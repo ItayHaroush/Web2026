@@ -4,36 +4,48 @@ import Header from './Components/Header';
 import Contact from './Components/Contact';
 import AddPerson from "./Components/addPerson";
 import Search from './Components/search';
-import defaultImage from './Components/images/defaultUser.jpg';
+import defaultUserImage from './Components/images/defaultUser.jpg';
 
 class App extends Component {
+  // כמה אנשי קשר בעמוד
+  contactsPerPage = 10;
+
   state = {
-    // שדות הטופס
+    // שליטה על הטופס
     addShow: false,
+
+    // שדות הטופס
     newName: '',
     newEmail: '',
     newPhone: '',
 
-    //שדה הודעה
+    // חיפוש
+    search: '',
+
+    // עריכה
+    editIndex: null,
+    isEditing: false,
+
+    // פאג'ינציה
+    currentPage: 1,
+
+    // כרטיסיות: 'all' או 'favorites'
+    activeTab: 'all',
+
+    // טוסטים
     toastMessage: '',
     toastColor: 'success',
     showToast: false,
 
-    // שדה החיפוש
-    search: '',
-
-    // למצב עריכה 
-    editIndex: null,   // איזה אינדקס אנחנו עורכים כרגע
-    isEditing: false,  // האם כרגע אנחנו במצב עריכה
-
-    // רשימת אנשי הקשר
+    // אנשי קשר
     contacts: [
-      { name: 'Doron', email: 'doron@gmail.com', phone: '054-234345' },
-      { name: 'Mike', email: 'miken@gmail.com', phone: '051-2234562' },
-      { name: 'Jimi', email: 'jimi@gmail.com', phone: '052-1112345' }
+      { name: 'Doron', email: 'doron@gmail.com', phone: '054-234345', image: defaultUserImage, favorite: false },
+      { name: 'Mike', email: 'miken@gmail.com', phone: '051-2234562', image: defaultUserImage, favorite: false },
+      { name: 'Jimi', email: 'jimi@gmail.com', phone: '052-1112345', image: defaultUserImage, favorite: false }
     ]
   };
-  // פונקציה שתציג את ההודעה לזמן קצר
+
+  // טוסט קצר
   showToast = (msg, color = "success") => {
     this.setState({
       toastMessage: msg,
@@ -45,140 +57,229 @@ class App extends Component {
       this.setState({ showToast: false });
     }, 2000);
   }
+
   // שמירה ללוקאל סטורג'
   saveToLocal = () => {
-    // localStorage שומר רק טקסט → JSON.stringify להפוך למחרוזת
     localStorage.setItem("contacts", JSON.stringify(this.state.contacts));
   }
 
-  // טעינה מהלוקאל סטורג' כשהאפליקציה עולה
   componentDidMount() {
     const saved = localStorage.getItem("contacts");
-
-    // אם יש נתונים שמורים → נטען אותם ל־state
     if (saved) {
       this.setState({ contacts: JSON.parse(saved) });
     }
   }
 
-  // כל שינוי ב־contacts → שמירה ללוקאל
   componentDidUpdate(prevProps, prevState) {
     if (prevState.contacts !== this.state.contacts) {
       this.saveToLocal();
     }
   }
 
-  // הוספה / עדכון של איש קשר
+  // שינוי בשדות טופס / חיפוש
+  handleChange = (event) => {
+    this.setState({ [event.target.name]: event.target.value });
+  }
+
+  // הוספה / עדכון איש קשר
   handleChangeAdd = (event) => {
     event.preventDefault();
 
-    // בדיקות תקינות בסיסיות
-    if (this.state.newName === '' || this.state.newEmail === '' || this.state.newPhone === '') {
-      alert("All fields are required");
+    const { newName, newEmail, newPhone, isEditing, editIndex } = this.state;
+
+    if (!newName || !newEmail || !newPhone) {
+      this.showToast("All fields are required", "warning");
       return;
     }
-    if (!this.state.newEmail.includes('@')) {
-      alert("Invalid email address");
+    if (!newEmail.includes('@')) {
+      this.showToast("Invalid email address", "warning");
       return;
     }
-    if (this.state.newPhone.length < 10) {
-      alert("Invalid phone number");
+    if (newPhone.length < 10) {
+      this.showToast("Invalid phone number", "warning");
       return;
     }
 
-    // ✔️ מצב עריכה – מעדכן איש קיים
-    if (this.state.isEditing) {
-      let temp = [...this.state.contacts]; // העתק כדי לא לשנות ישירות
-      temp[this.state.editIndex] = {
-        name: this.state.newName,
-        email: this.state.newEmail,
-        phone: this.state.newPhone,
-        image: defaultImage
+    const contactsCopy = [...this.state.contacts];
+
+    // מצב עריכה
+    if (isEditing && editIndex !== null) {
+
+      const oldFavorite = contactsCopy[editIndex].favorite;
+
+      contactsCopy[editIndex] = {
+        name: newName,
+        email: newEmail,
+        phone: newPhone,
+        image: defaultUserImage,
+        favorite: oldFavorite
       };
 
-      // שמירת העריכה
       this.setState({
-        contacts: temp,
+        contacts: contactsCopy,
         newName: '',
         newEmail: '',
         newPhone: '',
         isEditing: false,
         editIndex: null,
-        addShow: false,
-
+        addShow: false
       });
-      this.showToast("Contact Updated: " + this.state.newName, "success");
-      return; // חשוב! שלא ימשיך להוספה
+
+      this.showToast("Contact updated: " + newName, "info");
+      return;
     }
-    // ✔️ מצב הוספה – יוצר איש קשר חדש
+
+    // מצב הוספה
     const newContact = {
-      name: this.state.newName,
-      email: this.state.newEmail,
-      phone: this.state.newPhone,
-      image: defaultImage
+      name: newName,
+      email: newEmail,
+      phone: newPhone,
+      image: defaultUserImage,
+      favorite: false
     };
 
-    // מוסיף לרשימה
-    this.setState({
-      contacts: [...this.state.contacts, newContact],
+    this.setState(prev => ({
+      contacts: [...prev.contacts, newContact],
       newName: '',
       newEmail: '',
       newPhone: '',
       addShow: false,
+      currentPage: 1 // חוזרים לעמוד ראשון
+    }), () => {
+      this.showToast("Contact added: " + newName, "success");
     });
-    this.showToast("Contact Added: " + this.state.newName, "success");
   }
 
-  // שינוי ערכי הטופס / שדה החיפוש
-  handleChange = (event) => {
-    // [event.target.name] → מזהה איזה שדה משתנה
-    this.setState({ [event.target.name]: event.target.value });
+  // מחיקה - מקבל שם של איש קשר
+  handleDelete = (contactName) => {
+    const contactsCopy = [...this.state.contacts];
+    const index = contactsCopy.findIndex(c => c.name === contactName);
 
+    if (index === -1) return;
+
+    const name = contactsCopy[index].name;
+    if (!window.confirm("Delete " + name + "?")) return;
+
+    contactsCopy.splice(index, 1);
+
+    this.setState({ contacts: contactsCopy }, () => {
+      this.showToast("Contact deleted: " + name, "danger");
+    });
   }
 
-  // מחיקת איש קשר
-  handleDelete = (index) => {
-    if (!window.confirm("Are you sure you want to delete " + this.state.contacts[index].name + "?")) return;
+  // כניסה למצב עריכה - מקבל שם של איש קשר
+  handleEdit = (contactName) => {
+    const contactsCopy = [...this.state.contacts];
+    const index = contactsCopy.findIndex(c => c.name === contactName);
 
-    let tempContacts = [...this.state.contacts];
-    tempContacts.splice(index, 1); // מוחק לפי אינדקס
-    this.setState({ contacts: tempContacts });
-    this.showToast("Success Contact Deleted: " + this.state.contacts[index].name, "danger");
-  }
+    if (index === -1) return;
 
-  // כניסה למצב עריכה → ממלא את הטופס מחדש
-  handleEdit = (index) => {
-    const contact = this.state.contacts[index];
+    const contact = contactsCopy[index];
 
     this.setState({
       newName: contact.name,
       newEmail: contact.email,
       newPhone: contact.phone,
-      editIndex: index,   // מי נערך?
-      isEditing: true,     // עובר למצב עריכה
-      addShow: true,
-      newImage: contact.image
+      editIndex: index,
+      isEditing: true,
+      addShow: true
     });
-
   }
-  // העלאת תמונה
-  handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
 
-    const reader = new FileReader();
+  // מועדפים - מקבל שם של איש קשר כדי למצוא אותו
+  toggleFavorite = (contactName) => {
+    const contactsCopy = [...this.state.contacts];
+    const index = contactsCopy.findIndex(c => c.name === contactName);
 
-    reader.onloadend = () => {
-      this.setState({ newImage: reader.result });
-    };
+    if (index !== -1) {
+      contactsCopy[index].favorite = !contactsCopy[index].favorite;
+      this.setState({ contacts: contactsCopy });
+    }
+  }
 
-    reader.readAsDataURL(file);
-  };
+  // סינון (שם + מייל + טלפון)
+  getFilteredContacts = () => {
+    const term = this.state.search.toLowerCase();
+    let filtered = this.state.contacts;
+
+    // סינון לפי כרטיסיה
+    if (this.state.activeTab === 'favorites') {
+      filtered = filtered.filter(person => person.favorite);
+    }
+
+    // סינון לפי חיפוש
+    if (term) {
+      filtered = filtered.filter(person => {
+        const cleanPhone = person.phone.replace(/[-\s]/g, '');
+        return (
+          person.name.toLowerCase().includes(term) ||
+          person.email.toLowerCase().includes(term) ||
+          cleanPhone.includes(term)
+        );
+      });
+    }
+
+    return filtered;
+  }
 
   render() {
+    const filtered = this.getFilteredContacts();
+    const { currentPage, activeTab } = this.state;
+    const start = (currentPage - 1) * this.contactsPerPage;
+    const pageContacts = filtered.slice(start, start + this.contactsPerPage);
+    const totalPages = Math.max(1, Math.ceil(filtered.length / this.contactsPerPage));
+    const favoritesCount = this.state.contacts.filter(c => c.favorite).length;
+
     return (
       <div>
-        <Header brand="Contact List" />
+        <Header
+          brand="Contact List"
+          totalContacts={this.state.contacts.length}
+          favoritesCount={favoritesCount}
+        />
+
+        {/* כרטיסיות */}
+        <div style={{
+          display: 'flex',
+          gap: '10px',
+          marginBottom: '15px',
+          background: 'white',
+          padding: '10px',
+          borderRadius: '10px'
+        }}>
+          <button
+            onClick={() => this.setState({ activeTab: 'all', currentPage: 1 })}
+            style={{
+              flex: 1,
+              padding: '12px',
+              background: activeTab === 'all' ? 'var(--whatsapp-green)' : '#f0f0f0',
+              color: activeTab === 'all' ? 'white' : '#666',
+              border: 'none',
+              borderRadius: '8px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              transition: 'all 0.3s'
+            }}
+          >
+            📝 כל האנשים ({this.state.contacts.length})
+          </button>
+          <button
+            onClick={() => this.setState({ activeTab: 'favorites', currentPage: 1 })}
+            style={{
+              flex: 1,
+              padding: '12px',
+              background: activeTab === 'favorites' ? 'var(--whatsapp-green)' : '#f0f0f0',
+              color: activeTab === 'favorites' ? 'white' : '#666',
+              border: 'none',
+              borderRadius: '8px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              transition: 'all 0.3s'
+            }}
+          >
+            ⭐ מועדפים ({favoritesCount})
+          </button>
+        </div>
 
         {/* טופס הוספה / עריכה */}
         {this.state.addShow && (
@@ -188,13 +289,11 @@ class App extends Component {
             newPhone={this.state.newPhone}
             onChange={this.handleChange}
             onAdd={this.handleChangeAdd}
-            onImageChange={this.handleImageChange}
             isEditing={this.state.isEditing}
-            addShow={this.state.addShow}
           />
         )}
 
-        {/* כפתור להוספת איש קשר */}
+        {/* כפתור טופס */}
         <button
           className="btn-add-contact"
           onClick={() => this.setState({ addShow: !this.state.addShow })}
@@ -202,42 +301,111 @@ class App extends Component {
           {this.state.addShow ? "✖️ סגור טופס" : "➕ הוסף איש קשר חדש"}
         </button>
 
-
-        {/* שורת החיפוש */}
+        {/* חיפוש */}
         <Search
           search={this.state.search}
           onChange={this.handleChange}
         />
 
-        {/* מיפוי הרשימה אחרי סינון */}
-        {
-          this.state.contacts
-            .filter(person => {
-              const term = this.state.search.toLowerCase();
+        {/* רשימת אנשי קשר – 10 בעמוד */}
+        {pageContacts.length === 0 ? (
+          <div style={{
+            textAlign: 'center',
+            padding: '40px',
+            background: 'white',
+            borderRadius: '10px',
+            color: '#999'
+          }}>
+            <div style={{ fontSize: '60px', marginBottom: '15px' }}>
+              {activeTab === 'favorites' ? '⭐' : '🔍'}
+            </div>
+            <h3 style={{ color: '#666' }}>
+              {activeTab === 'favorites'
+                ? 'אין אנשי קשר מועדפים'
+                : this.state.search
+                  ? 'לא נמצאו תוצאות'
+                  : 'אין אנשי קשר'}
+            </h3>
+            <p>
+              {activeTab === 'favorites'
+                ? 'לחץ על ⭐ כדי להוסיף אנשי קשר למועדפים'
+                : this.state.search
+                  ? 'נסה חיפוש אחר'
+                  : 'התחל להוסיף אנשי קשר'}
+            </p>
+          </div>
+        ) : (
+          pageContacts.map((person, idx) => {
+            const globalIndex = start + idx; // אינדקס אמיתי ברשימה המלאה
 
-              // מנקה מקפים ורווחים
-              const cleanPhone = person.phone.replace(/[-\s]/g, '');
-
-
-              return (
-                person.name.toLowerCase().includes(term) ||
-                cleanPhone.toLowerCase().includes(term) ||
-                person.email.toLowerCase().includes(term)
-              );
-            })
-            .map((person, indx) => (
+            return (
               <Contact
-                key={indx}
-                index={indx}
+                key={globalIndex}
+                index={globalIndex}
                 name={person.name}
                 email={person.email}
                 phone={person.phone}
-                image={person.image || defaultImage}
+                image={person.image}
+                favorite={person.favorite}
                 onDelete={this.handleDelete}
                 onEdit={this.handleEdit}
+                onFavorite={this.toggleFavorite}
               />
-            ))}
-        {/* הודעת טוסט */}
+            );
+          })
+        )}
+
+        {/* פאג'ינציה */}
+        {totalPages > 1 && (
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: '15px',
+            marginTop: '20px',
+            padding: '15px',
+            background: 'white',
+            borderRadius: '10px'
+          }}>
+            <button
+              style={{
+                padding: '10px 20px',
+                background: currentPage === 1 ? '#ccc' : 'var(--whatsapp-green)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                fontWeight: 'bold'
+              }}
+              disabled={currentPage === 1}
+              onClick={() => this.setState({ currentPage: currentPage - 1 })}
+            >
+              ◀ הקודם
+            </button>
+
+            <span style={{ fontWeight: 'bold', color: 'var(--whatsapp-text)' }}>
+              עמוד {currentPage} / {totalPages}
+            </span>
+
+            <button
+              style={{
+                padding: '10px 20px',
+                background: currentPage >= totalPages ? '#ccc' : 'var(--whatsapp-green)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: currentPage >= totalPages ? 'not-allowed' : 'pointer',
+                fontWeight: 'bold'
+              }}
+              disabled={currentPage >= totalPages}
+              onClick={() => this.setState({ currentPage: currentPage + 1 })}
+            >
+              הבא ▶
+            </button>
+          </div>
+        )}
+
+        {/* טוסט */}
         {this.state.showToast && (
           <div className={`toast-whatsapp ${this.state.toastColor}`}>
             {this.state.toastMessage}

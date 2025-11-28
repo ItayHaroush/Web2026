@@ -90,6 +90,31 @@ body {
   transform: translateY(0);
 }
 
+/* ===== Tabs ===== */
+.tab-button {
+  flex: 1;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.tab-button.active {
+  background: var(--whatsapp-green);
+  color: white;
+}
+
+.tab-button:not(.active) {
+  background: #f0f0f0;
+  color: #666;
+}
+
+.tab-button:hover:not(.active) {
+  background: #e0e0e0;
+}
+
 /* ===== Contact Card ===== */
 .contact-card {
   background: white;
@@ -128,6 +153,35 @@ body {
   color: #666;
   font-size: 14px;
   line-height: 1.8;
+}
+
+/* ===== Contact Action Buttons ===== */
+.contact-action-btn {
+  flex: 1 1 calc(50% - 5px);
+  min-width: 120px;
+  padding: 10px 15px;
+  color: white;
+  text-decoration: none;
+  border-radius: 8px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: bold;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.contact-action-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.contact-action-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 /* אייקונים */
