@@ -1,0 +1,20 @@
+.contact-card {
+  background: #ffffff;
+  border-left: 4px solid #0d6efd;
+  transition: all 0.2s ease-in-out;
+}
+
+.contact-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0px 4px 12px rgba(0,0,0,0.1);
+}
+
+/* מעבר חלק בפתיחה */
+.fade-in {
+  animation: fadeIn 0.25s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-3px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
