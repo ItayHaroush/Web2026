@@ -1,0 +1,33 @@
+#add {
+    background-color: rgba(43, 87, 151, 0.5);
+    text-align: center;
+    padding: 16px;
+    margin: 0;
+}
+
+#add label {
+    padding: 10px;
+}
+
+#add input {
+    padding: 5px;
+    border-radius: 5px;
+}
+
+#add input[type='submit'] {
+    color: navy;
+    padding: 5px;
+    font-size: 18px;
+    font-weight: bold;
+    margin-left: 20px;
+}
+
+
+
+#add input:valid {
+    background-color: white;
+}
+
+#add input:invalid {
+    background-color: #ffcccc;
+}

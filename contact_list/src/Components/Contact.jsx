@@ -16,6 +16,7 @@ class Contact extends Component {
             name,
             email,
             phone,
+            birthday,
             image,
             favorite,
             index,
@@ -31,6 +32,20 @@ class Contact extends Component {
             : cleanPhone.startsWith('972') ? cleanPhone
                 : cleanPhone.startsWith('0') ? '972' + cleanPhone.substring(1)
                     : '972' + cleanPhone;
+
+
+        let birthdayText = null;
+        // מבנה כללי לתאריך יום הולדת
+        if (birthday) {
+            const date = new Date(birthday);
+            birthdayText = date.toLocaleDateString('he-IL', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+            });
+        }// בדיקה אם היום הוא יום ההולדת
+        const today = new Date().toISOString().slice(5, 10);
+        const isBirthdayToday = birthday?.slice(5, 10) === today;
 
         return (
             <div
@@ -61,8 +76,19 @@ class Contact extends Component {
                             }}
                         />
 
-                        {/* שם */}
+                        {/* שם והדגשת תאריך יום הולדת בתאריך המתאים */}
                         <h5 style={{ margin: 0, fontWeight: 'bold' }}>{name}</h5>
+                        <h5
+                            style={{
+                                margin: 0,
+                                fontWeight: 'bold',
+                                marginRight: '30px',
+                                backgroundColor: isBirthdayToday ? '#fff3e0' : 'transparent',
+                                color: isBirthdayToday ? '#ff9800' : 'inherit'
+                            }}
+                        >
+                            {isBirthdayToday && 'Happy Birthday 🎉'}
+                        </h5>
                     </div>
 
                     {/* אייקונים */}
@@ -128,6 +154,7 @@ class Contact extends Component {
                     <div className="contact-details">
                         <p><strong>📧 אימייל:</strong> {email}</p>
                         <p><strong>📱 טלפון:</strong> {phone}</p>
+                        {birthdayText && <p><strong>🎂 יום הולדת:</strong> {birthdayText}</p>}
 
                         {/* כפתורי פעולה */}
                         <div style={{

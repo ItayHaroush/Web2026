@@ -47,6 +47,17 @@ class AddPerson extends Component {
             />
           </label>
 
+          {/* יום הולדת */}
+          <label>
+            🎂 יום הולדת
+            <input
+              type="date"
+              name="newBirthday"
+              value={this.props.newBirthday}
+              onChange={this.props.onChange}
+            />
+          </label>
+
           {/* כפתור שמתעדכן לפי מצב – הוספה/עדכון */}
           <button type="submit">
             {this.props.isEditing ? "✔️ עדכן איש קשר" : "➕ הוסף איש קשר"}

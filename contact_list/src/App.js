@@ -18,7 +18,8 @@ class App extends Component {
     newName: '',
     newEmail: '',
     newPhone: '',
-
+    // יום הולדת
+    newBirthday: '',
     // חיפוש
     search: '',
 
@@ -39,9 +40,9 @@ class App extends Component {
 
     // אנשי קשר
     contacts: [
-      { name: 'Doron', email: 'doron@gmail.com', phone: '054-234345', image: defaultUserImage, favorite: false },
-      { name: 'Mike', email: 'miken@gmail.com', phone: '051-2234562', image: defaultUserImage, favorite: false },
-      { name: 'Jimi', email: 'jimi@gmail.com', phone: '052-1112345', image: defaultUserImage, favorite: false }
+      { name: 'Doron', email: 'doron@gmail.com', phone: '054-234345', birthday: '1990-05-12', image: defaultUserImage, favorite: false },
+      { name: 'Mike', email: 'miken@gmail.com', phone: '051-2234562', birthday: '1990-05-12', image: defaultUserImage, favorite: false },
+      { name: 'Jimi', email: 'jimi@gmail.com', phone: '052-1112345', birthday: '1990-05-12', image: defaultUserImage, favorite: false }
     ]
   };
 
@@ -85,7 +86,7 @@ class App extends Component {
   handleChangeAdd = (event) => {
     event.preventDefault();
 
-    const { newName, newEmail, newPhone, isEditing, editIndex } = this.state;
+    const { newName, newEmail, newPhone, newBirthday, isEditing, editIndex } = this.state;
 
     if (!newName || !newEmail || !newPhone) {
       this.showToast("All fields are required", "warning");
@@ -97,6 +98,10 @@ class App extends Component {
     }
     if (newPhone.length < 10) {
       this.showToast("Invalid phone number", "warning");
+      return;
+    }
+    if (!newBirthday) {
+      this.showToast("Missing birthday 🎂", "warning");
       return;
     }
 
@@ -111,6 +116,7 @@ class App extends Component {
         name: newName,
         email: newEmail,
         phone: newPhone,
+        birthday: newBirthday,
         image: defaultUserImage,
         favorite: oldFavorite
       };
@@ -120,6 +126,7 @@ class App extends Component {
         newName: '',
         newEmail: '',
         newPhone: '',
+        newBirthday: '',
         isEditing: false,
         editIndex: null,
         addShow: false
@@ -134,6 +141,7 @@ class App extends Component {
       name: newName,
       email: newEmail,
       phone: newPhone,
+      birthday: newBirthday,
       image: defaultUserImage,
       favorite: false
     };
@@ -143,6 +151,7 @@ class App extends Component {
       newName: '',
       newEmail: '',
       newPhone: '',
+      newBirthday: '',
       addShow: false,
       currentPage: 1 // חוזרים לעמוד ראשון
     }), () => {
@@ -180,6 +189,7 @@ class App extends Component {
       newName: contact.name,
       newEmail: contact.email,
       newPhone: contact.phone,
+      newBirthday: contact.birthday,
       editIndex: index,
       isEditing: true,
       addShow: true
@@ -287,6 +297,7 @@ class App extends Component {
             newName={this.state.newName}
             newEmail={this.state.newEmail}
             newPhone={this.state.newPhone}
+            newBirthday={this.state.newBirthday}
             onChange={this.handleChange}
             onAdd={this.handleChangeAdd}
             isEditing={this.state.isEditing}
@@ -345,6 +356,7 @@ class App extends Component {
                 name={person.name}
                 email={person.email}
                 phone={person.phone}
+                birthday={person.birthday}
                 image={person.image}
                 favorite={person.favorite}
                 onDelete={this.handleDelete}
