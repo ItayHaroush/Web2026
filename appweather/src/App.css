@@ -65,13 +65,20 @@ button:hover {
   border: 1px solid #eee;
   border-radius: 12px;
   display: block;
-  padding: 20px;
-  margin: 10px auto;
+  padding: 12px 10px;
+  margin: 8px auto;
   background: #f9f9f9;
-  min-width: 180px;
-  max-width: 400px;
+  min-width: 120px;
+  max-width: 260px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
   transition: box-shadow 0.2s;
+}
+
+.weather-card.mini {
+  padding: 8px 6px;
+  max-width: 180px;
+  min-width: 90px;
+  font-size: 0.97em;
 }
 
 
@@ -99,9 +106,16 @@ button:hover {
   }
 
   .weather-card {
-    padding: 12px;
-    min-width: 120px;
-    max-width: 98vw;
+    padding: 8px 4px;
+    min-width: 80px;
+    max-width: 90vw;
+  }
+
+  .weather-card.mini {
+    padding: 6px 2px;
+    max-width: 120px;
+    min-width: 60px;
+    font-size: 0.93em;
   }
 
   input[type="text"],
