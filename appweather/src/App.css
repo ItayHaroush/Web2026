@@ -1,4 +1,12 @@
+html,
 body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  min-height: 100vh;
   background: linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%);
   font-family: 'Segoe UI', Arial, sans-serif;
 }
