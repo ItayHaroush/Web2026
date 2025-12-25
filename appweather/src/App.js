@@ -22,7 +22,27 @@ class WeatherApp extends Component {
     city: '',
     cityArray: ['חיפה', 'עפולה', 'תל אביב', 'חיפה', 'ירושלים', 'באר שבע', 'אשדוד', 'נתניה', 'רמת גן', 'פתח תקווה'],
     results: [],
-    error: ''
+    error: '',
+    favorites: JSON.parse(localStorage.getItem('favorites') || '[]')
+  };
+  // הוספת עיר למועדפים
+  addToFavorites = (cityName) => {
+    this.setState(prev => {
+      const newFavorites = prev.favorites.includes(cityName)
+        ? prev.favorites
+        : [...prev.favorites, cityName];
+      localStorage.setItem('favorites', JSON.stringify(newFavorites));
+      return { favorites: newFavorites };
+    });
+  };
+
+  // הסרת עיר מהמועדפים
+  removeFromFavorites = (cityName) => {
+    this.setState(prev => {
+      const newFavorites = prev.favorites.filter(fav => fav !== cityName);
+      localStorage.setItem('favorites', JSON.stringify(newFavorites));
+      return { favorites: newFavorites };
+    });
   };
 
   // עדכון שם העיר לפי קלט המשתמש
@@ -56,12 +76,24 @@ class WeatherApp extends Component {
 
   render() {
     return (
-      <div style={{ direction: 'rtl', textAlign: 'center', marginTop: '40px' }}>
+      <div className="App">
         <h1>בדיקת מזג אוויר</h1>
+        {/* מועדפים */}
+        <div style={{ margin: '16px 0' }}>
+          <h3>מיקומים מועדפים</h3>
+          {this.state.favorites.length === 0 && <div style={{ color: '#888' }}>אין מיקומים מועדפים</div>}
+          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '8px' }}>
+            {this.state.favorites.map(city => (
+              <span key={city} style={{ background: '#e3f2fd', borderRadius: '16px', padding: '6px 14px', margin: '2px', display: 'inline-flex', alignItems: 'center', fontSize: '15px' }}>
+                {city}
+                <button onClick={() => this.removeFromFavorites(city)} style={{ marginRight: '6px', background: 'transparent', color: '#d32f2f', border: 'none', fontSize: '18px', cursor: 'pointer', padding: 0 }} title="הסר מהמועדפים">×</button>
+              </span>
+            ))}
+          </div>
+        </div>
         <select
           value={this.state.city}
           onChange={this.handleChange}
-          style={{ padding: '8px', fontSize: '16px', marginRight: '10px' }}
         >
           <option value="" disabled>
             בחר עיר
@@ -78,35 +110,39 @@ class WeatherApp extends Component {
           placeholder="הכנס שם עיר"
           value={this.state.city}
           onChange={this.handleChange}
-          style={{ padding: '8px', fontSize: '16px' }}
         />
         {/* כפתור לשליפת מזג האוויר */}
-        <button onClick={this.fetchWeather} style={{ marginRight: '10px', padding: '8px 16px' }}>
+        <button onClick={this.fetchWeather}>
           בדוק
         </button>
+        {/* כפתור הוספה למועדפים */}
+        {this.state.city && !this.state.favorites.includes(this.state.city) && (
+          <button onClick={() => this.addToFavorites(this.state.city)} style={{ background: '#ffd600', color: '#333', marginTop: '6px' }}>
+            הוסף למועדפים
+          </button>
+        )}
         {/* הצגת הודעת שגיאה במידת הצורך */}
-        {this.state.error && <div style={{ color: 'red' }}>{this.state.error}</div>}
+        {this.state.error && <div className="error">{this.state.error}</div>}
         <div style={{ marginTop: '20px' }}>
           {/* הצגת כל התוצאות שנשמרו במערך */}
           {this.state.results.map((weather, idx) => (
             <div
               key={weather.id + idx}
-              style={{
-                border: '1px solid #eee',
-                borderRadius: '8px',
-                display: 'inline-block',
-                padding: '20px',
-                margin: '10px',
-                background: '#f9f9f9',
-                minWidth: '220px'
-              }}
+              className="weather-card"
             >
               <h2>{weather.name}</h2>
               {/* אייקון משתנה לפי יום/לילה */}
-              <div className="weather-icon" style={{ fontSize: '48px', marginBottom: '10px' }}>
+              <div className="weather-icon">
                 {getCustomIcon(weather.weather[0].icon)}
-              </div> <p>{weather.weather[0].description}</p>
+              </div>
+              <p>{weather.weather[0].description}</p>
               <p>טמפרטורה: {weather.main.temp}°C</p>
+              {/* כפתור הוספה למועדפים מתוך כרטיס */}
+              {!this.state.favorites.includes(weather.name) && (
+                <button onClick={() => this.addToFavorites(weather.name)} style={{ background: '#ffd600', color: '#333', marginTop: '6px' }}>
+                  הוסף למועדפים
+                </button>
+              )}
             </div>
           ))}
         </div>

@@ -3,6 +3,7 @@ body {
   height: 100%;
   margin: 0;
   padding: 0;
+  box-sizing: border-box;
 }
 
 body {
@@ -11,21 +12,27 @@ body {
   font-family: 'Segoe UI', Arial, sans-serif;
 }
 
+
 .App {
   direction: rtl;
   text-align: center;
   margin-top: 40px;
+  padding: 0 8px;
 }
+
 
 input[type="text"],
 select {
-  padding: 8px;
-  font-size: 16px;
-  border-radius: 6px;
+  padding: 12px;
+  font-size: 18px;
+  border-radius: 8px;
   border: 1px solid #b0c4de;
   margin-bottom: 10px;
   outline: none;
   transition: border 0.2s;
+  width: 100%;
+  max-width: 350px;
+  box-sizing: border-box;
 }
 
 input[type="text"]:focus,
@@ -33,45 +40,75 @@ select:focus {
   border: 1.5px solid #4682b4;
 }
 
+
 button {
-  padding: 8px 16px;
-  font-size: 16px;
-  border-radius: 6px;
+  padding: 12px 24px;
+  font-size: 18px;
+  border-radius: 8px;
   border: none;
   background: #4682b4;
   color: white;
   cursor: pointer;
-  margin-right: 10px;
+  margin: 10px 0;
   transition: background 0.2s;
+  width: 100%;
+  max-width: 350px;
+  box-sizing: border-box;
 }
 
 button:hover {
   background: #315f7c;
 }
 
+
 .weather-card {
   border: 1px solid #eee;
   border-radius: 12px;
-  display: inline-block;
+  display: block;
   padding: 20px;
-  margin: 10px;
+  margin: 10px auto;
   background: #f9f9f9;
-  min-width: 220px;
+  min-width: 180px;
+  max-width: 400px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
   transition: box-shadow 0.2s;
 }
 
+
 .weather-card:hover {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
 }
+
 
 .weather-icon {
   font-size: 48px;
   margin-bottom: 10px;
 }
 
+
 .error {
   color: #d32f2f;
   margin-top: 10px;
   font-weight: bold;
+}
+
+@media (max-width: 600px) {
+  .App {
+    margin-top: 16px;
+    padding: 0 2vw;
+  }
+
+  .weather-card {
+    padding: 12px;
+    min-width: 120px;
+    max-width: 98vw;
+  }
+
+  input[type="text"],
+  select,
+  button {
+    font-size: 16px;
+    padding: 10px;
+    max-width: 98vw;
+  }
 }
