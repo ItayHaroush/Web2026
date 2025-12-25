@@ -3,13 +3,13 @@ import React, { Component } from 'react';
 
 // פונקציה שמחזירה אייקון מותאם אישית לפי יום/לילה
 function getCustomIcon(icon) {
-  if (icon === '01d') {
-    // שמש יום
-    return '🌞';
+  if (icon.endsWith('01d')) {
+    // אייקון יום כללי
+    return '☀️';
   }
-  if (icon === '01n') {
-    // ירח לילה
-    return '🌜';
+  if (icon.endsWith('01n')) {
+    // אייקון לילה כללי
+    return '🌙';
   }
   // אייקון ברירת מחדל מה-API
   return <img style={{ width: '48px' }} src={`https://openweathermap.org/img/wn/${icon}@2x.png`} alt="icon" />;
