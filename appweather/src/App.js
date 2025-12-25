@@ -10,7 +10,6 @@ function getCustomIcon(icon) {
   if (icon === '01n') {
     // ירח לילה
     return '🌜';
-
   }
   // אייקון ברירת מחדל מה-API
   return <img style={{ width: '48px' }} src={`https://openweathermap.org/img/wn/${icon}@2x.png`} alt="icon" />;
