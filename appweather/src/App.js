@@ -12,7 +12,7 @@ function getCustomIcon(icon) {
     return '🌜';
   }
   // אייקון ברירת מחדל מה-API
-  return <img style={{width: '48px'}} src={`https://openweathermap.org/img/wn/${icon}@2x.png`} alt="icon" />;
+  return <img style={{ width: '48px' }} src={`https://openweathermap.org/img/wn/${icon}@2x.png`} alt="icon" />;
 }
 
 // קומפוננטת מזג אוויר מבוססת מחלקה
@@ -20,7 +20,7 @@ class WeatherApp extends Component {
   // state ראשוני: עיר, תוצאות, הודעת שגיאה
   state = {
     city: '',
-    cityArray: ['חיפה','עפולה', 'תל אביב', 'חיפה', 'ירושלים', 'באר שבע', 'אשדוד', 'נתניה', 'רמת גן', 'פתח תקווה'],
+    cityArray: ['חיפה', 'עפולה', 'תל אביב', 'חיפה', 'ירושלים', 'באר שבע', 'אשדוד', 'נתניה', 'רמת גן', 'פתח תקווה'],
     results: [],
     error: ''
   };
@@ -56,7 +56,7 @@ class WeatherApp extends Component {
 
   render() {
     return (
-      <div  style={{ direction: 'rtl', textAlign: 'center', marginTop: '40px' }}>
+      <div style={{ direction: 'rtl', textAlign: 'center', marginTop: '40px' }}>
         <h1>בדיקת מזג אוויר</h1>
         <select
           value={this.state.city}
@@ -86,7 +86,7 @@ class WeatherApp extends Component {
         </button>
         {/* הצגת הודעת שגיאה במידת הצורך */}
         {this.state.error && <div style={{ color: 'red' }}>{this.state.error}</div>}
-        <div  style={{ marginTop: '20px' }}>
+        <div style={{ marginTop: '20px' }}>
           {/* הצגת כל התוצאות שנשמרו במערך */}
           {this.state.results.map((weather, idx) => (
             <div
@@ -101,7 +101,7 @@ class WeatherApp extends Component {
                 minWidth: '220px'
               }}
             >
-               <h2>{weather.name}</h2>
+              <h2>{weather.name}</h2>
               {/* אייקון משתנה לפי יום/לילה */}
               <div className="weather-icon" style={{ fontSize: '48px', marginBottom: '10px' }}>
                 {getCustomIcon(weather.weather[0].icon)}
