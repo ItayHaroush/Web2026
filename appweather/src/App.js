@@ -146,6 +146,14 @@ class WeatherApp extends Component {
                 </div>
                 <p style={{ margin: '6px 0', fontSize: '0.95em' }}>{weather.weather[0].description}</p>
                 <p style={{ margin: '6px 0', fontSize: '0.95em' }}>טמפ׳: {weather.main.temp}°C</p>
+                {/* נתונים נוספים */}
+                <p style={{ margin: '6px 0', fontSize: '0.9em', color: '#4682b4' }}>
+                  לחות: {weather.main.humidity}% | רוח: {weather.wind.speed} מ"ש
+                </p>
+                <p style={{ margin: '6px 0', fontSize: '0.9em', color: '#4682b4' }}>
+                  טמפ׳ מינ׳: {weather.main.temp_min}°C | טמפ׳ מקס׳: {weather.main.temp_max}°C
+                </p>
+
                 {/* כפתור הוספה למועדפים מתוך כרטיס */}
                 {!isFav && (
                   <button onClick={() => this.addToFavorites(weather.name)} style={{ background: '#ffd600', color: '#333', marginTop: '6px', fontSize: '0.95em', padding: '6px 10px', maxWidth: 120 }}>
