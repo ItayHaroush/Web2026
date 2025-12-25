@@ -17,16 +17,21 @@ class App extends Component {
     sortByName: false, // מיון לפי שם
     sortDirection: "asc", // כיוון המיון
     contacts: [
-      { name: 'Itay', email: 'itay@gmail.com', phone: '054-7466508', birthday: '21-12-2025' },
-      { name: 'Mike', email: 'miken@gmail.com', phone: '051-2234562', birthday: '05-12-1985' },
-      { name: 'Jimi', email: 'jimi@gmail.com', phone: '052-1112345', birthday: '07-07-1992' }
+      { id: 1, name: 'Itay', email: 'itay@gmail.com', phone: '054-7466508', birthday: '21-12-2025' },
+      { id: 2, name: 'Mike', email: 'miken@gmail.com', phone: '051-2234562', birthday: '05-12-1985' },
+      { id: 3, name: 'Jimi', email: 'jimi@gmail.com', phone: '052-1112345', birthday: '07-07-1992' }
     ]
   }
   componentDidMount() {
     // טען אנשי קשר מה-localStorage אם קיימים
     const contacts = localStorage.getItem("contacts");
     if (contacts) {
-      this.setState({ contacts: JSON.parse(contacts) });
+      // הוסף id ייחודי לאנשי קשר שאין להם id (תמיכה בנתונים ישנים)
+      let loaded = JSON.parse(contacts);
+      let maxId = 0;
+      loaded.forEach(c => { if (c.id && c.id > maxId) maxId = c.id; });
+      loaded = loaded.map((c, i) => c.id ? c : { ...c, id: ++maxId });
+      this.setState({ contacts: loaded });
     }
   }
   saveContactsToStorage = (contacts) => {
@@ -43,14 +48,14 @@ class App extends Component {
     }
   };
 
-  handleDelete = (index) => {
-    let answer = window.confirm(`Do you really want to delete ${this.state.contacts[index].name}`);
+  handleDelete = (id) => {
+    const contact = this.state.contacts.find(c => c.id === id);
+    if (!contact) return;
+    let answer = window.confirm(`Do you really want to delete ${contact.name}`);
     if (!answer) {
       return;
     }
-    // צור עותק חדש של המער
-    let updateArray = this.state.contacts.slice();
-    updateArray.splice(index, 1);
+    const updateArray = this.state.contacts.filter(c => c.id !== id);
     this.setState({ contacts: updateArray }, () => {
       this.saveContactsToStorage(this.state.contacts);
     });
@@ -62,16 +67,24 @@ class App extends Component {
     }
     //email regex
     if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/i.test(this.state.newEmail)) {
-      //alert("Invalid email address");
       return;
     }
     //phone regex
     if (!/^0[0-9]{1,2}(-)?[0-9]{7,8}$/i.test(this.state.newPhone)) {
-      //alert("Invalid phone number");
       return;
     }
 
+    // יצירת id ייחודי
+    const generateId = () => {
+      return (
+        Math.max(0, ...this.state.contacts.map(c => c.id || 0)) + 1
+      );
+    };
+
     const temp = {
+      id: this.state.isEdit
+        ? this.state.contacts.find(c => c.id === this.state.editId)?.id
+        : generateId(),
       name: this.state.newName,
       email: this.state.newEmail,
       phone: this.state.newPhone,
@@ -80,8 +93,9 @@ class App extends Component {
 
     if (this.state.isEdit) {
       // עדכון
-      const update = [...this.state.contacts];
-      update[this.state.editIndex] = temp;
+      const update = this.state.contacts.map(c =>
+        c.id === this.state.editId ? temp : c
+      );
       this.setState({
         contacts: update,
         newName: "",
@@ -89,7 +103,7 @@ class App extends Component {
         newPhone: "",
         showAddForm: false,
         isEdit: false,
-        editIndex: null
+        editId: null
       }, () => {
         this.saveContactsToStorage(this.state.contacts);
       });
@@ -109,8 +123,9 @@ class App extends Component {
   }
 
   // התחלת עריכה
-  handleEdit = (index) => {
-    const person = this.state.contacts[index];
+  handleEdit = (id) => {
+    const person = this.state.contacts.find(c => c.id === id);
+    if (!person) return;
     this.setState({
       newName: person.name,
       newEmail: person.email,
@@ -118,7 +133,7 @@ class App extends Component {
       newBirthday: person.birthday,
       showAddForm: true,
       isEdit: true,
-      editIndex: index
+      editId: id
     });
   }
   toggleAddForm = () => {
@@ -186,7 +201,7 @@ class App extends Component {
           />
         )}
         {
-          contactsToShow.map((person, indx) => {
+          contactsToShow.map((person) => {
             // בדיקה אם היום יום הולדת
             let isBirthdayToday = false;
             if (person.birthday) {
@@ -206,20 +221,20 @@ class App extends Component {
               }
             }
             return (
-              <div key={indx} style={{ display: 'flex', alignItems: 'center' }}>
+              <div key={person.id} style={{ display: 'flex', alignItems: 'center' }}>
                 <Contact
-                  index={indx}
+                  id={person.id}
                   name={person.name}
                   email={person.email}
                   phone={person.phone}
                   birthday={person.birthday}
                   onDelete={this.handleDelete}
-                  isBirthdayToday={isBirthdayToday} // prop חדש
+                  isBirthdayToday={isBirthdayToday}
                 />
                 <button
                   className="btn btn-outline-primary btn-sm"
                   style={{ marginRight: 10 }}
-                  onClick={() => this.handleEdit(indx)}>Edit</button>
+                  onClick={() => this.handleEdit(person.id)}>Edit</button>
               </div>
             );
           })

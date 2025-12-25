@@ -21,8 +21,7 @@ class Contact extends Component {
                         {this.state.showFlag ? '🔼' : '🔽'}
                     </span>
                     <span style={{ float: 'right', cursor: 'pointer', marginLeft: '10px' }}
-                        onClick={() => this.props.onDelete(this.props.index)}>&#10060;</span>
-
+                        onClick={() => this.props.onDelete(this.props.id)}>&#10060;</span>
                 </h3>
                 {
                     this.state.showFlag ? (
@@ -33,8 +32,8 @@ class Contact extends Component {
                         </ul>
                     ) : null
                 }
-
-            </div>);
+            </div>
+        );
     }
 }
 
