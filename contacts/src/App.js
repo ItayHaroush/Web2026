@@ -17,11 +17,22 @@ class App extends Component {
     sortByName: false, // מיון לפי שם
     sortDirection: "asc", // כיוון המיון
     contacts: [
-      { name: 'Itay', email: 'itay@gmail.com', phone: '054-7466508', birthday: '20/12/2025' },
-      { name: 'Mike', email: 'miken@gmail.com', phone: '051-2234562', birthday: '05/12/1985' },
-      { name: 'Jimi', email: 'jimi@gmail.com', phone: '052-1112345', birthday: '07/07/1992' }
+      { name: 'Itay', email: 'itay@gmail.com', phone: '054-7466508', birthday: '21-12-2025' },
+      { name: 'Mike', email: 'miken@gmail.com', phone: '051-2234562', birthday: '05-12-1985' },
+      { name: 'Jimi', email: 'jimi@gmail.com', phone: '052-1112345', birthday: '07-07-1992' }
     ]
   }
+  componentDidMount() {
+    // טען אנשי קשר מה-localStorage אם קיימים
+    const contacts = localStorage.getItem("contacts");
+    if (contacts) {
+      this.setState({ contacts: JSON.parse(contacts) });
+    }
+  }
+  saveContactsToStorage = (contacts) => {
+    localStorage.setItem("contacts", JSON.stringify(contacts));
+  }
+
   toggleSort = () => {
     if (!this.state.sortByName) {
       this.setState({ sortByName: true, sortDirection: "asc" });
@@ -37,10 +48,12 @@ class App extends Component {
     if (!answer) {
       return;
     }
-    // צור עותק חדש של המערך
+    // צור עותק חדש של המער
     let updateArray = this.state.contacts.slice();
     updateArray.splice(index, 1);
-    this.setState({ contacts: updateArray });
+    this.setState({ contacts: updateArray }, () => {
+      this.saveContactsToStorage(this.state.contacts);
+    });
   }
 
   handleAdd = () => {
@@ -77,6 +90,8 @@ class App extends Component {
         showAddForm: false,
         isEdit: false,
         editIndex: null
+      }, () => {
+        this.saveContactsToStorage(this.state.contacts);
       });
     } else {
       // הוספה
@@ -87,6 +102,8 @@ class App extends Component {
         newEmail: "",
         newPhone: "",
         showAddForm: false
+      }, () => {
+        this.saveContactsToStorage(this.state.contacts);
       });
     }
   }
@@ -173,11 +190,20 @@ class App extends Component {
             // בדיקה אם היום יום הולדת
             let isBirthdayToday = false;
             if (person.birthday) {
-              const [day, month] = person.birthday.split('/');
-              const today = new Date();
-              isBirthdayToday =
-                today.getDate() === parseInt(day, 10) &&
-                today.getMonth() + 1 === parseInt(month, 10);
+              let day, month;
+              if (/^\d{2}-\d{2}-\d{4}$/.test(person.birthday)) {
+                // פורמט dd-mm-yyyy
+                [day, month] = person.birthday.split('-');
+              } else if (/^\d{4}-\d{2}-\d{2}$/.test(person.birthday)) {
+                // פורמט yyyy-mm-dd   
+                [, month, day] = person.birthday.split('-');
+              }
+              if (day && month) {
+                const today = new Date();
+                isBirthdayToday =
+                  today.getDate() === parseInt(day, 10) &&
+                  today.getMonth() + 1 === parseInt(month, 10);
+              }
             }
             return (
               <div key={indx} style={{ display: 'flex', alignItems: 'center' }}>
