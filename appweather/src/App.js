@@ -27,12 +27,12 @@ class WeatherApp extends Component {
     results: [],
     error: '',
     favorites: JSON.parse(localStorage.getItem('favorites') || '[]'),
-    theme: 'sunny',
-    videoError: false
+    theme: null,
+    videoError: false,
+    closedWeatherIds: [] // מעקב אחרי כרטיסיות סגורות
   };
 
   componentDidMount() {
-    this.updateBodyTheme('sunny');
     if (!this.hasFetchedInitial) {
       this.hasFetchedInitial = true;
       this.getCurrentLocationWeather();
@@ -66,6 +66,13 @@ class WeatherApp extends Component {
     });
   };
 
+  // סגירת כרטיסיית מזג אוויר
+  closeWeatherCard = (cityId) => {
+    this.setState(prev => ({
+      closedWeatherIds: [...prev.closedWeatherIds, cityId]
+    }));
+  };
+
   // עדכון שם העיר לפי קלט המשתמש
   handleChange = (e) => {
     this.setState({ city: e.target.value });
@@ -84,19 +91,32 @@ class WeatherApp extends Component {
       const res = await fetch(url);
       const data = await res.json();
       if (data.cod === 200) {
-        const theme = this.getThemeFromWeather(data);
-        this.updateBodyTheme(theme);
         const enriched = { ...data, isCurrentLocation };
-        this.setState(prev => ({
-          results: [
+        this.setState(prev => {
+          const newResults = [
             enriched,
             ...prev.results.filter(
               item => item.id !== data.id && (!isCurrentLocation || !item.isCurrentLocation)
             )
-          ],
-          city: '',
-          theme
-        }));
+          ];
+          
+          // עדכן את הרקע רק אם זהו מיקום נוכחי
+          if (isCurrentLocation) {
+            const theme = this.getThemeFromWeather(enriched);
+            this.updateBodyTheme(theme);
+            return {
+              results: newResults,
+              city: '',
+              theme
+            };
+          } else {
+            // אם זה חיפוש רגיל, שמור את הרקע הקיים
+            return {
+              results: newResults,
+              city: ''
+            };
+          }
+        });
       } else {
         this.setState({ error: notFoundMessage || 'לא נמצאו נתונים' });
       }
@@ -149,18 +169,20 @@ class WeatherApp extends Component {
     return (
       <div className="page-shell">
         <div className="bg-video-wrapper" aria-hidden="true">
-          <video
-            key={`${this.state.theme}-${this.state.videoError ? 'fallback' : 'main'}`}
-            className="bg-video"
-            autoPlay
-            muted
-            loop
-            playsInline
-            preload="auto"
-            onError={() => this.setState({ videoError: true })}
-          >
-            <source src={this.state.videoError ? this.getVideoSource('sunny') : this.getVideoSource(this.state.theme)} type="video/mp4" />
-          </video>
+          {this.state.theme ? (
+            <video
+              key={`${this.state.theme}-${this.state.videoError ? 'fallback' : 'main'}`}
+              className="bg-video"
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="auto"
+              onError={() => this.setState({ videoError: true })}
+            >
+              <source src={this.state.videoError ? this.getVideoSource('sunny') : this.getVideoSource(this.state.theme)} type="video/mp4" />
+            </video>
+          ) : null}
           <div className="bg-overlay" />
         </div>
 
@@ -211,15 +233,37 @@ class WeatherApp extends Component {
 
           {/* הצגת הודעת שגיאה במידת הצורך */}
           {this.state.error && <div className="error">{this.state.error}</div>}
-          <div style={{ marginTop: '20px' }}>
+          <div className="weather-cards-container">
             {/* הצגת כל התוצאות שנשמרו במערך */}
-            {this.state.results.map((weather, idx) => {
+            {this.state.results
+              .filter(weather => !this.state.closedWeatherIds.includes(weather.id))
+              .map((weather, idx) => {
               const isFav = this.state.favorites.some(fav => (typeof fav === 'string' ? fav : fav.name) === weather.name);
               return (
                 <div
                   key={weather.id + idx}
                   className="weather-card mini"
                 >
+                  <button
+                    onClick={() => this.closeWeatherCard(weather.id)}
+                    style={{
+                      position: 'absolute',
+                      top: '4px',
+                      left: '4px',
+                      background: 'none',
+                      border: 'none',
+                      color: '#999',
+                      fontSize: '20px',
+                      cursor: 'pointer',
+                      padding: 0,
+                      width: '24px',
+                      height: '24px',
+                      margin: 0
+                    }}
+                    title="סגור"
+                  >
+                    ×
+                  </button>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <h2 style={{ fontSize: '1.1em', margin: 0 }}>{weather.name}</h2>
