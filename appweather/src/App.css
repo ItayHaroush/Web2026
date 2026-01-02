@@ -8,18 +8,79 @@ body {
 
 body {
   min-height: 100vh;
-  background: linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%);
+  background: #e8eef5;
   font-family: 'Segoe UI', Arial, sans-serif;
+  transition: background 0.6s ease;
+}
+
+.bg-sunny {
+  background:
+    radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.7) 0, rgba(255, 255, 255, 0) 35%),
+    radial-gradient(circle at 80% 30%, rgba(255, 255, 255, 0.6) 0, rgba(255, 255, 255, 0) 30%),
+    linear-gradient(160deg, #fdf7d9 0%, #cfe9ff 50%, #b7ddff 100%);
+}
+
+.bg-rainy {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.06) 25%, transparent 25%) -20px 0/40px 40px,
+    linear-gradient(225deg, rgba(255, 255, 255, 0.06) 25%, transparent 25%) -20px 0/40px 40px,
+    linear-gradient(45deg, rgba(255, 255, 255, 0.06) 25%, transparent 25%) 0 0/40px 40px,
+    linear-gradient(315deg, rgba(255, 255, 255, 0.06) 25%, #3a4552 25%) 0 0/40px 40px,
+    linear-gradient(160deg, #596270 0%, #3f4a57 50%, #2f3741 100%);
+}
+
+.page-shell {
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+}
+
+.bg-video-wrapper {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  overflow: hidden;
+  background: #2f3741;
+}
+
+.bg-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: saturate(1.05) brightness(0.9);
+}
+
+.bg-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(180deg, rgba(10, 25, 41, 0.18) 0%, rgba(255, 255, 255, 0.1) 55%, rgba(255, 255, 255, 0.3) 100%);
+  pointer-events: none;
 }
 
 
 .App {
   direction: rtl;
   text-align: center;
-  margin-top: 40px;
+  display: inline-block;
+  margin: 0 auto;
+  margin-top: 32px;
   padding: 0 8px;
 }
 
+.App h1 {
+  color: #fff;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+
+.App h3 {
+  color: #fff;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  margin-top: -10px;
+  font-weight: normal;
+}
 
 input[type="text"],
 select {
