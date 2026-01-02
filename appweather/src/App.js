@@ -122,9 +122,12 @@ class WeatherApp extends Component {
   };
 
   getThemeFromWeather = (weather) => {
-    const main = (weather.weather && weather.weather[0] && weather.weather[0].main ? weather.weather[0].main : '').toLowerCase();
-    const rainy = ['rain', 'drizzle', 'thunderstorm'].includes(main);
-    return rainy ? 'rainy' : 'sunny';
+    if (!weather || !weather.weather || !weather.weather[0]) return 'sunny';
+    const { main, id } = weather.weather[0];
+    if (['Rain', 'Drizzle', 'Thunderstorm'].includes(main)) return 'rainy';
+    // עננות כבדה (803/804) תוצג כרקע גשום/כהה
+    if (main === 'Clouds' && id >= 803) return 'rainy';
+    return 'sunny';
   };
 
   updateBodyTheme = (theme) => {
