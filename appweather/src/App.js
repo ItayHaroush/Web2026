@@ -99,7 +99,7 @@ class WeatherApp extends Component {
               item => item.id !== data.id && (!isCurrentLocation || !item.isCurrentLocation)
             )
           ];
-          
+
           // עדכן את הרקע רק אם זהו מיקום נוכחי
           if (isCurrentLocation) {
             const theme = this.getThemeFromWeather(enriched);
@@ -238,62 +238,62 @@ class WeatherApp extends Component {
             {this.state.results
               .filter(weather => !this.state.closedWeatherIds.includes(weather.id))
               .map((weather, idx) => {
-              const isFav = this.state.favorites.some(fav => (typeof fav === 'string' ? fav : fav.name) === weather.name);
-              return (
-                <div
-                  key={weather.id + idx}
-                  className="weather-card mini"
-                >
-                  <button
-                    onClick={() => this.closeWeatherCard(weather.id)}
-                    style={{
-                      position: 'absolute',
-                      top: '4px',
-                      left: '4px',
-                      background: 'none',
-                      border: 'none',
-                      color: '#999',
-                      fontSize: '20px',
-                      cursor: 'pointer',
-                      padding: 0,
-                      width: '24px',
-                      height: '24px',
-                      margin: 0
-                    }}
-                    title="סגור"
+                const isFav = this.state.favorites.some(fav => (typeof fav === 'string' ? fav : fav.name) === weather.name);
+                return (
+                  <div
+                    key={weather.id + idx}
+                    className="weather-card mini"
                   >
-                    ×
-                  </button>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <h2 style={{ fontSize: '1.1em', margin: 0 }}>{weather.name}</h2>
-                      {weather.isCurrentLocation && (
-                        <span style={{ background: '#e0f7fa', color: '#00796b', borderRadius: '12px', padding: '4px 10px', fontSize: '0.85em' }}>
-                          מיקום נוכחי
-                        </span>
-                      )}
-                    </div>
-                    <span className="weather-icon" style={{ fontSize: 28 }}>{getCustomIcon(weather.weather[0].icon)}</span>
-                  </div>
-                  <p style={{ margin: '6px 0', fontSize: '0.95em' }}>{weather.weather[0].description}</p>
-                  <p style={{ margin: '6px 0', fontSize: '0.95em' }}>טמפ׳: {weather.main.temp}°C</p>
-                  {/* נתונים נוספים */}
-                  <p style={{ margin: '6px 0', fontSize: '0.9em', color: '#4682b4' }}>
-                    לחות: {weather.main.humidity}% | רוח: {weather.wind.speed} מ"ש
-                  </p>
-                  <p style={{ margin: '6px 0', fontSize: '0.9em', color: '#4682b4' }}>
-                    טמפ׳ מינ׳: {weather.main.temp_min}°C | טמפ׳ מקס׳: {weather.main.temp_max}°C
-                  </p>
-
-                  {/* כפתור הוספה למועדפים מתוך כרטיס */}
-                  {!isFav && (
-                    <button onClick={() => this.addToFavorites(weather.name)} style={{ background: '#ffd600', color: '#333', marginTop: '6px', fontSize: '0.95em', padding: '6px 10px', maxWidth: 120 }}>
-                      הוסף למועדפים
+                    <button
+                      onClick={() => this.closeWeatherCard(weather.id)}
+                      style={{
+                        position: 'absolute',
+                        top: '4px',
+                        left: '4px',
+                        background: 'none',
+                        border: 'none',
+                        color: '#999',
+                        fontSize: '20px',
+                        cursor: 'pointer',
+                        padding: 0,
+                        width: '24px',
+                        height: '24px',
+                        margin: 0
+                      }}
+                      title="סגור"
+                    >
+                      ×
                     </button>
-                  )}
-                </div>
-              );
-            })}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <h2 style={{ fontSize: '1.1em', margin: 0 }}>{weather.name}</h2>
+                        {weather.isCurrentLocation && (
+                          <span style={{ background: '#e0f7fa', color: '#00796b', borderRadius: '12px', padding: '4px 10px', fontSize: '0.85em' }}>
+                            מיקום נוכחי
+                          </span>
+                        )}
+                      </div>
+                      <span className="weather-icon" style={{ fontSize: 28 }}>{getCustomIcon(weather.weather[0].icon)}</span>
+                    </div>
+                    <p style={{ margin: '6px 0', fontSize: '0.95em' }}>{weather.weather[0].description}</p>
+                    <p style={{ margin: '6px 0', fontSize: '0.95em' }}>טמפ׳: {weather.main.temp}°C</p>
+                    {/* נתונים נוספים */}
+                    <p style={{ margin: '6px 0', fontSize: '0.9em', color: '#4682b4' }}>
+                      לחות: {weather.main.humidity}% | רוח: {weather.wind.speed} מ"ש
+                    </p>
+                    <p style={{ margin: '6px 0', fontSize: '0.9em', color: '#4682b4' }}>
+                      טמפ׳ מינ׳: {weather.main.temp_min}°C | טמפ׳ מקס׳: {weather.main.temp_max}°C
+                    </p>
+
+                    {/* כפתור הוספה למועדפים מתוך כרטיס */}
+                    {!isFav && (
+                      <button onClick={() => this.addToFavorites(weather.name)} style={{ background: '#ffd600', color: '#333', marginTop: '6px', fontSize: '0.95em', padding: '6px 10px', maxWidth: 120 }}>
+                        הוסף למועדפים
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
           </div>
         </div>
       </div>
