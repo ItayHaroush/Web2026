@@ -17,11 +17,37 @@ class OrderItem extends Model
         'price_at_order',
     ];
 
+    protected $appends = ['price', 'subtotal', 'name'];
+
     protected $casts = [
         'price_at_order' => 'decimal:2',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
+
+    /**
+     * Accessor לשדה price (עבור תאימות עם Frontend)
+     */
+    public function getPriceAttribute()
+    {
+        return $this->price_at_order;
+    }
+
+    /**
+     * Accessor לשדה subtotal (מחיר כפול כמות)
+     */
+    public function getSubtotalAttribute()
+    {
+        return $this->price_at_order * $this->quantity;
+    }
+
+    /**
+     * Accessor לשדה name (שם הפריט)
+     */
+    public function getNameAttribute()
+    {
+        return $this->menuItem ? $this->menuItem->name : 'פריט לא ידוע';
+    }
 
     /**
      * ההזמנה שמכילה את הפריט

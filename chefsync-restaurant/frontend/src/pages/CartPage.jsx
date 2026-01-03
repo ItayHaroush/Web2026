@@ -51,6 +51,9 @@ export default function CartPage() {
             // שלח את ההזמנה
             const response = await orderService.createOrder(orderData);
 
+            // שמור את ה-order ID ב-localStorage כהזמנה פעילה
+            localStorage.setItem(`activeOrder_${tenantId}`, response.data.id);
+
             // סיים בהצלחה
             clearCart();
             navigate(`/order-status/${response.data.id}`);

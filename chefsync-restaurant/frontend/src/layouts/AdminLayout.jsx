@@ -1,13 +1,41 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAdminAuth } from '../context/AdminAuthContext';
+import { useRestaurantStatus } from '../context/RestaurantStatusContext';
+import api from '../services/apiClient';
 import logo from '../images/ChefSyncLogoIcon.png';
 
 export default function AdminLayout({ children }) {
     const [sidebarOpen, setSidebarOpen] = useState(false);
-    const { user, logout, isOwner, isManager } = useAdminAuth();
+    const { user, logout, isOwner, isManager, getAuthHeaders } = useAdminAuth();
+    const { restaurantStatus, setRestaurantStatus } = useRestaurantStatus();
     const location = useLocation();
     const navigate = useNavigate();
+
+    // טען סטטוס המסעדה בכל טעינה של layout
+    useEffect(() => {
+        const fetchRestaurantStatus = async () => {
+            try {
+                const response = await api.get('/admin/restaurant', { headers: getAuthHeaders() });
+                if (response.data.success) {
+                    const restaurant = response.data.restaurant;
+                    setRestaurantStatus({
+                        is_open: restaurant.is_open,
+                        is_override: restaurant.is_override_status || false,
+                    });
+                }
+            } catch (error) {
+                console.error('Failed to fetch restaurant status:', error);
+            }
+        };
+
+        if (user) {
+            fetchRestaurantStatus();
+            // רענן כל 30 שניות
+            const interval = setInterval(fetchRestaurantStatus, 30000);
+            return () => clearInterval(interval);
+        }
+    }, [user, getAuthHeaders, setRestaurantStatus]);
 
     const handleLogout = async () => {
         await logout();
@@ -159,7 +187,22 @@ export default function AdminLayout({ children }) {
                         {menuItems.find(item => item.path === location.pathname)?.label || 'פאנל ניהול'}
                     </h1>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-4">
+                        {/* סטטוס בזמן אמת */}
+                        <div className="flex items-center gap-2">
+                            <span className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${restaurantStatus.is_open
+                                    ? 'bg-green-100 text-green-700'
+                                    : 'bg-red-100 text-red-700'
+                                }`}>
+                                {restaurantStatus.is_open ? '✓ פתוח' : '✗ סגור'}
+                            </span>
+                            {restaurantStatus.is_override && (
+                                <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full font-semibold">
+                                    🔒 כפוי
+                                </span>
+                            )}
+                        </div>
+
                         <span className="text-sm text-gray-500 hidden sm:block">
                             {new Date().toLocaleDateString('he-IL', {
                                 weekday: 'long',

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
+import { useNavigate } from 'react-router-dom';
 import { CustomerLayout } from '../layouts/CustomerLayout';
 import menuService from '../services/menuService';
 import { UI_TEXT } from '../constants/ui';
@@ -12,17 +13,25 @@ import axios from 'axios';
 
 export default function MenuPage() {
     const { tenantId } = useAuth();
+    const navigate = useNavigate();
     const { addToCart } = useCart();
     const [menu, setMenu] = useState([]);
     const [restaurant, setRestaurant] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [activeCategory, setActiveCategory] = useState(null);
+    const [activeOrderId, setActiveOrderId] = useState(null);
     const categoryRefs = useRef({});
 
     useEffect(() => {
         loadMenu();
         loadRestaurantInfo();
+
+        // בדוק אם יש הזמנה פעילה
+        const savedOrderId = localStorage.getItem(`activeOrder_${tenantId}`);
+        if (savedOrderId) {
+            setActiveOrderId(savedOrderId);
+        }
     }, [tenantId]);
 
     // הגדרת קטגוריה פעילה ראשונה
@@ -103,6 +112,21 @@ export default function MenuPage() {
 
     return (
         <CustomerLayout>
+            {/* כרטיסייה של הזמנה פעילה */}
+            {activeOrderId && (
+                <div className="mb-6 p-4 bg-gradient-to-r from-brand-primary to-brand-secondary rounded-2xl shadow-lg text-white cursor-pointer hover:shadow-xl transition-shadow"
+                    onClick={() => navigate(`/order-status/${activeOrderId}`)}>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="font-semibold mb-1">📍 הזמנה בעיצומה</p>
+                            <p className="text-sm opacity-90">הזמנה #{activeOrderId}</p>
+                        </div>
+                        <div className="text-2xl">👉</div>
+                    </div>
+                    <p className="text-xs opacity-75 mt-2">לחץ כדי לראות סטטוס מלא</p>
+                </div>
+            )}
+
             {/* Hero Section - סגנון Wolt */}
             <div className="relative -mx-4 sm:-mx-6 lg:-mx-8 mb-8">
                 {/* רקע עם לוגו גדול */}

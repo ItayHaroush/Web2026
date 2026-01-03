@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { CustomerLayout } from '../layouts/CustomerLayout';
 import orderService from '../services/orderService';
@@ -11,6 +11,8 @@ import { ORDER_STATUS, ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from '../const
 
 export default function OrderStatusPage() {
     const { orderId } = useParams();
+    const { tenantId } = useAuth();
+    const navigate = useNavigate();
     const [order, setOrder] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -20,6 +22,11 @@ export default function OrderStatusPage() {
             setError(null);
             const data = await orderService.getOrder(orderId);
             setOrder(data.data);
+
+            // אם ההזמנה הושלמה, נקה את ה-localStorage
+            if (data.data?.status === 'delivered') {
+                localStorage.removeItem(`activeOrder_${tenantId}`);
+            }
         } catch (err) {
             console.error('שגיאה בטעינת סטטוס הזמנה:', err);
             setError('לא הצלחנו לטעון את סטטוס ההזמנה');
@@ -153,12 +160,12 @@ export default function OrderStatusPage() {
 
                 {/* ניווט */}
                 <div className="text-center">
-                    <a
-                        href="/menu"
+                    <button
+                        onClick={() => navigate('/menu')}
                         className="bg-brand-primary text-white px-6 py-3 rounded-lg hover:bg-gray-800 transition inline-block"
                     >
                         חזור לתפריט
-                    </a>
+                    </button>
                 </div>
             </div>
         </CustomerLayout>

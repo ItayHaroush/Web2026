@@ -17,10 +17,17 @@ export default function AdminCategories() {
 
     const fetchCategories = async () => {
         try {
+            console.log('Fetching categories...');
             const response = await api.get('/admin/categories', { headers: getAuthHeaders() });
-            if (response.data.success) setCategories(response.data.categories);
+            console.log('Categories response:', response.data);
+
+            if (response.data.success) {
+                setCategories(response.data.categories || []);
+                console.log('Set categories:', response.data.categories);
+            }
         } catch (error) {
             console.error('Failed to fetch categories:', error);
+            console.error('Error details:', error.response?.data);
         } finally {
             setLoading(false);
         }

@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AdminAuthProvider, useAdminAuth } from './context/AdminAuthContext';
+import { RestaurantStatusProvider } from './context/RestaurantStatusContext';
 import { CartProvider } from './context/CartContext';
 import { ToastProvider } from './context/ToastContext';
 import HomePage from './pages/HomePage';
@@ -118,13 +119,15 @@ export default function App() {
   return (
     <Router>
       <AdminAuthProvider>
-        <AuthProvider>
-          <ToastProvider>
-            <CartProvider>
-              <AppRoutes />
-            </CartProvider>
-          </ToastProvider>
-        </AuthProvider>
+        <RestaurantStatusProvider>
+          <AuthProvider>
+            <ToastProvider>
+              <CartProvider>
+                <AppRoutes />
+              </CartProvider>
+            </ToastProvider>
+          </AuthProvider>
+        </RestaurantStatusProvider>
       </AdminAuthProvider>
     </Router>
   );

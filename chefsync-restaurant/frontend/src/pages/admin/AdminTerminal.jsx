@@ -17,12 +17,17 @@ export default function AdminTerminal() {
 
     const fetchOrders = async () => {
         try {
+            // קבל את כל ההזמנות וסנן לפי סטטוס פתוח
             const response = await api.get('/admin/orders', {
-                headers: getAuthHeaders(),
-                params: { status: 'pending' }
+                headers: getAuthHeaders()
             });
             if (response.data.success) {
-                setOrders(response.data.orders.data || response.data.orders);
+                // סנן רק הזמנות שלא הושלמו או בוטלו
+                const allOrders = response.data.orders.data || response.data.orders;
+                const openOrders = allOrders.filter(order =>
+                    order.status !== 'delivered' && order.status !== 'cancelled'
+                );
+                setOrders(openOrders);
             }
         } catch (error) {
             console.error('Failed to fetch orders:', error);
@@ -43,8 +48,9 @@ export default function AdminTerminal() {
     const nextStatus = (status) => {
         const flow = {
             pending: 'preparing',
+            received: 'preparing',
             preparing: 'ready',
-            ready: isDelivery() ? 'delivering' : 'delivered',
+            ready: 'delivering',
             delivering: 'delivered',
         };
         return flow[status] || null;
@@ -52,6 +58,7 @@ export default function AdminTerminal() {
 
     const statusLabel = {
         pending: 'ממתין',
+        received: 'התקבל',
         preparing: 'בהכנה',
         ready: 'מוכן',
         delivering: 'במשלוח',
@@ -74,7 +81,7 @@ export default function AdminTerminal() {
             <div className="flex items-center justify-between mb-4">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-800">🖥️ מסוף סניף</h1>
-                    <p className="text-gray-500">הזמנות ממתינות / בהכנה</p>
+                    <p className="text-gray-500">הזמנות פתוחות</p>
                 </div>
                 <button
                     onClick={fetchOrders}

@@ -18,11 +18,18 @@ class Restaurant extends Model
         'phone',
         'address',
         'is_open',
+        'is_override_status',
         'description',
+        'logo_url',
+        'operating_days',
+        'operating_hours',
     ];
 
     protected $casts = [
         'is_open' => 'boolean',
+        'is_override_status' => 'boolean',
+        'operating_days' => 'array',
+        'operating_hours' => 'array',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];

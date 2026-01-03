@@ -26,20 +26,24 @@ class AdminController extends Controller
                 ->whereDate('created_at', today())
                 ->count(),
             'orders_pending' => Order::where('restaurant_id', $restaurantId)
-                ->whereIn('status', ['pending', 'preparing'])
+                ->whereIn('status', ['pending', 'received', 'preparing'])
                 ->count(),
-            'revenue_today' => Order::where('restaurant_id', $restaurantId)
-                ->whereDate('created_at', today())
-                ->where('status', '!=', 'cancelled')
-                ->sum('total'),
-            'revenue_week' => Order::where('restaurant_id', $restaurantId)
-                ->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()])
-                ->where('status', '!=', 'cancelled')
-                ->sum('total'),
             'menu_items' => MenuItem::where('restaurant_id', $restaurantId)->count(),
             'categories' => Category::where('restaurant_id', $restaurantId)->count(),
             'employees' => User::where('restaurant_id', $restaurantId)->count(),
         ];
+
+        // רק בעלים ומנהלים רואים הכנסות
+        if ($user->isOwner() || $user->isManager()) {
+            $stats['revenue_today'] = Order::where('restaurant_id', $restaurantId)
+                ->whereDate('created_at', today())
+                ->where('status', '!=', 'cancelled')
+                ->sum('total_amount');
+            $stats['revenue_week'] = Order::where('restaurant_id', $restaurantId)
+                ->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()])
+                ->where('status', '!=', 'cancelled')
+                ->sum('total_amount');
+        }
 
         // הזמנות אחרונות
         $recentOrders = Order::where('restaurant_id', $restaurantId)
@@ -152,14 +156,32 @@ class AdminController extends Controller
     public function getMenuItems(Request $request)
     {
         $user = $request->user();
-        $query = MenuItem::where('restaurant_id', $user->restaurant_id)
+        $restaurantId = $user->restaurant_id;
+
+        \Log::info('getMenuItems called', [
+            'user_id' => $user->id,
+            'restaurant_id' => $restaurantId,
+            'user_name' => $user->name,
+        ]);
+
+        $query = MenuItem::where('restaurant_id', $restaurantId)
             ->with('category');
 
         if ($request->has('category_id')) {
             $query->where('category_id', $request->category_id);
         }
 
-        $items = $query->orderBy('category_id')->orderBy('sort_order')->get();
+        $items = $query->orderBy('category_id')->get();
+
+        \Log::info('Found items', [
+            'count' => $items->count(),
+            'items' => $items->map(fn($item) => [
+                'id' => $item->id,
+                'name' => $item->name,
+                'category_id' => $item->category_id,
+                'restaurant_id' => $item->restaurant_id,
+            ])->toArray(),
+        ]);
 
         return response()->json([
             'success' => true,
@@ -292,7 +314,9 @@ class AdminController extends Controller
             'description' => 'nullable|string',
             'phone' => 'sometimes|string|max:20',
             'address' => 'sometimes|string|max:255',
-            'is_open' => 'sometimes|boolean',
+            'is_open' => 'sometimes',
+            'operating_days' => 'nullable|string',
+            'operating_hours' => 'nullable|string',
             'logo' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
         ]);
 
@@ -303,7 +327,73 @@ class AdminController extends Controller
             $restaurant->logo_url = $this->uploadImage($request->file('logo'), 'logos');
         }
 
-        $restaurant->update($request->only(['name', 'description', 'phone', 'address', 'is_open']));
+        // המר את is_open לבוליאן
+        $isOpen = $request->input('is_open');
+        if ($isOpen !== null && $isOpen !== '') {
+            // תמיד המר ל-boolean
+            if ($isOpen === '1' || $isOpen === 1 || $isOpen === true) {
+                $isOpen = true;
+            } elseif ($isOpen === '0' || $isOpen === 0 || $isOpen === false) {
+                $isOpen = false;
+            } else {
+                $isOpen = (bool) $isOpen;
+            }
+        }
+
+        $updateData = [
+            'name' => $request->input('name'),
+            'description' => $request->input('description'),
+            'phone' => $request->input('phone'),
+            'address' => $request->input('address'),
+        ];
+
+        // אם נשלח is_open, השתמש בערך שנשלח (כפיית ידנית)
+        $hasExplicitIsOpen = $request->has('is_open') && $request->filled('is_open');
+        if ($hasExplicitIsOpen) {
+            $updateData['is_open'] = $isOpen;
+            $updateData['is_override_status'] = true;
+            \Log::debug('🔒 Override status to: ' . ($isOpen ? 'true' : 'false'));
+        } else {
+            $updateData['is_override_status'] = false;
+            \Log::debug('📅 Will calculate status from operating hours/days');
+        }
+
+        // עבוד עם JSON strings מ-FormData
+        if ($request->has('operating_days') && !empty($request->input('operating_days'))) {
+            try {
+                $operatingDays = json_decode($request->input('operating_days'), true);
+                if (is_array($operatingDays)) {
+                    $updateData['operating_days'] = $operatingDays;
+                }
+            } catch (\Exception $e) {
+                // אם לא ניתן לפרסר, השאר את הערך הקודם
+            }
+        }
+
+        if ($request->has('operating_hours') && !empty($request->input('operating_hours'))) {
+            try {
+                $operatingHours = json_decode($request->input('operating_hours'), true);
+                if (is_array($operatingHours) && isset($operatingHours['open']) && isset($operatingHours['close'])) {
+                    $updateData['operating_hours'] = $operatingHours;
+                }
+            } catch (\Exception $e) {
+                // אם לא ניתן לפרסר, השאר את הערך הקודם
+            }
+        }
+
+        // חשב סטטוס פתיחה אוטומטי בהתאם לימים ושעות רק אם לא כפינו ידנית
+        if (!$hasExplicitIsOpen && (isset($updateData['operating_days']) || isset($updateData['operating_hours']))) {
+            $operatingDays = $updateData['operating_days'] ?? $restaurant->operating_days ?? [];
+            $operatingHours = $updateData['operating_hours'] ?? $restaurant->operating_hours ?? [];
+
+            $calculated = $this->isRestaurantOpen($operatingDays, $operatingHours);
+            $updateData['is_open'] = $calculated;
+            \Log::debug('📅 Calculated status: ' . ($calculated ? 'true' : 'false'));
+        }
+
+        \Log::debug('Update data:', $updateData);
+        $restaurant->update($updateData);
+        \Log::debug('Restaurant after update:', $restaurant->toArray());
 
         return response()->json([
             'success' => true,
@@ -447,10 +537,12 @@ class AdminController extends Controller
             ->findOrFail($id);
 
         $request->validate([
-            'status' => 'required|in:pending,preparing,ready,delivering,delivered,cancelled',
+            'status' => 'required|in:pending,received,preparing,ready,delivering,delivered,cancelled',
         ]);
 
         $order->status = $request->status;
+        $order->updated_by_name = $user->name;
+        $order->updated_by_user_id = $user->id;
         $order->save();
 
         return response()->json([
@@ -477,5 +569,44 @@ class AdminController extends Controller
         if (Storage::exists($path)) {
             Storage::delete($path);
         }
+    }
+
+    /**
+     * חשב אם המסעדה פתוחה בהתאם לימי פתיחה ושעות פתיחה
+     */
+    private function isRestaurantOpen($operatingDays = [], $operatingHours = [])
+    {
+        // אם אין מידע על ימי פתיחה ושעות, נחזיר true כברירת מחדל
+        if (empty($operatingDays) && empty($operatingHours)) {
+            return true;
+        }
+
+        $now = \Carbon\Carbon::now('Asia/Jerusalem');
+        $hebrewDays = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+        $currentDayName = $hebrewDays[$now->dayOfWeek];
+
+        // בדוק אם היום הנוכחי הוא יום פתיחה
+        if (!empty($operatingDays) && !($operatingDays[$currentDayName] ?? false)) {
+            return false;
+        }
+
+        // אם אין שעות מוגדרות, המסעדה פתוחה ביום זה
+        if (empty($operatingHours)) {
+            return true;
+        }
+
+        // בדוק אם השעה הנוכחית בתוך שעות הפתיחה
+        $currentTime = $now->format('H:i');
+        $open = $operatingHours['open'] ?? '00:00';
+        $close = $operatingHours['close'] ?? '23:59';
+
+        // אם שעת הסגירה קטנה משעת הפתיחה (פתוח בין לילה), צריך טיפול מיוחד
+        if ($close < $open) {
+            // פתוח מ-open עד חצות, ומחצות עד close
+            return $currentTime >= $open || $currentTime <= $close;
+        }
+
+        // טיפול רגיל
+        return $currentTime >= $open && $currentTime <= $close;
     }
 }
