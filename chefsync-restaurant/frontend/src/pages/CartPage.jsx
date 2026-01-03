@@ -71,12 +71,12 @@ export default function CartPage() {
 
                     <div className="bg-blue-50 border border-blue-200 text-blue-900 px-6 py-8 rounded-lg text-center">
                         <p className="text-lg mb-4">{UI_TEXT.MSG_EMPTY_CART}</p>
-                        <a
-                            href="/menu"
+                        <button
+                            onClick={() => navigate('/menu')}
                             className="bg-brand-primary text-white px-6 py-3 rounded-lg hover:bg-gray-800 transition inline-block"
                         >
                             חזור לתפריט
-                        </a>
+                        </button>
                     </div>
                 </div>
             </CustomerLayout>

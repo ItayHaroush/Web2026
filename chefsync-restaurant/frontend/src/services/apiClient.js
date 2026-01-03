@@ -55,10 +55,16 @@ apiClient.interceptors.response.use(
     (response) => response,
     (error) => {
         if (error.response?.status === 401) {
-            // Token לא תקף - נקה את המידע וזרוק ללוגין
+            // Token לא תקף - נקה מידע רלוונטי והפנה לפי סוג משתמש
+            const hasAdminToken = !!localStorage.getItem('admin_token');
             localStorage.removeItem('authToken');
             localStorage.removeItem('tenantId');
-            window.location.href = '/login';
+            if (hasAdminToken) {
+                localStorage.removeItem('admin_token');
+                window.location.href = '/admin/login';
+            } else {
+                window.location.href = '/login';
+            }
         }
         return Promise.reject(error);
     }
