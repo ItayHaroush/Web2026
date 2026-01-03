@@ -10,7 +10,7 @@ import logo from '../images/ChefSyncLogoIcon.png';
  */
 
 export default function HomePage() {
-    const { loginAsCustomer } = useAuth();
+    const { loginAsCustomer, tenantId } = useAuth();
     const [restaurants, setRestaurants] = useState([]);
     const [cities, setCities] = useState([]);
     const [selectedCity, setSelectedCity] = useState('');
@@ -19,7 +19,18 @@ export default function HomePage() {
     const [userLocation, setUserLocation] = useState(null);
     const [currentCityName, setCurrentCityName] = useState('');
     const [autoSelectedCity, setAutoSelectedCity] = useState(false);
+    const [activeOrderId, setActiveOrderId] = useState(null);
     const navigate = useNavigate();
+
+    // בדוק הזמנה פעילה כשיש tenant ID
+    useEffect(() => {
+        if (tenantId) {
+            const savedOrderId = localStorage.getItem(`activeOrder_${tenantId}`);
+            if (savedOrderId) {
+                setActiveOrderId(savedOrderId);
+            }
+        }
+    }, [tenantId]);
 
     // טען מיקום נוכחי
     useEffect(() => {
@@ -169,6 +180,21 @@ export default function HomePage() {
 
     return (
         <CustomerLayout>
+            {/* כרטיסייה של הזמנה פעילה */}
+            {activeOrderId && (
+                <div className="mb-6 p-4 bg-gradient-to-r from-brand-primary to-brand-secondary rounded-2xl shadow-lg text-white cursor-pointer hover:shadow-xl transition-shadow"
+                    onClick={() => navigate(`/order-status/${activeOrderId}`)}>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="font-semibold mb-1">📍 הזמנה בעיצומה</p>
+                            <p className="text-sm opacity-90">הזמנה #{activeOrderId}</p>
+                        </div>
+                        <div className="text-2xl">👉</div>
+                    </div>
+                    <p className="text-xs opacity-75 mt-2">לחץ כדי לראות סטטוס מלא</p>
+                </div>
+            )}
+
             {/* Hero Section - סגנון Wolt */}
             <div className="relative -mx-4 sm:-mx-6 lg:-mx-8 -mt-8 mb-6">
                 <div className="relative h-48 sm:h-72 bg-gradient-to-br from-brand-dark via-brand-primary to-brand-secondary overflow-hidden">

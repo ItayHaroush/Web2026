@@ -4,10 +4,13 @@ import AdminLayout from '../../layouts/AdminLayout';
 import api from '../../services/apiClient';
 
 export default function AdminDashboard() {
-    const { getAuthHeaders } = useAdminAuth();
+    const { getAuthHeaders, isOwner, isManager } = useAdminAuth();
     const [stats, setStats] = useState(null);
     const [recentOrders, setRecentOrders] = useState([]);
     const [loading, setLoading] = useState(true);
+
+    // רק בעלים ומנהלים רואים הכנסות
+    const canViewRevenue = isOwner() || isManager();
 
     useEffect(() => {
         fetchDashboard();
@@ -18,12 +21,16 @@ export default function AdminDashboard() {
             const response = await api.get('/admin/dashboard', {
                 headers: getAuthHeaders()
             });
+            console.log('Dashboard response:', response.data);
             if (response.data.success) {
                 setStats(response.data.stats);
                 setRecentOrders(response.data.recent_orders);
+                console.log('Stats:', response.data.stats);
+                console.log('Recent orders:', response.data.recent_orders);
             }
         } catch (error) {
             console.error('Failed to fetch dashboard:', error);
+            console.error('Error details:', error.response?.data);
         } finally {
             setLoading(false);
         }
@@ -34,33 +41,38 @@ export default function AdminDashboard() {
             key: 'orders_today',
             label: 'הזמנות היום',
             icon: '📦',
-            color: 'bg-blue-500'
+            color: 'bg-blue-500',
+            show: true
         },
         {
             key: 'orders_pending',
             label: 'ממתינות לטיפול',
             icon: '⏳',
-            color: 'bg-orange-500'
+            color: 'bg-orange-500',
+            show: true
         },
         {
             key: 'revenue_today',
             label: 'הכנסות היום',
             icon: '💰',
             color: 'bg-green-500',
-            format: (v) => `₪${(v || 0).toLocaleString()}`
+            format: (v) => `₪${(v || 0).toLocaleString()}`,
+            show: canViewRevenue
         },
         {
             key: 'revenue_week',
             label: 'הכנסות השבוע',
             icon: '📈',
             color: 'bg-purple-500',
-            format: (v) => `₪${(v || 0).toLocaleString()}`
+            format: (v) => `₪${(v || 0).toLocaleString()}`,
+            show: canViewRevenue
         },
-    ];
+    ].filter(card => card.show);
 
     const getStatusBadge = (status) => {
         const statuses = {
             pending: { text: 'ממתין', color: 'bg-yellow-100 text-yellow-700' },
+            received: { text: 'התקבל', color: 'bg-yellow-100 text-yellow-700' },
             preparing: { text: 'בהכנה', color: 'bg-blue-100 text-blue-700' },
             ready: { text: 'מוכן', color: 'bg-green-100 text-green-700' },
             delivering: { text: 'במשלוח', color: 'bg-purple-100 text-purple-700' },
@@ -173,7 +185,9 @@ export default function AdminDashboard() {
                                             <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusBadge.color}`}>
                                                 {statusBadge.text}
                                             </span>
-                                            <p className="text-lg font-bold text-gray-800 mt-1">₪{order.total}</p>
+                                            <p className="text-lg font-bold text-gray-800 mt-1">
+                                                ₪{Number(order.total || order.total_amount || 0).toFixed(2)}
+                                            </p>
                                         </div>
                                     </div>
                                 </div>

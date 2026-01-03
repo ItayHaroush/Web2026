@@ -26,15 +26,33 @@ export default function AdminMenu() {
 
     const fetchData = async () => {
         try {
+            console.log('Fetching menu items and categories...');
             const [itemsRes, categoriesRes] = await Promise.all([
                 api.get('/admin/menu-items', { headers: getAuthHeaders() }),
                 api.get('/admin/categories', { headers: getAuthHeaders() })
             ]);
 
-            if (itemsRes.data.success) setItems(itemsRes.data.items);
-            if (categoriesRes.data.success) setCategories(categoriesRes.data.categories);
+            console.log('Items response:', itemsRes.data);
+            console.log('Items array:', itemsRes.data.items);
+            console.log('Categories response:', categoriesRes.data);
+            console.log('Categories array:', categoriesRes.data.categories);
+
+            if (itemsRes.data.success) {
+                const itemsData = itemsRes.data.items || [];
+                setItems(itemsData);
+                console.log('Set items count:', itemsData.length);
+                itemsData.forEach(item => {
+                    console.log(`Item: ${item.name}, Category ID: ${item.category_id}, Category:`, item.category);
+                });
+            }
+            if (categoriesRes.data.success) {
+                const catsData = categoriesRes.data.categories || [];
+                setCategories(catsData);
+                console.log('Set categories count:', catsData.length);
+            }
         } catch (error) {
             console.error('Failed to fetch data:', error);
+            console.error('Error details:', error.response?.data);
         } finally {
             setLoading(false);
         }
@@ -183,83 +201,91 @@ export default function AdminMenu() {
 
             {/* רשימת פריטים */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredItems.map((item) => (
-                    <div
-                        key={item.id}
-                        className={`bg-white rounded-2xl shadow-sm overflow-hidden ${!item.is_available ? 'opacity-60' : ''
-                            }`}
-                    >
-                        {/* תמונה */}
-                        <div className="h-40 bg-gray-100 relative">
-                            {item.image_url ? (
-                                <img
-                                    src={item.image_url}
-                                    alt={item.name}
-                                    className="w-full h-full object-cover"
-                                />
-                            ) : (
-                                <div className="w-full h-full flex items-center justify-center text-4xl text-gray-300">
-                                    🍽️
-                                </div>
-                            )}
-                            {!item.is_available && (
-                                <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                                    <span className="bg-red-500 text-white px-4 py-2 rounded-full font-bold">
-                                        לא זמין
-                                    </span>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* תוכן */}
-                        <div className="p-4">
-                            <div className="flex items-start justify-between mb-2">
-                                <div>
-                                    <h3 className="font-bold text-gray-800">{item.name}</h3>
-                                    <p className="text-sm text-gray-500">{item.category?.name}</p>
-                                </div>
-                                <span className="text-lg font-bold text-brand-primary">₪{item.price}</span>
+                {(() => {
+                    console.log('Rendering items. Total items:', items.length, 'Filtered items:', filteredItems.length);
+                    console.log('Filter category:', filterCategory);
+                    console.log('Filtered items:', filteredItems);
+                    return filteredItems.map((item) => (
+                        <div
+                            key={item.id}
+                            className={`bg-white rounded-2xl shadow-sm overflow-hidden ${!item.is_available ? 'opacity-60' : ''
+                                }`}
+                        >
+                            {/* תמונה */}
+                            <div className="h-40 bg-gray-100 relative">
+                                {item.image_url ? (
+                                    <img
+                                        src={item.image_url}
+                                        alt={item.name}
+                                        className="w-full h-full object-cover"
+                                    />
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-4xl text-gray-300">
+                                        🍽️
+                                    </div>
+                                )}
+                                {!item.is_available && (
+                                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                                        <span className="bg-red-500 text-white px-4 py-2 rounded-full font-bold">
+                                            לא זמין
+                                        </span>
+                                    </div>
+                                )}
                             </div>
 
-                            {item.description && (
-                                <p className="text-sm text-gray-600 mb-4 line-clamp-2">{item.description}</p>
-                            )}
-
-                            {/* כפתורי פעולה */}
-                            {isManager() && (
-                                <div className="flex gap-2">
-                                    <button
-                                        onClick={() => toggleAvailability(item)}
-                                        className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${item.is_available
-                                            ? 'bg-green-50 text-green-600 hover:bg-green-100'
-                                            : 'bg-red-50 text-red-600 hover:bg-red-100'
-                                            }`}
-                                    >
-                                        {item.is_available ? '✓ זמין' : '✕ לא זמין'}
-                                    </button>
-                                    <button
-                                        onClick={() => openEditModal(item)}
-                                        className="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200"
-                                    >
-                                        ✏️
-                                    </button>
-                                    <button
-                                        onClick={() => deleteItem(item.id)}
-                                        className="px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100"
-                                    >
-                                        🗑️
-                                    </button>
+                            {/* תוכן */}
+                            <div className="p-4">
+                                <div className="flex items-start justify-between mb-2">
+                                    <div>
+                                        <h3 className="font-bold text-gray-800">{item.name}</h3>
+                                        <p className="text-sm text-gray-500">{item.category?.name}</p>
+                                    </div>
+                                    <span className="text-lg font-bold text-brand-primary">₪{item.price}</span>
                                 </div>
-                            )}
+
+                                {item.description && (
+                                    <p className="text-sm text-gray-600 mb-4 line-clamp-2">{item.description}</p>
+                                )}
+
+                                {/* כפתורי פעולה */}
+                                {isManager() && (
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => toggleAvailability(item)}
+                                            className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${item.is_available
+                                                ? 'bg-green-50 text-green-600 hover:bg-green-100'
+                                                : 'bg-red-50 text-red-600 hover:bg-red-100'
+                                                }`}
+                                        >
+                                            {item.is_available ? '✓ זמין' : '✕ לא זמין'}
+                                        </button>
+                                        <button
+                                            onClick={() => openEditModal(item)}
+                                            className="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200"
+                                        >
+                                            ✏️
+                                        </button>
+                                        <button
+                                            onClick={() => deleteItem(item.id)}
+                                            className="px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100"
+                                        >
+                                            🗑️
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
                         </div>
-                    </div>
-                ))}
+                    ))
+                })()}
             </div>
 
             {filteredItems.length === 0 && (
                 <div className="bg-white rounded-2xl shadow-sm p-8 text-center text-gray-500">
                     <span className="text-4xl mb-4 block">🍽️</span>
                     <p>אין פריטים להצגה</p>
+                    {items.length > 0 && (
+                        <p className="text-sm mt-2">יש {items.length} פריטים בסך הכל, אך הפילטר לא תואם</p>
+                    )}
                 </div>
             )}
 

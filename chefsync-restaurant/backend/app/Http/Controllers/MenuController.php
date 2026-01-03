@@ -22,7 +22,7 @@ class MenuController extends Controller
 
             // קבל קטגוריות עם פריטים זמינים בלבד
             $categories = Category::where('tenant_id', $tenantId)
-                ->orderBy('display_order')
+                ->orderBy('sort_order')
                 ->with([
                     'items' => function ($query) {
                         $query->where('is_available', true)

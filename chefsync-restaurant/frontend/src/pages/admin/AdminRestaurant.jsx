@@ -1,25 +1,82 @@
 import { useState, useEffect } from 'react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
+import { useRestaurantStatus } from '../../context/RestaurantStatusContext';
 import AdminLayout from '../../layouts/AdminLayout';
 import api from '../../services/apiClient';
 
+const DAYS_OF_WEEK = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+
+// חשב אם המסעדה פתוחה בהתאם לימי פתיחה ושעות פתיחה
+const calculateIsOpen = (operatingDays = {}, operatingHours = {}) => {
+    const now = new Date();
+    const hebrewDays = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+    const currentDayName = hebrewDays[now.getDay()];
+
+    // בדוק אם היום הנוכחי הוא יום פתיחה
+    if (Object.keys(operatingDays).length > 0 && !operatingDays[currentDayName]) {
+        return false;
+    }
+
+    // אם אין שעות מוגדרות, המסעדה פתוחה ביום זה
+    if (!operatingHours.open || !operatingHours.close) {
+        return true;
+    }
+
+    const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const open = operatingHours.open;
+    const close = operatingHours.close;
+
+    // אם שעת הסגירה קטנה משעת הפתיחה (פתוח בין לילה)
+    if (close < open) {
+        return currentTime >= open || currentTime <= close;
+    }
+
+    return currentTime >= open && currentTime <= close;
+};
+
 export default function AdminRestaurant() {
     const { getAuthHeaders, isOwner } = useAdminAuth();
+    const { setRestaurantStatus } = useRestaurantStatus();
     const [restaurant, setRestaurant] = useState(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [logoPreview, setLogoPreview] = useState(null);
+    const [overrideStatus, setOverrideStatus] = useState(false);
+    const [calculatedStatus, setCalculatedStatus] = useState(false);
+    const [justFetched, setJustFetched] = useState(false);
 
     useEffect(() => {
         fetchRestaurant();
     }, []);
 
+    useEffect(() => {
+        // שדרנו את סטטוס הקנייה לContext לשימוש בכל העמוד
+        if (restaurant) {
+            setRestaurantStatus({
+                is_open: restaurant.is_open,
+                is_override: overrideStatus,
+            });
+        }
+    }, [restaurant?.is_open, overrideStatus, setRestaurantStatus]);
+
+    useEffect(() => {
+        // רק חשב את הסטטוס המחושב לצורך תצוגה - אל תשנה את restaurant.is_open!
+        if (restaurant && Object.keys(restaurant).length > 0) {
+            const calculated = calculateIsOpen(restaurant.operating_days || {}, restaurant.operating_hours || {});
+            setCalculatedStatus(calculated);
+            console.log('📊 Calculated:', calculated, 'DB is_open:', restaurant.is_open, 'Is Overridden:', restaurant.is_override_status);
+        }
+    }, [restaurant?.operating_days, restaurant?.operating_hours, restaurant?.is_open]);
+
     const fetchRestaurant = async () => {
         try {
             const response = await api.get('/admin/restaurant', { headers: getAuthHeaders() });
             if (response.data.success) {
+                console.log('📩 Fetched restaurant:', response.data.restaurant);
                 setRestaurant(response.data.restaurant);
                 setLogoPreview(response.data.restaurant.logo_url || null);
+                // עדכן את overrideStatus בהתאם ל-is_override_status מהשרת
+                setOverrideStatus(response.data.restaurant.is_override_status || false);
             }
         } catch (error) {
             console.error('Failed to fetch restaurant:', error);
@@ -30,6 +87,26 @@ export default function AdminRestaurant() {
 
     const handleChange = (field, value) => {
         setRestaurant((prev) => ({ ...prev, [field]: value }));
+    };
+
+    const handleOperatingDaysChange = (day, checked) => {
+        setRestaurant((prev) => ({
+            ...prev,
+            operating_days: {
+                ...prev.operating_days,
+                [day]: checked,
+            },
+        }));
+    };
+
+    const handleOperatingHoursChange = (field, value) => {
+        setRestaurant((prev) => ({
+            ...prev,
+            operating_hours: {
+                ...prev.operating_hours,
+                [field]: value,
+            },
+        }));
     };
 
     const handleLogo = (file) => {
@@ -46,11 +123,31 @@ export default function AdminRestaurant() {
         setSaving(true);
         try {
             const formData = new FormData();
-            ['name', 'description', 'phone', 'address', 'is_open'].forEach((field) => {
+            ['name', 'description', 'phone', 'address'].forEach((field) => {
                 if (restaurant[field] !== undefined && restaurant[field] !== null) {
                     formData.append(field, restaurant[field]);
                 }
             });
+
+            // שלח את is_open רק אם הוא מעודכן ידנית (overrideStatus = true)
+            if (overrideStatus) {
+                const isOpenValue = restaurant.is_open === true ? '1' : '0';
+                formData.append('is_open', isOpenValue);
+                console.log('🔒 Overriding status to:', isOpenValue);
+            } else {
+                console.log('📅 Using calculated status');
+            }
+
+            // תמיד שלח את operating_days ו-operating_hours
+            if (restaurant.operating_days && Object.keys(restaurant.operating_days).length > 0) {
+                formData.append('operating_days', JSON.stringify(restaurant.operating_days));
+                console.log('📅 Operating days:', restaurant.operating_days);
+            }
+            if (restaurant.operating_hours && Object.keys(restaurant.operating_hours).length > 0) {
+                formData.append('operating_hours', JSON.stringify(restaurant.operating_hours));
+                console.log('🕐 Operating hours:', restaurant.operating_hours);
+            }
+
             if (restaurant.logo) {
                 formData.append('logo', restaurant.logo);
             }
@@ -59,6 +156,8 @@ export default function AdminRestaurant() {
                 headers: { ...getAuthHeaders(), 'Content-Type': 'multipart/form-data' },
             });
             alert('נשמר בהצלחה');
+            // אל תאפס את overrideStatus - תן לטעינה מהשרת לחזור עם הערך הנכון
+            // זה יאפס ב-fetchRestaurant כשטוענים
             fetchRestaurant();
         } catch (error) {
             console.error('Failed to save restaurant:', error);
@@ -149,19 +248,102 @@ export default function AdminRestaurant() {
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
-                        <label className="text-sm text-gray-700">סטטוס פתיחה</label>
-                        <button
-                            type="button"
-                            onClick={() => handleChange('is_open', !restaurant.is_open)}
-                            className={`px-4 py-2 rounded-full text-sm font-medium ${restaurant.is_open ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                                }`}
-                        >
-                            {restaurant.is_open ? 'פתוח' : 'סגור'}
-                        </button>
+                    {/* ימי פתיחה */}
+                    <div className="border-t pt-4">
+                        <h3 className="text-sm font-bold text-gray-700 mb-3">📅 ימי פתיחה</h3>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                            {DAYS_OF_WEEK.map((day, index) => (
+                                <label key={day} className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={restaurant.operating_days?.[day] || false}
+                                        onChange={(e) => handleOperatingDaysChange(day, e.target.checked)}
+                                        className="w-4 h-4 rounded"
+                                    />
+                                    <span className="text-sm text-gray-700">{day}</span>
+                                </label>
+                            ))}
+                        </div>
                     </div>
 
-                    <div className="flex gap-3 pt-2">
+                    {/* שעות פתיחה */}
+                    <div className="border-t pt-4">
+                        <h3 className="text-sm font-bold text-gray-700 mb-3">🕐 שעות פתיחה</h3>
+                        <div className="grid grid-cols-2 gap-4 sm:w-80">
+                            <div>
+                                <label className="block text-sm text-gray-700 mb-1">שעת פתיחה</label>
+                                <input
+                                    type="time"
+                                    value={restaurant.operating_hours?.open || '09:00'}
+                                    onChange={(e) => handleOperatingHoursChange('open', e.target.value)}
+                                    className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm text-gray-700 mb-1">שעת סגירה</label>
+                                <input
+                                    type="time"
+                                    value={restaurant.operating_hours?.close || '23:00'}
+                                    onChange={(e) => handleOperatingHoursChange('close', e.target.value)}
+                                    className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* סטטוס פתיחה */}
+                    <div className="border-t pt-4">
+                        <h3 className="text-sm font-bold text-gray-700 mb-4">🚪 סטטוס פתיחה</h3>
+
+                        <div className="space-y-3">
+                            {/* הצגת הסטטוס הנוכחי */}
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            if (overrideStatus) {
+                                                handleChange('is_open', !restaurant.is_open);
+                                            }
+                                        }}
+                                        disabled={!overrideStatus}
+                                        className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${restaurant.is_open
+                                                ? 'bg-green-100 text-green-700'
+                                                : 'bg-red-100 text-red-700'
+                                            } ${!overrideStatus && 'opacity-70 cursor-not-allowed'}`}
+                                    >
+                                        {restaurant.is_open ? '✓ פתוח' : '✗ סגור'}
+                                    </button>
+                                    {/* סטטוס קונקרטי */}
+                                    <span className="text-xs font-semibold">
+                                        {overrideStatus
+                                            ? '🔒 מכופה ידנית'
+                                            : `📅 חישוב: ${calculatedStatus ? '✓ פתוח' : '✗ סגור'}`
+                                        }
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* כפיית סטטוס ידנית */}
+                            <label className="flex items-center gap-2 cursor-pointer py-2">
+                                <input
+                                    type="checkbox"
+                                    checked={overrideStatus}
+                                    onChange={(e) => {
+                                        setOverrideStatus(e.target.checked);
+                                        if (!e.target.checked) {
+                                            // חזור לסטטוס מחושב
+                                            setRestaurant((prev) => ({ ...prev, is_open: calculatedStatus }));
+                                        }
+                                    }}
+                                    className="w-4 h-4 rounded"
+                                />
+                                <span className="text-sm text-gray-600">אפשר כפיית סטטוס ידנית</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div className="flex gap-3 pt-2 border-t">
                         <button
                             type="submit"
                             disabled={saving}
