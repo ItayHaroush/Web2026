@@ -5,23 +5,50 @@ import './App.css';
  * דף נחיתה שיווקי – גרסת סטנדאלון ללא תלות ב־router או tailwind
  */
 export default function App() {
+  const [formData, setFormData] = React.useState({
+    name: '',
+    restaurant: '',
+    phone: '',
+    message: ''
+  });
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const whatsappMessage = `שלום, אני ${formData.name} מ${formData.restaurant}.%0Aטלפון: ${formData.phone}%0A%0A${formData.message}`;
+    const whatsappUrl = `https://wa.me/972547466508?text=${whatsappMessage}`;
+    window.open(whatsappUrl, '_blank');
+  };
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
   const benefits = [
     {
+      icon: '🚀',
       title: 'מסעדה אונליין מלאה',
       desc: 'הלקוח מזמין מהספה: תפריט, סל קניות, תוספות, משלוח וסטטוס – הכול אונליין עד לדלת.'
     },
     {
+      icon: '✨',
       title: 'אותה חוויה כמו אפליקציות משלוחים',
       desc: 'עובד כמו וולט, תן ביס או משלוחה – רק שהלקוחות מזמינים ישירות מהמסעדה.'
     },
     {
+      icon: '💰',
       title: 'בלי אחוזים מכל הזמנה',
       desc: 'במקום לשלם עמלות – משלמים מנוי חודשי קבוע. יותר רווח, פחות תלות.'
     },
     {
+      icon: '🎯',
       title: 'המותג והלקוחות נשארים אצלך',
       desc: 'האתר, ההזמנות והנתונים שייכים למסעדה. אנחנו רק הפלטפורמה.'
     },
+  ];
+
+  const testimonials = [
+    { name: 'מסעדת הבית', text: '"חסכנו אלפי שקלים בעמלות. המערכת פשוטה ונוחה"', rating: '⭐⭐⭐⭐⭐' },
+    { name: 'פיצה אקספרס', text: '"הלקוחות שלנו אוהבים להזמין ישירות מאיתנו"', rating: '⭐⭐⭐⭐⭐' },
   ];
 
   const steps = [
@@ -70,21 +97,28 @@ export default function App() {
   return (
     <div className="page" dir="rtl">
       <header className="hero">
+        <div className="floating-shape floating-shape--1"></div>
+        <div className="floating-shape floating-shape--2"></div>
         <div className="hero__text">
-          <div className="pill">כמו וולט / תן ביס / משלוחה – בלי אחוזים</div>
-          <h1>ChefSync IL – המסעדה שלך אונליין</h1>
+          <div className="pill pulse">🚀 כמו וולט / תן ביס / משלוחה – בלי אחוזים</div>
+          <h1 className="gradient-text">ChefSync IL – המסעדה שלך אונליין</h1>
           <p>
             פלטפורמת הזמנות מלאה למסעדות: הלקוח מזמין מהספה, המערכת מרכזת הכול,
             והמסעדה מספקת עד הדלת – במנוי חודשי קבוע.
           </p>
           <div className="hero__actions">
-            <a className="btn btn--solid" href="#plans">פותחים מסעדה אונליין</a>
+            <a className="btn btn--solid btn--primary" href="#contact">
+              <span>🎉</span> פותחים מסעדה אונליין
+            </a>
             <a className="btn btn--ghost" href="#comparison">השוואה לפלטפורמות</a>
           </div>
           <div className="hero__tags">
-            <span>💳 מנוי חודשי / שנתי</span>
-            <span>❌ בלי אחוזים</span>
-            <span>🛡️ שליטה מלאה</span>
+            <span className="tag">💳 מנוי חודשי / שנתי</span>
+            <span className="tag">❌ בלי אחוזים</span>
+            <span className="tag">🛡️ שליטה מלאה</span>
+          </div>
+          <div className="social-proof">
+            <span className="social-proof__text">🚀 מחפשים מסעדות להצטרף למסלול פיילוט</span>
           </div>
         </div>
 
@@ -109,7 +143,8 @@ export default function App() {
           <div className="section__title">אותה פלטפורמה – מודל אחר</div>
           <div className="grid">
             {benefits.map(item => (
-              <article key={item.title} className="card">
+              <article key={item.title} className="card card--hover">
+                <div className="card__icon">{item.icon}</div>
                 <h3>{item.title}</h3>
                 <p>{item.desc}</p>
               </article>
@@ -163,6 +198,19 @@ export default function App() {
           </div>
         </section>
 
+        <section className="section testimonials">
+          <div className="section__title">מה אומרים מסעדות שעובדות איתנו</div>
+          <div className="grid grid--two">
+            {testimonials.map((t, i) => (
+              <article key={i} className="card card--testimonial">
+                <div className="testimonial__rating">{t.rating}</div>
+                <p className="testimonial__text">{t.text}</p>
+                <p className="testimonial__name">— {t.name}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
         <section className="section" id="plans">
           <div className="section__title">תמחור פשוט. בלי הפתעות.</div>
           <div className="grid grid--two">
@@ -177,19 +225,111 @@ export default function App() {
                     <li key={feature}>• {feature}</li>
                   ))}
                 </ul>
-                <a className="btn btn--solid" href="#register">פותחים מסעדה אונליין</a>
+                <a className="btn btn--solid" href="#contact">פותחים מסעדה אונליין</a>
               </article>
             ))}
           </div>
         </section>
-
-        <section className="cta" id="register">
+<section className="cta" id="register">
           <div>
             <h3>אותה חוויה ללקוח – פחות הוצאות למסעדה</h3>
             <p>אם כבר יש לך משלוחים – למה לשלם אחוזים?</p>
           </div>
-          <a className="btn btn--light" href="#plans">מתחילים עכשיו</a>
+          <a className="btn btn--light" href="#contact">מתחילים עכשיו</a>
         </section>
+        <section className="section" id="contact">
+          <div className="section__title">בואו נתחיל</div>
+          <div className="contact-wrapper">
+            <div className="contact-info">
+              <h3>מוכנים להצטרף?</h3>
+              <p>השאירו פרטים ונחזור אליכם בהקדם</p>
+              <div className="contact-features">
+                <div className="contact-feature">
+                  <span className="contact-feature__icon">⚡</span>
+                  <div>
+                    <h4>מענה מהיר</h4>
+                    <p>נחזור אליכם תוך 24 שעות</p>
+                  </div>
+                </div>
+                <div className="contact-feature">
+                  <span className="contact-feature__icon">🎯</span>
+                  <div>
+                    <h4>ייעוץ ללא התחייבות</h4>
+                    <p>נסביר איך המערכת עובדת</p>
+                  </div>
+                </div>
+                <div className="contact-feature">
+                  <span className="contact-feature__icon">💰</span>
+                  <div>
+                    <h4>מחיר שקוף</h4>
+                    <p>בלי עלויות נסתרות</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <form className="contact-form" onSubmit={handleSubmit}>
+              <div className="form-group">
+                <label htmlFor="name">שם מלא *</label>
+                <input
+                  type="text"
+                  id="name"
+                  name="name"
+                  required
+                  value={formData.name}
+                  onChange={handleChange}
+                  placeholder="איך קוראים לך?"
+                />
+              </div>
+              
+              <div className="form-group">
+                <label htmlFor="restaurant">שם המסעדה *</label>
+                <input
+                  type="text"
+                  id="restaurant"
+                  name="restaurant"
+                  required
+                  value={formData.restaurant}
+                  onChange={handleChange}
+                  placeholder="איך קוראים למסעדה?"
+                />
+              </div>
+              
+              <div className="form-group">
+                <label htmlFor="phone">טלפון *</label>
+                <input
+                  type="tel"
+                  id="phone"
+                  name="phone"
+                  required
+                  value={formData.phone}
+                  onChange={handleChange}
+                  placeholder="050-1234567"
+                />
+              </div>
+              
+              <div className="form-group">
+                <label htmlFor="message">ספרו לנו קצת</label>
+                <textarea
+                  id="message"
+                  name="message"
+                  rows="4"
+                  value={formData.message}
+                  onChange={handleChange}
+                  placeholder="מה תרצו לדעת? (אופציונלי)"
+                ></textarea>
+              </div>
+              
+              <button type="submit" className="btn btn--solid btn--primary btn--full">
+                <span>💬</span> שלחו הודעה בוואטסאפ
+              </button>
+              
+              <p className="form-note">ההודעה תישלח ישירות לוואטסאפ שלנו</p>
+            </form>
+          </div>
+        </section>
+
+        
       </main>
     </div>
   );
