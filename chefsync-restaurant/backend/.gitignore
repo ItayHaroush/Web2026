@@ -1,0 +1,40 @@
+# Backend .gitignore
+
+# Laravel
+/vendor/
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Environment
+.env
+.env.*.local
+.env.*.php
+.env.backup
+.env.production.backup
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Cache
+/storage/
+bootstrap/cache/
+.cache
+
+# Database
+database.sqlite
+database.sqlite-journal
+
+# Logs
+storage/logs/
+
+# Build
+/public/hot
+/public/storage
+/public/js
+/public/css

@@ -1,0 +1,30 @@
+# Frontend .gitignore
+
+# Vite
+dist/
+.vite/
+
+# Dependencies
+node_modules/
+package-lock.json
+yarn.lock
+
+# Logs
+npm-debug.log
+yarn-error.log
+pnpm-debug.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Build
+.env*.local
+.env*.*.local
+
+# Cache
+.eslintcache
