@@ -17,6 +17,11 @@ import AdminCategories from './pages/admin/AdminCategories';
 import AdminEmployees from './pages/admin/AdminEmployees';
 import AdminRestaurant from './pages/admin/AdminRestaurant';
 import AdminTerminal from './pages/admin/AdminTerminal';
+import SuperAdminDashboard from './pages/super-admin/SuperAdminDashboard';
+import SuperAdminReports from './pages/super-admin/SuperAdminReports';
+import SuperAdminSettings from './pages/super-admin/SuperAdminSettings';
+import RegisterRestaurant from './pages/RegisterRestaurant';
+import { Toaster } from 'react-hot-toast';
 import './App.css';
 
 /**
@@ -25,13 +30,41 @@ import './App.css';
  */
 
 function AdminRoute({ children }) {
-  const { isAuthenticated, loading } = useAdminAuth();
+  const { isAuthenticated, loading, user } = useAdminAuth();
 
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen">טוען...</div>;
   }
 
-  return isAuthenticated ? children : <Navigate to="/admin/login" replace />;
+  if (!isAuthenticated) {
+    return <Navigate to="/admin/login" replace />;
+  }
+
+  // אם זה Super Admin, החזר ל-Super Admin dashboard
+  if (user?.is_super_admin) {
+    return <Navigate to="/super-admin/dashboard" replace />;
+  }
+
+  return children;
+}
+
+function SuperAdminRoute({ children }) {
+  const { isAuthenticated, loading, user } = useAdminAuth();
+
+  if (loading) {
+    return <div className="flex items-center justify-center min-h-screen">טוען...</div>;
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/admin/login" replace />;
+  }
+
+  // בדיקה אם המשתמש הוא Super Admin
+  if (!user?.is_super_admin) {
+    return <Navigate to="/" replace />;
+  }
+
+  return children;
 }
 
 function AppRoutes() {
@@ -46,6 +79,7 @@ function AppRoutes() {
     <Routes>
       {/* לקוחות */}
       <Route path="/" element={<HomePage />} />
+      <Route path="/register-restaurant" element={<RegisterRestaurant />} />
       <Route path="/menu" element={tenantId ? <MenuPage /> : <Navigate to="/" />} />
       <Route path="/cart" element={tenantId ? <CartPage /> : <Navigate to="/" />} />
       <Route path="/order-status/:orderId" element={tenantId ? <OrderStatusPage /> : <Navigate to="/" />} />
@@ -110,6 +144,34 @@ function AppRoutes() {
         }
       />
 
+      {/* Super Admin */}
+      <Route path="/super-admin/login" element={<Navigate to="/admin/login" replace />} />
+      <Route path="/super-admin" element={<Navigate to="/super-admin/dashboard" replace />} />
+      <Route
+        path="/super-admin/dashboard"
+        element={
+          <SuperAdminRoute>
+            <SuperAdminDashboard />
+          </SuperAdminRoute>
+        }
+      />
+      <Route
+        path="/super-admin/reports"
+        element={
+          <SuperAdminRoute>
+            <SuperAdminReports />
+          </SuperAdminRoute>
+        }
+      />
+      <Route
+        path="/super-admin/settings"
+        element={
+          <SuperAdminRoute>
+            <SuperAdminSettings />
+          </SuperAdminRoute>
+        }
+      />
+
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
@@ -124,6 +186,7 @@ export default function App() {
             <ToastProvider>
               <CartProvider>
                 <AppRoutes />
+                <Toaster position="bottom-right" />
               </CartProvider>
             </ToastProvider>
           </AuthProvider>

@@ -41,8 +41,8 @@ apiClient.interceptors.request.use((config) => {
         config.headers[TENANT_HEADER] = tenantId;
     }
 
-    // שמירת Token אם קיים
-    const token = localStorage.getItem('authToken');
+    // שמירת Token אם קיים - תמיכה בשני Key names
+    const token = localStorage.getItem('authToken') || localStorage.getItem('admin_token');
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
     }

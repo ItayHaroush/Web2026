@@ -7,6 +7,9 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\RestaurantController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\SuperAdminController;
+use App\Http\Controllers\SuperAdminBillingController;
+use App\Http\Controllers\RegisterRestaurantController;
 
 /**
  * API Routes
@@ -27,6 +30,34 @@ Route::prefix('auth')->group(function () {
         Route::put('/update', [AuthController::class, 'update'])->name('auth.update');
         Route::post('/register', [AuthController::class, 'register'])->name('auth.register');
     });
+});
+
+// הרשמת מסעדה חדשה (ציבורי)
+Route::post('/register-restaurant', [RegisterRestaurantController::class, 'store'])->name('register.restaurant');
+
+// ============================================
+// פאנל Super Admin - ניהול כללי
+// ============================================
+Route::prefix('super-admin')->middleware(['auth:sanctum', 'super_admin'])->group(function () {
+    // דשבורד Super Admin
+    Route::get('/dashboard', [SuperAdminController::class, 'dashboard'])->name('super-admin.dashboard');
+
+    // ניהול מסעדות
+    Route::get('/restaurants', [SuperAdminController::class, 'listRestaurants'])->name('super-admin.restaurants.list');
+    Route::get('/restaurants/{id}', [SuperAdminController::class, 'getRestaurant'])->name('super-admin.restaurants.get');
+    Route::post('/restaurants', [SuperAdminController::class, 'createRestaurant'])->name('super-admin.restaurants.create');
+    Route::put('/restaurants/{id}', [SuperAdminController::class, 'updateRestaurant'])->name('super-admin.restaurants.update');
+    Route::delete('/restaurants/{id}', [SuperAdminController::class, 'deleteRestaurant'])->name('super-admin.restaurants.delete');
+    Route::patch('/restaurants/{id}/toggle-status', [SuperAdminController::class, 'toggleRestaurantStatus'])->name('super-admin.restaurants.toggle');
+
+    // סטטיסטיקות מסעדה
+    Route::get('/restaurants/{id}/stats', [SuperAdminController::class, 'getRestaurantStats'])->name('super-admin.restaurants.stats');
+
+    // חיוב ותשלומים
+    Route::get('/billing/summary', [SuperAdminBillingController::class, 'summary'])->name('super-admin.billing.summary');
+    Route::get('/billing/restaurants', [SuperAdminBillingController::class, 'restaurants'])->name('super-admin.billing.restaurants');
+    Route::post('/billing/restaurants/{id}/charge', [SuperAdminBillingController::class, 'chargeRestaurant'])->name('super-admin.billing.charge');
+    Route::get('/billing/payments', [SuperAdminBillingController::class, 'payments'])->name('super-admin.billing.payments');
 });
 
 // ============================================

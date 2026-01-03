@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * דגם Restaurant (Tenant)
@@ -56,6 +57,16 @@ class Restaurant extends Model
     public function orders(): HasMany
     {
         return $this->hasMany(Order::class, 'restaurant_id');
+    }
+
+    public function subscription(): HasOne
+    {
+        return $this->hasOne(RestaurantSubscription::class);
+    }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(RestaurantPayment::class);
     }
 
     /**

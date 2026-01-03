@@ -28,6 +28,7 @@ class User extends Authenticatable
         'password',
         'role',
         'is_active',
+        'is_super_admin',
     ];
 
     protected $hidden = [
@@ -39,6 +40,7 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
         'is_active' => 'boolean',
+        'is_super_admin' => 'boolean',
     ];
 
     /**
@@ -52,6 +54,11 @@ class User extends Authenticatable
     /**
      * בדיקת תפקיד
      */
+    public function isSuperAdmin(): bool
+    {
+        return $this->is_super_admin === true;
+    }
+
     public function isOwner(): bool
     {
         return $this->role === 'owner';
