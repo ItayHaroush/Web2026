@@ -65,8 +65,8 @@ export default function SuperAdminLayout({ children }) {
                                 key={item.path}
                                 onClick={() => navigate(item.path)}
                                 className={`w-full text-right px-4 py-3 rounded-lg transition-all flex items-center gap-3 ${location.pathname === item.path
-                                        ? 'bg-brand-primary text-white'
-                                        : 'text-gray-700 hover:bg-gray-50'
+                                    ? 'bg-brand-primary text-white'
+                                    : 'text-gray-700 hover:bg-gray-50'
                                     }`}
                             >
                                 <span className="text-xl">{item.icon}</span>
