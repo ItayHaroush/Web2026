@@ -71,23 +71,9 @@ function SuperAdminRoute({ children }) {
 function AppRoutes() {
   const { tenantId, isLoading } = useAuth();
   const { isAuthenticated: isAdmin } = useAdminAuth();
-  // במצב פרודקשן ננחת על דף הנחיתה כברירת מחדל, אלא אם הוגדר מפורשות false.
-  const landingOnly =
-    import.meta.env.VITE_LANDING_ONLY === 'true' ||
-    (import.meta.env.PROD && import.meta.env.VITE_LANDING_ONLY !== 'false');
 
   if (isLoading) {
     return <div className="flex items-center justify-center min-h-screen">טוען...</div>;
-  }
-
-  if (landingOnly) {
-    return (
-      <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/landing" element={<LandingPage />} />
-        <Route path="*" element={<Navigate to="/landing" replace />} />
-      </Routes>
-    );
   }
 
   return (
