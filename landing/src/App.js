@@ -132,7 +132,7 @@ export default function App() {
             </div>
             <div className="stat stat--dark">
               <p className="stat__label">ללא עמלות</p>
-              <p className="stat__value">100% למסעדה</p>
+              <p className="stat__value" style={{ color: 'white' }}>100% למסעדה</p>
             </div>
           </div>
         </div>
@@ -230,7 +230,7 @@ export default function App() {
             ))}
           </div>
         </section>
-<section className="cta" id="register">
+        <section className="cta" id="register">
           <div>
             <h3>אותה חוויה ללקוח – פחות הוצאות למסעדה</h3>
             <p>אם כבר יש לך משלוחים – למה לשלם אחוזים?</p>
@@ -267,7 +267,7 @@ export default function App() {
                 </div>
               </div>
             </div>
-            
+
             <form className="contact-form" onSubmit={handleSubmit}>
               <div className="form-group">
                 <label htmlFor="name">שם מלא *</label>
@@ -281,7 +281,7 @@ export default function App() {
                   placeholder="איך קוראים לך?"
                 />
               </div>
-              
+
               <div className="form-group">
                 <label htmlFor="restaurant">שם המסעדה *</label>
                 <input
@@ -294,7 +294,7 @@ export default function App() {
                   placeholder="איך קוראים למסעדה?"
                 />
               </div>
-              
+
               <div className="form-group">
                 <label htmlFor="phone">טלפון *</label>
                 <input
@@ -307,7 +307,7 @@ export default function App() {
                   placeholder="050-1234567"
                 />
               </div>
-              
+
               <div className="form-group">
                 <label htmlFor="message">ספרו לנו קצת</label>
                 <textarea
@@ -319,17 +319,17 @@ export default function App() {
                   placeholder="מה תרצו לדעת? (אופציונלי)"
                 ></textarea>
               </div>
-              
+
               <button type="submit" className="btn btn--solid btn--primary btn--full">
                 <span>💬</span> שלחו הודעה בוואטסאפ
               </button>
-              
+
               <p className="form-note">ההודעה תישלח ישירות לוואטסאפ שלנו</p>
             </form>
           </div>
         </section>
 
-        
+
       </main>
     </div>
   );
