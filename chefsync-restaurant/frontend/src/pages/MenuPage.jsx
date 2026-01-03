@@ -128,9 +128,9 @@ export default function MenuPage() {
             )}
 
             {/* Hero Section - סגנון Wolt */}
-            <div className="relative -mx-4 sm:-mx-6 lg:-mx-8 mb-8">
+            <div className="relative -mx-4 sm:-mx-6 lg:-mx-8 -mt-8 mb-8">
                 {/* רקע עם לוגו גדול */}
-                <div className="relative h-48 sm:h-56 bg-gradient-to-br from-brand-dark via-brand-primary to-brand-secondary overflow-hidden">
+                <div className="relative h-48 sm:h-72 bg-gradient-to-br from-brand-dark via-brand-primary to-brand-secondary overflow-hidden">
                     {/* לוגואים מעומעמים ברקע */}
                     {restaurant?.logo_url && (
                         <>

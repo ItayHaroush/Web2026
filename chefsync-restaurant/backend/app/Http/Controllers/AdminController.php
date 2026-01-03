@@ -9,6 +9,7 @@ use App\Models\Order;
 use App\Models\Restaurant;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class AdminController extends Controller
@@ -158,7 +159,7 @@ class AdminController extends Controller
         $user = $request->user();
         $restaurantId = $user->restaurant_id;
 
-        \Log::info('getMenuItems called', [
+            Log::info('getMenuItems called', [
             'user_id' => $user->id,
             'restaurant_id' => $restaurantId,
             'user_name' => $user->name,
@@ -173,7 +174,7 @@ class AdminController extends Controller
 
         $items = $query->orderBy('category_id')->get();
 
-        \Log::info('Found items', [
+            Log::info('Found items', [
             'count' => $items->count(),
             'items' => $items->map(fn($item) => [
                 'id' => $item->id,
@@ -352,10 +353,10 @@ class AdminController extends Controller
         if ($hasExplicitIsOpen) {
             $updateData['is_open'] = $isOpen;
             $updateData['is_override_status'] = true;
-            \Log::debug('🔒 Override status to: ' . ($isOpen ? 'true' : 'false'));
+                Log::debug('🔒 Override status to: ' . ($isOpen ? 'true' : 'false'));
         } else {
             $updateData['is_override_status'] = false;
-            \Log::debug('📅 Will calculate status from operating hours/days');
+                Log::debug('📅 Will calculate status from operating hours/days');
         }
 
         // עבוד עם JSON strings מ-FormData
@@ -388,12 +389,12 @@ class AdminController extends Controller
 
             $calculated = $this->isRestaurantOpen($operatingDays, $operatingHours);
             $updateData['is_open'] = $calculated;
-            \Log::debug('📅 Calculated status: ' . ($calculated ? 'true' : 'false'));
+                Log::debug('📅 Calculated status: ' . ($calculated ? 'true' : 'false'));
         }
 
-        \Log::debug('Update data:', $updateData);
+            Log::debug('Update data:', $updateData);
         $restaurant->update($updateData);
-        \Log::debug('Restaurant after update:', $restaurant->toArray());
+            Log::debug('Restaurant after update:', $restaurant->toArray());
 
         return response()->json([
             'success' => true,

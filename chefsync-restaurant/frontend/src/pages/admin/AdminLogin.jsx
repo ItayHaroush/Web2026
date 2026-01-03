@@ -2,13 +2,14 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import logo from '../../images/ChefSyncLogoIcon.png';
+import { toast } from 'react-hot-toast';
 
 export default function AdminLogin() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
-    const { login } = useAdminAuth();
+    const { loginWithCredentials } = useAdminAuth();
     const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
@@ -16,10 +17,20 @@ export default function AdminLogin() {
         setError('');
         setLoading(true);
 
-        const result = await login(email, password);
+        const result = await loginWithCredentials(email, password);
 
         if (result.success) {
-            navigate('/admin/dashboard');
+            // בדיקה אם זה Super Admin
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            console.log('User after login:', user);
+            console.log('is_super_admin:', user.is_super_admin);
+
+            if (user.is_super_admin) {
+                toast.success('ברוכים הבאים, מנהל מערכת! 👋');
+                navigate('/super-admin/dashboard');
+            } else {
+                navigate('/admin/dashboard');
+            }
         } else {
             setError(result.message);
         }
@@ -101,6 +112,11 @@ export default function AdminLogin() {
                         <a href="/" className="text-brand-primary hover:underline text-sm">
                             ← חזרה לאתר
                         </a>
+                        <div className="mt-3">
+                            <a href="/register-restaurant" className="text-brand-primary hover:underline text-sm font-medium">
+                                עדיין אין חשבון? הרשמה למסעדה
+                            </a>
+                        </div>
                     </div>
                 </div>
 

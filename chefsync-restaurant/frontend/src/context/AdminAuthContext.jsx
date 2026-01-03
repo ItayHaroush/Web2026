@@ -6,7 +6,7 @@ const AdminAuthContext = createContext(null);
 export function AdminAuthProvider({ children }) {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [token, setToken] = useState(localStorage.getItem('admin_token'));
+    const [token, setToken] = useState(localStorage.getItem('authToken') || localStorage.getItem('admin_token'));
 
     useEffect(() => {
         if (token) {
@@ -14,7 +14,7 @@ export function AdminAuthProvider({ children }) {
         } else {
             setLoading(false);
         }
-    }, []);
+    }, [token]);
 
     const checkAuth = async () => {
         try {
@@ -34,14 +34,19 @@ export function AdminAuthProvider({ children }) {
         }
     };
 
-    const login = async (email, password) => {
+    const login = (newToken, userData) => {
+        localStorage.setItem('authToken', newToken);
+        localStorage.setItem('user', JSON.stringify(userData));
+        setToken(newToken);
+        setUser(userData);
+    };
+
+    const loginWithCredentials = async (email, password) => {
         try {
             const response = await api.post('/auth/login', { email, password });
             if (response.data.success) {
                 const { token: newToken, user: userData } = response.data;
-                localStorage.setItem('admin_token', newToken);
-                setToken(newToken);
-                setUser(userData);
+                login(newToken, userData);
                 return { success: true };
             }
             return { success: false, message: response.data.message };
@@ -61,7 +66,8 @@ export function AdminAuthProvider({ children }) {
         } catch (error) {
             console.error('Logout error:', error);
         } finally {
-            localStorage.removeItem('admin_token');
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('user');
             setToken(null);
             setUser(null);
         }
@@ -71,6 +77,7 @@ export function AdminAuthProvider({ children }) {
     const isManager = () => ['owner', 'manager'].includes(user?.role);
     const isEmployee = () => ['owner', 'manager', 'employee'].includes(user?.role);
     const isDelivery = () => user?.role === 'delivery';
+    const isSuperAdmin = () => user?.is_super_admin === true;
 
     const getAuthHeaders = () => ({
         Authorization: `Bearer ${token}`
@@ -81,11 +88,13 @@ export function AdminAuthProvider({ children }) {
         token,
         loading,
         login,
+        loginWithCredentials,
         logout,
         isOwner,
         isManager,
         isEmployee,
         isDelivery,
+        isSuperAdmin,
         getAuthHeaders,
         isAuthenticated: !!user,
     };
