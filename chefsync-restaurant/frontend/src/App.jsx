@@ -21,6 +21,7 @@ import SuperAdminDashboard from './pages/super-admin/SuperAdminDashboard';
 import SuperAdminReports from './pages/super-admin/SuperAdminReports';
 import SuperAdminSettings from './pages/super-admin/SuperAdminSettings';
 import RegisterRestaurant from './pages/RegisterRestaurant';
+import LandingPage from './pages/LandingPage';
 import { Toaster } from 'react-hot-toast';
 import './App.css';
 
@@ -70,15 +71,29 @@ function SuperAdminRoute({ children }) {
 function AppRoutes() {
   const { tenantId, isLoading } = useAuth();
   const { isAuthenticated: isAdmin } = useAdminAuth();
+  // במצב פרודקשן ננחת על דף הנחיתה כברירת מחדל, אלא אם הוגדר מפורשות false.
+  const landingOnly =
+    import.meta.env.VITE_LANDING_ONLY === 'true' ||
+    (import.meta.env.PROD && import.meta.env.VITE_LANDING_ONLY !== 'false');
 
   if (isLoading) {
     return <div className="flex items-center justify-center min-h-screen">טוען...</div>;
+  }
+
+  if (landingOnly) {
+    return (
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    );
   }
 
   return (
     <Routes>
       {/* לקוחות */}
       <Route path="/" element={<HomePage />} />
+      <Route path="/landing" element={<LandingPage />} />
       <Route path="/register-restaurant" element={<RegisterRestaurant />} />
       <Route path="/menu" element={tenantId ? <MenuPage /> : <Navigate to="/" />} />
       <Route path="/cart" element={tenantId ? <CartPage /> : <Navigate to="/" />} />
