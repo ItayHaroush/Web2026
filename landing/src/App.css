@@ -681,50 +681,170 @@
 
 @media (max-width: 768px) {
   .page {
-    padding-top: 16px;
+    padding-top: 12px;
   }
 
   .hero {
-    padding: 40px 20px;
-    gap: 24px;
-    border-radius: 24px;
+    grid-template-columns: 1fr;
+    padding: 32px 16px;
+    gap: 28px;
+    border-radius: 20px;
   }
 
   .hero h1 {
-    font-size: clamp(28px, 7vw, 42px);
+    font-size: clamp(26px, 7vw, 38px);
+  }
+
+  .hero p {
+    font-size: 17px;
+  }
+
+  .pill {
+    font-size: 14px;
+    padding: 8px 14px;
+  }
+
+  .tag {
+    font-size: 14px;
+  }
+
+  .social-proof__text {
+    font-size: 14px;
   }
 
   .floating-shape {
     display: none;
   }
 
+  .hero__card {
+    padding: 20px;
+  }
+
+  .hero__card h3 {
+    font-size: 20px;
+  }
+
+  .hero__card p {
+    font-size: 15px;
+  }
+
+  .hero__grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .stat {
+    padding: 16px;
+  }
+
+  .stat__label {
+    font-size: 14px;
+  }
+
+  .stat__value {
+    font-size: 24px;
+  }
+
   .hero__actions {
     flex-direction: column;
     width: 100%;
+    gap: 10px;
   }
 
   .btn {
     width: 100%;
-    padding: 16px 24px;
+    padding: 14px 20px;
+    font-size: 16px;
   }
 
   .content {
     padding: 0 16px 48px;
   }
 
-  .grid {
-    grid-template-columns: 1fr;
+  .section {
+    margin-top: 36px;
   }
 
   .section__title {
-    font-size: 24px;
+    font-size: 26px;
+    margin-bottom: 16px;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
   }
 
   .card {
-    padding: 20px;
+    padding: 18px;
+  }
+
+  .card h3,
+  .card h4 {
+    font-size: 20px;
+  }
+
+  .card p {
+    font-size: 16px;
+  }
+
+  .card ul {
+    font-size: 15px;
   }
 
   .card__icon {
     font-size: 36px;
+  }
+
+  .plan__price {
+    font-size: 42px;
+  }
+
+  .plan__features {
+    font-size: 15px;
+  }
+
+  .testimonial__text {
+    font-size: 16px;
+  }
+
+  .cta {
+    padding: 20px;
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .cta h3 {
+    font-size: 24px;
+  }
+
+  .cta p {
+    font-size: 16px;
+  }
+
+  .contact-wrapper {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .contact-info {
+    padding: 24px;
+  }
+
+  .contact-info h3 {
+    font-size: 26px;
+  }
+
+  .contact-info > p {
+    font-size: 16px;
+  }
+
+  .contact-form {
+    padding: 24px;
+  }
+
+  .form-group input,
+  .form-group textarea {
+    font-size: 16px;
   }
 }
