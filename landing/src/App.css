@@ -126,7 +126,7 @@
   background: rgba(255, 255, 255, 0.15);
   backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.25);
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 600;
   letter-spacing: 0.01em;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
@@ -151,7 +151,7 @@
 }
 
 .hero h1 {
-  font-size: clamp(32px, 4.5vw, 54px);
+  font-size: clamp(36px, 5vw, 62px);
   margin: 0;
   line-height: 1.15;
   letter-spacing: 0.015em;
@@ -160,7 +160,7 @@
 
 .hero p {
   color: rgba(255, 255, 255, 0.92);
-  font-size: 18px;
+  font-size: 20px;
   margin: 0;
   max-width: 640px;
   line-height: 1.6;
@@ -177,7 +177,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  font-size: 14px;
+  font-size: 16px;
 }
 
 .tag {
@@ -203,13 +203,15 @@
 }
 
 .social-proof__text {
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 600;
   color: #fff;
 }
 
 .hero__card {
+  height: 200px;
   position: relative;
+  margin: auto;
   z-index: 1;
   background: #fff;
   color: var(--ink);
@@ -240,11 +242,13 @@
 
 .hero__card h3 {
   margin: 0;
+  font-size: 22px;
 }
 
 .hero__card p {
   margin: 0;
   color: #475569;
+  font-size: 16px;
 }
 
 .hero__grid {
@@ -267,7 +271,9 @@
 .stat__label {
   margin: 0 0 4px;
   color: #475569;
-  font-size: 13px;
+  font-size: 16px;
+  font-weight: 600;
+
 }
 
 .stat--dark .stat__label {
@@ -276,8 +282,9 @@
 
 .stat__value {
   margin: 0;
-  font-size: 22px;
-  font-weight: 700;
+
+  font-size: 28px;
+  font-weight: 800;
 }
 
 .content {
@@ -291,7 +298,7 @@
 }
 
 .section__title {
-  font-size: 28px;
+  font-size: 32px;
   font-weight: 800;
   margin-bottom: 18px;
   letter-spacing: 0.01em;
@@ -355,14 +362,14 @@
 .card h4 {
   margin: 0 0 10px;
   font-weight: 800;
-  font-size: 20px;
+  font-size: 22px;
 }
 
 .card p {
   margin: 0;
   color: var(--sub);
   line-height: 1.7;
-  font-size: 15px;
+  font-size: 17px;
 }
 
 .card ul {
@@ -371,6 +378,7 @@
   color: #1e293b;
   line-height: 1.6;
   font-weight: 600;
+  font-size: 16px;
 }
 
 .card--accent {
@@ -388,20 +396,21 @@
 }
 
 .testimonial__rating {
-  font-size: 20px;
+  font-size: 24px;
   margin-bottom: 12px;
 }
 
 .testimonial__text {
-  font-size: 16px;
+  font-size: 18px;
   font-style: italic;
   color: var(--ink);
   margin-bottom: 12px;
   font-weight: 600;
+  line-height: 1.6;
 }
 
 .testimonial__name {
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 700;
   color: var(--brand);
 }
@@ -425,20 +434,23 @@
   color: #fff;
   padding: 6px 12px;
   border-radius: 999px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
 }
 
 .plan__period {
   margin: 0;
   color: #475569;
-  font-size: 14px;
+  font-size: 16px;
+  font-weight: 600;
 }
 
 .plan__price {
   margin: 10px 0;
-  font-size: 32px;
-  font-weight: 800;
+  font-size: 52px;
+  font-weight: 900;
+  color: var(--brand);
+  line-height: 1;
 }
 
 .plan__features {
@@ -446,8 +458,9 @@
   padding: 0;
   margin: 0 0 16px;
   color: #1e293b;
-  line-height: 1.55;
+  line-height: 1.7;
   font-weight: 600;
+  font-size: 16px;
 }
 
 .cta {
@@ -466,11 +479,13 @@
 
 .cta h3 {
   margin: 0 0 6px;
+  font-size: 28px;
 }
 
 .cta p {
   margin: 0;
   color: rgba(255, 255, 255, 0.8);
+  font-size: 18px;
 }
 
 .btn {
@@ -478,10 +493,10 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 14px 28px;
+  padding: 16px 32px;
   border-radius: 14px;
   font-weight: 700;
-  font-size: 16px;
+  font-size: 18px;
   text-decoration: none;
   transition: var(--transition);
   cursor: pointer;
