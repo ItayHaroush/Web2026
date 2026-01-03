@@ -46,10 +46,7 @@ export default function App() {
     },
   ];
 
-  const testimonials = [
-    { name: 'מסעדת הבית', text: '"חסכנו אלפי שקלים בעמלות. המערכת פשוטה ונוחה"', rating: '⭐⭐⭐⭐⭐' },
-    { name: 'פיצה אקספרס', text: '"הלקוחות שלנו אוהבים להזמין ישירות מאיתנו"', rating: '⭐⭐⭐⭐⭐' },
-  ];
+
 
   const steps = [
     {
@@ -198,18 +195,7 @@ export default function App() {
           </div>
         </section>
 
-        <section className="section testimonials">
-          <div className="section__title">מה אומרים מסעדות שעובדות איתנו</div>
-          <div className="grid grid--two">
-            {testimonials.map((t, i) => (
-              <article key={i} className="card card--testimonial">
-                <div className="testimonial__rating">{t.rating}</div>
-                <p className="testimonial__text">{t.text}</p>
-                <p className="testimonial__name">— {t.name}</p>
-              </article>
-            ))}
-          </div>
-        </section>
+
 
         <section className="section" id="plans">
           <div className="section__title">תמחור פשוט. בלי הפתעות.</div>
