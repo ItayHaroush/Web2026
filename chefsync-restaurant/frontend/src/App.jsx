@@ -84,7 +84,8 @@ function AppRoutes() {
     return (
       <Routes>
         <Route path="/" element={<LandingPage />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="/landing" element={<LandingPage />} />
+        <Route path="*" element={<Navigate to="/landing" replace />} />
       </Routes>
     );
   }
