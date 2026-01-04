@@ -16,6 +16,8 @@
 
 * {
   box-sizing: border-box;
+  direction: rtl;
+  text-align: right;
 }
 
 .page {
