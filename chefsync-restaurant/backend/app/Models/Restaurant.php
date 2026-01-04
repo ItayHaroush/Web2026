@@ -26,6 +26,11 @@ class Restaurant extends Model
         'operating_hours',
     ];
 
+    protected $attributes = [
+        'operating_days' => '{}',
+        'operating_hours' => '{}',
+    ];
+
     protected $casts = [
         'is_open' => 'boolean',
         'is_override_status' => 'boolean',
