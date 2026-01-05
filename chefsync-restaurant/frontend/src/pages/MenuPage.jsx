@@ -6,6 +6,7 @@ import { CustomerLayout } from '../layouts/CustomerLayout';
 import menuService from '../services/menuService';
 import { UI_TEXT } from '../constants/ui';
 import axios from 'axios';
+import { API_BASE_URL } from '../constants/api';
 
 /**
  * עמוד תפריט - עיצוב בסגנון Wolt
@@ -43,8 +44,7 @@ export default function MenuPage() {
 
     const loadRestaurantInfo = async () => {
         try {
-            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
-            const response = await axios.get(`${API_URL}/restaurants`, {
+            const response = await axios.get(`${API_BASE_URL}/restaurants`, {
                 transformResponse: [(data) => {
                     // נקה את התגובה מ-HTML warnings של PHP
                     if (typeof data === 'string') {

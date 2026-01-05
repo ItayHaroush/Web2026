@@ -1,6 +1,19 @@
 // מידע API ועירובים
 
-export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+const resolveApiBaseUrl = () => {
+    const envValue = import.meta.env.VITE_API_URL?.trim();
+
+    if (envValue) return envValue;
+
+    if (import.meta.env.DEV) {
+        console.warn('VITE_API_URL missing; using dev fallback http://localhost:8000/api');
+        return 'http://localhost:8000/api';
+    }
+
+    throw new Error('VITE_API_URL is not set. Define it in the environment for production builds.');
+};
+
+export const API_BASE_URL = resolveApiBaseUrl();
 export const TENANT_HEADER = 'X-Tenant-ID';
 
 // נקודות סיום API

@@ -1,6 +1,5 @@
 import axios from 'axios';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+import { API_BASE_URL } from '../constants/api';
 
 /**
  * קבל רשימת כל המסעדות
@@ -10,7 +9,7 @@ export const getAllRestaurants = async (city = null) => {
         const params = {};
         if (city) params.city = city;
 
-        const response = await axios.get(`${API_URL}/restaurants`, {
+        const response = await axios.get(`${API_BASE_URL}/restaurants`, {
             params,
             transformResponse: [(data) => {
                 // נקה את התגובה מ-HTML warnings של PHP
