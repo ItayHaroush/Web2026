@@ -145,11 +145,18 @@ class SuperAdminController extends Controller
 
         DB::beginTransaction();
         try {
-            // יצירת המסעדה
+            // יצירת המסעדה - וודא שכל השדות הנדרשים קיימים
+            $slugValue = Str::slug($validated['name']);
+            \Log::info('Creating restaurant', [
+                'name' => $validated['name'],
+                'slug' => $slugValue,
+                'tenant_id' => $validated['tenant_id'],
+            ]);
+            
             $restaurant = Restaurant::create([
                 'tenant_id' => $validated['tenant_id'],
                 'name' => $validated['name'],
-                'slug' => Str::slug($validated['name']),
+                'slug' => $slugValue,
                 'phone' => $validated['phone'],
                 'address' => $validated['address'] ?? null,
                 'description' => $validated['description'] ?? null,
