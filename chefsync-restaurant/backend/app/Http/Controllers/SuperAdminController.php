@@ -8,6 +8,7 @@ use App\Models\Order;
 use App\Models\City;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -159,7 +160,7 @@ class SuperAdminController extends Controller
                 $logoUrl = '/storage/' . $logoPath;
             }
 
-            \Log::info('Creating restaurant', [
+            Log::info('Creating restaurant', [
                 'name' => $validated['name'],
                 'slug' => $slugValue,
                 'tenant_id' => $validated['tenant_id'],
@@ -205,7 +206,7 @@ class SuperAdminController extends Controller
             ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
-            \Log::error('Restaurant creation error: ' . $e->getMessage(), [
+            Log::error('Restaurant creation error: ' . $e->getMessage(), [
                 'exception' => $e,
                 'validated_data' => $validated,
             ]);
