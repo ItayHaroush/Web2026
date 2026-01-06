@@ -215,8 +215,8 @@ export default function SuperAdminDashboard() {
                                             <button
                                                 onClick={() => toggleRestaurant(restaurant.id)}
                                                 className={`px-3 py-1 text-sm rounded-lg font-medium transition-all ${restaurant.is_open
-                                                        ? 'bg-red-100 text-red-700 hover:bg-red-200'
-                                                        : 'bg-green-100 text-green-700 hover:bg-green-200'
+                                                    ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                                                    : 'bg-green-100 text-green-700 hover:bg-green-200'
                                                     }`}
                                             >
                                                 {restaurant.is_open ? 'סגור' : 'פתח'}
@@ -294,10 +294,18 @@ function AddRestaurantModal({ onClose, onSuccess, getAuthHeaders }) {
                 onSuccess();
             }
         } catch (error) {
+            console.error('Restaurant creation error:', error.response?.data);
             const errors = error.response?.data?.errors || {};
-            Object.values(errors).forEach(err => {
-                toast.error(Array.isArray(err) ? err[0] : err);
-            });
+
+            if (Object.keys(errors).length === 0) {
+                // אם אין errors specific, תציג את ה-message
+                toast.error(error.response?.data?.message || 'שגיאה לא ידועה');
+            } else {
+                Object.entries(errors).forEach(([field, messages]) => {
+                    const message = Array.isArray(messages) ? messages[0] : messages;
+                    toast.error(`${field}: ${message}`);
+                });
+            }
         } finally {
             setLoading(false);
         }
