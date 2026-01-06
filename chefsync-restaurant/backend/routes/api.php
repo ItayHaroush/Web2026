@@ -53,6 +53,9 @@ Route::prefix('super-admin')->middleware(['auth:sanctum', 'super_admin'])->group
     // סטטיסטיקות מסעדה
     Route::get('/restaurants/{id}/stats', [SuperAdminController::class, 'getRestaurantStats'])->name('super-admin.restaurants.stats');
 
+    // ערים
+    Route::get('/cities', [SuperAdminController::class, 'getCities'])->name('super-admin.cities.list');
+
     // חיוב ותשלומים
     Route::get('/billing/summary', [SuperAdminBillingController::class, 'summary'])->name('super-admin.billing.summary');
     Route::get('/billing/restaurants', [SuperAdminBillingController::class, 'restaurants'])->name('super-admin.billing.restaurants');
