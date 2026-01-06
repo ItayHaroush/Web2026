@@ -4,6 +4,7 @@ import { CustomerLayout } from '../layouts/CustomerLayout';
 import { useNavigate } from 'react-router-dom';
 import { getAllRestaurants, getCities } from '../services/restaurantService';
 import logo from '../images/ChefSyncLogoIcon.png';
+import { resolveAssetUrl } from '../utils/assets';
 
 /**
  * עמוד בית - בחירת מסעדה מרשימה
@@ -304,7 +305,7 @@ export default function HomePage() {
                                             <div
                                                 className="absolute inset-0 opacity-20"
                                                 style={{
-                                                    backgroundImage: `url(${restaurant.logo_url})`,
+                                                    backgroundImage: `url(${resolveAssetUrl(restaurant.logo_url)})`,
                                                     backgroundSize: 'cover',
                                                     backgroundPosition: 'center',
                                                     filter: 'blur(20px)'
@@ -313,7 +314,7 @@ export default function HomePage() {
                                             {/* לוגו מרכזי */}
                                             <div className="absolute inset-0 flex items-center justify-center">
                                                 <img
-                                                    src={restaurant.logo_url}
+                                                    src={resolveAssetUrl(restaurant.logo_url)}
                                                     alt={restaurant.name}
                                                     className="w-28 h-28 object-contain group-hover:scale-110 transition-transform duration-500"
                                                 />

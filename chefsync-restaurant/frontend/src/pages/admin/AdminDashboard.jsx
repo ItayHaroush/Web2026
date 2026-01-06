@@ -95,55 +95,55 @@ export default function AdminDashboard() {
     return (
         <AdminLayout>
             {/* כרטיסי סטטיסטיקה */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 {statCards.map((card) => (
-                    <div key={card.key} className="bg-white rounded-2xl shadow-sm p-6">
-                        <div className="flex items-center justify-between mb-4">
-                            <span className="text-3xl">{card.icon}</span>
-                            <div className={`w-12 h-12 ${card.color} rounded-xl flex items-center justify-center`}>
-                                <span className="text-white text-xl font-bold">
+                    <div key={card.key} className="bg-white rounded-2xl shadow-sm p-4 sm:p-6">
+                        <div className="flex items-center justify-between mb-3 sm:mb-4">
+                            <span className="text-2xl sm:text-3xl">{card.icon}</span>
+                            <div className={`w-10 h-10 sm:w-12 sm:h-12 ${card.color} rounded-xl flex items-center justify-center`}>
+                                <span className="text-white text-lg sm:text-xl font-bold">
                                     {card.format
                                         ? ''
                                         : stats?.[card.key] || 0}
                                 </span>
                             </div>
                         </div>
-                        <p className="text-2xl font-bold text-gray-800">
+                        <p className="text-xl sm:text-2xl font-bold text-gray-800">
                             {card.format
                                 ? card.format(stats?.[card.key])
                                 : stats?.[card.key] || 0}
                         </p>
-                        <p className="text-sm text-gray-500">{card.label}</p>
+                        <p className="text-xs sm:text-sm text-gray-500">{card.label}</p>
                     </div>
                 ))}
             </div>
 
             {/* סיכום נוסף */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
-                <div className="bg-gradient-to-br from-brand-primary to-brand-secondary text-white rounded-2xl p-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div className="bg-gradient-to-br from-brand-primary to-brand-secondary text-white rounded-2xl p-4 sm:p-6">
                     <div className="flex items-center gap-4">
-                        <span className="text-4xl">🍽️</span>
+                        <span className="text-3xl sm:text-4xl">🍽️</span>
                         <div>
-                            <p className="text-3xl font-bold">{stats?.menu_items || 0}</p>
-                            <p className="text-white/80">פריטים בתפריט</p>
+                            <p className="text-2xl sm:text-3xl font-bold">{stats?.menu_items || 0}</p>
+                            <p className="text-white/80 text-sm">פריטים בתפריט</p>
                         </div>
                     </div>
                 </div>
-                <div className="bg-gradient-to-br from-purple-500 to-pink-500 text-white rounded-2xl p-6">
+                <div className="bg-gradient-to-br from-purple-500 to-pink-500 text-white rounded-2xl p-4 sm:p-6">
                     <div className="flex items-center gap-4">
-                        <span className="text-4xl">📁</span>
+                        <span className="text-3xl sm:text-4xl">📁</span>
                         <div>
-                            <p className="text-3xl font-bold">{stats?.categories || 0}</p>
-                            <p className="text-white/80">קטגוריות</p>
+                            <p className="text-2xl sm:text-3xl font-bold">{stats?.categories || 0}</p>
+                            <p className="text-white/80 text-sm">קטגוריות</p>
                         </div>
                     </div>
                 </div>
-                <div className="bg-gradient-to-br from-orange-500 to-red-500 text-white rounded-2xl p-6">
+                <div className="bg-gradient-to-br from-orange-500 to-red-500 text-white rounded-2xl p-4 sm:p-6">
                     <div className="flex items-center gap-4">
-                        <span className="text-4xl">👥</span>
+                        <span className="text-3xl sm:text-4xl">👥</span>
                         <div>
-                            <p className="text-3xl font-bold">{stats?.employees || 0}</p>
-                            <p className="text-white/80">עובדים</p>
+                            <p className="text-2xl sm:text-3xl font-bold">{stats?.employees || 0}</p>
+                            <p className="text-white/80 text-sm">עובדים</p>
                         </div>
                     </div>
                 </div>
@@ -151,28 +151,28 @@ export default function AdminDashboard() {
 
             {/* הזמנות אחרונות */}
             <div className="bg-white rounded-2xl shadow-sm">
-                <div className="p-6 border-b">
+                <div className="p-4 sm:p-6 border-b">
                     <h2 className="text-xl font-bold text-gray-800">📋 הזמנות אחרונות</h2>
                 </div>
                 <div className="divide-y">
                     {recentOrders.length === 0 ? (
-                        <div className="p-8 text-center text-gray-500">
-                            <span className="text-4xl mb-4 block">📭</span>
+                        <div className="p-6 sm:p-8 text-center text-gray-500">
+                            <span className="text-3xl sm:text-4xl mb-4 block">📭</span>
                             <p>אין הזמנות להצגה</p>
                         </div>
                     ) : (
                         recentOrders.map((order) => {
                             const statusBadge = getStatusBadge(order.status);
                             return (
-                                <div key={order.id} className="p-4 hover:bg-gray-50 transition-colors">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-12 h-12 bg-brand-primary/10 rounded-xl flex items-center justify-center">
+                                <div key={order.id} className="p-3 sm:p-4 hover:bg-gray-50 transition-colors">
+                                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                                        <div className="flex items-center gap-3 sm:gap-4">
+                                            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-brand-primary/10 rounded-xl flex items-center justify-center">
                                                 <span className="font-bold text-brand-primary">#{order.id}</span>
                                             </div>
                                             <div>
-                                                <p className="font-medium text-gray-800">{order.customer_name}</p>
-                                                <p className="text-sm text-gray-500">
+                                                <p className="font-medium text-gray-800 text-sm sm:text-base">{order.customer_name}</p>
+                                                <p className="text-xs sm:text-sm text-gray-500">
                                                     {order.items?.length || 0} פריטים •
                                                     {new Date(order.created_at).toLocaleString('he-IL', {
                                                         hour: '2-digit',
@@ -182,10 +182,10 @@ export default function AdminDashboard() {
                                             </div>
                                         </div>
                                         <div className="text-left">
-                                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusBadge.color}`}>
+                                            <span className={`px-2 sm:px-3 py-1 rounded-full text-xs font-medium ${statusBadge.color}`}>
                                                 {statusBadge.text}
                                             </span>
-                                            <p className="text-lg font-bold text-gray-800 mt-1">
+                                            <p className="text-base sm:text-lg font-bold text-gray-800 mt-1">
                                                 ₪{Number(order.total || order.total_amount || 0).toFixed(2)}
                                             </p>
                                         </div>

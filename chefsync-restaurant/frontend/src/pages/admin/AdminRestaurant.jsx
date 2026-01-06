@@ -3,6 +3,7 @@ import { useAdminAuth } from '../../context/AdminAuthContext';
 import { useRestaurantStatus } from '../../context/RestaurantStatusContext';
 import AdminLayout from '../../layouts/AdminLayout';
 import api from '../../services/apiClient';
+import { resolveAssetUrl } from '../../utils/assets';
 
 const DAYS_OF_WEEK = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 
@@ -74,7 +75,7 @@ export default function AdminRestaurant() {
             if (response.data.success) {
                 console.log('📩 Fetched restaurant:', response.data.restaurant);
                 setRestaurant(response.data.restaurant);
-                setLogoPreview(response.data.restaurant.logo_url || null);
+                setLogoPreview(response.data.restaurant.logo_url ? resolveAssetUrl(response.data.restaurant.logo_url) : null);
                 // עדכן את overrideStatus בהתאם ל-is_override_status מהשרת
                 setOverrideStatus(response.data.restaurant.is_override_status || false);
             }
@@ -123,7 +124,7 @@ export default function AdminRestaurant() {
         setSaving(true);
         try {
             const formData = new FormData();
-            ['name', 'description', 'phone', 'address'].forEach((field) => {
+            ['name', 'description', 'phone', 'address', 'city'].forEach((field) => {
                 if (restaurant[field] !== undefined && restaurant[field] !== null) {
                     formData.append(field, restaurant[field]);
                 }
@@ -243,6 +244,15 @@ export default function AdminRestaurant() {
                                 type="text"
                                 value={restaurant.address || ''}
                                 onChange={(e) => handleChange('address', e.target.value)}
+                                className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                            />
+                        </div>
+                        <div className="sm:col-span-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">עיר</label>
+                            <input
+                                type="text"
+                                value={restaurant.city || ''}
+                                onChange={(e) => handleChange('city', e.target.value)}
                                 className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary"
                             />
                         </div>

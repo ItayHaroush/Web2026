@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import AdminLayout from '../../layouts/AdminLayout';
 import api from '../../services/apiClient';
+import { resolveAssetUrl } from '../../utils/assets';
 
 export default function AdminMenu() {
     const { getAuthHeaders, isManager } = useAdminAuth();
@@ -215,7 +216,7 @@ export default function AdminMenu() {
                             <div className="h-40 bg-gray-100 relative">
                                 {item.image_url ? (
                                     <img
-                                        src={item.image_url}
+                                        src={resolveAssetUrl(item.image_url)}
                                         alt={item.name}
                                         className="w-full h-full object-cover"
                                     />

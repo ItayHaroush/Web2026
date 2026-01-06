@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Restaurant;
+use App\Models\City;
 use Illuminate\Http\Request;
 
 /**
@@ -20,7 +21,23 @@ class RestaurantController extends Controller
 
             // סינון לפי עיר
             if ($request->has('city')) {
-                $query->where('city', $request->city);
+                $cityInput = $request->city;
+                if (!empty($cityInput)) {
+                    // מצא את העיר בטבלת הערים (עברית או אנגלית) והחזר את שתי האפשרויות לסינון
+                    $cityModel = City::where('hebrew_name', $cityInput)
+                        ->orWhere('name', $cityInput)
+                        ->first();
+
+                    if ($cityModel) {
+                        $query->whereIn('city', [
+                            $cityModel->hebrew_name ?? $cityInput,
+                            $cityModel->name ?? $cityInput,
+                        ]);
+                    } else {
+                        // אם לא נמצאה התאמה בטבלת הערים, בצע סינון ישיר
+                        $query->where('city', $cityInput);
+                    }
+                }
             }
 
             // סינון לפי סוג מטבח

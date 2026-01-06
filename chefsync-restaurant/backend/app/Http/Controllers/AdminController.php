@@ -7,6 +7,7 @@ use App\Models\MenuItem;
 use App\Models\Category;
 use App\Models\Order;
 use App\Models\Restaurant;
+use App\Models\City;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
@@ -315,6 +316,7 @@ class AdminController extends Controller
             'description' => 'nullable|string',
             'phone' => 'sometimes|string|max:20',
             'address' => 'sometimes|string|max:255',
+            'city' => 'sometimes|string|max:255',
             'is_open' => 'sometimes',
             'operating_days' => 'nullable|string',
             'operating_hours' => 'nullable|string',
@@ -346,6 +348,7 @@ class AdminController extends Controller
             'description' => $request->input('description'),
             'phone' => $request->input('phone'),
             'address' => $request->input('address'),
+            'city' => $request->input('city'),
         ];
 
         // אם נשלח is_open, השתמש בערך שנשלח (כפיית ידנית)
@@ -393,6 +396,18 @@ class AdminController extends Controller
         }
 
         Log::debug('Update data:', $updateData);
+
+        // אם נשלחה עיר, נרמול לשם העברי לפי טבלת הערים
+        if (!empty($updateData['city'])) {
+            $inputCity = $updateData['city'];
+            $cityModel = City::where('hebrew_name', $inputCity)
+                ->orWhere('name', $inputCity)
+                ->first();
+            if ($cityModel) {
+                $updateData['city'] = $cityModel->hebrew_name ?: $inputCity;
+            }
+        }
+
         $restaurant->update($updateData);
         Log::debug('Restaurant after update:', $restaurant->toArray());
 

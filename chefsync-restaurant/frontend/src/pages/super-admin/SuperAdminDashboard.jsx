@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import SuperAdminLayout from '../../layouts/SuperAdminLayout';
 import api from '../../services/apiClient';
+import { resolveAssetUrl } from '../../utils/assets';
 import { toast } from 'react-hot-toast';
 
 export default function SuperAdminDashboard() {
@@ -94,11 +95,11 @@ export default function SuperAdminDashboard() {
 
     return (
         <SuperAdminLayout>
-            <div className="max-w-7xl mx-auto">
+            <div className="max-w-7xl mx-auto px-3 sm:px-4">
                 {/* Header */}
                 <div className="mb-8">
-                    <h1 className="text-4xl font-bold text-gray-900 mb-2">🏢 דשבורד מנהל מערכת</h1>
-                    <p className="text-gray-600">ניהול מלא של כל המסעדות במערכת</p>
+                    <h1 className="text-2xl sm:text-4xl font-bold text-gray-900 mb-1 sm:mb-2">🏢 דשבורד מנהל מערכת</h1>
+                    <p className="text-sm sm:text-base text-gray-600">ניהול מלא של כל המסעדות במערכת</p>
                 </div>
 
                 {/* סטטיסטיקות */}
@@ -133,14 +134,14 @@ export default function SuperAdminDashboard() {
                 )}
 
                 {/* כפתור הוספת מסעדה */}
-                <div className="mb-6 flex justify-between items-center">
-                    <div className="flex gap-3">
+                <div className="mb-6 flex flex-col sm:flex-row sm:justify-between gap-3 sm:items-center">
+                    <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
                         <input
                             type="text"
                             placeholder="חיפוש מסעדה..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-brand-primary w-64"
+                            className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-brand-primary w-full sm:w-64"
                         />
                         <select
                             value={filterStatus}
@@ -154,7 +155,7 @@ export default function SuperAdminDashboard() {
                     </div>
                     <button
                         onClick={() => setShowAddRestaurant(true)}
-                        className="bg-brand-primary text-white px-6 py-2 rounded-lg hover:bg-brand-primary/90 font-medium transition-all"
+                        className="bg-brand-primary text-white px-4 sm:px-6 py-2 rounded-lg hover:bg-brand-primary/90 font-medium transition-all w-full sm:w-auto"
                     >
                         ➕ הוספת מסעדה חדשה
                     </button>
@@ -171,29 +172,32 @@ export default function SuperAdminDashboard() {
                         <p className="text-gray-500">אין מסעדות</p>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 gap-4">
+                    <div className="grid grid-cols-1 gap-3 sm:gap-4">
                         {restaurants.map((restaurant) => (
-                            <div key={restaurant.id} className="bg-white rounded-2xl shadow-sm p-6 hover:shadow-md transition-all">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-4 flex-1">
+                            <div key={restaurant.id} className="bg-white rounded-2xl shadow-sm p-4 sm:p-6 hover:shadow-md transition-all">
+                                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                                    <div className="flex items-center gap-3 sm:gap-4 flex-1">
                                         {restaurant.logo_url ? (
                                             <img
-                                                src={restaurant.logo_url}
+                                                src={resolveAssetUrl(restaurant.logo_url)}
                                                 alt={restaurant.name}
-                                                className="w-16 h-16 rounded-lg object-cover"
+                                                className="w-12 h-12 sm:w-16 sm:h-16 rounded-lg object-cover"
                                             />
                                         ) : (
-                                            <div className="w-16 h-16 rounded-lg bg-brand-primary/10 flex items-center justify-center text-2xl">
+                                            <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-lg bg-brand-primary/10 flex items-center justify-center text-xl sm:text-2xl">
                                                 🍽️
                                             </div>
                                         )}
                                         <div>
-                                            <h3 className="text-xl font-bold">{restaurant.name}</h3>
-                                            <p className="text-sm text-gray-500">
+                                            <h3 className="text-lg sm:text-xl font-bold">{restaurant.name}</h3>
+                                            <p className="text-xs sm:text-sm text-gray-500">
                                                 {restaurant.tenant_id}
                                             </p>
-                                            <div className="flex gap-4 mt-2 text-sm">
+                                            <div className="flex flex-wrap gap-2 sm:gap-4 mt-2 text-xs sm:text-sm">
                                                 <span className="text-gray-600">📞 {restaurant.phone}</span>
+                                                {restaurant.city && (
+                                                    <span className="text-gray-600">📍 {restaurant.city}</span>
+                                                )}
                                                 <span className={`font-medium ${restaurant.is_open ? 'text-green-600' : 'text-red-600'}`}>
                                                     {restaurant.is_open ? '✅ פתוח' : '❌ סגור'}
                                                 </span>
@@ -202,9 +206,9 @@ export default function SuperAdminDashboard() {
                                     </div>
 
                                     <div className="text-right">
-                                        <div className="mb-4">
-                                            <p className="text-sm text-gray-500">הכנסה</p>
-                                            <p className="text-2xl font-bold text-orange-600">
+                                        <div className="mb-3 sm:mb-4">
+                                            <p className="text-xs sm:text-sm text-gray-500">הכנסה</p>
+                                            <p className="text-lg sm:text-2xl font-bold text-orange-600">
                                                 ₪{Number(restaurant.total_revenue || 0).toFixed(0)}
                                             </p>
                                             <p className="text-xs text-gray-500">
@@ -277,9 +281,7 @@ function AddRestaurantModal({ onClose, onSuccess, getAuthHeaders }) {
     useEffect(() => {
         const fetchCities = async () => {
             try {
-                const response = await api.get('/super-admin/cities', {
-                    headers: getAuthHeaders()
-                });
+                const response = await api.get('/cities');
                 if (response.data.success) {
                     setCities(response.data.data);
                 }
@@ -290,7 +292,7 @@ function AddRestaurantModal({ onClose, onSuccess, getAuthHeaders }) {
                 setCitiesLoading(false);
             }
         };
-        
+
         fetchCities();
     }, []);
 
@@ -344,8 +346,13 @@ function AddRestaurantModal({ onClose, onSuccess, getAuthHeaders }) {
         } catch (error) {
             console.error('Restaurant creation error:', error.response?.data);
             const errors = error.response?.data?.errors || {};
-            
+
             if (Object.keys(errors).length === 0) {
+                toast.error(error.response?.data?.message || 'שגיאה לא ידועה');
+            } else {
+                Object.entries(errors).forEach(([field, messages]) => {
+                    const message = Array.isArray(messages) ? messages[0] : messages;
+                    toast.error(`${field}: ${message}`);
                 });
             }
         } finally {
@@ -407,7 +414,7 @@ function AddRestaurantModal({ onClose, onSuccess, getAuthHeaders }) {
                             >
                                 <option value="">בחר עיר</option>
                                 {cities.map((city) => (
-                                    <option key={city.id} value={city.name}>
+                                    <option key={city.id} value={city.hebrew_name}>
                                         {city.hebrew_name}
                                     </option>
                                 ))}
