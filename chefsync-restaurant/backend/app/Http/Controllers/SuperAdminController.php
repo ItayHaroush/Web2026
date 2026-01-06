@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Restaurant;
 use App\Models\User;
 use App\Models\Order;
+use App\Models\City;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -152,7 +153,7 @@ class SuperAdminController extends Controller
                 'slug' => $slugValue,
                 'tenant_id' => $validated['tenant_id'],
             ]);
-            
+
             $restaurant = Restaurant::create([
                 'tenant_id' => $validated['tenant_id'],
                 'name' => $validated['name'],
@@ -302,6 +303,18 @@ class SuperAdminController extends Controller
         return response()->json([
             'success' => true,
             'stats' => $stats,
+        ]);
+    }
+
+    /**
+     * קבל רשימת כל הערים בישראל
+     */
+    public function getCities()
+    {
+        $cities = City::orderBy('hebrew_name')->get();
+        return response()->json([
+            'success' => true,
+            'data' => $cities,
         ]);
     }
 }
