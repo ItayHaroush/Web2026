@@ -35,6 +35,7 @@ export function AdminAuthProvider({ children }) {
     };
 
     const login = (newToken, userData) => {
+        console.log('🔐 AdminAuth Login:', { token: newToken?.substring(0, 30) + '...', user: userData });
         localStorage.setItem('authToken', newToken);
         localStorage.setItem('user', JSON.stringify(userData));
         setToken(newToken);
@@ -43,7 +44,10 @@ export function AdminAuthProvider({ children }) {
 
     const loginWithCredentials = async (email, password) => {
         try {
+            console.log('🔑 Attempting login for:', email);
             const response = await api.post('/auth/login', { email, password });
+            console.log('✅ Login response:', response.data);
+
             if (response.data.success) {
                 const { token: newToken, user: userData } = response.data;
                 login(newToken, userData);
@@ -51,6 +55,7 @@ export function AdminAuthProvider({ children }) {
             }
             return { success: false, message: response.data.message };
         } catch (error) {
+            console.error('❌ Login failed:', error.response?.data);
             const message = error.response?.data?.message || 'שגיאה בהתחברות';
             return { success: false, message };
         }

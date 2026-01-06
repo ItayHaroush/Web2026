@@ -43,6 +43,7 @@ class Kernel extends HttpKernel
      */
     protected $middlewareAliases = [
         'tenant' => \App\Http\Middleware\EnsureTenantId::class,
+        'ensure_tenant_id' => \App\Http\Middleware\EnsureTenantId::class,
         'super_admin' => \App\Http\Middleware\EnsureSuperAdmin::class,
     ];
 }

@@ -1,4 +1,4 @@
-import axios from 'axios';
+import apiClient from './apiClient';
 import { API_BASE_URL } from '../constants/api';
 
 /**
@@ -9,19 +9,9 @@ export const getAllRestaurants = async (city = null) => {
         const params = {};
         if (city) params.city = city;
 
-        const response = await axios.get(`${API_BASE_URL}/restaurants`, {
-            params,
-            transformResponse: [(data) => {
-                // נקה את התגובה מ-HTML warnings של PHP
-                if (typeof data === 'string') {
-                    // חפש את תחילת ה-JSON (סוגריים מסולסלים)
-                    const jsonStart = data.indexOf('{');
-                    if (jsonStart > 0) {
-                        data = data.substring(jsonStart);
-                    }
-                }
-                return JSON.parse(data);
-            }]
+        // 🔥 שימוש ב-apiClient (עם interceptors)
+        const response = await apiClient.get(`/restaurants`, {
+            params
         });
 
         return response.data;

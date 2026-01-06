@@ -20,6 +20,8 @@ import AdminTerminal from './pages/admin/AdminTerminal';
 import SuperAdminDashboard from './pages/super-admin/SuperAdminDashboard';
 import SuperAdminReports from './pages/super-admin/SuperAdminReports';
 import SuperAdminSettings from './pages/super-admin/SuperAdminSettings';
+import DebugAuth from './pages/super-admin/DebugAuth';
+import DebugAPI from './pages/DebugAPI';
 import RegisterRestaurant from './pages/RegisterRestaurant';
 import LandingPage from './pages/LandingPage';
 import { Toaster } from 'react-hot-toast';
@@ -78,6 +80,9 @@ function AppRoutes() {
 
   return (
     <Routes>
+      {/* Debug */}
+      <Route path="/debug-api" element={<DebugAPI />} />
+      
       {/* לקוחות */}
       <Route path="/" element={<HomePage />} />
       <Route path="/landing" element={<LandingPage />} />
@@ -170,6 +175,14 @@ function AppRoutes() {
         element={
           <SuperAdminRoute>
             <SuperAdminSettings />
+          </SuperAdminRoute>
+        }
+      />
+      <Route
+        path="/super-admin/debug"
+        element={
+          <SuperAdminRoute>
+            <DebugAuth />
           </SuperAdminRoute>
         }
       />
