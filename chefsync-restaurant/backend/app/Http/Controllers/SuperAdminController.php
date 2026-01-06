@@ -184,9 +184,14 @@ class SuperAdminController extends Controller
             ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
+            \Log::error('Restaurant creation error: ' . $e->getMessage(), [
+                'exception' => $e,
+                'validated_data' => $validated,
+            ]);
             return response()->json([
                 'success' => false,
                 'message' => 'שגיאה ביצירת המסעדה: ' . $e->getMessage(),
+                'error_detail' => env('APP_DEBUG') ? $e->getMessage() : null,
             ], 500);
         }
     }
