@@ -150,7 +150,7 @@ class SuperAdminController extends Controller
         try {
             // יצירת המסעדה
             $slugValue = Str::slug($validated['name']);
-            
+
             // טיפול בהעלאת הלוגו
             $logoUrl = null;
             if ($request->hasFile('logo') && $request->file('logo')->isValid()) {

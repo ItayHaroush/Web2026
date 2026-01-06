@@ -6,6 +6,7 @@ import { CustomerLayout } from '../layouts/CustomerLayout';
 import menuService from '../services/menuService';
 import { UI_TEXT } from '../constants/ui';
 import apiClient from '../services/apiClient';
+import { resolveAssetUrl } from '../utils/assets';
 import { API_BASE_URL, TENANT_HEADER } from '../constants/api';
 
 /**
@@ -131,7 +132,7 @@ export default function MenuPage() {
                             <div
                                 className="absolute -top-10 -right-10 w-64 h-64 opacity-10"
                                 style={{
-                                    backgroundImage: `url(${restaurant.logo_url})`,
+                                    backgroundImage: `url(${resolveAssetUrl(restaurant.logo_url)})`,
                                     backgroundSize: 'contain',
                                     backgroundRepeat: 'no-repeat'
                                 }}
@@ -139,7 +140,7 @@ export default function MenuPage() {
                             <div
                                 className="absolute -bottom-10 -left-10 w-48 h-48 opacity-10"
                                 style={{
-                                    backgroundImage: `url(${restaurant.logo_url})`,
+                                    backgroundImage: `url(${resolveAssetUrl(restaurant.logo_url)})`,
                                     backgroundSize: 'contain',
                                     backgroundRepeat: 'no-repeat'
                                 }}
@@ -147,7 +148,7 @@ export default function MenuPage() {
                             <div
                                 className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 opacity-5"
                                 style={{
-                                    backgroundImage: `url(${restaurant.logo_url})`,
+                                    backgroundImage: `url(${resolveAssetUrl(restaurant.logo_url)})`,
                                     backgroundSize: 'contain',
                                     backgroundRepeat: 'no-repeat',
                                     backgroundPosition: 'center'
@@ -163,7 +164,7 @@ export default function MenuPage() {
                                 <div className="mb-4 flex justify-center">
                                     <div className="bg-white p-3 rounded-2xl shadow-2xl">
                                         <img
-                                            src={restaurant.logo_url}
+                                            src={resolveAssetUrl(restaurant.logo_url)}
                                             alt={restaurant?.name}
                                             className="h-16 w-16 sm:h-20 sm:w-20 object-contain"
                                         />
@@ -189,7 +190,7 @@ export default function MenuPage() {
                             <div className="flex items-center gap-4">
                                 {restaurant.logo_url && (
                                     <img
-                                        src={restaurant.logo_url}
+                                        src={resolveAssetUrl(restaurant.logo_url)}
                                         alt=""
                                         className="h-12 w-12 object-contain opacity-50 hidden sm:block"
                                     />
@@ -223,7 +224,7 @@ export default function MenuPage() {
                                     }`}
                             >
                                 {restaurant?.logo_url && activeCategory === category.id && (
-                                    <img src={restaurant.logo_url} alt="" className="h-5 w-5 object-contain" />
+                                    <img src={resolveAssetUrl(restaurant.logo_url)} alt="" className="h-5 w-5 object-contain" />
                                 )}
                                 <span className="font-medium">{category.name}</span>
                                 <span className="text-xs opacity-70">({category.items?.length || 0})</span>
@@ -238,7 +239,7 @@ export default function MenuPage() {
                 {menu.length === 0 ? (
                     <div className="bg-white rounded-2xl shadow-sm p-12 text-center">
                         {restaurant?.logo_url && (
-                            <img src={restaurant.logo_url} alt="" className="h-20 w-20 mx-auto mb-4 opacity-30" />
+                            <img src={resolveAssetUrl(restaurant.logo_url)} alt="" className="h-20 w-20 mx-auto mb-4 opacity-30" />
                         )}
                         <p className="text-gray-500 text-lg">עדיין אין פריטים בתפריט</p>
                     </div>
@@ -254,7 +255,7 @@ export default function MenuPage() {
                                 {restaurant?.logo_url && (
                                     <div className="bg-gradient-to-br from-brand-primary/20 to-brand-secondary/20 p-3 rounded-xl">
                                         <img
-                                            src={restaurant.logo_url}
+                                            src={resolveAssetUrl(restaurant.logo_url)}
                                             alt=""
                                             className="h-8 w-8 object-contain"
                                         />
@@ -284,14 +285,14 @@ export default function MenuPage() {
                                             <div className="relative h-40 bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden">
                                                 {item.image_url ? (
                                                     <img
-                                                        src={item.image_url}
+                                                        src={resolveAssetUrl(item.image_url)}
                                                         alt={item.name}
                                                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                                                     />
                                                 ) : restaurant?.logo_url ? (
                                                     <div className="absolute inset-0 flex items-center justify-center">
                                                         <img
-                                                            src={restaurant.logo_url}
+                                                            src={resolveAssetUrl(restaurant.logo_url)}
                                                             alt=""
                                                             className="h-24 w-24 object-contain opacity-10 group-hover:opacity-20 group-hover:scale-110 transition-all duration-500"
                                                         />

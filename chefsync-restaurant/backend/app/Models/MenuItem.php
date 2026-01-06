@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 
 /**
  * דגם MenuItem - פריטי תפריט
@@ -60,5 +62,22 @@ class MenuItem extends Model
                 $query->where('tenant_id', app('tenant_id'));
             }
         });
+    }
+
+    /**
+     * ודא שתמונת הפריט מוחזרת תמיד כ-URL מלא
+     */
+    public function getImageUrlAttribute($value)
+    {
+        if (!$value) {
+            return null;
+        }
+
+        if (is_string($value) && (str_starts_with($value, 'http://') || str_starts_with($value, 'https://'))) {
+            return $value;
+        }
+
+        $relative = str_starts_with($value, '/storage') ? $value : Storage::url($value);
+        return URL::to($relative);
     }
 }
