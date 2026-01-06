@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * SuperAdminController - ניהול מערכת כללי
@@ -135,7 +136,8 @@ class SuperAdminController extends Controller
             'phone' => 'required|string|max:20',
             'address' => 'nullable|string',
             'description' => 'nullable|string',
-            'logo_url' => 'nullable|url',
+            'city' => 'nullable|string|max:255',
+            'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
 
             // פרטי בעל המסעדה
             'owner_name' => 'required|string|max:255',
@@ -146,12 +148,22 @@ class SuperAdminController extends Controller
 
         DB::beginTransaction();
         try {
-            // יצירת המסעדה - וודא שכל השדות הנדרשים קיימים
+            // יצירת המסעדה
             $slugValue = Str::slug($validated['name']);
+            
+            // טיפול בהעלאת הלוגו
+            $logoUrl = null;
+            if ($request->hasFile('logo') && $request->file('logo')->isValid()) {
+                $logoFile = $request->file('logo');
+                $logoPath = $logoFile->store('logos', 'public');
+                $logoUrl = '/storage/' . $logoPath;
+            }
+
             \Log::info('Creating restaurant', [
                 'name' => $validated['name'],
                 'slug' => $slugValue,
                 'tenant_id' => $validated['tenant_id'],
+                'logo_path' => $logoUrl,
             ]);
 
             $restaurant = Restaurant::create([
@@ -161,7 +173,8 @@ class SuperAdminController extends Controller
                 'phone' => $validated['phone'],
                 'address' => $validated['address'] ?? null,
                 'description' => $validated['description'] ?? null,
-                'logo_url' => $validated['logo_url'] ?? null,
+                'city' => $validated['city'] ?? null,
+                'logo_url' => $logoUrl,
                 'is_open' => false, // כברירת מחדל סגור עד שיסיימו הגדרה
             ]);
 

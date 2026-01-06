@@ -18,6 +18,7 @@ class Restaurant extends Model
         'slug',
         'phone',
         'address',
+        'city',
         'is_open',
         'is_override_status',
         'description',
