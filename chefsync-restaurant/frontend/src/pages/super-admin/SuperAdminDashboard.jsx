@@ -398,14 +398,33 @@ function AddRestaurantModal({ onClose, onSuccess, getAuthHeaders }) {
                                 className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-brand-primary"
                                 required
                             />
-                            <input
-                                type="url"
-                                name="logo_url"
-                                placeholder="URL לתמונה של לוגו"
-                                value={formData.logo_url}
+                            <select
+                                name="city"
+                                value={formData.city}
                                 onChange={handleChange}
                                 className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-brand-primary"
-                            />
+                                disabled={citiesLoading}
+                            >
+                                <option value="">בחר עיר</option>
+                                {cities.map((city) => (
+                                    <option key={city.id} value={city.name}>
+                                        {city.hebrew_name}
+                                    </option>
+                                ))}
+                            </select>
+                            <label className="flex items-center justify-center w-full px-4 py-2 border border-gray-200 border-dashed rounded-lg cursor-pointer hover:border-brand-primary transition-colors">
+                                <span className="text-gray-700">📁 בחר תמונה לוגו</span>
+                                <input
+                                    type="file"
+                                    name="logo"
+                                    accept="image/jpeg,image/png,image/jpg,image/gif,image/webp"
+                                    onChange={handleChange}
+                                    className="hidden"
+                                />
+                            </label>
+                            {formData.logo && (
+                                <p className="text-sm text-green-600">✓ קובץ נבחר: {formData.logo.name}</p>
+                            )}
                             <textarea
                                 name="address"
                                 placeholder="כתובת"
