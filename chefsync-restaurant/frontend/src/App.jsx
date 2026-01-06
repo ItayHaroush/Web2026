@@ -82,7 +82,7 @@ function AppRoutes() {
     <Routes>
       {/* Debug */}
       <Route path="/debug-api" element={<DebugAPI />} />
-      
+
       {/* לקוחות */}
       <Route path="/" element={<HomePage />} />
       <Route path="/landing" element={<LandingPage />} />

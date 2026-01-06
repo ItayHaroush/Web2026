@@ -9,17 +9,17 @@ export default function DebugAPI() {
     const testEndpoint = async (endpoint, method = 'GET', data = null) => {
         setLoading(true);
         const key = `${method}_${endpoint}`;
-        
+
         try {
             console.log(`\n🧪 Testing ${method} ${endpoint}`);
             let response;
-            
+
             if (method === 'GET') {
                 response = await apiClient.get(endpoint);
             } else if (method === 'POST') {
                 response = await apiClient.post(endpoint, data);
             }
-            
+
             setResults(prev => ({
                 ...prev,
                 [key]: {
@@ -56,30 +56,30 @@ export default function DebugAPI() {
         <div style={{ padding: '20px', fontFamily: 'monospace' }}>
             <h1>🧪 Debug API Tester</h1>
             <p>Base URL: {API_BASE_URL}</p>
-            
+
             <div style={{ marginBottom: '20px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                <button 
+                <button
                     onClick={() => testEndpoint('/restaurants')}
                     style={{ padding: '10px', cursor: 'pointer' }}
                 >
                     GET /restaurants
                 </button>
-                
-                <button 
+
+                <button
                     onClick={testWithTenant}
                     style={{ padding: '10px', cursor: 'pointer' }}
                 >
                     GET /menu (with tenant)
                 </button>
-                
-                <button 
+
+                <button
                     onClick={testWithoutTenant}
                     style={{ padding: '10px', cursor: 'pointer' }}
                 >
                     GET /restaurants (without tenant)
                 </button>
 
-                <button 
+                <button
                     onClick={() => {
                         localStorage.clear();
                         setResults({});
@@ -91,17 +91,17 @@ export default function DebugAPI() {
                 </button>
             </div>
 
-            <div style={{ 
-                backgroundColor: '#f5f5f5', 
-                padding: '15px', 
+            <div style={{
+                backgroundColor: '#f5f5f5',
+                padding: '15px',
                 borderRadius: '5px',
                 maxHeight: '600px',
                 overflowY: 'auto'
             }}>
                 <h3>Results:</h3>
                 {Object.entries(results).map(([key, result]) => (
-                    <div key={key} style={{ 
-                        marginBottom: '15px', 
+                    <div key={key} style={{
+                        marginBottom: '15px',
                         padding: '10px',
                         backgroundColor: result.success ? '#e8f5e9' : '#ffebee',
                         borderLeft: `4px solid ${result.success ? '#4caf50' : '#f44336'}`
@@ -111,8 +111,8 @@ export default function DebugAPI() {
                             Status: {result.status || 'N/A'}
                         </div>
                         {result.message && <div style={{ color: '#d32f2f' }}>Error: {result.message}</div>}
-                        <pre style={{ 
-                            fontSize: '11px', 
+                        <pre style={{
+                            fontSize: '11px',
                             overflow: 'auto',
                             maxHeight: '200px',
                             backgroundColor: 'white',
