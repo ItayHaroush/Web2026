@@ -37,12 +37,22 @@ export const apiClient = axios.create({
 // Interceptor לשמירת Tenant ID בכל בקשה
 apiClient.interceptors.request.use((config) => {
     const tenantId = getTenantId();
+    const token = localStorage.getItem('authToken') || localStorage.getItem('admin_token');
+
+    // 🔥 DEBUG - הדפס כל בקשה
+    const fullUrl = config.baseURL + config.url;
+    console.group(`🚀 API Request: ${config.method?.toUpperCase()} ${config.url}`);
+    console.log('🌐 Full URL:', fullUrl);
+    console.log('🔑 Token:', token ? `${token.substring(0, 30)}...` : '❌ MISSING');
+    console.log('🏪 Tenant ID:', tenantId || '❌ MISSING');
+    console.log('📦 Data:', config.data);
+    console.log('🎯 Params:', config.params);
+    console.groupEnd();
+
     if (tenantId) {
         config.headers[TENANT_HEADER] = tenantId;
     }
 
-    // שמירת Token אם קיים - תמיכה בשני Key names
-    const token = localStorage.getItem('authToken') || localStorage.getItem('admin_token');
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
     }
@@ -52,8 +62,23 @@ apiClient.interceptors.request.use((config) => {
 
 // Interceptor לטיפול בשגיאות תגובה
 apiClient.interceptors.response.use(
-    (response) => response,
+    (response) => {
+        // 🔥 DEBUG - הדפס תגובות מוצלחות
+        console.log(`✅ Response ${response.status}:`, response.config.url, response.data);
+        return response;
+    },
     (error) => {
+        // 🔥 DEBUG - הדפס שגיאות מפורטות
+        console.group(`❌ API Error: ${error.config?.url}`);
+        console.log('📤 Request Headers:', error.config?.headers);
+        console.log('📥 Response Headers:', error.response?.headers);
+        console.log('Status:', error.response?.status);
+        console.log('Message:', error.response?.data?.message);
+        console.log('Errors:', error.response?.data?.errors);
+        console.log('Full Response:', error.response?.data);
+        console.log('Raw Response Text:', typeof error.response?.data === 'string' ? error.response.data.substring(0, 500) : 'N/A');
+        console.groupEnd();
+
         if (error.response?.status === 401) {
             // Token לא תקף - נקה מידע רלוונטי והפנה לפי סוג משתמש
             const hasAdminToken = !!localStorage.getItem('admin_token');

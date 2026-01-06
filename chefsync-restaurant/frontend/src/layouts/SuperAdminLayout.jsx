@@ -27,6 +27,11 @@ export default function SuperAdminLayout({ children }) {
             path: '/super-admin/settings',
             icon: '⚙️',
         },
+        {
+            label: '🔍 בדיקת Auth',
+            path: '/super-admin/debug',
+            icon: '🐛',
+        },
     ];
 
     return (

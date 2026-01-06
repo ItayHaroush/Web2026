@@ -5,8 +5,8 @@ import { useNavigate } from 'react-router-dom';
 import { CustomerLayout } from '../layouts/CustomerLayout';
 import menuService from '../services/menuService';
 import { UI_TEXT } from '../constants/ui';
-import axios from 'axios';
-import { API_BASE_URL } from '../constants/api';
+import apiClient from '../services/apiClient';
+import { API_BASE_URL, TENANT_HEADER } from '../constants/api';
 
 /**
  * עמוד תפריט - עיצוב בסגנון Wolt
@@ -44,17 +44,11 @@ export default function MenuPage() {
 
     const loadRestaurantInfo = async () => {
         try {
-            const response = await axios.get(`${API_BASE_URL}/restaurants`, {
-                transformResponse: [(data) => {
-                    // נקה את התגובה מ-HTML warnings של PHP
-                    if (typeof data === 'string') {
-                        const jsonStart = data.indexOf('{');
-                        if (jsonStart > 0) {
-                            data = data.substring(jsonStart);
-                        }
-                    }
-                    return JSON.parse(data);
-                }]
+            // 🔥 שימוש ב-apiClient (עם interceptor שמוסיף X-Tenant-ID)
+            const response = await apiClient.get(`/restaurants`, {
+                headers: {
+                    [TENANT_HEADER]: tenantId
+                }
             });
             const restaurants = response.data.data || [];
             const currentRestaurant = restaurants.find(r => r.tenant_id === tenantId);
