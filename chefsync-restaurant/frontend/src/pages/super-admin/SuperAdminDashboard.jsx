@@ -257,24 +257,56 @@ export default function SuperAdminDashboard() {
  */
 function AddRestaurantModal({ onClose, onSuccess, getAuthHeaders }) {
     const [loading, setLoading] = useState(false);
+    const [cities, setCities] = useState([]);
+    const [citiesLoading, setCitiesLoading] = useState(true);
     const [formData, setFormData] = useState({
         name: '',
         tenant_id: '',
+        city: '',
         phone: '',
         address: '',
         description: '',
-        logo_url: '',
+        logo: null,
         owner_name: '',
         owner_email: '',
         owner_phone: '',
         owner_password: '',
     });
 
+    // טען ערים בעת פתיחת המודאל
+    useEffect(() => {
+        const fetchCities = async () => {
+            try {
+                const response = await api.get('/super-admin/cities', {
+                    headers: getAuthHeaders()
+                });
+                if (response.data.success) {
+                    setCities(response.data.data);
+                }
+            } catch (error) {
+                console.error('Failed to load cities:', error);
+                toast.error('שגיאה בטעינת רשימת הערים');
+            } finally {
+                setCitiesLoading(false);
+            }
+        };
+        
+        fetchCities();
+    }, []);
+
     const handleChange = (e) => {
-        setFormData({
-            ...formData,
-            [e.target.name]: e.target.value
-        });
+        const { name, value, files } = e.target;
+        if (name === 'logo' && files && files[0]) {
+            setFormData({
+                ...formData,
+                logo: files[0]
+            });
+        } else {
+            setFormData({
+                ...formData,
+                [name]: value
+            });
+        }
     };
 
     const handleSubmit = async (e) => {
@@ -282,10 +314,26 @@ function AddRestaurantModal({ onClose, onSuccess, getAuthHeaders }) {
         setLoading(true);
 
         try {
+            // צור FormData אם יש קובץ לוגו, אחרת שלח JSON רגיל
+            let payload;
+            let headers = getAuthHeaders();
+
+            if (formData.logo) {
+                payload = new FormData();
+                Object.keys(formData).forEach(key => {
+                    if (key !== 'logo_url' && formData[key] !== null) {
+                        payload.append(key, formData[key]);
+                    }
+                });
+                headers['Content-Type'] = 'multipart/form-data';
+            } else {
+                payload = formData;
+            }
+
             const response = await api.post(
                 '/super-admin/restaurants',
-                formData,
-                { headers: getAuthHeaders() }
+                payload,
+                { headers }
             );
 
             if (response.data.success) {
@@ -296,14 +344,8 @@ function AddRestaurantModal({ onClose, onSuccess, getAuthHeaders }) {
         } catch (error) {
             console.error('Restaurant creation error:', error.response?.data);
             const errors = error.response?.data?.errors || {};
-
+            
             if (Object.keys(errors).length === 0) {
-                // אם אין errors specific, תציג את ה-message
-                toast.error(error.response?.data?.message || 'שגיאה לא ידועה');
-            } else {
-                Object.entries(errors).forEach(([field, messages]) => {
-                    const message = Array.isArray(messages) ? messages[0] : messages;
-                    toast.error(`${field}: ${message}`);
                 });
             }
         } finally {
