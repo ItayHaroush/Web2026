@@ -41,7 +41,7 @@ export const apiClient = axios.create({
 // Save chosen base URL for other parts (e.g., asset URL resolution)
 try {
     localStorage.setItem('api_base_url', LOCAL_API);
-} catch {}
+} catch { }
 
 // Interceptor לשמירת Tenant ID בכל בקשה
 apiClient.interceptors.request.use((config) => {
@@ -96,7 +96,7 @@ apiClient.interceptors.response.use(
         if (isNetworkError && isOnLocal && !alreadyRetried) {
             console.warn('🔄 Local API unreachable. Switching to production:', PROD_API);
             apiClient.defaults.baseURL = PROD_API;
-            try { localStorage.setItem('api_base_url', PROD_API); } catch {}
+            try { localStorage.setItem('api_base_url', PROD_API); } catch { }
             const newConfig = { ...error.config, _retryWithProduction: true, baseURL: PROD_API };
             try {
                 return await apiClient.request(newConfig);
