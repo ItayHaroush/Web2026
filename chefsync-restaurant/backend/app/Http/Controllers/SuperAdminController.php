@@ -149,6 +149,7 @@ class SuperAdminController extends Controller
             $restaurant = Restaurant::create([
                 'tenant_id' => $validated['tenant_id'],
                 'name' => $validated['name'],
+                'slug' => Str::slug($validated['name']),
                 'phone' => $validated['phone'],
                 'address' => $validated['address'] ?? null,
                 'description' => $validated['description'] ?? null,
