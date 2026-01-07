@@ -78,7 +78,7 @@ export default function RegisterRestaurant() {
                     <Section title="פרטי בעלים">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <Input name="owner_name" label="שם" value={form.owner_name} onChange={handleChange} required />
-                            <Input name="owner_email" label="דוא" value={form.owner_email} onChange={handleChange} type="email" required />
+                            <Input name="owner_email" label="דוא״ל" value={form.owner_email} onChange={handleChange} type="email" required />
                             <Input name="owner_phone" label="טלפון" value={form.owner_phone} onChange={handleChange} required />
                             <Input name="password" label="סיסמה" value={form.password} onChange={handleChange} type="password" required />
                         </div>

@@ -28,11 +28,24 @@ class Restaurant extends Model
         'logo_url',
         'operating_days',
         'operating_hours',
+        'subscription_status',
+        'trial_ends_at',
+        'subscription_ends_at',
+        'subscription_plan',
+        'tranzila_terminal_name',
+        'tranzila_token',
+        'payment_method_last4',
+        'payment_method_type',
+        'monthly_price',
+        'yearly_price',
+        'last_payment_at',
+        'next_payment_at',
     ];
 
     protected $attributes = [
         'operating_days' => '{}',
         'operating_hours' => '{}',
+        'subscription_status' => 'trial',
     ];
 
     protected $casts = [
@@ -40,6 +53,10 @@ class Restaurant extends Model
         'is_override_status' => 'boolean',
         'operating_days' => 'array',
         'operating_hours' => 'array',
+        'trial_ends_at' => 'datetime',
+        'subscription_ends_at' => 'datetime',
+        'last_payment_at' => 'datetime',
+        'next_payment_at' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
@@ -139,5 +156,56 @@ class Restaurant extends Model
         }
 
         return $cityMap[$value] ?? $value;
+    }
+
+    /**
+     * בדיקה האם המסעדה בתקופת ניסיון
+     */
+    public function isOnTrial(): bool
+    {
+        return $this->subscription_status === 'trial' 
+            && $this->trial_ends_at 
+            && $this->trial_ends_at->isFuture();
+    }
+
+    /**
+     * בדיקה האם המנוי פעיל
+     */
+    public function hasActiveSubscription(): bool
+    {
+        return $this->subscription_status === 'active' 
+            && (!$this->subscription_ends_at || $this->subscription_ends_at->isFuture());
+    }
+
+    /**
+     * בדיקה האם יש גישה למערכת (ניסיון או מנוי פעיל)
+     */
+    public function hasAccess(): bool
+    {
+        return $this->isOnTrial() || $this->hasActiveSubscription();
+    }
+
+    /**
+     * קבלת ימים שנותרו לניסיון
+     */
+    public function getDaysLeftInTrial(): int
+    {
+        if (!$this->isOnTrial()) {
+            return 0;
+        }
+        
+        return max(0, now()->diffInDays($this->trial_ends_at, false));
+    }
+
+    /**
+     * קבלת ימים שנותרו למנוי
+     */
+    public function getDaysLeftInSubscription(): int
+    {
+        if (!$this->hasActiveSubscription() || !$this->subscription_ends_at) {
+            return 0;
+        }
+        
+        return max(0, now()->diffInDays($this->subscription_ends_at, false));
     }
 }
