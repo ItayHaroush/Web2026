@@ -149,8 +149,14 @@ class SuperAdminController extends Controller
 
         DB::beginTransaction();
         try {
-            // יצירת המסעדה
+            // יצירת המסעדה - וידוא slug ו-tenant_id תמיד קיימים
             $slugValue = Str::slug($validated['name']);
+            
+            // ודא tenant_id תקין
+            $tenantId = $validated['tenant_id'];
+            if (empty($tenantId)) {
+                throw new \Exception('tenant_id is required');
+            }
 
             // טיפול בהעלאת הלוגו
             $logoUrl = null;
@@ -163,12 +169,12 @@ class SuperAdminController extends Controller
             Log::info('Creating restaurant', [
                 'name' => $validated['name'],
                 'slug' => $slugValue,
-                'tenant_id' => $validated['tenant_id'],
+                'tenant_id' => $tenantId,
                 'logo_path' => $logoUrl,
             ]);
 
             $restaurant = Restaurant::create([
-                'tenant_id' => $validated['tenant_id'],
+                'tenant_id' => $tenantId,
                 'name' => $validated['name'],
                 'slug' => $slugValue,
                 'phone' => $validated['phone'],
@@ -234,6 +240,11 @@ class SuperAdminController extends Controller
             'logo_url' => 'nullable|url',
             'is_open' => 'sometimes|boolean',
         ]);
+
+        // אם השם משתנה, עדכן את ה-slug
+        if (isset($validated['name'])) {
+            $validated['slug'] = Str::slug($validated['name']);
+        }
 
         $restaurant->update($validated);
 
