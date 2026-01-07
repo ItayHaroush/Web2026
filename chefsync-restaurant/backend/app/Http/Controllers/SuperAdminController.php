@@ -407,10 +407,10 @@ class SuperAdminController extends Controller
                 ],
             ]);
         } catch (\Throwable $e) {
-            Log::error('Schema status error: '.$e->getMessage(), ['exception' => $e]);
+            Log::error('Schema status error: ' . $e->getMessage(), ['exception' => $e]);
             return response()->json([
                 'success' => false,
-                'message' => 'שגיאה בשליפת סטטוס הסכימה: '.$e->getMessage(),
+                'message' => 'שגיאה בשליפת סטטוס הסכימה: ' . $e->getMessage(),
             ], 500);
         }
     }
