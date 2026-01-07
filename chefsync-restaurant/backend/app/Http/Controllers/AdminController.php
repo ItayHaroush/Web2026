@@ -364,7 +364,7 @@ class AdminController extends Controller
         if ($request->filled('phone')) {
             $updateData['phone'] = $validated['phone'];
         }
-        
+
         // description, address יכולים להיות ריקים (null/clear)
         if ($request->has('description')) {
             $updateData['description'] = $request->input('description');
@@ -372,7 +372,7 @@ class AdminController extends Controller
         if ($request->has('address')) {
             $updateData['address'] = $request->input('address');
         }
-        
+
         if ($request->filled('city')) {
             $updateData['city'] = $validated['city'];
         }
@@ -427,7 +427,7 @@ class AdminController extends Controller
         ]);
 
         // 🛡️ הגנה אחרונה - סנן null מכל השדות הקריטיים
-        $updateData = array_filter($updateData, function($value, $key) {
+        $updateData = array_filter($updateData, function ($value, $key) {
             // אפשר null רק לשדות שיכולים להיות ריקים
             $nullableFields = ['description', 'address', 'logo_url'];
             if (in_array($key, $nullableFields)) {
