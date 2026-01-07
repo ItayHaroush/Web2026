@@ -175,13 +175,18 @@ export default function AdminRestaurant() {
             formData.append('_method', 'PUT');
 
             console.log('✅ About to send POST request with _method=PUT...');
-            await api.post('/admin/restaurant', formData, {
+            const response = await api.post('/admin/restaurant', formData, {
                 headers: { ...getAuthHeaders(), 'Content-Type': 'multipart/form-data' },
             });
+            
+            // ✅ עדכן state עם הנתונים שחזרו מהשרת
+            if (response.data.success && response.data.restaurant) {
+                console.log('✅ Updating state with:', response.data.restaurant);
+                setRestaurant(response.data.restaurant);
+                setLogoPreview(response.data.restaurant.logo_url ? resolveAssetUrl(response.data.restaurant.logo_url) : null);
+            }
+            
             alert('נשמר בהצלחה');
-            // אל תאפס את overrideStatus - תן לטעינה מהשרת לחזור עם הערך הנכון
-            // זה יאפס ב-fetchRestaurant כשטוענים
-            fetchRestaurant();
         } catch (error) {
             console.error('Failed to save restaurant:', error);
             alert(error.response?.data?.message || 'שגיאה בשמירה');
