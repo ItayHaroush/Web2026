@@ -311,8 +311,9 @@ class AdminController extends Controller
 
         $restaurant = Restaurant::findOrFail($user->restaurant_id);
 
-        $request->validate([
-            'name' => 'sometimes|string|max:255',
+        // ✅ ולידציה - name חובה אם נשלח
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'phone' => 'sometimes|string|max:20',
             'address' => 'sometimes|string|max:255',
@@ -343,13 +344,27 @@ class AdminController extends Controller
             }
         }
 
-        $updateData = [
-            'name' => $request->input('name'),
-            'description' => $request->input('description'),
-            'phone' => $request->input('phone'),
-            'address' => $request->input('address'),
-            'city' => $request->input('city'),
-        ];
+        // ✅ שלוף רק שדות שבאמת נשלחו ולא ריקים
+        $updateData = [];
+        
+        // שדות חובה
+        if ($request->filled('name')) {
+            $updateData['name'] = $validated['name'];
+        }
+        
+        // שדות אופציונליים
+        if ($request->has('description')) {
+            $updateData['description'] = $request->input('description');
+        }
+        if ($request->filled('phone')) {
+            $updateData['phone'] = $validated['phone'];
+        }
+        if ($request->has('address')) {
+            $updateData['address'] = $request->input('address');
+        }
+        if ($request->filled('city')) {
+            $updateData['city'] = $validated['city'];
+        }
 
         // אם נשלח is_open, השתמש בערך שנשלח (כפיית ידנית)
         $hasExplicitIsOpen = $request->has('is_open') && $request->filled('is_open');
