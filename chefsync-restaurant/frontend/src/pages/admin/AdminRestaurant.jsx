@@ -380,6 +380,33 @@ export default function AdminRestaurant() {
                         </div>
                     </div>
 
+                    {/* לינק ישיר לתפריט */}
+                    <div className="border-t pt-4">
+                        <h3 className="text-sm font-bold text-gray-700 mb-3">🔗 לינק ישיר לתפריט</h3>
+                        <div className="flex gap-2">
+                            <input
+                                type="text"
+                                readOnly
+                                value={`${window.location.origin}/${restaurant.slug}/menu`}
+                                className="flex-1 px-4 py-3 border rounded-xl bg-gray-50 text-gray-600 text-sm"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    const link = `${window.location.origin}/${restaurant.slug}/menu`;
+                                    navigator.clipboard.writeText(link);
+                                    alert('הלינק הועתק ללוח!');
+                                }}
+                                className="px-6 py-3 bg-blue-500 text-white rounded-xl font-medium hover:bg-blue-600 whitespace-nowrap"
+                            >
+                                📋 העתק
+                            </button>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-2">
+                            שתפו לינק זה עם לקוחות לגישה ישירה לתפריט שלכם
+                        </p>
+                    </div>
+
                     <div className="flex gap-3 pt-2 border-t">
                         <button
                             type="submit"

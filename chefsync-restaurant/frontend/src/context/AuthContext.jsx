@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 
 /**
  * Context להנהלת מידע המשתמש ותעודות אימות
@@ -20,10 +21,26 @@ export function AuthProvider({ children }) {
         const savedTenant = localStorage.getItem('tenantId');
         const savedRole = localStorage.getItem('role');
 
-        if (savedToken && savedTenant) {
+        // בדיקה אם יש tenant בURL
+        const urlPath = window.location.pathname;
+        const urlTenantMatch = urlPath.match(/^\/([^\/]+)\/(menu|cart|order-status)/);
+        
+        if (urlTenantMatch && urlTenantMatch[1] && !savedTenant) {
+            // אם יש tenant בURL ואין בlocalStorage, נגדיר אותו
+            const urlTenant = urlTenantMatch[1];
+            setTenantId(urlTenant);
+            setRole('customer');
+            setUser({ token: null });
+            localStorage.setItem('tenantId', urlTenant);
+            localStorage.setItem('role', 'customer');
+        } else if (savedToken && savedTenant) {
             setUser({ token: savedToken });
             setTenantId(savedTenant);
             setRole(savedRole || 'customer');
+        } else if (savedTenant) {
+            setTenantId(savedTenant);
+            setRole(savedRole || 'customer');
+            setUser({ token: null });
         }
 
         setIsLoading(false);
