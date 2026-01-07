@@ -20,6 +20,9 @@ OUTPUT="${3:-schema-report.json}"
 echo "🔍 השוואת סכימה..."
 echo ""
 
+# נכנס ל-backend תחילה
+cd backend || exit 1
+
 # הרץ את ה-Artisan command עם הפרמטרים
 php artisan schema:compare \
     --remote-url="$REMOTE_URL" \
