@@ -382,18 +382,18 @@ export default function AdminRestaurant() {
 
                     {/* לינק ישיר לתפריט */}
                     <div className="border-t pt-4">
-                        <h3 className="text-sm font-bold text-gray-700 mb-3">🔗 לינק ישיר לתפריט</h3>
+                        <h3 className="text-sm font-bold text-gray-700 mb-3">🔗 לינק ישיר לדף המסעדה</h3>
                         <div className="flex gap-2">
                             <input
                                 type="text"
                                 readOnly
-                                value={`${window.location.origin}/${restaurant.slug}/menu`}
+                                value={`${window.location.origin}/${restaurant.tenant_id}/menu`}
                                 className="flex-1 px-4 py-3 border rounded-xl bg-gray-50 text-gray-600 text-sm"
                             />
                             <button
                                 type="button"
                                 onClick={() => {
-                                    const link = `${window.location.origin}/${restaurant.slug}/menu`;
+                                    const link = `${window.location.origin}/${restaurant.tenant_id}/menu`;
                                     navigator.clipboard.writeText(link);
                                     alert('הלינק הועתק ללוח!');
                                 }}
@@ -403,7 +403,7 @@ export default function AdminRestaurant() {
                             </button>
                         </div>
                         <p className="text-xs text-gray-500 mt-2">
-                            שתפו לינק זה עם לקוחות לגישה ישירה לתפריט שלכם
+                            שתפו לינק זה עם לקוחות לגישה ישירה לדף המסעדה המלא (תמונה, פרטים ותפריט)
                         </p>
                     </div>
 
