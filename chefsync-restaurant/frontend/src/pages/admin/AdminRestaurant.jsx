@@ -124,7 +124,7 @@ export default function AdminRestaurant() {
         setSaving(true);
         try {
             const formData = new FormData();
-            
+
             // ✅ שלח את כל השדות בלי לדלג על ריקים
             const fieldsToSend = ['name', 'description', 'phone', 'address', 'city'];
             fieldsToSend.forEach((field) => {
@@ -134,7 +134,7 @@ export default function AdminRestaurant() {
                     formData.append(field, value || '');
                 }
             });
-            
+
             console.log('📤 Sending form fields:', fieldsToSend.reduce((acc, f) => {
                 acc[f] = restaurant[f];
                 return acc;
