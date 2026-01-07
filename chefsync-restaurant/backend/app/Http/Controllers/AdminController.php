@@ -346,12 +346,12 @@ class AdminController extends Controller
 
         // ✅ שלוף רק שדות שבאמת נשלחו ולא ריקים
         $updateData = [];
-        
+
         // שדות חובה
         if ($request->filled('name')) {
             $updateData['name'] = $validated['name'];
         }
-        
+
         // שדות אופציונליים
         if ($request->has('description')) {
             $updateData['description'] = $request->input('description');
