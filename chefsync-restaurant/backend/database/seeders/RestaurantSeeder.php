@@ -30,45 +30,92 @@ class RestaurantSeeder extends Seeder
         $pizzaCategory = Category::create([
             'restaurant_id' => $restaurant1->id,
             'tenant_id' => 'pizza-palace',
-            'name' => 'פיצה',
-            'description' => 'פיצות בטעמים שונים',
+            'name' => 'פיצות קלאסיות',
+            'description' => 'תנור אבן, גבינה מוקרמת ורוטב סאן מרזאנו',
+            'icon' => '🍕',
+            'sort_order' => 1,
+            'is_active' => true,
+        ]);
+
+        $specialCategory = Category::create([
+            'restaurant_id' => $restaurant1->id,
+            'tenant_id' => 'pizza-palace',
+            'name' => 'פיצות ספיישל',
+            'description' => 'קומבינציות שף משתנות',
+            'icon' => '⭐',
+            'sort_order' => 2,
+            'is_active' => true,
         ]);
 
         $drinksCategory = Category::create([
             'restaurant_id' => $restaurant1->id,
             'tenant_id' => 'pizza-palace',
             'name' => 'משקאות',
-            'description' => 'משקאות קרים וחמים',
+            'description' => 'שתיה קלה ובקבוקי בוטיק',
+            'icon' => '🥤',
+            'sort_order' => 3,
+            'is_active' => true,
         ]);
 
+        // פריטי תפריט
         MenuItem::create([
             'restaurant_id' => $restaurant1->id,
             'category_id' => $pizzaCategory->id,
             'tenant_id' => 'pizza-palace',
             'name' => 'פיצה מרגריטה',
-            'description' => 'פיצה קלאסית עם עגבניות, מוצרלה ובזיליקום',
+            'description' => 'רוטב עגבניות סאן מרזאנו, מוצרלה טרייה ובזיליקום',
             'price' => 45.00,
+            'image_url' => 'https://images.unsplash.com/photo-1548365328-5b76c2f9f911?auto=format&fit=crop&w=800&q=80',
             'is_available' => true,
+            'sort_order' => 1,
         ]);
 
         MenuItem::create([
             'restaurant_id' => $restaurant1->id,
             'category_id' => $pizzaCategory->id,
             'tenant_id' => 'pizza-palace',
-            'name' => 'פיצה ברנד',
-            'description' => 'פיצה עם גבינה כפולה, בקון וגריבלים',
-            'price' => 55.00,
+            'name' => 'פיצה פפרוני',
+            'description' => 'פפרוני מעושן, מוצרלה וגבינת פרמזן',
+            'price' => 52.00,
+            'image_url' => 'https://images.unsplash.com/photo-1604382355076-af4b0eb60143?auto=format&fit=crop&w=800&q=80',
             'is_available' => true,
+            'sort_order' => 2,
+        ]);
+
+        MenuItem::create([
+            'restaurant_id' => $restaurant1->id,
+            'category_id' => $specialCategory->id,
+            'tenant_id' => 'pizza-palace',
+            'name' => 'פיצה ארטישוק וגבינת עיזים',
+            'description' => 'בזיליקום טרי, ארטישוק, מוצרלה וגבינת עיזים קרמית',
+            'price' => 59.00,
+            'image_url' => 'https://images.unsplash.com/photo-1475090169767-40ed8d18f67d?auto=format&fit=crop&w=800&q=80',
+            'is_available' => true,
+            'sort_order' => 1,
         ]);
 
         MenuItem::create([
             'restaurant_id' => $restaurant1->id,
             'category_id' => $drinksCategory->id,
             'tenant_id' => 'pizza-palace',
-            'name' => 'קולה',
-            'description' => 'קולה קרה בגודל 330 מל',
+            'name' => 'קולה קרה',
+            'description' => 'בקבוק 330 מ"ל',
             'price' => 12.00,
+            'image_url' => 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=800&q=80',
             'is_available' => true,
+            'sort_order' => 1,
+        ]);
+
+        MenuItem::create([
+            'restaurant_id' => $restaurant1->id,
+            'category_id' => $drinksCategory->id,
+            'tenant_id' => 'pizza-palace',
+            'name' => 'בירה איטלקית',
+            'description' => 'לאגר קראפט צוננת',
+            'price' => 24.00,
+            'image_url' => 'https://images.unsplash.com/photo-1514361892635-6e122620e4d1?auto=format&fit=crop&w=800&q=80',
+            'is_available' => true,
+            'sort_order' => 2,
         ]);
 
         // מסעדה 2: המבורגר סנטרל - ירושלים
@@ -92,26 +139,55 @@ class RestaurantSeeder extends Seeder
             'tenant_id' => 'burger-central',
             'name' => 'המבורגרים',
             'description' => 'המבורגרים טריים ועסיסיים',
+            'icon' => '🍔',
+            'sort_order' => 1,
+            'is_active' => true,
+        ]);
+
+        $sidesCategory = Category::create([
+            'restaurant_id' => $restaurant2->id,
+            'tenant_id' => 'burger-central',
+            'name' => 'תוספות',
+            'description' => 'צ\'יפס, טבעות בצל ודיפים',
+            'icon' => '🍟',
+            'sort_order' => 2,
+            'is_active' => true,
         ]);
 
         MenuItem::create([
             'restaurant_id' => $restaurant2->id,
             'category_id' => $burgerCategory->id,
             'tenant_id' => 'burger-central',
-            'name' => 'המבורגר קלאסי',
-            'description' => 'המבורגר 200 גרם עם ירקות טריים',
+            'name' => 'המבורגר קלאסי 200 גרם',
+            'description' => 'בשר בקר טרי, חסה, עגבניה, בצל סגול ורוטב הבית',
             'price' => 48.00,
+            'image_url' => 'https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&fit=crop&w=800&q=80',
             'is_available' => true,
+            'sort_order' => 1,
         ]);
 
         MenuItem::create([
             'restaurant_id' => $restaurant2->id,
             'category_id' => $burgerCategory->id,
             'tenant_id' => 'burger-central',
-            'name' => 'צ\'יזבורגר',
-            'description' => 'המבורגר עם גבינת צ\'דר מותכת',
-            'price' => 52.00,
+            'name' => 'צ\'יזבורגר כפול',
+            'description' => 'שני קציצות, גבינת צ\'דר כפולה ובייקון מעושן',
+            'price' => 62.00,
+            'image_url' => 'https://images.unsplash.com/photo-1551782450-a2132b4ba21d?auto=format&fit=crop&w=800&q=80',
             'is_available' => true,
+            'sort_order' => 2,
+        ]);
+
+        MenuItem::create([
+            'restaurant_id' => $restaurant2->id,
+            'category_id' => $sidesCategory->id,
+            'tenant_id' => 'burger-central',
+            'name' => 'צ\'יפס כפול',
+            'description' => 'צ\'יפס עבה עם מלח ים',
+            'price' => 18.00,
+            'image_url' => 'https://images.unsplash.com/photo-1541599540903-216a46ca1dc0?auto=format&fit=crop&w=800&q=80',
+            'is_available' => true,
+            'sort_order' => 1,
         ]);
 
         // מסעדה 3: סושי בר - חיפה
@@ -133,18 +209,57 @@ class RestaurantSeeder extends Seeder
         $sushiCategory = Category::create([
             'restaurant_id' => $restaurant3->id,
             'tenant_id' => 'sushi-bar',
-            'name' => 'סושי',
-            'description' => 'מגוון סושי טרי',
+            'name' => 'רולים',
+            'description' => 'רולים קלאסיים ומשודרגים',
+            'icon' => '🍣',
+            'sort_order' => 1,
+            'is_active' => true,
+        ]);
+
+        $sashimiCategory = Category::create([
+            'restaurant_id' => $restaurant3->id,
+            'tenant_id' => 'sushi-bar',
+            'name' => 'סשימי וניגירי',
+            'description' => 'דגים טריים במנות אישיות',
+            'icon' => '🐟',
+            'sort_order' => 2,
+            'is_active' => true,
         ]);
 
         MenuItem::create([
             'restaurant_id' => $restaurant3->id,
             'category_id' => $sushiCategory->id,
             'tenant_id' => 'sushi-bar',
-            'name' => 'סלמון נגירי',
-            'description' => '8 יחידות סלמון טרי',
-            'price' => 65.00,
+            'name' => 'רול סלמון אבוקדו',
+            'description' => '8 יחידות עם סלמון טרי ואבוקדו',
+            'price' => 54.00,
+            'image_url' => 'https://images.unsplash.com/photo-1544378730-8b5104b1da6e?auto=format&fit=crop&w=800&q=80',
             'is_available' => true,
+            'sort_order' => 1,
+        ]);
+
+        MenuItem::create([
+            'restaurant_id' => $restaurant3->id,
+            'category_id' => $sushiCategory->id,
+            'tenant_id' => 'sushi-bar',
+            'name' => 'רול טמפורה שרימפס',
+            'description' => '8 יחידות עם שרימפס טמפורה ומיונז יפני',
+            'price' => 62.00,
+            'image_url' => 'https://images.unsplash.com/photo-1604908177225-2f53b59a29e1?auto=format&fit=crop&w=800&q=80',
+            'is_available' => true,
+            'sort_order' => 2,
+        ]);
+
+        MenuItem::create([
+            'restaurant_id' => $restaurant3->id,
+            'category_id' => $sashimiCategory->id,
+            'tenant_id' => 'sushi-bar',
+            'name' => 'ניגירי סלמון',
+            'description' => '6 יחידות סלמון נורווגי',
+            'price' => 68.00,
+            'image_url' => 'https://images.unsplash.com/photo-1580828343064-fde4fc206bc6?auto=format&fit=crop&w=800&q=80',
+            'is_available' => true,
+            'sort_order' => 1,
         ]);
 
         // מסעדה 4: פלאפל הדקל - באר שבע
@@ -166,8 +281,21 @@ class RestaurantSeeder extends Seeder
         $falafelCategory = Category::create([
             'restaurant_id' => $restaurant4->id,
             'tenant_id' => 'falafel-hadekel',
-            'name' => 'מנות עיקריות',
-            'description' => 'מנות פלאפל ושווארמה',
+            'name' => 'מנות פלאפל',
+            'description' => 'פלאפל, כדורים טריים וציפוי פריך',
+            'icon' => '🥙',
+            'sort_order' => 1,
+            'is_active' => true,
+        ]);
+
+        $shawarmaCategory = Category::create([
+            'restaurant_id' => $restaurant4->id,
+            'tenant_id' => 'falafel-hadekel',
+            'name' => 'שווארמה ובשרים',
+            'description' => 'פיתה/לאפה עם תוספות ביתיות',
+            'icon' => '🍖',
+            'sort_order' => 2,
+            'is_active' => true,
         ]);
 
         MenuItem::create([
@@ -175,9 +303,23 @@ class RestaurantSeeder extends Seeder
             'category_id' => $falafelCategory->id,
             'tenant_id' => 'falafel-hadekel',
             'name' => 'פלאפל בפיתה',
-            'description' => 'פלאפל עם סלטים ללא הגבלה',
+            'description' => '6 כדורי פלאפל חמים, סלטים חופשי וטחינה',
             'price' => 22.00,
+            'image_url' => 'https://images.unsplash.com/photo-1608136760559-3a3e5e4a3c8b?auto=format&fit=crop&w=800&q=80',
             'is_available' => true,
+            'sort_order' => 1,
+        ]);
+
+        MenuItem::create([
+            'restaurant_id' => $restaurant4->id,
+            'category_id' => $shawarmaCategory->id,
+            'tenant_id' => 'falafel-hadekel',
+            'name' => 'שווארמה בפיתה',
+            'description' => 'פרגיות מתובלות, עגבניות, חמוצים וצ\'יפס',
+            'price' => 34.00,
+            'image_url' => 'https://images.unsplash.com/photo-1604908177453-74629501c6ab?auto=format&fit=crop&w=800&q=80',
+            'is_available' => true,
+            'sort_order' => 1,
         ]);
 
         // מסעדה 5: פסטה פרטה - נתניה
@@ -199,18 +341,57 @@ class RestaurantSeeder extends Seeder
         $pastaCategory = Category::create([
             'restaurant_id' => $restaurant5->id,
             'tenant_id' => 'pasta-preta',
-            'name' => 'פסטה',
-            'description' => 'מנות פסטה טריות',
+            'name' => 'פסטות טריות',
+            'description' => 'פסטה יומית עם רטבים קלאסיים',
+            'icon' => '🍝',
+            'sort_order' => 1,
+            'is_active' => true,
+        ]);
+
+        $saladsCategory = Category::create([
+            'restaurant_id' => $restaurant5->id,
+            'tenant_id' => 'pasta-preta',
+            'name' => 'סלטים',
+            'description' => 'סלטי שוק טריים',
+            'icon' => '🥗',
+            'sort_order' => 2,
+            'is_active' => true,
         ]);
 
         MenuItem::create([
             'restaurant_id' => $restaurant5->id,
             'category_id' => $pastaCategory->id,
             'tenant_id' => 'pasta-preta',
-            'name' => 'קרבונרה',
-            'description' => 'פסטה עם רוטב שמנת ובייקון',
+            'name' => 'פסטה קרבונרה',
+            'description' => 'פנצ\'טה פריכה, חלמון ופקורינו רומנו',
             'price' => 58.00,
+            'image_url' => 'https://images.unsplash.com/photo-1473093295043-cdd812d0e601?auto=format&fit=crop&w=800&q=80',
             'is_available' => true,
+            'sort_order' => 1,
+        ]);
+
+        MenuItem::create([
+            'restaurant_id' => $restaurant5->id,
+            'category_id' => $pastaCategory->id,
+            'tenant_id' => 'pasta-preta',
+            'name' => 'פסטה פסטו',
+            'description' => 'פסטו בזיליקום טרי, צנוברים ופרמזן',
+            'price' => 54.00,
+            'image_url' => 'https://images.unsplash.com/photo-1467003909585-2f8a72700288?auto=format&fit=crop&w=800&q=80',
+            'is_available' => true,
+            'sort_order' => 2,
+        ]);
+
+        MenuItem::create([
+            'restaurant_id' => $restaurant5->id,
+            'category_id' => $saladsCategory->id,
+            'tenant_id' => 'pasta-preta',
+            'name' => 'סלט קפרזה',
+            'description' => 'מוצרלה בופאלו, עגבניות שרי ובזיליקום',
+            'price' => 38.00,
+            'image_url' => 'https://images.unsplash.com/photo-1546793665-c74683f339c1?auto=format&fit=crop&w=800&q=80',
+            'is_available' => true,
+            'sort_order' => 1,
         ]);
     }
 }
