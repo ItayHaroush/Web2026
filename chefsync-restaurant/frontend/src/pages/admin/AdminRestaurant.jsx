@@ -135,6 +135,14 @@ export default function AdminRestaurant() {
                 }
             });
 
+            // 🔍 DEBUG - בדוק מה בדיוק ב-FormData
+            const formDataLog = {};
+            for (let [key, value] of formData.entries()) {
+                formDataLog[key] = value;
+            }
+            console.log('📤 FormData entries:', formDataLog);
+            console.log('📤 restaurant state:', restaurant);
+
             console.log('📤 Sending form fields:', fieldsToSend.reduce((acc, f) => {
                 acc[f] = restaurant[f];
                 return acc;
@@ -163,6 +171,7 @@ export default function AdminRestaurant() {
                 formData.append('logo', restaurant.logo);
             }
 
+            console.log('✅ About to send PUT request...');
             await api.put('/admin/restaurant', formData, {
                 headers: { ...getAuthHeaders(), 'Content-Type': 'multipart/form-data' },
             });
