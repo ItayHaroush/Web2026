@@ -90,6 +90,11 @@ function AppRoutes() {
       <Route path="/menu" element={tenantId ? <MenuPage /> : <Navigate to="/" />} />
       <Route path="/cart" element={tenantId ? <CartPage /> : <Navigate to="/" />} />
       <Route path="/order-status/:orderId" element={tenantId ? <OrderStatusPage /> : <Navigate to="/" />} />
+      
+      {/* לינק ישיר למסעדה */}
+      <Route path="/:tenantId/menu" element={<MenuPage />} />
+      <Route path="/:tenantId/cart" element={<CartPage />} />
+      <Route path="/:tenantId/order-status/:orderId" element={<OrderStatusPage />} />
 
       {/* אדמין */}
       <Route path="/admin/login" element={isAdmin ? <Navigate to="/admin/dashboard" replace /> : <AdminLogin />} />
