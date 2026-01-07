@@ -82,7 +82,7 @@ export default function LandingPage() {
 
                     <div className="relative grid gap-8 lg:grid-cols-[1.1fr_0.9fr] items-center">
                         <div className="space-y-6">
-                            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white text-sm font-semibold px-4 py-2 rounded-full shadow-lg animate-pulse">
+                            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-500 to-brand-primary text-white text-sm font-semibold px-4 py-2 rounded-full shadow-lg animate-pulse">
                                 <span>🎁</span>
                                 <span>14 ימי התנסות חינם - ללא התחייבות!</span>
                             </div>
@@ -121,8 +121,8 @@ export default function LandingPage() {
                         </div>
 
                         <div className="bg-white text-brand-dark rounded-2xl shadow-2xl p-6 space-y-4">
-                            <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-3 mb-2">
-                                <p className="text-green-700 font-semibold text-sm text-center">🎁 14 ימי ניסיון חינם</p>
+                            <div className="bg-gradient-to-r from-blue-50 to-brand-light border border-brand-primary/30 rounded-xl p-3 mb-2">
+                                <p className="text-brand-primary font-semibold text-sm text-center">🎁 14 ימי ניסיון חינם</p>
                             </div>
                             <h3 className="text-2xl font-bold">מהזמנה – עד משלוח</h3>
                             <p className="text-gray-700 text-sm">
@@ -269,9 +269,9 @@ export default function LandingPage() {
                 </section>
 
                 {/* Free Trial Section */}
-                <section className="mt-16 bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 rounded-3xl p-8 sm:p-12 border-2 border-green-200">
+                <section className="mt-16 bg-gradient-to-br from-blue-50 via-brand-light/50 to-purple-50 rounded-3xl p-8 sm:p-12 border border-brand-primary/20">
                     <div className="text-center mb-8">
-                        <div className="inline-block bg-gradient-to-r from-green-500 to-emerald-500 text-white px-6 py-2 rounded-full font-bold text-lg mb-4">
+                        <div className="inline-block bg-gradient-to-r from-blue-500 to-brand-primary text-white px-6 py-2 rounded-full font-bold text-lg mb-4">
                             🎁 הצעה מיוחדת
                         </div>
                         <h2 className="text-3xl sm:text-4xl font-bold mb-4">
@@ -308,27 +308,27 @@ export default function LandingPage() {
                         </div>
                     </div>
 
-                    <div className="bg-white/80 backdrop-blur p-6 rounded-2xl border border-green-200">
+                    <div className="bg-white/90 backdrop-blur p-6 rounded-2xl border border-brand-primary/30 shadow-sm">
                         <h3 className="font-bold text-lg mb-3 text-center">📋 תנאי הניסיון</h3>
                         <ul className="space-y-2 text-gray-700 max-w-2xl mx-auto">
                             <li className="flex items-start gap-2">
-                                <span className="text-green-500 font-bold">•</span>
+                                <span className="text-brand-primary font-bold">•</span>
                                 <span>14 ימים מלאים להתנסות בכל יכולות המערכת</span>
                             </li>
                             <li className="flex items-start gap-2">
-                                <span className="text-green-500 font-bold">•</span>
+                                <span className="text-brand-primary font-bold">•</span>
                                 <span>ללא חיוב עד סיום תקופת הניסיון</span>
                             </li>
                             <li className="flex items-start gap-2">
-                                <span className="text-green-500 font-bold">•</span>
+                                <span className="text-brand-primary font-bold">•</span>
                                 <span>ניתן לבטל בכל עת ללא עלות</span>
                             </li>
                             <li className="flex items-start gap-2">
-                                <span className="text-green-500 font-bold">•</span>
+                                <span className="text-brand-primary font-bold">•</span>
                                 <span>לאחר הניסיון - חיוב חודשי של ₪600 או שנתי של ₪5,000</span>
                             </li>
                             <li className="flex items-start gap-2">
-                                <span className="text-green-500 font-bold">•</span>
+                                <span className="text-brand-primary font-bold">•</span>
                                 <span>סליקה מאובטחת דרך טרנזילה</span>
                             </li>
                         </ul>
@@ -337,7 +337,7 @@ export default function LandingPage() {
                     <div className="text-center mt-8">
                         <Link
                             to="/register-restaurant"
-                            className="inline-block px-8 py-4 bg-gradient-to-r from-green-500 to-emerald-500 text-white text-lg font-bold rounded-xl shadow-lg hover:shadow-xl transition transform hover:scale-105"
+                            className="inline-block px-8 py-4 bg-gradient-to-r from-blue-500 to-brand-primary text-white text-lg font-bold rounded-xl shadow-lg hover:shadow-xl transition transform hover:scale-105"
                         >
                             🎁 התחל ניסיון חינם עכשיו
                         </Link>
