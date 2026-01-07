@@ -24,7 +24,7 @@ export function AuthProvider({ children }) {
         // בדיקה אם יש tenant בURL
         const urlPath = window.location.pathname;
         const urlTenantMatch = urlPath.match(/^\/([^\/]+)\/(menu|cart|order-status)/);
-        
+
         if (urlTenantMatch && urlTenantMatch[1] && !savedTenant) {
             // אם יש tenant בURL ואין בlocalStorage, נגדיר אותו
             const urlTenant = urlTenantMatch[1];

@@ -141,30 +141,30 @@ export default function LandingPage() {
                 </div>
 
                 {/* Live Demo Section */}
-                <section className="mt-16 bg-gradient-to-b from-gray-50 to-white rounded-3xl p-8 sm:p-12">
-                    <div className="text-center mb-10">
-                        <h2 className="text-3xl sm:text-4xl font-bold mb-4">
+                <section className="mt-16 bg-gradient-to-b from-gray-50 to-white rounded-3xl p-4 sm:p-8 lg:p-12">
+                    <div className="text-center mb-8 sm:mb-10">
+                        <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-3 sm:mb-4">
                             ראה את המערכת בפעולה
                         </h2>
-                        <p className="text-gray-600 text-lg">
+                        <p className="text-gray-600 text-base sm:text-lg">
                             המערכת כבר חיה ועובדת – נסה בעצמך עכשיו
                         </p>
                     </div>
 
-                    <div className="grid lg:grid-cols-2 gap-12 items-center">
+                    <div className="flex flex-col lg:grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
                         {/* iPhone Mockup */}
-                        <div className="relative mx-auto">
-                            <div className="relative w-[300px] h-[600px] mx-auto">
+                        <div className="relative mx-auto w-full max-w-[280px] sm:max-w-[300px]">
+                            <div className="relative w-full aspect-[9/18] max-w-[280px] sm:max-w-[300px] mx-auto">
                                 {/* iPhone Frame */}
-                                <div className="absolute inset-0 bg-black rounded-[55px] shadow-2xl p-3">
-                                    <div className="w-full h-full bg-white rounded-[45px] overflow-hidden">
+                                <div className="absolute inset-0 bg-black rounded-[40px] sm:rounded-[55px] shadow-2xl p-2 sm:p-3">
+                                    <div className="w-full h-full bg-white rounded-[32px] sm:rounded-[45px] overflow-hidden">
                                         {/* Notch */}
-                                        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-7 bg-black rounded-b-3xl z-10"></div>
-                                        
+                                        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-24 sm:w-32 h-5 sm:h-7 bg-black rounded-b-2xl sm:rounded-b-3xl z-10"></div>
+
                                         {/* Screen Content - Scrolling Demo */}
                                         <div className="w-full h-full overflow-hidden">
                                             <iframe
-                                                src="https://chefsync.vercel.app/pizza-palace/menu"
+                                                src="https://chefsync.vercel.app/"
                                                 className="w-full h-full border-0"
                                                 title="ChefSync Demo"
                                                 loading="lazy"
@@ -172,22 +172,32 @@ export default function LandingPage() {
                                         </div>
                                     </div>
                                 </div>
-                                
-                                {/* Floating badges */}
-                                <div className="absolute -right-8 top-20 bg-green-500 text-white text-xs px-3 py-2 rounded-full shadow-lg animate-pulse">
+
+                                {/* Floating badges - Hidden on mobile, shown on larger screens */}
+                                <div className="hidden sm:block absolute -right-8 top-20 bg-green-500 text-white text-xs px-3 py-2 rounded-full shadow-lg animate-pulse">
                                     🟢 LIVE
                                 </div>
-                                <div className="absolute -left-8 bottom-32 bg-blue-500 text-white text-xs px-3 py-2 rounded-full shadow-lg">
+                                <div className="hidden sm:block absolute -left-8 bottom-32 bg-blue-500 text-white text-xs px-3 py-2 rounded-full shadow-lg">
                                     📱 PWA
                                 </div>
+                            </div>
+                            
+                            {/* Mobile badges below phone */}
+                            <div className="sm:hidden flex justify-center gap-2 mt-4">
+                                <span className="bg-green-500 text-white text-xs px-3 py-1.5 rounded-full shadow animate-pulse">
+                                    🟢 LIVE
+                                </span>
+                                <span className="bg-blue-500 text-white text-xs px-3 py-1.5 rounded-full shadow">
+                                    📱 PWA
+                                </span>
                             </div>
                         </div>
 
                         {/* Demo Controls */}
-                        <div className="space-y-6">
-                            <div className="bg-white p-6 rounded-2xl border shadow-sm">
-                                <h3 className="text-xl font-bold mb-4">🍕 נסה מסעדות דוגמה</h3>
-                                <div className="space-y-3">
+                        <div className="space-y-4 sm:space-y-6 w-full">
+                            <div className="bg-white p-4 sm:p-6 rounded-2xl border shadow-sm">
+                                <h3 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4">🍕 נסה מסעדות דוגמה</h3>
+                                <div className="space-y-2 sm:space-y-3">
                                     <a
                                         href="https://chefsync.vercel.app/pizza-palace/menu"
                                         target="_blank"
@@ -202,7 +212,7 @@ export default function LandingPage() {
                                             <span className="text-2xl">→</span>
                                         </div>
                                     </a>
-                                    
+
                                     <a
                                         href="https://chefsync.vercel.app/burger-central/menu"
                                         target="_blank"
@@ -235,8 +245,8 @@ export default function LandingPage() {
                                 </div>
                             </div>
 
-                            <div className="bg-brand-primary text-white p-6 rounded-2xl">
-                                <h3 className="text-lg font-bold mb-2">💡 טיפ</h3>
+                            <div className="bg-brand-primary text-white p-4 sm:p-6 rounded-2xl">
+                                <h3 className="text-base sm:text-lg font-bold mb-2">💡 טיפ</h3>
                                 <p className="text-sm text-white/90">
                                     נסה להוסיף מנות לעגלה, לעקוב אחרי הזמנה ולראות איך המערכת עובדת בזמן אמת
                                 </p>
@@ -246,7 +256,7 @@ export default function LandingPage() {
                                 href="https://chefsync.vercel.app/admin/login"
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="block text-center p-4 bg-gray-800 text-white rounded-xl font-semibold hover:bg-gray-900 transition"
+                                className="block text-center p-3 sm:p-4 bg-gray-800 text-white rounded-xl text-sm sm:text-base font-semibold hover:bg-gray-900 transition"
                             >
                                 🔑 כניסה לפאנל ניהול (דמו)
                             </a>
