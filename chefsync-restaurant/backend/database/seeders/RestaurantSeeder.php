@@ -89,6 +89,13 @@ class RestaurantSeeder extends Seeder
             'sort_order' => 3,
         ]);
 
+        $appetizerCategory = $createCategory($restaurant1, [
+            'name' => 'מנות פתיחה',
+            'description' => 'פתיחות חמות לצד הפיצה',
+            'icon' => '🥗',
+            'sort_order' => 0,
+        ]);
+
         // פריטי תפריט
         $createItem($restaurant1, [
             'category_id' => $pizzaCategory->id,
@@ -135,6 +142,24 @@ class RestaurantSeeder extends Seeder
             'sort_order' => 2,
         ]);
 
+        $createItem($restaurant1, [
+            'category_id' => $appetizerCategory->id,
+            'name' => 'פוקאצ\'ה שום ושמן זית',
+            'description' => 'בצק מחמצת, שמן זית, שום ורוזמרין',
+            'price' => 24.00,
+            'image_url' => 'https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?auto=format&fit=crop&w=800&q=80',
+            'sort_order' => 1,
+        ]);
+
+        $createItem($restaurant1, [
+            'category_id' => $appetizerCategory->id,
+            'name' => 'ברוסקטה עגבניות',
+            'description' => 'עגבניות שרי, בזיליקום, בלסמי ומוצרלה טרייה',
+            'price' => 28.00,
+            'image_url' => 'https://images.unsplash.com/photo-1604908554164-3c5b265b5c01?auto=format&fit=crop&w=800&q=80',
+            'sort_order' => 2,
+        ]);
+
         // מסעדה 2: המבורגר סנטרל - ירושלים
         $restaurant2 = Restaurant::withoutGlobalScopes()->updateOrCreate(
             ['slug' => 'burger-central'],
@@ -168,6 +193,20 @@ class RestaurantSeeder extends Seeder
             'sort_order' => 2,
         ]);
 
+        $burgerAppetizerCategory = $createCategory($restaurant2, [
+            'name' => 'מנות פתיחה',
+            'description' => 'נשנושים לפני ההמבורגר',
+            'icon' => '🥨',
+            'sort_order' => 3,
+        ]);
+
+        $burgerDrinksCategory = $createCategory($restaurant2, [
+            'name' => 'משקאות',
+            'description' => 'קולה, זירו ובירות בוטיק',
+            'icon' => '🥤',
+            'sort_order' => 4,
+        ]);
+
         $createItem($restaurant2, [
             'category_id' => $burgerCategory->id,
             'name' => 'המבורגר קלאסי 200 גרם',
@@ -193,6 +232,42 @@ class RestaurantSeeder extends Seeder
             'price' => 18.00,
             'image_url' => 'https://images.unsplash.com/photo-1541599540903-216a46ca1dc0?auto=format&fit=crop&w=800&q=80',
             'sort_order' => 1,
+        ]);
+
+        $createItem($restaurant2, [
+            'category_id' => $burgerAppetizerCategory->id,
+            'name' => 'כנפיים ברביקיו',
+            'description' => '6 כנפיים עם רוטב ברביקיו מעושן',
+            'price' => 36.00,
+            'image_url' => 'https://images.unsplash.com/photo-1608039829572-78524f79c5ac?auto=format&fit=crop&w=800&q=80',
+            'sort_order' => 1,
+        ]);
+
+        $createItem($restaurant2, [
+            'category_id' => $burgerAppetizerCategory->id,
+            'name' => 'טבעות בצל',
+            'description' => 'טבעות בצל פריכות עם רוטב שום',
+            'price' => 28.00,
+            'image_url' => 'https://images.unsplash.com/photo-1576107232684-1279f390859f?auto=format&fit=crop&w=800&q=80',
+            'sort_order' => 2,
+        ]);
+
+        $createItem($restaurant2, [
+            'category_id' => $burgerDrinksCategory->id,
+            'name' => 'קולה זירו',
+            'description' => 'בקבוק 330 מ"ל קר',
+            'price' => 12.00,
+            'image_url' => 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=800&q=80',
+            'sort_order' => 1,
+        ]);
+
+        $createItem($restaurant2, [
+            'category_id' => $burgerDrinksCategory->id,
+            'name' => 'בירה בוטיק',
+            'description' => 'IPA מקומית מרעננת',
+            'price' => 26.00,
+            'image_url' => 'https://images.unsplash.com/photo-1514361892635-6e122620e4d1?auto=format&fit=crop&w=800&q=80',
+            'sort_order' => 2,
         ]);
 
         // מסעדה 3: סושי בר - חיפה
@@ -228,6 +303,20 @@ class RestaurantSeeder extends Seeder
             'sort_order' => 2,
         ]);
 
+        $sushiAppetizerCategory = $createCategory($restaurant3, [
+            'name' => 'מנות פתיחה',
+            'description' => 'נשנושים יפניים לפתיחה',
+            'icon' => '🥢',
+            'sort_order' => 3,
+        ]);
+
+        $sushiDrinksCategory = $createCategory($restaurant3, [
+            'name' => 'משקאות',
+            'description' => 'תה, סאקה ומשקאות יפניים',
+            'icon' => '🍵',
+            'sort_order' => 4,
+        ]);
+
         $createItem($restaurant3, [
             'category_id' => $sushiCategory->id,
             'name' => 'רול סלמון אבוקדו',
@@ -253,6 +342,42 @@ class RestaurantSeeder extends Seeder
             'price' => 68.00,
             'image_url' => 'https://images.unsplash.com/photo-1580828343064-fde4fc206bc6?auto=format&fit=crop&w=800&q=80',
             'sort_order' => 1,
+        ]);
+
+        $createItem($restaurant3, [
+            'category_id' => $sushiAppetizerCategory->id,
+            'name' => 'אדממה ים',
+            'description' => 'פולי סויה מאודים עם מלח ים',
+            'price' => 22.00,
+            'image_url' => 'https://images.unsplash.com/photo-1591754053654-8b37e7cfd014?auto=format&fit=crop&w=800&q=80',
+            'sort_order' => 1,
+        ]);
+
+        $createItem($restaurant3, [
+            'category_id' => $sushiAppetizerCategory->id,
+            'name' => 'סלט אצות וואקמה',
+            'description' => 'אצות וואקמה, שומשום ורוטב סויה-ג\'ינג\'ר',
+            'price' => 26.00,
+            'image_url' => 'https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&w=800&q=80',
+            'sort_order' => 2,
+        ]);
+
+        $createItem($restaurant3, [
+            'category_id' => $sushiDrinksCategory->id,
+            'name' => 'תה ירוק יפני',
+            'description' => 'חליטה חמה של מאצ'ה עדין',
+            'price' => 14.00,
+            'image_url' => 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=800&q=80',
+            'sort_order' => 1,
+        ]);
+
+        $createItem($restaurant3, [
+            'category_id' => $sushiDrinksCategory->id,
+            'name' => 'סאקה קר',
+            'description' => 'כוס סאקה צוננת',
+            'price' => 24.00,
+            'image_url' => 'https://images.unsplash.com/photo-1497534446932-c925b458314e?auto=format&fit=crop&w=800&q=80',
+            'sort_order' => 2,
         ]);
 
         // מסעדה 4: פלאפל הדקל - באר שבע
@@ -288,6 +413,20 @@ class RestaurantSeeder extends Seeder
             'sort_order' => 2,
         ]);
 
+        $falafelDrinksCategory = $createCategory($restaurant4, [
+            'name' => 'משקאות',
+            'description' => 'לימונדה, קולה וזירו',
+            'icon' => '🥤',
+            'sort_order' => 3,
+        ]);
+
+        $falafelAppetizerCategory = $createCategory($restaurant4, [
+            'name' => 'מנות פתיחה',
+            'description' => 'צלחות חומוס וביצים קשות',
+            'icon' => '🥚',
+            'sort_order' => 0,
+        ]);
+
         $createItem($restaurant4, [
             'category_id' => $falafelCategory->id,
             'name' => 'פלאפל בפיתה',
@@ -304,6 +443,42 @@ class RestaurantSeeder extends Seeder
             'price' => 34.00,
             'image_url' => 'https://images.unsplash.com/photo-1604908177453-74629501c6ab?auto=format&fit=crop&w=800&q=80',
             'sort_order' => 1,
+        ]);
+
+        $createItem($restaurant4, [
+            'category_id' => $falafelAppetizerCategory->id,
+            'name' => 'חומוס גרגרים',
+            'description' => 'צלחת חומוס עם גרגרים חמים, שמן זית ופפריקה',
+            'price' => 24.00,
+            'image_url' => 'https://images.unsplash.com/photo-1604908177235-9f5700c41f6c?auto=format&fit=crop&w=800&q=80',
+            'sort_order' => 1,
+        ]);
+
+        $createItem($restaurant4, [
+            'category_id' => $falafelAppetizerCategory->id,
+            'name' => 'ביצה קשה ומלפפון חמוץ',
+            'description' => 'ביצה, חמוצים, חמאה ומלח גס',
+            'price' => 12.00,
+            'image_url' => 'https://images.unsplash.com/photo-1528323273322-d81458248d40?auto=format&fit=crop&w=800&q=80',
+            'sort_order' => 2,
+        ]);
+
+        $createItem($restaurant4, [
+            'category_id' => $falafelDrinksCategory->id,
+            'name' => 'לימונדה נענע',
+            'description' => 'לימונדה ביתית עם נענע טרייה',
+            'price' => 14.00,
+            'image_url' => 'https://images.unsplash.com/photo-1502741338009-cac2772e18bc?auto=format&fit=crop&w=800&q=80',
+            'sort_order' => 1,
+        ]);
+
+        $createItem($restaurant4, [
+            'category_id' => $falafelDrinksCategory->id,
+            'name' => 'קולה זירו',
+            'description' => 'בקבוק 330 מ"ל קר',
+            'price' => 12.00,
+            'image_url' => 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=800&q=80',
+            'sort_order' => 2,
         ]);
 
         // מסעדה 5: פסטה פרטה - נתניה
@@ -339,6 +514,20 @@ class RestaurantSeeder extends Seeder
             'sort_order' => 2,
         ]);
 
+        $pastaAppetizerCategory = $createCategory($restaurant5, [
+            'name' => 'מנות פתיחה',
+            'description' => 'לחמים, ברוסקטות ואנטיפסטי',
+            'icon' => '🫓',
+            'sort_order' => 0,
+        ]);
+
+        $pastaDrinksCategory = $createCategory($restaurant5, [
+            'name' => 'משקאות',
+            'description' => 'יינות וכוסות שתיה קלה',
+            'icon' => '🍷',
+            'sort_order' => 3,
+        ]);
+
         $createItem($restaurant5, [
             'category_id' => $pastaCategory->id,
             'name' => 'פסטה קרבונרה',
@@ -364,6 +553,42 @@ class RestaurantSeeder extends Seeder
             'price' => 38.00,
             'image_url' => 'https://images.unsplash.com/photo-1546793665-c74683f339c1?auto=format&fit=crop&w=800&q=80',
             'sort_order' => 1,
+        ]);
+
+        $createItem($restaurant5, [
+            'category_id' => $pastaAppetizerCategory->id,
+            'name' => 'לחם שום ביתי',
+            'description' => 'לחם מחמצת, חמאת שום ופטרוזיליה',
+            'price' => 18.00,
+            'image_url' => 'https://images.unsplash.com/photo-1481391032119-d89fee407e44?auto=format&fit=crop&w=800&q=80',
+            'sort_order' => 1,
+        ]);
+
+        $createItem($restaurant5, [
+            'category_id' => $pastaAppetizerCategory->id,
+            'name' => 'אנטיפסטי ירקות',
+            'description' => 'קישוא, פלפל ובצל צלויים עם בלסמי',
+            'price' => 26.00,
+            'image_url' => 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=800&q=80',
+            'sort_order' => 2,
+        ]);
+
+        $createItem($restaurant5, [
+            'category_id' => $pastaDrinksCategory->id,
+            'name' => 'כוס יין אדום',
+            'description' => 'יין אדום יבש מהמזקקה הביתית',
+            'price' => 28.00,
+            'image_url' => 'https://images.unsplash.com/photo-1470337458703-46ad1756a187?auto=format&fit=crop&w=800&q=80',
+            'sort_order' => 1,
+        ]);
+
+        $createItem($restaurant5, [
+            'category_id' => $pastaDrinksCategory->id,
+            'name' => 'סודה/מים מוגזים',
+            'description' => 'בקבוק מים מוגזים 330 מ"ל',
+            'price' => 10.00,
+            'image_url' => 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=800&q=80',
+            'sort_order' => 2,
         ]);
     }
 }
