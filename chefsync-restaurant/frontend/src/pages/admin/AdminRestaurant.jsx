@@ -171,8 +171,11 @@ export default function AdminRestaurant() {
                 formData.append('logo', restaurant.logo);
             }
 
-            console.log('✅ About to send PUT request...');
-            await api.put('/admin/restaurant', formData, {
+            // ✅ Laravel PUT + multipart workaround
+            formData.append('_method', 'PUT');
+
+            console.log('✅ About to send POST request with _method=PUT...');
+            await api.post('/admin/restaurant', formData, {
                 headers: { ...getAuthHeaders(), 'Content-Type': 'multipart/form-data' },
             });
             alert('נשמר בהצלחה');
