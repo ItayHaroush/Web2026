@@ -89,7 +89,7 @@ class AdminController extends Controller
 
         $user = $request->user();
         $restaurant = $user->restaurant;
-        
+
         if (!$restaurant) {
             return response()->json([
                 'success' => false,
@@ -461,7 +461,7 @@ class AdminController extends Controller
 
         $restaurant->update($updateData);
         $restaurant->refresh(); // ✅ טען את הנתונים המעודכנים מה-DB
-        
+
         Log::info('Restaurant after update:', [
             'id' => $restaurant->id,
             'name' => $restaurant->name,
