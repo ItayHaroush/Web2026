@@ -311,9 +311,9 @@ class AdminController extends Controller
 
         $restaurant = Restaurant::findOrFail($user->restaurant_id);
 
-        // ✅ ולידציה - name חובה אם נשלח
+        // ✅ ולידציה - name חובה אם נשלח (sometimes = רק אם קיים בבקשה)
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
+            'name' => 'sometimes|required|string|max:255',
             'description' => 'nullable|string',
             'phone' => 'sometimes|string|max:20',
             'address' => 'sometimes|string|max:255',
