@@ -51,7 +51,7 @@ class RestaurantSeeder extends Seeder
 
         // מסעדה 1: פיצה פאלאס - תל אביב
         $restaurant1 = Restaurant::withoutGlobalScopes()->updateOrCreate(
-            ['tenant_id' => 'pizza-palace'],
+            ['slug' => 'pizza-palace'],
             [
                 'name' => 'Pizza Palace',
                 'slug' => 'pizza-palace',
@@ -136,7 +136,7 @@ class RestaurantSeeder extends Seeder
 
         // מסעדה 2: המבורגר סנטרל - ירושלים
         $restaurant2 = Restaurant::withoutGlobalScopes()->updateOrCreate(
-            ['tenant_id' => 'burger-central'],
+            ['slug' => 'burger-central'],
             [
                 'name' => 'Burger Central',
                 'slug' => 'burger-central',
@@ -195,7 +195,7 @@ class RestaurantSeeder extends Seeder
 
         // מסעדה 3: סושי בר - חיפה
         $restaurant3 = Restaurant::withoutGlobalScopes()->updateOrCreate(
-            ['tenant_id' => 'sushi-bar'],
+            ['slug' => 'sushi-bar'],
             [
                 'name' => 'Sushi Bar',
                 'slug' => 'sushi-bar',
@@ -254,7 +254,7 @@ class RestaurantSeeder extends Seeder
 
         // מסעדה 4: פלאפל הדקל - באר שבע
         $restaurant4 = Restaurant::withoutGlobalScopes()->updateOrCreate(
-            ['tenant_id' => 'falafel-hadekel'],
+            ['slug' => 'falafel-hadekel'],
             [
                 'name' => 'פלאפל הדקל',
                 'slug' => 'falafel-hadekel',
@@ -304,7 +304,7 @@ class RestaurantSeeder extends Seeder
 
         // מסעדה 5: פסטה פרטה - נתניה
         $restaurant5 = Restaurant::withoutGlobalScopes()->updateOrCreate(
-            ['tenant_id' => 'pasta-preta'],
+            ['slug' => 'pasta-preta'],
             [
                 'name' => 'Pasta Preta',
                 'slug' => 'pasta-preta',
