@@ -365,7 +365,7 @@ class RestaurantSeeder extends Seeder
         $createItem($restaurant3, [
             'category_id' => $sushiDrinksCategory->id,
             'name' => 'תה ירוק יפני',
-            'description' => 'חליטה חמה של מאצ'ה עדין',
+            'description' => 'חליטה חמה של מאצ\'ה עדין',
             'price' => 14.00,
             'image_url' => 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=800&q=80',
             'sort_order' => 1,
