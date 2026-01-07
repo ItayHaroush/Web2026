@@ -225,7 +225,9 @@ class AdminController extends Controller
             $imageUrl = $this->uploadImage($request->file('image'), 'menu-items');
         }
 
+        // ✅ וודא tenant_id + restaurant_id
         $item = MenuItem::create([
+            'tenant_id' => $user->restaurant->tenant_id,  // ← חובה!
             'restaurant_id' => $user->restaurant_id,
             'category_id' => $request->category_id,
             'name' => $request->name,
