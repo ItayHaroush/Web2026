@@ -71,7 +71,9 @@ export default function AdminMenu() {
 
         try {
             if (editItem) {
-                await api.put(`/admin/menu-items/${editItem.id}`, formData, {
+                // ✅ Laravel PUT + multipart workaround
+                formData.append('_method', 'PUT');
+                await api.post(`/admin/menu-items/${editItem.id}`, formData, {
                     headers: { ...getAuthHeaders(), 'Content-Type': 'multipart/form-data' }
                 });
             } else {
