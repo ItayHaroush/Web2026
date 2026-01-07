@@ -322,7 +322,15 @@ class AdminController extends Controller
 
         $restaurant = Restaurant::findOrFail($user->restaurant_id);
 
-        // 🔍 DEBUG - מה מגיע מהפרונט
+        // 🔍 DEBUG - מה מגיע מהפרונט בדיוק
+        $rawBody = $request->getContent();
+        Log::info('Raw Request Body', [
+            'content_length' => strlen($rawBody),
+            'content_type' => $request->header('content-type'),
+            'raw_body' => substr($rawBody, 0, 500), // חתוך ל-500 chars
+            'method' => $request->method(),
+        ]);
+        
         Log::info('Update Restaurant Request', [
             'all_data' => $request->all(),
             'has_name' => $request->has('name'),
