@@ -178,14 +178,14 @@ export default function AdminRestaurant() {
             const response = await api.post('/admin/restaurant', formData, {
                 headers: { ...getAuthHeaders(), 'Content-Type': 'multipart/form-data' },
             });
-            
+
             // ✅ עדכן state עם הנתונים שחזרו מהשרת
             if (response.data.success && response.data.restaurant) {
                 console.log('✅ Updating state with:', response.data.restaurant);
                 setRestaurant(response.data.restaurant);
                 setLogoPreview(response.data.restaurant.logo_url ? resolveAssetUrl(response.data.restaurant.logo_url) : null);
             }
-            
+
             alert('נשמר בהצלחה');
         } catch (error) {
             console.error('Failed to save restaurant:', error);
