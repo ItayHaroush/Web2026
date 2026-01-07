@@ -69,24 +69,36 @@ export default function AdminMenu() {
         formData.append('category_id', form.category_id);
         if (form.image) formData.append('image', form.image);
 
+        console.log('📤 Submitting menu item:', {
+            name: form.name,
+            price: form.price,
+            category_id: form.category_id,
+            hasImage: !!form.image,
+            isEdit: !!editItem,
+        });
+
         try {
             if (editItem) {
                 // ✅ Laravel PUT + multipart workaround
                 formData.append('_method', 'PUT');
-                await api.post(`/admin/menu-items/${editItem.id}`, formData, {
+                const response = await api.post(`/admin/menu-items/${editItem.id}`, formData, {
                     headers: { ...getAuthHeaders(), 'Content-Type': 'multipart/form-data' }
                 });
+                console.log('✅ Update response:', response.data);
             } else {
-                await api.post('/admin/menu-items', formData, {
+                const response = await api.post('/admin/menu-items', formData, {
                     headers: { ...getAuthHeaders(), 'Content-Type': 'multipart/form-data' }
                 });
+                console.log('✅ Create response:', response.data);
             }
 
             closeModal();
             fetchData();
         } catch (error) {
-            console.error('Failed to save item:', error);
-            alert('שגיאה בשמירת הפריט');
+            console.error('❌ Failed to save item:', error);
+            console.error('❌ Error response:', error.response?.data);
+            console.error('❌ Error status:', error.response?.status);
+            alert(`שגיאה בשמירת הפריט: ${error.response?.data?.message || error.message}`);
         }
     };
 
