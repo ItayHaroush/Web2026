@@ -151,7 +151,7 @@ class SuperAdminController extends Controller
         try {
             // יצירת המסעדה - וידוא slug ו-tenant_id תמיד קיימים
             $slugValue = Str::slug($validated['name']);
-            
+
             // ודא tenant_id תקין
             $tenantId = $validated['tenant_id'];
             if (empty($tenantId)) {
