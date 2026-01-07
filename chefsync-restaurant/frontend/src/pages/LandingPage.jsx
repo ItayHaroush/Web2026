@@ -290,7 +290,7 @@ export default function LandingPage() {
                                 כל הפיצ'רים והיכולות ללא הגבלה
                             </p>
                         </div>
-                        
+
                         <div className="bg-white p-6 rounded-2xl shadow-sm text-center">
                             <div className="text-4xl mb-3">💳</div>
                             <h3 className="font-bold text-lg mb-2">כרטיס אשראי</h3>
@@ -298,7 +298,7 @@ export default function LandingPage() {
                                 נדרש לצורך אימות בלבד - <strong>לא יחויב</strong> בתקופת הניסיון
                             </p>
                         </div>
-                        
+
                         <div className="bg-white p-6 rounded-2xl shadow-sm text-center">
                             <div className="text-4xl mb-3">🔔</div>
                             <h3 className="font-bold text-lg mb-2">תזכורת מראש</h3>
