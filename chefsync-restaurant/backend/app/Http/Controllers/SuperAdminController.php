@@ -331,4 +331,87 @@ class SuperAdminController extends Controller
             'data' => $cities,
         ]);
     }
+
+    /**
+     * סטטוס סכימת בסיס נתונים ומיגרציות - לאבחון הבדלים בין סביבות
+     */
+    public function schemaStatus()
+    {
+        try {
+            // פרטים כלליים
+            $app = [
+                'laravel_version' => app()->version(),
+                'php_version' => PHP_VERSION,
+                'app_env' => config('app.env'),
+                'app_debug' => (bool) config('app.debug'),
+                'app_url' => config('app.url'),
+            ];
+
+            // שם הדאטאבייס וגרסת ה-DB
+            $dbName = optional(collect(DB::select('SELECT DATABASE() as db'))->first())->db;
+            $dbVersion = optional(collect(DB::select('SELECT VERSION() as v'))->first())->v;
+
+            // מיגרציות שהורצו
+            $migrations = collect(DB::table('migrations')->select('migration', 'batch')->orderBy('id')->get())
+                ->map(function ($row) {
+                    return [
+                        'migration' => $row->migration,
+                        'batch' => (int) $row->batch,
+                    ];
+                })->values();
+
+            // טבלאות ועמודות מתוך information_schema
+            $columns = collect(DB::select(<<<SQL
+                SELECT TABLE_NAME as table_name,
+                       COLUMN_NAME as column_name,
+                       COLUMN_TYPE as column_type,
+                       IS_NULLABLE as is_nullable,
+                       COLUMN_DEFAULT as column_default,
+                       COLUMN_KEY as column_key,
+                       EXTRA as extra
+                FROM information_schema.COLUMNS
+                WHERE TABLE_SCHEMA = ?
+                ORDER BY TABLE_NAME, ORDINAL_POSITION
+            SQL, [$dbName]))
+                ->groupBy('table_name')
+                ->map(function ($cols, $table) {
+                    return $cols->map(function ($c) {
+                        return [
+                            'column' => $c->column_name,
+                            'type' => $c->column_type,
+                            'nullable' => $c->is_nullable === 'YES',
+                            'default' => $c->column_default,
+                            'key' => $c->column_key,
+                            'extra' => $c->extra,
+                        ];
+                    })->values();
+                });
+
+            // חישוב checksum להשוואה מהירה בין סביבות
+            $checksum = sha1(json_encode([
+                'migrations' => $migrations,
+                'columns' => $columns,
+            ]));
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'app' => $app,
+                    'database' => [
+                        'name' => $dbName,
+                        'version' => $dbVersion,
+                    ],
+                    'migrations' => $migrations,
+                    'schema' => $columns,
+                    'checksum' => $checksum,
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Schema status error: '.$e->getMessage(), ['exception' => $e]);
+            return response()->json([
+                'success' => false,
+                'message' => 'שגיאה בשליפת סטטוס הסכימה: '.$e->getMessage(),
+            ], 500);
+        }
+    }
 }

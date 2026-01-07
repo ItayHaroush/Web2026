@@ -61,6 +61,9 @@ Route::prefix('super-admin')->middleware(['auth:sanctum', 'super_admin'])->group
     Route::get('/billing/restaurants', [SuperAdminBillingController::class, 'restaurants'])->name('super-admin.billing.restaurants');
     Route::post('/billing/restaurants/{id}/charge', [SuperAdminBillingController::class, 'chargeRestaurant'])->name('super-admin.billing.charge');
     Route::get('/billing/payments', [SuperAdminBillingController::class, 'payments'])->name('super-admin.billing.payments');
+
+    // סטטוס סכימת בסיס נתונים ומיגרציות (אבחון)
+    Route::get('/schema-status', [SuperAdminController::class, 'schemaStatus'])->name('super-admin.schema.status');
 });
 
 // ============================================
