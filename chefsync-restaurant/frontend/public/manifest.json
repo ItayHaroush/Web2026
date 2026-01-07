@@ -9,25 +9,25 @@
   "theme_color": "#1f2c38",
   "icons": [
     {
-      "src": "/icons/chefsync-512.png",
+      "src": "/icons/chefsync-logo-v2-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/icons/chefsync-192.png",
+      "src": "/icons/chefsync-logo-v2-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/icons/chefsync-180.png",
+      "src": "/icons/chefsync-logo-v2-180.png",
       "sizes": "180x180",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icons/chefsync-96.png",
+      "src": "/icons/chefsync-logo-v2-96.png",
       "sizes": "96x96",
       "type": "image/png",
       "purpose": "any"
