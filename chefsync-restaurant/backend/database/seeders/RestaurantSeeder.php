@@ -13,7 +13,7 @@ class RestaurantSeeder extends Seeder
     public function run(): void
     {
         $createCategory = function (Restaurant $restaurant, array $data) {
-            return Category::updateOrCreate(
+            return Category::withoutGlobalScopes()->updateOrCreate(
                 [
                     'tenant_id' => $restaurant->tenant_id,
                     'name' => $data['name'],
@@ -32,7 +32,7 @@ class RestaurantSeeder extends Seeder
         };
 
         $createItem = function (Restaurant $restaurant, array $data) {
-            return MenuItem::updateOrCreate(
+            return MenuItem::withoutGlobalScopes()->updateOrCreate(
                 [
                     'tenant_id' => $restaurant->tenant_id,
                     'name' => $data['name'],
@@ -50,7 +50,7 @@ class RestaurantSeeder extends Seeder
         };
 
         // מסעדה 1: פיצה פאלאס - תל אביב
-        $restaurant1 = Restaurant::updateOrCreate(
+        $restaurant1 = Restaurant::withoutGlobalScopes()->updateOrCreate(
             ['tenant_id' => 'pizza-palace'],
             [
                 'name' => 'Pizza Palace',
@@ -135,7 +135,7 @@ class RestaurantSeeder extends Seeder
         ]);
 
         // מסעדה 2: המבורגר סנטרל - ירושלים
-        $restaurant2 = Restaurant::updateOrCreate(
+        $restaurant2 = Restaurant::withoutGlobalScopes()->updateOrCreate(
             ['tenant_id' => 'burger-central'],
             [
                 'name' => 'Burger Central',
@@ -194,7 +194,7 @@ class RestaurantSeeder extends Seeder
         ]);
 
         // מסעדה 3: סושי בר - חיפה
-        $restaurant3 = Restaurant::updateOrCreate(
+        $restaurant3 = Restaurant::withoutGlobalScopes()->updateOrCreate(
             ['tenant_id' => 'sushi-bar'],
             [
                 'name' => 'Sushi Bar',
@@ -253,7 +253,7 @@ class RestaurantSeeder extends Seeder
         ]);
 
         // מסעדה 4: פלאפל הדקל - באר שבע
-        $restaurant4 = Restaurant::updateOrCreate(
+        $restaurant4 = Restaurant::withoutGlobalScopes()->updateOrCreate(
             ['tenant_id' => 'falafel-hadekel'],
             [
                 'name' => 'פלאפל הדקל',
@@ -303,7 +303,7 @@ class RestaurantSeeder extends Seeder
         ]);
 
         // מסעדה 5: פסטה פרטה - נתניה
-        $restaurant5 = Restaurant::updateOrCreate(
+        $restaurant5 = Restaurant::withoutGlobalScopes()->updateOrCreate(
             ['tenant_id' => 'pasta-preta'],
             [
                 'name' => 'Pasta Preta',
