@@ -218,7 +218,10 @@ class AdminController extends Controller
         $category = Category::where('restaurant_id', $user->restaurant_id)
             ->findOrFail($request->category_id);
 
-        $maxOrder = MenuItem::where('category_id', $request->category_id)->max('sort_order') ?? 0;
+        // ✅ חישוב sort_order עם tenant_id
+        $maxOrder = MenuItem::where('category_id', $request->category_id)
+            ->where('tenant_id', $user->restaurant->tenant_id)
+            ->max('sort_order') ?? 0;
 
         $imageUrl = null;
         if ($request->hasFile('image')) {
