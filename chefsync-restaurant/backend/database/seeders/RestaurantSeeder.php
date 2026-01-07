@@ -53,6 +53,7 @@ class RestaurantSeeder extends Seeder
         $restaurant1 = Restaurant::withoutGlobalScopes()->updateOrCreate(
             ['slug' => 'pizza-palace'],
             [
+                'tenant_id' => 'pizza-palace',
                 'name' => 'Pizza Palace',
                 'slug' => 'pizza-palace',
                 'phone' => '03-1234567',
@@ -138,6 +139,7 @@ class RestaurantSeeder extends Seeder
         $restaurant2 = Restaurant::withoutGlobalScopes()->updateOrCreate(
             ['slug' => 'burger-central'],
             [
+                'tenant_id' => 'burger-central',
                 'name' => 'Burger Central',
                 'slug' => 'burger-central',
                 'phone' => '02-9876543',
@@ -197,6 +199,7 @@ class RestaurantSeeder extends Seeder
         $restaurant3 = Restaurant::withoutGlobalScopes()->updateOrCreate(
             ['slug' => 'sushi-bar'],
             [
+                'tenant_id' => 'sushi-bar',
                 'name' => 'Sushi Bar',
                 'slug' => 'sushi-bar',
                 'phone' => '04-5551234',
@@ -256,6 +259,7 @@ class RestaurantSeeder extends Seeder
         $restaurant4 = Restaurant::withoutGlobalScopes()->updateOrCreate(
             ['slug' => 'falafel-hadekel'],
             [
+                'tenant_id' => 'falafel-hadekel',
                 'name' => 'פלאפל הדקל',
                 'slug' => 'falafel-hadekel',
                 'phone' => '08-6667788',
@@ -306,6 +310,7 @@ class RestaurantSeeder extends Seeder
         $restaurant5 = Restaurant::withoutGlobalScopes()->updateOrCreate(
             ['slug' => 'pasta-preta'],
             [
+                'tenant_id' => 'pasta-preta',
                 'name' => 'Pasta Preta',
                 'slug' => 'pasta-preta',
                 'phone' => '09-8881122',
