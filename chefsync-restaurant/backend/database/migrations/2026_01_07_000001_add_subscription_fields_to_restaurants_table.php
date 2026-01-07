@@ -16,18 +16,18 @@ return new class extends Migration
             $table->enum('subscription_status', ['trial', 'active', 'expired', 'cancelled', 'suspended'])
                 ->default('trial')
                 ->after('is_override_status');
-            
+
             $table->timestamp('trial_ends_at')->nullable()->after('subscription_status');
             $table->timestamp('subscription_ends_at')->nullable()->after('trial_ends_at');
-            
+
             $table->enum('subscription_plan', ['monthly', 'yearly'])->nullable()->after('subscription_ends_at');
-            
+
             // פרטי תשלום טרנזילה
             $table->string('tranzila_terminal_name')->nullable()->after('subscription_plan');
             $table->string('tranzila_token')->nullable()->after('tranzila_terminal_name');
             $table->string('payment_method_last4')->nullable()->after('tranzila_token');
             $table->string('payment_method_type')->nullable()->after('payment_method_last4'); // Visa, Mastercard, etc.
-            
+
             // מעקב חיובים
             $table->decimal('monthly_price', 10, 2)->default(600.00)->after('payment_method_type');
             $table->decimal('yearly_price', 10, 2)->default(5000.00)->after('monthly_price');

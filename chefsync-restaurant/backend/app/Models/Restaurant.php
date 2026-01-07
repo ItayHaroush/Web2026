@@ -163,8 +163,8 @@ class Restaurant extends Model
      */
     public function isOnTrial(): bool
     {
-        return $this->subscription_status === 'trial' 
-            && $this->trial_ends_at 
+        return $this->subscription_status === 'trial'
+            && $this->trial_ends_at
             && $this->trial_ends_at->isFuture();
     }
 
@@ -173,7 +173,7 @@ class Restaurant extends Model
      */
     public function hasActiveSubscription(): bool
     {
-        return $this->subscription_status === 'active' 
+        return $this->subscription_status === 'active'
             && (!$this->subscription_ends_at || $this->subscription_ends_at->isFuture());
     }
 
@@ -193,7 +193,7 @@ class Restaurant extends Model
         if (!$this->isOnTrial()) {
             return 0;
         }
-        
+
         return max(0, now()->diffInDays($this->trial_ends_at, false));
     }
 
@@ -205,7 +205,7 @@ class Restaurant extends Model
         if (!$this->hasActiveSubscription() || !$this->subscription_ends_at) {
             return 0;
         }
-        
+
         return max(0, now()->diffInDays($this->subscription_ends_at, false));
     }
 }
