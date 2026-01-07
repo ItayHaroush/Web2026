@@ -77,7 +77,7 @@ function AppRoutes() {
   if (isLoading) {
     return <div className="flex items-center justify-center min-h-screen">טוען...</div>;
   }
-
+  console.log("Tenant ID:", tenantId);
   return (
     <Routes>
       {/* Debug */}
