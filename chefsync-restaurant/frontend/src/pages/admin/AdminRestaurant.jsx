@@ -124,11 +124,21 @@ export default function AdminRestaurant() {
         setSaving(true);
         try {
             const formData = new FormData();
-            ['name', 'description', 'phone', 'address', 'city'].forEach((field) => {
-                if (restaurant[field] !== undefined && restaurant[field] !== null) {
-                    formData.append(field, restaurant[field]);
+            
+            // ✅ שלח את כל השדות בלי לדלג על ריקים
+            const fieldsToSend = ['name', 'description', 'phone', 'address', 'city'];
+            fieldsToSend.forEach((field) => {
+                const value = restaurant[field];
+                // שלח גם ריקים/null - תן לבקאנד להחליט מה לעשות
+                if (value !== undefined) {
+                    formData.append(field, value || '');
                 }
             });
+            
+            console.log('📤 Sending form fields:', fieldsToSend.reduce((acc, f) => {
+                acc[f] = restaurant[f];
+                return acc;
+            }, {}));
 
             // שלח את is_open רק אם הוא מעודכן ידנית (overrideStatus = true)
             if (overrideStatus) {

@@ -88,9 +88,20 @@ class AdminController extends Controller
         ]);
 
         $user = $request->user();
+        $restaurant = $user->restaurant;
+        
+        if (!$restaurant) {
+            return response()->json([
+                'success' => false,
+                'message' => 'לא נמצאה מסעדה למשתמש זה',
+            ], 400);
+        }
+
         $maxOrder = Category::where('restaurant_id', $user->restaurant_id)->max('sort_order') ?? 0;
 
+        // ✅ וודא tenant_id + restaurant_id
         $category = Category::create([
+            'tenant_id' => $restaurant->tenant_id,  // ← חובה!
             'restaurant_id' => $user->restaurant_id,
             'name' => $request->name,
             'description' => $request->description,
@@ -449,12 +460,18 @@ class AdminController extends Controller
         }
 
         $restaurant->update($updateData);
-        Log::debug('Restaurant after update:', $restaurant->toArray());
+        $restaurant->refresh(); // ✅ טען את הנתונים המעודכנים מה-DB
+        
+        Log::info('Restaurant after update:', [
+            'id' => $restaurant->id,
+            'name' => $restaurant->name,
+            'updated_fields' => $updateData,
+        ]);
 
         return response()->json([
             'success' => true,
             'message' => 'פרטי המסעדה עודכנו בהצלחה!',
-            'restaurant' => $restaurant,
+            'restaurant' => $restaurant->load(['categories', 'menuItems']), // ✅ טען יחסים
         ]);
     }
 
