@@ -330,7 +330,7 @@ class AdminController extends Controller
             'raw_body' => substr($rawBody, 0, 500), // חתוך ל-500 chars
             'method' => $request->method(),
         ]);
-        
+
         Log::info('Update Restaurant Request', [
             'all_data' => $request->all(),
             'has_name' => $request->has('name'),
