@@ -311,6 +311,14 @@ class AdminController extends Controller
 
         $restaurant = Restaurant::findOrFail($user->restaurant_id);
 
+        // 🔍 DEBUG - מה מגיע מהפרונט
+        Log::info('Update Restaurant Request', [
+            'all_data' => $request->all(),
+            'has_name' => $request->has('name'),
+            'filled_name' => $request->filled('name'),
+            'name_value' => $request->input('name'),
+        ]);
+
         // ✅ ולידציה - name חובה אם נשלח (sometimes = רק אם קיים בבקשה)
         $validated = $request->validate([
             'name' => 'sometimes|required|string|max:255',
@@ -410,7 +418,10 @@ class AdminController extends Controller
             Log::debug('📅 Calculated status: ' . ($calculated ? 'true' : 'false'));
         }
 
-        Log::debug('Update data:', $updateData);
+        Log::info('Final Update Data', [
+            'updateData' => $updateData,
+            'isEmpty' => empty($updateData),
+        ]);
 
         // אם נשלחה עיר, נרמול לשם העברי לפי טבלת הערים
         if (!empty($updateData['city'])) {
