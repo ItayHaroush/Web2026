@@ -29,7 +29,7 @@ class SchemaCompare extends Command
         $remoteToken = $this->option('remote-token');
 
         if ($remoteUrl && $remoteToken) {
-            $this->line('📡 שליפת סכימה מ-'. $remoteUrl .'...');
+            $this->line('📡 שליפת סכימה מ-' . $remoteUrl . '...');
             $remoteSchema = $this->fetchRemoteSchema($remoteUrl, $remoteToken);
         }
 
@@ -39,7 +39,7 @@ class SchemaCompare extends Command
         // שמירה וצפייה
         $outputPath = $this->option('output');
         file_put_contents($outputPath, json_encode($report, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-        $this->info('✅ דוח שמור ב- '. $outputPath);
+        $this->info('✅ דוח שמור ב- ' . $outputPath);
 
         // הדפס סיכום
         $this->printSummary($report);
