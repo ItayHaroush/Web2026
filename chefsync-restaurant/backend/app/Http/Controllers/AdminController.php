@@ -352,24 +352,27 @@ class AdminController extends Controller
             }
         }
 
-        // ✅ שלוף רק שדות שבאמת נשלחו ולא ריקים
+        // ✅ שלוף רק שדות שבאמת נשלחו ולא ריקים/null
         $updateData = [];
 
-        // שדות חובה
+        // שדות חובה - רק אם נשלחו וממולאים
         if ($request->filled('name')) {
             $updateData['name'] = $validated['name'];
         }
 
-        // שדות אופציונליים
-        if ($request->has('description')) {
-            $updateData['description'] = $request->input('description');
-        }
+        // שדות אופציונליים - רק אם יש להם ערך
         if ($request->filled('phone')) {
             $updateData['phone'] = $validated['phone'];
+        }
+        
+        // description, address יכולים להיות ריקים (null/clear)
+        if ($request->has('description')) {
+            $updateData['description'] = $request->input('description');
         }
         if ($request->has('address')) {
             $updateData['address'] = $request->input('address');
         }
+        
         if ($request->filled('city')) {
             $updateData['city'] = $validated['city'];
         }
@@ -422,6 +425,17 @@ class AdminController extends Controller
             'updateData' => $updateData,
             'isEmpty' => empty($updateData),
         ]);
+
+        // 🛡️ הגנה אחרונה - סנן null מכל השדות הקריטיים
+        $updateData = array_filter($updateData, function($value, $key) {
+            // אפשר null רק לשדות שיכולים להיות ריקים
+            $nullableFields = ['description', 'address', 'logo_url'];
+            if (in_array($key, $nullableFields)) {
+                return true; // שמור גם null
+            }
+            // שאר השדות - אל תשמור null
+            return $value !== null;
+        }, ARRAY_FILTER_USE_BOTH);
 
         // אם נשלחה עיר, נרמול לשם העברי לפי טבלת הערים
         if (!empty($updateData['city'])) {
