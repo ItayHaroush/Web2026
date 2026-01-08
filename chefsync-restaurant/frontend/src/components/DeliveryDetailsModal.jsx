@@ -13,11 +13,23 @@ export default function DeliveryDetailsModal({ open, onClose, customerInfo, setC
 
     if (!open) return null;
 
+    const handleClose = () => {
+        // אם סוגרים ללא כתובת, חזור לאיסוף עצמי
+        if (!address.trim() && !customerInfo.delivery_address) {
+            setCustomerInfo({
+                ...customerInfo,
+                delivery_method: 'pickup'
+            });
+        }
+        onClose();
+    };
+
     const handleSave = (e) => {
         e.preventDefault();
         if (!address.trim()) return;
         setCustomerInfo({
             ...customerInfo,
+            delivery_method: 'delivery',
             delivery_address: address.trim(),
             delivery_notes: notes.trim(),
         });
@@ -35,7 +47,7 @@ export default function DeliveryDetailsModal({ open, onClose, customerInfo, setC
             <div className="bg-white rounded-xl shadow-xl w-full max-w-lg p-6">
                 <div className="flex justify-between items-center mb-4">
                     <h3 className="text-xl font-bold text-gray-900">פרטי משלוח</h3>
-                    <button onClick={onClose} className="text-gray-500 hover:text-gray-700">×</button>
+                    <button onClick={handleClose} type="button" className="text-gray-500 hover:text-gray-700 text-2xl">×</button>
                 </div>
                 <form onSubmit={handleSave} className="space-y-4">
                     <div>
@@ -60,7 +72,7 @@ export default function DeliveryDetailsModal({ open, onClose, customerInfo, setC
                         />
                     </div>
                     <div className="flex justify-end gap-3">
-                        <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100">
+                        <button type="button" onClick={handleClose} className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100">
                             ביטול
                         </button>
                         <button type="submit" className="px-4 py-2 rounded-lg bg-brand-primary text-white hover:bg-brand-primary/90">
