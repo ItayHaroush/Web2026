@@ -83,12 +83,12 @@ class RegisterRestaurantController extends Controller
 
         DB::beginTransaction();
         try {
-            // ודא slug תקין מה-name (לא מ-tenant_id)
+            // בנה slug מהשם; אם ריק (למשל שם בעברית) נFallback ל-tenant_id
             $slugValue = Str::slug($validated['name']);
             $tenantId = $validated['tenant_id'];
 
-            if (empty($tenantId) || empty($slugValue)) {
-                throw new \Exception('tenant_id and slug are required');
+            if (empty($slugValue)) {
+                $slugValue = Str::slug($tenantId) ?: $tenantId;
             }
 
             $restaurant = Restaurant::create([
