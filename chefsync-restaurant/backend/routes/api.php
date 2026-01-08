@@ -29,6 +29,9 @@ Route::prefix('auth')->group(function () {
         Route::get('/me', [AuthController::class, 'me'])->name('auth.me');
         Route::put('/update', [AuthController::class, 'update'])->name('auth.update');
         Route::post('/register', [AuthController::class, 'register'])->name('auth.register');
+        // אימות טלפון - בקשת קוד ואימות קוד
+        Route::post('/phone/request', [\App\Http\Controllers\PhoneAuthController::class, 'requestCode']);
+        Route::post('/phone/verify', [\App\Http\Controllers\PhoneAuthController::class, 'verifyCode']);
     });
 });
 
