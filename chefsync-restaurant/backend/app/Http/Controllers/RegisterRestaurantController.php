@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Restaurant;
 use App\Models\RestaurantPayment;
 use App\Models\RestaurantSubscription;
+use App\Models\PhoneVerification;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -28,7 +29,36 @@ class RegisterRestaurantController extends Controller
             'password' => 'required|string|min:6',
             'plan_type' => 'required|in:monthly,annual',
             'paid_upfront' => 'nullable|boolean',
+            'verification_code' => 'required|string',
         ]);
+
+        // אימות קוד טלפון לבעלים
+        $ownerPhoneNormalized = $this->normalizePhone($validated['owner_phone']);
+        $verification = PhoneVerification::where('phone', $ownerPhoneNormalized)
+            ->orderByDesc('id')
+            ->first();
+
+        if (!$verification) {
+            return response()->json(['success' => false, 'message' => 'קוד אימות לא נמצא'], 400);
+        }
+        if ($verification->verified_at) {
+            // כבר אומת בעבר – ממשיכים
+        } else {
+            if ($verification->expires_at < Carbon::now()) {
+                return response()->json(['success' => false, 'message' => 'פג תוקף הקוד'], 400);
+            }
+            if ($verification->attempts >= 3) {
+                return response()->json(['success' => false, 'message' => 'יותר מדי ניסיונות'], 429);
+            }
+            $verification->attempts++;
+            $verification->save();
+
+            if (!Hash::check($validated['verification_code'], $verification->code_hash)) {
+                return response()->json(['success' => false, 'message' => 'קוד שגוי'], 400);
+            }
+            $verification->verified_at = Carbon::now();
+            $verification->save();
+        }
 
         $monthlyPrice = 600; // ILS
         $annualPrice = 5000; // ILS
@@ -53,7 +83,7 @@ class RegisterRestaurantController extends Controller
                 'tenant_id' => $tenantId,
                 'name' => $validated['name'],
                 'slug' => $slugValue,
-                'phone' => $validated['phone'],
+                'phone' => $this->normalizePhone($validated['phone']),
                 'address' => $validated['address'] ?? null,
                 'description' => null,
                 'logo_url' => $validated['logo_url'] ?? null,
@@ -64,7 +94,7 @@ class RegisterRestaurantController extends Controller
                 'restaurant_id' => $restaurant->id,
                 'name' => $validated['owner_name'],
                 'email' => $validated['owner_email'],
-                'phone' => $validated['owner_phone'],
+                'phone' => $ownerPhoneNormalized,
                 'password' => Hash::make($validated['password']),
                 'role' => 'owner',
                 'is_active' => true,
@@ -121,5 +151,14 @@ class RegisterRestaurantController extends Controller
                 'message' => 'שגיאה בהרשמה: ' . $e->getMessage(),
             ], 500);
         }
+    }
+
+    private function normalizePhone(string $raw): string
+    {
+        $phone = preg_replace('/\s+/', '', $raw);
+        if (str_starts_with($phone, '0')) {
+            return '+972' . substr($phone, 1);
+        }
+        return $phone;
     }
 }
