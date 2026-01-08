@@ -14,6 +14,10 @@ export function CartProvider({ children }) {
     const [customerInfo, setCustomerInfo] = useState({
         name: '',
         phone: '',
+        delivery_method: 'pickup',
+        payment_method: 'cash',
+        delivery_address: '',
+        delivery_notes: '',
     });
     const [phoneVerified, setPhoneVerified] = useState(false);
     const { addToast } = useToast();
@@ -26,7 +30,7 @@ export function CartProvider({ children }) {
                 // המסעדה השתנתה - נקה את הסל
                 console.log('Restaurant changed, clearing cart');
                 setCartItems([]);
-                setCustomerInfo({ name: '', phone: '' });
+                setCustomerInfo({ name: '', phone: '', delivery_method: 'pickup', payment_method: 'cash', delivery_address: '', delivery_notes: '' });
             }
             setCurrentTenantId(tenantId);
         }
@@ -84,7 +88,7 @@ export function CartProvider({ children }) {
      */
     const clearCart = useCallback(() => {
         setCartItems([]);
-        setCustomerInfo({ name: '', phone: '' });
+        setCustomerInfo({ name: '', phone: '', delivery_method: 'pickup', payment_method: 'cash', delivery_address: '', delivery_notes: '' });
         setPhoneVerified(false);
     }, []);
 

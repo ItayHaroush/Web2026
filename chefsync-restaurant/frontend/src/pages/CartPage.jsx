@@ -6,6 +6,7 @@ import { useCart } from '../context/CartContext';
 import { CustomerLayout } from '../layouts/CustomerLayout';
 import orderService from '../services/orderService';
 import { UI_TEXT } from '../constants/ui';
+import DeliveryDetailsModal from '../components/DeliveryDetailsModal';
 
 /**
  * עמוד סל קניות
@@ -18,6 +19,8 @@ export default function CartPage() {
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState(null);
     const [showPhoneModal, setShowPhoneModal] = useState(false);
+    const [showDeliveryModal, setShowDeliveryModal] = useState(false);
+    const [submitStep, setSubmitStep] = useState('payment'); // payment -> confirm
 
     const handleQuantityChange = (itemId, newQuantity) => {
         if (newQuantity < 1) {
@@ -37,29 +40,44 @@ export default function CartPage() {
             return;
         }
 
+        if (customerInfo.delivery_method === 'delivery' && !customerInfo.delivery_address) {
+            setShowDeliveryModal(true);
+            setError('');
+            setSubmitStep('payment');
+            return;
+        }
+
         // אם הטלפון לא אומת, פתח modal
         if (!phoneVerified) {
             setShowPhoneModal(true);
             return;
         }
 
+        // שלב ראשון: הכנה (ללא שליחה)
+        if (submitStep === 'payment') {
+            setSubmitStep('confirm');
+            setError('');
+            return;
+        }
+
         try {
             setSubmitting(true);
-            // הכן נתוני ההזמנה
             const orderData = {
                 customer_name: customerInfo.name,
                 customer_phone: customerInfo.phone,
+                delivery_method: customerInfo.delivery_method || 'pickup',
+                payment_method: customerInfo.payment_method || 'cash',
+                delivery_address: customerInfo.delivery_address || undefined,
+                delivery_notes: customerInfo.delivery_notes || undefined,
                 items: cartItems.map((item) => ({
                     menu_item_id: item.id,
                     quantity: item.quantity,
                 })),
             };
-            // שלח את ההזמנה
             const response = await orderService.createOrder(orderData);
-            // שמור את ה-order ID ב-localStorage כהזמנה פעילה
             localStorage.setItem(`activeOrder_${tenantId}`, response.data.id);
-            // סיים בהצלחה
             clearCart();
+            setSubmitStep('payment');
             navigate(`/order-status/${response.data.id}`);
         } catch (err) {
             console.error('שגיאה בהגשת הזמנה:', err);
@@ -111,6 +129,19 @@ export default function CartPage() {
                         {error}
                     </div>
                 )}
+
+                <DeliveryDetailsModal
+                    open={showDeliveryModal}
+                    onClose={() => {
+                        setShowDeliveryModal(false);
+                    }}
+                    customerInfo={customerInfo}
+                    setCustomerInfo={setCustomerInfo}
+                    onSaved={() => {
+                        // אחרי שמירת פרטי משלוח אפשר להתקדם לשלב אישור
+                        setSubmitStep('confirm');
+                    }}
+                />
 
                 {/* פריטים בסל */}
                 <div className="space-y-2">
@@ -170,7 +201,7 @@ export default function CartPage() {
                 </div>
 
                 {/* טופס פרטים אישיים */}
-                <form onSubmit={handleSubmitOrder} className="space-y-4 bg-gray-50 p-6 rounded-lg">
+                <form id="cart-order-form" onSubmit={handleSubmitOrder} className="space-y-4 bg-gray-50 p-6 rounded-lg">
                     <h2 className="text-xl font-bold text-gray-900">פרטים אישיים</h2>
 
                     <div>
@@ -181,7 +212,7 @@ export default function CartPage() {
                             type="text"
                             value={customerInfo.name}
                             onChange={(e) => setCustomerInfo({ ...customerInfo, name: e.target.value })}
-                            placeholder="דוד כהן"
+                            placeholder="הקלד את שמך המלא"
                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary"
                             required
                         />
@@ -201,6 +232,53 @@ export default function CartPage() {
                         />
                     </div>
 
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <p className="block text-sm font-medium text-gray-700 mb-2">שיטת קבלה</p>
+                            <div className="flex gap-3">
+                                <label className={`flex-1 border rounded-lg p-3 cursor-pointer ${customerInfo.delivery_method === 'pickup' ? 'border-brand-primary bg-brand-primary/5' : 'border-gray-300'}`}>
+                                    <input
+                                        type="radio"
+                                        name="delivery_method"
+                                        value="pickup"
+                                        checked={customerInfo.delivery_method === 'pickup'}
+                                        onChange={(e) => setCustomerInfo({ ...customerInfo, delivery_method: e.target.value })}
+                                        className="mr-2"
+                                    />
+                                    איסוף עצמי
+                                </label>
+                                <label className={`flex-1 border rounded-lg p-3 cursor-pointer ${customerInfo.delivery_method === 'delivery' ? 'border-brand-primary bg-brand-primary/5' : 'border-gray-300'}`}>
+                                    <input
+                                        type="radio"
+                                        name="delivery_method"
+                                        value="delivery"
+                                        checked={customerInfo.delivery_method === 'delivery'}
+                                        onChange={(e) => {
+                                            setCustomerInfo({ ...customerInfo, delivery_method: e.target.value });
+                                            setShowDeliveryModal(true);
+                                        }}
+                                        className="mr-2"
+                                    />
+                                    משלוח
+                                </label>
+                            </div>
+                            {customerInfo.delivery_method === 'delivery' && (
+                                <button
+                                    type="button"
+                                    onClick={() => setShowDeliveryModal(true)}
+                                    className="mt-3 text-sm text-brand-primary underline"
+                                >
+                                    עריכת פרטי משלוח
+                                </button>
+                            )}
+                        </div>
+
+                        <div className="border rounded-lg p-3 bg-white">
+                            <p className="text-sm font-medium text-gray-700">תשלום</p>
+                            <p className="text-gray-800 font-semibold">מזומן בלבד בעת איסוף/משלוח</p>
+                        </div>
+                    </div>
+
                     {/* כפתורים */}
                     <div className="flex gap-3 mt-6">
                         <button
@@ -208,7 +286,11 @@ export default function CartPage() {
                             disabled={submitting}
                             className="flex-1 bg-brand-primary text-white font-bold py-4 rounded-lg hover:bg-gray-800 transition disabled:opacity-50"
                         >
-                            {submitting ? 'שולח...' : UI_TEXT.BTN_CHECKOUT}
+                            {submitting
+                                ? 'שולח...'
+                                : submitStep === 'payment'
+                                    ? 'שלם עכשיו'
+                                    : 'שלח הזמנה'}
                         </button>
                         <a
                             href="/menu"

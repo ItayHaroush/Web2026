@@ -225,6 +225,7 @@ export default function AdminOrders() {
                                     const statusBadge = getStatusBadge(order.status);
                                     const isPending = ['pending', 'received'].includes(order.status);
                                     const isActive = ['pending', 'received', 'preparing', 'ready', 'delivering'].includes(order.status);
+                                    const isDelivery = order.delivery_method === 'delivery';
 
                                     return (
                                         <div
@@ -257,6 +258,14 @@ export default function AdminOrders() {
                                                             }`}>{order.customer_name}</p>
                                                         <p className="text-sm text-gray-500">
                                                             {new Date(order.created_at).toLocaleString('he-IL')}
+                                                        </p>
+                                                        <p className="text-xs text-gray-500 flex items-center gap-1">
+                                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-100 text-gray-700">
+                                                                {isDelivery ? 'משלוח' : 'איסוף עצמי'}
+                                                            </span>
+                                                            {isDelivery && order.delivery_address && (
+                                                                <span className="truncate max-w-[140px]">📍 {order.delivery_address}</span>
+                                                            )}
                                                         </p>
                                                     </div>
                                                 </div>
@@ -316,9 +325,19 @@ export default function AdminOrders() {
                                     <h4 className="font-medium text-gray-800 mb-2">👤 פרטי לקוח</h4>
                                     <p className="text-gray-600 font-medium">{selectedOrder.customer_name}</p>
                                     <p className="text-gray-600 dir-ltr text-right">{selectedOrder.customer_phone}</p>
-                                    {selectedOrder.customer_address && (
-                                        <p className="text-gray-600 text-sm mt-2 p-2 bg-white rounded-lg">📍 {selectedOrder.customer_address}</p>
-                                    )}
+                                    <div className="text-sm text-gray-600 mt-2 space-y-2">
+                                        <p className="inline-flex items-center gap-2 px-2 py-1 bg-white rounded-lg">
+                                            <span className="text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-700">
+                                                {selectedOrder.delivery_method === 'delivery' ? 'משלוח' : 'איסוף עצמי'}
+                                            </span>
+                                            {selectedOrder.delivery_method === 'delivery' && selectedOrder.delivery_address && (
+                                                <span>📍 {selectedOrder.delivery_address}</span>
+                                            )}
+                                        </p>
+                                        {selectedOrder.delivery_notes && (
+                                            <p className="p-2 bg-white rounded-lg">הערות משלוח: {selectedOrder.delivery_notes}</p>
+                                        )}
+                                    </div>
                                 </div>
 
                                 {/* פריטים */}
