@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import PhoneVerificationModal from '../components/PhoneVerificationModal';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
@@ -13,9 +14,10 @@ import { UI_TEXT } from '../constants/ui';
 export default function CartPage() {
     const navigate = useNavigate();
     const { tenantId } = useAuth();
-    const { cartItems, removeFromCart, updateQuantity, getTotal, clearCart, customerInfo, setCustomerInfo } = useCart();
+    const { cartItems, removeFromCart, updateQuantity, getTotal, clearCart, customerInfo, setCustomerInfo, phoneVerified, setPhoneVerified } = useCart();
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState(null);
+    const [showPhoneModal, setShowPhoneModal] = useState(false);
 
     const handleQuantityChange = (itemId, newQuantity) => {
         if (newQuantity < 1) {
@@ -27,17 +29,22 @@ export default function CartPage() {
 
     const handleSubmitOrder = async (e) => {
         e.preventDefault();
+        setError(null);
+
+        // בדוק שנתונים בסיסיים קיימים
+        if (!customerInfo.name || !customerInfo.phone) {
+            setError('אנא מלא שם וטלפון');
+            return;
+        }
+
+        // אם הטלפון לא אומת, פתח modal
+        if (!phoneVerified) {
+            setShowPhoneModal(true);
+            return;
+        }
 
         try {
             setSubmitting(true);
-            setError(null);
-
-            // בדוק שנתונים בסיסיים קיימים
-            if (!customerInfo.name || !customerInfo.phone) {
-                setError('אנא מלא שם וטלפון');
-                return;
-            }
-
             // הכן נתוני ההזמנה
             const orderData = {
                 customer_name: customerInfo.name,
@@ -47,17 +54,13 @@ export default function CartPage() {
                     quantity: item.quantity,
                 })),
             };
-
             // שלח את ההזמנה
             const response = await orderService.createOrder(orderData);
-
             // שמור את ה-order ID ב-localStorage כהזמנה פעילה
             localStorage.setItem(`activeOrder_${tenantId}`, response.data.id);
-
             // סיים בהצלחה
             clearCart();
             navigate(`/order-status/${response.data.id}`);
-
         } catch (err) {
             console.error('שגיאה בהגשת הזמנה:', err);
             setError(err.response?.data?.message || 'שגיאה בהגשת ההזמנה');
@@ -91,6 +94,16 @@ export default function CartPage() {
     return (
         <CustomerLayout>
             <div className="space-y-6">
+                {showPhoneModal && (
+                    <PhoneVerificationModal
+                        phone={customerInfo.phone}
+                        onVerified={(phone) => {
+                            setPhoneVerified(true);
+                            setShowPhoneModal(false);
+                        }}
+                        onClose={() => setShowPhoneModal(false)}
+                    />
+                )}
                 <h1 className="text-3xl font-bold text-brand-primary">סל קניות</h1>
 
                 {error && (

@@ -15,6 +15,7 @@ export function CartProvider({ children }) {
         name: '',
         phone: '',
     });
+    const [phoneVerified, setPhoneVerified] = useState(false);
     const { addToast } = useToast();
 
     // בדוק אם המסעדה השתנתה - אם כן, נקה את הסל
@@ -84,6 +85,7 @@ export function CartProvider({ children }) {
     const clearCart = useCallback(() => {
         setCartItems([]);
         setCustomerInfo({ name: '', phone: '' });
+        setPhoneVerified(false);
     }, []);
 
     /**
@@ -113,6 +115,8 @@ export function CartProvider({ children }) {
         getItemCount,
         customerInfo,
         setCustomerInfo,
+        phoneVerified,
+        setPhoneVerified,
     };
 
     return (
