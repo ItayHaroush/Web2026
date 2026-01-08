@@ -45,6 +45,12 @@ class OrderController extends Controller
                 'items.*.quantity' => 'required|integer|min:1',
             ]);
 
+            \Log::info('📦 Order request received:', [
+                'delivery_method' => $validated['delivery_method'],
+                'delivery_address' => $validated['delivery_address'] ?? null,
+                'all_data' => $request->all()
+            ]);
+
             if ($validated['delivery_method'] === 'delivery' && empty($validated['delivery_address'])) {
                 return response()->json([
                     'success' => false,
