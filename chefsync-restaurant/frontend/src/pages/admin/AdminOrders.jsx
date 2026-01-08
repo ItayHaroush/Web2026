@@ -225,7 +225,7 @@ export default function AdminOrders() {
                                     const statusBadge = getStatusBadge(order.status);
                                     const isPending = ['pending', 'received'].includes(order.status);
                                     const isActive = ['pending', 'received', 'preparing', 'ready', 'delivering'].includes(order.status);
-                                    const isDelivery = order.delivery_method === 'delivery';
+                                    const isDelivery = order.delivery_method === 'delivery' || (!!order.delivery_address);
 
                                     return (
                                         <div

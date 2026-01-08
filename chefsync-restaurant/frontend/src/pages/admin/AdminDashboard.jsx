@@ -163,7 +163,7 @@ export default function AdminDashboard() {
                     ) : (
                         recentOrders.map((order) => {
                             const statusBadge = getStatusBadge(order.status);
-                            const isDelivery = order.delivery_method === 'delivery';
+                            const isDelivery = order.delivery_method === 'delivery' || (!!order.delivery_address);
                             return (
                                 <div key={order.id} className="p-3 sm:p-4 hover:bg-gray-50 transition-colors">
                                     <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
