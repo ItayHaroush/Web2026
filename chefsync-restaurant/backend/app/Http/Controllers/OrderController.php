@@ -7,18 +7,15 @@ use App\Models\OrderItem;
 use App\Models\MenuItem;
 use App\Models\Restaurant;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 /**
  * OrderController - ניהול הזמנות
-            $restaurantId = Restaurant::where('tenant_id', $tenantId)->value('id');
-            if (!$restaurantId) {
-                throw new \Exception('Restaurant not found for tenant');
-            }
  */
 class OrderController extends Controller
 {
     /**
-                'restaurant_id' => $restaurantId,
+     * צור הזמנה חדשה
      * 
      * בקשה:
      * {
@@ -45,7 +42,7 @@ class OrderController extends Controller
                 'items.*.quantity' => 'required|integer|min:1',
             ]);
 
-            \Log::info('📦 Order request received:', [
+            Log::info('Order request received', [
                 'delivery_method' => $validated['delivery_method'],
                 'delivery_address' => $validated['delivery_address'] ?? null,
                 'all_data' => $request->all()
@@ -59,11 +56,15 @@ class OrderController extends Controller
             }
 
             $tenantId = app('tenant_id');
+            $restaurantId = Restaurant::where('tenant_id', $tenantId)->value('id');
+            if (!$restaurantId) {
+                throw new \Exception('Restaurant not found for tenant');
+            }
 
             // צור את ההזמנה
             $order = Order::create([
                 'tenant_id' => $tenantId,
-                'restaurant_id' => 1, // TODO: השג restaurant_id מ-Tenant
+                'restaurant_id' => $restaurantId,
                 'customer_name' => $validated['customer_name'],
                 'customer_phone' => $validated['customer_phone'],
                 'delivery_method' => $validated['delivery_method'],
