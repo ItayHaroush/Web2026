@@ -16,6 +16,7 @@ class CitiesSeeder extends Seeder
             ['name' => 'Nahariya', 'hebrew_name' => 'נהריה', 'region' => 'צפון', 'latitude' => 33.0066, 'longitude' => 35.0964],
             ['name' => 'Safed', 'hebrew_name' => 'צפת', 'region' => 'צפון', 'latitude' => 32.9614, 'longitude' => 35.4983],
             ['name' => 'Tiberias', 'hebrew_name' => 'טבריה', 'region' => 'צפון', 'latitude' => 32.7814, 'longitude' => 35.5305],
+            ['name' => 'Afula', 'hebrew_name' => 'עפולה', 'region' => 'צפון', 'latitude' => 32.6070, 'longitude' => 35.2894],
 
             // מרכז
             ['name' => 'Tel Aviv', 'hebrew_name' => 'תל אביב', 'region' => 'מרכז', 'latitude' => 32.0853, 'longitude' => 34.7818],
