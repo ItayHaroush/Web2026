@@ -163,6 +163,7 @@ export default function AdminDashboard() {
                     ) : (
                         recentOrders.map((order) => {
                             const statusBadge = getStatusBadge(order.status);
+                            const isDelivery = order.delivery_method === 'delivery';
                             return (
                                 <div key={order.id} className="p-3 sm:p-4 hover:bg-gray-50 transition-colors">
                                     <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
@@ -172,13 +173,21 @@ export default function AdminDashboard() {
                                             </div>
                                             <div>
                                                 <p className="font-medium text-gray-800 text-sm sm:text-base">{order.customer_name}</p>
-                                                <p className="text-xs sm:text-sm text-gray-500">
-                                                    {order.items?.length || 0} פריטים •
-                                                    {new Date(order.created_at).toLocaleString('he-IL', {
+                                                <p className="text-xs sm:text-sm text-gray-500 flex flex-wrap items-center gap-1">
+                                                    <span>{order.items?.length || 0} פריטים</span>
+                                                    <span>•</span>
+                                                    <span>{new Date(order.created_at).toLocaleString('he-IL', {
                                                         hour: '2-digit',
                                                         minute: '2-digit'
-                                                    })}
+                                                    })}</span>
+                                                    <span>•</span>
+                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 text-[11px]">
+                                                        {isDelivery ? 'משלוח' : 'איסוף עצמי'}
+                                                    </span>
                                                 </p>
+                                                {isDelivery && order.delivery_address && (
+                                                    <p className="text-xs text-gray-500 truncate max-w-[220px]">📍 {order.delivery_address}</p>
+                                                )}
                                             </div>
                                         </div>
                                         <div className="text-left">

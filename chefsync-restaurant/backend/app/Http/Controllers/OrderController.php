@@ -5,15 +5,20 @@ namespace App\Http\Controllers;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\MenuItem;
+use App\Models\Restaurant;
 use Illuminate\Http\Request;
 
 /**
  * OrderController - ניהול הזמנות
+            $restaurantId = Restaurant::where('tenant_id', $tenantId)->value('id');
+            if (!$restaurantId) {
+                throw new \Exception('Restaurant not found for tenant');
+            }
  */
 class OrderController extends Controller
 {
     /**
-     * צור הזמנה חדשה
+                'restaurant_id' => $restaurantId,
      * 
      * בקשה:
      * {
@@ -31,10 +36,21 @@ class OrderController extends Controller
             $validated = $request->validate([
                 'customer_name' => 'required|string|max:100',
                 'customer_phone' => 'required|string|max:20',
+                'delivery_method' => 'required|in:pickup,delivery',
+                'payment_method' => 'required|in:cash',
+                'delivery_address' => 'nullable|string|max:255',
+                'delivery_notes' => 'nullable|string|max:500',
                 'items' => 'required|array|min:1',
                 'items.*.menu_item_id' => 'required|integer|exists:menu_items,id',
                 'items.*.quantity' => 'required|integer|min:1',
             ]);
+
+            if ($validated['delivery_method'] === 'delivery' && empty($validated['delivery_address'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'נא להזין כתובת למשלוח',
+                ], 422);
+            }
 
             $tenantId = app('tenant_id');
 
@@ -44,6 +60,10 @@ class OrderController extends Controller
                 'restaurant_id' => 1, // TODO: השג restaurant_id מ-Tenant
                 'customer_name' => $validated['customer_name'],
                 'customer_phone' => $validated['customer_phone'],
+                'delivery_method' => $validated['delivery_method'],
+                'payment_method' => $validated['payment_method'],
+                'delivery_address' => $validated['delivery_address'] ?? null,
+                'delivery_notes' => $validated['delivery_notes'] ?? null,
                 'status' => Order::STATUS_RECEIVED,
                 'total_amount' => 0, // יחושב מיד אחרי
             ]);
