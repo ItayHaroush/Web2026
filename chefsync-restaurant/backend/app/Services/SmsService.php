@@ -12,29 +12,42 @@ class SmsService
         $sid = config('services.twilio.sid');
         $token = config('services.twilio.token');
         $messagingServiceSid = config('services.twilio.messaging_service_sid');
+        $from = config('services.twilio.from');
 
-        // Missing config? אל תזרוק חריגה – רק לוג והחזר false
-        if (!$sid || !$token || !$messagingServiceSid) {
+        // Missing creds? אל תזרוק חריגה – רק לוג והחזר false
+        if (!$sid || !$token) {
             Log::warning('Twilio config missing', [
                 'sid' => (bool) $sid,
                 'token' => (bool) $token,
                 'messagingServiceSid' => (bool) $messagingServiceSid,
+                'from' => (bool) $from,
             ]);
+            return false;
+        }
+
+        // חייבים לפחות MessagingServiceSid או From
+        if (!$messagingServiceSid && !$from) {
+            Log::warning('Twilio destination missing (MessagingServiceSid/From)');
             return false;
         }
 
         $twilioUrl = "https://api.twilio.com/2010-04-01/Accounts/{$sid}/Messages.json";
         $body = "קוד האימות שלך ל-ChefSync: $code";
 
+        $payload = [
+            'To' => $phone,
+            'Body' => $body,
+        ];
+        if ($messagingServiceSid) {
+            $payload['MessagingServiceSid'] = $messagingServiceSid;
+        } else {
+            $payload['From'] = $from;
+        }
+
         try {
             $response = Http::asForm()
                 ->withBasicAuth($sid, $token)
-                ->post($twilioUrl, [
-                    'To' => $phone,
-                    'MessagingServiceSid' => $messagingServiceSid,
-                    'Body' => $body,
-                    // לא מציינים from
-                ]);
+                ->post($twilioUrl, $payload);
 
             if (!$response->successful()) {
                 Log::error('Twilio SMS failed', ['status' => $response->status(), 'response' => $response->body()]);
