@@ -15,7 +15,7 @@ class PhoneAuthController extends Controller
         $request->validate([
             'phone' => 'required|string',
         ]);
-        $phone = $request->phone;
+        $phone = $this->normalizePhone($request->phone);
         $now = Carbon::now();
         $code = random_int(100000, 999999);
         $codeHash = Hash::make($code);
@@ -45,7 +45,7 @@ class PhoneAuthController extends Controller
             'phone' => 'required|string',
             'code' => 'required|string',
         ]);
-        $phone = $request->phone;
+        $phone = $this->normalizePhone($request->phone);
         $code = $request->code;
         $now = Carbon::now();
 
@@ -74,5 +74,16 @@ class PhoneAuthController extends Controller
         $verification->verified_at = $now;
         $verification->save();
         return response()->json(['success' => true, 'verified' => true]);
+    }
+
+    private function normalizePhone(string $raw): string
+    {
+        $phone = preg_replace('/\s+/', '', $raw);
+        // אם מתחיל ב-0 (ישראל), החלף ל-+972 ללא האפס
+        if (str_starts_with($phone, '0')) {
+            return '+972' . substr($phone, 1);
+        }
+        // אם כבר כולל +, החזר כפי שהוא
+        return $phone;
     }
 }
