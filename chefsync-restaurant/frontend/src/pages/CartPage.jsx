@@ -74,6 +74,8 @@ export default function CartPage() {
                     quantity: item.quantity,
                 })),
             };
+            console.log('📦 Sending order data:', orderData);
+            console.log('🛒 Customer info:', customerInfo);
             const response = await orderService.createOrder(orderData);
             localStorage.setItem(`activeOrder_${tenantId}`, response.data.id);
             clearCart();
