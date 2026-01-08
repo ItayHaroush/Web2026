@@ -27,8 +27,8 @@ Route::prefix('auth')->group(function () {
     Route::post('/phone/request', [\App\Http\Controllers\PhoneAuthController::class, 'requestCode']);
     Route::post('/phone/verify', [\App\Http\Controllers\PhoneAuthController::class, 'verifyCode']);
     // Preflight CORS
-    Route::options('/phone/request', fn () => response()->json(['success' => true]));
-    Route::options('/phone/verify', fn () => response()->json(['success' => true]));
+    Route::options('/phone/request', fn() => response()->json(['success' => true]));
+    Route::options('/phone/verify', fn() => response()->json(['success' => true]));
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/logout', [AuthController::class, 'logout'])->name('auth.logout');

@@ -22,11 +22,14 @@ class RegisterRestaurantController extends Controller
             'tenant_id' => 'required|string|max:255|unique:restaurants,tenant_id|regex:/^[a-z0-9-]+$/',
             'phone' => 'required|string|max:20',
             'address' => 'nullable|string',
+            'city' => 'required|string|exists:cities,name',
+            'logo' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
             'logo_url' => 'nullable|url',
             'owner_name' => 'required|string|max:255',
             'owner_email' => 'required|email|unique:users,email',
             'owner_phone' => 'required|string|max:20',
-            'password' => 'required|string|min:6',
+            'password' => 'required|string|min:6|confirmed',
+            'password_confirmation' => 'required|string|min:6',
             'plan_type' => 'required|in:monthly,annual',
             'paid_upfront' => 'nullable|boolean',
             'verification_code' => 'required|string',
@@ -69,6 +72,15 @@ class RegisterRestaurantController extends Controller
         $chargeAmount = $planType === 'annual' ? $annualPrice : $monthlyPrice;
         $monthlyFeeForTracking = $planType === 'annual' ? round($annualPrice / 12, 2) : $monthlyPrice;
 
+        $logoUrl = null;
+        if ($request->hasFile('logo') && $request->file('logo')->isValid()) {
+            $logoPath = $request->file('logo')->store('logos', 'public');
+            $logoUrl = '/storage/' . $logoPath;
+        } elseif (!empty($request->input('logo_url'))) {
+            // שמור תאימות אחורה אם נשלח URL ישיר
+            $logoUrl = $request->input('logo_url');
+        }
+
         DB::beginTransaction();
         try {
             // ודא slug תקין מה-name (לא מ-tenant_id)
@@ -85,8 +97,9 @@ class RegisterRestaurantController extends Controller
                 'slug' => $slugValue,
                 'phone' => $this->normalizePhone($validated['phone']),
                 'address' => $validated['address'] ?? null,
+                'city' => $validated['city'],
                 'description' => null,
-                'logo_url' => $validated['logo_url'] ?? null,
+                'logo_url' => $logoUrl,
                 'is_open' => false,
             ]);
 
