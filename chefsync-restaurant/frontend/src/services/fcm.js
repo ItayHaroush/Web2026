@@ -12,7 +12,7 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const messaging = getMessaging(app);
-const VAPID_KEY = 'joFmZrI-usNwqfh5fQVjAkB_tR2DchtVkZ7uJlwO5XQ';
+const VAPID_KEY = 'BGbVAlRKn9V7VrOB9aN8-lAoZ9_q55ox6-pgJ0p7dN9uGPQl6t60ZiJwCzmZj_P2BHmGuMTSMjChxMOJAccvG-o';
 
 export async function requestFcmToken() {
     const permission = await Notification.requestPermission();
