@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import AdminLayout from '../../layouts/AdminLayout';
 import api from '../../services/apiClient';
-import { requestFcmToken } from '../../services/fcm';
+import { listenForegroundMessages, requestFcmToken } from '../../services/fcm';
 
 export default function AdminDashboard() {
     const { getAuthHeaders, isOwner, isManager } = useAdminAuth();
@@ -16,6 +16,31 @@ export default function AdminDashboard() {
 
     useEffect(() => {
         fetchDashboard();
+    }, []);
+
+    // When the dashboard is open (foreground), FCM messages won't be shown automatically.
+    // This listener makes it obvious the message arrived.
+    useEffect(() => {
+        const unsubscribe = listenForegroundMessages((payload) => {
+            console.log('[FCM] foreground message', payload);
+
+            const title = payload?.notification?.title || payload?.data?.title || 'ChefSync';
+            const body = payload?.notification?.body || payload?.data?.body || 'התראה חדשה';
+
+            if (Notification?.permission === 'granted') {
+                try {
+                    // eslint-disable-next-line no-new
+                    new Notification(title, { body, icon: '/icon-192.png' });
+                } catch (e) {
+                    // Some browsers block Notification() in certain contexts; fallback to console.
+                    console.warn('[FCM] Notification() failed', e);
+                }
+            }
+        });
+
+        return () => {
+            if (typeof unsubscribe === 'function') unsubscribe();
+        };
     }, []);
 
     const fetchDashboard = async () => {
