@@ -49,6 +49,8 @@ class AuthController extends Controller
                 'is_super_admin' => $user->is_super_admin ?? false,
                 'restaurant_id' => $user->restaurant_id,
                 'restaurant_name' => $user->restaurant->name ?? null,
+                'tenant_id' => $user->restaurant->tenant_id ?? null,
+                'restaurant' => $user->restaurant,
             ],
             'token' => $token,
         ]);
@@ -85,6 +87,7 @@ class AuthController extends Controller
                 'is_super_admin' => $user->is_super_admin ?? false,
                 'restaurant_id' => $user->restaurant_id,
                 'restaurant' => $user->restaurant,
+                'tenant_id' => $user->restaurant->tenant_id ?? null,
             ],
         ]);
     }
