@@ -23,6 +23,7 @@ export function AdminAuthProvider({ children }) {
             });
             if (response.data.success) {
                 setUser(response.data.user);
+                setTenantFromUser(response.data.user);
             } else {
                 logout();
             }
@@ -34,10 +35,18 @@ export function AdminAuthProvider({ children }) {
         }
     };
 
+    const setTenantFromUser = (userData) => {
+        const tenantId = userData?.tenant_id || userData?.restaurant?.tenant_id;
+        if (tenantId) {
+            localStorage.setItem('tenantId', tenantId);
+        }
+    };
+
     const login = (newToken, userData) => {
         console.log('🔐 AdminAuth Login:', { token: newToken?.substring(0, 30) + '...', user: userData });
         localStorage.setItem('authToken', newToken);
         localStorage.setItem('user', JSON.stringify(userData));
+        setTenantFromUser(userData);
         setToken(newToken);
         setUser(userData);
     };
