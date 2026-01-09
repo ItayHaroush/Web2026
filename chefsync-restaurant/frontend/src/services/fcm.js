@@ -18,8 +18,14 @@ export async function requestFcmToken() {
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') return null;
 
-    const swReg = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-    const token = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: swReg });
+    // Register and wait until the SW is active to avoid "no active Service Worker" errors
+    const swReg = await navigator.serviceWorker.register('/firebase-messaging-sw.js', { scope: '/' });
+    const readyReg = await navigator.serviceWorker.ready;
+
+    const token = await getToken(messaging, {
+        vapidKey: VAPID_KEY,
+        serviceWorkerRegistration: readyReg || swReg,
+    });
     return token;
 }
 
