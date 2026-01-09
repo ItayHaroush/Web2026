@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useMemo, useRef, useState, useEffect } from 'react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import AdminLayout from '../../layouts/AdminLayout';
 import api from '../../services/apiClient';
-import { listenForegroundMessages, requestFcmToken } from '../../services/fcm';
+import { clearStoredFcmToken, disableFcm, getStoredFcmToken, listenForegroundMessages, requestFcmToken } from '../../services/fcm';
 
 export default function AdminDashboard() {
     const { getAuthHeaders, isOwner, isManager } = useAdminAuth();
@@ -10,6 +10,11 @@ export default function AdminDashboard() {
     const [recentOrders, setRecentOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [pushState, setPushState] = useState({ status: 'idle', message: '' });
+
+    const permission = typeof Notification !== 'undefined' ? Notification.permission : 'unsupported';
+    const storedToken = useMemo(() => getStoredFcmToken(), [pushState.status]);
+    const isPushEnabled = permission === 'granted' && !!storedToken;
+    const lastMessageIdsRef = useRef(new Set());
 
     // רק בעלים ומנהלים רואים הכנסות
     const canViewRevenue = isOwner() || isManager();
@@ -23,6 +28,13 @@ export default function AdminDashboard() {
     useEffect(() => {
         const unsubscribe = listenForegroundMessages((payload) => {
             console.log('[FCM] foreground message', payload);
+
+            const msgId = payload?.messageId || payload?.data?.messageId || payload?.data?.google?.message_id;
+            if (msgId) {
+                if (lastMessageIdsRef.current.has(msgId)) return;
+                lastMessageIdsRef.current.add(msgId);
+                setTimeout(() => lastMessageIdsRef.current.delete(msgId), 30_000);
+            }
 
             const title = payload?.notification?.title || payload?.data?.title || 'ChefSync';
             const body = payload?.notification?.body || payload?.data?.body || 'התראה חדשה';
@@ -68,7 +80,13 @@ export default function AdminDashboard() {
             setPushState({ status: 'loading', message: 'מבקש הרשאה להתראות...' });
             const token = await requestFcmToken();
             if (!token) {
-                setPushState({ status: 'error', message: 'הרשאה נדחתה. יש לאשר התראות.' });
+                const perm = typeof Notification !== 'undefined' ? Notification.permission : 'unsupported';
+                setPushState({
+                    status: 'error',
+                    message: perm === 'denied'
+                        ? 'ההתראות חסומות בדפדפן. יש לאפשר דרך ההגדרות.'
+                        : 'הרשאה נדחתה. יש לאשר התראות.',
+                });
                 return;
             }
 
@@ -77,6 +95,36 @@ export default function AdminDashboard() {
         } catch (error) {
             console.error('Failed to enable push', error);
             setPushState({ status: 'error', message: 'שגיאה בהפעלת התראות. נסו שוב.' });
+        }
+    };
+
+    const disablePush = async () => {
+        try {
+            setPushState({ status: 'loading', message: 'מכבה התראות...' });
+
+            const token = getStoredFcmToken();
+            if (token) {
+                try {
+                    await api.post('/fcm/unregister', { token }, { headers: getAuthHeaders() });
+                } catch (e) {
+                    console.warn('[FCM] backend unregister failed', e);
+                }
+            }
+
+            try {
+                await disableFcm();
+            } catch (e) {
+                console.warn('[FCM] deleteToken failed', e);
+                clearStoredFcmToken();
+            }
+
+            setPushState({
+                status: 'success',
+                message: 'התראות כובו עבור המכשיר הזה. כדי לבטל הרשאה לחלוטין יש לחסום בהגדרות הדפדפן.',
+            });
+        } catch (error) {
+            console.error('Failed to disable push', error);
+            setPushState({ status: 'error', message: 'שגיאה בכיבוי התראות. נסו שוב.' });
         }
     };
 
@@ -142,19 +190,42 @@ export default function AdminDashboard() {
                 <div>
                     <p className="text-base sm:text-lg font-semibold text-gray-800">קבלו התראות הזמנה לטאבלט</p>
                     <p className="text-sm text-gray-500">במיוחד באייפון: חייב אישור אחרי לחיצה ידנית.</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                        סטטוס הרשאה: <span className="font-mono">{permission}</span>
+                    </p>
                     {pushState.message && (
                         <p className={`text-sm mt-1 ${pushState.status === 'success' ? 'text-green-600' : pushState.status === 'error' ? 'text-red-600' : 'text-gray-600'}`}>
                             {pushState.message}
                         </p>
                     )}
                 </div>
-                <button
-                    onClick={enablePush}
-                    disabled={pushState.status === 'loading'}
-                    className="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-brand-primary text-white font-semibold shadow-sm hover:bg-brand-primary/90 disabled:opacity-60"
-                >
-                    {pushState.status === 'loading' ? 'מפעיל...' : 'הפעל התראות'}
-                </button>
+                <div className="flex flex-col sm:flex-row gap-2">
+                    <button
+                        onClick={enablePush}
+                        disabled={pushState.status === 'loading' || permission === 'denied' || isPushEnabled}
+                        className={`inline-flex items-center justify-center px-4 py-2 rounded-xl text-white font-semibold shadow-sm disabled:opacity-60 ${
+                            isPushEnabled ? 'bg-green-600' : 'bg-brand-primary hover:bg-brand-primary/90'
+                        }`}
+                    >
+                        {pushState.status === 'loading'
+                            ? 'טוען...'
+                            : isPushEnabled
+                                ? 'התראות מופעלות'
+                                : permission === 'denied'
+                                    ? 'התראות חסומות'
+                                    : 'הפעל התראות'}
+                    </button>
+
+                    {isPushEnabled && (
+                        <button
+                            onClick={disablePush}
+                            disabled={pushState.status === 'loading'}
+                            className="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-white border border-gray-200 text-gray-800 font-semibold shadow-sm hover:bg-gray-50 disabled:opacity-60"
+                        >
+                            כבה התראות
+                        </button>
+                    )}
+                </div>
             </div>
 
             {/* כרטיסי סטטיסטיקה */}
