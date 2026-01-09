@@ -203,9 +203,8 @@ export default function AdminDashboard() {
                     <button
                         onClick={enablePush}
                         disabled={pushState.status === 'loading' || permission === 'denied' || isPushEnabled}
-                        className={`inline-flex items-center justify-center px-4 py-2 rounded-xl text-white font-semibold shadow-sm disabled:opacity-60 ${
-                            isPushEnabled ? 'bg-green-600' : 'bg-brand-primary hover:bg-brand-primary/90'
-                        }`}
+                        className={`inline-flex items-center justify-center px-4 py-2 rounded-xl text-white font-semibold shadow-sm disabled:opacity-60 ${isPushEnabled ? 'bg-green-600' : 'bg-brand-primary hover:bg-brand-primary/90'
+                            }`}
                     >
                         {pushState.status === 'loading'
                             ? 'טוען...'
