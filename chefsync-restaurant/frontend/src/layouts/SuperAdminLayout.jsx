@@ -18,6 +18,11 @@ export default function SuperAdminLayout({ children }) {
             icon: '📊',
         },
         {
+            label: 'התראות',
+            path: '/super-admin/notifications',
+            icon: '🔔',
+        },
+        {
             label: 'דוחות',
             path: '/super-admin/reports',
             icon: '📈',

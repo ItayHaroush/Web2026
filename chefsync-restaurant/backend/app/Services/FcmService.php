@@ -10,7 +10,7 @@ class FcmService
     /**
      * Send a notification to a single token.
      */
-    public function sendToToken(string $token, string $title, string $body, array $data = []): void
+    public function sendToToken(string $token, string $title, string $body, array $data = []): bool
     {
         $projectId = config('fcm.project_id');
         $accessToken = $this->getAccessToken();
@@ -51,10 +51,12 @@ class FcmService
                 'status' => $response->status(),
                 'body' => $response->body(),
             ]);
+            return false;
         } else {
             Log::info('FCM send ok', [
                 'name' => $response->json('name'),
             ]);
+            return true;
         }
     }
 

@@ -18,6 +18,7 @@ import AdminEmployees from './pages/admin/AdminEmployees';
 import AdminRestaurant from './pages/admin/AdminRestaurant';
 import AdminTerminal from './pages/admin/AdminTerminal';
 import SuperAdminDashboard from './pages/super-admin/SuperAdminDashboard';
+import SuperAdminNotifications from './pages/super-admin/SuperAdminNotifications';
 import SuperAdminReports from './pages/super-admin/SuperAdminReports';
 import SuperAdminSettings from './pages/super-admin/SuperAdminSettings';
 import DebugAuth from './pages/super-admin/DebugAuth';
@@ -164,6 +165,14 @@ function AppRoutes() {
         element={
           <SuperAdminRoute>
             <SuperAdminDashboard />
+          </SuperAdminRoute>
+        }
+      />
+      <Route
+        path="/super-admin/notifications"
+        element={
+          <SuperAdminRoute>
+            <SuperAdminNotifications />
           </SuperAdminRoute>
         }
       />

@@ -14,10 +14,13 @@ class FcmTokenController extends Controller
             'device_label' => 'nullable|string|max:100',
         ]);
 
+        $userId = $request->user()?->id;
+
         FcmToken::updateOrCreate(
             ['token' => $data['token']],
             [
                 'tenant_id' => app('tenant_id'),
+                'user_id' => $userId,
                 'device_label' => $data['device_label'] ?? 'tablet',
             ]
         );
