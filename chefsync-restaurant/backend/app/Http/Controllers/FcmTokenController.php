@@ -15,13 +15,30 @@ class FcmTokenController extends Controller
         ]);
 
         $userId = $request->user()?->id;
+        $deviceLabel = $data['device_label'] ?? 'tablet';
+        $tenantId = app('tenant_id');
+
+        // Tokens can rotate. If the same device registers again, keep only the latest token
+        // to avoid sending the same notification twice to the same physical device.
+        $dedupeQuery = FcmToken::query()
+            ->where('tenant_id', $tenantId)
+            ->where('device_label', $deviceLabel)
+            ->where('token', '!=', $data['token']);
+
+        if ($userId) {
+            $dedupeQuery->where('user_id', $userId);
+        } else {
+            $dedupeQuery->whereNull('user_id');
+        }
+
+        $dedupeQuery->delete();
 
         FcmToken::updateOrCreate(
             ['token' => $data['token']],
             [
-                'tenant_id' => app('tenant_id'),
+                'tenant_id' => $tenantId,
                 'user_id' => $userId,
-                'device_label' => $data['device_label'] ?? 'tablet',
+                'device_label' => $deviceLabel,
             ]
         );
 
