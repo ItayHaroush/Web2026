@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { CustomerLayout } from '../layouts/CustomerLayout';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { getAllRestaurants, getCities } from '../services/restaurantService';
 import logo from '../images/ChefSyncLogoIcon.png';
 import { resolveAssetUrl } from '../utils/assets';
@@ -406,6 +406,16 @@ export default function HomePage() {
                             <h4 className="font-bold text-brand-dark mb-2 text-lg">בכל מכשיר</h4>
                             <p className="text-sm text-gray-500">עיצוב רספונסיבי שעובד מושלם בכל מסך</p>
                         </div>
+                    </div>
+
+                    <div className="mt-8 text-center text-sm text-gray-500">
+                        <Link to="/legal/end-user" className="text-brand-primary hover:underline font-semibold">
+                            תנאי שימוש למשתמשי קצה
+                        </Link>
+                        <span className="mx-2">•</span>
+                        <Link to="/legal/privacy" className="text-brand-primary hover:underline font-semibold">
+                            מדיניות פרטיות
+                        </Link>
                     </div>
                 </div>
             </div>
