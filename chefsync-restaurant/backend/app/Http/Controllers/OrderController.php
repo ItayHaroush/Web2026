@@ -6,6 +6,8 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\MenuItem;
 use App\Models\Restaurant;
+use App\Models\FcmToken;
+use App\Services\FcmService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -92,6 +94,14 @@ class OrderController extends Controller
 
             // עדכן סכום ההזמנה
             $order->update(['total_amount' => $totalAmount]);
+
+            // שליחת פוש לטאבלטים של המסעדה
+            $this->sendOrderNotification(
+                tenantId: $tenantId,
+                title: config('push.messages.order_new.title'),
+                body: config('push.messages.order_new.body'),
+                data: ['orderId' => (string) $order->id]
+            );
 
             return response()->json([
                 'success' => true,
@@ -189,6 +199,17 @@ class OrderController extends Controller
 
             $order->update(['status' => $validated['status']]);
 
+            $statusMessages = config('push.messages.status');
+            if (isset($statusMessages[$validated['status']])) {
+                $message = $statusMessages[$validated['status']];
+                $this->sendOrderNotification(
+                    tenantId: $tenantId,
+                    title: $message['title'],
+                    body: $message['body'],
+                    data: ['orderId' => (string) $order->id, 'status' => $validated['status']]
+                );
+            }
+
             return response()->json([
                 'success' => true,
                 'message' => 'סטטוס עודכן בהצלחה',
@@ -206,6 +227,25 @@ class OrderController extends Controller
                 'message' => 'שגיאה בעדכון הסטטוס',
                 'error' => $e->getMessage(),
             ], 500);
+        }
+    }
+
+    private function sendOrderNotification(string $tenantId, string $title, string $body, array $data = []): void
+    {
+        try {
+            $tokens = FcmToken::where('tenant_id', $tenantId)->pluck('token');
+            if ($tokens->isEmpty()) {
+                return;
+            }
+
+            $fcm = app(FcmService::class);
+            foreach ($tokens as $token) {
+                $fcm->sendToToken($token, $title, $body, $data);
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Failed to send FCM notification', [
+                'error' => $e->getMessage(),
+            ]);
         }
     }
 }

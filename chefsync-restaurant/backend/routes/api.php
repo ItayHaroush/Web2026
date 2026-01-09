@@ -10,6 +10,7 @@ use App\Http\Controllers\AdminController;
 use App\Http\Controllers\SuperAdminController;
 use App\Http\Controllers\SuperAdminBillingController;
 use App\Http\Controllers\RegisterRestaurantController;
+use App\Http\Controllers\FcmTokenController;
 
 /**
  * API Routes
@@ -118,6 +119,11 @@ Route::middleware(['api', 'tenant'])->group(function () {
     // ============================================
     Route::post('/orders', [OrderController::class, 'store'])->name('orders.store');
     Route::get('/orders/{id}', [OrderController::class, 'show'])->name('orders.show');
+
+    // ============================================
+    // רישום FCM לטאבלטים/דפדפנים
+    // ============================================
+    Route::post('/fcm/register', [FcmTokenController::class, 'store'])->name('fcm.register');
 
     // ============================================
     // הזמנות - למנהלי מסעדה
