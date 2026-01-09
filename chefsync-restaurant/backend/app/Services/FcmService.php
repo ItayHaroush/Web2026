@@ -15,20 +15,29 @@ class FcmService
         $projectId = config('fcm.project_id');
         $accessToken = $this->getAccessToken();
 
+        // WebPush delivery is most reliable when using the explicit 'webpush' envelope.
+        // Also include title/body in data so the service worker can display notifications.
+        $dataMap = ['title' => (string) $title, 'body' => (string) $body];
+        foreach ($data as $key => $value) {
+            $dataMap[(string) $key] = (string) $value; // FCM requires string key/value map
+        }
+
         $message = [
             'token' => $token,
-            'notification' => [
-                'title' => $title,
-                'body' => $body,
+            'data' => $dataMap,
+            'webpush' => [
+                'headers' => [
+                    'TTL' => '300',
+                    'Urgency' => 'high',
+                ],
+                'notification' => [
+                    'title' => $title,
+                    'body' => $body,
+                    'icon' => '/icon-192.png',
+                    'badge' => '/badge-72x72.png',
+                ],
             ],
         ];
-
-        if (!empty($data)) {
-            $message['data'] = [];
-            foreach ($data as $key => $value) {
-                $message['data'][(string) $key] = (string) $value; // FCM requires string key/value map
-            }
-        }
 
         $payload = [
             'message' => $message,
@@ -41,6 +50,10 @@ class FcmService
             Log::warning('FCM send failed', [
                 'status' => $response->status(),
                 'body' => $response->body(),
+            ]);
+        } else {
+            Log::info('FCM send ok', [
+                'name' => $response->json('name'),
             ]);
         }
     }

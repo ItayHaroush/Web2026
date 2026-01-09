@@ -23,10 +23,34 @@ firebase.initializeApp({
 const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage((payload) => {
-    const { title, body } = payload.notification || {};
-    self.registration.showNotification(title || 'ChefSync', {
-        body: body || 'התראה חדשה',
+    const title = payload.notification?.title || payload.data?.title || 'ChefSync';
+    const body = payload.notification?.body || payload.data?.body || 'התראה חדשה';
+
+    self.registration.showNotification(title, {
+        body,
         icon: '/icon-192.png',
         badge: '/badge-72x72.png',
+        data: payload.data || {},
     });
+});
+
+self.addEventListener('notificationclick', (event) => {
+    event.notification.close();
+
+    const url = event.notification?.data?.url || '/';
+
+    event.waitUntil(
+        (async () => {
+            const allClients = await clients.matchAll({ type: 'window', includeUncontrolled: true });
+            for (const client of allClients) {
+                if ('focus' in client) {
+                    client.focus();
+                    return;
+                }
+            }
+            if (clients.openWindow) {
+                await clients.openWindow(url);
+            }
+        })()
+    );
 });
