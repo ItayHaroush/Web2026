@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getMessaging, getToken, onMessage } from 'firebase/messaging';
+import { deleteToken, getMessaging, getToken, onMessage } from 'firebase/messaging';
 
 const firebaseConfig = {
     apiKey: 'AIzaSyAdhvtnnmHu8u294TeLUz2Vl7tTdg64bSw',
@@ -13,6 +13,32 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const messaging = getMessaging(app);
 const VAPID_KEY = 'BGbVAlRKn9V7VrOB9aN8-lAoZ9_q55ox6-pgJ0p7dN9uGPQl6t60ZiJwCzmZj_P2BHmGuMTSMjChxMOJAccvG-o';
+
+const LS_KEY = 'fcmToken';
+
+export function getStoredFcmToken() {
+    try {
+        return localStorage.getItem(LS_KEY);
+    } catch {
+        return null;
+    }
+}
+
+function setStoredFcmToken(token) {
+    try {
+        if (token) localStorage.setItem(LS_KEY, token);
+    } catch {
+        // ignore
+    }
+}
+
+export function clearStoredFcmToken() {
+    try {
+        localStorage.removeItem(LS_KEY);
+    } catch {
+        // ignore
+    }
+}
 
 export async function requestFcmToken() {
     const permission = await Notification.requestPermission();
@@ -37,7 +63,21 @@ export async function requestFcmToken() {
         vapidKey: VAPID_KEY,
         serviceWorkerRegistration: readyReg || swReg,
     });
+    if (token) setStoredFcmToken(token);
     return token;
+}
+
+export async function disableFcm() {
+    try {
+        // This removes the FCM token from the browser (permission remains granted).
+        const ok = await deleteToken(messaging);
+        clearStoredFcmToken();
+        return ok;
+    } catch (e) {
+        // Still clear local state; backend unregister will handle server-side.
+        clearStoredFcmToken();
+        throw e;
+    }
 }
 
 export function listenForegroundMessages(handler) {

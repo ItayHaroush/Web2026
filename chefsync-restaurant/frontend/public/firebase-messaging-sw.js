@@ -22,7 +22,22 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-messaging.onBackgroundMessage((payload) => {
+messaging.onBackgroundMessage(async (payload) => {
+    // Avoid duplicates: if there's an active/focused client, let the page handle it.
+    const windowClients = await clients.matchAll({ type: 'window', includeUncontrolled: true });
+    const hasFocusedClient = windowClients.some((c) => c.focused || c.visibilityState === 'visible');
+
+    if (hasFocusedClient) {
+        for (const c of windowClients) {
+            try {
+                c.postMessage({ type: 'fcm_message', payload });
+            } catch (_) {
+                // ignore
+            }
+        }
+        return;
+    }
+
     const title = payload.notification?.title || payload.data?.title || 'ChefSync';
     const body = payload.notification?.body || payload.data?.body || 'התראה חדשה';
 

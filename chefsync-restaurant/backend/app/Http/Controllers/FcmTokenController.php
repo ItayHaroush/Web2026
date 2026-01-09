@@ -44,4 +44,18 @@ class FcmTokenController extends Controller
 
         return response()->json(['success' => true]);
     }
+
+    public function unregister(Request $request)
+    {
+        $data = $request->validate([
+            'token' => 'required|string',
+        ]);
+
+        FcmToken::query()
+            ->where('tenant_id', app('tenant_id'))
+            ->where('token', $data['token'])
+            ->delete();
+
+        return response()->json(['success' => true]);
+    }
 }

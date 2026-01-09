@@ -129,6 +129,7 @@ Route::middleware(['api', 'tenant'])->group(function () {
     // רישום FCM לטאבלטים/דפדפנים
     // ============================================
     Route::post('/fcm/register', [FcmTokenController::class, 'store'])->name('fcm.register');
+    Route::post('/fcm/unregister', [FcmTokenController::class, 'unregister'])->name('fcm.unregister');
 
     // ============================================
     // הזמנות - למנהלי מסעדה
