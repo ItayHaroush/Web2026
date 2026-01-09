@@ -21,8 +21,17 @@ export async function requestFcmToken() {
     console.log('VAPID', VAPID_KEY, VAPID_KEY.length);
 
     // Register and wait until the SW is active to avoid "no active Service Worker" errors
-    const swReg = await navigator.serviceWorker.register('/firebase-messaging-sw.js', { scope: '/' });
+    let swReg;
+    try {
+        swReg = await navigator.serviceWorker.register('/firebase-messaging-sw.js', { scope: '/' });
+    } catch (err) {
+        console.error('[FCM] SW register failed', err);
+        throw err;
+    }
+
     const readyReg = await navigator.serviceWorker.ready;
+    const swUrl = readyReg?.active?.scriptURL || swReg?.active?.scriptURL;
+    console.log('[FCM] using SW', swUrl || '(no scriptURL yet)');
 
     const token = await getToken(messaging, {
         vapidKey: VAPID_KEY,
