@@ -15,15 +15,23 @@ class FcmService
         $projectId = config('fcm.project_id');
         $accessToken = $this->getAccessToken();
 
-        $payload = [
-            'message' => [
-                'token' => $token,
-                'notification' => [
-                    'title' => $title,
-                    'body' => $body,
-                ],
-                'data' => array_map('strval', $data),
+        $message = [
+            'token' => $token,
+            'notification' => [
+                'title' => $title,
+                'body' => $body,
             ],
+        ];
+
+        if (!empty($data)) {
+            $message['data'] = [];
+            foreach ($data as $key => $value) {
+                $message['data'][(string) $key] = (string) $value; // FCM requires string key/value map
+            }
+        }
+
+        $payload = [
+            'message' => $message,
         ];
 
         $response = Http::withToken($accessToken)
