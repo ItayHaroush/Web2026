@@ -108,6 +108,19 @@ export default function AdminLogin() {
                         </button>
                     </form>
 
+                    <div className="mt-5 text-center text-xs text-gray-500">
+                        בהתחברות אתה מאשר את
+                        {' '}
+                        <a href="/legal/restaurant" className="text-brand-primary hover:underline font-semibold">
+                            תנאי השימוש למסעדנים
+                        </a>
+                        {' '}ו{' '}
+                        <a href="/legal/privacy" className="text-brand-primary hover:underline font-semibold">
+                            מדיניות הפרטיות
+                        </a>
+                        .
+                    </div>
+
                     <div className="mt-6 text-center">
                         <a href="/" className="text-brand-primary hover:underline text-sm">
                             ← חזרה לאתר

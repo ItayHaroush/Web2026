@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import PhoneVerificationModal from '../components/PhoneVerificationModal';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { CustomerLayout } from '../layouts/CustomerLayout';
@@ -300,6 +300,18 @@ export default function CartPage() {
                         >
                             {UI_TEXT.BTN_CANCEL}
                         </a>
+                    </div>
+
+                    <div className="mt-3 text-center text-xs text-gray-500">
+                        שליחת הזמנה מהווה הסכמה ל{' '}
+                        <Link to="/legal/end-user" className="text-brand-primary hover:underline font-semibold">
+                            תנאי השימוש למשתמשי קצה
+                        </Link>
+                        {' '}ו{' '}
+                        <Link to="/legal/privacy" className="text-brand-primary hover:underline font-semibold">
+                            מדיניות הפרטיות
+                        </Link>
+                        .
                     </div>
                 </form>
             </div>

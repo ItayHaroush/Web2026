@@ -25,6 +25,9 @@ import DebugAuth from './pages/super-admin/DebugAuth';
 import DebugAPI from './pages/DebugAPI';
 import RegisterRestaurant from './pages/RegisterRestaurant';
 import LandingPage from './pages/LandingPage';
+import TermsEndUser from './pages/legal/TermsEndUser';
+import TermsRestaurant from './pages/legal/TermsRestaurant';
+import PrivacyPolicy from './pages/legal/PrivacyPolicy';
 import { Toaster } from 'react-hot-toast';
 import './App.css';
 
@@ -83,6 +86,11 @@ function AppRoutes() {
     <Routes>
       {/* Debug */}
       <Route path="/debug-api" element={<DebugAPI />} />
+
+      {/* משפטי */}
+      <Route path="/legal/end-user" element={<TermsEndUser />} />
+      <Route path="/legal/restaurant" element={<TermsRestaurant />} />
+      <Route path="/legal/privacy" element={<PrivacyPolicy />} />
 
       {/* לקוחות */}
       <Route path="/" element={<HomePage />} />
