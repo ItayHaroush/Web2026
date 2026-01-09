@@ -8,7 +8,7 @@ use App\Models\Restaurant;
 use App\Services\FcmService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
- 
+
 
 class SuperAdminNotificationController extends Controller
 {
