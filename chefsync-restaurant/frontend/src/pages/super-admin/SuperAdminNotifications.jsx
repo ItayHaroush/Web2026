@@ -4,13 +4,6 @@ import { useAdminAuth } from '../../context/AdminAuthContext';
 import api from '../../services/apiClient';
 import { toast } from 'react-hot-toast';
 
-function parseCommaList(value) {
-    return value
-        .split(',')
-        .map((s) => s.trim())
-        .filter(Boolean);
-}
-
 export default function SuperAdminNotifications() {
     const { getAuthHeaders } = useAdminAuth();
 
@@ -20,13 +13,8 @@ export default function SuperAdminNotifications() {
     const [title, setTitle] = useState('');
     const [body, setBody] = useState('');
 
-    const [selectedCuisineTypes, setSelectedCuisineTypes] = useState([]);
-    const [selectedRegions, setSelectedRegions] = useState([]);
-    const [selectedCities, setSelectedCities] = useState([]);
+    const [search, setSearch] = useState('');
     const [selectedRestaurantIds, setSelectedRestaurantIds] = useState([]);
-
-    const [tenantIdsText, setTenantIdsText] = useState('');
-    const [userIdsText, setUserIdsText] = useState('');
 
     const [result, setResult] = useState(null);
     const [submitting, setSubmitting] = useState(false);
@@ -55,29 +43,21 @@ export default function SuperAdminNotifications() {
         }
     };
 
-    const citiesForSelectedRegions = useMemo(() => {
-        const all = filtersData?.cities || [];
-        if (!selectedRegions.length) return all;
-        return all.filter((c) => selectedRegions.includes(c.region));
-    }, [filtersData, selectedRegions]);
-
     const restaurants = useMemo(() => filtersData?.restaurants || [], [filtersData]);
 
-    const buildFiltersPayload = () => {
-        const tenantIds = parseCommaList(tenantIdsText);
-        const userIds = parseCommaList(userIdsText)
-            .map((s) => Number(s))
-            .filter((n) => Number.isFinite(n));
+    const filteredRestaurants = useMemo(() => {
+        const q = search.trim().toLowerCase();
+        if (!q) return restaurants;
+        return restaurants.filter((r) => {
+            const name = String(r.name || '').toLowerCase();
+            const tenant = String(r.tenant_id || '').toLowerCase();
+            return name.includes(q) || tenant.includes(q);
+        });
+    }, [restaurants, search]);
 
+    const buildFiltersPayload = () => {
         return {
-            tenant_ids: tenantIds.length ? tenantIds : undefined,
-            user_ids: userIds.length ? userIds : undefined,
-            cuisine_types: selectedCuisineTypes.length ? selectedCuisineTypes : undefined,
-            regions: selectedRegions.length ? selectedRegions : undefined,
-            cities: selectedCities.length ? selectedCities : undefined,
-            restaurant_ids: selectedRestaurantIds.length
-                ? selectedRestaurantIds.map((id) => Number(id)).filter((n) => Number.isFinite(n))
-                : undefined,
+            restaurant_ids: selectedRestaurantIds.map((id) => Number(id)).filter((n) => Number.isFinite(n)),
         };
     };
 
@@ -86,6 +66,11 @@ export default function SuperAdminNotifications() {
         setResult(null);
 
         try {
+            if (!selectedRestaurantIds.length) {
+                toast.error('חובה לבחור לפחות מסעדה אחת');
+                return;
+            }
+
             const payload = {
                 title,
                 body,
@@ -123,7 +108,7 @@ export default function SuperAdminNotifications() {
             <div className="max-w-5xl mx-auto">
                 <div className="mb-6">
                     <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">🔔 התראות מערכת</h1>
-                    <p className="text-sm text-gray-600 mt-1">שליחת התראות לפי פילטרים (סוג מטבח, אזור/עיר, מסעדות, משתמשים).</p>
+                    <p className="text-sm text-gray-600 mt-1">שליחת התראות לפי בחירת מסעדות בלבד (כדי למנוע טעויות שידור).</p>
                 </div>
 
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 sm:p-6">
@@ -152,130 +137,95 @@ export default function SuperAdminNotifications() {
 
                     <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-4">
                         <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
-                            <h2 className="font-bold text-gray-900 mb-3">🎯 פילטרים</h2>
+                            <h2 className="font-bold text-gray-900 mb-3">🎯 בחירת מסעדות</h2>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">סוג מטבח</label>
-                                    <select
-                                        multiple
-                                        value={selectedCuisineTypes}
-                                        onChange={(e) => setSelectedCuisineTypes(Array.from(e.target.selectedOptions).map((o) => o.value))}
-                                        className="w-full min-h-[120px] px-3 py-2 border border-gray-200 rounded-lg bg-white"
+                            <div className="mb-3">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">חיפוש</label>
+                                <input
+                                    value={search}
+                                    onChange={(e) => setSearch(e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white"
+                                    placeholder="חפש לפי שם מסעדה או tenant_id..."
+                                />
+                            </div>
+
+                            <div className="flex items-center justify-between mb-2">
+                                <p className="text-sm text-gray-600">נבחרו: {selectedRestaurantIds.length}</p>
+                                <div className="flex gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setSelectedRestaurantIds(filteredRestaurants.map((r) => r.id))}
+                                        className="text-sm px-3 py-1 rounded-lg bg-white border border-gray-200 hover:bg-gray-50"
                                         disabled={loadingFilters}
                                     >
-                                        {(filtersData?.cuisine_types || []).map((t) => (
-                                            <option key={t} value={t}>{t}</option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">אזור</label>
-                                    <select
-                                        multiple
-                                        value={selectedRegions}
-                                        onChange={(e) => {
-                                            const next = Array.from(e.target.selectedOptions).map((o) => o.value);
-                                            setSelectedRegions(next);
-                                            // clear cities if they are no longer in the region set
-                                            setSelectedCities((prev) => prev.filter((c) => {
-                                                const city = (filtersData?.cities || []).find((x) => x.hebrew_name === c || x.name === c);
-                                                return !city?.region || next.includes(city.region);
-                                            }));
-                                        }}
-                                        className="w-full min-h-[120px] px-3 py-2 border border-gray-200 rounded-lg bg-white"
-                                        disabled={loadingFilters}
+                                        בחר הכל (מסונן)
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setSelectedRestaurantIds([])}
+                                        className="text-sm px-3 py-1 rounded-lg bg-white border border-gray-200 hover:bg-gray-50"
                                     >
-                                        {(filtersData?.regions || []).map((r) => (
-                                            <option key={r} value={r}>{r}</option>
-                                        ))}
-                                    </select>
+                                        נקה
+                                    </button>
                                 </div>
+                            </div>
 
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">ערים</label>
-                                    <select
-                                        multiple
-                                        value={selectedCities}
-                                        onChange={(e) => setSelectedCities(Array.from(e.target.selectedOptions).map((o) => o.value))}
-                                        className="w-full min-h-[160px] px-3 py-2 border border-gray-200 rounded-lg bg-white"
-                                        disabled={loadingFilters}
-                                    >
-                                        {citiesForSelectedRegions.map((c) => (
-                                            <option key={`${c.name}-${c.hebrew_name}`} value={c.hebrew_name || c.name}>
-                                                {c.hebrew_name || c.name}{c.region ? ` (${c.region})` : ''}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">מסעדות</label>
-                                    <select
-                                        multiple
-                                        value={selectedRestaurantIds}
-                                        onChange={(e) => setSelectedRestaurantIds(Array.from(e.target.selectedOptions).map((o) => o.value))}
-                                        className="w-full min-h-[160px] px-3 py-2 border border-gray-200 rounded-lg bg-white"
-                                        disabled={loadingFilters}
-                                    >
-                                        {restaurants.map((r) => (
-                                            <option key={r.id} value={r.id}>
-                                                {r.name} — {r.tenant_id}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Tenant IDs (מופרדים בפסיקים)</label>
-                                    <input
-                                        value={tenantIdsText}
-                                        onChange={(e) => setTenantIdsText(e.target.value)}
-                                        className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white"
-                                        placeholder="pizza-palace, burger-central"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">User IDs (מופרדים בפסיקים)</label>
-                                    <input
-                                        value={userIdsText}
-                                        onChange={(e) => setUserIdsText(e.target.value)}
-                                        className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white"
-                                        placeholder="12, 34"
-                                    />
-                                </div>
+                            <div className="bg-white border border-gray-200 rounded-xl max-h-[360px] overflow-auto">
+                                {loadingFilters ? (
+                                    <p className="p-3 text-sm text-gray-600">טוען מסעדות...</p>
+                                ) : filteredRestaurants.length === 0 ? (
+                                    <p className="p-3 text-sm text-gray-600">לא נמצאו מסעדות.</p>
+                                ) : (
+                                    <div className="divide-y">
+                                        {filteredRestaurants.map((r) => {
+                                            const checked = selectedRestaurantIds.includes(r.id);
+                                            return (
+                                                <label key={r.id} className="flex items-center gap-3 p-3 cursor-pointer hover:bg-gray-50">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={checked}
+                                                        onChange={(e) => {
+                                                            const next = e.target.checked
+                                                                ? Array.from(new Set([...selectedRestaurantIds, r.id]))
+                                                                : selectedRestaurantIds.filter((id) => id !== r.id);
+                                                            setSelectedRestaurantIds(next);
+                                                        }}
+                                                    />
+                                                    <div className="flex-1">
+                                                        <p className="text-sm font-medium text-gray-900">{r.name}</p>
+                                                        <p className="text-xs text-gray-500">{r.tenant_id}</p>
+                                                    </div>
+                                                </label>
+                                            );
+                                        })}
+                                    </div>
+                                )}
                             </div>
 
                             <div className="mt-4 flex flex-col sm:flex-row gap-3">
                                 <button
                                     onClick={() => send(true)}
-                                    disabled={submitting || !title || !body}
+                                    disabled={submitting || !title || !body || !selectedRestaurantIds.length}
                                     className="px-4 py-2 rounded-lg bg-gray-900 text-white hover:bg-gray-800 disabled:opacity-50"
                                 >
                                     {submitting ? 'טוען...' : 'בדיקת יעד (Dry run)'}
                                 </button>
                                 <button
                                     onClick={() => send(false)}
-                                    disabled={submitting || !title || !body}
+                                    disabled={submitting || !title || !body || !selectedRestaurantIds.length}
                                     className="px-4 py-2 rounded-lg bg-brand-primary text-white hover:bg-brand-primary/90 disabled:opacity-50"
                                 >
                                     {submitting ? 'שולח...' : 'שלח התראה'}
                                 </button>
                                 <button
                                     onClick={() => {
-                                        setSelectedCuisineTypes([]);
-                                        setSelectedRegions([]);
-                                        setSelectedCities([]);
                                         setSelectedRestaurantIds([]);
-                                        setTenantIdsText('');
-                                        setUserIdsText('');
+                                        setSearch('');
                                         setResult(null);
                                     }}
                                     className="px-4 py-2 rounded-lg bg-white border border-gray-200 hover:bg-gray-50"
                                 >
-                                    נקה פילטרים
+                                    נקה בחירה
                                 </button>
                             </div>
                         </div>
