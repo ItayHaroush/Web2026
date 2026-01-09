@@ -2,12 +2,14 @@ import { useState, useEffect } from 'react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import AdminLayout from '../../layouts/AdminLayout';
 import api from '../../services/apiClient';
+import { requestFcmToken } from '../../services/fcm';
 
 export default function AdminDashboard() {
     const { getAuthHeaders, isOwner, isManager } = useAdminAuth();
     const [stats, setStats] = useState(null);
     const [recentOrders, setRecentOrders] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [pushState, setPushState] = useState({ status: 'idle', message: '' });
 
     // רק בעלים ומנהלים רואים הכנסות
     const canViewRevenue = isOwner() || isManager();
@@ -33,6 +35,23 @@ export default function AdminDashboard() {
             console.error('Error details:', error.response?.data);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const enablePush = async () => {
+        try {
+            setPushState({ status: 'loading', message: 'מבקש הרשאה להתראות...' });
+            const token = await requestFcmToken();
+            if (!token) {
+                setPushState({ status: 'error', message: 'הרשאה נדחתה. יש לאשר התראות.' });
+                return;
+            }
+
+            await api.post('/fcm/register', { token, device_label: 'tablet' }, { headers: getAuthHeaders() });
+            setPushState({ status: 'success', message: 'התראות הופעלו לטאבלט הזה.' });
+        } catch (error) {
+            console.error('Failed to enable push', error);
+            setPushState({ status: 'error', message: 'שגיאה בהפעלת התראות. נסו שוב.' });
         }
     };
 
@@ -94,6 +113,25 @@ export default function AdminDashboard() {
 
     return (
         <AdminLayout>
+            <div className="bg-white rounded-2xl shadow-sm p-4 sm:p-5 mb-6 flex flex-col gap-3 sm:gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <p className="text-base sm:text-lg font-semibold text-gray-800">קבלו התראות הזמנה לטאבלט</p>
+                    <p className="text-sm text-gray-500">במיוחד באייפון: חייב אישור אחרי לחיצה ידנית.</p>
+                    {pushState.message && (
+                        <p className={`text-sm mt-1 ${pushState.status === 'success' ? 'text-green-600' : pushState.status === 'error' ? 'text-red-600' : 'text-gray-600'}`}>
+                            {pushState.message}
+                        </p>
+                    )}
+                </div>
+                <button
+                    onClick={enablePush}
+                    disabled={pushState.status === 'loading'}
+                    className="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-brand-primary text-white font-semibold shadow-sm hover:bg-brand-primary/90 disabled:opacity-60"
+                >
+                    {pushState.status === 'loading' ? 'מפעיל...' : 'הפעל התראות'}
+                </button>
+            </div>
+
             {/* כרטיסי סטטיסטיקה */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 {statCards.map((card) => (
