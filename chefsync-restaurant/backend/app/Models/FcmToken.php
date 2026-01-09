@@ -8,6 +8,7 @@ class FcmToken extends Model
 {
     protected $fillable = [
         'tenant_id',
+        'user_id',
         'token',
         'device_label',
     ];

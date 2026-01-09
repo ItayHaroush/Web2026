@@ -9,6 +9,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\SuperAdminController;
 use App\Http\Controllers\SuperAdminBillingController;
+use App\Http\Controllers\SuperAdminNotificationController;
 use App\Http\Controllers\RegisterRestaurantController;
 use App\Http\Controllers\FcmTokenController;
 
@@ -71,6 +72,10 @@ Route::prefix('super-admin')->middleware(['auth:sanctum', 'super_admin'])->group
 
     // סטטוס סכימת בסיס נתונים ומיגרציות (אבחון)
     Route::get('/schema-status', [SuperAdminController::class, 'schemaStatus'])->name('super-admin.schema.status');
+
+    // התראות (Broadcast) לפי פילטרים
+    Route::get('/notifications/filters', [SuperAdminNotificationController::class, 'filters'])->name('super-admin.notifications.filters');
+    Route::post('/notifications/send', [SuperAdminNotificationController::class, 'send'])->name('super-admin.notifications.send');
 });
 
 // ============================================
