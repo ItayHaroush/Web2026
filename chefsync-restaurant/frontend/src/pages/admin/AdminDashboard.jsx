@@ -3,6 +3,7 @@ import { useAdminAuth } from '../../context/AdminAuthContext';
 import AdminLayout from '../../layouts/AdminLayout';
 import api from '../../services/apiClient';
 import { clearStoredFcmToken, disableFcm, getStoredFcmToken, listenForegroundMessages, requestFcmToken } from '../../services/fcm';
+import { PRODUCT_NAME } from '../../constants/brand';
 
 export default function AdminDashboard() {
     const { getAuthHeaders, isOwner, isManager } = useAdminAuth();
@@ -36,7 +37,7 @@ export default function AdminDashboard() {
                 setTimeout(() => lastMessageIdsRef.current.delete(msgId), 30_000);
             }
 
-            const title = payload?.notification?.title || payload?.data?.title || 'ChefSync';
+            const title = payload?.notification?.title || payload?.data?.title || PRODUCT_NAME;
             const body = payload?.notification?.body || payload?.data?.body || 'התראה חדשה';
 
             if (Notification?.permission === 'granted') {

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import logo from '../../images/ChefSyncLogoIcon.png';
 import { toast } from 'react-hot-toast';
+import { PRODUCT_BYLINE_HE, PRODUCT_NAME } from '../../constants/brand';
 
 export default function AdminLogin() {
     const [email, setEmail] = useState('');
@@ -44,10 +45,10 @@ export default function AdminLogin() {
                 {/* לוגו */}
                 <div className="text-center mb-8">
                     <div className="inline-block bg-white p-4 rounded-2xl shadow-2xl mb-4">
-                        <img src={logo} alt="ChefSync IL" className="h-16" />
+                        <img src={logo} alt={PRODUCT_NAME} className="h-16" />
                     </div>
-                    <h1 className="text-3xl font-bold text-white mb-2">פאנל ניהול</h1>
-                    <p className="text-white/80">התחבר לניהול המסעדה שלך</p>
+                    <h1 className="text-3xl font-bold text-white mb-2">{PRODUCT_NAME}</h1>
+                    <p className="text-white/80">{PRODUCT_BYLINE_HE} · פאנל ניהול</p>
                 </div>
 
                 {/* טופס התחברות */}

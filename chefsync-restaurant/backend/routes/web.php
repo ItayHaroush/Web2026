@@ -3,5 +3,5 @@
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return ['message' => 'ChefSync IL API'];
+    return ['message' => 'TakeEat API'];
 });

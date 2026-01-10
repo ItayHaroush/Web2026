@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import logo from '../images/ChefSyncLogoIcon.png';
+import { COMPANY_LEGAL_NAME, PRODUCT_NAME, PRODUCT_TAGLINE_HE } from '../constants/brand';
 
 /**
  * Layout ראשי עם ניווט עליון
@@ -20,7 +21,11 @@ export function CustomerLayout({ children }) {
                 <div className="max-w-6xl mx-auto px-6 py-4">
                     <div className="flex justify-between items-center">
                         <Link to="/" className="flex items-center">
-                            <img src={logo} alt="ChefSync IL" className="h-12" />
+                            <img
+                                src={logo}
+                                alt={PRODUCT_NAME}
+                                className="h-12 w-auto transform scale-110 sm:scale-125 origin-center drop-shadow-md"
+                            />
                         </Link>
                         <nav className="flex gap-6 items-center">
                             <Link to="/" className="text-gray-700 hover:text-brand-primary transition font-medium">בית</Link>
@@ -55,7 +60,7 @@ export function CustomerLayout({ children }) {
 
             {/* Footer */}
             <footer className="bg-white border-t border-gray-100 text-center py-6 text-sm text-gray-500">
-                <p>ChefSync IL © 2026 - הזמנות למסעדה בקלות</p>
+                <p>{PRODUCT_NAME} © 2026 · {COMPANY_LEGAL_NAME} - {PRODUCT_TAGLINE_HE}</p>
             </footer>
         </div>
     );

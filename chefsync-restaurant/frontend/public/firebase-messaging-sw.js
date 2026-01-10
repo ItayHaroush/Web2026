@@ -38,7 +38,7 @@ messaging.onBackgroundMessage(async (payload) => {
         return;
     }
 
-    const title = payload.notification?.title || payload.data?.title || 'ChefSync';
+    const title = payload.notification?.title || payload.data?.title || 'TakeEat';
     const body = payload.notification?.body || payload.data?.body || 'התראה חדשה';
 
     self.registration.showNotification(title, {

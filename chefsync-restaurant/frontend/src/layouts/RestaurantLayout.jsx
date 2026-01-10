@@ -1,4 +1,5 @@
 import React from 'react';
+import { PRODUCT_BYLINE_HE, PRODUCT_NAME } from '../constants/brand';
 
 /**
  * Layout עבור ממשק מנהל המסעדה
@@ -33,7 +34,10 @@ export function RestaurantLayout({ children }) {
             <div className="flex-1 flex flex-col">
                 {/* Top Bar */}
                 <header className="bg-white shadow-sm px-6 py-4">
-                    <h1 className="text-xl font-semibold text-gray-800">ChefSync IL - ממשק מנהל</h1>
+                    <div>
+                        <h1 className="text-xl font-semibold text-gray-800">{PRODUCT_NAME} - ממשק מנהל</h1>
+                        <p className="text-xs text-gray-500 mt-0.5">{PRODUCT_BYLINE_HE}</p>
+                    </div>
                 </header>
 
                 {/* Content */}

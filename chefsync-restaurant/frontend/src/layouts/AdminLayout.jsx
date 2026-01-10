@@ -4,6 +4,7 @@ import { useAdminAuth } from '../context/AdminAuthContext';
 import { useRestaurantStatus } from '../context/RestaurantStatusContext';
 import api from '../services/apiClient';
 import logo from '../images/ChefSyncLogoIcon.png';
+import { PRODUCT_NAME } from '../constants/brand';
 
 export default function AdminLayout({ children }) {
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -118,7 +119,7 @@ export default function AdminLayout({ children }) {
             `}>
                 {/* Logo */}
                 <div className="h-16 flex items-center justify-center border-b">
-                    <img src={logo} alt="ChefSync IL" className="h-10" />
+                    <img src={logo} alt={PRODUCT_NAME} className="h-10" />
                 </div>
 
                 {/* User Info */}
@@ -191,8 +192,8 @@ export default function AdminLayout({ children }) {
                         {/* סטטוס בזמן אמת */}
                         <div className="flex items-center gap-2">
                             <span className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${restaurantStatus.is_open
-                                    ? 'bg-green-100 text-green-700'
-                                    : 'bg-red-100 text-red-700'
+                                ? 'bg-green-100 text-green-700'
+                                : 'bg-red-100 text-red-700'
                                 }`}>
                                 {restaurantStatus.is_open ? '✓ פתוח' : '✗ סגור'}
                             </span>

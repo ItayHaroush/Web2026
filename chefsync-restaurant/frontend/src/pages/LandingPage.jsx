@@ -4,9 +4,10 @@ import { CustomerLayout } from '../layouts/CustomerLayout';
 import woltLogo from '../images/woltLogo.png';
 import tenBisLogo from '../images/tenBisLogo.png';
 import mishlohaLogo from '../images/mishlohaLogo.jpeg';
-import ChefSync from "../images/ChefSyncLogoIcon.png";
+import logo from '../images/ChefSyncLogoIcon.png';
+import { PRODUCT_BYLINE_HE, PRODUCT_NAME } from '../constants/brand';
 /**
- * דף נחיתה שיווקי – ChefSync IL
+ * דף נחיתה שיווקי – TakeEat
  * מסעדה אונליין מלאה | כמו וולט / תן ביס / משלוחה – בלי אחוזים
  */
 export default function LandingPage() {
@@ -88,8 +89,10 @@ export default function LandingPage() {
                             </div>
 
                             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight">
-                                ChefSync IL – המסעדה שלך אונליין
+                                {PRODUCT_NAME} – המסעדה שלך אונליין
                             </h1>
+
+                            <p className="text-white/70 text-sm font-medium">{PRODUCT_BYLINE_HE}</p>
 
                             <p className="text-white/90 text-lg max-w-2xl">
                                 פלטפורמת הזמנות מלאה למסעדות:
@@ -170,7 +173,7 @@ export default function LandingPage() {
                                             <iframe
                                                 src="https://chefsync.vercel.app/"
                                                 className="w-full h-full border-0"
-                                                title="ChefSync Demo"
+                                                title="TakeEat Demo"
                                                 loading="lazy"
                                             />
                                         </div>
@@ -386,8 +389,11 @@ export default function LandingPage() {
 
                         <div className="p-6 rounded-2xl border border-brand-primary">
                             <div className="flex items-center gap-3 mb-4">
-                                <img src={ChefSync} alt="ChefSync IL" className="h-6" />
-                                <span className="text-xl font-bold text-brand-primary">ChefSync IL</span>
+                                <img src={logo} alt={PRODUCT_NAME} className="h-6" />
+                                <div>
+                                    <span className="text-xl font-bold text-brand-primary">{PRODUCT_NAME}</span>
+                                    <p className="text-xs text-gray-500">{PRODUCT_BYLINE_HE}</p>
+                                </div>
                             </div>
                             <ul className="space-y-2 text-gray-700">
                                 <li>✔ אותה חוויית הזמנה</li>

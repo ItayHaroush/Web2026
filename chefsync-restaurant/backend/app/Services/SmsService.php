@@ -32,7 +32,7 @@ class SmsService
         }
 
         $twilioUrl = "https://api.twilio.com/2010-04-01/Accounts/{$sid}/Messages.json";
-        $body = "קוד האימות שלך ל-ChefSync: $code";
+        $body = "קוד האימות שלך ל-TakeEat: $code";
 
         $payload = [
             'To' => $phone,
