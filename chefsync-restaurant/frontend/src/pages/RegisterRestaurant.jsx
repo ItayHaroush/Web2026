@@ -44,9 +44,22 @@ export default function RegisterRestaurant() {
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
+
+        let nextValue = type === 'checkbox' ? checked : value;
+
+        if (name === 'tenant_id') {
+            // נרמל ל-kebab-case: אותיות קטנות, מספרים ומקפים בלבד
+            nextValue = value
+                .toLowerCase()
+                .replace(/[^a-z0-9\s-]/g, '')
+                .trim()
+                .replace(/\s+/g, '-')
+                .replace(/-+/g, '-');
+        }
+
         setForm((prev) => ({
             ...prev,
-            [name]: type === 'checkbox' ? checked : value,
+            [name]: nextValue,
         }));
     };
 
@@ -131,7 +144,15 @@ export default function RegisterRestaurant() {
                     <Section title="פרטי המסעדה">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <Input name="name" label="שם המסעדה" value={form.name} onChange={handleChange} required />
-                            <Input name="tenant_id" label="Tenant ID (kebab-case)" value={form.tenant_id} onChange={handleChange} required placeholder="לדוגמה: pizza-palace" />
+                            <Input
+                                name="tenant_id"
+                                label="Tenant ID (kebab-case)"
+                                value={form.tenant_id}
+                                onChange={handleChange}
+                                required
+                                placeholder="לדוגמה: pizza-palace"
+                                helper="אותיות קטנות באנגלית, מספרים ומקף בלבד"
+                            />
                             <Input name="phone" label="טלפון" value={form.phone} onChange={handleChange} required inputMode="tel" />
                             <Select
                                 name="city"
@@ -230,7 +251,7 @@ function Section({ title, children }) {
     );
 }
 
-function Input({ label, name, value, onChange, type = 'text', className = '', required = false, ...rest }) {
+function Input({ label, name, value, onChange, type = 'text', className = '', required = false, helper = '', ...rest }) {
     return (
         <label className={`block text-sm text-gray-700 ${className}`}>
             <span className="block mb-1 font-medium">{label}</span>
@@ -243,6 +264,7 @@ function Input({ label, name, value, onChange, type = 'text', className = '', re
                 className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-brand-primary"
                 {...rest}
             />
+            {helper && <span className="text-xs text-gray-500 mt-1 block">{helper}</span>}
         </label>
     );
 }
