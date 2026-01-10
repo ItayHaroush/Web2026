@@ -147,6 +147,8 @@ export default function LandingPage() {
                     </div>
                 </div>
 
+
+
                 {/* Live Demo Section */}
                 <section className="mt-16 bg-gradient-to-b from-gray-50 to-white rounded-3xl p-4 sm:p-8 lg:p-12">
                     <div className="text-center mb-8 sm:mb-10">
@@ -420,7 +422,92 @@ export default function LandingPage() {
                         ))}
                     </div>
                 </section>
+                {/* Special Onboarding Package */}
+                <section className="mt-12 sm:mt-16 bg-white rounded-3xl p-6 sm:p-10 border border-brand-primary/20 shadow-sm">
+                    <div className="flex flex-col gap-4 sm:gap-5">
+                        <div className="flex flex-wrap items-center gap-3">
+                            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary text-white text-sm sm:text-base font-bold shadow">
+                                🎁 חבילת הטמעה מיוחדת – 10 הראשונות בלבד
+                            </span>
+                            <span className="text-xs sm:text-sm text-gray-500">עד גמר המלאי | טל״ח</span>
+                        </div>
 
+                        <p className="text-gray-700 text-base sm:text-lg font-semibold">אם הגעת לפה מוקדם – הרווחת.</p>
+
+                        <div className="grid md:grid-cols-2 gap-6 sm:gap-8">
+                            <div className="bg-brand-light/60 border border-brand-primary/20 rounded-2xl p-5 sm:p-6 shadow-sm">
+                                <h3 className="text-lg sm:text-xl font-bold mb-3">✅ מה כלול בחבילה:</h3>
+                                <ul className="space-y-2 text-gray-700 text-sm sm:text-base">
+                                    <li>• הקמת מסעדה מלאה במערכת</li>
+                                    <li>• בניית תפריט וקטגוריות</li>
+                                    <li>• חיבור TakeEat (PWA – עובד על טאבלט / נייד קיים)</li>
+                                    <li>• קישור הזמנה ישיר למסעדה</li>
+                                    <li>• מיתוג בסיסי</li>
+                                    <li>• הדרכה והפעלה</li>
+                                    <li>• ליווי אישי בשבועיים הראשונים</li>
+                                </ul>
+                            </div>
+
+                            <div className="bg-white border border-gray-200 rounded-2xl p-5 sm:p-6 shadow-sm">
+                                <h3 className="text-lg sm:text-xl font-bold mb-3">❌ מה לא כלול (שקיפות מלאה):</h3>
+                                <ul className="space-y-2 text-gray-700 text-sm sm:text-base">
+                                    <li>• טאבלט</li>
+                                    <li>• מדפסת מטבח</li>
+                                    <li>• שליחים</li>
+                                    <li>• פרסום / טראפיק</li>
+                                </ul>
+
+                                <div className="mt-4 p-4 rounded-xl bg-brand-light/60 border border-brand-primary/10 text-sm sm:text-base text-gray-800">
+                                    <p className="font-semibold mb-2">📱 חומרה – בלי קומבינות</p>
+                                    <p className="mb-1">המערכת עובדת על טאבלט או סמארטפון שיש למסעדה.</p>
+                                    <p>צריך טאבלט? אפשר בתוספת תשלום – המחיר תלוי בדגם הנבחר.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="grid md:grid-cols-[1.2fr_0.8fr] gap-6 sm:gap-8">
+                            <div className="bg-brand-dark text-white rounded-2xl p-5 sm:p-6 shadow-md">
+                                <h3 className="text-lg sm:text-xl font-bold mb-3">💰 מחיר מיוחד ל־10 הראשונות:</h3>
+                                <ul className="space-y-2 text-sm sm:text-base">
+                                    <li>• ₪499 הטמעה חד־פעמי</li>
+                                    <li>• 30 ימי ניסיון חינם</li>
+                                    <li>• לאחר מכן: ₪299 לחודש</li>
+                                </ul>
+                                <p className="mt-4 text-sm sm:text-base">בלי עמלות. בלי אחוזים. בלי התחייבות ארוכה.</p>
+                            </div>
+
+                            <div className="bg-white border border-brand-primary/20 rounded-2xl p-5 sm:p-6 shadow-sm flex flex-col gap-3 text-sm sm:text-base text-gray-800">
+                                <div>
+                                    <p className="font-semibold mb-1">⏳ למה עכשיו?</p>
+                                    <ul className="space-y-1">
+                                        <li>• מספר המקומות מוגבל</li>
+                                        <li>• כל מסעדה אחרי זה – במחיר רגיל</li>
+                                        <li>• מי שנכנס עכשיו חוסך כסף ונכנס ראשון</li>
+                                    </ul>
+                                </div>
+
+                                <div className="pt-2">
+                                    <p className="font-semibold mb-2">👉 רוצה להיכנס לפני שנסגר?</p>
+                                    <div className="flex flex-wrap gap-3">
+                                        <Link
+                                            to="/register-restaurant"
+                                            className="px-5 py-3 bg-brand-primary text-white rounded-xl font-bold shadow hover:shadow-lg transition"
+                                        >
+                                            התחל ניסיון חינם
+                                        </Link>
+                                        <a
+                                            href="mailto:support@chefsync.co.il"
+                                            className="px-5 py-3 border border-brand-primary text-brand-primary rounded-xl font-bold hover:bg-brand-primary/5 transition"
+                                        >
+                                            דבר איתנו בוואטסאפ / מייל
+                                        </a>
+                                    </div>
+                                    <p className="text-xs text-gray-500 mt-2">TakeEat – הזמנות ישירות מהמסעדה. טל״ח | עד גמר המלאי</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
                 {/* Plans */}
                 <section id="plans" className="mt-16">
                     <h2 className="text-2xl sm:text-3xl font-bold mb-6">

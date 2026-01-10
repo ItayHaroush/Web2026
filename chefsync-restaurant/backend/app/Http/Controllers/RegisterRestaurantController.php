@@ -69,6 +69,12 @@ class RegisterRestaurantController extends Controller
         $planType = $validated['plan_type'];
         $paidUpfront = (bool) ($validated['paid_upfront'] ?? false);
 
+        $trialEndsAt = now()->addDays(14)->endOfDay();
+        $planDurationEnd = $planType === 'annual'
+            ? $trialEndsAt->copy()->addYear()
+            : $trialEndsAt->copy()->addMonth();
+        $subscriptionStatus = $paidUpfront ? 'active' : 'trial';
+
         $chargeAmount = $planType === 'annual' ? $annualPrice : $monthlyPrice;
         $monthlyFeeForTracking = $planType === 'annual' ? round($annualPrice / 12, 2) : $monthlyPrice;
 
@@ -101,6 +107,16 @@ class RegisterRestaurantController extends Controller
                 'description' => null,
                 'logo_url' => $logoUrl,
                 'is_open' => false,
+                'subscription_status' => $subscriptionStatus,
+                'trial_ends_at' => $trialEndsAt,
+                'subscription_plan' => $planType,
+                'subscription_ends_at' => $subscriptionStatus === 'active' ? $planDurationEnd : $trialEndsAt,
+                'last_payment_at' => $paidUpfront ? now() : null,
+                'next_payment_at' => $subscriptionStatus === 'active'
+                    ? ($planType === 'annual'
+                        ? $planDurationEnd->copy()->addYear()
+                        : $planDurationEnd->copy()->addMonth())
+                    : $trialEndsAt,
             ]);
 
             $owner = User::create([
@@ -114,9 +130,11 @@ class RegisterRestaurantController extends Controller
             ]);
 
             $billingDay = now()->day > 28 ? 28 : now()->day;
-            $nextCharge = $planType === 'annual'
-                ? now()->addYear()->startOfDay()
-                : now()->addMonth()->startOfDay();
+            $nextCharge = $paidUpfront
+                ? ($planType === 'annual'
+                    ? $planDurationEnd->copy()->addYear()->startOfDay()
+                    : $planDurationEnd->copy()->addMonth()->startOfDay())
+                : $trialEndsAt->copy()->startOfDay();
 
             $subscription = RestaurantSubscription::create([
                 'restaurant_id' => $restaurant->id,
@@ -124,7 +142,7 @@ class RegisterRestaurantController extends Controller
                 'monthly_fee' => $monthlyFeeForTracking,
                 'billing_day' => $billingDay,
                 'currency' => 'ILS',
-                'status' => 'active',
+                'status' => $subscriptionStatus,
                 'outstanding_amount' => $paidUpfront ? 0 : $chargeAmount,
                 'next_charge_at' => $nextCharge,
                 'last_paid_at' => $paidUpfront ? now() : null,
@@ -136,10 +154,8 @@ class RegisterRestaurantController extends Controller
                     'restaurant_id' => $restaurant->id,
                     'amount' => $chargeAmount,
                     'currency' => 'ILS',
-                    'period_start' => now()->startOfDay(),
-                    'period_end' => $planType === 'annual'
-                        ? now()->addYear()->startOfDay()
-                        : now()->addMonth()->startOfDay(),
+                    'period_start' => $trialEndsAt->copy()->startOfDay(),
+                    'period_end' => $planDurationEnd->copy()->startOfDay(),
                     'paid_at' => now(),
                     'method' => 'manual',
                     'reference' => 'initial_signup',
