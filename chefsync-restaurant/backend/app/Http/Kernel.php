@@ -45,5 +45,6 @@ class Kernel extends HttpKernel
         'tenant' => \App\Http\Middleware\EnsureTenantId::class,
         'ensure_tenant_id' => \App\Http\Middleware\EnsureTenantId::class,
         'super_admin' => \App\Http\Middleware\EnsureSuperAdmin::class,
+        'restaurant_access' => \App\Http\Middleware\CheckRestaurantAccess::class,
     ];
 }

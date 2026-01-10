@@ -120,7 +120,7 @@ export default function RegisterRestaurant() {
         <div className="min-h-screen bg-gradient-to-br from-brand-primary/10 to-white py-12 px-4">
             <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
                 <h1 className="text-3xl font-bold text-gray-900 mb-2">הצטרפות כמסעדה</h1>
-                <p className="text-gray-600 mb-6">בחרו מסלול, מלאו פרטים והתחילו להשתמש במערכת.</p>
+                <p className="text-gray-600 mb-6">14 ימים ראשונים בחינם. בחרו מסלול, מלאו פרטים והתחילו להשתמש במערכת.</p>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
                     <PlanCard title="חודשי" price={MONTHLY_PRICE} subtitle="חיוב חודשי" selected={form.plan_type === 'monthly'} onSelect={() => setForm((p) => ({ ...p, plan_type: 'monthly' }))} />
@@ -184,18 +184,24 @@ export default function RegisterRestaurant() {
                         </div>
                     </Section>
 
-                    <div className="flex items-center justify-between bg-gray-50 border rounded-xl p-4">
-                        <div>
-                            <p className="text-sm text-gray-600">סכום חיוב לפי מסלול נבחר</p>
-                            <p className="text-2xl font-bold text-gray-900">₪{currentPrice}</p>
+                    <div className="flex flex-col gap-3">
+                        <div className="flex items-center justify-between bg-gray-50 border rounded-xl p-4">
+                            <div>
+                                <p className="text-sm text-gray-600">סכום חיוב לפי מסלול נבחר</p>
+                                <p className="text-2xl font-bold text-gray-900">₪{currentPrice}</p>
+                            </div>
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="px-6 py-3 bg-brand-primary text-white rounded-lg font-semibold hover:bg-brand-primary/90 disabled:opacity-50"
+                            >
+                                {loading ? 'שולח...' : 'התחלת 14 ימי ניסיון'}
+                            </button>
                         </div>
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className="px-6 py-3 bg-brand-primary text-white rounded-lg font-semibold hover:bg-brand-primary/90 disabled:opacity-50"
-                        >
-                            {loading ? 'שולח...' : 'הצטרפות'}
-                        </button>
+                        <div className="bg-brand-primary/5 border border-brand-primary/20 rounded-xl p-3 text-sm text-gray-700 text-right">
+                            <p className="font-semibold text-brand-primary">אין חיוב מיידי</p>
+                            <p>המערכת פעילה בחינם ל-14 ימים. ניתן לשלם ולנעול מחיר בכל רגע במהלך הניסיון; אם לא תבוצע הפעלה, הגישה תיחסם אחרי התקופה.</p>
+                        </div>
                     </div>
 
                     <div className="text-xs text-gray-500 text-center">

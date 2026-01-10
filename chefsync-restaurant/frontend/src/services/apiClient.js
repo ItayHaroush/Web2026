@@ -117,6 +117,16 @@ apiClient.interceptors.response.use(
                 window.location.href = '/login';
             }
         }
+
+        if (error.response?.status === 402) {
+            const hasAdminToken = !!(localStorage.getItem('authToken') || localStorage.getItem('admin_token'));
+            if (hasAdminToken && window.location.pathname !== '/admin/paywall') {
+                try {
+                    localStorage.setItem('paywall_data', JSON.stringify(error.response?.data?.data || {}));
+                } catch { }
+                window.location.href = '/admin/paywall';
+            }
+        }
         return Promise.reject(error);
     }
 );

@@ -8,6 +8,8 @@ use App\Models\Category;
 use App\Models\Order;
 use App\Models\Restaurant;
 use App\Models\City;
+use App\Models\RestaurantPayment;
+use App\Models\RestaurantSubscription;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
@@ -635,6 +637,112 @@ class AdminController extends Controller
             'success' => true,
             'message' => 'סטטוס ההזמנה עודכן!',
             'order' => $order->load('items.menuItem'),
+        ]);
+    }
+
+    // =============================================
+    // מנוי וחיוב
+    // =============================================
+
+    public function subscriptionStatus(Request $request)
+    {
+        $restaurant = $request->user()->restaurant;
+
+        if (!$restaurant) {
+            return response()->json([
+                'success' => false,
+                'message' => 'לא נמצאה מסעדה למשתמש',
+            ], 404);
+        }
+
+        $subscription = $restaurant->subscription;
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'subscription_status' => $restaurant->subscription_status,
+                'trial_ends_at' => $restaurant->trial_ends_at,
+                'subscription_ends_at' => $restaurant->subscription_ends_at,
+                'subscription_plan' => $restaurant->subscription_plan,
+                'has_access' => $restaurant->hasAccess(),
+                'days_left_in_trial' => $restaurant->getDaysLeftInTrial(),
+                'days_left_in_subscription' => $restaurant->getDaysLeftInSubscription(),
+                'outstanding_amount' => $subscription?->outstanding_amount,
+                'next_charge_at' => $subscription?->next_charge_at,
+                'last_paid_at' => $subscription?->last_paid_at,
+            ],
+        ]);
+    }
+
+    public function activateSubscription(Request $request)
+    {
+        $restaurant = $request->user()->restaurant;
+
+        if (!$restaurant) {
+            return response()->json([
+                'success' => false,
+                'message' => 'לא נמצאה מסעדה למשתמש',
+            ], 404);
+        }
+
+        $validated = $request->validate([
+            'plan_type' => 'nullable|in:monthly,annual',
+        ]);
+
+        $planType = $validated['plan_type'] ?? $restaurant->subscription_plan ?? 'monthly';
+        $monthlyPrice = 600;
+        $annualPrice = 5000;
+        $chargeAmount = $planType === 'annual' ? $annualPrice : $monthlyPrice;
+        $monthlyFeeForTracking = $planType === 'annual' ? round($annualPrice / 12, 2) : $monthlyPrice;
+
+        $periodStart = $restaurant->trial_ends_at && now()->lt($restaurant->trial_ends_at)
+            ? $restaurant->trial_ends_at->copy()->startOfDay()
+            : now()->startOfDay();
+
+        $periodEnd = $planType === 'annual'
+            ? $periodStart->copy()->addYear()
+            : $periodStart->copy()->addMonth();
+
+        $subscription = RestaurantSubscription::updateOrCreate(
+            ['restaurant_id' => $restaurant->id],
+            [
+                'plan_type' => $planType,
+                'monthly_fee' => $monthlyFeeForTracking,
+                'billing_day' => now()->day > 28 ? 28 : now()->day,
+                'currency' => 'ILS',
+                'status' => 'active',
+                'outstanding_amount' => 0,
+                'next_charge_at' => $periodEnd,
+                'last_paid_at' => now(),
+            ]
+        );
+
+        $payment = RestaurantPayment::create([
+            'restaurant_id' => $restaurant->id,
+            'amount' => $chargeAmount,
+            'currency' => 'ILS',
+            'period_start' => $periodStart,
+            'period_end' => $periodEnd,
+            'paid_at' => now(),
+            'method' => 'manual',
+            'reference' => 'subscription_activation',
+            'status' => 'paid',
+        ]);
+
+        $restaurant->update([
+            'subscription_status' => 'active',
+            'subscription_plan' => $planType,
+            'subscription_ends_at' => $periodEnd,
+            'last_payment_at' => now(),
+            'next_payment_at' => $periodEnd,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'המנוי הופעל בהצלחה',
+            'subscription' => $subscription,
+            'restaurant' => $restaurant->fresh(),
+            'payment' => $payment,
         ]);
     }
 

@@ -81,38 +81,44 @@ Route::prefix('super-admin')->middleware(['auth:sanctum', 'super_admin'])->group
 // ============================================
 // פאנל ניהול - Admin Routes
 // ============================================
-Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
-    // דשבורד
-    Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard');
+Route::prefix('admin')->middleware(['auth:sanctum'])->group(function () {
+    // סטטוס מנוי + תשלום - זמין גם אם פג הניסיון
+    Route::get('/subscription/status', [AdminController::class, 'subscriptionStatus'])->name('admin.subscription.status');
+    Route::post('/subscription/activate', [AdminController::class, 'activateSubscription'])->name('admin.subscription.activate');
 
-    // ניהול מסעדה
-    Route::get('/restaurant', [AdminController::class, 'getRestaurant'])->name('admin.restaurant.get');
-    Route::put('/restaurant', [AdminController::class, 'updateRestaurant'])->name('admin.restaurant.update');
+    Route::middleware('restaurant_access')->group(function () {
+        // דשבורד
+        Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard');
 
-    // ניהול קטגוריות
-    Route::get('/categories', [AdminController::class, 'getCategories'])->name('admin.categories.index');
-    Route::post('/categories', [AdminController::class, 'storeCategory'])->name('admin.categories.store');
-    Route::put('/categories/{id}', [AdminController::class, 'updateCategory'])->name('admin.categories.update');
-    Route::delete('/categories/{id}', [AdminController::class, 'deleteCategory'])->name('admin.categories.delete');
+        // ניהול מסעדה
+        Route::get('/restaurant', [AdminController::class, 'getRestaurant'])->name('admin.restaurant.get');
+        Route::put('/restaurant', [AdminController::class, 'updateRestaurant'])->name('admin.restaurant.update');
 
-    // ניהול פריטי תפריט
-    Route::get('/menu-items', [AdminController::class, 'getMenuItems'])->name('admin.menu.index');
-    Route::post('/menu-items', [AdminController::class, 'storeMenuItem'])->name('admin.menu.store');
-    Route::put('/menu-items/{id}', [AdminController::class, 'updateMenuItem'])->name('admin.menu.update');
-    Route::delete('/menu-items/{id}', [AdminController::class, 'deleteMenuItem'])->name('admin.menu.delete');
+        // ניהול קטגוריות
+        Route::get('/categories', [AdminController::class, 'getCategories'])->name('admin.categories.index');
+        Route::post('/categories', [AdminController::class, 'storeCategory'])->name('admin.categories.store');
+        Route::put('/categories/{id}', [AdminController::class, 'updateCategory'])->name('admin.categories.update');
+        Route::delete('/categories/{id}', [AdminController::class, 'deleteCategory'])->name('admin.categories.delete');
 
-    // ניהול הזמנות
-    Route::get('/orders', [AdminController::class, 'getOrders'])->name('admin.orders.index');
-    Route::patch('/orders/{id}/status', [AdminController::class, 'updateOrderStatus'])->name('admin.orders.status');
+        // ניהול פריטי תפריט
+        Route::get('/menu-items', [AdminController::class, 'getMenuItems'])->name('admin.menu.index');
+        Route::post('/menu-items', [AdminController::class, 'storeMenuItem'])->name('admin.menu.store');
+        Route::put('/menu-items/{id}', [AdminController::class, 'updateMenuItem'])->name('admin.menu.update');
+        Route::delete('/menu-items/{id}', [AdminController::class, 'deleteMenuItem'])->name('admin.menu.delete');
 
-    // ניהול עובדים
-    Route::get('/employees', [AdminController::class, 'getEmployees'])->name('admin.employees.index');
-    Route::put('/employees/{id}', [AdminController::class, 'updateEmployee'])->name('admin.employees.update');
-    Route::delete('/employees/{id}', [AdminController::class, 'deleteEmployee'])->name('admin.employees.delete');
+        // ניהול הזמנות
+        Route::get('/orders', [AdminController::class, 'getOrders'])->name('admin.orders.index');
+        Route::patch('/orders/{id}/status', [AdminController::class, 'updateOrderStatus'])->name('admin.orders.status');
+
+        // ניהול עובדים
+        Route::get('/employees', [AdminController::class, 'getEmployees'])->name('admin.employees.index');
+        Route::put('/employees/{id}', [AdminController::class, 'updateEmployee'])->name('admin.employees.update');
+        Route::delete('/employees/{id}', [AdminController::class, 'deleteEmployee'])->name('admin.employees.delete');
+    });
 });
 
 // הרשם את Middleware Tenant לכל הנתיבים
-Route::middleware(['api', 'tenant'])->group(function () {
+Route::middleware(['api', 'tenant', 'restaurant_access'])->group(function () {
 
     // ============================================
     // תפריט - ללקוחות
