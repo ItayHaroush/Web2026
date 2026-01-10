@@ -118,7 +118,7 @@ Route::prefix('admin')->middleware(['auth:sanctum'])->group(function () {
 });
 
 // הרשם את Middleware Tenant לכל הנתיבים
-Route::middleware(['api', 'tenant', 'restaurant_access'])->group(function () {
+Route::middleware(['api', 'tenant'])->group(function () {
 
     // ============================================
     // תפריט - ללקוחות
