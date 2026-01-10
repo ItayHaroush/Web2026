@@ -1,12 +1,13 @@
 {
-  "name": "ChefSync",
-  "short_name": "ChefSync",
+  "name": "TakeEat",
+  "short_name": "TakeEat",
+  "description": "TakeEat - הזמנות למסעדה בקלות",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#ffffff",
-  "theme_color": "#1f2c38",
+  "theme_color": "#ffffff",
   "icons": [
     {
       "src": "/icons/chefsync-logo-v2-512.png",

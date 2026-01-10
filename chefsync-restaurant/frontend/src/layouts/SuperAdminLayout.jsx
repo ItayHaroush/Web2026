@@ -1,5 +1,6 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAdminAuth } from '../context/AdminAuthContext';
+import { PRODUCT_NAME } from '../constants/brand';
 
 export default function SuperAdminLayout({ children }) {
     const navigate = useNavigate();
@@ -48,7 +49,7 @@ export default function SuperAdminLayout({ children }) {
                         <div className="w-10 h-10 rounded-lg bg-brand-primary/10 flex items-center justify-center text-xl">
                             👨‍💼
                         </div>
-                        <h1 className="text-xl font-bold">ChefSync Admin</h1>
+                        <h1 className="text-xl font-bold">{PRODUCT_NAME} Admin</h1>
                     </div>
 
                     <div className="flex items-center gap-4">
