@@ -86,7 +86,7 @@ Route::prefix('admin')->middleware(['auth:sanctum'])->group(function () {
     Route::get('/subscription/status', [AdminController::class, 'subscriptionStatus'])->name('admin.subscription.status');
     Route::post('/subscription/activate', [AdminController::class, 'activateSubscription'])->name('admin.subscription.activate');
 
-    Route::middleware('restaurant_access')->group(function () {
+    Route::middleware(\App\Http\Middleware\CheckRestaurantAccess::class)->group(function () {
         // דשבורד
         Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard');
 
