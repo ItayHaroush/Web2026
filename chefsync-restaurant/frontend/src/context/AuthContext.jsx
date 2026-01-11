@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
 
 /**
  * Context להנהלת מידע המשתמש ותעודות אימות
@@ -25,8 +24,8 @@ export function AuthProvider({ children }) {
         const urlPath = window.location.pathname;
         const urlTenantMatch = urlPath.match(/^\/([^\/]+)\/(menu|cart|order-status)/);
 
-        if (urlTenantMatch && urlTenantMatch[1] && !savedTenant) {
-            // אם יש tenant בURL ואין בlocalStorage, נגדיר אותו
+        if (urlTenantMatch && urlTenantMatch[1]) {
+            // אם יש tenant ב-URL, הוא המקור האמין (גם אם יש tenant ישן ב-localStorage)
             const urlTenant = urlTenantMatch[1];
             setTenantId(urlTenant);
             setRole('customer');
