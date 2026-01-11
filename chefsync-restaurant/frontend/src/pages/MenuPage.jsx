@@ -3,7 +3,7 @@ import { FaWhatsapp, FaPhoneAlt } from 'react-icons/fa';
 import { SiWaze } from 'react-icons/si';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { CustomerLayout } from '../layouts/CustomerLayout';
 import menuService from '../services/menuService';
 import { UI_TEXT } from '../constants/ui';
@@ -16,8 +16,9 @@ import { API_BASE_URL, TENANT_HEADER } from '../constants/api';
  */
 
 export default function MenuPage() {
-    const { tenantId } = useAuth();
+    const { tenantId, loginAsCustomer } = useAuth();
     const navigate = useNavigate();
+    const params = useParams();
     const { addToCart } = useCart();
     const [menu, setMenu] = useState([]);
     const [restaurant, setRestaurant] = useState(null);
@@ -28,12 +29,14 @@ export default function MenuPage() {
     const categoryRefs = useRef({});
 
     const effectiveTenantId = useMemo(() => {
+        const fromUrl = params?.tenantId;
+        if (fromUrl) return fromUrl;
         if (tenantId) return tenantId;
         const fromStorage = localStorage.getItem('tenantId');
         if (fromStorage) return fromStorage;
         const match = window.location.pathname.match(/^\/([^\/]+)\/menu/);
         return match?.[1] || '';
-    }, [tenantId]);
+    }, [params?.tenantId, tenantId]);
 
     const getWazeLink = () => {
         const query = [restaurant?.address, restaurant?.city].filter(Boolean).join(', ');
@@ -57,22 +60,25 @@ export default function MenuPage() {
     };
 
     useEffect(() => {
-        // ודא שיש לנו tenant ב-localStorage לטובת interceptors גם כשנכנסים מקישור ישיר
-        if (!tenantId && effectiveTenantId) {
-            localStorage.setItem('tenantId', effectiveTenantId);
+        if (!effectiveTenantId) return;
+        // URL tenant must always win
+        localStorage.setItem('tenantId', effectiveTenantId);
+        if (params?.tenantId && params.tenantId !== tenantId) {
+            loginAsCustomer(params.tenantId);
         }
-    }, [tenantId, effectiveTenantId]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [effectiveTenantId]);
 
     useEffect(() => {
-        loadMenu();
-        loadRestaurantInfo();
+        if (!effectiveTenantId) return;
 
-        // בדוק אם יש הזמנה פעילה
-        const savedOrderId = localStorage.getItem(`activeOrder_${tenantId}`);
-        if (savedOrderId) {
-            setActiveOrderId(savedOrderId);
-        }
-    }, [tenantId]);
+        loadRestaurantInfo();
+        loadMenu();
+
+        const savedOrderId = localStorage.getItem(`activeOrder_${effectiveTenantId}`);
+        setActiveOrderId(savedOrderId || null);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [effectiveTenantId]);
 
     // הגדרת קטגוריה פעילה ראשונה
     useEffect(() => {
@@ -83,12 +89,8 @@ export default function MenuPage() {
 
     const loadRestaurantInfo = async () => {
         try {
-            // 🔥 שימוש ב-apiClient (עם interceptor שמוסיף X-Tenant-ID)
-            const response = await apiClient.get(`/restaurants`, {
-                headers: {
-                    [TENANT_HEADER]: effectiveTenantId
-                }
-            });
+            // /restaurants is public; we use it to render the hero reliably even before /menu.
+            const response = await apiClient.get(`/restaurants`);
             const restaurants = response.data.data || [];
             const currentRestaurant = restaurants.find(r => r.tenant_id === effectiveTenantId);
             console.log('🏪 Restaurant loaded:', currentRestaurant?.name, 'Logo:', currentRestaurant?.logo_url);
@@ -152,7 +154,7 @@ export default function MenuPage() {
             {/* כרטיסייה של הזמנה פעילה */}
             {activeOrderId && (
                 <div className="mb-6 p-4 bg-gradient-to-r from-brand-primary to-brand-secondary rounded-2xl shadow-lg text-white cursor-pointer hover:shadow-xl transition-shadow"
-                    onClick={() => navigate(`/${tenantId || ''}/order-status/${activeOrderId}`)}>
+                    onClick={() => navigate(`/${effectiveTenantId || tenantId || ''}/order-status/${activeOrderId}`)}>
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="font-semibold mb-1">📍 הזמנה בעיצומה</p>

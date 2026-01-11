@@ -5,19 +5,33 @@ import { TENANT_HEADER } from '../constants/api';
 const LOCAL_API = (import.meta.env.VITE_API_URL_LOCAL || 'http://localhost:8000/api').trim();
 const PROD_API = (import.meta.env.VITE_API_URL_PRODUCTION || 'https://api.chefsync.co.il/api').trim();
 
+// In production (Vercel), default straight to production API to avoid a first request to localhost.
+const DEFAULT_API = import.meta.env.PROD ? PROD_API : LOCAL_API;
+
 /**
  * אתחול כלי HTTP עם תמיכה מלאה ב-Multi-Tenant
  * בכל בקשה יוצמד ה-Tenant ID מה-localStorage
  */
 
+const getTenantIdFromUrl = () => {
+    try {
+        const path = window?.location?.pathname || '';
+        const match = path.match(/^\/([^\/]+)\/(menu|cart|order-status)/);
+        return match?.[1] || '';
+    } catch {
+        return '';
+    }
+};
+
 // שמירת Tenant ID בשימוש המקומי
 const getTenantId = () => {
-    return localStorage.getItem('tenantId') || '';
+    // URL הוא מקור אמת בכניסה ישירה; fallback ל-localStorage
+    return getTenantIdFromUrl() || localStorage.getItem('tenantId') || '';
 };
 
 // יצירת instance של axios עם ברירות מחדל
 export const apiClient = axios.create({
-    baseURL: LOCAL_API,
+    baseURL: DEFAULT_API,
     headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
@@ -40,12 +54,13 @@ export const apiClient = axios.create({
 
 // Save chosen base URL for other parts (e.g., asset URL resolution)
 try {
-    localStorage.setItem('api_base_url', LOCAL_API);
+    localStorage.setItem('api_base_url', DEFAULT_API);
 } catch { }
 
 // Interceptor לשמירת Tenant ID בכל בקשה
 apiClient.interceptors.request.use((config) => {
     const tenantId = getTenantId();
+    const urlTenantId = getTenantIdFromUrl();
     const token = localStorage.getItem('authToken') || localStorage.getItem('admin_token');
 
     // 🔥 DEBUG - הדפס כל בקשה
@@ -53,12 +68,13 @@ apiClient.interceptors.request.use((config) => {
     console.group(`🚀 API Request: ${config.method?.toUpperCase()} ${config.url}`);
     console.log('🌐 Full URL:', fullUrl);
     console.log('🔑 Token:', token ? `${token.substring(0, 30)}...` : '❌ MISSING');
-    console.log('🏪 Tenant ID:', tenantId || '❌ MISSING');
+    console.log('🏪 Tenant ID:', tenantId || '❌ MISSING', urlTenantId ? `(from URL: ${urlTenantId})` : '');
     console.log('📦 Data:', config.data);
     console.log('🎯 Params:', config.params);
     console.groupEnd();
 
-    if (tenantId) {
+    // Don't clobber an explicit header
+    if (tenantId && !config.headers?.[TENANT_HEADER]) {
         config.headers[TENANT_HEADER] = tenantId;
     }
 
