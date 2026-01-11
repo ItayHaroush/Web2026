@@ -1,1 +1,17 @@
 /* אין CSS מיוחד - כל התשנוגים מנוהלים ב-Tailwind */
+
+/* Time inputs LTR on desktop so HH precedes MM visually */
+@media (min-width: 768px) {
+	.time-ltr {
+		direction: ltr;
+		text-align: left;
+	}
+
+	/* Keep default hours inputs aligned on one row (desktop) */
+	.default-hours-row {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 1rem;
+		align-items: start;
+	}
+}
