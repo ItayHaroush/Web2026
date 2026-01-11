@@ -3,6 +3,7 @@ import { FaWhatsapp, FaPhoneAlt } from 'react-icons/fa';
 import { SiWaze } from 'react-icons/si';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
+import { useToast } from '../context/ToastContext';
 import { useNavigate, useParams } from 'react-router-dom';
 import { CustomerLayout } from '../layouts/CustomerLayout';
 import menuService from '../services/menuService';
@@ -20,6 +21,7 @@ export default function MenuPage() {
     const navigate = useNavigate();
     const params = useParams();
     const { addToCart } = useCart();
+    const { addToast } = useToast();
     const [menu, setMenu] = useState([]);
     const [restaurant, setRestaurant] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -89,10 +91,8 @@ export default function MenuPage() {
 
     const loadRestaurantInfo = async () => {
         try {
-            // /restaurants is public; we use it to render the hero reliably even before /menu.
-            const response = await apiClient.get(`/restaurants`);
-            const restaurants = response.data.data || [];
-            const currentRestaurant = restaurants.find(r => r.tenant_id === effectiveTenantId);
+            const response = await apiClient.get(`/restaurants/by-tenant/${encodeURIComponent(effectiveTenantId)}`);
+            const currentRestaurant = response.data?.data || null;
             console.log('🏪 Restaurant loaded:', currentRestaurant?.name, 'Logo:', currentRestaurant?.logo_url);
             setRestaurant(currentRestaurant);
         } catch (err) {
@@ -123,6 +123,8 @@ export default function MenuPage() {
     const phoneHref = getPhoneHref();
     const whatsappLink = getWhatsAppLink();
 
+    const canOrder = restaurant?.is_open !== false;
+
     if (loading) {
         return (
             <CustomerLayout>
@@ -151,6 +153,12 @@ export default function MenuPage() {
 
     return (
         <CustomerLayout>
+            {!canOrder && restaurant && (
+                <div className="mb-6 bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-xl">
+                    המסעדה סגורה כרגע. אפשר לעיין בתפריט, אך לא ניתן לבצע הזמנה.
+                </div>
+            )}
+
             {/* כרטיסייה של הזמנה פעילה */}
             {activeOrderId && (
                 <div className="mb-6 p-4 bg-gradient-to-r from-brand-primary to-brand-secondary rounded-2xl shadow-lg text-white cursor-pointer hover:shadow-xl transition-shadow"
@@ -351,8 +359,14 @@ export default function MenuPage() {
                                     category.items.map((item) => (
                                         <div
                                             key={item.id}
-                                            onClick={() => addToCart(item)}
-                                            className="bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden cursor-pointer group border border-gray-100 hover:border-brand-primary/30"
+                                            onClick={() => {
+                                                if (!canOrder) {
+                                                    addToast('המסעדה סגורה כרגע', 'error');
+                                                    return;
+                                                }
+                                                addToCart(item);
+                                            }}
+                                            className={`bg-white rounded-2xl shadow-sm transition-all duration-300 overflow-hidden group border border-gray-100 ${canOrder ? 'cursor-pointer hover:shadow-xl hover:border-brand-primary/30' : 'cursor-not-allowed opacity-80'}`}
                                         >
                                             {/* תמונה / לוגו placeholder */}
                                             <div className="relative h-40 bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden">
@@ -377,9 +391,14 @@ export default function MenuPage() {
                                                     <button
                                                         onClick={(e) => {
                                                             e.stopPropagation();
+                                                            if (!canOrder) {
+                                                                addToast('המסעדה סגורה כרגע', 'error');
+                                                                return;
+                                                            }
                                                             addToCart(item);
                                                         }}
-                                                        className="w-full bg-brand-primary hover:bg-brand-secondary text-white py-2.5 rounded-xl font-bold shadow-lg transform translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center gap-2"
+                                                        disabled={!canOrder}
+                                                        className={`w-full text-white py-2.5 rounded-xl font-bold shadow-lg transform translate-y-2 opacity-0 transition-all duration-300 flex items-center justify-center gap-2 ${canOrder ? 'bg-brand-primary hover:bg-brand-secondary group-hover:translate-y-0 group-hover:opacity-100' : 'bg-gray-400 cursor-not-allowed'}`}
                                                     >
                                                         <span>הוסף</span>
                                                         <span className="bg-white/20 px-2 py-0.5 rounded-lg text-sm">₪{item.price}</span>

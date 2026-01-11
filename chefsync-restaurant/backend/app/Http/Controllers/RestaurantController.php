@@ -61,6 +61,32 @@ class RestaurantController extends Controller
     }
 
     /**
+     * קבל פרטי מסעדה לפי tenant/slug (ציבורי)
+     * מיועד לעמודי תפריט ציבוריים: /:tenantId/menu
+     * לא מסנן לפי is_open כדי שמשתמש חדש יראה את דף המסעדה המלא גם אם היא סגורה.
+     */
+    public function publicShowByTenant(Request $request, string $tenantId)
+    {
+        try {
+            $restaurant = Restaurant::query()
+                ->where('tenant_id', $tenantId)
+                ->orWhere('slug', $tenantId)
+                ->firstOrFail();
+
+            return response()->json([
+                'success' => true,
+                'data' => $restaurant,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'המסעדה לא נמצאה',
+                'error' => $e->getMessage(),
+            ], 404);
+        }
+    }
+
+    /**
      * קבל פרטי המסעדה (דרוש אימות)
      */
     public function show(Request $request)
