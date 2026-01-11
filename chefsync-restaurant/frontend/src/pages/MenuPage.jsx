@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { FaWhatsapp, FaPhoneAlt } from 'react-icons/fa';
 import { SiWaze } from 'react-icons/si';
 import { useAuth } from '../context/AuthContext';
@@ -27,6 +27,14 @@ export default function MenuPage() {
     const [activeOrderId, setActiveOrderId] = useState(null);
     const categoryRefs = useRef({});
 
+    const effectiveTenantId = useMemo(() => {
+        if (tenantId) return tenantId;
+        const fromStorage = localStorage.getItem('tenantId');
+        if (fromStorage) return fromStorage;
+        const match = window.location.pathname.match(/^\/([^\/]+)\/menu/);
+        return match?.[1] || '';
+    }, [tenantId]);
+
     const getWazeLink = () => {
         const query = [restaurant?.address, restaurant?.city].filter(Boolean).join(', ');
         if (!query) return '';
@@ -47,6 +55,13 @@ export default function MenuPage() {
         const defaultText = encodeURIComponent(`היי, הגעתי מתפריט ${restaurant?.name || ''}`.trim());
         return `https://wa.me/${sanitized}?text=${defaultText}`;
     };
+
+    useEffect(() => {
+        // ודא שיש לנו tenant ב-localStorage לטובת interceptors גם כשנכנסים מקישור ישיר
+        if (!tenantId && effectiveTenantId) {
+            localStorage.setItem('tenantId', effectiveTenantId);
+        }
+    }, [tenantId, effectiveTenantId]);
 
     useEffect(() => {
         loadMenu();
@@ -71,11 +86,11 @@ export default function MenuPage() {
             // 🔥 שימוש ב-apiClient (עם interceptor שמוסיף X-Tenant-ID)
             const response = await apiClient.get(`/restaurants`, {
                 headers: {
-                    [TENANT_HEADER]: tenantId
+                    [TENANT_HEADER]: effectiveTenantId
                 }
             });
             const restaurants = response.data.data || [];
-            const currentRestaurant = restaurants.find(r => r.tenant_id === tenantId);
+            const currentRestaurant = restaurants.find(r => r.tenant_id === effectiveTenantId);
             console.log('🏪 Restaurant loaded:', currentRestaurant?.name, 'Logo:', currentRestaurant?.logo_url);
             setRestaurant(currentRestaurant);
         } catch (err) {
