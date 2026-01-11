@@ -80,7 +80,7 @@ export default function CartPage() {
             localStorage.setItem(`activeOrder_${tenantId}`, response.data.id);
             clearCart();
             setSubmitStep('payment');
-            navigate(`/order-status/${response.data.id}`);
+            navigate(`/${tenantId || ''}/order-status/${response.data.id}`);
         } catch (err) {
             console.error('שגיאה בהגשת הזמנה:', err);
             setError(err.response?.data?.message || 'שגיאה בהגשת ההזמנה');
@@ -295,7 +295,7 @@ export default function CartPage() {
                                     : 'שלח הזמנה'}
                         </button>
                         <a
-                            href="/menu"
+                            href={tenantId ? `/${tenantId}/menu` : '/'}
                             className="flex-1 bg-gray-300 text-gray-800 font-bold py-4 rounded-lg text-center hover:bg-gray-400 transition"
                         >
                             {UI_TEXT.BTN_CANCEL}
