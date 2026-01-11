@@ -365,16 +365,17 @@ class AdminController extends Controller
             $restaurant->logo_url = $this->uploadImage($request->file('logo'), 'logos');
         }
 
-        // המר את is_open לבוליאן
-        $isOpen = $request->input('is_open');
-        if ($isOpen !== null && $isOpen !== '') {
-            // תמיד המר ל-boolean
-            if ($isOpen === '1' || $isOpen === 1 || $isOpen === true) {
+        // המר את is_open לבוליאן (כולל false מפורש)
+        $hasExplicitIsOpen = $request->has('is_open');
+        $isOpen = null;
+        if ($hasExplicitIsOpen) {
+            $rawIsOpen = $request->input('is_open');
+            if ($rawIsOpen === '1' || $rawIsOpen === 1 || $rawIsOpen === true) {
                 $isOpen = true;
-            } elseif ($isOpen === '0' || $isOpen === 0 || $isOpen === false) {
+            } elseif ($rawIsOpen === '0' || $rawIsOpen === 0 || $rawIsOpen === false) {
                 $isOpen = false;
             } else {
-                $isOpen = (bool) $isOpen;
+                $isOpen = (bool) $rawIsOpen;
             }
         }
 
@@ -403,15 +404,16 @@ class AdminController extends Controller
             $updateData['city'] = $validated['city'];
         }
 
-        // אם נשלח is_open, השתמש בערך שנשלח (כפיית ידנית)
-        $hasExplicitIsOpen = $request->has('is_open') && $request->filled('is_open');
+        // אם נשלח is_open, כפייה ידנית גוברת על חישוב
         if ($hasExplicitIsOpen) {
             $updateData['is_open'] = $isOpen;
             $updateData['is_override_status'] = true;
             Log::debug('🔒 Override status to: ' . ($isOpen ? 'true' : 'false'));
-        } else {
-            $updateData['is_override_status'] = false;
-            Log::debug('📅 Will calculate status from operating hours/days');
+        } elseif ($restaurant->is_override_status) {
+            // שמור כפייה קיימת גם אם לא נשלח is_open בבקשה
+            $updateData['is_override_status'] = true;
+            $updateData['is_open'] = $restaurant->is_open;
+            Log::debug('🔒 Preserve existing override: ' . ($restaurant->is_open ? 'true' : 'false'));
         }
 
         // עבוד עם JSON strings מ-FormData
@@ -429,16 +431,66 @@ class AdminController extends Controller
         if ($request->has('operating_hours') && !empty($request->input('operating_hours'))) {
             try {
                 $operatingHours = json_decode($request->input('operating_hours'), true);
-                if (is_array($operatingHours) && isset($operatingHours['open']) && isset($operatingHours['close'])) {
-                    $updateData['operating_hours'] = $operatingHours;
+                if (is_array($operatingHours)) {
+                    // תמיכה לאחור: מבנה ישן עם open/close בלבד
+                    if (isset($operatingHours['open']) && isset($operatingHours['close'])) {
+                        $operatingHours = [
+                            'default' => [
+                                'open' => $operatingHours['open'],
+                                'close' => $operatingHours['close'],
+                            ],
+                            'special_days' => [],
+                        ];
+                    }
+
+                    $hasDefault = isset($operatingHours['default']['open']) && isset($operatingHours['default']['close']);
+                    $hasSpecial = isset($operatingHours['special_days']) && is_array($operatingHours['special_days']);
+                    $hasPerDay = isset($operatingHours['days']) && is_array($operatingHours['days']);
+
+                    if ($hasDefault || $hasSpecial || $hasPerDay) {
+                        // דחיית special days לא חוקיים (ללא תאריכים)
+                        if ($hasSpecial) {
+                            $validSpecial = [];
+                            foreach ($operatingHours['special_days'] as $date => $special) {
+                                if (!is_array($special)) {
+                                    continue;
+                                }
+                                $validSpecial[$date] = [
+                                    'open' => $special['open'] ?? null,
+                                    'close' => $special['close'] ?? null,
+                                    'closed' => (bool) ($special['closed'] ?? false),
+                                ];
+                            }
+                            $operatingHours['special_days'] = $validSpecial;
+                        }
+
+                        // ניקוי per-day overrides
+                        if ($hasPerDay) {
+                            $validDays = [];
+                            foreach ($operatingHours['days'] as $dayName => $dayCfg) {
+                                if (!is_array($dayCfg)) {
+                                    continue;
+                                }
+                                $validDays[$dayName] = [
+                                    'open' => $dayCfg['open'] ?? null,
+                                    'close' => $dayCfg['close'] ?? null,
+                                    'closed' => (bool) ($dayCfg['closed'] ?? false),
+                                ];
+                            }
+                            $operatingHours['days'] = $validDays;
+                        }
+
+                        $updateData['operating_hours'] = $operatingHours;
+                    }
                 }
             } catch (\Exception $e) {
                 // אם לא ניתן לפרסר, השאר את הערך הקודם
             }
         }
 
-        // חשב סטטוס פתיחה אוטומטי בהתאם לימים ושעות רק אם לא כפינו ידנית
-        if (!$hasExplicitIsOpen && (isset($updateData['operating_days']) || isset($updateData['operating_hours']))) {
+        // חשב סטטוס פתיחה אוטומטי רק אם אין כפייה ידנית (חדשה או קיימת)
+        $shouldAutoCalculate = !$hasExplicitIsOpen && !($updateData['is_override_status'] ?? false);
+        if ($shouldAutoCalculate && (isset($updateData['operating_days']) || isset($updateData['operating_hours']))) {
             $operatingDays = $updateData['operating_days'] ?? $restaurant->operating_days ?? [];
             $operatingHours = $updateData['operating_hours'] ?? $restaurant->operating_hours ?? [];
 
@@ -776,23 +828,49 @@ class AdminController extends Controller
         }
 
         $now = \Carbon\Carbon::now('Asia/Jerusalem');
+        $todayDate = $now->toDateString();
         $hebrewDays = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
         $currentDayName = $hebrewDays[$now->dayOfWeek];
 
-        // בדוק אם היום הנוכחי הוא יום פתיחה
-        if (!empty($operatingDays) && !($operatingDays[$currentDayName] ?? false)) {
-            return false;
-        }
+        $defaultHours = $operatingHours['default'] ?? $operatingHours;
+        $specialDays = $operatingHours['special_days'] ?? [];
+        $perDayOverrides = $operatingHours['days'] ?? [];
 
-        // אם אין שעות מוגדרות, המסעדה פתוחה ביום זה
-        if (empty($operatingHours)) {
-            return true;
+        // 1) יום מיוחד לפי תאריך גובר על הכל
+        if (!empty($specialDays[$todayDate])) {
+            $special = $specialDays[$todayDate];
+            if (!empty($special['closed'])) {
+                return false;
+            }
+            $open = $special['open'] ?? ($defaultHours['open'] ?? '00:00');
+            $close = $special['close'] ?? ($defaultHours['close'] ?? '23:59');
+        }
+        // 2) override שבועי ליום בשבוע (אם לא היה יום מיוחד)
+        elseif (!empty($perDayOverrides[$currentDayName])) {
+            $dayCfg = $perDayOverrides[$currentDayName];
+            if (!empty($dayCfg['closed'])) {
+                return false;
+            }
+            $open = $dayCfg['open'] ?? ($defaultHours['open'] ?? '00:00');
+            $close = $dayCfg['close'] ?? ($defaultHours['close'] ?? '23:59');
+        }
+        // 3) ברירת מחדל: ימים + שעות כלליים
+        else {
+            // בדוק אם היום הנוכחי הוא יום פתיחה
+            if (!empty($operatingDays) && !($operatingDays[$currentDayName] ?? false)) {
+                return false;
+            }
+
+            if (empty($defaultHours)) {
+                return true;
+            }
+
+            $open = $defaultHours['open'] ?? '00:00';
+            $close = $defaultHours['close'] ?? '23:59';
         }
 
         // בדוק אם השעה הנוכחית בתוך שעות הפתיחה
         $currentTime = $now->format('H:i');
-        $open = $operatingHours['open'] ?? '00:00';
-        $close = $operatingHours['close'] ?? '23:59';
 
         // אם שעת הסגירה קטנה משעת הפתיחה (פתוח בין לילה), צריך טיפול מיוחד
         if ($close < $open) {

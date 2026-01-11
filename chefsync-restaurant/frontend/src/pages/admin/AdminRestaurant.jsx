@@ -7,31 +7,49 @@ import { resolveAssetUrl } from '../../utils/assets';
 
 const DAYS_OF_WEEK = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 
-// חשב אם המסעדה פתוחה בהתאם לימי פתיחה ושעות פתיחה
+// חשב סטטוס פתיחה: יום מיוחד (תאריך) > שעות יום ספציפי > ברירת מחדל
 const calculateIsOpen = (operatingDays = {}, operatingHours = {}) => {
     const now = new Date();
+    const todayDate = now.toISOString().slice(0, 10);
     const hebrewDays = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
     const currentDayName = hebrewDays[now.getDay()];
 
-    // בדוק אם היום הנוכחי הוא יום פתיחה
+    const defaultHours = operatingHours.default || operatingHours;
+    const specialDays = operatingHours.special_days || {};
+    const perDay = operatingHours.days || {};
+
+    if (specialDays[todayDate]) {
+        const special = specialDays[todayDate];
+        if (special.closed) return false;
+        const open = special.open ?? defaultHours?.open ?? '00:00';
+        const close = special.close ?? defaultHours?.close ?? '23:59';
+        return isTimeInRange(now, open, close);
+    }
+
+    if (perDay[currentDayName]) {
+        const dayCfg = perDay[currentDayName];
+        if (dayCfg.closed) return false;
+        const open = dayCfg.open ?? defaultHours?.open ?? '00:00';
+        const close = dayCfg.close ?? defaultHours?.close ?? '23:59';
+        return isTimeInRange(now, open, close);
+    }
+
     if (Object.keys(operatingDays).length > 0 && !operatingDays[currentDayName]) {
         return false;
     }
 
-    // אם אין שעות מוגדרות, המסעדה פתוחה ביום זה
-    if (!operatingHours.open || !operatingHours.close) {
+    if (!defaultHours?.open || !defaultHours?.close) {
         return true;
     }
 
-    const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-    const open = operatingHours.open;
-    const close = operatingHours.close;
+    return isTimeInRange(now, defaultHours.open, defaultHours.close);
+};
 
-    // אם שעת הסגירה קטנה משעת הפתיחה (פתוח בין לילה)
+const isTimeInRange = (now, open, close) => {
+    const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
     if (close < open) {
         return currentTime >= open || currentTime <= close;
     }
-
     return currentTime >= open && currentTime <= close;
 };
 
@@ -45,6 +63,43 @@ export default function AdminRestaurant() {
     const [overrideStatus, setOverrideStatus] = useState(false);
     const [calculatedStatus, setCalculatedStatus] = useState(false);
     const [justFetched, setJustFetched] = useState(false);
+    const [openDayPanels, setOpenDayPanels] = useState({});
+
+    const normalizeOperatingHours = (oh) => {
+        if (!oh) return {};
+        if (oh.default || oh.special_days || oh.days) return oh;
+        if (oh.open && oh.close) {
+            return { default: { open: oh.open, close: oh.close }, special_days: {}, days: {} };
+        }
+        return oh;
+    };
+
+    // ודא שתמיד יש מבנה מלא לפני שליחה
+    const buildOperatingHoursPayload = (operatingHours = {}, operatingDays = {}) => {
+        const normalized = normalizeOperatingHours(operatingHours);
+        const defaultOpen = normalized.default?.open ?? normalized.open ?? null;
+        const defaultClose = normalized.default?.close ?? normalized.close ?? null;
+
+        // השלם ימים חסרים עם מצב סגור/פתוח לפי operating_days
+        const daysMap = { ...(normalized.days || {}) };
+        Object.entries(operatingDays || {}).forEach(([day, isOpen]) => {
+            daysMap[day] = {
+                ...(daysMap[day] || {}),
+                closed: !isOpen,
+                open: daysMap[day]?.open ?? defaultOpen,
+                close: daysMap[day]?.close ?? defaultClose,
+            };
+        });
+
+        return {
+            default: {
+                open: defaultOpen,
+                close: defaultClose,
+            },
+            special_days: normalized.special_days || {},
+            days: daysMap,
+        };
+    };
 
     useEffect(() => {
         fetchRestaurant();
@@ -73,11 +128,18 @@ export default function AdminRestaurant() {
         try {
             const response = await api.get('/admin/restaurant', { headers: getAuthHeaders() });
             if (response.data.success) {
-                console.log('📩 Fetched restaurant:', response.data.restaurant);
-                setRestaurant(response.data.restaurant);
-                setLogoPreview(response.data.restaurant.logo_url ? resolveAssetUrl(response.data.restaurant.logo_url) : null);
-                // עדכן את overrideStatus בהתאם ל-is_override_status מהשרת
-                setOverrideStatus(response.data.restaurant.is_override_status || false);
+                const normalized = {
+                    ...response.data.restaurant,
+                    operating_hours: normalizeOperatingHours(response.data.restaurant.operating_hours),
+                };
+                normalized.operating_hours = buildOperatingHoursPayload(
+                    normalized.operating_hours,
+                    normalized.operating_days || {}
+                );
+                console.log('📩 Fetched restaurant:', normalized);
+                setRestaurant(normalized);
+                setLogoPreview(normalized.logo_url ? resolveAssetUrl(normalized.logo_url) : null);
+                setOverrideStatus(normalized.is_override_status || false);
             }
         } catch (error) {
             console.error('Failed to fetch restaurant:', error);
@@ -97,6 +159,17 @@ export default function AdminRestaurant() {
                 ...prev.operating_days,
                 [day]: checked,
             },
+            operating_hours: {
+                default: prev.operating_hours?.default || prev.operating_hours || {},
+                special_days: prev.operating_hours?.special_days || {},
+                days: {
+                    ...(prev.operating_hours?.days || {}),
+                    [day]: {
+                        ...(prev.operating_hours?.days?.[day] || {}),
+                        closed: !checked,
+                    },
+                },
+            },
         }));
     };
 
@@ -104,10 +177,35 @@ export default function AdminRestaurant() {
         setRestaurant((prev) => ({
             ...prev,
             operating_hours: {
-                ...prev.operating_hours,
-                [field]: value,
+                default: {
+                    ...(prev.operating_hours?.default || prev.operating_hours || {}),
+                    [field]: value,
+                },
+                special_days: prev.operating_hours?.special_days || {},
+                days: prev.operating_hours?.days || {},
             },
         }));
+    };
+
+    const handleDayHoursChange = (day, field, value) => {
+        setRestaurant((prev) => ({
+            ...prev,
+            operating_hours: {
+                default: prev.operating_hours?.default || prev.operating_hours || {},
+                special_days: prev.operating_hours?.special_days || {},
+                days: {
+                    ...(prev.operating_hours?.days || {}),
+                    [day]: {
+                        ...(prev.operating_hours?.days?.[day] || {}),
+                        [field]: field === 'closed' ? Boolean(value) : value,
+                    },
+                },
+            },
+        }));
+    };
+
+    const toggleDayPanel = (day) => {
+        setOpenDayPanels((prev) => ({ ...prev, [day]: !prev[day] }));
     };
 
     const handleLogo = (file) => {
@@ -157,15 +255,18 @@ export default function AdminRestaurant() {
                 console.log('📅 Using calculated status');
             }
 
-            // תמיד שלח את operating_days ו-operating_hours
+            // תמיד שלח את operating_days ו-operating_hours (מסודרות)
             if (restaurant.operating_days && Object.keys(restaurant.operating_days).length > 0) {
                 formData.append('operating_days', JSON.stringify(restaurant.operating_days));
                 console.log('📅 Operating days:', restaurant.operating_days);
             }
-            if (restaurant.operating_hours && Object.keys(restaurant.operating_hours).length > 0) {
-                formData.append('operating_hours', JSON.stringify(restaurant.operating_hours));
-                console.log('🕐 Operating hours:', restaurant.operating_hours);
-            }
+
+            const sanitizedHours = buildOperatingHoursPayload(
+                restaurant.operating_hours,
+                restaurant.operating_days
+            );
+            formData.append('operating_hours', JSON.stringify(sanitizedHours));
+            console.log('🕐 Operating hours (sanitized):', sanitizedHours);
 
             if (restaurant.logo) {
                 formData.append('logo', restaurant.logo);
@@ -181,9 +282,18 @@ export default function AdminRestaurant() {
 
             // ✅ עדכן state עם הנתונים שחזרו מהשרת
             if (response.data.success && response.data.restaurant) {
-                console.log('✅ Updating state with:', response.data.restaurant);
-                setRestaurant(response.data.restaurant);
-                setLogoPreview(response.data.restaurant.logo_url ? resolveAssetUrl(response.data.restaurant.logo_url) : null);
+                const normalized = {
+                    ...response.data.restaurant,
+                    operating_hours: normalizeOperatingHours(response.data.restaurant.operating_hours),
+                };
+                // ודא שהשעות מוצגות עם ברירת מחדל אם חסר
+                normalized.operating_hours = buildOperatingHoursPayload(
+                    normalized.operating_hours,
+                    normalized.operating_days || {}
+                );
+                console.log('✅ Updating state with:', normalized);
+                setRestaurant(normalized);
+                setLogoPreview(normalized.logo_url ? resolveAssetUrl(normalized.logo_url) : null);
             }
 
             alert('נשמר בהצלחה');
@@ -285,46 +395,96 @@ export default function AdminRestaurant() {
                         </div>
                     </div>
 
-                    {/* ימי פתיחה */}
-                    <div className="border-t pt-4">
-                        <h3 className="text-sm font-bold text-gray-700 mb-3">📅 ימי פתיחה</h3>
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                            {DAYS_OF_WEEK.map((day, index) => (
-                                <label key={day} className="flex items-center gap-2 cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        checked={restaurant.operating_days?.[day] || false}
-                                        onChange={(e) => handleOperatingDaysChange(day, e.target.checked)}
-                                        className="w-4 h-4 rounded"
-                                    />
-                                    <span className="text-sm text-gray-700">{day}</span>
-                                </label>
-                            ))}
-                        </div>
-                    </div>
+                    {/* ימי פתיחה + שעות לפי יום */}
+                    <div className="border-t pt-4 space-y-4">
+                        <h3 className="text-sm font-bold text-gray-700">📅 ימי פתיחה ושעות</h3>
 
-                    {/* שעות פתיחה */}
-                    <div className="border-t pt-4">
-                        <h3 className="text-sm font-bold text-gray-700 mb-3">🕐 שעות פתיחה</h3>
-                        <div className="grid grid-cols-2 gap-4 sm:w-80">
+                        {/* שעות ברירת מחדל */}
+                        <div className="grid grid-cols-2 gap-4 sm:w-96 md:w-[28rem] items-start default-hours-row">
                             <div>
-                                <label className="block text-sm text-gray-700 mb-1">שעת פתיחה</label>
+                                <label className="block text-sm text-gray-700 mb-1">שעת פתיחה (ברירת מחדל)</label>
                                 <input
                                     type="time"
-                                    value={restaurant.operating_hours?.open || '09:00'}
+                                    value={restaurant.operating_hours?.default?.open || restaurant.operating_hours?.open || '09:00'}
                                     onChange={(e) => handleOperatingHoursChange('open', e.target.value)}
-                                    className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                                    className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary time-ltr"
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm text-gray-700 mb-1">שעת סגירה</label>
+                                <label className="block text-sm text-gray-700 mb-1">שעת סגירה (ברירת מחדל)</label>
                                 <input
                                     type="time"
-                                    value={restaurant.operating_hours?.close || '23:00'}
+                                    value={restaurant.operating_hours?.default?.close || restaurant.operating_hours?.close || '23:00'}
                                     onChange={(e) => handleOperatingHoursChange('close', e.target.value)}
-                                    className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                                    className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary time-ltr"
                                 />
                             </div>
+                        </div>
+
+                        {/* שעות מותאמות לפי יום */}
+                        <div className="space-y-2">
+                            {DAYS_OF_WEEK.map((day) => {
+                                const dayCfg = restaurant.operating_hours?.days?.[day] || {};
+                                const isOpenDay = restaurant.operating_days?.[day] ?? false;
+                                const panelOpen = openDayPanels[day] || false;
+                                return (
+                                    <div key={day} className="border rounded-xl p-3 bg-gray-50">
+                                        <div className="flex items-center justify-between gap-2">
+                                            <label className="flex items-center gap-2 cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={isOpenDay}
+                                                    onChange={(e) => handleOperatingDaysChange(day, e.target.checked)}
+                                                    className="w-4 h-4 rounded"
+                                                />
+                                                <span className="text-sm text-gray-800" onClick={() => toggleDayPanel(day)}>
+                                                    {day}
+                                                </span>
+                                            </label>
+                                            <button
+                                                type="button"
+                                                onClick={() => toggleDayPanel(day)}
+                                                className="text-xs text-brand-primary underline"
+                                            >
+                                                {panelOpen ? 'סגור שעות' : 'הגדר שעות'}
+                                            </button>
+                                        </div>
+                                        {panelOpen && (
+                                            <div className="mt-3 grid grid-cols-2 gap-3 sm:w-80">
+                                                <div>
+                                                    <label className="block text-xs text-gray-600 mb-1">פתיחה</label>
+                                                    <input
+                                                        type="time"
+                                                        value={dayCfg.open || restaurant.operating_hours?.default?.open || '09:00'}
+                                                        onChange={(e) => handleDayHoursChange(day, 'open', e.target.value)}
+                                                        disabled={!isOpenDay}
+                                                        className="w-full px-3 py-2 border rounded-lg text-sm time-ltr"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs text-gray-600 mb-1">סגירה</label>
+                                                    <input
+                                                        type="time"
+                                                        value={dayCfg.close || restaurant.operating_hours?.default?.close || '23:00'}
+                                                        onChange={(e) => handleDayHoursChange(day, 'close', e.target.value)}
+                                                        disabled={!isOpenDay}
+                                                        className="w-full px-3 py-2 border rounded-lg text-sm time-ltr"
+                                                    />
+                                                </div>
+                                                <label className="flex items-center gap-2 text-xs text-gray-600 col-span-2">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={!!dayCfg.closed || !isOpenDay}
+                                                        onChange={(e) => handleDayHoursChange(day, 'closed', e.target.checked)}
+                                                        className="w-4 h-4"
+                                                    />
+                                                    סגור ביום זה (גובר על שעות)
+                                                </label>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
                         </div>
                     </div>
 
