@@ -146,7 +146,7 @@ export default function HomePage() {
         // חכה רגע קצר כדי לוודא שה-localStorage התעדכן
         setTimeout(() => {
             console.log('Tenant ID saved:', localStorage.getItem('tenantId'));
-            navigate('/menu');
+            navigate(`/${restaurant.tenant_id}/menu`);
         }, 100);
     };
 
@@ -185,7 +185,7 @@ export default function HomePage() {
             {/* כרטיסייה של הזמנה פעילה */}
             {activeOrderId && (
                 <div className="mb-6 p-4 bg-gradient-to-r from-brand-primary to-brand-secondary rounded-2xl shadow-lg text-white cursor-pointer hover:shadow-xl transition-shadow"
-                    onClick={() => navigate(`/order-status/${activeOrderId}`)}>
+                    onClick={() => navigate(`/${tenantId || ''}/order-status/${activeOrderId}`)}>
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="font-semibold mb-1">📍 הזמנה בעיצומה</p>

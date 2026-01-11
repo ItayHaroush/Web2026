@@ -14,6 +14,9 @@ export function CustomerLayout({ children }) {
     const { tenantId, logout } = useAuth();
     const { getItemCount } = useCart();
 
+    const menuPath = tenantId ? `/${tenantId}/menu` : '/';
+    const cartPath = tenantId ? `/${tenantId}/cart` : '/';
+
     return (
         <div className="flex flex-col min-h-screen bg-brand-light" dir="rtl">
             {/* Header */}
@@ -31,8 +34,8 @@ export function CustomerLayout({ children }) {
                             <Link to="/" className="text-gray-700 hover:text-brand-primary transition font-medium">בית</Link>
                             {tenantId && (
                                 <>
-                                    <Link to="/menu" className="text-gray-700 hover:text-brand-primary transition font-medium">תפריט</Link>
-                                    <Link to="/cart" className="text-gray-700 hover:text-brand-primary transition font-medium relative inline-block">
+                                    <Link to={menuPath} className="text-gray-700 hover:text-brand-primary transition font-medium">תפריט</Link>
+                                    <Link to={cartPath} className="text-gray-700 hover:text-brand-primary transition font-medium relative inline-block">
                                         סל
                                         {getItemCount() > 0 && (
                                             <span className="absolute -top-3 -left-3 bg-brand-primary text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center shadow-md">

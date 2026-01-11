@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { FaWhatsapp, FaPhoneAlt } from 'react-icons/fa';
+import { SiWaze } from 'react-icons/si';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useNavigate } from 'react-router-dom';
@@ -24,6 +26,27 @@ export default function MenuPage() {
     const [activeCategory, setActiveCategory] = useState(null);
     const [activeOrderId, setActiveOrderId] = useState(null);
     const categoryRefs = useRef({});
+
+    const getWazeLink = () => {
+        const query = [restaurant?.address, restaurant?.city].filter(Boolean).join(', ');
+        if (!query) return '';
+        // navigate=yes מבקש פתיחה ישירה לניווט באפליקציה אם מותקנת
+        return `https://waze.com/ul?q=${encodeURIComponent(query)}&navigate=yes`;
+    };
+
+    const getPhoneHref = () => {
+        if (!restaurant?.phone) return '';
+        const sanitized = restaurant.phone.replace(/[^\d+]/g, '');
+        return sanitized ? `tel:${sanitized}` : '';
+    };
+
+    const getWhatsAppLink = () => {
+        if (!restaurant?.phone) return '';
+        const sanitized = restaurant.phone.replace(/[^\d]/g, '');
+        if (!sanitized) return '';
+        const defaultText = encodeURIComponent(`היי, הגעתי מתפריט ${restaurant?.name || ''}`.trim());
+        return `https://wa.me/${sanitized}?text=${defaultText}`;
+    };
 
     useEffect(() => {
         loadMenu();
@@ -79,6 +102,10 @@ export default function MenuPage() {
         categoryRefs.current[categoryId]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     };
 
+    const wazeLink = getWazeLink();
+    const phoneHref = getPhoneHref();
+    const whatsappLink = getWhatsAppLink();
+
     if (loading) {
         return (
             <CustomerLayout>
@@ -110,7 +137,7 @@ export default function MenuPage() {
             {/* כרטיסייה של הזמנה פעילה */}
             {activeOrderId && (
                 <div className="mb-6 p-4 bg-gradient-to-r from-brand-primary to-brand-secondary rounded-2xl shadow-lg text-white cursor-pointer hover:shadow-xl transition-shadow"
-                    onClick={() => navigate(`/order-status/${activeOrderId}`)}>
+                    onClick={() => navigate(`/${tenantId || ''}/order-status/${activeOrderId}`)}>
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="font-semibold mb-1">📍 הזמנה בעיצומה</p>
@@ -187,7 +214,7 @@ export default function MenuPage() {
                 {restaurant && (
                     <div className="mx-4 sm:mx-6 lg:mx-8 -mt-8 relative z-10">
                         <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-6 flex flex-wrap items-center justify-between gap-4">
-                            <div className="flex items-center gap-4">
+                            <div className="flex items-start gap-4 flex-1">
                                 {restaurant.logo_url && (
                                     <img
                                         src={resolveAssetUrl(restaurant.logo_url)}
@@ -195,10 +222,39 @@ export default function MenuPage() {
                                         className="h-12 w-12 object-contain opacity-50 hidden sm:block"
                                     />
                                 )}
-                                <div>
-                                    <p className="text-gray-600 text-sm">{restaurant.address}</p>
+                                <div className="space-y-2">
+                                    <div className="flex items-center gap-2 text-sm text-gray-700">
+                                        <span className="font-medium">{restaurant.address}</span>
+                                        <a
+                                            href={wazeLink || undefined}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className={`flex items-center justify-center h-9 w-9 rounded-full border text-base ${wazeLink ? 'bg-gray-50 text-blue-700 border-gray-200 hover:bg-gray-100' : 'bg-gray-100 text-gray-400 border-transparent cursor-not-allowed pointer-events-none'}`}
+                                            aria-label="פתח ב-Waze"
+                                        >
+                                            <SiWaze className="h-5 w-5" />
+                                        </a>
+                                    </div>
                                     {restaurant.phone && (
-                                        <p className="text-brand-primary font-medium">{restaurant.phone}</p>
+                                        <div className="flex items-center gap-2 text-sm text-brand-primary font-semibold">
+                                            <span>{restaurant.phone}</span>
+                                            <a
+                                                href={phoneHref || undefined}
+                                                className={`flex items-center justify-center h-9 w-9 rounded-full border text-base ${phoneHref ? 'bg-gray-50 text-emerald-700 border-gray-200 hover:bg-gray-100' : 'bg-gray-100 text-gray-400 border-transparent cursor-not-allowed pointer-events-none'}`}
+                                                aria-label="חייג למסעדה"
+                                            >
+                                                <FaPhoneAlt className="h-4 w-4" />
+                                            </a>
+                                            <a
+                                                href={whatsappLink || undefined}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className={`flex items-center justify-center h-9 w-9 rounded-full border text-base ${whatsappLink ? 'bg-gray-50 text-green-700 border-gray-200 hover:bg-gray-100' : 'bg-gray-100 text-gray-400 border-transparent cursor-not-allowed pointer-events-none'}`}
+                                                aria-label="שלח הודעת וואטסאפ"
+                                            >
+                                                <FaWhatsapp className="h-5 w-5" />
+                                            </a>
+                                        </div>
                                     )}
                                 </div>
                             </div>
