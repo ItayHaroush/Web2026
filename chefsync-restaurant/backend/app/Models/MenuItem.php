@@ -55,6 +55,22 @@ class MenuItem extends Model
         return $this->hasMany(OrderItem::class);
     }
 
+    /**
+     * וריאציות זמינות עבור הפריט
+     */
+    public function variants(): HasMany
+    {
+        return $this->hasMany(MenuItemVariant::class)->orderBy('sort_order');
+    }
+
+    /**
+     * קבוצות תוספות/סלטים של הפריט
+     */
+    public function addonGroups(): HasMany
+    {
+        return $this->hasMany(MenuItemAddonGroup::class)->orderBy('sort_order');
+    }
+
     protected static function booted()
     {
         static::addGlobalScope('tenant', function ($query) {

@@ -13,6 +13,11 @@ class OrderItem extends Model
     protected $fillable = [
         'order_id',
         'menu_item_id',
+        'variant_id',
+        'variant_name',
+        'variant_price_delta',
+        'addons',
+        'addons_total',
         'quantity',
         'price_at_order',
     ];
@@ -21,6 +26,9 @@ class OrderItem extends Model
 
     protected $casts = [
         'price_at_order' => 'decimal:2',
+        'variant_price_delta' => 'decimal:2',
+        'addons' => 'array',
+        'addons_total' => 'decimal:2',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
@@ -63,5 +71,13 @@ class OrderItem extends Model
     public function menuItem(): BelongsTo
     {
         return $this->belongsTo(MenuItem::class);
+    }
+
+    /**
+     * וריאציה שנבחרה (אם קיימת)
+     */
+    public function variant(): BelongsTo
+    {
+        return $this->belongsTo(MenuItemVariant::class, 'variant_id');
     }
 }

@@ -10,6 +10,7 @@ use App\Models\FcmToken;
 use App\Services\FcmService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 
 /**
  * OrderController - ניהול הזמנות
@@ -17,15 +18,19 @@ use Illuminate\Support\Facades\Log;
 class OrderController extends Controller
 {
     /**
-     * צור הזמנה חדשה
-     * 
+     * צור הזמנה חדשה עם וריאציות ותוספות
+     *
      * בקשה:
      * {
      *   "customer_name": "דוד כהן",
      *   "customer_phone": "050-1234567",
      *   "items": [
-     *     {"menu_item_id": 1, "quantity": 2},
-     *     {"menu_item_id": 3, "quantity": 1}
+     *     {
+     *       "menu_item_id": 1,
+     *       "variant_id": 10,
+     *       "addons": [{"addon_id": 5}, {"addon_id": 6}],
+     *       "qty": 2
+     *     }
      *   ]
      * }
      */
@@ -41,7 +46,11 @@ class OrderController extends Controller
                 'delivery_notes' => 'nullable|string|max:500',
                 'items' => 'required|array|min:1',
                 'items.*.menu_item_id' => 'required|integer|exists:menu_items,id',
-                'items.*.quantity' => 'required|integer|min:1',
+                'items.*.variant_id' => 'nullable|integer',
+                'items.*.addons' => 'nullable|array',
+                'items.*.addons.*.addon_id' => 'required|integer',
+                'items.*.qty' => 'nullable|integer|min:1',
+                'items.*.quantity' => 'nullable|integer|min:1',
             ]);
 
             Log::info('Order request received', [
@@ -63,7 +72,146 @@ class OrderController extends Controller
                 throw new \Exception('Restaurant not found for tenant');
             }
 
-            // צור את ההזמנה
+            $lineItems = [];
+            $totalAmount = 0;
+
+            foreach ($validated['items'] as $index => $itemData) {
+                $menuItem = MenuItem::where('tenant_id', $tenantId)
+                    ->with([
+                        'variants' => function ($variantQuery) {
+                            $variantQuery->where('is_active', true)->orderBy('sort_order');
+                        },
+                        'addonGroups' => function ($groupQuery) {
+                            $groupQuery->where('is_active', true)
+                                ->orderBy('sort_order')
+                                ->with([
+                                    'addons' => function ($addonQuery) {
+                                        $addonQuery->where('is_active', true)->orderBy('sort_order');
+                                    }
+                                ]);
+                        },
+                    ])
+                    ->findOrFail($itemData['menu_item_id']);
+
+                $quantity = $itemData['qty'] ?? $itemData['quantity'] ?? null;
+                if ($quantity === null) {
+                    throw ValidationException::withMessages([
+                        "items.$index.qty" => ['יש לבחור כמות לפריט'],
+                    ]);
+                }
+                if ($quantity < 1) {
+                    throw ValidationException::withMessages([
+                        "items.$index.qty" => ['כמות חייבת להיות לפחות 1'],
+                    ]);
+                }
+
+                $selectedVariant = null;
+                $variantDelta = 0.0;
+                if (array_key_exists('variant_id', $itemData) && !is_null($itemData['variant_id'])) {
+                    $variantId = (int) $itemData['variant_id'];
+                    $selectedVariant = $menuItem->variants->firstWhere('id', $variantId);
+                    if (!$selectedVariant) {
+                        throw ValidationException::withMessages([
+                            "items.$index.variant_id" => ['וריאציה שנבחרה אינה זמינה לפריט זה'],
+                        ]);
+                    }
+                    $variantDelta = round((float) $selectedVariant->price_delta, 2);
+                }
+
+                $addonEntries = collect($itemData['addons'] ?? [])
+                    ->filter(fn($entry) => is_array($entry) && isset($entry['addon_id']))
+                    ->unique('addon_id')
+                    ->values();
+
+                $selectedAddonsByGroup = [];
+                foreach ($addonEntries as $addonEntry) {
+                    $addonId = (int) $addonEntry['addon_id'];
+                    $matchedAddon = null;
+                    $matchedGroup = null;
+
+                    foreach ($menuItem->addonGroups as $group) {
+                        $matchedAddon = $group->addons->firstWhere('id', $addonId);
+                        if ($matchedAddon) {
+                            $matchedGroup = $group;
+                            break;
+                        }
+                    }
+
+                    if (!$matchedAddon || !$matchedGroup) {
+                        throw ValidationException::withMessages([
+                            "items.$index.addons" => ['תוספת שנבחרה אינה זמינה עבור הפריט'],
+                        ]);
+                    }
+
+                    $selectedAddonsByGroup[$matchedGroup->id][] = [
+                        'addon' => $matchedAddon,
+                        'group' => $matchedGroup,
+                    ];
+                }
+
+                $addonsDetails = [];
+                $addonsTotal = 0.0;
+
+                foreach ($menuItem->addonGroups as $group) {
+                    $selectedForGroup = collect($selectedAddonsByGroup[$group->id] ?? []);
+                    $count = $selectedForGroup->count();
+
+                    $minRequired = $group->min_selections ?? 0;
+                    if ($group->is_required && $minRequired < 1) {
+                        $minRequired = 1;
+                    }
+                    if ($count < $minRequired) {
+                        throw ValidationException::withMessages([
+                            "items.$index.addons" => [sprintf('יש לבחור לפחות %d תוספות בקבוצה "%s"', $minRequired, $group->name)],
+                        ]);
+                    }
+
+                    $maxAllowed = $group->max_selections;
+                    if ($maxAllowed !== null && $count > $maxAllowed) {
+                        throw ValidationException::withMessages([
+                            "items.$index.addons" => [sprintf('ניתן לבחור עד %d תוספות בקבוצה "%s"', $maxAllowed, $group->name)],
+                        ]);
+                    }
+
+                    if ($group->selection_type === 'single' && $count > 1) {
+                        throw ValidationException::withMessages([
+                            "items.$index.addons" => [sprintf('ניתן לבחור תוספת אחת בלבד בקבוצה "%s"', $group->name)],
+                        ]);
+                    }
+
+                    $selectedForGroup->each(function ($selection) use (&$addonsDetails, &$addonsTotal, $group) {
+                        $addonModel = $selection['addon'];
+                        $addonPrice = round((float) $addonModel->price_delta, 2);
+                        $addonsDetails[] = [
+                            'id' => $addonModel->id,
+                            'name' => $addonModel->name,
+                            'price_delta' => $addonPrice,
+                            'group_id' => $group->id,
+                            'group_name' => $group->name,
+                        ];
+                        $addonsTotal += $addonPrice;
+                    });
+                }
+
+                $addonsTotal = round($addonsTotal, 2);
+                $basePrice = round((float) $menuItem->price, 2);
+                $unitPrice = round($basePrice + $variantDelta + $addonsTotal, 2);
+                $lineTotal = round($unitPrice * $quantity, 2);
+                $totalAmount = round($totalAmount + $lineTotal, 2);
+
+                $lineItems[] = [
+                    'menu_item_id' => $menuItem->id,
+                    'quantity' => $quantity,
+                    'variant_id' => $selectedVariant?->id,
+                    'variant_name' => $selectedVariant?->name,
+                    'variant_price_delta' => $variantDelta,
+                    'addons' => array_values($addonsDetails),
+                    'addons_total' => $addonsTotal,
+                    'price_at_order' => $unitPrice,
+                ];
+            }
+
+            // צור את ההזמנה עם סכום סופי
             $order = Order::create([
                 'tenant_id' => $tenantId,
                 'restaurant_id' => $restaurantId,
@@ -74,26 +222,22 @@ class OrderController extends Controller
                 'delivery_address' => $validated['delivery_address'] ?? null,
                 'delivery_notes' => $validated['delivery_notes'] ?? null,
                 'status' => Order::STATUS_RECEIVED,
-                'total_amount' => 0, // יחושב מיד אחרי
+                'total_amount' => $totalAmount,
             ]);
 
-            // הוסף פריטים להזמנה
-            $totalAmount = 0;
-            foreach ($validated['items'] as $itemData) {
-                $menuItem = MenuItem::findOrFail($itemData['menu_item_id']);
-
+            foreach ($lineItems as $lineItem) {
                 OrderItem::create([
                     'order_id' => $order->id,
-                    'menu_item_id' => $menuItem->id,
-                    'quantity' => $itemData['quantity'],
-                    'price_at_order' => $menuItem->price,
+                    'menu_item_id' => $lineItem['menu_item_id'],
+                    'variant_id' => $lineItem['variant_id'],
+                    'variant_name' => $lineItem['variant_name'],
+                    'variant_price_delta' => $lineItem['variant_price_delta'],
+                    'addons' => $lineItem['addons'],
+                    'addons_total' => $lineItem['addons_total'],
+                    'quantity' => $lineItem['quantity'],
+                    'price_at_order' => $lineItem['price_at_order'],
                 ]);
-
-                $totalAmount += $menuItem->price * $itemData['quantity'];
             }
-
-            // עדכן סכום ההזמנה
-            $order->update(['total_amount' => $totalAmount]);
 
             // שליחת פוש לטאבלטים של המסעדה
             $this->sendOrderNotification(
@@ -106,7 +250,7 @@ class OrderController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'הזמנה נקבלה בהצלחה',
-                'data' => $order->load('items.menuItem'),
+                'data' => $order->load(['items.menuItem', 'items.variant']),
             ], 201);
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
@@ -131,7 +275,7 @@ class OrderController extends Controller
         try {
             $tenantId = app('tenant_id');
             $order = Order::where('tenant_id', $tenantId)
-                ->with('items.menuItem')
+                ->with(['items.menuItem', 'items.variant'])
                 ->findOrFail($id);
 
             return response()->json([
@@ -157,7 +301,7 @@ class OrderController extends Controller
             $status = $request->query('status'); // סנן לפי סטטוס אם יש
 
             $query = Order::where('tenant_id', $tenantId)
-                ->with('items.menuItem')
+                ->with(['items.menuItem', 'items.variant'])
                 ->orderBy('created_at', 'desc');
 
             if ($status) {

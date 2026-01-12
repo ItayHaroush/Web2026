@@ -22,11 +22,11 @@ export default function CartPage() {
     const [showDeliveryModal, setShowDeliveryModal] = useState(false);
     const [submitStep, setSubmitStep] = useState('payment'); // payment -> confirm
 
-    const handleQuantityChange = (itemId, newQuantity) => {
+    const handleQuantityChange = (itemKey, newQuantity) => {
         if (newQuantity < 1) {
-            removeFromCart(itemId);
+            removeFromCart(itemKey);
         } else {
-            updateQuantity(itemId, newQuantity);
+            updateQuantity(itemKey, newQuantity);
         }
     };
 
@@ -70,17 +70,23 @@ export default function CartPage() {
                 delivery_address: customerInfo.delivery_address || undefined,
                 delivery_notes: customerInfo.delivery_notes || undefined,
                 items: cartItems.map((item) => ({
-                    menu_item_id: item.id,
-                    quantity: item.quantity,
+                    menu_item_id: item.menuItemId,
+                    variant_id: item.variant?.id ?? null,
+                    addons: (item.addons || []).map((addon) => ({ addon_id: addon.id })),
+                    qty: item.qty,
                 })),
             };
             console.log('📦 Sending order data:', orderData);
             console.log('🛒 Customer info:', customerInfo);
             const response = await orderService.createOrder(orderData);
-            localStorage.setItem(`activeOrder_${tenantId}`, response.data.id);
+            const resolvedTenantSlug = tenantId || localStorage.getItem('tenantId');
+            if (resolvedTenantSlug) {
+                localStorage.setItem(`activeOrder_${resolvedTenantSlug}`, response.data.id);
+                localStorage.setItem(`order_tenant_${response.data.id}`, resolvedTenantSlug);
+            }
             clearCart();
             setSubmitStep('payment');
-            navigate(`/${tenantId || ''}/order-status/${response.data.id}`);
+            navigate(`/${resolvedTenantSlug || ''}/order-status/${response.data.id}`);
         } catch (err) {
             console.error('שגיאה בהגשת הזמנה:', err);
             setError(err.response?.data?.message || 'שגיאה בהגשת ההזמנה');
@@ -147,28 +153,36 @@ export default function CartPage() {
 
                 {/* פריטים בסל */}
                 <div className="space-y-2">
-                    {cartItems.map((item) => (
+                    {cartItems.map((item) => {
+                        const addonNames = (item.addons || []).map((addon) => addon.name).join(' · ');
+                        return (
                         <div
-                            key={item.id}
+                            key={item.cartKey}
                             className="bg-white border border-gray-200 rounded-lg p-4 flex justify-between items-center"
                         >
-                            <div className="flex-1">
+                            <div className="flex-1 space-y-1">
                                 <h3 className="font-semibold text-gray-900">{item.name}</h3>
-                                <p className="text-gray-600 text-sm">₪{item.price} למנה</p>
+                                {item.variant?.name && (
+                                    <p className="text-sm text-brand-primary">וריאנט: {item.variant.name}</p>
+                                )}
+                                {addonNames && (
+                                    <p className="text-xs text-gray-500">תוספות: {addonNames}</p>
+                                )}
+                                <p className="text-xs text-gray-400">₪{item.unitPrice.toFixed(2)} ליחידה</p>
                             </div>
 
                             <div className="flex items-center gap-4">
                                 {/* כמות */}
                                 <div className="flex items-center gap-2 border border-gray-300 rounded">
                                     <button
-                                        onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
+                                        onClick={() => handleQuantityChange(item.cartKey, item.qty - 1)}
                                         className="px-3 py-1 text-gray-600 hover:bg-gray-100"
                                     >
                                         −
                                     </button>
-                                    <span className="px-3 py-1 min-w-[40px] text-center">{item.quantity}</span>
+                                    <span className="px-3 py-1 min-w-[40px] text-center">{item.qty}</span>
                                     <button
-                                        onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
+                                        onClick={() => handleQuantityChange(item.cartKey, item.qty + 1)}
                                         className="px-3 py-1 text-gray-600 hover:bg-gray-100"
                                     >
                                         +
@@ -178,20 +192,21 @@ export default function CartPage() {
                                 {/* מחיר כולל לפריט */}
                                 <div className="min-w-[80px] text-right">
                                     <p className="font-semibold text-brand-accent">
-                                        ₪{(item.price * item.quantity).toFixed(2)}
+                                        ₪{item.totalPrice.toFixed(2)}
                                     </p>
                                 </div>
 
                                 {/* הסרה */}
                                 <button
-                                    onClick={() => removeFromCart(item.id)}
+                                    onClick={() => removeFromCart(item.cartKey)}
                                     className="text-red-600 hover:text-red-800 font-semibold"
                                 >
                                     ×
                                 </button>
                             </div>
                         </div>
-                    ))}
+                        );
+                    })}
                 </div>
 
                 {/* סכום ביניים */}

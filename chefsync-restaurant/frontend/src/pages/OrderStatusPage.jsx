@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { CustomerLayout } from '../layouts/CustomerLayout';
@@ -10,38 +10,126 @@ import { ORDER_STATUS, ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from '../const
  */
 
 export default function OrderStatusPage() {
-    const { orderId } = useParams();
-    const { tenantId } = useAuth();
+    const { tenantId: urlTenantId, orderId } = useParams();
+    const { tenantId, loginAsCustomer } = useAuth();
     const navigate = useNavigate();
     const [order, setOrder] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [fatalErrorMessage, setFatalErrorMessage] = useState('');
+    const [shouldPoll, setShouldPoll] = useState(true);
+    const [errorCount, setErrorCount] = useState(0);
+    const [precheckPassed, setPrecheckPassed] = useState(false);
 
-    const loadOrder = async () => {
+    // הבטחת כתובת קאנונית עם tenant בסלאג
+    useEffect(() => {
+        if (!urlTenantId) {
+            if (typeof loginAsCustomer === 'function' && tenantId !== urlTenantId) {
+                loginAsCustomer(urlTenantId);
+            }
+            return;
+        }
+
+        const fallbackTenant = tenantId || localStorage.getItem('tenantId');
+        if (fallbackTenant) {
+            navigate(`/${fallbackTenant}/order-status/${orderId}`, { replace: true });
+        } else {
+            navigate('/', { replace: true });
+        }
+    }, [urlTenantId, tenantId, loginAsCustomer, orderId, navigate]);
+
+    useEffect(() => {
+        if (!orderId || !urlTenantId) {
+            return;
+        }
+
+        const recordedTenant = localStorage.getItem(`order_tenant_${orderId}`);
+        if (recordedTenant && recordedTenant !== urlTenantId) {
+            const message = 'ההזמנה לא קיימת במסעדה שנבחרה';
+            setFatalErrorMessage(message);
+            setError(message);
+            setShouldPoll(false);
+            setLoading(false);
+            setPrecheckPassed(false);
+            return;
+        }
+
+        setPrecheckPassed(true);
+    }, [orderId, urlTenantId]);
+
+    const loadOrder = useCallback(async ({ withLoading = false } = {}) => {
+        if (!orderId || !urlTenantId || !precheckPassed) {
+            return;
+        }
+
+        if (withLoading) {
+            setLoading(true);
+        }
+
         try {
             setError(null);
+            setFatalErrorMessage('');
             const data = await orderService.getOrder(orderId);
             setOrder(data.data);
+            setErrorCount(0);
+            if (!shouldPoll) {
+                setShouldPoll(true);
+            }
 
-            // אם ההזמנה הושלמה, נקה את ה-localStorage
-            if (data.data?.status === 'delivered') {
-                localStorage.removeItem(`activeOrder_${tenantId}`);
+            if (data.data?.status === ORDER_STATUS.DELIVERED) {
+                const tenantKey = urlTenantId || tenantId || localStorage.getItem('tenantId');
+                if (tenantKey) {
+                    localStorage.removeItem(`activeOrder_${tenantKey}`);
+                }
             }
         } catch (err) {
             console.error('שגיאה בטעינת סטטוס הזמנה:', err);
-            setError('לא הצלחנו לטעון את סטטוס ההזמנה');
+            const statusCode = err?.response?.status;
+            if (statusCode === 404) {
+                const message = 'ההזמנה לא קיימת במסעדה שנבחרה';
+                setFatalErrorMessage(message);
+                setError(message);
+                setShouldPoll(false);
+            } else {
+                setError('לא הצלחנו לטעון את סטטוס ההזמנה');
+                setErrorCount((prev) => {
+                    const next = prev + 1;
+                    if (next >= 3) {
+                        setShouldPoll(false);
+                    }
+                    return next;
+                });
+            }
         } finally {
-            setLoading(false);
+            if (withLoading) {
+                setLoading(false);
+            }
         }
-    };
+    }, [orderId, tenantId, urlTenantId, shouldPoll, precheckPassed]);
 
     useEffect(() => {
-        loadOrder();
-        // Polling כל 5 שניות
-        const interval = setInterval(loadOrder, 5000);
-        return () => clearInterval(interval);
+        if (!urlTenantId || !precheckPassed) {
+            return;
+        }
+        loadOrder({ withLoading: true });
+        setErrorCount(0);
+        setShouldPoll(true);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [orderId]);
+    }, [orderId, urlTenantId, precheckPassed]);
+
+    useEffect(() => {
+        if (!shouldPoll || !urlTenantId || !precheckPassed) {
+            return undefined;
+        }
+        const interval = setInterval(() => loadOrder({ withLoading: false }), 5000);
+        return () => clearInterval(interval);
+    }, [shouldPoll, loadOrder, urlTenantId, precheckPassed]);
+
+    const handleRetry = () => {
+        setShouldPoll(true);
+        setFatalErrorMessage('');
+        loadOrder({ withLoading: true });
+    };
 
     if (loading) {
         return (
@@ -56,14 +144,38 @@ export default function OrderStatusPage() {
     if (error || !order) {
         return (
             <CustomerLayout>
-                <div className="bg-red-100 border border-red-400 text-red-900 px-4 py-3 rounded">
-                    <p>{error}</p>
-                    <button
-                        onClick={loadOrder}
-                        className="mt-2 bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition"
-                    >
-                        נסה שוב
-                    </button>
+                <div className="bg-red-50 border border-red-200 text-red-900 px-4 py-6 rounded-2xl space-y-4">
+                    <div>
+                        <p className="font-semibold text-lg">{error}</p>
+                        {fatalErrorMessage ? (
+                            <p className="text-sm text-red-700 mt-2">עצרתנו את בדיקות הסטטוס כדי שלא תתבצע פניה חוזרת ללא צורך.</p>
+                        ) : (
+                            <p className="text-sm text-red-700 mt-2">נצרת הפעילות האוטומטית לאחר מספר שגיאות. אפשר לנסות שוב ידנית.</p>
+                        )}
+                    </div>
+                    {fatalErrorMessage ? (
+                        <button
+                            onClick={() => navigate('/')}
+                            className="bg-gray-900 text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition"
+                        >
+                            חזרה לבחירת מסעדה
+                        </button>
+                    ) : (
+                        <div className="flex gap-3">
+                            <button
+                                onClick={handleRetry}
+                                className="bg-brand-primary text-white px-4 py-2 rounded-lg hover:bg-brand-secondary transition"
+                            >
+                                נסה שוב
+                            </button>
+                            <button
+                                onClick={() => navigate('/')}
+                                className="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300 transition"
+                            >
+                                חזרה לבחירת מסעדה
+                            </button>
+                        </div>
+                    )}
                 </div>
             </CustomerLayout>
         );
