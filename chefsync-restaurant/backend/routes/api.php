@@ -93,6 +93,7 @@ Route::prefix('admin')->middleware(['auth:sanctum'])->group(function () {
         // ניהול מסעדה
         Route::get('/restaurant', [AdminController::class, 'getRestaurant'])->name('admin.restaurant.get');
         Route::put('/restaurant', [AdminController::class, 'updateRestaurant'])->name('admin.restaurant.update');
+        Route::post('/restaurant/override/clear', [AdminController::class, 'clearRestaurantOverride'])->name('admin.restaurant.override.clear');
 
         // ניהול קטגוריות
         Route::get('/categories', [AdminController::class, 'getCategories'])->name('admin.categories.index');
@@ -164,3 +165,12 @@ Route::get('/restaurants', [RestaurantController::class, 'index'])->name('restau
 // מסעדה לפי tenant/slug - ציבורי (לטעינת דף תפריט מלא גם אם המסעדה סגורה)
 Route::get('/restaurants/by-tenant/{tenantId}', [RestaurantController::class, 'publicShowByTenant'])
     ->name('restaurants.byTenant');
+
+// ============================================
+// CORS Preflight (OPTIONS)
+// ============================================
+// בחלק מהדפדפנים בקשות עם Authorization מבצעות preflight.
+// אם אין נתיב OPTIONS תואם, מתקבל 404 וה-GET/POST בכלל לא נשלח.
+Route::options('/{any}', function () {
+    return response()->json(['success' => true]);
+})->where('any', '.*');

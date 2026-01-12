@@ -353,6 +353,7 @@ class AdminController extends Controller
             'address' => 'sometimes|string|max:255',
             'city' => 'sometimes|string|max:255',
             'is_open' => 'sometimes',
+            'is_override_status' => 'sometimes',
             'operating_days' => 'nullable|string',
             'operating_hours' => 'nullable|string',
             'logo' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
@@ -376,6 +377,23 @@ class AdminController extends Controller
                 $isOpen = false;
             } else {
                 $isOpen = (bool) $rawIsOpen;
+            }
+        }
+
+        // האם נשלח דגל כפייה מפורש (כדי לאפשר גם ביטול כפייה)
+        $hasExplicitOverrideFlag = $request->has('is_override_status') || $request->has('is_override');
+        $overrideFlag = null;
+        if ($hasExplicitOverrideFlag) {
+            $rawOverride = $request->has('is_override_status')
+                ? $request->input('is_override_status')
+                : $request->input('is_override');
+
+            if ($rawOverride === '1' || $rawOverride === 1 || $rawOverride === true || $rawOverride === 'true') {
+                $overrideFlag = true;
+            } elseif ($rawOverride === '0' || $rawOverride === 0 || $rawOverride === false || $rawOverride === 'false') {
+                $overrideFlag = false;
+            } else {
+                $overrideFlag = (bool) $rawOverride;
             }
         }
 
@@ -404,12 +422,17 @@ class AdminController extends Controller
             $updateData['city'] = $validated['city'];
         }
 
+        // ביטול כפייה מפורש: החזר למצב auto (גם אם לא נשלח is_open)
+        if ($hasExplicitOverrideFlag && $overrideFlag === false) {
+            $updateData['is_override_status'] = false;
+        }
+
         // אם נשלח is_open, כפייה ידנית גוברת על חישוב
         if ($hasExplicitIsOpen) {
             $updateData['is_open'] = $isOpen;
             $updateData['is_override_status'] = true;
             Log::debug('🔒 Override status to: ' . ($isOpen ? 'true' : 'false'));
-        } elseif ($restaurant->is_override_status) {
+        } elseif ($restaurant->is_override_status && !($hasExplicitOverrideFlag && $overrideFlag === false)) {
             // שמור כפייה קיימת גם אם לא נשלח is_open בבקשה
             $updateData['is_override_status'] = true;
             $updateData['is_open'] = $restaurant->is_open;
@@ -488,6 +511,17 @@ class AdminController extends Controller
             }
         }
 
+        // אם בוטלה כפייה (is_override_status = false) ואין is_open מפורש - חשב מחדש תמיד
+        $shouldRecalculateAfterClear = ($hasExplicitOverrideFlag && $overrideFlag === false && !$hasExplicitIsOpen);
+        if ($shouldRecalculateAfterClear) {
+            $operatingDays = $updateData['operating_days'] ?? $restaurant->operating_days ?? [];
+            $operatingHours = $updateData['operating_hours'] ?? $restaurant->operating_hours ?? [];
+
+            $calculated = $this->isRestaurantOpen($operatingDays, $operatingHours);
+            $updateData['is_open'] = $calculated;
+            Log::debug('🔓 Override cleared. Recalculated status: ' . ($calculated ? 'true' : 'false'));
+        }
+
         // חשב סטטוס פתיחה אוטומטי רק אם אין כפייה ידנית (חדשה או קיימת)
         $shouldAutoCalculate = !$hasExplicitIsOpen && !($updateData['is_override_status'] ?? false);
         if ($shouldAutoCalculate && (isset($updateData['operating_days']) || isset($updateData['operating_hours']))) {
@@ -539,6 +573,34 @@ class AdminController extends Controller
             'success' => true,
             'message' => 'פרטי המסעדה עודכנו בהצלחה!',
             'restaurant' => $restaurant->load(['categories', 'menuItems']), // ✅ טען יחסים
+        ]);
+    }
+
+    public function clearRestaurantOverride(Request $request)
+    {
+        $user = $request->user();
+
+        if (!$user->isOwner()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'רק בעל המסעדה יכול לבטל כפייה',
+            ], 403);
+        }
+
+        $restaurant = Restaurant::findOrFail($user->restaurant_id);
+
+        $calculated = $this->isRestaurantOpen($restaurant->operating_days ?? [], $restaurant->operating_hours ?? []);
+
+        $restaurant->update([
+            'is_override_status' => false,
+            'is_open' => $calculated,
+        ]);
+        $restaurant->refresh();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'כפייה בוטלה וחזרנו לחישוב אוטומטי',
+            'restaurant' => $restaurant->load(['categories', 'menuItems']),
         ]);
     }
 

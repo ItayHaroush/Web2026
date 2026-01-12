@@ -250,15 +250,7 @@ export default function MenuPage() {
                                 <div className="space-y-2">
                                     <div className="flex items-center gap-2 text-sm text-gray-700">
                                         <span className="font-medium">{restaurant.address}</span>
-                                        <a
-                                            href={wazeLink || undefined}
-                                            target="_blank"
-                                            rel="noreferrer"
-                                            className={`flex items-center justify-center h-9 w-9 rounded-full border text-base ${wazeLink ? 'bg-gray-50 text-blue-700 border-gray-200 hover:bg-gray-100' : 'bg-gray-100 text-gray-400 border-transparent cursor-not-allowed pointer-events-none'}`}
-                                            aria-label="פתח ב-Waze"
-                                        >
-                                            <SiWaze className="h-5 w-5" />
-                                        </a>
+
                                     </div>
                                     {restaurant.phone && (
                                         <div className="flex items-center gap-2 text-sm text-brand-primary font-semibold">
