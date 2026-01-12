@@ -11,6 +11,7 @@ import { UI_TEXT } from '../constants/ui';
 import apiClient from '../services/apiClient';
 import { resolveAssetUrl } from '../utils/assets';
 import { API_BASE_URL, TENANT_HEADER } from '../constants/api';
+import MenuItemModal from '../components/MenuItemModal';
 
 /**
  * עמוד תפריט - עיצוב בסגנון Wolt
@@ -28,6 +29,7 @@ export default function MenuPage() {
     const [error, setError] = useState(null);
     const [activeCategory, setActiveCategory] = useState(null);
     const [activeOrderId, setActiveOrderId] = useState(null);
+    const [selectedMenuItem, setSelectedMenuItem] = useState(null);
     const categoryRefs = useRef({});
 
     const effectiveTenantId = useMemo(() => {
@@ -117,6 +119,20 @@ export default function MenuPage() {
     const phoneHref = getPhoneHref();
 
     const canOrder = restaurant?.is_open !== false;
+
+    const handleOpenItemModal = (menuItem) => {
+        if (!canOrder) {
+            addToast('המסעדה סגורה כרגע', 'error');
+            return;
+        }
+        setSelectedMenuItem(menuItem);
+    };
+
+    const handleCloseModal = () => setSelectedMenuItem(null);
+
+    const handleAddFromModal = (cartPayload) => {
+        addToCart(cartPayload);
+    };
 
     if (loading) {
         return (
@@ -344,11 +360,7 @@ export default function MenuPage() {
                                         <div
                                             key={item.id}
                                             onClick={() => {
-                                                if (!canOrder) {
-                                                    addToast('המסעדה סגורה כרגע', 'error');
-                                                    return;
-                                                }
-                                                addToCart(item);
+                                                handleOpenItemModal(item);
                                             }}
                                             className={`bg-white rounded-2xl shadow-sm transition-all duration-300 overflow-hidden group border border-gray-100 ${canOrder ? 'cursor-pointer hover:shadow-xl hover:border-brand-primary/30' : 'cursor-not-allowed opacity-80'}`}
                                         >
@@ -375,11 +387,7 @@ export default function MenuPage() {
                                                     <button
                                                         onClick={(e) => {
                                                             e.stopPropagation();
-                                                            if (!canOrder) {
-                                                                addToast('המסעדה סגורה כרגע', 'error');
-                                                                return;
-                                                            }
-                                                            addToCart(item);
+                                                            handleOpenItemModal(item);
                                                         }}
                                                         disabled={!canOrder}
                                                         className={`w-full text-white py-2.5 rounded-xl font-bold shadow-lg transform translate-y-2 opacity-0 transition-all duration-300 flex items-center justify-center gap-2 ${canOrder ? 'bg-brand-primary hover:bg-brand-secondary group-hover:translate-y-0 group-hover:opacity-100' : 'bg-gray-400 cursor-not-allowed'}`}
@@ -414,6 +422,14 @@ export default function MenuPage() {
                     ))
                 )}
             </div>
+
+            <MenuItemModal
+                item={selectedMenuItem}
+                isOpen={Boolean(selectedMenuItem)}
+                onClose={handleCloseModal}
+                onAdd={handleAddFromModal}
+                isOrderingEnabled={canOrder}
+            />
         </CustomerLayout>
     );
 }

@@ -26,16 +26,69 @@ class MenuController extends Controller
                 ->with([
                     'items' => function ($query) {
                         $query->where('is_available', true)
-                            ->orderBy('name');
+                            ->orderBy('name')
+                            ->with([
+                                'variants' => function ($variantQuery) {
+                                    $variantQuery->where('is_active', true)
+                                        ->orderBy('sort_order');
+                                },
+                                'addonGroups' => function ($groupQuery) {
+                                    $groupQuery->where('is_active', true)
+                                        ->orderBy('sort_order')
+                                        ->with([
+                                            'addons' => function ($addonQuery) {
+                                                $addonQuery->where('is_active', true)
+                                                    ->orderBy('sort_order');
+                                            }
+                                        ]);
+                                }
+                            ]);
                     }
                 ])
                 ->get()
-                ->map(fn($category) => [
-                    'id' => $category->id,
-                    'name' => $category->name,
-                    'description' => $category->description,
-                    'items' => $category->items,
-                ]);
+                ->map(function ($category) {
+                    return [
+                        'id' => $category->id,
+                        'name' => $category->name,
+                        'description' => $category->description,
+                        'icon' => $category->icon,
+                        'items' => $category->items->map(function ($item) {
+                            return [
+                                'id' => $item->id,
+                                'name' => $item->name,
+                                'description' => $item->description,
+                                'price' => (float) $item->price,
+                                'image_url' => $item->image_url,
+                                'variants' => $item->variants->map(function ($variant) {
+                                    return [
+                                        'id' => $variant->id,
+                                        'name' => $variant->name,
+                                        'price_delta' => (float) $variant->price_delta,
+                                        'is_default' => (bool) $variant->is_default,
+                                    ];
+                                })->values()->toArray(),
+                                'addon_groups' => $item->addonGroups->map(function ($group) {
+                                    return [
+                                        'id' => $group->id,
+                                        'name' => $group->name,
+                                        'selection_type' => $group->selection_type,
+                                        'min_select' => $group->min_selections,
+                                        'max_select' => $group->max_selections,
+                                        'is_required' => (bool) $group->is_required,
+                                        'addons' => $group->addons->map(function ($addon) {
+                                            return [
+                                                'id' => $addon->id,
+                                                'name' => $addon->name,
+                                                'price_delta' => (float) $addon->price_delta,
+                                                'is_default' => (bool) $addon->is_default,
+                                            ];
+                                        })->values()->toArray(),
+                                    ];
+                                })->values()->toArray(),
+                            ];
+                        })->values()->toArray(),
+                    ];
+                })->values();
 
             return response()->json([
                 'success' => true,

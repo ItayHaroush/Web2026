@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { useToast } from './ToastContext';
+import { normalizeCartItem, normalizeCartItems } from '../utils/cart';
 
 /**
  * Context להנהלת סל קניות
@@ -10,12 +11,20 @@ const CartContext = createContext();
 
 const CART_EXPIRY_HOURS = 24; // סל תקף ל-24 שעות
 
+const createEmptyCustomerInfo = () => ({
+    name: '',
+    phone: '',
+    delivery_method: 'pickup',
+    payment_method: 'cash',
+    delivery_address: '',
+    delivery_notes: '',
+});
+
 export function CartProvider({ children }) {
     const { addToast } = useToast();
     const [currentTenantId, setCurrentTenantId] = useState(null);
     const [phoneVerified, setPhoneVerified] = useState(false);
 
-    // טען סל מ-localStorage בטעינה ראשונית
     const [cartItems, setCartItems] = useState(() => {
         const tenantId = localStorage.getItem('tenantId');
         if (!tenantId) return [];
@@ -24,33 +33,34 @@ export function CartProvider({ children }) {
         const savedTimestamp = localStorage.getItem(`cart_timestamp_${tenantId}`);
 
         if (savedCart && savedTimestamp) {
-            const hoursSinceLastUpdate = (Date.now() - parseInt(savedTimestamp)) / (1000 * 60 * 60);
+            const hoursSinceLastUpdate = (Date.now() - parseInt(savedTimestamp, 10)) / (1000 * 60 * 60);
             if (hoursSinceLastUpdate < CART_EXPIRY_HOURS) {
                 try {
-                    return JSON.parse(savedCart);
+                    const parsedCart = JSON.parse(savedCart);
+                    return normalizeCartItems(parsedCart);
                 } catch (e) {
                     console.error('Failed to parse saved cart:', e);
                 }
             } else {
-                // הסל פג תוקף - נקה אותו
                 localStorage.removeItem(`cart_${tenantId}`);
                 localStorage.removeItem(`cart_timestamp_${tenantId}`);
                 localStorage.removeItem(`customer_info_${tenantId}`);
             }
         }
+
         return [];
     });
 
+    const commitCartItems = useCallback((updater) => {
+        setCartItems((prevItems) => {
+            const nextItems = typeof updater === 'function' ? updater(prevItems) : updater;
+            return normalizeCartItems(nextItems);
+        });
+    }, []);
+
     const [customerInfo, setCustomerInfo] = useState(() => {
         const tenantId = localStorage.getItem('tenantId');
-        if (!tenantId) return {
-            name: '',
-            phone: '',
-            delivery_method: 'pickup',
-            payment_method: 'cash',
-            delivery_address: '',
-            delivery_notes: '',
-        };
+        if (!tenantId) return createEmptyCustomerInfo();
 
         const savedInfo = localStorage.getItem(`customer_info_${tenantId}`);
         if (savedInfo) {
@@ -60,31 +70,25 @@ export function CartProvider({ children }) {
                 console.error('Failed to parse saved customer info:', e);
             }
         }
-        return {
-            name: '',
-            phone: '',
-            delivery_method: 'pickup',
-            payment_method: 'cash',
-            delivery_address: '',
-            delivery_notes: '',
-        };
+        return createEmptyCustomerInfo();
     });
 
-    // שמור סל ב-localStorage כל פעם שהוא משתנה
     useEffect(() => {
         const tenantId = localStorage.getItem('tenantId');
-        if (tenantId) {
-            if (cartItems.length > 0) {
-                localStorage.setItem(`cart_${tenantId}`, JSON.stringify(cartItems));
-                localStorage.setItem(`cart_timestamp_${tenantId}`, Date.now().toString());
-            } else {
-                localStorage.removeItem(`cart_${tenantId}`);
-                localStorage.removeItem(`cart_timestamp_${tenantId}`);
-            }
+        if (!tenantId) {
+            return;
+        }
+
+        const normalizedForStorage = normalizeCartItems(cartItems);
+        if (normalizedForStorage.length > 0) {
+            localStorage.setItem(`cart_${tenantId}`, JSON.stringify(normalizedForStorage));
+            localStorage.setItem(`cart_timestamp_${tenantId}`, Date.now().toString());
+        } else {
+            localStorage.removeItem(`cart_${tenantId}`);
+            localStorage.removeItem(`cart_timestamp_${tenantId}`);
         }
     }, [cartItems]);
 
-    // שמור פרטי לקוח ב-localStorage כל פעם שהם משתנים
     useEffect(() => {
         const tenantId = localStorage.getItem('tenantId');
         if (tenantId && (customerInfo.name || customerInfo.phone)) {
@@ -92,100 +96,112 @@ export function CartProvider({ children }) {
         }
     }, [customerInfo]);
 
-    // בדוק אם המסעדה השתנתה - אם כן, נקה את הסל
     useEffect(() => {
         const tenantId = localStorage.getItem('tenantId');
         if (tenantId && tenantId !== currentTenantId) {
             if (currentTenantId !== null) {
-                // המסעדה השתנתה - נקה את הסל
                 console.log('Restaurant changed, clearing cart');
-                setCartItems([]);
-                setCustomerInfo({ name: '', phone: '', delivery_method: 'pickup', payment_method: 'cash', delivery_address: '', delivery_notes: '' });
+                commitCartItems([]);
+                setCustomerInfo(createEmptyCustomerInfo());
                 localStorage.removeItem(`cart_${currentTenantId}`);
                 localStorage.removeItem(`cart_timestamp_${currentTenantId}`);
                 localStorage.removeItem(`customer_info_${currentTenantId}`);
             }
             setCurrentTenantId(tenantId);
         }
-    }, [currentTenantId]);
+    }, [commitCartItems, currentTenantId]);
 
-    /**
-     * הוספת פריט לסל
-     * אם קיים כבר - הגדל כמות
-     */
-    const addToCart = useCallback((menuItem) => {
-        const existingItem = cartItems.find((item) => item.id === menuItem.id);
-
-        if (existingItem) {
-            setCartItems((prevItems) =>
-                prevItems.map((item) =>
-                    item.id === menuItem.id
-                        ? { ...item, quantity: item.quantity + 1 }
-                        : item
-                )
-            );
-            addToast(`נוספה יחידה נוספת של ${menuItem.name}`, 'success');
-        } else {
-            setCartItems((prevItems) => [...prevItems, { ...menuItem, quantity: 1 }]);
-            addToast(`${menuItem.name} נוסף לסל!`, 'success');
-        }
-    }, [cartItems, addToast]);
-
-    /**
-     * הסרת פריט מהסל
-     */
-    const removeFromCart = useCallback((menuItemId) => {
-        setCartItems((prevItems) =>
-            prevItems.filter((item) => item.id !== menuItemId)
-        );
-    }, []);
-
-    /**
-     * עדכון כמות פריט
-     */
-    const updateQuantity = useCallback((menuItemId, quantity) => {
-        if (quantity <= 0) {
-            removeFromCart(menuItemId);
+    const addToCart = useCallback((rawItem) => {
+        const normalizedItem = normalizeCartItem(rawItem);
+        if (!normalizedItem) {
+            console.warn('Attempted to add invalid cart item', rawItem);
             return;
         }
 
-        setCartItems((prevItems) =>
-            prevItems.map((item) =>
-                item.id === menuItemId ? { ...item, quantity } : item
-            )
-        );
-    }, [removeFromCart]);
+        commitCartItems((prevItems) => {
+            const existingIndex = prevItems.findIndex((item) => item.cartKey === normalizedItem.cartKey);
 
-    /**
-     * ניקוי סל כשהזמנה הוגשה
-     */
+            if (existingIndex === -1) {
+                return [...prevItems, normalizedItem];
+            }
+
+            return prevItems.map((item, index) => {
+                if (index !== existingIndex) {
+                    return item;
+                }
+                const nextQty = item.qty + normalizedItem.qty;
+                return {
+                    ...item,
+                    qty: nextQty,
+                    totalPrice: Number((item.unitPrice * nextQty).toFixed(2)),
+                };
+            });
+        });
+
+        const variantLabel = normalizedItem.variant?.name ? ` (${normalizedItem.variant.name})` : '';
+        addToast(`${normalizedItem.name || 'פריט'}${variantLabel} נוסף לסל!`, 'success');
+    }, [commitCartItems, addToast]);
+
+    const removeFromCart = useCallback((identifier) => {
+        commitCartItems((prevItems) =>
+            prevItems.filter((item) => {
+                const numericIdentifier = Number(identifier);
+                return (
+                    item.cartKey !== identifier &&
+                    item.menuItemId !== identifier &&
+                    (Number.isNaN(numericIdentifier) || item.menuItemId !== numericIdentifier)
+                );
+            })
+        );
+    }, [commitCartItems]);
+
+    const updateQuantity = useCallback((identifier, quantity) => {
+        const parsedQty = Math.round(Number(quantity));
+        if (!Number.isFinite(parsedQty) || parsedQty <= 0) {
+            removeFromCart(identifier);
+            return;
+        }
+
+        commitCartItems((prevItems) =>
+            prevItems.map((item) => {
+                const numericIdentifier = Number(identifier);
+                const isMatch =
+                    item.cartKey === identifier ||
+                    item.menuItemId === identifier ||
+                    (!Number.isNaN(numericIdentifier) && item.menuItemId === numericIdentifier);
+
+                if (!isMatch) {
+                    return item;
+                }
+
+                return {
+                    ...item,
+                    qty: parsedQty,
+                    totalPrice: Number((item.unitPrice * parsedQty).toFixed(2)),
+                };
+            })
+        );
+    }, [commitCartItems, removeFromCart]);
+
     const clearCart = useCallback(() => {
         const tenantId = localStorage.getItem('tenantId');
-        setCartItems([]);
-        setCustomerInfo({ name: '', phone: '', delivery_method: 'pickup', payment_method: 'cash', delivery_address: '', delivery_notes: '' });
+        commitCartItems([]);
+        setCustomerInfo(createEmptyCustomerInfo());
         setPhoneVerified(false);
         if (tenantId) {
             localStorage.removeItem(`cart_${tenantId}`);
             localStorage.removeItem(`cart_timestamp_${tenantId}`);
             localStorage.removeItem(`customer_info_${tenantId}`);
         }
-    }, []);
+    }, [commitCartItems]);
 
-    /**
-     * חישוב סכום כללי
-     */
     const getTotal = useCallback(() => {
-        return cartItems.reduce(
-            (sum, item) => sum + item.price * item.quantity,
-            0
-        );
+        const total = cartItems.reduce((sum, item) => sum + (item.totalPrice || 0), 0);
+        return Number(total.toFixed(2));
     }, [cartItems]);
 
-    /**
-     * חישוב מספר פריטים
-     */
     const getItemCount = useCallback(() => {
-        return cartItems.reduce((count, item) => count + item.quantity, 0);
+        return cartItems.reduce((count, item) => count + (item.qty || 0), 0);
     }, [cartItems]);
 
     const value = {
