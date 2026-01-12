@@ -43,10 +43,10 @@ export const buildCartKey = (menuItemId, variant, addons = []) => {
     const variantKey = variant?.id ?? 'base';
     const addonsKey = addons.length
         ? addons
-              .map((addon) => addon?.id)
-              .filter((id) => id || id === 0)
-              .sort()
-              .join('|')
+            .map((addon) => addon?.id)
+            .filter((id) => id || id === 0)
+            .sort()
+            .join('|')
         : 'none';
 
     return `${menuItemId}::${variantKey}::${addonsKey}`;

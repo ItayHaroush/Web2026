@@ -156,55 +156,55 @@ export default function CartPage() {
                     {cartItems.map((item) => {
                         const addonNames = (item.addons || []).map((addon) => addon.name).join(' · ');
                         return (
-                        <div
-                            key={item.cartKey}
-                            className="bg-white border border-gray-200 rounded-lg p-4 flex justify-between items-center"
-                        >
-                            <div className="flex-1 space-y-1">
-                                <h3 className="font-semibold text-gray-900">{item.name}</h3>
-                                {item.variant?.name && (
-                                    <p className="text-sm text-brand-primary">וריאנט: {item.variant.name}</p>
-                                )}
-                                {addonNames && (
-                                    <p className="text-xs text-gray-500">תוספות: {addonNames}</p>
-                                )}
-                                <p className="text-xs text-gray-400">₪{item.unitPrice.toFixed(2)} ליחידה</p>
-                            </div>
-
-                            <div className="flex items-center gap-4">
-                                {/* כמות */}
-                                <div className="flex items-center gap-2 border border-gray-300 rounded">
-                                    <button
-                                        onClick={() => handleQuantityChange(item.cartKey, item.qty - 1)}
-                                        className="px-3 py-1 text-gray-600 hover:bg-gray-100"
-                                    >
-                                        −
-                                    </button>
-                                    <span className="px-3 py-1 min-w-[40px] text-center">{item.qty}</span>
-                                    <button
-                                        onClick={() => handleQuantityChange(item.cartKey, item.qty + 1)}
-                                        className="px-3 py-1 text-gray-600 hover:bg-gray-100"
-                                    >
-                                        +
-                                    </button>
+                            <div
+                                key={item.cartKey}
+                                className="bg-white border border-gray-200 rounded-lg p-4 flex justify-between items-center"
+                            >
+                                <div className="flex-1 space-y-1">
+                                    <h3 className="font-semibold text-gray-900">{item.name}</h3>
+                                    {item.variant?.name && (
+                                        <p className="text-sm text-brand-primary">וריאנט: {item.variant.name}</p>
+                                    )}
+                                    {addonNames && (
+                                        <p className="text-xs text-gray-500">תוספות: {addonNames}</p>
+                                    )}
+                                    <p className="text-xs text-gray-400">₪{item.unitPrice.toFixed(2)} ליחידה</p>
                                 </div>
 
-                                {/* מחיר כולל לפריט */}
-                                <div className="min-w-[80px] text-right">
-                                    <p className="font-semibold text-brand-accent">
-                                        ₪{item.totalPrice.toFixed(2)}
-                                    </p>
-                                </div>
+                                <div className="flex items-center gap-4">
+                                    {/* כמות */}
+                                    <div className="flex items-center gap-2 border border-gray-300 rounded">
+                                        <button
+                                            onClick={() => handleQuantityChange(item.cartKey, item.qty - 1)}
+                                            className="px-3 py-1 text-gray-600 hover:bg-gray-100"
+                                        >
+                                            −
+                                        </button>
+                                        <span className="px-3 py-1 min-w-[40px] text-center">{item.qty}</span>
+                                        <button
+                                            onClick={() => handleQuantityChange(item.cartKey, item.qty + 1)}
+                                            className="px-3 py-1 text-gray-600 hover:bg-gray-100"
+                                        >
+                                            +
+                                        </button>
+                                    </div>
 
-                                {/* הסרה */}
-                                <button
-                                    onClick={() => removeFromCart(item.cartKey)}
-                                    className="text-red-600 hover:text-red-800 font-semibold"
-                                >
-                                    ×
-                                </button>
+                                    {/* מחיר כולל לפריט */}
+                                    <div className="min-w-[80px] text-right">
+                                        <p className="font-semibold text-brand-accent">
+                                            ₪{item.totalPrice.toFixed(2)}
+                                        </p>
+                                    </div>
+
+                                    {/* הסרה */}
+                                    <button
+                                        onClick={() => removeFromCart(item.cartKey)}
+                                        className="text-red-600 hover:text-red-800 font-semibold"
+                                    >
+                                        ×
+                                    </button>
+                                </div>
                             </div>
-                        </div>
                         );
                     })}
                 </div>
