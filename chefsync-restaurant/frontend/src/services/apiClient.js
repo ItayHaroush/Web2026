@@ -13,11 +13,15 @@ const DEFAULT_API = import.meta.env.PROD ? PROD_API : LOCAL_API;
  * בכל בקשה יוצמד ה-Tenant ID מה-localStorage
  */
 
+const RESERVED_PREFIXES = new Set(['admin', 'super-admin']);
+
 const getTenantIdFromUrl = () => {
     try {
         const path = window?.location?.pathname || '';
         const match = path.match(/^\/([^\/]+)\/(menu|cart|order-status)/);
-        return match?.[1] || '';
+        const candidate = match?.[1] || '';
+        if (!candidate) return '';
+        return RESERVED_PREFIXES.has(candidate.toLowerCase()) ? '' : candidate;
     } catch {
         return '';
     }

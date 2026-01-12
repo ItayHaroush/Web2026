@@ -16,6 +16,9 @@ class Category extends Model
         'tenant_id',
         'name',
         'description',
+        'icon',
+        'sort_order',
+        'is_active',
         'display_order',
     ];
 

@@ -53,13 +53,7 @@ export default function MenuPage() {
         return sanitized ? `tel:${sanitized}` : '';
     };
 
-    const getWhatsAppLink = () => {
-        if (!restaurant?.phone) return '';
-        const sanitized = restaurant.phone.replace(/[^\d]/g, '');
-        if (!sanitized) return '';
-        const defaultText = encodeURIComponent(`היי, הגעתי מתפריט ${restaurant?.name || ''}`.trim());
-        return `https://wa.me/${sanitized}?text=${defaultText}`;
-    };
+
 
     useEffect(() => {
         if (!effectiveTenantId) return;
@@ -121,7 +115,6 @@ export default function MenuPage() {
 
     const wazeLink = getWazeLink();
     const phoneHref = getPhoneHref();
-    const whatsappLink = getWhatsAppLink();
 
     const canOrder = restaurant?.is_open !== false;
 
@@ -250,7 +243,15 @@ export default function MenuPage() {
                                 <div className="space-y-2">
                                     <div className="flex items-center gap-2 text-sm text-gray-700">
                                         <span className="font-medium">{restaurant.address}</span>
-
+                                        <a
+                                            href={wazeLink || undefined}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className={`flex items-center justify-center h-9 w-9 rounded-full border text-base ${wazeLink ? 'bg-gray-50 text-blue-700 border-gray-200 hover:bg-gray-100' : 'bg-gray-100 text-gray-400 border-transparent cursor-not-allowed pointer-events-none'}`}
+                                            aria-label="פתח ב-Waze"
+                                        >
+                                            <SiWaze className="h-5 w-5" />
+                                        </a>
                                     </div>
                                     {restaurant.phone && (
                                         <div className="flex items-center gap-2 text-sm text-brand-primary font-semibold">
@@ -261,15 +262,6 @@ export default function MenuPage() {
                                                 aria-label="חייג למסעדה"
                                             >
                                                 <FaPhoneAlt className="h-4 w-4" />
-                                            </a>
-                                            <a
-                                                href={whatsappLink || undefined}
-                                                target="_blank"
-                                                rel="noreferrer"
-                                                className={`flex items-center justify-center h-9 w-9 rounded-full border text-base ${whatsappLink ? 'bg-gray-50 text-green-700 border-gray-200 hover:bg-gray-100' : 'bg-gray-100 text-gray-400 border-transparent cursor-not-allowed pointer-events-none'}`}
-                                                aria-label="שלח הודעת וואטסאפ"
-                                            >
-                                                <FaWhatsapp className="h-5 w-5" />
                                             </a>
                                         </div>
                                     )}
