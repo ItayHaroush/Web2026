@@ -223,6 +223,9 @@ export default function AdminRestaurant() {
         try {
             const formData = new FormData();
 
+            // חשוב: שלח תמיד את דגל הכפייה כדי שיהיה אפשר לבטל כפייה בצורה מפורשת
+            formData.append('is_override_status', overrideStatus ? '1' : '0');
+
             // ✅ שלח את כל השדות בלי לדלג על ריקים
             const fieldsToSend = ['name', 'description', 'phone', 'address', 'city'];
             fieldsToSend.forEach((field) => {
@@ -300,6 +303,24 @@ export default function AdminRestaurant() {
         } catch (error) {
             console.error('Failed to save restaurant:', error);
             alert(error.response?.data?.message || 'שגיאה בשמירה');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const clearOverride = async () => {
+        if (!isOwner()) {
+            alert('רק בעל המסעדה יכול לבטל כפייה');
+            return;
+        }
+        setSaving(true);
+        try {
+            await api.post('/admin/restaurant/override/clear', null, { headers: getAuthHeaders() });
+            await fetchRestaurant();
+            alert('כפייה בוטלה וחזרנו לאוטומטי');
+        } catch (error) {
+            console.error('Failed to clear override:', error);
+            alert('לא הצלחנו לבטל כפייה. נסה שוב.');
         } finally {
             setSaving(false);
         }
@@ -537,6 +558,17 @@ export default function AdminRestaurant() {
                                 />
                                 <span className="text-sm text-gray-600">אפשר כפיית סטטוס ידנית</span>
                             </label>
+
+                            {overrideStatus && (
+                                <button
+                                    type="button"
+                                    onClick={clearOverride}
+                                    disabled={saving}
+                                    className="inline-flex items-center justify-center px-4 py-2 rounded-xl text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-60"
+                                >
+                                    בטל כפייה (חזור לאוטומטי)
+                                </button>
+                            )}
                         </div>
                     </div>
 
