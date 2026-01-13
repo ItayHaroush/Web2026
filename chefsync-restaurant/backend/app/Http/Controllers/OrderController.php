@@ -124,7 +124,8 @@ class OrderController extends Controller
 
                 $selectedVariant = null;
                 $variantDelta = 0.0;
-                $availableVariants = $menuItem->use_variants ? $restaurantVariants : $menuItem->variants;
+                $variantSourceIsRestaurant = $menuItem->use_variants;
+                $availableVariants = $variantSourceIsRestaurant ? $restaurantVariants : $menuItem->variants;
 
                 if (array_key_exists('variant_id', $itemData) && !is_null($itemData['variant_id'])) {
                     $variantId = (int) $itemData['variant_id'];
@@ -224,10 +225,14 @@ class OrderController extends Controller
                 $lineTotal = round($unitPrice * $quantity, 2);
                 $totalAmount = round($totalAmount + $lineTotal, 2);
 
+                // If variants are coming from restaurant-wide tables, they do not exist in menu_item_variants (FK target),
+                // so we store the name/delta but keep variant_id null to satisfy FK constraint.
+                $variantIdForDb = $variantSourceIsRestaurant ? null : ($selectedVariant?->id);
+
                 $lineItems[] = [
                     'menu_item_id' => $menuItem->id,
                     'quantity' => $quantity,
-                    'variant_id' => $selectedVariant?->id,
+                    'variant_id' => $variantIdForDb,
                     'variant_name' => $selectedVariant?->name,
                     'variant_price_delta' => $variantDelta,
                     'addons' => array_values($addonsDetails),
