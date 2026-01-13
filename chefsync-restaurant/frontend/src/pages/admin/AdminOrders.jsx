@@ -345,17 +345,42 @@ export default function AdminOrders() {
                                     <h4 className="font-medium text-gray-800 mb-2">🍽️ פריטים</h4>
                                     <div className="space-y-2">
                                         {selectedOrder.items?.map((item, index) => {
-                                            const itemPrice = Number(item.price || item.menu_item?.price || 0);
-                                            const itemQuantity = Number(item.quantity || 1);
-                                            const subtotal = item.subtotal ? Number(item.subtotal) : (itemPrice * itemQuantity);
+                                            const quantity = Number(item.quantity ?? item.qty ?? 1);
+                                            const unitPrice = Number(item.price_at_order ?? item.price ?? 0);
+                                            const variantDelta = Number(item.variant_price_delta ?? 0);
+                                            const addonsTotal = Number(item.addons_total ?? 0);
+                                            const basePrice = Math.max(unitPrice - variantDelta - addonsTotal, 0);
+                                            const lineTotal = (unitPrice * quantity).toFixed(2);
+                                            const addons = Array.isArray(item.addons) ? item.addons : [];
 
                                             return (
-                                                <div key={index} className="flex justify-between bg-gray-50 rounded-lg p-3">
-                                                    <div>
-                                                        <span className="font-medium">{item.menu_item?.name || item.name}</span>
-                                                        <span className="text-gray-500 mr-2">x{itemQuantity}</span>
+                                                <div key={index} className="bg-gray-50 rounded-lg p-3 space-y-2">
+                                                    <div className="flex justify-between items-start">
+                                                        <div className="space-y-1">
+                                                            <div className="font-medium text-gray-900">
+                                                                {item.menu_item?.name || item.name || 'פריט'}
+                                                                <span className="text-gray-500 mr-2">× {quantity}</span>
+                                                            </div>
+                                                            {item.variant_name && (
+                                                                <div className="text-sm text-gray-700">וריאציה: {item.variant_name}</div>
+                                                            )}
+                                                            {addons.length > 0 && (
+                                                                <div className="text-sm text-gray-700">
+                                                                    תוספות: {addons.map((addon) => addon.name).join(', ')}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <div className="font-semibold text-gray-900">₪{lineTotal}</div>
+                                                            <div className="text-xs text-gray-600">₪{unitPrice.toFixed(2)} ליחידה</div>
+                                                        </div>
                                                     </div>
-                                                    <span className="font-medium">₪{subtotal.toFixed(2)}</span>
+                                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs text-gray-700">
+                                                        <div className="bg-white border rounded px-2 py-1">בסיס: ₪{basePrice.toFixed(2)}</div>
+                                                        <div className="bg-white border rounded px-2 py-1">וריאציה: ₪{variantDelta.toFixed(2)}</div>
+                                                        <div className="bg-white border rounded px-2 py-1">תוספות: ₪{addonsTotal.toFixed(2)}</div>
+                                                        <div className="bg-white border rounded px-2 py-1">סה"כ יחידה: ₪{unitPrice.toFixed(2)}</div>
+                                                    </div>
                                                 </div>
                                             );
                                         })}
