@@ -10,21 +10,69 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('orders', function (Blueprint $table) {
-            $table->enum('delivery_method', ['pickup', 'delivery'])->default('pickup')->after('customer_phone');
-            $table->enum('payment_method', ['cash'])->default('cash')->after('delivery_method');
-            $table->string('delivery_address')->nullable()->after('payment_method');
-            $table->text('delivery_notes')->nullable()->after('delivery_address');
+            if (!Schema::hasColumn('orders', 'delivery_method')) {
+                $table->enum('delivery_method', ['pickup', 'delivery'])->default('pickup')->after('customer_phone');
+            }
+
+            if (!Schema::hasColumn('orders', 'payment_method')) {
+                $table->enum('payment_method', ['cash'])->default('cash')->after('delivery_method');
+            }
+
+            if (!Schema::hasColumn('orders', 'delivery_address')) {
+                $table->string('delivery_address')->nullable()->after('payment_method');
+            }
+
+            if (!Schema::hasColumn('orders', 'delivery_notes')) {
+                $table->text('delivery_notes')->nullable()->after('delivery_address');
+            }
         });
 
-        DB::statement("ALTER TABLE `orders` MODIFY COLUMN `status` ENUM('pending','received','preparing','ready','delivering','delivered','cancelled') DEFAULT 'received'");
+        $this->extendStatusEnum();
     }
 
     public function down(): void
     {
-        DB::statement("ALTER TABLE `orders` MODIFY COLUMN `status` ENUM('received','preparing','ready','delivered') DEFAULT 'received'");
+        $this->resetStatusEnum();
 
         Schema::table('orders', function (Blueprint $table) {
-            $table->dropColumn(['delivery_method', 'payment_method', 'delivery_address', 'delivery_notes']);
+            $columns = ['delivery_method', 'payment_method', 'delivery_address', 'delivery_notes'];
+            foreach ($columns as $column) {
+                if (Schema::hasColumn('orders', $column)) {
+                    $table->dropColumn($column);
+                }
+            }
         });
+    }
+
+    protected function extendStatusEnum(): void
+    {
+        $enumValues = [
+            'pending',
+            'received',
+            'preparing',
+            'ready',
+            'delivering',
+            'delivered',
+            'cancelled',
+        ];
+
+        DB::statement(
+            sprintf(
+                "ALTER TABLE `orders` MODIFY COLUMN `status` ENUM('%s') DEFAULT 'received'",
+                implode("','", $enumValues)
+            )
+        );
+    }
+
+    protected function resetStatusEnum(): void
+    {
+        $enumValues = ['received', 'preparing', 'ready', 'delivered'];
+
+        DB::statement(
+            sprintf(
+                "ALTER TABLE `orders` MODIFY COLUMN `status` ENUM('%s') DEFAULT 'received'",
+                implode("','", $enumValues)
+            )
+        );
     }
 };
