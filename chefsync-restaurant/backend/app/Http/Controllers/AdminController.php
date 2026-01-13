@@ -8,6 +8,9 @@ use App\Models\Category;
 use App\Models\Order;
 use App\Models\Restaurant;
 use App\Models\City;
+use App\Models\RestaurantAddon;
+use App\Models\RestaurantAddonGroup;
+use App\Models\RestaurantVariant;
 use App\Models\RestaurantPayment;
 use App\Models\RestaurantSubscription;
 use Illuminate\Http\Request;
@@ -17,6 +20,7 @@ use Illuminate\Support\Str;
 
 class AdminController extends Controller
 {
+    private const DEFAULT_SALAD_GROUP_NAME = 'סלטים קבועים';
     /**
      * דשבורד - סטטיסטיקות
      */
@@ -212,6 +216,9 @@ class AdminController extends Controller
             'description' => 'nullable|string',
             'price' => 'required|numeric|min:0',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
+            'use_variants' => 'sometimes|boolean',
+            'use_addons' => 'sometimes|boolean',
+            'max_addons' => 'nullable|integer|min:1|max:99',
         ]);
 
         $user = $request->user();
@@ -230,6 +237,12 @@ class AdminController extends Controller
             $imageUrl = $this->uploadImage($request->file('image'), 'menu-items');
         }
 
+        $useVariants = $request->boolean('use_variants');
+        $useAddons = $request->boolean('use_addons');
+        $maxAddons = $useAddons && $request->filled('max_addons')
+            ? (int) $request->input('max_addons')
+            : null;
+
         // ✅ וודא tenant_id + restaurant_id
         $item = MenuItem::create([
             'tenant_id' => $user->restaurant->tenant_id,  // ← חובה!
@@ -241,6 +254,9 @@ class AdminController extends Controller
             'image_url' => $imageUrl,
             'sort_order' => $maxOrder + 1,
             'is_available' => true,
+            'use_variants' => $useVariants,
+            'use_addons' => $useAddons,
+            'max_addons' => $maxAddons,
         ]);
 
         return response()->json([
@@ -263,6 +279,9 @@ class AdminController extends Controller
             'price' => 'sometimes|numeric|min:0',
             'is_available' => 'sometimes|boolean',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
+            'use_variants' => 'sometimes|boolean',
+            'use_addons' => 'sometimes|boolean',
+            'max_addons' => 'nullable|integer|min:1|max:99',
         ]);
 
         if ($request->hasFile('image')) {
@@ -273,7 +292,25 @@ class AdminController extends Controller
             $item->image_url = $this->uploadImage($request->file('image'), 'menu-items');
         }
 
-        $item->update($request->only(['category_id', 'name', 'description', 'price', 'is_available', 'sort_order']));
+        $payload = $request->only(['category_id', 'name', 'description', 'price', 'is_available', 'sort_order']);
+
+        if ($request->has('use_variants')) {
+            $payload['use_variants'] = $request->boolean('use_variants');
+        }
+
+        if ($request->has('use_addons')) {
+            $useAddons = $request->boolean('use_addons');
+            $payload['use_addons'] = $useAddons;
+            $payload['max_addons'] = $useAddons
+                ? ($request->filled('max_addons') ? (int) $request->input('max_addons') : null)
+                : null;
+        } elseif ($request->has('max_addons')) {
+            $payload['max_addons'] = $request->filled('max_addons')
+                ? (int) $request->input('max_addons')
+                : null;
+        }
+
+        $item->update($payload);
 
         return response()->json([
             'success' => true,
@@ -298,6 +335,255 @@ class AdminController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'הפריט נמחק בהצלחה!',
+        ]);
+    }
+
+    // =============================================
+    // ניהול סלטים קבועים (Add-ons ברמת מסעדה)
+    // =============================================
+
+    public function getSalads(Request $request)
+    {
+        $user = $request->user();
+
+        if (!$user->isManager()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'אין לך הרשאה לצפות בסלטים',
+            ], 403);
+        }
+
+        $restaurant = $user->restaurant;
+        if (!$restaurant) {
+            return response()->json([
+                'success' => false,
+                'message' => 'לא נמצאה מסעדה למשתמש',
+            ], 404);
+        }
+
+        $group = $this->ensureDefaultSaladGroup($restaurant);
+        $salads = $group->addons()->orderBy('sort_order')->get();
+
+        return response()->json([
+            'success' => true,
+            'salads' => $salads,
+        ]);
+    }
+
+    public function storeSalad(Request $request)
+    {
+        $user = $request->user();
+
+        if (!$user->isManager()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'אין לך הרשאה להוסיף סלטים',
+            ], 403);
+        }
+
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'price_delta' => 'nullable|numeric|min:0|max:999.99',
+            'is_active' => 'sometimes|boolean',
+        ]);
+
+        $restaurant = $user->restaurant;
+        if (!$restaurant) {
+            return response()->json([
+                'success' => false,
+                'message' => 'לא נמצאה מסעדה למשתמש',
+            ], 404);
+        }
+
+        $group = $this->ensureDefaultSaladGroup($restaurant);
+        $maxOrder = RestaurantAddon::where('addon_group_id', $group->id)->max('sort_order') ?? 0;
+
+        $salad = RestaurantAddon::create([
+            'addon_group_id' => $group->id,
+            'restaurant_id' => $restaurant->id,
+            'tenant_id' => $restaurant->tenant_id,
+            'name' => $request->input('name'),
+            'price_delta' => $request->input('price_delta', 0),
+            'is_active' => $request->boolean('is_active', true),
+            'sort_order' => $maxOrder + 1,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'הסלט נוסף בהצלחה!',
+            'salad' => $salad,
+        ], 201);
+    }
+
+    public function updateSalad(Request $request, $id)
+    {
+        $user = $request->user();
+
+        if (!$user->isManager()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'אין לך הרשאה לעדכן סלטים',
+            ], 403);
+        }
+
+        $request->validate([
+            'name' => 'sometimes|string|max:255',
+            'price_delta' => 'sometimes|numeric|min:0|max:999.99',
+            'is_active' => 'sometimes|boolean',
+            'sort_order' => 'sometimes|integer|min:0',
+        ]);
+
+        $restaurant = $user->restaurant;
+        if (!$restaurant) {
+            return response()->json([
+                'success' => false,
+                'message' => 'לא נמצאה מסעדה למשתמש',
+            ], 404);
+        }
+
+        $group = $this->ensureDefaultSaladGroup($restaurant);
+        $salad = RestaurantAddon::where('restaurant_id', $restaurant->id)
+            ->where('addon_group_id', $group->id)
+            ->findOrFail($id);
+
+        $payload = $request->only(['name', 'price_delta', 'is_active', 'sort_order']);
+
+        $salad->update($payload);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'הסלט עודכן בהצלחה!',
+            'salad' => $salad,
+        ]);
+    }
+
+    // =============================================
+    // ניהול בסיסים (וריאציות גלובליות)
+    // =============================================
+
+    public function getBases(Request $request)
+    {
+        $user = $request->user();
+
+        if (!$user->isManager()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'אין לך הרשאה לצפות בבסיסים',
+            ], 403);
+        }
+
+        $restaurant = $user->restaurant;
+        if (!$restaurant) {
+            return response()->json([
+                'success' => false,
+                'message' => 'לא נמצאה מסעדה למשתמש',
+            ], 404);
+        }
+
+        $bases = RestaurantVariant::where('restaurant_id', $restaurant->id)
+            ->orderBy('sort_order')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'bases' => $bases,
+        ]);
+    }
+
+    public function storeBase(Request $request)
+    {
+        $user = $request->user();
+
+        if (!$user->isManager()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'אין לך הרשאה להוסיף בסיסים',
+            ], 403);
+        }
+
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'price_delta' => 'nullable|numeric|min:0|max:999.99',
+            'is_active' => 'sometimes|boolean',
+            'is_default' => 'sometimes|boolean',
+        ]);
+
+        $restaurant = $user->restaurant;
+        if (!$restaurant) {
+            return response()->json([
+                'success' => false,
+                'message' => 'לא נמצאה מסעדה למשתמש',
+            ], 404);
+        }
+
+        $isDefault = $request->boolean('is_default', false);
+        if ($isDefault) {
+            RestaurantVariant::where('restaurant_id', $restaurant->id)->update(['is_default' => false]);
+        }
+
+        $maxOrder = RestaurantVariant::where('restaurant_id', $restaurant->id)->max('sort_order') ?? 0;
+
+        $base = RestaurantVariant::create([
+            'restaurant_id' => $restaurant->id,
+            'tenant_id' => $restaurant->tenant_id,
+            'name' => $request->input('name'),
+            'price_delta' => $request->input('price_delta', 0),
+            'is_active' => $request->boolean('is_active', true),
+            'is_default' => $isDefault,
+            'sort_order' => $maxOrder + 1,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'הבסיס נוסף בהצלחה!',
+            'base' => $base,
+        ], 201);
+    }
+
+    public function updateBase(Request $request, $id)
+    {
+        $user = $request->user();
+
+        if (!$user->isManager()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'אין לך הרשאה לעדכן בסיסים',
+            ], 403);
+        }
+
+        $request->validate([
+            'name' => 'sometimes|string|max:255',
+            'price_delta' => 'sometimes|numeric|min:0|max:999.99',
+            'is_active' => 'sometimes|boolean',
+            'is_default' => 'sometimes|boolean',
+            'sort_order' => 'sometimes|integer|min:0',
+        ]);
+
+        $restaurant = $user->restaurant;
+        if (!$restaurant) {
+            return response()->json([
+                'success' => false,
+                'message' => 'לא נמצאה מסעדה למשתמש',
+            ], 404);
+        }
+
+        $base = RestaurantVariant::where('restaurant_id', $restaurant->id)
+            ->findOrFail($id);
+
+        $payload = $request->only(['name', 'price_delta', 'is_active', 'is_default', 'sort_order']);
+
+        if ($request->has('is_default') && $request->boolean('is_default')) {
+            RestaurantVariant::where('restaurant_id', $restaurant->id)
+                ->where('id', '!=', $base->id)
+                ->update(['is_default' => false]);
+        }
+
+        $base->update($payload);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'הבסיס עודכן בהצלחה!',
+            'base' => $base,
         ]);
     }
 
@@ -863,6 +1149,25 @@ class AdminController extends Controller
     // =============================================
     // העלאת תמונות
     // =============================================
+
+    private function ensureDefaultSaladGroup(Restaurant $restaurant): RestaurantAddonGroup
+    {
+        return RestaurantAddonGroup::firstOrCreate(
+            [
+                'restaurant_id' => $restaurant->id,
+                'tenant_id' => $restaurant->tenant_id,
+                'name' => self::DEFAULT_SALAD_GROUP_NAME,
+            ],
+            [
+                'selection_type' => 'multiple',
+                'min_selections' => 0,
+                'max_selections' => null,
+                'is_required' => false,
+                'is_active' => true,
+                'sort_order' => 0,
+            ]
+        );
+    }
 
     private function uploadImage($file, $folder)
     {

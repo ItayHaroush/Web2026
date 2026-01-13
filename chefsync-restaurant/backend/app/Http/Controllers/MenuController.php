@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\MenuItem;
 use App\Models\Category;
+use App\Models\Restaurant;
 use Illuminate\Http\Request;
 
 /**
@@ -19,6 +20,22 @@ class MenuController extends Controller
     {
         try {
             $tenantId = app('tenant_id');
+
+            $restaurant = Restaurant::with([
+                'variants' => function ($variantQuery) {
+                    $variantQuery->where('is_active', true)->orderBy('sort_order');
+                },
+                'addonGroups' => function ($groupQuery) {
+                    $groupQuery->where('is_active', true)
+                        ->orderBy('sort_order')
+                        ->with(['addons' => function ($addonQuery) {
+                            $addonQuery->where('is_active', true)->orderBy('sort_order');
+                        }]);
+                },
+            ])->where('tenant_id', $tenantId)->first();
+
+            $restaurantVariants = $restaurant?->variants ?? collect();
+            $restaurantAddonGroups = $restaurant?->addonGroups ?? collect();
 
             // קבל קטגוריות עם פריטים זמינים בלבד
             $categories = Category::where('tenant_id', $tenantId)
@@ -46,28 +63,51 @@ class MenuController extends Controller
                     }
                 ])
                 ->get()
-                ->map(function ($category) {
+                ->map(function ($category) use ($restaurantVariants, $restaurantAddonGroups) {
                     return [
                         'id' => $category->id,
                         'name' => $category->name,
                         'description' => $category->description,
                         'icon' => $category->icon,
-                        'items' => $category->items->map(function ($item) {
-                            return [
-                                'id' => $item->id,
-                                'name' => $item->name,
-                                'description' => $item->description,
-                                'price' => (float) $item->price,
-                                'image_url' => $item->image_url,
-                                'variants' => $item->variants->map(function ($variant) {
+                        'items' => $category->items->map(function ($item) use ($restaurantVariants, $restaurantAddonGroups) {
+                            $variants = $item->use_variants
+                                ? $restaurantVariants->map(function ($variant) {
                                     return [
                                         'id' => $variant->id,
                                         'name' => $variant->name,
                                         'price_delta' => (float) $variant->price_delta,
                                         'is_default' => (bool) $variant->is_default,
                                     ];
-                                })->values()->toArray(),
-                                'addon_groups' => $item->addonGroups->map(function ($group) {
+                                })->values()->toArray()
+                                : $item->variants->map(function ($variant) {
+                                    return [
+                                        'id' => $variant->id,
+                                        'name' => $variant->name,
+                                        'price_delta' => (float) $variant->price_delta,
+                                        'is_default' => (bool) $variant->is_default,
+                                    ];
+                                })->values()->toArray();
+
+                            $addonGroups = $item->use_addons
+                                ? $restaurantAddonGroups->map(function ($group) use ($item) {
+                                    return [
+                                        'id' => $group->id,
+                                        'name' => $group->name,
+                                        'selection_type' => $group->selection_type,
+                                        'min_select' => $group->min_selections,
+                                        'max_select' => $item->max_addons ?? $group->max_selections,
+                                        'is_required' => (bool) $group->is_required,
+                                        'addons' => $group->addons->map(function ($addon) {
+                                            return [
+                                                'id' => $addon->id,
+                                                'name' => $addon->name,
+                                                'price_delta' => (float) $addon->price_delta,
+                                                'is_default' => false,
+                                            ];
+                                        })->values()->toArray(),
+                                    ];
+                                })->values()->toArray()
+                                : $item->addonGroups->map(function ($group) {
                                     return [
                                         'id' => $group->id,
                                         'name' => $group->name,
@@ -84,7 +124,16 @@ class MenuController extends Controller
                                             ];
                                         })->values()->toArray(),
                                     ];
-                                })->values()->toArray(),
+                                })->values()->toArray();
+
+                            return [
+                                'id' => $item->id,
+                                'name' => $item->name,
+                                'description' => $item->description,
+                                'price' => (float) $item->price,
+                                'image_url' => $item->image_url,
+                                'variants' => $variants,
+                                'addon_groups' => $addonGroups,
                             ];
                         })->values()->toArray(),
                     ];

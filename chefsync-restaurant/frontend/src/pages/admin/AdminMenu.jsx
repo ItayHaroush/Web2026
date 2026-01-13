@@ -19,6 +19,9 @@ export default function AdminMenu() {
         price: '',
         category_id: '',
         image: null,
+        use_variants: false,
+        use_addons: false,
+        max_addons: '5',
     });
 
     useEffect(() => {
@@ -62,12 +65,20 @@ export default function AdminMenu() {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
+        if (form.use_addons && (!form.max_addons || Number(form.max_addons) < 1)) {
+            alert('אנא הזן מספר מקסימלי של סלטים לבחירה');
+            return;
+        }
+
         const formData = new FormData();
         formData.append('name', form.name);
         formData.append('description', form.description || '');
         formData.append('price', form.price);
         formData.append('category_id', form.category_id);
         if (form.image) formData.append('image', form.image);
+        formData.append('use_variants', form.use_variants ? '1' : '0');
+        formData.append('use_addons', form.use_addons ? '1' : '0');
+        formData.append('max_addons', form.use_addons ? (form.max_addons || '') : '');
 
         console.log('📤 Submitting menu item:', {
             name: form.name,
@@ -133,6 +144,9 @@ export default function AdminMenu() {
             price: item.price,
             category_id: item.category_id,
             image: null,
+            use_variants: Boolean(item.use_variants),
+            use_addons: Boolean(item.use_addons),
+            max_addons: item.max_addons ? String(item.max_addons) : '5',
         });
         setShowModal(true);
     };
@@ -145,6 +159,9 @@ export default function AdminMenu() {
             price: '',
             category_id: categories[0]?.id || '',
             image: null,
+            use_variants: false,
+            use_addons: false,
+            max_addons: '5',
         });
         setShowModal(true);
     };
@@ -152,6 +169,16 @@ export default function AdminMenu() {
     const closeModal = () => {
         setShowModal(false);
         setEditItem(null);
+        setForm({
+            name: '',
+            description: '',
+            price: '',
+            category_id: categories[0]?.id || '',
+            image: null,
+            use_variants: false,
+            use_addons: false,
+            max_addons: '5',
+        });
     };
 
     const filteredItems = filterCategory
@@ -380,6 +407,52 @@ export default function AdminMenu() {
                                     onChange={(e) => setForm({ ...form, image: e.target.files[0] })}
                                     className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary"
                                 />
+                            </div>
+
+                            <div className="border-t border-gray-100 pt-4 space-y-4">
+                                <h3 className="text-sm font-bold text-gray-700">אפשרויות למנה</h3>
+
+                                <label className="flex items-start gap-3 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={form.use_variants}
+                                        onChange={(e) => setForm({ ...form, use_variants: e.target.checked })}
+                                        className="mt-1 w-4 h-4 rounded"
+                                    />
+                                    <div>
+                                        <p className="text-sm font-medium text-gray-800">🥙 בסיס כריך</p>
+                                        <p className="text-xs text-gray-500">אם מסומן, יוצגו כל הבסיסים הפעילים (פיתה / בגט / לאפה וכו').</p>
+                                    </div>
+                                </label>
+
+                                <div className="space-y-2">
+                                    <label className="flex items-start gap-3 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={form.use_addons}
+                                            onChange={(e) => setForm({ ...form, use_addons: e.target.checked })}
+                                            className="mt-1 w-4 h-4 rounded"
+                                        />
+                                        <div>
+                                            <p className="text-sm font-medium text-gray-800">🥗 סלטים</p>
+                                            <p className="text-xs text-gray-500">הצגת רשימת הסלטים הגלובלית של המסעדה עבור מנה זו.</p>
+                                        </div>
+                                    </label>
+
+                                    {form.use_addons && (
+                                        <div>
+                                            <label className="block text-xs font-medium text-gray-600 mb-1">מקסימום סלטים לבחירה</label>
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                max="20"
+                                                value={form.max_addons}
+                                                onChange={(e) => setForm({ ...form, max_addons: e.target.value })}
+                                                className="w-full px-3 py-2 border rounded-lg text-sm"
+                                            />
+                                        </div>
+                                    )}
+                                </div>
                             </div>
 
                             <div className="flex gap-3 pt-4">

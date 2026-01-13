@@ -67,10 +67,26 @@ class OrderController extends Controller
             }
 
             $tenantId = app('tenant_id');
-            $restaurantId = Restaurant::where('tenant_id', $tenantId)->value('id');
-            if (!$restaurantId) {
+            $restaurant = Restaurant::with([
+                'variants' => function ($variantQuery) {
+                    $variantQuery->where('is_active', true)->orderBy('sort_order');
+                },
+                'addonGroups' => function ($groupQuery) {
+                    $groupQuery->where('is_active', true)
+                        ->orderBy('sort_order')
+                        ->with(['addons' => function ($addonQuery) {
+                            $addonQuery->where('is_active', true)->orderBy('sort_order');
+                        }]);
+                },
+            ])->where('tenant_id', $tenantId)->first();
+
+            if (!$restaurant) {
                 throw new \Exception('Restaurant not found for tenant');
             }
+
+            $restaurantId = $restaurant->id;
+            $restaurantVariants = $restaurant->variants ?? collect();
+            $restaurantAddonGroups = $restaurant->addonGroups ?? collect();
 
             $lineItems = [];
             $totalAmount = 0;
@@ -90,6 +106,7 @@ class OrderController extends Controller
                                     }
                                 ]);
                         },
+                        'restaurant',
                     ])
                     ->findOrFail($itemData['menu_item_id']);
 
@@ -107,9 +124,11 @@ class OrderController extends Controller
 
                 $selectedVariant = null;
                 $variantDelta = 0.0;
+                $availableVariants = $menuItem->use_variants ? $restaurantVariants : $menuItem->variants;
+
                 if (array_key_exists('variant_id', $itemData) && !is_null($itemData['variant_id'])) {
                     $variantId = (int) $itemData['variant_id'];
-                    $selectedVariant = $menuItem->variants->firstWhere('id', $variantId);
+                    $selectedVariant = $availableVariants->firstWhere('id', $variantId);
                     if (!$selectedVariant) {
                         throw ValidationException::withMessages([
                             "items.$index.variant_id" => ['וריאציה שנבחרה אינה זמינה לפריט זה'],
@@ -123,14 +142,17 @@ class OrderController extends Controller
                     ->unique('addon_id')
                     ->values();
 
+                $availableAddonGroups = $menuItem->use_addons ? $restaurantAddonGroups : $menuItem->addonGroups;
+
                 $selectedAddonsByGroup = [];
                 foreach ($addonEntries as $addonEntry) {
                     $addonId = (int) $addonEntry['addon_id'];
                     $matchedAddon = null;
                     $matchedGroup = null;
 
-                    foreach ($menuItem->addonGroups as $group) {
-                        $matchedAddon = $group->addons->firstWhere('id', $addonId);
+                    foreach ($availableAddonGroups as $group) {
+                        $groupAddons = $group->addons ?? collect();
+                        $matchedAddon = $groupAddons->firstWhere('id', $addonId);
                         if ($matchedAddon) {
                             $matchedGroup = $group;
                             break;
@@ -152,7 +174,7 @@ class OrderController extends Controller
                 $addonsDetails = [];
                 $addonsTotal = 0.0;
 
-                foreach ($menuItem->addonGroups as $group) {
+                foreach ($availableAddonGroups as $group) {
                     $selectedForGroup = collect($selectedAddonsByGroup[$group->id] ?? []);
                     $count = $selectedForGroup->count();
 
@@ -167,6 +189,9 @@ class OrderController extends Controller
                     }
 
                     $maxAllowed = $group->max_selections;
+                    if ($menuItem->use_addons && $menuItem->max_addons) {
+                        $maxAllowed = $menuItem->max_addons;
+                    }
                     if ($maxAllowed !== null && $count > $maxAllowed) {
                         throw ValidationException::withMessages([
                             "items.$index.addons" => [sprintf('ניתן לבחור עד %d תוספות בקבוצה "%s"', $maxAllowed, $group->name)],

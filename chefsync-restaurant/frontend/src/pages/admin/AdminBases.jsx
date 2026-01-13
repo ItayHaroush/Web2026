@@ -1,0 +1,274 @@
+import { useEffect, useState } from 'react';
+import AdminLayout from '../../layouts/AdminLayout';
+import { useAdminAuth } from '../../context/AdminAuthContext';
+import api from '../../services/apiClient';
+
+export default function AdminBases() {
+    const { getAuthHeaders, isManager } = useAdminAuth();
+    const [bases, setBases] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [modalOpen, setModalOpen] = useState(false);
+    const [editBase, setEditBase] = useState(null);
+    const [saving, setSaving] = useState(false);
+    const [form, setForm] = useState({ name: '', price_delta: '0', is_active: true, is_default: false });
+
+    useEffect(() => {
+        fetchBases();
+    }, []);
+
+    const fetchBases = async () => {
+        try {
+            const response = await api.get('/admin/bases', { headers: getAuthHeaders() });
+            if (response.data.success) {
+                setBases(response.data.bases || []);
+            }
+        } catch (error) {
+            console.error('Failed to load bases', error.response?.data || error.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const openModal = (base = null) => {
+        if (base) {
+            setEditBase(base);
+            setForm({
+                name: base.name,
+                price_delta: typeof base.price_delta === 'number' ? base.price_delta.toString() : base.price_delta || '0',
+                is_active: Boolean(base.is_active),
+                is_default: Boolean(base.is_default),
+            });
+        } else {
+            setEditBase(null);
+            setForm({ name: '', price_delta: '0', is_active: true, is_default: bases.length === 0 });
+        }
+        setModalOpen(true);
+    };
+
+    const closeModal = () => {
+        setModalOpen(false);
+        setEditBase(null);
+        setForm({ name: '', price_delta: '0', is_active: true, is_default: bases.length === 0 });
+    };
+
+    const handleSubmit = async (event) => {
+        event.preventDefault();
+        if (!isManager()) return;
+
+        const payload = {
+            name: form.name.trim(),
+            price_delta: Number(form.price_delta) || 0,
+            is_active: form.is_active,
+            is_default: form.is_default,
+        };
+
+        setSaving(true);
+        try {
+            if (editBase) {
+                await api.put(`/admin/bases/${editBase.id}`, payload, { headers: getAuthHeaders() });
+            } else {
+                await api.post('/admin/bases', payload, { headers: getAuthHeaders() });
+            }
+            closeModal();
+            fetchBases();
+        } catch (error) {
+            console.error('Failed to save base', error.response?.data || error.message);
+            alert(error.response?.data?.message || 'שגיאה בשמירת הבסיס');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const toggleActive = async (base) => {
+        if (!isManager()) return;
+        try {
+            await api.put(`/admin/bases/${base.id}`,
+                { is_active: !base.is_active },
+                { headers: getAuthHeaders() }
+            );
+            fetchBases();
+        } catch (error) {
+            console.error('Failed to toggle base', error.response?.data || error.message);
+        }
+    };
+
+    const markAsDefault = async (base) => {
+        if (!isManager() || base.is_default) return;
+        try {
+            await api.put(`/admin/bases/${base.id}`,
+                { is_default: true },
+                { headers: getAuthHeaders() }
+            );
+            fetchBases();
+        } catch (error) {
+            console.error('Failed to set default base', error.response?.data || error.message);
+        }
+    };
+
+    if (loading) {
+        return (
+            <AdminLayout>
+                <div className="flex items-center justify-center h-64">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary"></div>
+                </div>
+            </AdminLayout>
+        );
+    }
+
+    return (
+        <AdminLayout>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                <div>
+                    <h1 className="text-2xl font-bold text-gray-800">🥖 בסיסי כריך</h1>
+                    <p className="text-gray-500">קבע אילו בסיסים זמינים לכל המנות שמסמנות "בסיסים קבועים"</p>
+                </div>
+                {isManager() && (
+                    <button
+                        onClick={() => openModal()}
+                        className="bg-brand-primary text-white px-6 py-3 rounded-xl font-medium hover:bg-brand-dark transition-colors flex items-center gap-2"
+                    >
+                        ➕ הוסף בסיס
+                    </button>
+                )}
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+                <table className="w-full text-right">
+                    <thead className="bg-gray-50 text-gray-600 text-sm">
+                        <tr>
+                            <th className="py-3 px-4 font-medium">שם הבסיס</th>
+                            <th className="py-3 px-4 font-medium">תוספת מחיר</th>
+                            <th className="py-3 px-4 font-medium">ברירת מחדל</th>
+                            <th className="py-3 px-4 font-medium">סטטוס</th>
+                            {isManager() && <th className="py-3 px-4 font-medium text-center">פעולות</th>}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {bases.length === 0 && (
+                            <tr>
+                                <td colSpan={isManager() ? 5 : 4} className="py-8 px-4 text-center text-gray-500">
+                                    אין בסיסים מוגדרים כרגע
+                                </td>
+                            </tr>
+                        )}
+                        {bases.map((base) => (
+                            <tr key={base.id} className="border-t border-gray-100">
+                                <td className="py-4 px-4">
+                                    <p className="font-semibold text-gray-800">{base.name}</p>
+                                    <p className="text-sm text-gray-500">זמין בכל הפריטים שמסמנות "בסיסים גלובליים"</p>
+                                </td>
+                                <td className="py-4 px-4 text-gray-700 font-medium">
+                                    {Number(base.price_delta || 0).toLocaleString('he-IL', { style: 'currency', currency: 'ILS' })}
+                                </td>
+                                <td className="py-4 px-4">
+                                    {base.is_default ? (
+                                        <span className="px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-700">ברירת מחדל</span>
+                                    ) : (
+                                        <button
+                                            disabled={!isManager()}
+                                            onClick={() => markAsDefault(base)}
+                                            className="text-sm text-blue-600 hover:underline disabled:text-gray-400"
+                                        >
+                                            קבע כברירת מחדל
+                                        </button>
+                                    )}
+                                </td>
+                                <td className="py-4 px-4">
+                                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${base.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                                        {base.is_active ? 'פעיל' : 'לא פעיל'}
+                                    </span>
+                                </td>
+                                {isManager() && (
+                                    <td className="py-4 px-4">
+                                        <div className="flex flex-wrap gap-2 justify-end">
+                                            <button
+                                                onClick={() => toggleActive(base)}
+                                                className={`px-4 py-2 rounded-lg text-sm font-medium ${base.is_active ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-green-50 text-green-600 hover:bg-green-100'}`}
+                                            >
+                                                {base.is_active ? 'השבת' : 'הפעל'}
+                                            </button>
+                                            <button
+                                                onClick={() => openModal(base)}
+                                                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+                                            >
+                                                ערוך
+                                            </button>
+                                        </div>
+                                    </td>
+                                )}
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+
+            {modalOpen && (
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl max-w-md w-full">
+                        <div className="p-6 border-b flex items-center justify-between">
+                            <h2 className="text-xl font-bold">{editBase ? 'עריכת בסיס' : 'בסיס חדש'}</h2>
+                            <button onClick={closeModal} className="text-gray-400 hover:text-gray-600">✕</button>
+                        </div>
+                        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">שם הבסיס</label>
+                                <input
+                                    type="text"
+                                    value={form.name}
+                                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                                    required
+                                    className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">תוספת מחיר (₪)</label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    step="0.5"
+                                    value={form.price_delta}
+                                    onChange={(e) => setForm({ ...form, price_delta: e.target.value })}
+                                    className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                                />
+                            </div>
+                            <label className="flex items-center gap-3">
+                                <input
+                                    type="checkbox"
+                                    checked={form.is_default}
+                                    onChange={(e) => setForm({ ...form, is_default: e.target.checked })}
+                                    className="w-5 h-5 rounded border-gray-300 text-brand-primary focus:ring-brand-primary"
+                                />
+                                <span className="text-sm text-gray-700">ברירת מחדל</span>
+                            </label>
+                            <label className="flex items-center gap-3">
+                                <input
+                                    type="checkbox"
+                                    checked={form.is_active}
+                                    onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
+                                    className="w-5 h-5 rounded border-gray-300 text-brand-primary focus:ring-brand-primary"
+                                />
+                                <span className="text-sm text-gray-700">בסיס פעיל</span>
+                            </label>
+                            <div className="flex gap-3 pt-2">
+                                <button
+                                    type="submit"
+                                    disabled={saving}
+                                    className="flex-1 bg-brand-primary text-white py-3 rounded-xl font-medium hover:bg-brand-dark disabled:opacity-60"
+                                >
+                                    {saving ? 'שומר...' : editBase ? 'עדכן' : 'הוסף'}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={closeModal}
+                                    className="px-6 py-3 bg-gray-100 text-gray-600 rounded-xl font-medium hover:bg-gray-200"
+                                >
+                                    ביטול
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+        </AdminLayout>
+    );
+}
