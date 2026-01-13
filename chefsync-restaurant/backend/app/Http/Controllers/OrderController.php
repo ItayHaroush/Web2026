@@ -278,12 +278,23 @@ class OrderController extends Controller
                 'data' => $order->load(['items.menuItem', 'items.variant']),
             ], 201);
         } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::warning('Order validation failed', [
+                'errors' => $e->errors(),
+                'payload' => $request->all(),
+            ]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'שגיאה בתקינות הנתונים',
                 'errors' => $e->errors(),
             ], 422);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            Log::error('Order creation failed', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'payload' => $request->all(),
+            ]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'שגיאה ביצירת הזמנה',
