@@ -20,6 +20,11 @@ class OrderItem extends Model
         'addons_total',
         'quantity',
         'price_at_order',
+        // Legacy / upcoming aliases to prevent mass-assignment failures in older deployments
+        'addons_json',
+        'unit_price',
+        'total_price',
+        'qty',
     ];
 
     protected $appends = ['price', 'subtotal', 'name'];
