@@ -130,13 +130,16 @@ export default function MenuItemModal({
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" onClick={onClose}>
+        <div
+            className="fixed inset-0 z-50 flex items-start md:items-center justify-center bg-black/40 px-4 py-6 overflow-y-auto"
+            onClick={onClose}
+        >
             <div
-                className="w-full max-w-2xl bg-white rounded-3xl shadow-2xl overflow-hidden"
+                className="w-full max-w-2xl bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh]"
                 onClick={(e) => e.stopPropagation()}
             >
                 {item.image_url && (
-                    <div className="relative h-56 bg-gray-100">
+                    <div className="relative h-56 bg-gray-100 flex-shrink-0">
                         <img
                             src={resolveAssetUrl(item.image_url)}
                             alt={item.name}
@@ -152,12 +155,12 @@ export default function MenuItemModal({
                     </div>
                 )}
                 {!item.image_url && (
-                    <div className="flex justify-end p-4">
+                    <div className="flex justify-end p-4 flex-shrink-0">
                         <button className="text-2xl text-gray-500" onClick={onClose} aria-label="סגור">×</button>
                     </div>
                 )}
 
-                <div className="px-6 pb-6 space-y-6">
+                <div className="flex-1 overflow-y-auto px-6 pb-6 space-y-6">
                     <div>
                         <h2 className="text-2xl font-bold text-brand-dark mb-2">{item.name}</h2>
                         {item.description && (
@@ -168,7 +171,7 @@ export default function MenuItemModal({
                     {variants.length > 0 && (
                         <div className="space-y-3">
                             <div className="flex items-center justify-between">
-                                <h3 className="text-lg font-semibold text-brand-dark">בחר גודל / וריאציה</h3>
+                                <h3 className="text-lg font-semibold text-brand-dark">בחרו צורת הגשה</h3>
                                 <span className="text-sm text-gray-500">חובה לבחור אפשרות אחת</span>
                             </div>
                             <div className="space-y-2">
@@ -209,7 +212,7 @@ export default function MenuItemModal({
                                     <div key={group.id} className="border border-gray-200 rounded-2xl p-4">
                                         <div className="flex items-center justify-between mb-3">
                                             <div>
-                                                <h4 className="text-lg font-semibold text-brand-dark">{group.name}</h4>
+                                                <h4 className="text-lg font-semibold text-brand-dark">בחרו ממרחים וסלטים</h4>
                                                 <p className="text-xs text-gray-500 mt-1">
                                                     {group.min_select ? `מינימום ${group.min_select}` : ''}
                                                     {group.min_select && group.max_select ? ' · ' : ''}

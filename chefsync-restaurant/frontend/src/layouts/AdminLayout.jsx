@@ -63,6 +63,18 @@ export default function AdminLayout({ children }) {
             show: isManager()
         },
         {
+            path: '/admin/menu/bases',
+            icon: '🥖',
+            label: 'בסיסים',
+            show: isManager()
+        },
+        {
+            path: '/admin/menu/salads',
+            icon: '🥗',
+            label: 'סלטים',
+            show: isManager()
+        },
+        {
             path: '/admin/categories',
             icon: '📁',
             label: 'קטגוריות',

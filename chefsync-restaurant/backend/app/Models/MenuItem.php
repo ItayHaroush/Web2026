@@ -22,11 +22,17 @@ class MenuItem extends Model
         'price',
         'image_url',
         'is_available',
+        'use_variants',
+        'use_addons',
+        'max_addons',
     ];
 
     protected $casts = [
         'price' => 'decimal:2',
         'is_available' => 'boolean',
+        'use_variants' => 'boolean',
+        'use_addons' => 'boolean',
+        'max_addons' => 'integer',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];

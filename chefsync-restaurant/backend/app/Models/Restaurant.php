@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use App\Models\City;
+use App\Models\RestaurantVariant;
+use App\Models\RestaurantAddonGroup;
 
 /**
  * דגם Restaurant (Tenant)
@@ -75,6 +77,16 @@ class Restaurant extends Model
     public function menuItems(): HasMany
     {
         return $this->hasMany(MenuItem::class, 'restaurant_id');
+    }
+
+    public function variants(): HasMany
+    {
+        return $this->hasMany(RestaurantVariant::class);
+    }
+
+    public function addonGroups(): HasMany
+    {
+        return $this->hasMany(RestaurantAddonGroup::class);
     }
 
     /**

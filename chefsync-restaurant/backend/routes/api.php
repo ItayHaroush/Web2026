@@ -107,6 +107,16 @@ Route::prefix('admin')->middleware(['auth:sanctum'])->group(function () {
         Route::put('/menu-items/{id}', [AdminController::class, 'updateMenuItem'])->name('admin.menu.update');
         Route::delete('/menu-items/{id}', [AdminController::class, 'deleteMenuItem'])->name('admin.menu.delete');
 
+        // ניהול סלטים קבועים
+        Route::get('/salads', [AdminController::class, 'getSalads'])->name('admin.salads.index');
+        Route::post('/salads', [AdminController::class, 'storeSalad'])->name('admin.salads.store');
+        Route::put('/salads/{id}', [AdminController::class, 'updateSalad'])->name('admin.salads.update');
+
+        // ניהול בסיסים גלובליים
+        Route::get('/bases', [AdminController::class, 'getBases'])->name('admin.bases.index');
+        Route::post('/bases', [AdminController::class, 'storeBase'])->name('admin.bases.store');
+        Route::put('/bases/{id}', [AdminController::class, 'updateBase'])->name('admin.bases.update');
+
         // ניהול הזמנות
         Route::get('/orders', [AdminController::class, 'getOrders'])->name('admin.orders.index');
         Route::patch('/orders/{id}/status', [AdminController::class, 'updateOrderStatus'])->name('admin.orders.status');

@@ -13,6 +13,8 @@ import AdminLogin from './pages/admin/AdminLogin';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminOrders from './pages/admin/AdminOrders';
 import AdminMenu from './pages/admin/AdminMenu';
+import AdminBases from './pages/admin/AdminBases';
+import AdminSalads from './pages/admin/AdminSalads';
 import AdminCategories from './pages/admin/AdminCategories';
 import AdminEmployees from './pages/admin/AdminEmployees';
 import AdminRestaurant from './pages/admin/AdminRestaurant';
@@ -130,6 +132,22 @@ function AppRoutes() {
         element={
           <AdminRoute>
             <AdminMenu />
+          </AdminRoute>
+        }
+      />
+      <Route
+        path="/admin/menu/bases"
+        element={
+          <AdminRoute>
+            <AdminBases />
+          </AdminRoute>
+        }
+      />
+      <Route
+        path="/admin/menu/salads"
+        element={
+          <AdminRoute>
+            <AdminSalads />
           </AdminRoute>
         }
       />
