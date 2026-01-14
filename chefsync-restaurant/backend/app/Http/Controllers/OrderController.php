@@ -84,6 +84,17 @@ class OrderController extends Controller
                 throw new \Exception('Restaurant not found for tenant');
             }
 
+            if (!($restaurant->is_open_now ?? false)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'המסעדה סגורה כרגע ולא ניתן לבצע הזמנה',
+                    'data' => [
+                        'is_open_now' => false,
+                        'is_override_status' => (bool) ($restaurant->is_override_status ?? false),
+                    ],
+                ], 403);
+            }
+
             $restaurantId = $restaurant->id;
             $restaurantVariants = $restaurant->variants ?? collect();
             $restaurantAddonGroups = $restaurant->addonGroups ?? collect();
