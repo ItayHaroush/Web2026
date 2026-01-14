@@ -2,60 +2,38 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use App\Services\Otp\OtpProviderInterface;
+use App\Services\Otp\Sms019OtpService;
+use App\Services\Otp\TwilioOtpProvider;
 
 class SmsService
 {
     public static function sendVerificationCode($phone, $code)
     {
-        $sid = config('services.twilio.sid');
-        $token = config('services.twilio.token');
-        $messagingServiceSid = config('services.twilio.messaging_service_sid');
-        $from = config('services.twilio.from');
+        return self::sendOtp((string) $phone, (string) $code);
+    }
 
-        // Missing creds? אל תזרוק חריגה – רק לוג והחזר false
-        if (!$sid || !$token) {
-            Log::warning('Twilio config missing', [
-                'sid' => (bool) $sid,
-                'token' => (bool) $token,
-                'messagingServiceSid' => (bool) $messagingServiceSid,
-                'from' => (bool) $from,
-            ]);
-            return false;
-        }
+    public static function sendOtp(string $phone, string $code): bool
+    {
+        return self::provider()->sendOtp($phone, $code);
+    }
 
-        // חייבים לפחות MessagingServiceSid או From
-        if (!$messagingServiceSid && !$from) {
-            Log::warning('Twilio destination missing (MessagingServiceSid/From)');
-            return false;
-        }
+    public static function verifyOtp(string $phone, string $code): bool
+    {
+        return self::provider()->verifyOtp($phone, $code);
+    }
 
-        $twilioUrl = "https://api.twilio.com/2010-04-01/Accounts/{$sid}/Messages.json";
-        $body = "קוד האימות שלך ל-TakeEat: $code";
+    private static function provider(): OtpProviderInterface
+    {
+        $provider = (string) config('sms.provider', 'twilio');
 
-        $payload = [
-            'To' => $phone,
-            'Body' => $body,
-        ];
-        if ($messagingServiceSid) {
-            $payload['MessagingServiceSid'] = $messagingServiceSid;
-        } else {
-            $payload['From'] = $from;
-        }
-
-        try {
-            $response = Http::asForm()
-                ->withBasicAuth($sid, $token)
-                ->post($twilioUrl, $payload);
-
-            if (!$response->successful()) {
-                Log::error('Twilio SMS failed', ['status' => $response->status(), 'response' => $response->body()]);
-            }
-            return $response->successful();
-        } catch (\Throwable $e) {
-            Log::error('Twilio SMS exception', ['message' => $e->getMessage()]);
-            return false;
-        }
+        return match ($provider) {
+            'sms019', '019sms', '019' => new Sms019OtpService(),
+            'twilio' => new TwilioOtpProvider(),
+            default => tap(new TwilioOtpProvider(), function () use ($provider) {
+                Log::warning('Unknown SMS provider, falling back to twilio', ['provider' => $provider]);
+            }),
+        };
     }
 }
