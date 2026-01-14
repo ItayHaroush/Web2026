@@ -12,7 +12,17 @@ export default function AdminOrders() {
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [newOrderAlert, setNewOrderAlert] = useState(false);
     const previousOrdersCount = useRef(0);
-    const audioRef = useRef(null);
+
+    const formatAddons = (addons) => {
+        if (!Array.isArray(addons) || addons.length === 0) return '';
+        return addons
+            .map((addon) => {
+                if (typeof addon === 'string') return addon;
+                return addon?.name ?? addon?.addon_name ?? null;
+            })
+            .filter(Boolean)
+            .join(' · ');
+    };
 
     useEffect(() => {
         fetchOrders();
@@ -44,12 +54,16 @@ export default function AdminOrders() {
                 }
 
                 setOrders(newOrders);
+
+                return newOrders;
             }
         } catch (error) {
             console.error('Failed to fetch orders:', error);
         } finally {
             setLoading(false);
         }
+
+        return null;
     };
 
     const playNotificationSound = () => {
@@ -92,11 +106,14 @@ export default function AdminOrders() {
 
             if (response.data.success) {
                 // רענון רשימת ההזמנות
-                await fetchOrders();
+                const refreshed = await fetchOrders();
 
-                // עדכון ההזמנה הנבחרת
+                // עדכון ההזמנה הנבחרת (חשוב: להשאיר items/addons/variant_name ולא לדרוס עם payload חלקי)
                 if (selectedOrder?.id === orderId) {
-                    setSelectedOrder(response.data.order);
+                    const refreshedOrder = Array.isArray(refreshed)
+                        ? refreshed.find((o) => o.id === orderId)
+                        : null;
+                    setSelectedOrder(refreshedOrder || response.data.order || selectedOrder);
                 }
             } else {
                 console.error('Update failed:', response.data);
@@ -224,7 +241,6 @@ export default function AdminOrders() {
                                 orders.map((order) => {
                                     const statusBadge = getStatusBadge(order.status);
                                     const isPending = ['pending', 'received'].includes(order.status);
-                                    const isActive = ['pending', 'received', 'preparing', 'ready', 'delivering'].includes(order.status);
                                     const isDelivery = order.delivery_method === 'delivery' || (!!order.delivery_address);
 
                                     return (
@@ -343,7 +359,7 @@ export default function AdminOrders() {
                                 {/* פריטים */}
                                 <div>
                                     <h4 className="font-medium text-gray-800 mb-2">🍽️ פריטים</h4>
-                                    <div className="space-y-2">
+                                    <div className="divide-y">
                                         {selectedOrder.items?.map((item, index) => {
                                             const quantity = Number(item.quantity ?? item.qty ?? 1);
                                             const unitPrice = Number(item.price_at_order ?? item.price ?? 0);
@@ -352,9 +368,10 @@ export default function AdminOrders() {
                                             const basePrice = Math.max(unitPrice - variantDelta - addonsTotal, 0);
                                             const lineTotal = (unitPrice * quantity).toFixed(2);
                                             const addons = Array.isArray(item.addons) ? item.addons : [];
+                                            const hasCustomizations = Boolean(item.variant_name) || addons.length > 0 || variantDelta > 0 || addonsTotal > 0;
 
                                             return (
-                                                <div key={index} className="bg-gray-50 rounded-lg p-3 space-y-2">
+                                                <div key={index} className="py-3 space-y-2">
                                                     <div className="flex justify-between items-start">
                                                         <div className="space-y-1">
                                                             <div className="font-medium text-gray-900">
@@ -362,11 +379,11 @@ export default function AdminOrders() {
                                                                 <span className="text-gray-500 mr-2">× {quantity}</span>
                                                             </div>
                                                             {item.variant_name && (
-                                                                <div className="text-sm text-gray-700">וריאציה: {item.variant_name}</div>
+                                                                <div className="text-sm text-gray-700">סוג לחם: {item.variant_name}</div>
                                                             )}
                                                             {addons.length > 0 && (
                                                                 <div className="text-sm text-gray-700">
-                                                                    תוספות: {addons.map((addon) => addon.name).join(', ')}
+                                                                    תוספות: {formatAddons(addons)}
                                                                 </div>
                                                             )}
                                                         </div>
@@ -375,12 +392,13 @@ export default function AdminOrders() {
                                                             <div className="text-xs text-gray-600">₪{unitPrice.toFixed(2)} ליחידה</div>
                                                         </div>
                                                     </div>
-                                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs text-gray-700">
-                                                        <div className="bg-white border rounded px-2 py-1">בסיס: ₪{basePrice.toFixed(2)}</div>
-                                                        <div className="bg-white border rounded px-2 py-1">וריאציה: ₪{variantDelta.toFixed(2)}</div>
-                                                        <div className="bg-white border rounded px-2 py-1">תוספות: ₪{addonsTotal.toFixed(2)}</div>
-                                                        <div className="bg-white border rounded px-2 py-1">סה"כ יחידה: ₪{unitPrice.toFixed(2)}</div>
-                                                    </div>
+                                                    {hasCustomizations && (
+                                                        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-600">
+                                                            <div>בסיס: ₪{basePrice.toFixed(2)}</div>
+                                                            {variantDelta > 0 && <div>סוג לחם: ₪{variantDelta.toFixed(2)}</div>}
+                                                            {addonsTotal > 0 && <div>תוספות: ₪{addonsTotal.toFixed(2)}</div>}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             );
                                         })}
