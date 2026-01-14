@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -17,6 +18,10 @@ use App\Models\RestaurantAddonGroup;
  */
 class Restaurant extends Model
 {
+    protected $appends = [
+        'is_open_now',
+    ];
+
     protected $fillable = [
         'tenant_id',
         'name',
@@ -219,5 +224,76 @@ class Restaurant extends Model
         }
 
         return max(0, now()->diffInDays($this->subscription_ends_at, false));
+    }
+
+    public function getIsOpenNowAttribute(): bool
+    {
+        if ($this->is_override_status) {
+            return (bool) $this->is_open;
+        }
+
+        return self::calculateIsOpen(
+            $this->operating_days ?? [],
+            $this->operating_hours ?? [],
+        );
+    }
+
+    public static function calculateIsOpen(array $operatingDays = [], array $operatingHours = [], ?Carbon $now = null): bool
+    {
+        if (empty($operatingDays) && empty($operatingHours)) {
+            return true;
+        }
+
+        $now = $now ?? Carbon::now('Asia/Jerusalem');
+        $todayDate = $now->toDateString();
+        $hebrewDays = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+        $currentDayName = $hebrewDays[$now->dayOfWeek] ?? null;
+
+        $defaultHours = $operatingHours['default'] ?? $operatingHours;
+        $specialDays = $operatingHours['special_days'] ?? [];
+        $perDayOverrides = $operatingHours['days'] ?? [];
+
+        // 1) יום מיוחד לפי תאריך גובר על הכל
+        if (!empty($specialDays[$todayDate]) && is_array($specialDays[$todayDate])) {
+            $special = $specialDays[$todayDate];
+            if (!empty($special['closed'])) {
+                return false;
+            }
+            $open = $special['open'] ?? ($defaultHours['open'] ?? '00:00');
+            $close = $special['close'] ?? ($defaultHours['close'] ?? '23:59');
+        }
+        // 2) override שבועי ליום בשבוע (אם לא היה יום מיוחד)
+        elseif ($currentDayName && !empty($perDayOverrides[$currentDayName]) && is_array($perDayOverrides[$currentDayName])) {
+            $dayCfg = $perDayOverrides[$currentDayName];
+            if (!empty($dayCfg['closed'])) {
+                return false;
+            }
+            $open = $dayCfg['open'] ?? ($defaultHours['open'] ?? '00:00');
+            $close = $dayCfg['close'] ?? ($defaultHours['close'] ?? '23:59');
+        }
+        // 3) ברירת מחדל: ימים + שעות כלליים
+        else {
+            if ($currentDayName && !empty($operatingDays) && !($operatingDays[$currentDayName] ?? false)) {
+                return false;
+            }
+
+            if (empty($defaultHours) || !is_array($defaultHours)) {
+                return true;
+            }
+
+            $open = $defaultHours['open'] ?? '00:00';
+            $close = $defaultHours['close'] ?? '23:59';
+        }
+
+        $currentTime = $now->format('H:i');
+        $open = is_string($open) ? $open : '00:00';
+        $close = is_string($close) ? $close : '23:59';
+
+        // אם שעת הסגירה קטנה משעת הפתיחה (פתוח בין לילה)
+        if ($close < $open) {
+            return $currentTime >= $open || $currentTime <= $close;
+        }
+
+        return $currentTime >= $open && $currentTime <= $close;
     }
 }

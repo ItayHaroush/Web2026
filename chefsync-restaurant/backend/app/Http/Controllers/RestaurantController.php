@@ -17,7 +17,7 @@ class RestaurantController extends Controller
     public function index(Request $request)
     {
         try {
-            $query = Restaurant::where('is_open', true);
+            $query = Restaurant::query();
 
             // סינון לפי עיר
             if ($request->has('city')) {
@@ -46,6 +46,11 @@ class RestaurantController extends Controller
             }
 
             $restaurants = $query->orderBy('name')->get();
+
+            // סנן בזמן אמת לפי שעות פתיחה (או כפייה, אם קיימת)
+            $restaurants = $restaurants
+                ->filter(fn($restaurant) => (bool) ($restaurant->is_open_now ?? false))
+                ->values();
 
             return response()->json([
                 'success' => true,

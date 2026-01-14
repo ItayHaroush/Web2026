@@ -118,7 +118,8 @@ export default function MenuPage() {
     const wazeLink = getWazeLink();
     const phoneHref = getPhoneHref();
 
-    const canOrder = restaurant?.is_open !== false;
+    const isOpenNow = restaurant?.is_open_now ?? restaurant?.is_open;
+    const canOrder = isOpenNow !== false;
 
     const handleOpenItemModal = (menuItem) => {
         if (!canOrder) {
@@ -283,8 +284,8 @@ export default function MenuPage() {
                                     )}
                                 </div>
                             </div>
-                            <div className={`px-4 py-2 rounded-full text-sm font-bold ${restaurant.is_open ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                                {restaurant.is_open ? '🟢 פתוח עכשיו' : '🔴 סגור'}
+                            <div className={`px-4 py-2 rounded-full text-sm font-bold ${isOpenNow ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                {isOpenNow ? '🟢 פתוח עכשיו' : '🔴 סגור'}
                             </div>
                         </div>
                     </div>

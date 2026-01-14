@@ -346,8 +346,8 @@ export default function HomePage() {
                                     )}
 
                                     {/* תג סטטוס */}
-                                    <div className={`absolute top-3 right-3 px-3 py-1.5 rounded-full text-xs font-bold shadow-md ${restaurant.is_open ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
-                                        {restaurant.is_open ? '🟢 פתוח' : '🔴 סגור'}
+                                    <div className={`absolute top-3 right-3 px-3 py-1.5 rounded-full text-xs font-bold shadow-md ${(restaurant.is_open_now ?? restaurant.is_open) ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
+                                        {(restaurant.is_open_now ?? restaurant.is_open) ? '🟢 פתוח' : '🔴 סגור'}
                                     </div>
                                 </div>
 

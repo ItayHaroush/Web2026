@@ -21,7 +21,7 @@ export default function AdminLayout({ children }) {
                 if (response.data.success) {
                     const restaurant = response.data.restaurant;
                     setRestaurantStatus({
-                        is_open: restaurant.is_open,
+                        is_open: restaurant.is_open_now ?? restaurant.is_open,
                         is_override: restaurant.is_override_status || false,
                     });
                 }
