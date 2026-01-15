@@ -31,7 +31,14 @@ class PhoneAuthController extends Controller
             'attempts' => 0,
         ]);
 
-        SmsService::sendVerificationCode($phone, $code);
+        $sent = SmsService::sendVerificationCode($phone, $code);
+        if (!$sent) {
+            $verification->delete();
+            return response()->json([
+                'success' => false,
+                'message' => 'שליחת SMS נכשלה, נסה שוב מאוחר יותר',
+            ], 502);
+        }
 
         return response()->json([
             'success' => true,
