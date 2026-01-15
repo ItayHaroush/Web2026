@@ -426,7 +426,7 @@ class SuperAdminController extends Controller
             ], 500);
         }
     }
-    
+
     /**
      * SMS Debug - שליחת הודעת אימות (OTP) לבדיקה מתוך פאנל סופר אדמין
      *
