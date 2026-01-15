@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use App\Services\SmsService;
 
 /**
  * SuperAdminController - ניהול מערכת כללי
@@ -424,5 +425,115 @@ class SuperAdminController extends Controller
                 'message' => 'שגיאה בשליפת סטטוס הסכימה: ' . $e->getMessage(),
             ], 500);
         }
+    }
+    
+    /**
+     * SMS Debug - שליחת הודעת אימות (OTP) לבדיקה מתוך פאנל סופר אדמין
+     *
+     * מאפשר לבחור ספק (twilio/sms019) או להשתמש בברירת מחדל (twilio).
+     * ברירת מחדל: לא מחזיר את הקוד בתגובה (ניתן לבקש reveal_code=true).
+     */
+    public function testSms(Request $request)
+    {
+        $validated = $request->validate([
+            'phone' => 'required|string',
+            'provider' => 'nullable|string|in:auto,twilio,sms019,019,019sms',
+            'dry_run' => 'nullable|boolean',
+            'reveal_code' => 'nullable|boolean',
+        ]);
+
+        $phone = $this->normalizePhoneE164($validated['phone']);
+        $providerRequested = (string) ($validated['provider'] ?? 'auto');
+        $dryRun = (bool) ($validated['dry_run'] ?? false);
+        $revealCode = (bool) ($validated['reveal_code'] ?? false);
+
+        if ($providerRequested !== '' && $providerRequested !== 'auto') {
+            config([
+                'sms.pilot' => false,
+                'sms.provider' => $providerRequested,
+            ]);
+        }
+
+        $pilot = filter_var(config('sms.pilot', false), FILTER_VALIDATE_BOOLEAN);
+        $providerSelected = $pilot ? 'twilio' : (string) config('sms.provider', 'twilio');
+
+        $code = (string) random_int(100000, 999999);
+
+        $configHealth = [
+            'twilio' => [
+                'sid' => (bool) config('sms.providers.twilio.sid'),
+                'token' => (bool) config('sms.providers.twilio.token'),
+                'messaging_service_sid' => (bool) config('sms.providers.twilio.messaging_service_sid'),
+                'from' => (bool) config('sms.providers.twilio.from'),
+            ],
+            'sms019' => [
+                'endpoint' => (bool) config('sms.providers.sms019.endpoint'),
+                'token' => (bool) config('sms.providers.sms019.token'),
+                'username' => (bool) config('sms.providers.sms019.username'),
+                'source' => (bool) config('sms.providers.sms019.source'),
+            ],
+        ];
+
+        $sent = false;
+        if (!$dryRun) {
+            $sent = SmsService::sendVerificationCode($phone, $code);
+        }
+
+        Log::info('Super admin SMS test', [
+            'user_id' => optional($request->user())->id,
+            'phone_masked' => $this->maskPhone($phone),
+            'provider_requested' => $providerRequested,
+            'provider_selected' => $providerSelected,
+            'pilot' => $pilot,
+            'dry_run' => $dryRun,
+            'sent' => $sent,
+        ]);
+
+        if (!$dryRun && !$sent) {
+            return response()->json([
+                'success' => false,
+                'message' => 'שליחת SMS נכשלה',
+                'data' => [
+                    'provider_requested' => $providerRequested,
+                    'provider_selected' => $providerSelected,
+                    'pilot' => $pilot,
+                    'phone_masked' => $this->maskPhone($phone),
+                    'config_health' => $configHealth,
+                ],
+            ], 502);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'provider_requested' => $providerRequested,
+                'provider_selected' => $providerSelected,
+                'pilot' => $pilot,
+                'dry_run' => $dryRun,
+                'sent' => $dryRun ? null : $sent,
+                'phone_masked' => $this->maskPhone($phone),
+                'config_health' => $configHealth,
+                'code' => $revealCode ? $code : null,
+            ],
+        ]);
+    }
+
+    private function normalizePhoneE164(string $raw): string
+    {
+        $phone = preg_replace('/\s+/', '', $raw);
+        if (str_starts_with($phone, '0')) {
+            return '+972' . substr($phone, 1);
+        }
+        return $phone;
+    }
+
+    private function maskPhone(string $phone): string
+    {
+        $digits = preg_replace('/\D+/', '', $phone) ?? '';
+        if ($digits === '') {
+            return '***';
+        }
+        $last4 = substr($digits, -4);
+        return '***' . $last4;
     }
 }

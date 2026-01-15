@@ -34,6 +34,11 @@ export default function SuperAdminLayout({ children }) {
             icon: '⚙️',
         },
         {
+            label: 'SMS Debug',
+            path: '/super-admin/sms-debug',
+            icon: '📨',
+        },
+        {
             label: '🔍 בדיקת Auth',
             path: '/super-admin/debug',
             icon: '🐛',

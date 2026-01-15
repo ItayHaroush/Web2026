@@ -25,6 +25,7 @@ import SuperAdminNotifications from './pages/super-admin/SuperAdminNotifications
 import SuperAdminReports from './pages/super-admin/SuperAdminReports';
 import SuperAdminSettings from './pages/super-admin/SuperAdminSettings';
 import DebugAuth from './pages/super-admin/DebugAuth';
+import SuperAdminSmsDebug from './pages/super-admin/SuperAdminSmsDebug';
 import DebugAPI from './pages/DebugAPI';
 import RegisterRestaurant from './pages/RegisterRestaurant';
 import LandingPage from './pages/LandingPage';
@@ -232,6 +233,14 @@ function AppRoutes() {
         element={
           <SuperAdminRoute>
             <DebugAuth />
+          </SuperAdminRoute>
+        }
+      />
+      <Route
+        path="/super-admin/sms-debug"
+        element={
+          <SuperAdminRoute>
+            <SuperAdminSmsDebug />
           </SuperAdminRoute>
         }
       />

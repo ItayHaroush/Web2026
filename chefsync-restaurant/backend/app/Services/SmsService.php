@@ -27,7 +27,9 @@ class SmsService
     private static function provider(): OtpProviderInterface
     {
         $pilot = filter_var(config('sms.pilot', false), FILTER_VALIDATE_BOOLEAN);
-        $provider = $pilot ? 'twilio' : 'sms019';
+        $provider = $pilot
+            ? 'twilio'
+            : (string) config('sms.provider', 'twilio');
 
         return match ($provider) {
             'sms019', '019sms', '019' => new Sms019OtpService(),

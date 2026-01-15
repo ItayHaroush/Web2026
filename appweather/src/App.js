@@ -1,5 +1,6 @@
 import './App.css';
 import React, { Component } from 'react';
+import ConectToServer from './Components/ConectToServer';
 
 const API_KEY = 'dd8bff93c38776dc57397b428c93325d';
 
@@ -187,6 +188,7 @@ class WeatherApp extends Component {
         </div>
 
         <div className="App">
+          <ConectToServer />
           <h1>בדיקת מזג אוויר</h1>
           {/* מועדפים */}
           <div style={{ margin: '16px 0' }}>
