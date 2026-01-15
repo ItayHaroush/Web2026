@@ -67,6 +67,9 @@ apiClient.interceptors.request.use((config) => {
     const urlTenantId = getTenantIdFromUrl();
     const token = localStorage.getItem('authToken') || localStorage.getItem('admin_token');
 
+    const urlPath = (config.url || '').toString();
+    const isSuperAdminCall = urlPath.startsWith('/super-admin/');
+
     // 🔥 DEBUG - הדפס כל בקשה
     const fullUrl = (config.baseURL || '') + config.url;
     console.group(`🚀 API Request: ${config.method?.toUpperCase()} ${config.url}`);
@@ -77,8 +80,8 @@ apiClient.interceptors.request.use((config) => {
     console.log('🎯 Params:', config.params);
     console.groupEnd();
 
-    // Don't clobber an explicit header
-    if (tenantId && !config.headers?.[TENANT_HEADER]) {
+    // Don't clobber an explicit header; skip tenant header for super-admin routes
+    if (!isSuperAdminCall && tenantId && !config.headers?.[TENANT_HEADER]) {
         config.headers[TENANT_HEADER] = tenantId;
     }
 

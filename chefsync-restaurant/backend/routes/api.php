@@ -73,6 +73,9 @@ Route::prefix('super-admin')->middleware(['auth:sanctum', 'super_admin'])->group
     // סטטוס סכימת בסיס נתונים ומיגרציות (אבחון)
     Route::get('/schema-status', [SuperAdminController::class, 'schemaStatus'])->name('super-admin.schema.status');
 
+    // SMS Debug (OTP)
+    Route::post('/sms/test', [SuperAdminController::class, 'testSms'])->name('super-admin.sms.test');
+
     // התראות (Broadcast) לפי פילטרים
     Route::get('/notifications/filters', [SuperAdminNotificationController::class, 'filters'])->name('super-admin.notifications.filters');
     Route::post('/notifications/send', [SuperAdminNotificationController::class, 'send'])->name('super-admin.notifications.send');
