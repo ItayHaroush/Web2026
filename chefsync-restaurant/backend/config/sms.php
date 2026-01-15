@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'pilot' => env('SMS_PILOT', false),
     'provider' => env('SMS_PROVIDER', 'twilio'),
 
     'providers' => [

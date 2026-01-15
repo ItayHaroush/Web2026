@@ -24,6 +24,11 @@ class Sms019OtpService implements OtpProviderInterface
             return false;
         }
 
+        if ($username === '') {
+            Log::warning('019sms username missing');
+            return false;
+        }
+
         $normalizedPhone = $this->normalizeIsraeliPhoneTo972($phone);
         if ($normalizedPhone === null) {
             Log::warning('019sms invalid phone', ['phone' => $phone]);
@@ -33,16 +38,17 @@ class Sms019OtpService implements OtpProviderInterface
         $message = "קוד האימות שלך הוא: {$code}";
 
         $payload = [
-            'source' => $source,
-            'destinations' => [
-                'phone' => [$normalizedPhone],
+            'sms' => [
+                'user' => [
+                    'username' => $username,
+                ],
+                'source' => $source,
+                'destinations' => [
+                    'phone' => [$normalizedPhone],
+                ],
+                'message' => $message,
             ],
-            'message' => $message,
         ];
-
-        if ($username !== '') {
-            $payload['username'] = $username;
-        }
 
         try {
             $response = Http::timeout($timeout)
@@ -50,6 +56,7 @@ class Sms019OtpService implements OtpProviderInterface
                     'Authorization' => "Bearer {$token}",
                     'Accept' => 'application/json',
                 ])
+                ->asJson()
                 ->post($endpoint, $payload);
 
             return $this->isSuccess($response);
@@ -103,8 +110,8 @@ class Sms019OtpService implements OtpProviderInterface
             return '972' . substr($digits, 1);
         }
 
-        // 5XXXXXXXX -> 9725XXXXXXXX
-        if (str_starts_with($digits, '5') && strlen($digits) === 8) {
+        // 5XXXXXXXXX -> 9725XXXXXXXXX
+        if (str_starts_with($digits, '5') && strlen($digits) === 9) {
             return '972' . $digits;
         }
 
