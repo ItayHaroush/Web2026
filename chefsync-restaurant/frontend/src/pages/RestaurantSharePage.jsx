@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { FaPhoneAlt, FaUtensils, FaMotorcycle, FaShoppingBag } from 'react-icons/fa';
 import { SiWaze } from 'react-icons/si';
@@ -17,6 +17,12 @@ const buildShareUrl = ({ origin, slug, type }) => {
     return `${base}?type=${encodeURIComponent(type)}`;
 };
 
+const DEFAULT_INCENTIVE_TEXT = [
+    'הרעב מתחיל כאן.',
+    'הזמינו בקלות ובמהירות',
+    'בלי לחכות בתור ובלי להמתין למלצר',
+].join('\n');
+
 export default function RestaurantSharePage() {
     const { slug: slugParam } = useParams();
     const navigate = useNavigate();
@@ -30,11 +36,6 @@ export default function RestaurantSharePage() {
     const orderType = normalizeOrderType(searchParams.get('type'));
 
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
-
-    const shareUrl = useMemo(() => {
-        if (!restaurant?.slug || !origin) return '';
-        return buildShareUrl({ origin, slug: restaurant.slug, type: null });
-    }, [origin, restaurant?.slug]);
 
     useEffect(() => {
         if (!slugParam) return;
@@ -83,6 +84,15 @@ export default function RestaurantSharePage() {
 
     const canDelivery = (restaurant?.has_delivery ?? true) && !isClosed;
     const canPickup = (restaurant?.has_pickup ?? true) && !isClosed;
+
+    const incentiveText = (restaurant?.share_incentive_text || DEFAULT_INCENTIVE_TEXT).trim();
+    const incentiveLines = incentiveText.split(/\r?\n/).filter(Boolean);
+    const [line1, line2, ...restLines] = incentiveLines;
+
+    const deliveryTime = restaurant?.delivery_time_minutes;
+    const pickupTime = restaurant?.pickup_time_minutes;
+    const deliveryNote = restaurant?.delivery_time_note;
+    const pickupNote = restaurant?.pickup_time_note;
 
     const goToMenu = (type) => {
         const normalized = normalizeOrderType(type);
@@ -140,6 +150,7 @@ export default function RestaurantSharePage() {
 
             <div className="relative z-10 w-full max-w-md flex flex-col gap-8 text-center animate-[slideDown_0.5s_ease-out]">
                 {/* Identity */}
+
                 <div className="flex flex-col items-center gap-4">
                     <div className="relative">
                         {restaurant.logo_url ? (
@@ -168,12 +179,34 @@ export default function RestaurantSharePage() {
                 {/* Incentive Text */}
                 <div className="py-2">
                     <h2 className="text-xl font-medium text-gray-200 leading-relaxed">
-                        הרעב מתחיל כאן.<br />
-                        <span className="text-blue-400 font-bold text-2xl">הזמינו בקלות ובמהירות</span>
-                        <br /><span className="text-sm text-gray-500 mt-1 block">בלי לחכות בתור ובלי להמתין למלצר</span>
+                        {line1 || 'ברוכים הבאים'}
+                        {line2 && (
+                            <>
+                                <br />
+                                <span className="text-blue-400 font-bold text-2xl">{line2}</span>
+                            </>
+                        )}
+                        {restLines.length > 0 && (
+                            <>
+                                <br />
+                                <span className="text-sm text-gray-500 mt-1 block">
+                                    {restLines.join(' · ')}
+                                </span>
+                            </>
+                        )}
                     </h2>
                 </div>
 
+                {isClosed && (
+                    <div className="bg-red-900/20 border border-red-900/50 p-4 rounded-xl backdrop-blur-sm">
+                        <p className="text-red-300 font-medium">
+                            המסעדה סגורה כרגע 😴
+                        </p>
+                        <p className="text-red-400/80 text-sm mt-1">
+                            אבל אל דאגה, התפריט פתוח להתרשמות
+                        </p>
+                    </div>
+                )}
                 {/* Main Actions */}
                 <div className="flex flex-col gap-4 w-full">
                     <button
@@ -184,29 +217,67 @@ export default function RestaurantSharePage() {
                     </button>
 
                     <div className="grid grid-cols-2 gap-4">
-                        <button
-                            onClick={() => goToMenu('delivery')}
-                            disabled={!canDelivery}
-                            className={`py-4 px-4 rounded-2xl font-bold flex flex-col items-center justify-center gap-2 transition-all border ${canDelivery
-                                ? 'bg-gray-800 border-gray-700 hover:bg-gray-750 hover:border-gray-600 text-white shadow-lg active:scale-95'
-                                : 'bg-gray-900/50 border-gray-800 text-gray-600 cursor-not-allowed'
-                                }`}
-                        >
-                            <FaMotorcycle size={24} className={canDelivery ? "text-blue-400" : "text-gray-700"} />
-                            <span>משלוח</span>
-                        </button>
+                        {canDelivery && (
+                            <div className="flex flex-col items-center gap-2">
+                                <button
+                                    onClick={() => goToMenu('delivery')}
+                                    className="w-full py-4 px-4 rounded-2xl font-bold flex flex-col items-center justify-center gap-2 transition-all border bg-gray-800 border-gray-700 hover:bg-gray-750 hover:border-gray-600 text-white shadow-lg active:scale-95"
+                                >
+                                    <FaMotorcycle size={24} className="text-blue-400" />
+                                    <span>משלוח</span>
+                                </button>
+                                {deliveryTime && (
+                                    <div className="flex items-center gap-2 text-xs text-gray-400">
+                                        <span>⏱️ {deliveryTime} דק'</span>
+                                        {deliveryNote && (
+                                            <div className="relative group">
+                                                <button
+                                                    type="button"
+                                                    className="w-4 h-4 rounded-full bg-amber-400 text-gray-900 text-[10px] font-bold flex items-center justify-center"
+                                                    aria-label="מידע נוסף על זמן משלוח"
+                                                >
+                                                    !
+                                                </button>
+                                                <div className="absolute z-10 hidden group-hover:block group-focus-within:block top-6 right-0 bg-gray-900 text-white text-xs px-3 py-2 rounded-lg shadow-lg max-w-xs whitespace-pre-wrap">
+                                                    {deliveryNote}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )}
 
-                        <button
-                            onClick={() => goToMenu('pickup')}
-                            disabled={!canPickup}
-                            className={`py-4 px-4 rounded-2xl font-bold flex flex-col items-center justify-center gap-2 transition-all border ${canPickup
-                                ? 'bg-gray-800 border-gray-700 hover:bg-gray-750 hover:border-gray-600 text-white shadow-lg active:scale-95'
-                                : 'bg-gray-900/50 border-gray-800 text-gray-600 cursor-not-allowed'
-                                }`}
-                        >
-                            <FaShoppingBag size={24} className={canPickup ? "text-emerald-400" : "text-gray-700"} />
-                            <span>איסוף עצמי</span>
-                        </button>
+                        {canPickup && (
+                            <div className="flex flex-col items-center gap-2">
+                                <button
+                                    onClick={() => goToMenu('pickup')}
+                                    className="w-full py-4 px-4 rounded-2xl font-bold flex flex-col items-center justify-center gap-2 transition-all border bg-gray-800 border-gray-700 hover:bg-gray-750 hover:border-gray-600 text-white shadow-lg active:scale-95"
+                                >
+                                    <FaShoppingBag size={24} className="text-emerald-400" />
+                                    <span>איסוף עצמי</span>
+                                </button>
+                                {pickupTime && (
+                                    <div className="flex items-center gap-2 text-xs text-gray-400">
+                                        <span>⏱️ {pickupTime} דק'</span>
+                                        {pickupNote && (
+                                            <div className="relative group">
+                                                <button
+                                                    type="button"
+                                                    className="w-4 h-4 rounded-full bg-amber-400 text-gray-900 text-[10px] font-bold flex items-center justify-center"
+                                                    aria-label="מידע נוסף על זמן איסוף"
+                                                >
+                                                    !
+                                                </button>
+                                                <div className="absolute z-10 hidden group-hover:block group-focus-within:block top-6 right-0 bg-gray-900 text-white text-xs px-3 py-2 rounded-lg shadow-lg max-w-xs whitespace-pre-wrap">
+                                                    {pickupNote}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -230,16 +301,6 @@ export default function RestaurantSharePage() {
                     )}
                 </div>
 
-                {isClosed && (
-                    <div className="bg-red-900/20 border border-red-900/50 p-4 rounded-xl backdrop-blur-sm">
-                        <p className="text-red-300 font-medium">
-                            המסעדה סגורה כרגע 😴
-                        </p>
-                        <p className="text-red-400/80 text-sm mt-1">
-                            אבל אל דאגה, התפריט פתוח להתרשמות
-                        </p>
-                    </div>
-                )}
             </div>
 
             {/* Branding Footer */}

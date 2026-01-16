@@ -21,11 +21,37 @@ class SmsService
 
     public static function sendOtp(string $phone, string $code): bool
     {
+        if (app()->environment('local')) {
+            Log::info('Local SMS bypass: OTP generated', [
+                'phone' => $phone,
+                'code' => $code,
+            ]);
+            return true;
+        }
+
         return self::provider()->sendOtp($phone, $code);
     }
 
     public static function sendOtpDetailed(string $phone, string $code): array
     {
+        if (app()->environment('local')) {
+            Log::info('Local SMS bypass: OTP generated (detailed)', [
+                'phone' => $phone,
+                'code' => $code,
+            ]);
+            return [
+                'sent' => true,
+                'resolved_source' => 'local-bypass',
+                'resolved_destination' => $phone,
+                'used_username' => null,
+                'token_tail' => null,
+                'http_status' => 200,
+                'provider_status' => 'local-bypass',
+                'provider_message' => 'SMS bypassed in local environment',
+                'code' => $code,
+            ];
+        }
+
         $provider = self::provider();
 
         if (is_callable([$provider, 'sendOtpDetailed'])) {

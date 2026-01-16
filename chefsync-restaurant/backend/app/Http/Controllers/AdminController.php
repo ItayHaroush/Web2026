@@ -638,6 +638,11 @@ class AdminController extends Controller
             'phone' => 'sometimes|string|max:20',
             'address' => 'sometimes|string|max:255',
             'city' => 'sometimes|string|max:255',
+            'share_incentive_text' => 'nullable|string|max:1000',
+            'delivery_time_minutes' => 'nullable|integer|min:1|max:240',
+            'delivery_time_note' => 'nullable|string|max:255',
+            'pickup_time_minutes' => 'nullable|integer|min:1|max:240',
+            'pickup_time_note' => 'nullable|string|max:255',
             'is_open' => 'sometimes',
             'is_override_status' => 'sometimes',
             'operating_days' => 'nullable|string',
@@ -702,6 +707,28 @@ class AdminController extends Controller
         }
         if ($request->has('address')) {
             $updateData['address'] = $request->input('address');
+        }
+
+        if ($request->has('share_incentive_text')) {
+            $updateData['share_incentive_text'] = $request->input('share_incentive_text');
+        }
+
+        if ($request->has('delivery_time_minutes')) {
+            $value = $request->input('delivery_time_minutes');
+            $updateData['delivery_time_minutes'] = $value === '' ? null : (int) $value;
+        }
+
+        if ($request->has('delivery_time_note')) {
+            $updateData['delivery_time_note'] = $request->input('delivery_time_note');
+        }
+
+        if ($request->has('pickup_time_minutes')) {
+            $value = $request->input('pickup_time_minutes');
+            $updateData['pickup_time_minutes'] = $value === '' ? null : (int) $value;
+        }
+
+        if ($request->has('pickup_time_note')) {
+            $updateData['pickup_time_note'] = $request->input('pickup_time_note');
         }
 
         if ($request->filled('city')) {
@@ -827,7 +854,16 @@ class AdminController extends Controller
         // 🛡️ הגנה אחרונה - סנן null מכל השדות הקריטיים
         $updateData = array_filter($updateData, function ($value, $key) {
             // אפשר null רק לשדות שיכולים להיות ריקים
-            $nullableFields = ['description', 'address', 'logo_url'];
+            $nullableFields = [
+                'description',
+                'address',
+                'logo_url',
+                'share_incentive_text',
+                'delivery_time_minutes',
+                'delivery_time_note',
+                'pickup_time_minutes',
+                'pickup_time_note',
+            ];
             if (in_array($key, $nullableFields)) {
                 return true; // שמור גם null
             }
@@ -1036,6 +1072,31 @@ class AdminController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'סטטוס ההזמנה עודכן!',
+            'order' => $order->load('items.menuItem'),
+        ]);
+    }
+
+    public function updateOrderEta(Request $request, $id)
+    {
+        $user = $request->user();
+        $order = Order::where('restaurant_id', $user->restaurant_id)
+            ->findOrFail($id);
+
+        $validated = $request->validate([
+            'eta_minutes' => 'required|integer|min:1|max:240',
+            'eta_note' => 'nullable|string|max:255',
+        ]);
+
+        $order->eta_minutes = $validated['eta_minutes'];
+        if ($request->has('eta_note')) {
+            $order->eta_note = $validated['eta_note'];
+        }
+        $order->eta_updated_at = now();
+        $order->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'זמן ההזמנה עודכן בהצלחה',
             'order' => $order->load('items.menuItem'),
         ]);
     }
