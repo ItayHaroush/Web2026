@@ -29,6 +29,11 @@ class RestaurantController extends Controller
             'operating_hours' => $restaurant->operating_hours ?? [],
             'has_delivery' => $restaurant->has_delivery ?? true,
             'has_pickup' => $restaurant->has_pickup ?? true,
+            'share_incentive_text' => $restaurant->share_incentive_text,
+            'delivery_time_minutes' => $restaurant->delivery_time_minutes,
+            'delivery_time_note' => $restaurant->delivery_time_note,
+            'pickup_time_minutes' => $restaurant->pickup_time_minutes,
+            'pickup_time_note' => $restaurant->pickup_time_note,
         ];
     }
 

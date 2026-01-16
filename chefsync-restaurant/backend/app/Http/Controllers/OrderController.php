@@ -99,6 +99,16 @@ class OrderController extends Controller
             $restaurantVariants = $restaurant->variants ?? collect();
             $restaurantAddonGroups = $restaurant->addonGroups ?? collect();
 
+            $etaMinutes = null;
+            $etaNote = null;
+            if ($validated['delivery_method'] === 'delivery') {
+                $etaMinutes = $restaurant->delivery_time_minutes ?? null;
+                $etaNote = $restaurant->delivery_time_note ?? null;
+            } else {
+                $etaMinutes = $restaurant->pickup_time_minutes ?? null;
+                $etaNote = $restaurant->pickup_time_note ?? null;
+            }
+
             $lineItems = [];
             $totalAmount = 0;
 
@@ -262,6 +272,9 @@ class OrderController extends Controller
                 'payment_method' => $validated['payment_method'],
                 'delivery_address' => $validated['delivery_address'] ?? null,
                 'delivery_notes' => $validated['delivery_notes'] ?? null,
+                'eta_minutes' => $etaMinutes,
+                'eta_note' => $etaNote,
+                'eta_updated_at' => now(),
                 'status' => Order::STATUS_RECEIVED,
                 'total_amount' => $totalAmount,
             ]);

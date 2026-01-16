@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { CustomerLayout } from '../layouts/CustomerLayout';
@@ -20,6 +20,10 @@ export default function OrderStatusPage() {
     const [shouldPoll, setShouldPoll] = useState(true);
     const [errorCount, setErrorCount] = useState(0);
     const [precheckPassed, setPrecheckPassed] = useState(false);
+    const [etaAlert, setEtaAlert] = useState('');
+    const etaUpdatedAtRef = useRef(null);
+    const statusRef = useRef(null);
+    const initialLoadRef = useRef(true);
 
     // הבטחת כתובת קאנונית עם tenant בסלאג
     useEffect(() => {
@@ -70,10 +74,31 @@ export default function OrderStatusPage() {
             setError(null);
             setFatalErrorMessage('');
             const data = await orderService.getOrder(orderId);
-            setOrder(data.data);
+            const nextOrder = data.data;
+            setOrder(nextOrder);
             setErrorCount(0);
             if (!shouldPoll) {
                 setShouldPoll(true);
+            }
+
+            const nextEtaUpdatedAt = nextOrder?.eta_updated_at || null;
+            if (etaUpdatedAtRef.current && nextEtaUpdatedAt && etaUpdatedAtRef.current !== nextEtaUpdatedAt) {
+                const etaText = nextOrder?.eta_minutes
+                    ? `זמן ההזמנה עודכן ל-${nextOrder.eta_minutes} דקות`
+                    : 'זמן ההזמנה עודכן';
+                setEtaAlert(etaText);
+                setTimeout(() => setEtaAlert(''), 6000);
+                playNotificationSound();
+            }
+            etaUpdatedAtRef.current = nextEtaUpdatedAt;
+
+            if (statusRef.current && nextOrder?.status && statusRef.current !== nextOrder.status) {
+                playNotificationSound();
+            }
+            statusRef.current = nextOrder?.status || statusRef.current;
+
+            if (initialLoadRef.current) {
+                initialLoadRef.current = false;
             }
 
             if (data.data?.status === ORDER_STATUS.DELIVERED) {
@@ -106,6 +131,26 @@ export default function OrderStatusPage() {
             }
         }
     }, [orderId, tenantId, urlTenantId, shouldPoll, precheckPassed]);
+
+    const playNotificationSound = () => {
+        try {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            oscillator.frequency.value = 900;
+            oscillator.type = 'sine';
+            gainNode.gain.value = 0.25;
+
+            oscillator.start();
+            setTimeout(() => oscillator.stop(), 180);
+        } catch (e) {
+            // ignore audio errors
+        }
+    };
 
     useEffect(() => {
         if (!urlTenantId || !precheckPassed) {
@@ -198,6 +243,12 @@ export default function OrderStatusPage() {
                     <p className="text-gray-600">הזמנה #{order.id}</p>
                 </div>
 
+                {etaAlert && (
+                    <div className="max-w-2xl mx-auto bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-xl text-center">
+                        {etaAlert}
+                    </div>
+                )}
+
                 {/* כרטיס הזמנה */}
                 <div className="bg-white border-2 border-brand-primary rounded-lg p-6 max-w-2xl mx-auto">
                     <div className="grid grid-cols-2 gap-4 mb-6">
@@ -209,15 +260,36 @@ export default function OrderStatusPage() {
                             <p className="text-sm text-gray-600 mb-1">טלפון</p>
                             <p className="font-semibold text-gray-900">{order.customer_phone}</p>
                         </div>
-                        <div>
-                            <p className="text-sm text-gray-600 mb-1">סכום כללי</p>
-                            <p className="font-semibold text-brand-accent text-lg">₪{order.total_amount}</p>
-                        </div>
+
                         <div>
                             <p className="text-sm text-gray-600 mb-1">זמן הזמנה</p>
                             <p className="font-semibold text-gray-900">
                                 {new Date(order.created_at).toLocaleString('he-IL')}
                             </p>
+                        </div>
+                        <div className="col-2">
+                            <p className="text-sm text-gray-600 mb-1">זמן משוער</p>
+                            {order.eta_minutes ? (
+                                <div className="flex items-center gap-2">
+                                    <p className="font-semibold text-gray-900">{order.eta_minutes} דקות</p>
+                                    {order.eta_note && (
+                                        <div className="relative group">
+                                            <button
+                                                type="button"
+                                                className="w-5 h-5 rounded-full bg-amber-100 text-amber-700 text-xs font-bold flex items-center justify-center"
+                                                aria-label="מידע נוסף על זמן משוער"
+                                            >
+                                                !
+                                            </button>
+                                            <div className="absolute z-10 hidden group-hover:block group-focus-within:block top-7 right-0 bg-gray-900 text-white text-xs px-3 py-2 rounded-lg shadow-lg max-w-xs whitespace-pre-wrap">
+                                                {order.eta_note}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <p className="text-sm text-gray-500">טרם עודכן זמן משוער</p>
+                            )}
                         </div>
                     </div>
 
@@ -260,7 +332,7 @@ export default function OrderStatusPage() {
                 {/* פרטי פריטים */}
                 {order.items && order.items.length > 0 && (
                     <div className="space-y-3">
-                        <h2 className="text-xl font-bold text-gray-900">פרטי הזמנה:</h2>
+                        <h2 className="text-xl font-bold text-gray-900">🍽️ פריטים</h2>
                         {order.items.map((item) => {
                             const quantity = item.quantity ?? item.qty ?? 1;
                             const unitPrice = Number(item.price_at_order) || 0;
@@ -269,39 +341,51 @@ export default function OrderStatusPage() {
                             const basePrice = Math.max(unitPrice - variantDelta - addonsTotal, 0);
                             const lineTotal = (unitPrice * quantity).toFixed(2);
                             const addons = Array.isArray(item.addons) ? item.addons : [];
+                            const hasCustomizations = Boolean(item.variant_name) || addonsTotal > 0 || variantDelta > 0;
 
                             return (
                                 <div key={item.id} className="bg-gray-50 border border-gray-200 rounded p-4 space-y-2">
-                                    <div className="flex justify-between items-start gap-3">
-                                        <div className="space-y-1">
+                                    <div className="space-y-1">
+                                        <div className="flex items-center justify-between gap-3">
                                             <div className="font-semibold text-gray-900">
-                                                {item.menuItem?.name || 'פריט'}
-                                                <span className="text-gray-700 font-normal"> × {quantity}</span>
+                                                {(item.menuItem?.name || item.menu_item?.name || item.name || 'פריט')}× {quantity}
                                             </div>
-                                            {item.variant_name && (
-                                                <div className="text-sm text-gray-700">וריאציה: {item.variant_name}</div>
-                                            )}
-                                            {addons.length > 0 && (
-                                                <div className="text-sm text-gray-700">
-                                                    תוספות: {addons.map((addon) => addon.name).join(', ')}
-                                                </div>
+                                            {unitPrice > 0 && (
+                                                <div className="font-semibold text-gray-900">₪{lineTotal}</div>
                                             )}
                                         </div>
-                                        <div className="text-right">
-                                            <div className="font-semibold text-gray-900">₪{lineTotal}</div>
-                                            <div className="text-xs text-gray-600">₪{unitPrice.toFixed(2)} ליחידה</div>
-                                        </div>
+                                        {item.variant_name && (
+                                            <div className="text-sm text-gray-700">סוג לחם: {item.variant_name}</div>
+                                        )}
+                                        {addons.length > 0 && (
+                                            <div className="text-sm text-gray-700">
+                                                תוספות: {addons.map((addon) => addon.name).join(' · ')}
+                                            </div>
+                                        )}
                                     </div>
+                                    {hasCustomizations && (
+                                        <div className="text-sm text-gray-700">
+                                            {[
+                                                basePrice > 0 ? `בסיס: ₪${basePrice.toFixed(2)}` : null,
+                                                variantDelta > 0 ? `סוג לחם: ₪${variantDelta.toFixed(2)}` : null,
+                                                addonsTotal > 0 ? `תוספות: ₪${addonsTotal.toFixed(2)}` : null,
+                                            ]
+                                                .filter(Boolean)
+                                                .join(' · ')}
+                                        </div>
+                                    )}
+                                    {unitPrice > 0 && (
+                                        <div className="text-xs text-gray-600">₪{unitPrice.toFixed(2)} ליחידה</div>
+                                    )}
 
-                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs text-gray-700">
-                                        <div className="bg-white border rounded px-2 py-1">בסיס: ₪{basePrice.toFixed(2)}</div>
-                                        <div className="bg-white border rounded px-2 py-1">וריאציה: ₪{variantDelta.toFixed(2)}</div>
-                                        <div className="bg-white border rounded px-2 py-1">תוספות: ₪{addonsTotal.toFixed(2)}</div>
-                                        <div className="bg-white border rounded px-2 py-1">סה"כ יחידה: ₪{unitPrice.toFixed(2)}</div>
-                                    </div>
+
                                 </div>
                             );
                         })}
+                        <div className="border-t pt-3 flex items-center justify-between text-lg font-bold text-gray-900">
+                            <span>סה"כ</span>
+                            <span>₪{Number(order.total_amount || 0).toFixed(2)}</span>
+                        </div>
                     </div>
                 )}
 

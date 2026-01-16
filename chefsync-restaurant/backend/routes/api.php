@@ -123,6 +123,7 @@ Route::prefix('admin')->middleware(['auth:sanctum'])->group(function () {
         // ניהול הזמנות
         Route::get('/orders', [AdminController::class, 'getOrders'])->name('admin.orders.index');
         Route::patch('/orders/{id}/status', [AdminController::class, 'updateOrderStatus'])->name('admin.orders.status');
+        Route::patch('/orders/{id}/eta', [AdminController::class, 'updateOrderEta'])->name('admin.orders.eta');
 
         // ניהול עובדים
         Route::get('/employees', [AdminController::class, 'getEmployees'])->name('admin.employees.index');

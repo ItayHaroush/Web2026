@@ -49,6 +49,11 @@ class Restaurant extends Model
         'yearly_price',
         'last_payment_at',
         'next_payment_at',
+        'share_incentive_text',
+        'delivery_time_minutes',
+        'delivery_time_note',
+        'pickup_time_minutes',
+        'pickup_time_note',
     ];
 
     protected $attributes = [
@@ -70,6 +75,8 @@ class Restaurant extends Model
         'next_payment_at' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
+        'delivery_time_minutes' => 'integer',
+        'pickup_time_minutes' => 'integer',
     ];
 
     /**

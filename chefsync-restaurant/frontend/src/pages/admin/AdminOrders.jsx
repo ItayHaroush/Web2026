@@ -11,6 +11,9 @@ export default function AdminOrders() {
     const [filterStatus, setFilterStatus] = useState('');
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [newOrderAlert, setNewOrderAlert] = useState(false);
+    const [etaExtraMinutes, setEtaExtraMinutes] = useState('');
+    const [etaNote, setEtaNote] = useState('');
+    const [etaUpdating, setEtaUpdating] = useState(false);
     const previousOrdersCount = useRef(0);
 
     const formatAddons = (addons) => {
@@ -30,6 +33,12 @@ export default function AdminOrders() {
         const interval = setInterval(fetchOrders, 10000);
         return () => clearInterval(interval);
     }, [filterStatus]);
+
+    useEffect(() => {
+        if (!selectedOrder) return;
+        setEtaExtraMinutes('');
+        setEtaNote(selectedOrder.eta_note || '');
+    }, [selectedOrder]);
 
     const fetchOrders = async () => {
         try {
@@ -122,6 +131,46 @@ export default function AdminOrders() {
         } catch (error) {
             console.error('Failed to update status:', error);
             console.error('Error details:', error.response?.data);
+        }
+    };
+
+    const updateEta = async () => {
+        if (!selectedOrder) return;
+        const extra = Number(etaExtraMinutes);
+        if (!Number.isFinite(extra) || extra <= 0) {
+            alert('נא להזין תוספת בדקות (מספר חיובי)');
+            return;
+        }
+
+        const current = Number(selectedOrder.eta_minutes || 0);
+        const newEta = current + extra;
+
+        try {
+            setEtaUpdating(true);
+            const response = await api.patch(
+                `/admin/orders/${selectedOrder.id}/eta`,
+                {
+                    eta_minutes: newEta,
+                    eta_note: etaNote || null,
+                },
+                { headers: getAuthHeaders() }
+            );
+
+            if (response.data.success) {
+                const refreshed = await fetchOrders();
+                const refreshedOrder = Array.isArray(refreshed)
+                    ? refreshed.find((o) => o.id === selectedOrder.id)
+                    : null;
+                setSelectedOrder(refreshedOrder || response.data.order || selectedOrder);
+                setEtaExtraMinutes('');
+            } else {
+                alert('שגיאה בעדכון זמן ההזמנה');
+            }
+        } catch (error) {
+            console.error('Failed to update ETA:', error);
+            alert('שגיאה בעדכון זמן ההזמנה');
+        } finally {
+            setEtaUpdating(false);
         }
     };
 
@@ -354,6 +403,59 @@ export default function AdminOrders() {
                                             <p className="p-2 bg-white rounded-lg">הערות משלוח: {selectedOrder.delivery_notes}</p>
                                         )}
                                     </div>
+                                </div>
+
+                                {/* זמן משוער */}
+                                <div className="bg-white border rounded-xl p-4">
+                                    <h4 className="font-medium text-gray-800 mb-3">⏱️ זמן משוער ללקוח</h4>
+                                    <div className="text-sm text-gray-700 space-y-2">
+                                        {selectedOrder.eta_minutes ? (
+                                            <div>
+                                                זמן משוער: <span className="font-semibold">{selectedOrder.eta_minutes} דק'</span>
+                                            </div>
+                                        ) : (
+                                            <div className="text-gray-500">לא הוגדר זמן משוער</div>
+                                        )}
+                                        {selectedOrder.eta_note && (
+                                            <div className="text-gray-500">* {selectedOrder.eta_note}</div>
+                                        )}
+                                        {selectedOrder.eta_updated_at && (
+                                            <div className="text-xs text-gray-400">
+                                                עודכן לאחרונה: {new Date(selectedOrder.eta_updated_at).toLocaleString('he-IL')}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="block text-xs text-gray-600 mb-1">הארכת זמן (בדקות)</label>
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                max="240"
+                                                value={etaExtraMinutes}
+                                                onChange={(e) => setEtaExtraMinutes(e.target.value)}
+                                                className="w-full px-3 py-2 border rounded-lg text-sm"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs text-gray-600 mb-1">כוכבית ללקוח</label>
+                                            <input
+                                                type="text"
+                                                value={etaNote}
+                                                onChange={(e) => setEtaNote(e.target.value)}
+                                                placeholder="* יתכנו עיכובים"
+                                                className="w-full px-3 py-2 border rounded-lg text-sm"
+                                            />
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={updateEta}
+                                        disabled={etaUpdating || !etaExtraMinutes}
+                                        className="mt-3 w-full bg-gray-900 text-white py-2 rounded-lg text-sm font-semibold disabled:opacity-50"
+                                    >
+                                        {etaUpdating ? 'מעדכן...' : 'הארכת זמן והודעה ללקוח'}
+                                    </button>
                                 </div>
 
                                 {/* פריטים */}

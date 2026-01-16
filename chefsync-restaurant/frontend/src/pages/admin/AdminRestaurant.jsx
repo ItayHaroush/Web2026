@@ -229,7 +229,18 @@ export default function AdminRestaurant() {
             formData.append('is_override_status', overrideStatus ? '1' : '0');
 
             // ✅ שלח את כל השדות בלי לדלג על ריקים
-            const fieldsToSend = ['name', 'description', 'phone', 'address', 'city'];
+            const fieldsToSend = [
+                'name',
+                'description',
+                'phone',
+                'address',
+                'city',
+                'share_incentive_text',
+                'delivery_time_minutes',
+                'delivery_time_note',
+                'pickup_time_minutes',
+                'pickup_time_note',
+            ];
             fieldsToSend.forEach((field) => {
                 const value = restaurant[field];
                 // שלח גם ריקים/null - תן לבקאנד להחליט מה לעשות
@@ -393,6 +404,17 @@ export default function AdminRestaurant() {
                                     className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary"
                                 />
                             </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">משפט פתיחה בעמוד QR</label>
+                                <textarea
+                                    value={restaurant.share_incentive_text || ''}
+                                    onChange={(e) => handleChange('share_incentive_text', e.target.value)}
+                                    rows={3}
+                                    placeholder="הרעב מתחיל כאן..."
+                                    className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                                />
+                                <p className="text-xs text-gray-500 mt-1">אפשר להכניס שורות חדשות עם Enter</p>
+                            </div>
                         </div>
                         <div className="w-full sm:w-48">
                             <div className="bg-gray-50 rounded-2xl p-4 text-center">
@@ -436,6 +458,54 @@ export default function AdminRestaurant() {
                                 onChange={(e) => handleChange('city', e.target.value)}
                                 className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary"
                             />
+                        </div>
+                    </div>
+
+                    <div className="border-t pt-4 space-y-3">
+                        <h3 className="text-sm font-bold text-gray-700">⏱️ זמני הכנה (בדקות)</h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">משלוח - זמן משוער</label>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max="240"
+                                    value={restaurant.delivery_time_minutes ?? ''}
+                                    onChange={(e) => handleChange('delivery_time_minutes', e.target.value)}
+                                    className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">משלוח - כוכבית</label>
+                                <input
+                                    type="text"
+                                    value={restaurant.delivery_time_note || ''}
+                                    onChange={(e) => handleChange('delivery_time_note', e.target.value)}
+                                    placeholder="* יתכנו עיכובים"
+                                    className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">איסוף עצמי - זמן משוער</label>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max="240"
+                                    value={restaurant.pickup_time_minutes ?? ''}
+                                    onChange={(e) => handleChange('pickup_time_minutes', e.target.value)}
+                                    className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">איסוף עצמי - כוכבית</label>
+                                <input
+                                    type="text"
+                                    value={restaurant.pickup_time_note || ''}
+                                    onChange={(e) => handleChange('pickup_time_note', e.target.value)}
+                                    placeholder="* זמן הכנה עשוי להשתנות"
+                                    className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                                />
+                            </div>
                         </div>
                     </div>
 

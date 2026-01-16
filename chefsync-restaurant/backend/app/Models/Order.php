@@ -20,6 +20,9 @@ class Order extends Model
         'payment_method',
         'delivery_address',
         'delivery_notes',
+        'eta_minutes',
+        'eta_note',
+        'eta_updated_at',
         'status',
         'total_amount',
         'notes',
@@ -33,6 +36,7 @@ class Order extends Model
         'total_amount' => 'decimal:2',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
+        'eta_updated_at' => 'datetime',
     ];
 
     /**

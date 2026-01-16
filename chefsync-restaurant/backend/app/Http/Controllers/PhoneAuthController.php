@@ -40,10 +40,16 @@ class PhoneAuthController extends Controller
             ], 502);
         }
 
-        return response()->json([
+        $response = [
             'success' => true,
             'expires_in' => 300,
-        ]);
+        ];
+
+        if (app()->environment('local')) {
+            $response['dev_code'] = (string) $code;
+        }
+
+        return response()->json($response);
     }
 
     public function verifyCode(Request $request)
