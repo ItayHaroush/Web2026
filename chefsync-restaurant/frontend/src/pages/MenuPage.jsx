@@ -4,7 +4,7 @@ import { SiWaze } from 'react-icons/si';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useToast } from '../context/ToastContext';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { CustomerLayout } from '../layouts/CustomerLayout';
 import menuService from '../services/menuService';
 import { UI_TEXT } from '../constants/ui';
@@ -21,7 +21,8 @@ export default function MenuPage() {
     const { tenantId, loginAsCustomer } = useAuth();
     const navigate = useNavigate();
     const params = useParams();
-    const { addToCart } = useCart();
+    const [searchParams] = useSearchParams();
+    const { addToCart, setCustomerInfo } = useCart();
     const { addToast } = useToast();
     const [menu, setMenu] = useState([]);
     const [restaurant, setRestaurant] = useState(null);
@@ -70,13 +71,18 @@ export default function MenuPage() {
     useEffect(() => {
         if (!effectiveTenantId) return;
 
+        const type = searchParams.get('type');
+        if (type === 'delivery' || type === 'pickup') {
+            setCustomerInfo((prev) => ({ ...prev, delivery_method: type }));
+        }
+
         loadRestaurantInfo();
         loadMenu();
 
         const savedOrderId = localStorage.getItem(`activeOrder_${effectiveTenantId}`);
         setActiveOrderId(savedOrderId || null);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [effectiveTenantId]);
+    }, [effectiveTenantId, searchParams, setCustomerInfo]);
 
     // הגדרת קטגוריה פעילה ראשונה
     useEffect(() => {
