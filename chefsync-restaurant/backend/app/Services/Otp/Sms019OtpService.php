@@ -69,6 +69,112 @@ class Sms019OtpService implements OtpProviderInterface
         }
     }
 
+    /**
+     * Detailed send used by Super Admin debug endpoint.
+     *
+     * NOTE:
+     * - destinations.phone must be international digits without '+': ["9725XXXXXXXX"]
+     * - source must NOT be normalized to 972 (can be 0-leading number or sender name)
+     * - user.username must come from env/config (SMS_019_USERNAME)
+     */
+    public function sendOtpDetailed(string $phone, string $code): array
+    {
+        $endpoint = (string) config('sms.providers.sms019.endpoint');
+        $token = (string) config('sms.providers.sms019.token');
+        $source = (string) config('sms.providers.sms019.source');
+        $username = (string) config('sms.providers.sms019.username');
+        $timeout = (int) config('sms.providers.sms019.timeout');
+
+        $tokenTail = $token === '' ? null : substr($token, -6);
+
+        if ($endpoint === '' || $token === '' || $username === '') {
+            return [
+                'sent' => false,
+                'resolved_source' => $source !== '' ? $source : null,
+                'resolved_destination' => null,
+                'used_username' => $username !== '' ? $username : null,
+                'token_tail' => $tokenTail,
+                'http_status' => null,
+                'provider_status' => null,
+                'provider_message' => '019sms config missing',
+            ];
+        }
+
+        $normalizedPhone = $this->normalizeIsraeliPhoneTo972($phone);
+        if ($normalizedPhone === null) {
+            return [
+                'sent' => false,
+                'resolved_source' => $source,
+                'resolved_destination' => null,
+                'used_username' => $username,
+                'token_tail' => $tokenTail,
+                'http_status' => null,
+                'provider_status' => null,
+                'provider_message' => 'invalid destination phone',
+            ];
+        }
+
+        $message = "קוד האימות שלך הוא: {$code}";
+
+        $payload = [
+            'sms' => [
+                'user' => [
+                    'username' => $username,
+                ],
+                'source' => $source,
+                'destinations' => [
+                    'phone' => [$normalizedPhone],
+                ],
+                'message' => $message,
+            ],
+        ];
+
+        try {
+            $response = Http::timeout($timeout)
+                ->withHeaders([
+                    'Authorization' => "Bearer {$token}",
+                    'Accept' => 'application/json',
+                ])
+                ->asJson()
+                ->post($endpoint, $payload);
+
+            $data = $response->json();
+            $providerStatus = is_array($data) ? ($data['status'] ?? null) : null;
+            $providerMessage = is_array($data)
+                ? ($data['message'] ?? $data['statusDescription'] ?? $data['description'] ?? null)
+                : null;
+
+            $sent = $this->isSuccess($response);
+
+            return [
+                'sent' => $sent,
+                'resolved_source' => $source,
+                'resolved_destination' => $normalizedPhone,
+                'used_username' => $username,
+                'token_tail' => $tokenTail,
+                'http_status' => $response->status(),
+                'provider_status' => $providerStatus,
+                'provider_message' => $providerMessage,
+            ];
+        } catch (\Throwable $e) {
+            Log::error('019sms exception', [
+                'message' => $e->getMessage(),
+                'endpoint' => $endpoint,
+            ]);
+
+            return [
+                'sent' => false,
+                'resolved_source' => $source,
+                'resolved_destination' => $normalizedPhone,
+                'used_username' => $username,
+                'token_tail' => $tokenTail,
+                'http_status' => null,
+                'provider_status' => null,
+                'provider_message' => $e->getMessage(),
+            ];
+        }
+    }
+
     public function verifyOtp(string $phone, string $code): bool
     {
         return true;

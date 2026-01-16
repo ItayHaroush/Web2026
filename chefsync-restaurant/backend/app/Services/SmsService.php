@@ -14,9 +14,38 @@ class SmsService
         return self::sendOtp((string) $phone, (string) $code);
     }
 
+    public static function sendVerificationCodeDetailed($phone, $code): array
+    {
+        return self::sendOtpDetailed((string) $phone, (string) $code);
+    }
+
     public static function sendOtp(string $phone, string $code): bool
     {
         return self::provider()->sendOtp($phone, $code);
+    }
+
+    public static function sendOtpDetailed(string $phone, string $code): array
+    {
+        $provider = self::provider();
+
+        if (is_callable([$provider, 'sendOtpDetailed'])) {
+            /** @var array $result */
+            $result = call_user_func([$provider, 'sendOtpDetailed'], $phone, $code);
+            return $result;
+        }
+
+        $sent = $provider->sendOtp($phone, $code);
+
+        return [
+            'sent' => $sent,
+            'resolved_source' => null,
+            'resolved_destination' => null,
+            'used_username' => null,
+            'token_tail' => null,
+            'http_status' => null,
+            'provider_status' => null,
+            'provider_message' => null,
+        ];
     }
 
     public static function verifyOtp(string $phone, string $code): bool

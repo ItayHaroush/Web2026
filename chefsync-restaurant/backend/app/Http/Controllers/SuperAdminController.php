@@ -475,8 +475,19 @@ class SuperAdminController extends Controller
         ];
 
         $sent = false;
+        $providerDebug = [
+            'sent' => null,
+            'resolved_source' => null,
+            'resolved_destination' => null,
+            'used_username' => null,
+            'token_tail' => null,
+            'http_status' => null,
+            'provider_status' => null,
+            'provider_message' => null,
+        ];
         if (!$dryRun) {
-            $sent = SmsService::sendVerificationCode($phone, $code);
+            $providerDebug = SmsService::sendVerificationCodeDetailed($phone, $code);
+            $sent = (bool) ($providerDebug['sent'] ?? false);
         }
 
         Log::info('Super admin SMS test', [
@@ -487,6 +498,14 @@ class SuperAdminController extends Controller
             'pilot' => $pilot,
             'dry_run' => $dryRun,
             'sent' => $sent,
+            'provider_debug' => [
+                'resolved_source' => $providerDebug['resolved_source'] ?? null,
+                'resolved_destination' => $providerDebug['resolved_destination'] ?? null,
+                'used_username' => $providerDebug['used_username'] ?? null,
+                'token_tail' => $providerDebug['token_tail'] ?? null,
+                'http_status' => $providerDebug['http_status'] ?? null,
+                'provider_status' => $providerDebug['provider_status'] ?? null,
+            ],
         ]);
 
         if (!$dryRun && !$sent) {
@@ -499,6 +518,13 @@ class SuperAdminController extends Controller
                     'pilot' => $pilot,
                     'phone_masked' => $this->maskPhone($phone),
                     'config_health' => $configHealth,
+                    'resolved_source' => $providerDebug['resolved_source'] ?? null,
+                    'resolved_destination' => $providerDebug['resolved_destination'] ?? null,
+                    'used_username' => $providerDebug['used_username'] ?? null,
+                    'token_tail' => $providerDebug['token_tail'] ?? null,
+                    'http_status' => $providerDebug['http_status'] ?? null,
+                    'provider_status' => $providerDebug['provider_status'] ?? null,
+                    'provider_message' => $providerDebug['provider_message'] ?? null,
                 ],
             ], 502);
         }
@@ -514,6 +540,13 @@ class SuperAdminController extends Controller
                 'phone_masked' => $this->maskPhone($phone),
                 'config_health' => $configHealth,
                 'code' => $revealCode ? $code : null,
+                'resolved_source' => $providerDebug['resolved_source'] ?? null,
+                'resolved_destination' => $providerDebug['resolved_destination'] ?? null,
+                'used_username' => $providerDebug['used_username'] ?? null,
+                'token_tail' => $providerDebug['token_tail'] ?? null,
+                'http_status' => $providerDebug['http_status'] ?? null,
+                'provider_status' => $providerDebug['provider_status'] ?? null,
+                'provider_message' => $providerDebug['provider_message'] ?? null,
             ],
         ]);
     }
