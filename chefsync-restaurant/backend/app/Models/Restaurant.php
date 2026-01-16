@@ -30,6 +30,8 @@ class Restaurant extends Model
         'address',
         'city',
         'is_open',
+        'has_delivery',
+        'has_pickup',
         'is_override_status',
         'description',
         'logo_url',
@@ -57,6 +59,8 @@ class Restaurant extends Model
 
     protected $casts = [
         'is_open' => 'boolean',
+        'has_delivery' => 'boolean',
+        'has_pickup' => 'boolean',
         'is_override_status' => 'boolean',
         'operating_days' => 'array',
         'operating_hours' => 'array',

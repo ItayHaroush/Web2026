@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { useRestaurantStatus } from '../../context/RestaurantStatusContext';
 import AdminLayout from '../../layouts/AdminLayout';
 import api from '../../services/apiClient';
 import { resolveAssetUrl } from '../../utils/assets';
+import { QRCodeCanvas } from 'qrcode.react';
 
 const DAYS_OF_WEEK = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 
@@ -64,6 +65,7 @@ export default function AdminRestaurant() {
     const [calculatedStatus, setCalculatedStatus] = useState(false);
     const [justFetched, setJustFetched] = useState(false);
     const [openDayPanels, setOpenDayPanels] = useState({});
+    const shareQrRef = useRef(null);
 
     const normalizeOperatingHours = (oh) => {
         if (!oh) return {};
@@ -306,6 +308,27 @@ export default function AdminRestaurant() {
         } finally {
             setSaving(false);
         }
+    };
+
+    const getShareLink = () => {
+        if (!restaurant?.slug) return '';
+        return `${window.location.origin}/r/${restaurant.slug}`;
+    };
+
+    const downloadShareQrPng = () => {
+        const canvas = shareQrRef.current;
+        if (!canvas) return;
+        canvas.toBlob((blob) => {
+            if (!blob) return;
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${restaurant?.slug || 'restaurant'}-qr.png`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+        });
     };
 
     const clearOverride = async () => {
@@ -597,6 +620,64 @@ export default function AdminRestaurant() {
                         <p className="text-xs text-gray-500 mt-2">
                             שתפו לינק זה עם לקוחות לגישה ישירה לדף המסעדה המלא (תמונה, פרטים ותפריט)
                         </p>
+                    </div>
+
+                    {/* עמוד שיתוף + QR */}
+                    <div className="border-t pt-4">
+                        <h3 className="text-sm font-bold text-gray-700 mb-3">🔗 עמוד שיתוף / QR</h3>
+                        <div className="flex flex-col lg:flex-row gap-3 items-stretch">
+                            <div className="flex-1">
+                                <div className="flex gap-2">
+                                    <input
+                                        type="text"
+                                        readOnly
+                                        value={getShareLink()}
+                                        className="flex-1 px-4 py-3 border rounded-xl bg-gray-50 text-gray-600 text-sm"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            const link = getShareLink();
+                                            if (!link) return;
+                                            navigator.clipboard.writeText(link);
+                                            alert('הלינק הועתק ללוח!');
+                                        }}
+                                        className="px-6 py-3 bg-gray-900 text-white rounded-xl font-medium hover:bg-black whitespace-nowrap"
+                                    >
+                                        📋 העתק
+                                    </button>
+                                </div>
+
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            const link = getShareLink();
+                                            if (!link) return;
+                                            window.open(link, '_blank', 'noopener,noreferrer');
+                                        }}
+                                        className="px-4 py-2 bg-blue-500 text-white rounded-xl font-medium hover:bg-blue-600"
+                                    >
+                                        👁️ תצוגה מקדימה
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={downloadShareQrPng}
+                                        className="px-4 py-2 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200"
+                                    >
+                                        ⬇️ הורדת QR (PNG)
+                                    </button>
+                                </div>
+
+                                <p className="text-xs text-gray-500 mt-2">
+                                    זה העמוד שמתאים להדפסה/שיתוף בוואטסאפ. QR יוביל לעמוד הזה.
+                                </p>
+                            </div>
+
+                            <div className="flex items-center justify-center p-3 border rounded-xl bg-white">
+                                <QRCodeCanvas value={getShareLink()} size={120} includeMargin ref={shareQrRef} />
+                            </div>
+                        </div>
                     </div>
 
                     <div className="flex gap-3 pt-2 border-t">

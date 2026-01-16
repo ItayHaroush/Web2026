@@ -29,6 +29,7 @@ import SuperAdminSmsDebug from './pages/super-admin/SuperAdminSmsDebug';
 import DebugAPI from './pages/DebugAPI';
 import RegisterRestaurant from './pages/RegisterRestaurant';
 import LandingPage from './pages/LandingPage';
+import RestaurantSharePage from './pages/RestaurantSharePage';
 import TermsEndUser from './pages/legal/TermsEndUser';
 import TermsRestaurant from './pages/legal/TermsRestaurant';
 import PrivacyPolicy from './pages/legal/PrivacyPolicy';
@@ -108,6 +109,9 @@ function AppRoutes() {
       <Route path="/:tenantId/menu" element={<MenuPage />} />
       <Route path="/:tenantId/cart" element={<CartPage />} />
       <Route path="/:tenantId/order-status/:orderId" element={<OrderStatusPage />} />
+
+      {/* עמוד שיתוף למסעדה */}
+      <Route path="/r/:slug" element={<RestaurantSharePage />} />
 
       {/* אדמין */}
       <Route path="/admin/login" element={isAdmin ? <Navigate to="/admin/dashboard" replace /> : <AdminLogin />} />

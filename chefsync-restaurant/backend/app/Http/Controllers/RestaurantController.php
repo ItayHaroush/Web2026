@@ -11,6 +11,27 @@ use Illuminate\Http\Request;
  */
 class RestaurantController extends Controller
 {
+    private function toPublicRestaurantPayload(Restaurant $restaurant): array
+    {
+        return [
+            'tenant_id' => $restaurant->tenant_id,
+            'slug' => $restaurant->slug,
+            'name' => $restaurant->name,
+            'cuisine_type' => $restaurant->cuisine_type ?? null,
+            'logo_url' => $restaurant->logo_url,
+            'phone' => $restaurant->phone,
+            'address' => $restaurant->address,
+            'city' => $restaurant->city,
+            'is_open' => (bool) $restaurant->is_open,
+            'is_override_status' => (bool) ($restaurant->is_override_status ?? false),
+            'is_open_now' => (bool) ($restaurant->is_open_now ?? false),
+            'operating_days' => $restaurant->operating_days ?? [],
+            'operating_hours' => $restaurant->operating_hours ?? [],
+            'has_delivery' => $restaurant->has_delivery ?? true,
+            'has_pickup' => $restaurant->has_pickup ?? true,
+        ];
+    }
+
     /**
      * קבל רשימת כל המסעדות (ללא צורך באימות)
      */
@@ -54,7 +75,7 @@ class RestaurantController extends Controller
 
             return response()->json([
                 'success' => true,
-                'data' => $restaurants,
+                'data' => $restaurants->map(fn(Restaurant $r) => $this->toPublicRestaurantPayload($r))->values(),
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -80,7 +101,7 @@ class RestaurantController extends Controller
 
             return response()->json([
                 'success' => true,
-                'data' => $restaurant,
+                'data' => $this->toPublicRestaurantPayload($restaurant),
             ]);
         } catch (\Exception $e) {
             return response()->json([
