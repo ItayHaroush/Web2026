@@ -92,7 +92,7 @@ class MenuController extends Controller
 
                             $addonGroups = $item->use_addons
                                 ? $this->filterAddonGroupsByScope($restaurantAddonGroups, $item)
-                                    ->map(function ($group) use ($item) {
+                                ->map(function ($group) use ($item) {
                                     return [
                                         'id' => $group->id,
                                         'name' => $group->name,
