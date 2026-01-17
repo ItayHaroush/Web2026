@@ -115,6 +115,9 @@ Route::prefix('admin')->middleware(['auth:sanctum'])->group(function () {
         Route::post('/salads', [AdminController::class, 'storeSalad'])->name('admin.salads.store');
         Route::put('/salads/{id}', [AdminController::class, 'updateSalad'])->name('admin.salads.update');
 
+        // ניהול קבוצות תוספות
+        Route::put('/addon-groups/{id}', [AdminController::class, 'updateAddonGroup'])->name('admin.addon-groups.update');
+
         // ניהול בסיסים גלובליים
         Route::get('/bases', [AdminController::class, 'getBases'])->name('admin.bases.index');
         Route::post('/bases', [AdminController::class, 'storeBase'])->name('admin.bases.store');

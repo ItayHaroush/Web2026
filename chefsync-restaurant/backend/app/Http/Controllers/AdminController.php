@@ -21,6 +21,7 @@ use Illuminate\Support\Str;
 class AdminController extends Controller
 {
     private const DEFAULT_SALAD_GROUP_NAME = 'סלטים קבועים';
+    private const DEFAULT_HOT_GROUP_NAME = 'תוספות חמות';
     /**
      * דשבורד - סטטיסטיקות
      */
@@ -218,6 +219,7 @@ class AdminController extends Controller
             'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
             'use_variants' => 'sometimes|boolean',
             'use_addons' => 'sometimes|boolean',
+            'addons_group_scope' => 'nullable|string|in:salads,hot,both',
             'max_addons' => 'nullable|integer|min:1|max:99',
         ]);
 
@@ -242,6 +244,9 @@ class AdminController extends Controller
         $maxAddons = $useAddons && $request->filled('max_addons')
             ? (int) $request->input('max_addons')
             : null;
+        $addonsGroupScope = $useAddons
+            ? ($request->input('addons_group_scope') ?: 'salads')
+            : null;
 
         // ✅ וודא tenant_id + restaurant_id
         $item = MenuItem::create([
@@ -256,6 +261,7 @@ class AdminController extends Controller
             'is_available' => true,
             'use_variants' => $useVariants,
             'use_addons' => $useAddons,
+            'addons_group_scope' => $addonsGroupScope,
             'max_addons' => $maxAddons,
         ]);
 
@@ -281,6 +287,7 @@ class AdminController extends Controller
             'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
             'use_variants' => 'sometimes|boolean',
             'use_addons' => 'sometimes|boolean',
+            'addons_group_scope' => 'nullable|string|in:salads,hot,both',
             'max_addons' => 'nullable|integer|min:1|max:99',
         ]);
 
@@ -304,10 +311,15 @@ class AdminController extends Controller
             $payload['max_addons'] = $useAddons
                 ? ($request->filled('max_addons') ? (int) $request->input('max_addons') : null)
                 : null;
+            $payload['addons_group_scope'] = $useAddons
+                ? ($request->input('addons_group_scope') ?: 'salads')
+                : null;
         } elseif ($request->has('max_addons')) {
             $payload['max_addons'] = $request->filled('max_addons')
                 ? (int) $request->input('max_addons')
                 : null;
+        } elseif ($request->has('addons_group_scope')) {
+            $payload['addons_group_scope'] = $request->input('addons_group_scope') ?: 'salads';
         }
 
         $item->update($payload);
@@ -361,12 +373,18 @@ class AdminController extends Controller
             ], 404);
         }
 
-        $group = $this->ensureDefaultSaladGroup($restaurant);
-        $salads = $group->addons()->orderBy('sort_order')->get();
+        $this->ensureDefaultAddonGroups($restaurant);
+        $groups = RestaurantAddonGroup::where('restaurant_id', $restaurant->id)
+            ->orderBy('sort_order')
+            ->get();
+        $salads = RestaurantAddon::where('restaurant_id', $restaurant->id)
+            ->orderBy('sort_order')
+            ->get();
 
         return response()->json([
             'success' => true,
             'salads' => $salads,
+            'groups' => $groups,
         ]);
     }
 
@@ -385,6 +403,7 @@ class AdminController extends Controller
             'name' => 'required|string|max:255',
             'price_delta' => 'nullable|numeric|min:0|max:999.99',
             'is_active' => 'sometimes|boolean',
+            'group_id' => 'nullable|integer',
         ]);
 
         $restaurant = $user->restaurant;
@@ -395,7 +414,11 @@ class AdminController extends Controller
             ], 404);
         }
 
-        $group = $this->ensureDefaultSaladGroup($restaurant);
+        $this->ensureDefaultAddonGroups($restaurant);
+        $groupId = $request->input('group_id');
+        $group = $groupId
+            ? RestaurantAddonGroup::where('restaurant_id', $restaurant->id)->findOrFail($groupId)
+            : $this->ensureDefaultSaladGroup($restaurant);
         $maxOrder = RestaurantAddon::where('addon_group_id', $group->id)->max('sort_order') ?? 0;
 
         $salad = RestaurantAddon::create([
@@ -431,6 +454,7 @@ class AdminController extends Controller
             'price_delta' => 'sometimes|numeric|min:0|max:999.99',
             'is_active' => 'sometimes|boolean',
             'sort_order' => 'sometimes|integer|min:0',
+            'group_id' => 'nullable|integer',
         ]);
 
         $restaurant = $user->restaurant;
@@ -441,12 +465,16 @@ class AdminController extends Controller
             ], 404);
         }
 
-        $group = $this->ensureDefaultSaladGroup($restaurant);
+        $this->ensureDefaultAddonGroups($restaurant);
         $salad = RestaurantAddon::where('restaurant_id', $restaurant->id)
-            ->where('addon_group_id', $group->id)
             ->findOrFail($id);
 
         $payload = $request->only(['name', 'price_delta', 'is_active', 'sort_order']);
+        if ($request->filled('group_id')) {
+            $group = RestaurantAddonGroup::where('restaurant_id', $restaurant->id)
+                ->findOrFail((int) $request->input('group_id'));
+            $payload['addon_group_id'] = $group->id;
+        }
 
         $salad->update($payload);
 
@@ -584,6 +612,49 @@ class AdminController extends Controller
             'success' => true,
             'message' => 'הבסיס עודכן בהצלחה!',
             'base' => $base,
+        ]);
+    }
+
+    // =============================================
+    // ניהול קבוצות תוספות (Add-on Groups)
+    // =============================================
+
+    public function updateAddonGroup(Request $request, $id)
+    {
+        $user = $request->user();
+
+        if (!$user->isManager()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'אין לך הרשאה לעדכן קבוצות תוספות',
+            ], 403);
+        }
+
+        $request->validate([
+            'sort_order' => 'sometimes|integer|min:0',
+            'is_active' => 'sometimes|boolean',
+        ]);
+
+        $restaurant = $user->restaurant;
+        if (!$restaurant) {
+            return response()->json([
+                'success' => false,
+                'message' => 'לא נמצאה מסעדה למשתמש',
+            ], 404);
+        }
+
+        $this->ensureDefaultAddonGroups($restaurant);
+
+        $group = RestaurantAddonGroup::where('restaurant_id', $restaurant->id)
+            ->findOrFail($id);
+
+        $payload = $request->only(['sort_order', 'is_active']);
+        $group->update($payload);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'הקבוצה עודכנה בהצלחה!',
+            'group' => $group,
         ]);
     }
 
@@ -1213,11 +1284,22 @@ class AdminController extends Controller
 
     private function ensureDefaultSaladGroup(Restaurant $restaurant): RestaurantAddonGroup
     {
+        return $this->ensureAddonGroup($restaurant, self::DEFAULT_SALAD_GROUP_NAME, 0);
+    }
+
+    private function ensureDefaultAddonGroups(Restaurant $restaurant): void
+    {
+        $this->ensureAddonGroup($restaurant, self::DEFAULT_SALAD_GROUP_NAME, 0);
+        $this->ensureAddonGroup($restaurant, self::DEFAULT_HOT_GROUP_NAME, 1);
+    }
+
+    private function ensureAddonGroup(Restaurant $restaurant, string $name, int $sortOrder): RestaurantAddonGroup
+    {
         return RestaurantAddonGroup::firstOrCreate(
             [
                 'restaurant_id' => $restaurant->id,
                 'tenant_id' => $restaurant->tenant_id,
-                'name' => self::DEFAULT_SALAD_GROUP_NAME,
+                'name' => $name,
             ],
             [
                 'selection_type' => 'multiple',
@@ -1225,7 +1307,7 @@ class AdminController extends Controller
                 'max_selections' => null,
                 'is_required' => false,
                 'is_active' => true,
-                'sort_order' => 0,
+                'sort_order' => $sortOrder,
             ]
         );
     }

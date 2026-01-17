@@ -24,6 +24,7 @@ class MenuItem extends Model
         'is_available',
         'use_variants',
         'use_addons',
+        'addons_group_scope',
         'max_addons',
     ];
 

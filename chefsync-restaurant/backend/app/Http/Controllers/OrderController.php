@@ -17,6 +17,8 @@ use Illuminate\Validation\ValidationException;
  */
 class OrderController extends Controller
 {
+    private const DEFAULT_SALAD_GROUP_NAME = 'סלטים קבועים';
+    private const DEFAULT_HOT_GROUP_NAME = 'תוספות חמות';
     /**
      * צור הזמנה חדשה עם וריאציות ותוספות
      *
@@ -164,7 +166,9 @@ class OrderController extends Controller
                     ->unique('addon_id')
                     ->values();
 
-                $availableAddonGroups = $menuItem->use_addons ? $restaurantAddonGroups : $menuItem->addonGroups;
+                $availableAddonGroups = $menuItem->use_addons
+                    ? $this->filterAddonGroupsByScope($restaurantAddonGroups, $menuItem)
+                    : $menuItem->addonGroups;
 
                 $selectedAddonsByGroup = [];
                 foreach ($addonEntries as $addonEntry) {
@@ -456,5 +460,20 @@ class OrderController extends Controller
                 'error' => $e->getMessage(),
             ]);
         }
+    }
+
+    private function filterAddonGroupsByScope($groups, MenuItem $item)
+    {
+        $scope = $item->addons_group_scope ?: 'salads';
+
+        if ($scope === 'both') {
+            return $groups;
+        }
+
+        $allowedName = $scope === 'hot'
+            ? self::DEFAULT_HOT_GROUP_NAME
+            : self::DEFAULT_SALAD_GROUP_NAME;
+
+        return $groups->filter(fn($group) => $group->name === $allowedName)->values();
     }
 }

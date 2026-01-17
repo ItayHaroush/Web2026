@@ -212,7 +212,7 @@ export default function MenuItemModal({
                                     <div key={group.id} className="border border-gray-200 rounded-2xl p-4">
                                         <div className="flex items-center justify-between mb-3">
                                             <div>
-                                                <h4 className="text-lg font-semibold text-brand-dark">בחרו ממרחים וסלטים</h4>
+                                                <h4 className="text-lg font-semibold text-brand-dark">{group.name || 'בחרו תוספות'}</h4>
                                                 <p className="text-xs text-gray-500 mt-1">
                                                     {group.min_select ? `מינימום ${group.min_select}` : ''}
                                                     {group.min_select && group.max_select ? ' · ' : ''}
@@ -230,7 +230,8 @@ export default function MenuItemModal({
                                                 >
                                                     <div className="flex items-center gap-3">
                                                         <input
-                                                            type="checkbox"
+                                                            type={group.selection_type === 'single' ? 'radio' : 'checkbox'}
+                                                            name={`addon-group-${group.id}`}
                                                             checked={selection.includes(addon.id)}
                                                             onChange={() => toggleAddon(group, addon.id)}
                                                             disabled={isAddonDisabled(group, addon.id)}

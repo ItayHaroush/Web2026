@@ -12,6 +12,8 @@ use Illuminate\Http\Request;
  */
 class MenuController extends Controller
 {
+    private const DEFAULT_SALAD_GROUP_NAME = 'סלטים קבועים';
+    private const DEFAULT_HOT_GROUP_NAME = 'תוספות חמות';
     /**
      * קבל את כל התפריט של המסעדה הנוכחית (Tenant)
      * כולל קטגוריות ופריטים זמינים בלבד
@@ -89,7 +91,8 @@ class MenuController extends Controller
                                 })->values()->toArray();
 
                             $addonGroups = $item->use_addons
-                                ? $restaurantAddonGroups->map(function ($group) use ($item) {
+                                ? $this->filterAddonGroupsByScope($restaurantAddonGroups, $item)
+                                    ->map(function ($group) use ($item) {
                                     return [
                                         'id' => $group->id,
                                         'name' => $group->name,
@@ -186,5 +189,20 @@ class MenuController extends Controller
                 'error' => $e->getMessage(),
             ], 500);
         }
+    }
+
+    private function filterAddonGroupsByScope($groups, MenuItem $item)
+    {
+        $scope = $item->addons_group_scope ?: 'salads';
+
+        if ($scope === 'both') {
+            return $groups;
+        }
+
+        $allowedName = $scope === 'hot'
+            ? self::DEFAULT_HOT_GROUP_NAME
+            : self::DEFAULT_SALAD_GROUP_NAME;
+
+        return $groups->filter(fn($group) => $group->name === $allowedName)->values();
     }
 }
