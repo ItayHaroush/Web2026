@@ -71,7 +71,7 @@ export default function AdminLayout({ children }) {
         {
             path: '/admin/menu/salads',
             icon: '🥗',
-            label: 'סלטים',
+            label: 'תוספות',
             show: isManager()
         },
         {

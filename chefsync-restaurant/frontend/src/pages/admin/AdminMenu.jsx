@@ -21,6 +21,7 @@ export default function AdminMenu() {
         image: null,
         use_variants: false,
         use_addons: false,
+        addons_group_scope: 'salads',
         max_addons: '5',
     });
 
@@ -66,7 +67,7 @@ export default function AdminMenu() {
         e.preventDefault();
 
         if (form.use_addons && (!form.max_addons || Number(form.max_addons) < 1)) {
-            alert('אנא הזן מספר מקסימלי של סלטים לבחירה');
+            alert('אנא הזן מספר מקסימלי של תוספות לבחירה');
             return;
         }
 
@@ -78,6 +79,7 @@ export default function AdminMenu() {
         if (form.image) formData.append('image', form.image);
         formData.append('use_variants', form.use_variants ? '1' : '0');
         formData.append('use_addons', form.use_addons ? '1' : '0');
+        formData.append('addons_group_scope', form.use_addons ? (form.addons_group_scope || 'salads') : '');
         formData.append('max_addons', form.use_addons ? (form.max_addons || '') : '');
 
         console.log('📤 Submitting menu item:', {
@@ -146,6 +148,7 @@ export default function AdminMenu() {
             image: null,
             use_variants: Boolean(item.use_variants),
             use_addons: Boolean(item.use_addons),
+            addons_group_scope: item.addons_group_scope || 'salads',
             max_addons: item.max_addons ? String(item.max_addons) : '5',
         });
         setShowModal(true);
@@ -161,6 +164,7 @@ export default function AdminMenu() {
             image: null,
             use_variants: false,
             use_addons: false,
+            addons_group_scope: 'salads',
             max_addons: '5',
         });
         setShowModal(true);
@@ -177,6 +181,7 @@ export default function AdminMenu() {
             image: null,
             use_variants: false,
             use_addons: false,
+            addons_group_scope: 'salads',
             max_addons: '5',
         });
     };
@@ -434,22 +439,60 @@ export default function AdminMenu() {
                                             className="mt-1 w-4 h-4 rounded"
                                         />
                                         <div>
-                                            <p className="text-sm font-medium text-gray-800">🥗 סלטים</p>
-                                            <p className="text-xs text-gray-500">הצגת רשימת הסלטים הגלובלית של המסעדה עבור מנה זו.</p>
+                                            <p className="text-sm font-medium text-gray-800">➕ תוספות</p>
+                                            <p className="text-xs text-gray-500">הצגת תוספות גלובליות לפי קבוצות עבור מנה זו.</p>
                                         </div>
                                     </label>
 
                                     {form.use_addons && (
-                                        <div>
-                                            <label className="block text-xs font-medium text-gray-600 mb-1">מקסימום סלטים לבחירה</label>
-                                            <input
-                                                type="number"
-                                                min="1"
-                                                max="20"
-                                                value={form.max_addons}
-                                                onChange={(e) => setForm({ ...form, max_addons: e.target.value })}
-                                                className="w-full px-3 py-2 border rounded-lg text-sm"
-                                            />
+                                        <div className="space-y-3">
+                                            <div>
+                                                <label className="block text-xs font-medium text-gray-600 mb-1">קבוצת תוספות להצגה</label>
+                                                <div className="flex flex-wrap gap-3 text-sm text-gray-700">
+                                                    <label className="flex items-center gap-2">
+                                                        <input
+                                                            type="radio"
+                                                            name="addons_group_scope"
+                                                            value="salads"
+                                                            checked={form.addons_group_scope === 'salads'}
+                                                            onChange={(e) => setForm({ ...form, addons_group_scope: e.target.value })}
+                                                        />
+                                                        סלטים קבועים
+                                                    </label>
+                                                    <label className="flex items-center gap-2">
+                                                        <input
+                                                            type="radio"
+                                                            name="addons_group_scope"
+                                                            value="hot"
+                                                            checked={form.addons_group_scope === 'hot'}
+                                                            onChange={(e) => setForm({ ...form, addons_group_scope: e.target.value })}
+                                                        />
+                                                        תוספות חמות
+                                                    </label>
+                                                    <label className="flex items-center gap-2">
+                                                        <input
+                                                            type="radio"
+                                                            name="addons_group_scope"
+                                                            value="both"
+                                                            checked={form.addons_group_scope === 'both'}
+                                                            onChange={(e) => setForm({ ...form, addons_group_scope: e.target.value })}
+                                                        />
+                                                        גם וגם
+                                                    </label>
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-xs font-medium text-gray-600 mb-1">מקסימום תוספות לבחירה</label>
+                                                <input
+                                                    type="number"
+                                                    min="1"
+                                                    max="20"
+                                                    value={form.max_addons}
+                                                    onChange={(e) => setForm({ ...form, max_addons: e.target.value })}
+                                                    className="w-full px-3 py-2 border rounded-lg text-sm"
+                                                />
+                                            </div>
                                         </div>
                                     )}
                                 </div>
