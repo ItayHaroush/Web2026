@@ -7,6 +7,7 @@ use App\Models\RestaurantPayment;
 use App\Models\RestaurantSubscription;
 use App\Models\PhoneVerification;
 use App\Models\User;
+use App\Models\City;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -97,6 +98,11 @@ class RegisterRestaurantController extends Controller
                 $slugValue = Str::slug($tenantId) ?: $tenantId;
             }
 
+            // מצא קואורדינטות מטבלת cities
+            $cityData = City::where('hebrew_name', $validated['city'])->first();
+            $latitude = $cityData?->latitude;
+            $longitude = $cityData?->longitude;
+
             $restaurant = Restaurant::create([
                 'tenant_id' => $tenantId,
                 'name' => $validated['name'],
@@ -104,6 +110,8 @@ class RegisterRestaurantController extends Controller
                 'phone' => $this->normalizePhone($validated['phone']),
                 'address' => $validated['address'] ?? null,
                 'city' => $validated['city'],
+                'latitude' => $latitude,
+                'longitude' => $longitude,
                 'description' => null,
                 'logo_url' => $logoUrl,
                 'is_open' => false,
