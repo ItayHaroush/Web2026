@@ -14,6 +14,7 @@ class RestaurantController extends Controller
     private function toPublicRestaurantPayload(Restaurant $restaurant): array
     {
         return [
+            'id' => $restaurant->id,
             'tenant_id' => $restaurant->tenant_id,
             'slug' => $restaurant->slug,
             'name' => $restaurant->name,
@@ -22,6 +23,8 @@ class RestaurantController extends Controller
             'phone' => $restaurant->phone,
             'address' => $restaurant->address,
             'city' => $restaurant->city,
+            'latitude' => $restaurant->latitude,
+            'longitude' => $restaurant->longitude,
             'is_open' => (bool) $restaurant->is_open,
             'is_override_status' => (bool) ($restaurant->is_override_status ?? false),
             'is_open_now' => (bool) ($restaurant->is_open_now ?? false),

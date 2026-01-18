@@ -20,6 +20,7 @@ export default function HomePage() {
     const [error, setError] = useState(null);
     const [userLocation, setUserLocation] = useState(null);
     const [currentCityName, setCurrentCityName] = useState('');
+    const [closestRestaurantId, setClosestRestaurantId] = useState(null);
     const [autoSelectedCity, setAutoSelectedCity] = useState(false);
     const [activeOrderId, setActiveOrderId] = useState(null);
     const navigate = useNavigate();
@@ -87,8 +88,6 @@ export default function HomePage() {
             setLoading(true);
             setError(null);
 
-            console.log('Loading restaurants, city filter:', selectedCity);
-
             // טען מסעדות
             const result = await getAllRestaurants(selectedCity || null);
             console.log('Restaurants loaded:', result);
@@ -113,14 +112,11 @@ export default function HomePage() {
                     return a.distance - b.distance;
                 });
 
-                // בחירה אוטומטית של העיר הקרובה ביותר
-                if (!autoSelectedCity && restaurantsList.length > 0) {
-                    const closestRestaurant = restaurantsList[0]; // הראשון אחרי המיון = הכי קרוב
-                    if (closestRestaurant && closestRestaurant.city && closestRestaurant.distance !== null) {
-                        console.log('🎯 בחירת עיר קרובה:', closestRestaurant.city, '- מרחק:', closestRestaurant.distance.toFixed(2), 'ק"מ');
-                        setSelectedCity(closestRestaurant.city);
-                        setAutoSelectedCity(true);
-                    }
+                // בחירה אוטומטית של העיר הקרובה ביותר (רק בפעם הראשונה)
+                if (!autoSelectedCity && !selectedCity && restaurantsList.length > 0 && restaurantsList[0].distance !== null) {
+                    const closestRestaurant = restaurantsList[0];
+                    setSelectedCity(closestRestaurant.city);
+                    setAutoSelectedCity(true);
                 }
             }
 
@@ -262,8 +258,8 @@ export default function HomePage() {
                                     className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-gray-50 border border-gray-200 rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent text-gray-700 font-medium text-sm sm:text-base"
                                 >
                                     <option value="">🌍 כל הערים</option>
-                                    {cities.map((city) => (
-                                        <option key={city} value={city}>
+                                    {cities.filter(Boolean).map((city, index) => (
+                                        <option key={`${city}-${index}`} value={city}>
                                             📍 {city}
                                         </option>
                                     ))}
@@ -302,7 +298,7 @@ export default function HomePage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                         {restaurants.map((restaurant, index) => (
                             <div
-                                key={restaurant.id}
+                                key={restaurant.id ?? restaurant.tenant_id ?? `restaurant-${index}`}
                                 onClick={() => handleRestaurantClick(restaurant)}
                                 className="bg-white rounded-2xl shadow-sm hover:shadow-2xl transition-all duration-300 cursor-pointer group overflow-hidden border border-gray-100 hover:border-brand-primary/30"
                                 style={{ animationDelay: `${index * 50}ms` }}
@@ -339,7 +335,7 @@ export default function HomePage() {
                                     )}
 
                                     {/* תג מרחק */}
-                                    {restaurant.distance && (
+                                    {restaurant.distance !== null && Number.isFinite(restaurant.distance) && (
                                         <div className="absolute top-3 left-3 bg-white/95 backdrop-blur-sm text-brand-primary px-3 py-1.5 rounded-full text-sm font-bold shadow-md">
                                             📍 {restaurant.distance.toFixed(1)} ק"מ
                                         </div>
