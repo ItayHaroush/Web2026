@@ -23,6 +23,7 @@ export default function AdminLayout({ children }) {
                     setRestaurantStatus({
                         is_open: restaurant.is_open_now ?? restaurant.is_open,
                         is_override: restaurant.is_override_status || false,
+                        is_approved: restaurant.is_approved ?? false,
                     });
                 }
             } catch (error) {
@@ -209,6 +210,11 @@ export default function AdminLayout({ children }) {
                                 }`}>
                                 {restaurantStatus.is_open ? '✓ פתוח' : '✗ סגור'}
                             </span>
+                            {restaurantStatus.is_approved === false && (
+                                <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700">
+                                    ממתין לאישור מנהל מערכת
+                                </span>
+                            )}
                             {restaurantStatus.is_override && (
                                 <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full font-semibold">
                                     🔒 כפוי
@@ -228,6 +234,17 @@ export default function AdminLayout({ children }) {
 
                 {/* Page Content */}
                 <main className="p-4 lg:p-6">
+                    {restaurantStatus.is_approved === false && (
+                        <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-800 shadow-sm">
+                            <div className="flex items-start gap-3">
+                                <span className="text-xl">⏳</span>
+                                <div>
+                                    <p className="font-bold">ממתין לאישור מנהל מערכת</p>
+                                    <p className="text-sm">בינתיים ניתן לעדכן פרטי מסעדה, אבל פעולות פתיחה/סגירה והזמנות מנוטרלות עד לאישור.</p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                     {children}
                 </main>
             </div>

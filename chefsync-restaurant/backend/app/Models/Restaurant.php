@@ -30,6 +30,7 @@ class Restaurant extends Model
         'address',
         'city',
         'is_open',
+        'is_approved',
         'has_delivery',
         'has_pickup',
         'is_override_status',
@@ -64,6 +65,7 @@ class Restaurant extends Model
 
     protected $casts = [
         'is_open' => 'boolean',
+        'is_approved' => 'boolean',
         'has_delivery' => 'boolean',
         'has_pickup' => 'boolean',
         'is_override_status' => 'boolean',
@@ -239,6 +241,10 @@ class Restaurant extends Model
 
     public function getIsOpenNowAttribute(): bool
     {
+        if ($this->is_approved === false) {
+            return false;
+        }
+
         if ($this->is_override_status) {
             return (bool) $this->is_open;
         }

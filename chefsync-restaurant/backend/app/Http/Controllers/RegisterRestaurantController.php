@@ -118,6 +118,7 @@ class RegisterRestaurantController extends Controller
                 'tenant_id' => $tenantId,
                 'name' => $validated['name'],
                 'slug' => $slugValue,
+
                 'phone' => $this->formatPhoneForDisplay($validated['phone']),
                 'address' => $validated['address'] ?? null,
                 'city' => $validated['city'],
@@ -126,6 +127,7 @@ class RegisterRestaurantController extends Controller
                 'description' => null,
                 'logo_url' => $logoUrl,
                 'is_open' => false,
+                'is_approved' => false,
                 'subscription_status' => $subscriptionStatus,
                 'trial_ends_at' => $trialEndsAt,
                 'subscription_plan' => $planType,

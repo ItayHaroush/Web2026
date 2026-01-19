@@ -184,6 +184,7 @@ class SuperAdminController extends Controller
                 'city' => $validated['city'] ?? null,
                 'logo_url' => $logoUrl,
                 'is_open' => false, // כברירת מחדל סגור עד שיסיימו הגדרה
+                'is_approved' => false,
             ]);
 
             // יצירת משתמש בעלים
@@ -296,6 +297,48 @@ class SuperAdminController extends Controller
             'success' => true,
             'message' => 'סטטוס המסעדה עודכן!',
             'restaurant' => $restaurant,
+        ]);
+    }
+
+    /**
+     * אישור מסעדה חדשה (סופר אדמין בלבד)
+     */
+    public function approveRestaurant($id)
+    {
+        $restaurant = Restaurant::findOrFail($id);
+
+        if ($restaurant->is_approved) {
+            return response()->json([
+                'success' => true,
+                'message' => 'המסעדה כבר מאושרת',
+                'restaurant' => $restaurant,
+            ]);
+        }
+
+        $restaurant->is_approved = true;
+        $restaurant->is_open = false; // נותר סגור עד שבעלים יפתח ידנית לאחר אישור
+        $restaurant->is_override_status = false;
+        $restaurant->save();
+
+        $owner = User::where('restaurant_id', $restaurant->id)
+            ->where('role', 'owner')
+            ->orderBy('id')
+            ->first();
+
+        $smsSent = null;
+        if ($owner && $owner->phone) {
+            $ownerPhone = $this->normalizePhoneE164($owner->phone);
+            $smsSent = SmsService::sendApprovalMessage($ownerPhone, $restaurant->name);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'המסעדה אושרה בהצלחה',
+            'restaurant' => $restaurant,
+            'notification' => [
+                'sms_sent' => $smsSent,
+                'owner_id' => $owner?->id,
+            ],
         ]);
     }
 

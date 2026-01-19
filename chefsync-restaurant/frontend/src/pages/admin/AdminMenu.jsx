@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
+import { useRestaurantStatus } from '../../context/RestaurantStatusContext';
 import AdminLayout from '../../layouts/AdminLayout';
 import api from '../../services/apiClient';
 import { resolveAssetUrl } from '../../utils/assets';
 
 export default function AdminMenu() {
     const { getAuthHeaders, isManager } = useAdminAuth();
+    const { restaurantStatus } = useRestaurantStatus();
+    const isLocked = restaurantStatus?.is_approved === false;
     const [items, setItems] = useState([]);
     const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -66,6 +69,11 @@ export default function AdminMenu() {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
+        if (isLocked) {
+            alert('המסעדה ממתינה לאישור מנהל מערכת. פעולות על התפריט נעולות זמנית.');
+            return;
+        }
+
         if (form.use_addons && (!form.max_addons || Number(form.max_addons) < 1)) {
             alert('אנא הזן מספר מקסימלי של תוספות לבחירה');
             return;
@@ -116,6 +124,10 @@ export default function AdminMenu() {
     };
 
     const toggleAvailability = async (item) => {
+        if (isLocked) {
+            alert('המסעדה ממתינה לאישור מנהל מערכת. פעולות על התפריט נעולות זמנית.');
+            return;
+        }
         try {
             await api.put(`/admin/menu-items/${item.id}`,
                 { is_available: !item.is_available },
@@ -129,6 +141,11 @@ export default function AdminMenu() {
 
     const deleteItem = async (id) => {
         if (!confirm('האם אתה בטוח שברצונך למחוק פריט זה?')) return;
+
+        if (isLocked) {
+            alert('המסעדה ממתינה לאישור מנהל מערכת. פעולות על התפריט נעולות זמנית.');
+            return;
+        }
 
         try {
             await api.delete(`/admin/menu-items/${id}`, { headers: getAuthHeaders() });
@@ -211,7 +228,8 @@ export default function AdminMenu() {
                 {isManager() && (
                     <button
                         onClick={openNewModal}
-                        className="bg-brand-primary text-white px-6 py-3 rounded-xl font-medium hover:bg-brand-dark transition-colors flex items-center gap-2"
+                        disabled={isLocked}
+                        className="bg-brand-primary text-white px-6 py-3 rounded-xl font-medium hover:bg-brand-dark transition-colors flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
                     >
                         <span>➕</span>
                         הוסף פריט
@@ -299,22 +317,25 @@ export default function AdminMenu() {
                                     <div className="flex gap-2">
                                         <button
                                             onClick={() => toggleAvailability(item)}
+                                            disabled={isLocked}
                                             className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${item.is_available
                                                 ? 'bg-green-50 text-green-600 hover:bg-green-100'
                                                 : 'bg-red-50 text-red-600 hover:bg-red-100'
-                                                }`}
+                                                } disabled:opacity-60 disabled:cursor-not-allowed`}
                                         >
                                             {item.is_available ? '✓ זמין' : '✕ לא זמין'}
                                         </button>
                                         <button
                                             onClick={() => openEditModal(item)}
-                                            className="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200"
+                                            disabled={isLocked}
+                                            className="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 disabled:opacity-60 disabled:cursor-not-allowed"
                                         >
                                             ✏️
                                         </button>
                                         <button
                                             onClick={() => deleteItem(item.id)}
-                                            className="px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100"
+                                            disabled={isLocked}
+                                            className="px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 disabled:opacity-60 disabled:cursor-not-allowed"
                                         >
                                             🗑️
                                         </button>
@@ -501,7 +522,8 @@ export default function AdminMenu() {
                             <div className="flex gap-3 pt-4">
                                 <button
                                     type="submit"
-                                    className="flex-1 bg-brand-primary text-white py-3 rounded-xl font-medium hover:bg-brand-dark"
+                                    disabled={isLocked}
+                                    className="flex-1 bg-brand-primary text-white py-3 rounded-xl font-medium hover:bg-brand-dark disabled:opacity-60 disabled:cursor-not-allowed"
                                 >
                                     {editItem ? 'עדכן' : 'הוסף'}
                                 </button>

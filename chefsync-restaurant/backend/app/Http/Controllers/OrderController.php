@@ -86,6 +86,14 @@ class OrderController extends Controller
                 throw new \Exception('Restaurant not found for tenant');
             }
 
+            if (!$restaurant->is_approved) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'המסעדה ממתינה לאישור מנהל מערכת ולא ניתן לבצע הזמנה',
+                    'error' => 'restaurant_not_approved',
+                ], 403);
+            }
+
             if (!($restaurant->is_open_now ?? false)) {
                 return response()->json([
                     'success' => false,
