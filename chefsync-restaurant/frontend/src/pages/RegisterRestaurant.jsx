@@ -24,6 +24,8 @@ export default function RegisterRestaurant() {
         password_confirmation: '',
         plan_type: 'monthly',
         verification_code: '',
+        latitude: '',
+        longitude: '',
     });
     const [codeSending, setCodeSending] = useState(false);
     const [logoFile, setLogoFile] = useState(null);
@@ -76,6 +78,9 @@ export default function RegisterRestaurant() {
             if (form.address) {
                 formData.append('address', form.address);
             }
+            if (form.latitude) formData.append('latitude', form.latitude);
+            if (form.longitude) formData.append('longitude', form.longitude);
+
             formData.append('paid_upfront', '0');
 
             if (logoFile) {
