@@ -29,6 +29,8 @@ class Restaurant extends Model
         'phone',
         'address',
         'city',
+        'latitude',
+        'longitude',
         'is_open',
         'is_approved',
         'has_delivery',

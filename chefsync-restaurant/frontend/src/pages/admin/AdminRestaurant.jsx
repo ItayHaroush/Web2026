@@ -242,7 +242,6 @@ export default function AdminRestaurant() {
                 'description',
                 'phone',
                 'address',
-                'city',
                 'share_incentive_text',
                 'delivery_time_minutes',
                 'delivery_time_note',
@@ -465,7 +464,9 @@ export default function AdminRestaurant() {
                                 value={restaurant.city || ''}
                                 onChange={(e) => handleChange('city', e.target.value)}
                                 className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                                disabled
                             />
+                            <p className="text-xs text-gray-500 mt-1">עיר לא ניתנת לעריכה.</p>
                         </div>
                     </div>
 

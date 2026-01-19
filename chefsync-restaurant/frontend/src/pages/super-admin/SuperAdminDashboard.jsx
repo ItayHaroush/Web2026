@@ -216,8 +216,8 @@ export default function SuperAdminDashboard() {
                                                 {restaurant.city && (
                                                     <span className="text-gray-600">📍 {restaurant.city}</span>
                                                 )}
-                                                <span className={`font-medium ${restaurant.is_open ? 'text-green-600' : 'text-red-600'}`}>
-                                                    {restaurant.is_open ? '✅ פתוח' : '❌ סגור'}
+                                                <span className={`font-medium ${(restaurant.is_open_now ?? restaurant.is_open) ? 'text-green-600' : 'text-red-600'}`}>
+                                                    {(restaurant.is_open_now ?? restaurant.is_open) ? '✅ פתוח' : '❌ סגור'}
                                                 </span>
                                                 {restaurant.is_approved === false && (
                                                     <span className="px-2 py-1 rounded-full text-xs bg-amber-100 text-amber-700 font-semibold">
@@ -249,12 +249,12 @@ export default function SuperAdminDashboard() {
                                             )}
                                             <button
                                                 onClick={() => toggleRestaurant(restaurant.id)}
-                                                className={`px-3 py-1 text-sm rounded-lg font-medium transition-all ${restaurant.is_open
+                                                className={`px-3 py-1 text-sm rounded-lg font-medium transition-all ${(restaurant.is_open_now ?? restaurant.is_open)
                                                     ? 'bg-red-100 text-red-700 hover:bg-red-200'
                                                     : 'bg-green-100 text-green-700 hover:bg-green-200'
                                                     }`}
                                             >
-                                                {restaurant.is_open ? 'סגור' : 'פתח'}
+                                                {(restaurant.is_open_now ?? restaurant.is_open) ? 'סגור' : 'פתח'}
                                             </button>
                                             <button
                                                 onClick={() => deleteRestaurant(restaurant.id)}
