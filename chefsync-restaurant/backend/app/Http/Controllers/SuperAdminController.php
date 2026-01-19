@@ -138,7 +138,9 @@ class SuperAdminController extends Controller
             'phone' => 'required|string|max:20',
             'address' => 'nullable|string',
             'description' => 'nullable|string',
-            'city' => 'nullable|string|max:255',
+            'city' => 'required|string|max:255',
+            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
             'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
 
             // פרטי בעל המסעדה
@@ -150,16 +152,27 @@ class SuperAdminController extends Controller
 
         DB::beginTransaction();
         try {
-            // יצירת המסעדה - וידוא slug ו-tenant_id תמיד קיימים
             $slugValue = Str::slug($validated['name']);
-
-            // ודא tenant_id תקין
             $tenantId = $validated['tenant_id'];
             if (empty($tenantId)) {
                 throw new \Exception('tenant_id is required');
             }
+            if (empty($slugValue)) {
+                $slugValue = Str::slug($tenantId) ?: $tenantId;
+            }
 
-            // טיפול בהעלאת הלוגו
+            // קואורדינטות: ידני > לפי עיר
+            $latitude = null;
+            $longitude = null;
+            if ($request->filled(['latitude', 'longitude'])) {
+                $latitude = $validated['latitude'];
+                $longitude = $validated['longitude'];
+            } else {
+                $cityData = City::where('hebrew_name', $validated['city'])->first();
+                $latitude = $cityData?->latitude;
+                $longitude = $cityData?->longitude;
+            }
+
             $logoUrl = null;
             if ($request->hasFile('logo') && $request->file('logo')->isValid()) {
                 $logoFile = $request->file('logo');
@@ -178,10 +191,12 @@ class SuperAdminController extends Controller
                 'tenant_id' => $tenantId,
                 'name' => $validated['name'],
                 'slug' => $slugValue,
-                'phone' => $validated['phone'],
+                'phone' => $this->formatPhoneForDisplay($validated['phone']),
                 'address' => $validated['address'] ?? null,
                 'description' => $validated['description'] ?? null,
-                'city' => $validated['city'] ?? null,
+                'city' => $validated['city'],
+                'latitude' => $latitude,
+                'longitude' => $longitude,
                 'logo_url' => $logoUrl,
                 'is_open' => false, // כברירת מחדל סגור עד שיסיימו הגדרה
                 'is_approved' => false,
@@ -193,7 +208,7 @@ class SuperAdminController extends Controller
                 'restaurant_id' => $restaurant->id,
                 'name' => $validated['owner_name'],
                 'email' => $validated['owner_email'],
-                'phone' => $validated['owner_phone'],
+                'phone' => $this->formatPhoneForDisplay($validated['owner_phone']),
                 'password' => Hash::make($password),
                 'role' => 'owner',
                 'is_active' => true,
@@ -290,7 +305,9 @@ class SuperAdminController extends Controller
     public function toggleRestaurantStatus($id)
     {
         $restaurant = Restaurant::findOrFail($id);
-        $restaurant->is_open = !$restaurant->is_open;
+        $currentOpen = (bool) ($restaurant->is_open_now ?? $restaurant->is_open);
+        $restaurant->is_override_status = true;
+        $restaurant->is_open = !$currentOpen;
         $restaurant->save();
 
         return response()->json([
@@ -611,5 +628,17 @@ class SuperAdminController extends Controller
         }
         $last4 = substr($digits, -4);
         return '***' . $last4;
+    }
+
+    private function formatPhoneForDisplay(string $raw): string
+    {
+        $phone = preg_replace('/\D/', '', $raw);
+        if (strlen($phone) === 10 && str_starts_with($phone, '05')) {
+            return substr($phone, 0, 3) . '-' . substr($phone, 3);
+        }
+        if (strlen($phone) === 9 && str_starts_with($phone, '0')) {
+            return substr($phone, 0, 2) . '-' . substr($phone, 2);
+        }
+        return $raw;
     }
 }

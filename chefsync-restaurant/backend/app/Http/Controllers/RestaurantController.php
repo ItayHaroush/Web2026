@@ -13,6 +13,30 @@ class RestaurantController extends Controller
 {
     private function toPublicRestaurantPayload(Restaurant $restaurant): array
     {
+        $latitude = $restaurant->latitude;
+        $longitude = $restaurant->longitude;
+
+        if (($latitude === null || $longitude === null) && !empty($restaurant->city)) {
+            static $cityMap = null;
+            if ($cityMap === null) {
+                $cityMap = [];
+                foreach (City::all(['name', 'hebrew_name', 'latitude', 'longitude']) as $city) {
+                    if (!empty($city->name)) {
+                        $cityMap[$city->name] = $city;
+                    }
+                    if (!empty($city->hebrew_name)) {
+                        $cityMap[$city->hebrew_name] = $city;
+                    }
+                }
+            }
+
+            $cityData = $cityMap[$restaurant->city] ?? null;
+            if ($cityData) {
+                $latitude = $latitude ?? $cityData->latitude;
+                $longitude = $longitude ?? $cityData->longitude;
+            }
+        }
+
         return [
             'id' => $restaurant->id,
             'tenant_id' => $restaurant->tenant_id,
@@ -23,8 +47,8 @@ class RestaurantController extends Controller
             'phone' => $restaurant->phone,
             'address' => $restaurant->address,
             'city' => $restaurant->city,
-            'latitude' => $restaurant->latitude,
-            'longitude' => $restaurant->longitude,
+            'latitude' => $latitude,
+            'longitude' => $longitude,
             'is_approved' => (bool) ($restaurant->is_approved ?? false),
             'is_open' => (bool) $restaurant->is_open,
             'is_override_status' => (bool) ($restaurant->is_override_status ?? false),
