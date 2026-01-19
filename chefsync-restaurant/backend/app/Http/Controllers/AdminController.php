@@ -685,7 +685,7 @@ class AdminController extends Controller
         }
 
         $restaurant = Restaurant::findOrFail($user->restaurant_id);
-    $isApproved = (bool) $restaurant->is_approved;
+        $isApproved = (bool) $restaurant->is_approved;
 
         // 🔍 DEBUG - מה מגיע מהפרונט בדיוק
         $rawBody = $request->getContent();
