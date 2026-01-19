@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
+import { useRestaurantStatus } from '../../context/RestaurantStatusContext';
 import AdminLayout from '../../layouts/AdminLayout';
 import api from '../../services/apiClient';
 
 export default function AdminOrders() {
     const { getAuthHeaders } = useAdminAuth();
+    const { restaurantStatus } = useRestaurantStatus();
     const [orders, setOrders] = useState([]);
     const [allOrders, setAllOrders] = useState([]); // כל ההזמנות ללא סינון
     const [loading, setLoading] = useState(true);
@@ -15,6 +17,7 @@ export default function AdminOrders() {
     const [etaNote, setEtaNote] = useState('');
     const [etaUpdating, setEtaUpdating] = useState(false);
     const previousOrdersCount = useRef(0);
+    const isLocked = restaurantStatus?.is_approved === false;
 
     const formatAddons = (addons) => {
         if (!Array.isArray(addons) || addons.length === 0) return '';
@@ -105,6 +108,10 @@ export default function AdminOrders() {
     };
 
     const updateStatus = async (orderId, newStatus) => {
+        if (isLocked) {
+            alert('המסעדה ממתינה לאישור מנהל מערכת. פעולות על הזמנות נעולות זמנית.');
+            return;
+        }
         try {
             console.log('Updating order', orderId, 'to status:', newStatus);
             const response = await api.patch(`/admin/orders/${orderId}/status`,
@@ -135,6 +142,10 @@ export default function AdminOrders() {
     };
 
     const updateEta = async () => {
+        if (isLocked) {
+            alert('המסעדה ממתינה לאישור מנהל מערכת. פעולות על הזמנות נעולות זמנית.');
+            return;
+        }
         if (!selectedOrder) return;
         const extra = Number(etaExtraMinutes);
         if (!Number.isFinite(extra) || extra <= 0) {
@@ -451,7 +462,7 @@ export default function AdminOrders() {
                                     </div>
                                     <button
                                         onClick={updateEta}
-                                        disabled={etaUpdating || !etaExtraMinutes}
+                                        disabled={etaUpdating || !etaExtraMinutes || isLocked}
                                         className="mt-3 w-full bg-gray-900 text-white py-2 rounded-lg text-sm font-semibold disabled:opacity-50"
                                     >
                                         {etaUpdating ? 'מעדכן...' : 'הארכת זמן והודעה ללקוח'}
@@ -533,7 +544,8 @@ export default function AdminOrders() {
                                             return (
                                                 <button
                                                     onClick={() => updateStatus(selectedOrder.id, nextStatus)}
-                                                    className="w-full bg-gradient-to-r from-brand-primary to-brand-secondary text-white py-4 rounded-xl font-bold text-lg hover:shadow-lg transition-all transform hover:scale-105"
+                                                    disabled={isLocked}
+                                                    className="w-full bg-gradient-to-r from-brand-primary to-brand-secondary text-white py-4 rounded-xl font-bold text-lg hover:shadow-lg transition-all transform hover:scale-105 disabled:opacity-60 disabled:cursor-not-allowed"
                                                 >
                                                     {buttonTexts[nextStatus] || `העבר ל${nextBadge.text}`}
                                                 </button>
@@ -549,7 +561,8 @@ export default function AdminOrders() {
                                                     updateStatus(selectedOrder.id, 'cancelled');
                                                 }
                                             }}
-                                            className="w-full bg-red-50 text-red-600 py-3 rounded-xl font-medium hover:bg-red-100 transition-colors"
+                                            disabled={isLocked}
+                                            className="w-full bg-red-50 text-red-600 py-3 rounded-xl font-medium hover:bg-red-100 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                                         >
                                             ❌ ביטול הזמנה
                                         </button>

@@ -36,6 +36,14 @@ class MenuController extends Controller
                 },
             ])->where('tenant_id', $tenantId)->first();
 
+            if (!$restaurant || !$restaurant->is_approved) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'המסעדה ממתינה לאישור מנהל מערכת ואינה זמינה עדיין להזמנות',
+                    'error' => 'restaurant_not_approved',
+                ], 403);
+            }
+
             $restaurantVariants = $restaurant?->variants ?? collect();
             $restaurantAddonGroups = $restaurant?->addonGroups ?? collect();
 

@@ -113,9 +113,10 @@ export default function AdminRestaurant() {
             setRestaurantStatus({
                 is_open: restaurant.is_open,
                 is_override: overrideStatus,
+                is_approved: restaurant.is_approved ?? false,
             });
         }
-    }, [restaurant?.is_open, overrideStatus, setRestaurantStatus]);
+    }, [restaurant?.is_open, restaurant?.is_approved, overrideStatus, setRestaurantStatus]);
 
     useEffect(() => {
         // רק חשב את הסטטוס המחושב לצורך תצוגה - אל תשנה את restaurant.is_open!
@@ -142,6 +143,11 @@ export default function AdminRestaurant() {
                 setRestaurant(normalized);
                 setLogoPreview(normalized.logo_url ? resolveAssetUrl(normalized.logo_url) : null);
                 setOverrideStatus(normalized.is_override_status || false);
+                setRestaurantStatus({
+                    is_open: normalized.is_open,
+                    is_override: normalized.is_override_status || false,
+                    is_approved: normalized.is_approved ?? false,
+                });
             }
         } catch (error) {
             console.error('Failed to fetch restaurant:', error);
@@ -215,6 +221,8 @@ export default function AdminRestaurant() {
         setLogoPreview(URL.createObjectURL(file));
     };
 
+    const isApproved = restaurant?.is_approved ?? false;
+
     const save = async (e) => {
         e.preventDefault();
         if (!isOwner()) {
@@ -263,7 +271,7 @@ export default function AdminRestaurant() {
             }, {}));
 
             // שלח את is_open רק אם הוא מעודכן ידנית (overrideStatus = true)
-            if (overrideStatus) {
+            if (overrideStatus && isApproved) {
                 const isOpenValue = restaurant.is_open === true ? '1' : '0';
                 formData.append('is_open', isOpenValue);
                 console.log('🔒 Overriding status to:', isOpenValue);
@@ -617,11 +625,11 @@ export default function AdminRestaurant() {
                                                 handleChange('is_open', !restaurant.is_open);
                                             }
                                         }}
-                                        disabled={!overrideStatus}
+                                        disabled={!overrideStatus || !isApproved}
                                         className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${restaurant.is_open
                                             ? 'bg-green-100 text-green-700'
                                             : 'bg-red-100 text-red-700'
-                                            } ${!overrideStatus && 'opacity-70 cursor-not-allowed'}`}
+                                            } ${(!overrideStatus || !isApproved) && 'opacity-70 cursor-not-allowed'}`}
                                     >
                                         {restaurant.is_open ? '✓ פתוח' : '✗ סגור'}
                                     </button>
@@ -647,6 +655,7 @@ export default function AdminRestaurant() {
                                             setRestaurant((prev) => ({ ...prev, is_open: calculatedStatus }));
                                         }
                                     }}
+                                    disabled={!isApproved}
                                     className="w-4 h-4 rounded"
                                 />
                                 <span className="text-sm text-gray-600">אפשר כפיית סטטוס ידנית</span>
@@ -656,11 +665,17 @@ export default function AdminRestaurant() {
                                 <button
                                     type="button"
                                     onClick={clearOverride}
-                                    disabled={saving}
+                                    disabled={saving || !isApproved}
                                     className="inline-flex items-center justify-center px-4 py-2 rounded-xl text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-60"
                                 >
                                     בטל כפייה (חזור לאוטומטי)
                                 </button>
+                            )}
+
+                            {!isApproved && (
+                                <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2">
+                                    פתיחה וסגירה ידנית תתאפשר רק לאחר אישור מנהל מערכת.
+                                </p>
                             )}
                         </div>
                     </div>

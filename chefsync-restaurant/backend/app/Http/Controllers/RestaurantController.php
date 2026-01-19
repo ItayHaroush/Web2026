@@ -25,6 +25,7 @@ class RestaurantController extends Controller
             'city' => $restaurant->city,
             'latitude' => $restaurant->latitude,
             'longitude' => $restaurant->longitude,
+            'is_approved' => (bool) ($restaurant->is_approved ?? false),
             'is_open' => (bool) $restaurant->is_open,
             'is_override_status' => (bool) ($restaurant->is_override_status ?? false),
             'is_open_now' => (bool) ($restaurant->is_open_now ?? false),
@@ -46,7 +47,7 @@ class RestaurantController extends Controller
     public function index(Request $request)
     {
         try {
-            $query = Restaurant::query();
+            $query = Restaurant::query()->where('is_approved', true);
 
             // סינון לפי עיר
             if ($request->has('city')) {
@@ -106,6 +107,14 @@ class RestaurantController extends Controller
                 ->where('tenant_id', $tenantId)
                 ->orWhere('slug', $tenantId)
                 ->firstOrFail();
+
+            if (!$restaurant->is_approved) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'המסעדה ממתינה לאישור מנהל מערכת',
+                    'error' => 'restaurant_not_approved',
+                ], 403);
+            }
 
             return response()->json([
                 'success' => true,

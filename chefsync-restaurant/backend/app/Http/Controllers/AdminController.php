@@ -685,6 +685,7 @@ class AdminController extends Controller
         }
 
         $restaurant = Restaurant::findOrFail($user->restaurant_id);
+    $isApproved = (bool) $restaurant->is_approved;
 
         // 🔍 DEBUG - מה מגיע מהפרונט בדיוק
         $rawBody = $request->getContent();
@@ -915,6 +916,12 @@ class AdminController extends Controller
             $calculated = $this->isRestaurantOpen($operatingDays, $operatingHours);
             $updateData['is_open'] = $calculated;
             Log::debug('📅 Calculated status: ' . ($calculated ? 'true' : 'false'));
+        }
+
+        // אין פתיחה/כפייה לפני אישור סופר אדמין
+        if (!$isApproved) {
+            $updateData['is_open'] = false;
+            $updateData['is_override_status'] = false;
         }
 
         Log::info('Final Update Data', [

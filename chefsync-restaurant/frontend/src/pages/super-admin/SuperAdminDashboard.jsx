@@ -75,6 +75,24 @@ export default function SuperAdminDashboard() {
         }
     };
 
+    const approveRestaurant = async (restaurantId) => {
+        try {
+            const response = await api.post(
+                `/super-admin/restaurants/${restaurantId}/approve`,
+                {},
+                { headers: getAuthHeaders() }
+            );
+
+            if (response.data.success) {
+                toast.success(response.data.message || 'המסעדה אושרה');
+                fetchRestaurants();
+                fetchDashboard();
+            }
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'שגיאה באישור המסעדה');
+        }
+    };
+
     const deleteRestaurant = async (restaurantId) => {
         if (!confirm('בטוח שרוצה למחוק את המסעדה?')) return;
 
@@ -201,6 +219,11 @@ export default function SuperAdminDashboard() {
                                                 <span className={`font-medium ${restaurant.is_open ? 'text-green-600' : 'text-red-600'}`}>
                                                     {restaurant.is_open ? '✅ פתוח' : '❌ סגור'}
                                                 </span>
+                                                {restaurant.is_approved === false && (
+                                                    <span className="px-2 py-1 rounded-full text-xs bg-amber-100 text-amber-700 font-semibold">
+                                                        ממתין לאישור
+                                                    </span>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
@@ -215,7 +238,15 @@ export default function SuperAdminDashboard() {
                                                 {restaurant.orders_count} הזמנות
                                             </p>
                                         </div>
-                                        <div className="flex gap-2">
+                                        <div className="flex gap-2 flex-wrap justify-end">
+                                            {restaurant.is_approved === false && (
+                                                <button
+                                                    onClick={() => approveRestaurant(restaurant.id)}
+                                                    className="px-3 py-1 text-sm rounded-lg font-medium bg-amber-500 text-white hover:bg-amber-600"
+                                                >
+                                                    אשר מסעדה
+                                                </button>
+                                            )}
                                             <button
                                                 onClick={() => toggleRestaurant(restaurant.id)}
                                                 className={`px-3 py-1 text-sm rounded-lg font-medium transition-all ${restaurant.is_open

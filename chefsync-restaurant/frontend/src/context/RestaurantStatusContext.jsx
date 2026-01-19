@@ -6,6 +6,7 @@ export function RestaurantStatusProvider({ children }) {
     const [restaurantStatus, setRestaurantStatus] = useState({
         is_open: false,
         is_override: false,
+        is_approved: true,
     });
 
     return (
