@@ -99,7 +99,7 @@ class MenuController extends Controller
                                 })->values()->toArray();
 
                             $addonGroups = $item->use_addons
-                                ? $this->filterAddonGroupsByScope($restaurantAddonGroups, $item)
+                                ? $this->filterAddonGroupsByScope($restaurantAddonGroups, $item, $item->category_id)
                                 ->map(function ($group) use ($item) {
                                     return [
                                         'id' => $group->id,
@@ -199,18 +199,67 @@ class MenuController extends Controller
         }
     }
 
-    private function filterAddonGroupsByScope($groups, MenuItem $item)
+    private function filterAddonGroupsByScope($groups, MenuItem $item, ?int $categoryId)
     {
+        $groups = $this->cloneAddonGroups($groups);
         $scope = $item->addons_group_scope ?: 'salads';
 
         if ($scope === 'both') {
-            return $groups;
+            return $this->filterAddonGroupsByCategory($groups, $categoryId);
         }
 
         $allowedName = $scope === 'hot'
             ? self::DEFAULT_HOT_GROUP_NAME
             : self::DEFAULT_SALAD_GROUP_NAME;
 
-        return $groups->filter(fn($group) => $group->name === $allowedName)->values();
+        $filteredGroups = $groups->filter(fn($group) => $group->name === $allowedName)->values();
+        return $this->filterAddonGroupsByCategory($filteredGroups, $categoryId);
+    }
+
+    private function filterAddonGroupsByCategory($groups, ?int $categoryId)
+    {
+        if (!$categoryId) {
+            return $groups;
+        }
+
+        return $groups
+            ->map(function ($group) use ($categoryId) {
+                $filteredAddons = ($group->addons ?? collect())
+                    ->filter(function ($addon) use ($categoryId) {
+                        $categoryIds = $addon->category_ids ?? null;
+                        if (empty($categoryIds)) {
+                            return true;
+                        }
+
+                        if (is_string($categoryIds)) {
+                            $decoded = json_decode($categoryIds, true);
+                            $categoryIds = is_array($decoded) ? $decoded : [$categoryIds];
+                        }
+
+                        $normalized = collect((array) $categoryIds)
+                            ->map(fn($id) => (int) $id)
+                            ->all();
+
+                        return in_array((int) $categoryId, $normalized, true);
+                    })
+                    ->values();
+
+                $group->setRelation('addons', $filteredAddons);
+                return $group;
+            })
+            ->filter(fn($group) => ($group->addons ?? collect())->isNotEmpty())
+            ->values();
+    }
+
+    private function cloneAddonGroups($groups)
+    {
+        return $groups->map(function ($group) {
+            $clone = clone $group;
+            $addons = ($group->addons ?? collect())->map(function ($addon) {
+                return clone $addon;
+            });
+            $clone->setRelation('addons', $addons);
+            return $clone;
+        });
     }
 }

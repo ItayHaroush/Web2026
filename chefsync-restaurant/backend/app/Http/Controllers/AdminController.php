@@ -92,6 +92,7 @@ class AdminController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'icon' => 'nullable|string|max:50',
+            'dish_type' => 'nullable|string|in:plate,sandwich,both',
         ]);
 
         $user = $request->user();
@@ -115,6 +116,7 @@ class AdminController extends Controller
             'icon' => $request->icon ?? '🍽️',
             'sort_order' => $maxOrder + 1,
             'is_active' => true,
+            'dish_type' => $request->input('dish_type', 'both'),
         ]);
 
         return response()->json([
@@ -136,9 +138,10 @@ class AdminController extends Controller
             'icon' => 'nullable|string|max:50',
             'is_active' => 'sometimes|boolean',
             'sort_order' => 'sometimes|integer',
+            'dish_type' => 'sometimes|string|in:plate,sandwich,both',
         ]);
 
-        $category->update($request->only(['name', 'description', 'icon', 'is_active', 'sort_order']));
+        $category->update($request->only(['name', 'description', 'icon', 'is_active', 'sort_order', 'dish_type']));
 
         return response()->json([
             'success' => true,
@@ -403,6 +406,8 @@ class AdminController extends Controller
             'name' => 'required|string|max:255',
             'price_delta' => 'nullable|numeric|min:0|max:999.99',
             'is_active' => 'sometimes|boolean',
+            'category_ids' => 'nullable|array',
+            'category_ids.*' => 'integer',
             'group_id' => 'nullable|integer',
         ]);
 
@@ -420,6 +425,19 @@ class AdminController extends Controller
             ? RestaurantAddonGroup::where('restaurant_id', $restaurant->id)->findOrFail($groupId)
             : $this->ensureDefaultSaladGroup($restaurant);
         $maxOrder = RestaurantAddon::where('addon_group_id', $group->id)->max('sort_order') ?? 0;
+        $categoryIds = collect($request->input('category_ids', []))
+            ->filter(fn($id) => is_numeric($id))
+            ->map(fn($id) => (int) $id)
+            ->values();
+
+        if ($categoryIds->isNotEmpty()) {
+            $allowedCategoryIds = Category::where('restaurant_id', $restaurant->id)
+                ->whereIn('id', $categoryIds)
+                ->pluck('id')
+                ->map(fn($id) => (int) $id)
+                ->values();
+            $categoryIds = $allowedCategoryIds;
+        }
 
         $salad = RestaurantAddon::create([
             'addon_group_id' => $group->id,
@@ -428,6 +446,7 @@ class AdminController extends Controller
             'name' => $request->input('name'),
             'price_delta' => $request->input('price_delta', 0),
             'is_active' => $request->boolean('is_active', true),
+            'category_ids' => $categoryIds->isEmpty() ? null : $categoryIds->toArray(),
             'sort_order' => $maxOrder + 1,
         ]);
 
@@ -454,6 +473,8 @@ class AdminController extends Controller
             'price_delta' => 'sometimes|numeric|min:0|max:999.99',
             'is_active' => 'sometimes|boolean',
             'sort_order' => 'sometimes|integer|min:0',
+            'category_ids' => 'nullable|array',
+            'category_ids.*' => 'integer',
             'group_id' => 'nullable|integer',
         ]);
 
@@ -470,6 +491,22 @@ class AdminController extends Controller
             ->findOrFail($id);
 
         $payload = $request->only(['name', 'price_delta', 'is_active', 'sort_order']);
+        if ($request->has('category_ids')) {
+            $categoryIds = collect($request->input('category_ids', []))
+                ->filter(fn($id) => is_numeric($id))
+                ->map(fn($id) => (int) $id)
+                ->values();
+
+            if ($categoryIds->isNotEmpty()) {
+                $categoryIds = Category::where('restaurant_id', $restaurant->id)
+                    ->whereIn('id', $categoryIds)
+                    ->pluck('id')
+                    ->map(fn($id) => (int) $id)
+                    ->values();
+            }
+
+            $payload['category_ids'] = $categoryIds->isEmpty() ? null : $categoryIds->toArray();
+        }
         if ($request->filled('group_id')) {
             $group = RestaurantAddonGroup::where('restaurant_id', $restaurant->id)
                 ->findOrFail((int) $request->input('group_id'));

@@ -20,11 +20,13 @@ class Category extends Model
         'sort_order',
         'is_active',
         'display_order',
+        'dish_type',
     ];
 
     protected $casts = [
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
+        'is_active' => 'boolean',
     ];
 
     /**
