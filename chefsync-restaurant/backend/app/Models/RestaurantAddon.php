@@ -14,12 +14,14 @@ class RestaurantAddon extends Model
         'name',
         'price_delta',
         'is_active',
+        'category_ids',
         'sort_order',
     ];
 
     protected $casts = [
         'price_delta' => 'decimal:2',
         'is_active' => 'boolean',
+        'category_ids' => 'array',
         'sort_order' => 'integer',
     ];
 

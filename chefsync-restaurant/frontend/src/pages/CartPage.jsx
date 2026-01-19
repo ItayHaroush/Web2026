@@ -163,7 +163,7 @@ export default function CartPage() {
                                 <div className="flex-1 space-y-1">
                                     <h3 className="font-semibold text-gray-900">{item.name}</h3>
                                     {item.variant?.name && (
-                                        <p className="text-sm text-brand-primary">וריאנט: {item.variant.name}</p>
+                                        <p className="text-sm text-brand-primary">סוג לחם: {item.variant.name}</p>
                                     )}
                                     {addonNames && (
                                         <p className="text-xs text-gray-500">תוספות: {addonNames}</p>

@@ -9,7 +9,7 @@ export default function AdminCategories() {
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [editCategory, setEditCategory] = useState(null);
-    const [form, setForm] = useState({ name: '', description: '', icon: '📂' });
+    const [form, setForm] = useState({ name: '', description: '', icon: '📂', dish_type: 'both' });
 
     useEffect(() => {
         fetchCategories();
@@ -62,13 +62,18 @@ export default function AdminCategories() {
 
     const openNew = () => {
         setEditCategory(null);
-        setForm({ name: '', description: '', icon: '📂' });
+        setForm({ name: '', description: '', icon: '📂', dish_type: 'both' });
         setShowModal(true);
     };
 
     const openEdit = (cat) => {
         setEditCategory(cat);
-        setForm({ name: cat.name, description: cat.description || '', icon: cat.icon || '📂' });
+        setForm({
+            name: cat.name,
+            description: cat.description || '',
+            icon: cat.icon || '📂',
+            dish_type: cat.dish_type || 'both',
+        });
         setShowModal(true);
     };
 
@@ -181,6 +186,18 @@ export default function AdminCategories() {
                                     maxLength={4}
                                     className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary"
                                 />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">סוג הגשה</label>
+                                <select
+                                    value={form.dish_type}
+                                    onChange={(e) => setForm({ ...form, dish_type: e.target.value })}
+                                    className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                                >
+                                    <option value="both">🥗🌯 גם וגם</option>
+                                    <option value="plate">🥗 צלחת</option>
+                                    <option value="sandwich">🌯 כריך</option>
+                                </select>
                             </div>
                             <div className="flex gap-3 pt-2">
                                 <button type="submit" className="flex-1 bg-brand-primary text-white py-3 rounded-xl font-medium hover:bg-brand-dark">
