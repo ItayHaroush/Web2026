@@ -34,6 +34,8 @@ class RegisterRestaurantController extends Controller
             'plan_type' => 'required|in:monthly,annual',
             'paid_upfront' => 'nullable|boolean',
             'verification_code' => 'required|string',
+            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
         ]);
 
         // אימות קוד טלפון לבעלים
@@ -98,16 +100,25 @@ class RegisterRestaurantController extends Controller
                 $slugValue = Str::slug($tenantId) ?: $tenantId;
             }
 
-            // מצא קואורדינטות מטבלת cities
-            $cityData = City::where('hebrew_name', $validated['city'])->first();
-            $latitude = $cityData?->latitude;
-            $longitude = $cityData?->longitude;
+            // קביעת קואורדינטות - עדיפות לערכים ידניים אם סופקו
+            $latitude = null;
+            $longitude = null;
+
+            if ($request->filled(['latitude', 'longitude'])) {
+                $latitude = $validated['latitude'];
+                $longitude = $validated['longitude'];
+            } else {
+                // חיפוש אוטומטי לפי עיר (Fallback)
+                $cityData = City::where('hebrew_name', $validated['city'])->first();
+                $latitude = $cityData?->latitude;
+                $longitude = $cityData?->longitude;
+            }
 
             $restaurant = Restaurant::create([
                 'tenant_id' => $tenantId,
                 'name' => $validated['name'],
                 'slug' => $slugValue,
-                'phone' => $this->normalizePhone($validated['phone']),
+                'phone' => $this->formatPhoneForDisplay($validated['phone']),
                 'address' => $validated['address'] ?? null,
                 'city' => $validated['city'],
                 'latitude' => $latitude,
@@ -131,7 +142,7 @@ class RegisterRestaurantController extends Controller
                 'restaurant_id' => $restaurant->id,
                 'name' => $validated['owner_name'],
                 'email' => $validated['owner_email'],
-                'phone' => $ownerPhoneNormalized,
+                'phone' => $this->formatPhoneForDisplay($validated['owner_phone']),
                 'password' => Hash::make($validated['password']),
                 'role' => 'owner',
                 'is_active' => true,
@@ -188,6 +199,23 @@ class RegisterRestaurantController extends Controller
                 'message' => 'שגיאה בהרשמה: ' . $e->getMessage(),
             ], 500);
         }
+    }
+
+    private function formatPhoneForDisplay(string $raw): string
+    {
+        $phone = preg_replace('/\D/', '', $raw); // רק ספרות
+
+        // נייד: 05X-XXXXXXX (10 ספרות)
+        if (strlen($phone) === 10 && str_starts_with($phone, '05')) {
+            return substr($phone, 0, 3) . '-' . substr($phone, 3);
+        }
+
+        // נייח: 0X-XXXXXXX (9 ספרות)
+        if (strlen($phone) === 9 && str_starts_with($phone, '0')) {
+            return substr($phone, 0, 2) . '-' . substr($phone, 2);
+        }
+
+        return $raw; // החזר מקורי אם לא תואם
     }
 
     private function normalizePhone(string $raw): string
