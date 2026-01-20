@@ -60,6 +60,38 @@ export default function MenuItemModal({
 
     const getGroupSelection = (groupId) => selectedAddons[groupId] || [];
 
+    const getGroupDisplayTitle = (group) => {
+        if (group?.display_name) {
+            return group.display_name;
+        }
+        const rawName = (group?.name || '').toString();
+        const normalizedName = rawName.trim();
+        if (!normalizedName) {
+            return 'בחרו תוספות';
+        }
+        if (normalizedName.includes('סלט')) {
+            return 'בחרו סלטים';
+        }
+        if (normalizedName.includes('רוטב')) {
+            return 'בחרו רטבים';
+        }
+        if (normalizedName.includes('שתייה') || normalizedName.includes('משקה')) {
+            return 'בחרו שתייה';
+        }
+        if (normalizedName.includes('תוספת') || normalizedName.includes('תוספות')) {
+            return 'בחרו תוספות';
+        }
+        return normalizedName;
+    };
+
+    const getGroupSelectionLabel = (group, selectionCount) => {
+        const maxAllowed = group.max_select || (group.selection_type === 'single' ? 1 : null);
+        if (maxAllowed) {
+            return `נבחרו ${selectionCount} מתוך ${maxAllowed}`;
+        }
+        return `נבחרו ${selectionCount}`;
+    };
+
     const computeGroupError = (group) => {
         const selected = getGroupSelection(group.id);
         const minRequired = group.min_select ?? (group.is_required ? 1 : 0);
@@ -212,7 +244,7 @@ export default function MenuItemModal({
                                     <div key={group.id} className="border border-gray-200 rounded-2xl p-4">
                                         <div className="flex items-center justify-between mb-3">
                                             <div>
-                                                <h4 className="text-lg font-semibold text-brand-dark">{group.name || 'בחרו תוספות'}</h4>
+                                                <h4 className="text-lg font-semibold text-brand-dark">{getGroupDisplayTitle(group)}</h4>
                                                 <p className="text-xs text-gray-500 mt-1">
                                                     {group.min_select ? `מינימום ${group.min_select}` : ''}
                                                     {group.min_select && group.max_select ? ' · ' : ''}
@@ -220,7 +252,7 @@ export default function MenuItemModal({
                                                     {!group.min_select && !group.max_select && group.is_required ? 'חובה לבחור אחת' : ''}
                                                 </p>
                                             </div>
-                                            <span className="text-xs text-gray-500">נבחרו {selection.length}</span>
+                                            <span className="text-xs text-gray-500">{getGroupSelectionLabel(group, selection.length)}</span>
                                         </div>
                                         <div className="space-y-2">
                                             {(group.addons || []).map((addon) => (

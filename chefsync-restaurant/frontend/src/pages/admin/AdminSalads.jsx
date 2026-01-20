@@ -44,6 +44,10 @@ export default function AdminSalads() {
                     acc[group.id] = {
                         sort_order: group.sort_order ?? 0,
                         is_active: Boolean(group.is_active),
+                        min_selections: typeof group.min_selections === 'number' ? String(group.min_selections) : '0',
+                        max_selections: group.max_selections === null || group.max_selections === undefined
+                            ? ''
+                            : String(group.max_selections),
                     };
                     return acc;
                 }, {});
@@ -143,7 +147,12 @@ export default function AdminSalads() {
         if (!edit) return;
         try {
             await api.put(`/admin/addon-groups/${groupId}`,
-                { sort_order: Number(edit.sort_order) || 0, is_active: Boolean(edit.is_active) },
+                {
+                    sort_order: Number(edit.sort_order) || 0,
+                    is_active: Boolean(edit.is_active),
+                    min_selections: Number(edit.min_selections) || 0,
+                    max_selections: edit.max_selections === '' ? null : Number(edit.max_selections),
+                },
                 { headers: getAuthHeaders() }
             );
             fetchSalads();
@@ -236,6 +245,31 @@ export default function AdminSalads() {
                                         [group.id]: { ...prev[group.id], sort_order: e.target.value },
                                     }))}
                                     className="w-24 px-2 py-1 border rounded-lg text-sm"
+                                    aria-label="סדר הצגה"
+                                />
+                                <input
+                                    type="number"
+                                    min="0"
+                                    value={groupEdits[group.id]?.min_selections ?? '0'}
+                                    onChange={(e) => setGroupEdits((prev) => ({
+                                        ...prev,
+                                        [group.id]: { ...prev[group.id], min_selections: e.target.value },
+                                    }))}
+                                    className="w-24 px-2 py-1 border rounded-lg text-sm"
+                                    placeholder="מינימום"
+                                    aria-label="מינימום בחירות"
+                                />
+                                <input
+                                    type="number"
+                                    min="1"
+                                    value={groupEdits[group.id]?.max_selections ?? ''}
+                                    onChange={(e) => setGroupEdits((prev) => ({
+                                        ...prev,
+                                        [group.id]: { ...prev[group.id], max_selections: e.target.value },
+                                    }))}
+                                    className="w-24 px-2 py-1 border rounded-lg text-sm"
+                                    placeholder="מקסימום"
+                                    aria-label="מקסימום בחירות"
                                 />
                                 <label className="flex items-center gap-2 text-sm text-gray-600">
                                     <input

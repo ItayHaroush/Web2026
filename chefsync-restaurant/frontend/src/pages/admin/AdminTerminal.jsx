@@ -26,6 +26,28 @@ export default function AdminTerminal() {
             .join(' · ');
     };
 
+    const getItemCategoryLabel = (item) => (
+        item?.category_name
+        || item?.menu_item?.category?.name
+        || item?.menu_item?.category_name
+        || 'ללא קטגוריה'
+    );
+
+    const groupItemsByCategory = (items = []) => {
+        const groups = [];
+        const map = new Map();
+        items.forEach((item) => {
+            const label = getItemCategoryLabel(item);
+            if (!map.has(label)) {
+                const entry = { label, items: [] };
+                map.set(label, entry);
+                groups.push(entry);
+            }
+            map.get(label).items.push(item);
+        });
+        return groups;
+    };
+
     const fetchOrders = async () => {
         try {
             // קבל את כל ההזמנות וסנן לפי סטטוס פתוח
@@ -122,34 +144,41 @@ export default function AdminTerminal() {
                             </div>
 
                             <div className="space-y-2 max-h-40 overflow-y-auto">
-                                {order.items?.map((item, idx) => {
-                                    const quantity = Number(item.quantity ?? item.qty ?? 1);
-                                    const unitPrice = Number(item.price_at_order ?? item.price ?? 0);
-                                    const variantDelta = Number(item.variant_price_delta ?? 0);
-                                    const addons = Array.isArray(item.addons) ? item.addons : [];
-                                    const lineTotal = (unitPrice * quantity).toFixed(2);
+                                {groupItemsByCategory(order.items || []).map((group) => (
+                                    <div key={group.label} className="py-2">
+                                        <div className="text-xs font-semibold text-gray-500 mb-2">{group.label}</div>
+                                        <div className="space-y-2">
+                                            {group.items.map((item, idx) => {
+                                                const quantity = Number(item.quantity ?? item.qty ?? 1);
+                                                const unitPrice = Number(item.price_at_order ?? item.price ?? 0);
+                                                const variantDelta = Number(item.variant_price_delta ?? 0);
+                                                const addons = Array.isArray(item.addons) ? item.addons : [];
+                                                const lineTotal = (unitPrice * quantity).toFixed(2);
 
-                                    return (
-                                        <div key={idx} className="py-2 text-sm">
-                                            <div className="flex justify-between items-start">
-                                                <div className="space-y-1">
-                                                    <div className="font-medium text-gray-900">
-                                                        {item.menu_item?.name || item.name || 'פריט'}
-                                                        <span className="text-gray-600 mr-2">× {quantity}</span>
+                                                return (
+                                                    <div key={`${group.label}-${idx}`} className="text-sm">
+                                                        <div className="flex justify-between items-start">
+                                                            <div className="space-y-1">
+                                                                <div className="font-medium text-gray-900">
+                                                                    {item.menu_item?.name || item.name || 'פריט'}
+                                                                    <span className="text-gray-600 mr-2">× {quantity}</span>
+                                                                </div>
+                                                                {item.variant_name && (
+                                                                    <div className="text-xs text-gray-700">סוג לחם: {item.variant_name} (₪{variantDelta.toFixed(2)})</div>
+                                                                )}
+                                                                {addons.length > 0 && (
+                                                                    <div className="text-xs text-gray-700">תוספות: {formatAddons(addons)}</div>
+                                                                )}
+                                                            </div>
+                                                            <div className="text-right text-gray-900 font-semibold">₪{lineTotal}</div>
+                                                        </div>
+                                                        <div className="text-xs text-gray-600">₪{unitPrice.toFixed(2)} ליחידה</div>
                                                     </div>
-                                                    {item.variant_name && (
-                                                        <div className="text-xs text-gray-700">סוג לחם: {item.variant_name} (₪{variantDelta.toFixed(2)})</div>
-                                                    )}
-                                                    {addons.length > 0 && (
-                                                        <div className="text-xs text-gray-700">תוספות: {formatAddons(addons)}</div>
-                                                    )}
-                                                </div>
-                                                <div className="text-right text-gray-900 font-semibold">₪{lineTotal}</div>
-                                            </div>
-                                            <div className="text-xs text-gray-600">₪{unitPrice.toFixed(2)} ליחידה</div>
+                                                );
+                                            })}
                                         </div>
-                                    );
-                                })}
+                                    </div>
+                                ))}
                             </div>
 
                             <div className="flex justify-between items-center">
