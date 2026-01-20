@@ -101,12 +101,16 @@ class MenuController extends Controller
                             $addonGroups = $item->use_addons
                                 ? $this->filterAddonGroupsByScope($restaurantAddonGroups, $item, $item->category_id)
                                 ->map(function ($group) use ($item) {
+                                    $maxSelect = $group->max_selections;
+                                    if ($maxSelect === null && $item->max_addons && $item->addons_group_scope !== 'both') {
+                                        $maxSelect = $item->max_addons;
+                                    }
                                     return [
                                         'id' => $group->id,
                                         'name' => $group->name,
                                         'selection_type' => $group->selection_type,
                                         'min_select' => $group->min_selections,
-                                        'max_select' => $item->max_addons ?? $group->max_selections,
+                                        'max_select' => $maxSelect,
                                         'is_required' => (bool) $group->is_required,
                                         'addons' => $group->addons->map(function ($addon) {
                                             return [

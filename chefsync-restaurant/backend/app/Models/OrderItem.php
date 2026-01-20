@@ -13,6 +13,8 @@ class OrderItem extends Model
     protected $fillable = [
         'order_id',
         'menu_item_id',
+        'category_id',
+        'category_name',
         'variant_id',
         'variant_name',
         'variant_price_delta',
@@ -34,6 +36,7 @@ class OrderItem extends Model
         'variant_price_delta' => 'decimal:2',
         'addons' => 'array',
         'addons_total' => 'decimal:2',
+        'category_id' => 'integer',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];

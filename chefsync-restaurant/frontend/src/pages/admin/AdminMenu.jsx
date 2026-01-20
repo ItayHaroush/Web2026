@@ -25,7 +25,6 @@ export default function AdminMenu() {
         use_variants: false,
         use_addons: false,
         addons_group_scope: 'salads',
-        max_addons: '5',
     });
 
     useEffect(() => {
@@ -74,11 +73,6 @@ export default function AdminMenu() {
             return;
         }
 
-        if (form.use_addons && (!form.max_addons || Number(form.max_addons) < 1)) {
-            alert('אנא הזן מספר מקסימלי של תוספות לבחירה');
-            return;
-        }
-
         const formData = new FormData();
         formData.append('name', form.name);
         formData.append('description', form.description || '');
@@ -88,7 +82,6 @@ export default function AdminMenu() {
         formData.append('use_variants', form.use_variants ? '1' : '0');
         formData.append('use_addons', form.use_addons ? '1' : '0');
         formData.append('addons_group_scope', form.use_addons ? (form.addons_group_scope || 'salads') : '');
-        formData.append('max_addons', form.use_addons ? (form.max_addons || '') : '');
 
         console.log('📤 Submitting menu item:', {
             name: form.name,
@@ -166,7 +159,6 @@ export default function AdminMenu() {
             use_variants: Boolean(item.use_variants),
             use_addons: Boolean(item.use_addons),
             addons_group_scope: item.addons_group_scope || 'salads',
-            max_addons: item.max_addons ? String(item.max_addons) : '5',
         });
         setShowModal(true);
     };
@@ -182,7 +174,6 @@ export default function AdminMenu() {
             use_variants: false,
             use_addons: false,
             addons_group_scope: 'salads',
-            max_addons: '5',
         });
         setShowModal(true);
     };
@@ -199,7 +190,6 @@ export default function AdminMenu() {
             use_variants: false,
             use_addons: false,
             addons_group_scope: 'salads',
-            max_addons: '5',
         });
     };
 
@@ -503,17 +493,6 @@ export default function AdminMenu() {
                                                 </div>
                                             </div>
 
-                                            <div>
-                                                <label className="block text-xs font-medium text-gray-600 mb-1">מקסימום תוספות לבחירה</label>
-                                                <input
-                                                    type="number"
-                                                    min="1"
-                                                    max="20"
-                                                    value={form.max_addons}
-                                                    onChange={(e) => setForm({ ...form, max_addons: e.target.value })}
-                                                    className="w-full px-3 py-2 border rounded-lg text-sm"
-                                                />
-                                            </div>
                                         </div>
                                     )}
                                 </div>

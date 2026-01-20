@@ -30,6 +30,28 @@ export default function AdminOrders() {
             .join(' · ');
     };
 
+    const getItemCategoryLabel = (item) => (
+        item?.category_name
+        || item?.menu_item?.category?.name
+        || item?.menu_item?.category_name
+        || 'ללא קטגוריה'
+    );
+
+    const groupItemsByCategory = (items = []) => {
+        const groups = [];
+        const map = new Map();
+        items.forEach((item) => {
+            const label = getItemCategoryLabel(item);
+            if (!map.has(label)) {
+                const entry = { label, items: [] };
+                map.set(label, entry);
+                groups.push(entry);
+            }
+            map.get(label).items.push(item);
+        });
+        return groups;
+    };
+
     useEffect(() => {
         fetchOrders();
         // רענון אוטומטי כל 10 שניות
@@ -473,48 +495,55 @@ export default function AdminOrders() {
                                 <div>
                                     <h4 className="font-medium text-gray-800 mb-2">🍽️ פריטים</h4>
                                     <div className="divide-y">
-                                        {selectedOrder.items?.map((item, index) => {
-                                            const quantity = Number(item.quantity ?? item.qty ?? 1);
-                                            const unitPrice = Number(item.price_at_order ?? item.price ?? 0);
-                                            const variantDelta = Number(item.variant_price_delta ?? 0);
-                                            const addonsTotal = Number(item.addons_total ?? 0);
-                                            const basePrice = Math.max(unitPrice - variantDelta - addonsTotal, 0);
-                                            const lineTotal = (unitPrice * quantity).toFixed(2);
-                                            const addons = Array.isArray(item.addons) ? item.addons : [];
-                                            const hasCustomizations = Boolean(item.variant_name) || addons.length > 0 || variantDelta > 0 || addonsTotal > 0;
+                                        {groupItemsByCategory(selectedOrder.items || []).map((group) => (
+                                            <div key={group.label} className="py-3">
+                                                <div className="text-xs font-semibold text-gray-500 mb-2">{group.label}</div>
+                                                <div className="space-y-3">
+                                                    {group.items.map((item, index) => {
+                                                        const quantity = Number(item.quantity ?? item.qty ?? 1);
+                                                        const unitPrice = Number(item.price_at_order ?? item.price ?? 0);
+                                                        const variantDelta = Number(item.variant_price_delta ?? 0);
+                                                        const addonsTotal = Number(item.addons_total ?? 0);
+                                                        const basePrice = Math.max(unitPrice - variantDelta - addonsTotal, 0);
+                                                        const lineTotal = (unitPrice * quantity).toFixed(2);
+                                                        const addons = Array.isArray(item.addons) ? item.addons : [];
+                                                        const hasCustomizations = Boolean(item.variant_name) || addons.length > 0 || variantDelta > 0 || addonsTotal > 0;
 
-                                            return (
-                                                <div key={index} className="py-3 space-y-2">
-                                                    <div className="flex justify-between items-start">
-                                                        <div className="space-y-1">
-                                                            <div className="font-medium text-gray-900">
-                                                                {item.menu_item?.name || item.name || 'פריט'}
-                                                                <span className="text-gray-500 mr-2">× {quantity}</span>
-                                                            </div>
-                                                            {item.variant_name && (
-                                                                <div className="text-sm text-gray-700">סוג לחם: {item.variant_name}</div>
-                                                            )}
-                                                            {addons.length > 0 && (
-                                                                <div className="text-sm text-gray-700">
-                                                                    תוספות: {formatAddons(addons)}
+                                                        return (
+                                                            <div key={`${group.label}-${index}`} className="space-y-2">
+                                                                <div className="flex justify-between items-start">
+                                                                    <div className="space-y-1">
+                                                                        <div className="font-medium text-gray-900">
+                                                                            {item.menu_item?.name || item.name || 'פריט'}
+                                                                            <span className="text-gray-500 mr-2">× {quantity}</span>
+                                                                        </div>
+                                                                        {item.variant_name && (
+                                                                            <div className="text-sm text-gray-700">סוג לחם: {item.variant_name}</div>
+                                                                        )}
+                                                                        {addons.length > 0 && (
+                                                                            <div className="text-sm text-gray-700">
+                                                                                תוספות: {formatAddons(addons)}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                    <div className="text-right">
+                                                                        <div className="font-semibold text-gray-900">₪{lineTotal}</div>
+                                                                        <div className="text-xs text-gray-600">₪{unitPrice.toFixed(2)} ליחידה</div>
+                                                                    </div>
                                                                 </div>
-                                                            )}
-                                                        </div>
-                                                        <div className="text-right">
-                                                            <div className="font-semibold text-gray-900">₪{lineTotal}</div>
-                                                            <div className="text-xs text-gray-600">₪{unitPrice.toFixed(2)} ליחידה</div>
-                                                        </div>
-                                                    </div>
-                                                    {hasCustomizations && (
-                                                        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-600">
-                                                            <div>בסיס: ₪{basePrice.toFixed(2)}</div>
-                                                            {variantDelta > 0 && <div>סוג לחם: ₪{variantDelta.toFixed(2)}</div>}
-                                                            {addonsTotal > 0 && <div>תוספות: ₪{addonsTotal.toFixed(2)}</div>}
-                                                        </div>
-                                                    )}
+                                                                {hasCustomizations && (
+                                                                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-600">
+                                                                        <div>בסיס: ₪{basePrice.toFixed(2)}</div>
+                                                                        {variantDelta > 0 && <div>סוג לחם: ₪{variantDelta.toFixed(2)}</div>}
+                                                                        {addonsTotal > 0 && <div>תוספות: ₪{addonsTotal.toFixed(2)}</div>}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })}
                                                 </div>
-                                            );
-                                        })}
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
 

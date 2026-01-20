@@ -138,6 +138,7 @@ class OrderController extends Controller
                                 ]);
                         },
                         'restaurant',
+                        'category',
                     ])
                     ->findOrFail($itemData['menu_item_id']);
 
@@ -223,7 +224,7 @@ class OrderController extends Controller
                     }
 
                     $maxAllowed = $group->max_selections;
-                    if ($menuItem->use_addons && $menuItem->max_addons) {
+                    if ($maxAllowed === null && $menuItem->use_addons && $menuItem->max_addons && $menuItem->addons_group_scope !== 'both') {
                         $maxAllowed = $menuItem->max_addons;
                     }
                     if ($maxAllowed !== null && $count > $maxAllowed) {
@@ -264,6 +265,8 @@ class OrderController extends Controller
 
                 $lineItems[] = [
                     'menu_item_id' => $menuItem->id,
+                    'category_id' => $menuItem->category_id,
+                    'category_name' => $menuItem->category?->name,
                     'quantity' => $quantity,
                     'variant_id' => $variantIdForDb,
                     'variant_name' => $selectedVariant?->name,
@@ -295,6 +298,8 @@ class OrderController extends Controller
                 OrderItem::create([
                     'order_id' => $order->id,
                     'menu_item_id' => $lineItem['menu_item_id'],
+                    'category_id' => $lineItem['category_id'],
+                    'category_name' => $lineItem['category_name'],
                     'variant_id' => $lineItem['variant_id'],
                     'variant_name' => $lineItem['variant_name'],
                     'variant_price_delta' => $lineItem['variant_price_delta'],

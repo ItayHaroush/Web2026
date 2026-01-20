@@ -56,7 +56,7 @@ class AdminController extends Controller
 
         // הזמנות אחרונות
         $recentOrders = Order::where('restaurant_id', $restaurantId)
-            ->with('items.menuItem')
+            ->with('items.menuItem.category')
             ->orderBy('created_at', 'desc')
             ->take(10)
             ->get();
@@ -670,6 +670,8 @@ class AdminController extends Controller
         $request->validate([
             'sort_order' => 'sometimes|integer|min:0',
             'is_active' => 'sometimes|boolean',
+            'min_selections' => 'sometimes|integer|min:0|max:99',
+            'max_selections' => 'nullable|integer|min:1|max:99|gte:min_selections',
         ]);
 
         $restaurant = $user->restaurant;
@@ -685,7 +687,10 @@ class AdminController extends Controller
         $group = RestaurantAddonGroup::where('restaurant_id', $restaurant->id)
             ->findOrFail($id);
 
-        $payload = $request->only(['sort_order', 'is_active']);
+        $payload = $request->only(['sort_order', 'is_active', 'min_selections', 'max_selections']);
+        if ($request->has('min_selections')) {
+            $payload['is_required'] = (int) $request->input('min_selections') > 0;
+        }
         $group->update($payload);
 
         return response()->json([
@@ -1150,7 +1155,7 @@ class AdminController extends Controller
     {
         $user = $request->user();
         $query = Order::where('restaurant_id', $user->restaurant_id)
-            ->with('items.menuItem');
+            ->with('items.menuItem.category');
 
         if ($request->has('status')) {
             $query->where('status', $request->status);
@@ -1187,7 +1192,7 @@ class AdminController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'סטטוס ההזמנה עודכן!',
-            'order' => $order->load('items.menuItem'),
+            'order' => $order->load('items.menuItem.category'),
         ]);
     }
 
