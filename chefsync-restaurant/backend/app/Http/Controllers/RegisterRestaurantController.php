@@ -8,6 +8,7 @@ use App\Models\RestaurantSubscription;
 use App\Models\PhoneVerification;
 use App\Models\User;
 use App\Models\City;
+use App\Services\PhoneValidationService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -39,7 +40,13 @@ class RegisterRestaurantController extends Controller
         ]);
 
         // אימות קוד טלפון לבעלים
-        $ownerPhoneNormalized = $this->normalizePhone($validated['owner_phone']);
+        $ownerPhoneNormalized = PhoneValidationService::normalizeIsraeliMobileE164($validated['owner_phone']);
+        if (!$ownerPhoneNormalized) {
+            return response()->json([
+                'success' => false,
+                'message' => 'מספר טלפון בעלים לא תקין (נייד ישראלי בלבד)',
+            ], 422);
+        }
         $verification = PhoneVerification::where('phone', $ownerPhoneNormalized)
             ->orderByDesc('id')
             ->first();
@@ -218,14 +225,5 @@ class RegisterRestaurantController extends Controller
         }
 
         return $raw; // החזר מקורי אם לא תואם
-    }
-
-    private function normalizePhone(string $raw): string
-    {
-        $phone = preg_replace('/\s+/', '', $raw);
-        if (str_starts_with($phone, '0')) {
-            return '+972' . substr($phone, 1);
-        }
-        return $phone;
     }
 }

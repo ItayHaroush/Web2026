@@ -20,6 +20,11 @@ class Order extends Model
         'payment_method',
         'delivery_address',
         'delivery_notes',
+        'delivery_zone_id',
+        'delivery_fee',
+        'delivery_distance_km',
+        'delivery_lat',
+        'delivery_lng',
         'eta_minutes',
         'eta_note',
         'eta_updated_at',
@@ -34,6 +39,10 @@ class Order extends Model
 
     protected $casts = [
         'total_amount' => 'decimal:2',
+        'delivery_fee' => 'decimal:2',
+        'delivery_distance_km' => 'decimal:2',
+        'delivery_lat' => 'decimal:7',
+        'delivery_lng' => 'decimal:7',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'eta_updated_at' => 'datetime',
@@ -85,6 +94,11 @@ class Order extends Model
     public function items(): HasMany
     {
         return $this->hasMany(OrderItem::class);
+    }
+
+    public function deliveryZone(): BelongsTo
+    {
+        return $this->belongsTo(DeliveryZone::class, 'delivery_zone_id');
     }
 
     /**

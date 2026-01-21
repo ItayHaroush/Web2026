@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import api from '../services/apiClient';
 import { requestPhoneCode } from '../services/phoneAuthService';
 import { toast } from 'react-hot-toast';
+import { isValidIsraeliMobile } from '../utils/phone';
 
 const MONTHLY_PRICE = 600;
 const ANNUAL_PRICE = 5000;
@@ -69,6 +70,11 @@ export default function RegisterRestaurant() {
         e.preventDefault();
         setLoading(true);
         try {
+            if (!isValidIsraeliMobile(form.owner_phone)) {
+                toast.error('טלפון בעלים לא תקין (נייד ישראלי בלבד)');
+                setLoading(false);
+                return;
+            }
             const formData = new FormData();
             const requiredFields = ['name', 'tenant_id', 'phone', 'city', 'owner_name', 'owner_email', 'owner_phone', 'password', 'password_confirmation', 'plan_type', 'verification_code'];
             requiredFields.forEach((field) => {
@@ -118,6 +124,10 @@ export default function RegisterRestaurant() {
     const handleSendCode = async () => {
         if (!form.owner_phone) {
             toast.error('הזן טלפון בעלים לפני שליחת קוד');
+            return;
+        }
+        if (!isValidIsraeliMobile(form.owner_phone)) {
+            toast.error('טלפון בעלים לא תקין (נייד ישראלי בלבד)');
             return;
         }
         setCodeSending(true);

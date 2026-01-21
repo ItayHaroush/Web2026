@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import PhoneVerificationModal from '../components/PhoneVerificationModal';
+import LocationPickerModal from '../components/LocationPickerModal';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
@@ -7,6 +8,7 @@ import { CustomerLayout } from '../layouts/CustomerLayout';
 import orderService from '../services/orderService';
 import { UI_TEXT } from '../constants/ui';
 import DeliveryDetailsModal from '../components/DeliveryDetailsModal';
+import { isValidIsraeliMobile } from '../utils/phone';
 
 /**
  * עמוד סל קניות
@@ -20,7 +22,61 @@ export default function CartPage() {
     const [error, setError] = useState(null);
     const [showPhoneModal, setShowPhoneModal] = useState(false);
     const [showDeliveryModal, setShowDeliveryModal] = useState(false);
+    const [showLocationModal, setShowLocationModal] = useState(false);
     const [submitStep, setSubmitStep] = useState('payment'); // payment -> confirm
+    const [deliveryLocation, setDeliveryLocation] = useState(null);
+    const [deliveryFee, setDeliveryFee] = useState(0);
+    const [deliveryZoneAvailable, setDeliveryZoneAvailable] = useState(true);
+    const [checkingZone, setCheckingZone] = useState(false);
+
+    React.useEffect(() => {
+        // Load saved delivery location
+        try {
+            const stored = localStorage.getItem('user_delivery_location');
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                if (parsed.lat && parsed.lng) {
+                    setDeliveryLocation(parsed);
+                }
+            }
+        } catch (e) {
+            console.warn('Failed to load saved location', e);
+        }
+    }, []);
+
+    // Check delivery zone when location or delivery method changes
+    React.useEffect(() => {
+        if (customerInfo.delivery_method === 'delivery' && deliveryLocation?.lat && deliveryLocation?.lng) {
+            checkDeliveryZoneAvailability(deliveryLocation.lat, deliveryLocation.lng);
+        } else {
+            setDeliveryFee(0);
+            setDeliveryZoneAvailable(true); // Reset to true for pickup or no location
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [deliveryLocation, customerInfo.delivery_method]);
+
+    const checkDeliveryZoneAvailability = async (lat, lng) => {
+        try {
+            setCheckingZone(true);
+            setError(null);
+            const result = await orderService.checkDeliveryZone(lat, lng);
+            if (result.available) {
+                setDeliveryFee(result.fee || 0);
+                setDeliveryZoneAvailable(true);
+            } else {
+                setDeliveryFee(0);
+                setDeliveryZoneAvailable(false);
+                setError(result.message || 'אזור לא מכוסה במשלוחים');
+            }
+        } catch (err) {
+            console.error('Error checking delivery zone:', err);
+            setDeliveryZoneAvailable(false);
+            setError('שגיאה בבדיקת אזור משלוח');
+            setDeliveryFee(0);
+        } finally {
+            setCheckingZone(false);
+        }
+    };
 
     const handleQuantityChange = (itemKey, newQuantity) => {
         if (newQuantity < 1) {
@@ -40,11 +96,31 @@ export default function CartPage() {
             return;
         }
 
-        if (customerInfo.delivery_method === 'delivery' && !customerInfo.delivery_address) {
-            setShowDeliveryModal(true);
-            setError('');
-            setSubmitStep('payment');
+        if (!isValidIsraeliMobile(customerInfo.phone)) {
+            setError('מספר טלפון לא תקין (נייד ישראלי בלבד)');
             return;
+        }
+
+        // בדיקת מיקום למשלוח
+        if (customerInfo.delivery_method === 'delivery') {
+            if (!deliveryLocation?.lat || !deliveryLocation?.lng) {
+                setShowLocationModal(true);
+                setError('נא לבחור מיקום למשלוח');
+                return;
+            }
+
+            // בדיקה שהאזור זמין
+            if (!deliveryZoneAvailable) {
+                setError('הכתובת מחוץ לאזורי המשלוח של המסעדה. אנא בחר מיקום אחר.');
+                return;
+            }
+
+            if (!customerInfo.delivery_address) {
+                setShowDeliveryModal(true);
+                setError('');
+                setSubmitStep('payment');
+                return;
+            }
         }
 
         // אם הטלפון לא אומת, פתח modal
@@ -67,8 +143,12 @@ export default function CartPage() {
                 customer_phone: customerInfo.phone,
                 delivery_method: customerInfo.delivery_method || 'pickup',
                 payment_method: customerInfo.payment_method || 'cash',
-                delivery_address: customerInfo.delivery_address || undefined,
+                delivery_address: customerInfo.delivery_method === 'delivery'
+                    ? (customerInfo.delivery_address || deliveryLocation?.address || 'מיקום GPS')
+                    : undefined,
                 delivery_notes: customerInfo.delivery_notes || undefined,
+                delivery_lat: customerInfo.delivery_method === 'delivery' ? deliveryLocation?.lat : undefined,
+                delivery_lng: customerInfo.delivery_method === 'delivery' ? deliveryLocation?.lng : undefined,
                 items: cartItems.map((item) => ({
                     menu_item_id: item.menuItemId,
                     variant_id: item.variant?.id ?? null,
@@ -116,6 +196,7 @@ export default function CartPage() {
     }
 
     const total = getTotal();
+    const totalWithDelivery = total + deliveryFee;
 
     return (
         <CustomerLayout>
@@ -130,11 +211,49 @@ export default function CartPage() {
                         onClose={() => setShowPhoneModal(false)}
                     />
                 )}
+
+                <LocationPickerModal
+                    open={showLocationModal}
+                    onClose={() => setShowLocationModal(false)}
+                    onLocationSelected={(location) => {
+                        setDeliveryLocation(location);
+                        setShowLocationModal(false);
+                        // Update delivery address automatically from location
+                        if (location.fullAddress) {
+                            setCustomerInfo({ ...customerInfo, delivery_address: location.fullAddress });
+                        }
+                    }}
+                />
                 <h1 className="text-3xl font-bold text-brand-primary">סל קניות</h1>
 
                 {error && (
-                    <div className="bg-red-100 border border-red-400 text-red-900 px-4 py-3 rounded">
-                        {error}
+                    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                        <div className="bg-white rounded-2xl p-4 sm:p-6 max-w-md w-full shadow-2xl mx-4">
+                            <div className="text-center">
+                                <div className="text-4xl sm:text-5xl mb-3 sm:mb-4">⚠️</div>
+                                <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-2 sm:mb-3">שגיאה</h3>
+                                <p className="text-sm sm:text-base text-gray-700 mb-4 sm:mb-6">{error}</p>
+                                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                                    {!deliveryZoneAvailable && customerInfo.delivery_method === 'delivery' && (
+                                        <button
+                                            onClick={() => {
+                                                setError(null);
+                                                setShowLocationModal(true);
+                                            }}
+                                            className="w-full sm:flex-1 bg-blue-600 text-white px-4 py-2.5 sm:py-3 rounded-xl text-sm sm:text-base font-medium hover:bg-blue-700 transition"
+                                        >
+                                            📍 שנה מיקום
+                                        </button>
+                                    )}
+                                    <button
+                                        onClick={() => setError(null)}
+                                        className="w-full sm:flex-1 bg-brand-primary text-white px-4 py-2.5 sm:py-3 rounded-xl text-sm sm:text-base font-medium hover:bg-brand-dark transition"
+                                    >
+                                        הבנתי
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 )}
 
@@ -210,11 +329,48 @@ export default function CartPage() {
                 </div>
 
                 {/* סכום ביניים */}
-                <div className="border-t-2 border-gray-300 pt-4">
-                    <div className="flex justify-between items-center text-2xl font-bold">
-                        <span>סך הכל:</span>
-                        <span className="text-brand-accent">₪{total.toFixed(2)}</span>
+                <div className="border-t-2 border-gray-300 pt-4 space-y-2">
+                    <div className="flex justify-between items-center text-lg">
+                        <span>סכום ביניים:</span>
+                        <span className="text-gray-700">₪{total.toFixed(2)}</span>
                     </div>
+
+                    {customerInfo.delivery_method === 'delivery' && (
+                        <div className="flex justify-between items-center text-lg">
+                            <div className="flex items-center gap-2">
+                                <span>דמי משלוח:</span>
+                                {checkingZone && <span className="text-xs text-gray-500">⏳ בודק...</span>}
+                            </div>
+                            <span className="text-gray-700">
+                                {deliveryFee > 0 ? `₪${deliveryFee.toFixed(2)}` : checkingZone ? '...' : '₪0.00'}
+                            </span>
+                        </div>
+                    )}
+
+                    <div className="flex justify-between items-center text-2xl font-bold border-t pt-2">
+                        <span>סה"כ לתשלום:</span>
+                        <span className="text-brand-accent">₪{totalWithDelivery.toFixed(2)}</span>
+                    </div>
+
+                    {deliveryLocation && customerInfo.delivery_method === 'delivery' && (
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 bg-blue-50 p-3 rounded-lg text-sm">
+                            <div className="flex-1">
+                                <p className="font-medium text-blue-900 text-xs sm:text-sm break-words">
+                                    📍 {deliveryLocation.fullAddress ||
+                                        (deliveryLocation.street && deliveryLocation.cityName
+                                            ? `${deliveryLocation.street}, ${deliveryLocation.cityName}`
+                                            : deliveryLocation.cityName || 'מיקום למשלוח')}
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setShowLocationModal(true)}
+                                className="text-blue-700 underline text-xs hover:text-blue-900 whitespace-nowrap self-end sm:self-auto"
+                            >
+                                שנה מיקום
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 {/* טופס פרטים אישיים */}
@@ -252,8 +408,8 @@ export default function CartPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <p className="block text-sm font-medium text-gray-700 mb-2">שיטת קבלה</p>
-                            <div className="flex gap-3">
-                                <label className={`flex-1 border rounded-lg p-3 cursor-pointer ${customerInfo.delivery_method === 'pickup' ? 'border-brand-primary bg-brand-primary/5' : 'border-gray-300'}`}>
+                            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                                <label className={`w-full sm:flex-1 border rounded-lg p-3 cursor-pointer text-sm sm:text-base ${customerInfo.delivery_method === 'pickup' ? 'border-brand-primary bg-brand-primary/5' : 'border-gray-300'}`}>
                                     <input
                                         type="radio"
                                         name="delivery_method"
@@ -264,7 +420,7 @@ export default function CartPage() {
                                     />
                                     איסוף עצמי
                                 </label>
-                                <label className={`flex-1 border rounded-lg p-3 cursor-pointer ${customerInfo.delivery_method === 'delivery' ? 'border-brand-primary bg-brand-primary/5' : 'border-gray-300'}`}>
+                                <label className={`w-full sm:flex-1 border rounded-lg p-3 cursor-pointer text-sm sm:text-base ${customerInfo.delivery_method === 'delivery' ? 'border-brand-primary bg-brand-primary/5' : 'border-gray-300'}`}>
                                     <input
                                         type="radio"
                                         name="delivery_method"
@@ -272,7 +428,9 @@ export default function CartPage() {
                                         checked={customerInfo.delivery_method === 'delivery'}
                                         onChange={(e) => {
                                             setCustomerInfo({ ...customerInfo, delivery_method: e.target.value });
-                                            setShowDeliveryModal(true);
+                                            if (!deliveryLocation) {
+                                                setShowLocationModal(true);
+                                            }
                                         }}
                                         className="mr-2"
                                     />
@@ -280,13 +438,24 @@ export default function CartPage() {
                                 </label>
                             </div>
                             {customerInfo.delivery_method === 'delivery' && (
-                                <button
-                                    type="button"
-                                    onClick={() => setShowDeliveryModal(true)}
-                                    className="mt-3 text-sm text-brand-primary underline"
-                                >
-                                    עריכת פרטי משלוח
-                                </button>
+                                <div className="mt-3 space-y-2">
+                                    {!deliveryLocation && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowLocationModal(true)}
+                                            className="w-full text-sm bg-blue-50 text-blue-700 px-3 py-2 rounded-lg hover:bg-blue-100"
+                                        >
+                                            📍 בחר מיקום למשלוח
+                                        </button>
+                                    )}
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowDeliveryModal(true)}
+                                        className="text-sm text-brand-primary underline"
+                                    >
+                                        עריכת פרטי משלוח
+                                    </button>
+                                </div>
                             )}
                         </div>
 

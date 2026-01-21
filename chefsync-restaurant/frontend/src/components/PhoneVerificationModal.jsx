@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { requestPhoneCode, verifyPhoneCode } from '../services/phoneAuthService';
+import { isValidIsraeliMobile } from '../utils/phone';
 
 export default function PhoneVerificationModal({ phone, onVerified, onClose }) {
     const [step, setStep] = useState('input'); // input | sent | verifying | verified
@@ -13,6 +14,10 @@ export default function PhoneVerificationModal({ phone, onVerified, onClose }) {
     // שליחת קוד
     const handleSend = async () => {
         setError('');
+        if (!isValidIsraeliMobile(inputPhone)) {
+            setError('מספר טלפון לא תקין (נייד ישראלי בלבד)');
+            return;
+        }
         try {
             await requestPhoneCode(inputPhone);
             setStep('sent');
@@ -53,10 +58,10 @@ export default function PhoneVerificationModal({ phone, onVerified, onClose }) {
     };
 
     return (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center">
-            <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-xs">
-                <button className="absolute top-2 left-2 text-gray-400" onClick={onClose}>✕</button>
-                <h2 className="text-lg font-bold mb-2 text-center">אימות טלפון</h2>
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-6 w-full max-w-xs mx-4">
+                <button className="absolute top-2 left-2 text-gray-400 relative" onClick={onClose}>✕</button>
+                <h2 className="text-base sm:text-lg font-bold mb-2 text-center">אימות טלפון</h2>
                 {step === 'input' && (
                     <>
                         <input

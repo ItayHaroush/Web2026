@@ -11,6 +11,7 @@ use App\Models\City;
 use App\Models\RestaurantAddon;
 use App\Models\RestaurantAddonGroup;
 use App\Models\RestaurantVariant;
+use App\Models\DeliveryZone;
 use App\Models\RestaurantPayment;
 use App\Models\RestaurantSubscription;
 use Illuminate\Http\Request;
@@ -519,6 +520,239 @@ class AdminController extends Controller
             'success' => true,
             'message' => 'הסלט עודכן בהצלחה!',
             'salad' => $salad,
+        ]);
+    }
+
+    // =============================================
+    // ניהול אזורי משלוח
+    // =============================================
+
+    public function getDeliveryZones(Request $request)
+    {
+        $user = $request->user();
+
+        if (!$user->isManager()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'אין לך הרשאה לצפות באזורי משלוח',
+            ], 403);
+        }
+
+        $restaurant = $user->restaurant;
+        if (!$restaurant) {
+            return response()->json([
+                'success' => false,
+                'message' => 'לא נמצאה מסעדה למשתמש',
+            ], 404);
+        }
+
+        $zones = DeliveryZone::where('restaurant_id', $restaurant->id)
+            ->orderBy('sort_order')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'zones' => $zones,
+        ]);
+    }
+
+    public function storeDeliveryZone(Request $request)
+    {
+        $user = $request->user();
+
+        if (!$user->isManager()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'אין לך הרשאה להוסיף אזורי משלוח',
+            ], 403);
+        }
+
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'city_id' => 'nullable|exists:cities,id',
+            'polygon' => 'nullable|array|min:3',
+            'polygon.*.lat' => 'required_with:polygon|numeric|between:-90,90',
+            'polygon.*.lng' => 'required_with:polygon|numeric|between:-180,180',
+            'pricing_type' => 'required|string|in:fixed,per_km,tiered',
+            'fixed_fee' => 'nullable|numeric|min:0|max:999.99',
+            'per_km_fee' => 'nullable|numeric|min:0|max:999.99',
+            'tiered_fees' => 'nullable|array',
+            'is_active' => 'sometimes|boolean',
+            'sort_order' => 'sometimes|integer|min:0',
+        ]);
+
+        // אימות שיש לפחות city_id או polygon
+        if (!$request->filled('city_id') && !$request->filled('polygon')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'חובה לבחור עיר או לצייר פוליגון',
+            ], 422);
+        }
+
+        $restaurant = $user->restaurant;
+        if (!$restaurant) {
+            return response()->json([
+                'success' => false,
+                'message' => 'לא נמצאה מסעדה למשתמש',
+            ], 404);
+        }
+
+        $pricingType = $request->input('pricing_type');
+        if ($pricingType === 'fixed' && !$request->filled('fixed_fee')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'חובה להזין מחיר קבוע',
+            ], 422);
+        }
+        if ($pricingType === 'per_km' && !$request->filled('per_km_fee')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'חובה להזין מחיר לק"מ',
+            ], 422);
+        }
+        if ($pricingType === 'tiered') {
+            $tiers = $request->input('tiered_fees', []);
+            if (!is_array($tiers) || empty($tiers)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'חובה להזין מדרגות מחיר',
+                ], 422);
+            }
+            foreach ($tiers as $tier) {
+                if (!is_array($tier) || !isset($tier['upto_km'], $tier['fee'])) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'מדרגות מחיר לא תקינות',
+                    ], 422);
+                }
+            }
+        }
+
+        $zone = DeliveryZone::create([
+            'restaurant_id' => $restaurant->id,
+            'tenant_id' => $restaurant->tenant_id,
+            'city_id' => $request->input('city_id'),
+            'name' => $request->input('name'),
+            'polygon' => $request->input('polygon'),
+            'pricing_type' => $pricingType,
+            'fixed_fee' => $request->input('fixed_fee', 0),
+            'per_km_fee' => $request->input('per_km_fee'),
+            'tiered_fees' => $request->input('tiered_fees'),
+            'is_active' => $request->boolean('is_active', true),
+            'sort_order' => (int) $request->input('sort_order', 0),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'אזור משלוח נוסף בהצלחה',
+            'zone' => $zone,
+        ], 201);
+    }
+
+    public function updateDeliveryZone(Request $request, $id)
+    {
+        $user = $request->user();
+
+        if (!$user->isManager()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'אין לך הרשאה לעדכן אזורי משלוח',
+            ], 403);
+        }
+
+        $request->validate([
+            'name' => 'sometimes|string|max:255',
+            'city_id' => 'nullable|exists:cities,id',
+            'polygon' => 'nullable|sometimes|array|min:3',
+            'polygon.*.lat' => 'required_with:polygon|numeric|between:-90,90',
+            'polygon.*.lng' => 'required_with:polygon|numeric|between:-180,180',
+            'pricing_type' => 'sometimes|string|in:fixed,per_km,tiered',
+            'fixed_fee' => 'nullable|numeric|min:0|max:999.99',
+            'per_km_fee' => 'nullable|numeric|min:0|max:999.99',
+            'tiered_fees' => 'nullable|array',
+            'is_active' => 'sometimes|boolean',
+            'sort_order' => 'sometimes|integer|min:0',
+        ]);
+
+        $restaurant = $user->restaurant;
+        if (!$restaurant) {
+            return response()->json([
+                'success' => false,
+                'message' => 'לא נמצאה מסעדה למשתמש',
+            ], 404);
+        }
+
+        $zone = DeliveryZone::where('restaurant_id', $restaurant->id)->findOrFail($id);
+
+        $pricingType = $request->input('pricing_type', $zone->pricing_type);
+        if ($pricingType === 'fixed' && $request->has('fixed_fee') && $request->input('fixed_fee') === null) {
+            return response()->json([
+                'success' => false,
+                'message' => 'חובה להזין מחיר קבוע',
+            ], 422);
+        }
+        if ($pricingType === 'per_km' && $request->has('per_km_fee') && $request->input('per_km_fee') === null) {
+            return response()->json([
+                'success' => false,
+                'message' => 'חובה להזין מחיר לק"מ',
+            ], 422);
+        }
+        if ($pricingType === 'tiered' && $request->has('tiered_fees')) {
+            $tiers = $request->input('tiered_fees', []);
+            if (!is_array($tiers) || empty($tiers)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'חובה להזין מדרגות מחיר',
+                ], 422);
+            }
+        }
+
+        $payload = $request->only([
+            'name',
+            'city_id',
+            'polygon',
+            'pricing_type',
+            'fixed_fee',
+            'per_km_fee',
+            'tiered_fees',
+            'is_active',
+            'sort_order',
+        ]);
+
+        $zone->update($payload);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'אזור משלוח עודכן בהצלחה',
+            'zone' => $zone,
+        ]);
+    }
+
+    public function deleteDeliveryZone(Request $request, $id)
+    {
+        $user = $request->user();
+
+        if (!$user->isManager()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'אין לך הרשאה למחוק אזורי משלוח',
+            ], 403);
+        }
+
+        $restaurant = $user->restaurant;
+        if (!$restaurant) {
+            return response()->json([
+                'success' => false,
+                'message' => 'לא נמצאה מסעדה למשתמש',
+            ], 404);
+        }
+
+        $zone = DeliveryZone::where('restaurant_id', $restaurant->id)->findOrFail($id);
+        $zone->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'אזור משלוח נמחק בהצלחה',
         ]);
     }
 
