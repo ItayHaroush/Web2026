@@ -116,10 +116,9 @@ export default function CountdownTimer({ startTime, etaMinutes, etaNote, deliver
     const formattedTime = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 
     return (
-        <div 
-            className={`bg-gradient-to-br from-brand-light via-blue-50 to-white rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-lg border-2 border-brand-primary/30 transition-all duration-500 ${
-                hasChanged ? 'scale-105' : 'scale-100'
-            }`}
+        <div
+            className={`bg-gradient-to-br from-brand-light via-blue-50 to-white rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-lg border-2 border-brand-primary/30 transition-all duration-500 ${hasChanged ? 'scale-105' : 'scale-100'
+                }`}
         >
             <div className="flex flex-col items-center gap-3 sm:gap-4">
                 {/* אייקון שעון */}
@@ -135,10 +134,9 @@ export default function CountdownTimer({ startTime, etaMinutes, etaNote, deliver
                     <p className="text-xs sm:text-sm text-gray-600 mb-1">
                         {deliveryMethod === 'pickup' ? 'זמן נותר עד הכנת הזמנה' : 'זמן נותר עד הגעת ההזמנה'}
                     </p>
-                    <div 
-                        className={`text-4xl sm:text-5xl font-bold bg-gradient-to-r from-brand-primary via-brand-secondary to-brand-primary bg-clip-text text-transparent transition-all duration-300 ${
-                            hasChanged ? 'animate-pulse' : ''
-                        }`}
+                    <div
+                        className={`text-4xl sm:text-5xl font-bold bg-gradient-to-r from-brand-primary via-brand-secondary to-brand-primary bg-clip-text text-transparent transition-all duration-300 ${hasChanged ? 'animate-pulse' : ''
+                            }`}
                     >
                         {formattedTime}
                     </div>
