@@ -43,7 +43,7 @@ Route::prefix('auth')->group(function () {
 // הרשמת מסעדה חדשה (ציבורי)
 Route::post('/register-restaurant', [RegisterRestaurantController::class, 'store'])->name('register.restaurant');
 
-// ערים - ציבורי (לשימוש בטופס הרשמה)
+// ערים - ציבורי (לשימוש בטופס הרשמה ואזורי משלוח)
 Route::get('/cities', [SuperAdminController::class, 'getCities'])->name('cities.list');
 
 // ============================================
@@ -119,6 +119,12 @@ Route::prefix('admin')->middleware(['auth:sanctum'])->group(function () {
         // ניהול קבוצות תוספות
         Route::put('/addon-groups/{id}', [AdminController::class, 'updateAddonGroup'])->name('admin.addon-groups.update');
 
+        // ניהול אזורי משלוח
+        Route::get('/delivery-zones', [AdminController::class, 'getDeliveryZones'])->name('admin.delivery-zones.index');
+        Route::post('/delivery-zones', [AdminController::class, 'storeDeliveryZone'])->name('admin.delivery-zones.store');
+        Route::put('/delivery-zones/{id}', [AdminController::class, 'updateDeliveryZone'])->name('admin.delivery-zones.update');
+        Route::delete('/delivery-zones/{id}', [AdminController::class, 'deleteDeliveryZone'])->name('admin.delivery-zones.delete');
+
         // ניהול בסיסים גלובליים
         Route::get('/bases', [AdminController::class, 'getBases'])->name('admin.bases.index');
         Route::post('/bases', [AdminController::class, 'storeBase'])->name('admin.bases.store');
@@ -149,6 +155,7 @@ Route::middleware(['api', 'tenant'])->group(function () {
     // ============================================
     Route::post('/orders', [OrderController::class, 'store'])->name('orders.store');
     Route::get('/orders/{id}', [OrderController::class, 'show'])->name('orders.show');
+    Route::post('/check-delivery-zone', [OrderController::class, 'checkDeliveryZone'])->name('orders.check-delivery');
 
     // ============================================
     // רישום FCM לטאבלטים/דפדפנים

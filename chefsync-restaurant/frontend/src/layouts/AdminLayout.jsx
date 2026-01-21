@@ -91,7 +91,13 @@ export default function AdminLayout({ children }) {
             path: '/admin/restaurant',
             icon: '🏪',
             label: 'פרטי מסעדה',
-            show: isOwner()
+            show: isManager() || isOwner()  // ← הוספנו isManager()
+        },
+        {
+            path: '/admin/delivery-zones',
+            icon: '🚚',
+            label: 'אזורי משלוח',
+            show: isManager()
         },
         {
             path: '/admin/terminal',

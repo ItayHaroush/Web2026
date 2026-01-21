@@ -7,7 +7,9 @@ use App\Models\OrderItem;
 use App\Models\MenuItem;
 use App\Models\Restaurant;
 use App\Models\FcmToken;
+use App\Models\DeliveryZone;
 use App\Services\FcmService;
+use App\Services\PhoneValidationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
@@ -46,6 +48,8 @@ class OrderController extends Controller
                 'payment_method' => 'required|in:cash',
                 'delivery_address' => 'nullable|string|max:255',
                 'delivery_notes' => 'nullable|string|max:500',
+                'delivery_lat' => 'nullable|numeric|between:-90,90',
+                'delivery_lng' => 'nullable|numeric|between:-180,180',
                 'items' => 'required|array|min:1',
                 'items.*.menu_item_id' => 'required|integer|exists:menu_items,id',
                 'items.*.variant_id' => 'nullable|integer',
@@ -65,6 +69,21 @@ class OrderController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => 'נא להזין כתובת למשלוח',
+                ], 422);
+            }
+
+            if ($validated['delivery_method'] === 'delivery' && (!isset($validated['delivery_lat']) || !isset($validated['delivery_lng']))) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'נא לאשר מיקום למשלוח',
+                ], 422);
+            }
+
+            $normalizedCustomerPhone = PhoneValidationService::normalizeIsraeliMobileE164($validated['customer_phone']);
+            if (!$normalizedCustomerPhone) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'מספר טלפון לא תקין (נייד ישראלי בלבד)',
                 ], 422);
             }
 
@@ -108,6 +127,33 @@ class OrderController extends Controller
             $restaurantId = $restaurant->id;
             $restaurantVariants = $restaurant->variants ?? collect();
             $restaurantAddonGroups = $restaurant->addonGroups ?? collect();
+
+            $deliveryZone = null;
+            $deliveryFee = 0.0;
+            $deliveryDistanceKm = null;
+            $deliveryLat = $validated['delivery_lat'] ?? null;
+            $deliveryLng = $validated['delivery_lng'] ?? null;
+
+            if ($validated['delivery_method'] === 'delivery') {
+                // Validate delivery location and calculate fee
+                $deliveryValidation = $this->validateDeliveryLocation(
+                    $deliveryLat,
+                    $deliveryLng,
+                    $restaurantId,
+                    $restaurant
+                );
+
+                if (!$deliveryValidation['success']) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => $deliveryValidation['message'],
+                    ], 422);
+                }
+
+                $deliveryZone = $deliveryValidation['zone'];
+                $deliveryDistanceKm = $deliveryValidation['distance_km'];
+                $deliveryFee = $deliveryValidation['fee'];
+            }
 
             $etaMinutes = null;
             $etaNote = null;
@@ -282,16 +328,21 @@ class OrderController extends Controller
                 'tenant_id' => $tenantId,
                 'restaurant_id' => $restaurantId,
                 'customer_name' => $validated['customer_name'],
-                'customer_phone' => $validated['customer_phone'],
+                'customer_phone' => $normalizedCustomerPhone,
                 'delivery_method' => $validated['delivery_method'],
                 'payment_method' => $validated['payment_method'],
                 'delivery_address' => $validated['delivery_address'] ?? null,
                 'delivery_notes' => $validated['delivery_notes'] ?? null,
+                'delivery_zone_id' => $deliveryZone?->id,
+                'delivery_fee' => $deliveryFee,
+                'delivery_distance_km' => $deliveryDistanceKm,
+                'delivery_lat' => $deliveryLat,
+                'delivery_lng' => $deliveryLng,
                 'eta_minutes' => $etaMinutes,
                 'eta_note' => $etaNote,
                 'eta_updated_at' => now(),
                 'status' => Order::STATUS_RECEIVED,
-                'total_amount' => $totalAmount,
+                'total_amount' => $totalAmount + $deliveryFee,
             ]);
 
             foreach ($lineItems as $lineItem) {
@@ -370,6 +421,61 @@ class OrderController extends Controller
                 'message' => 'הזמנה לא נמצאה',
                 'error' => $e->getMessage(),
             ], 404);
+        }
+    }
+
+    /**
+     * Check if delivery is available for given location
+     * 
+     * POST /check-delivery-zone
+     * Body: { delivery_lat: float, delivery_lng: float }
+     * Returns: { available: bool, zone: object|null, fee: float, distance_km: float|null, message: string }
+     */
+    public function checkDeliveryZone(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'delivery_lat' => 'required|numeric|between:-90,90',
+                'delivery_lng' => 'required|numeric|between:-180,180',
+            ]);
+
+            $tenantId = app('tenant_id');
+            $restaurant = Restaurant::where('tenant_id', $tenantId)->first();
+
+            if (!$restaurant) {
+                return response()->json([
+                    'success' => false,
+                    'available' => false,
+                    'message' => 'מסעדה לא נמצאה',
+                ], 404);
+            }
+
+            $validation = $this->validateDeliveryLocation(
+                $validated['delivery_lat'],
+                $validated['delivery_lng'],
+                $restaurant->id,
+                $restaurant
+            );
+
+            return response()->json([
+                'success' => $validation['success'],
+                'available' => $validation['success'],
+                'zone' => $validation['zone'] ? [
+                    'id' => $validation['zone']->id,
+                    'name' => $validation['zone']->name,
+                    'pricing_type' => $validation['zone']->pricing_type,
+                ] : null,
+                'fee' => $validation['fee'],
+                'distance_km' => $validation['distance_km'],
+                'message' => $validation['message'] ?? ($validation['success'] ? 'משלוח זמין' : null),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'available' => false,
+                'message' => 'שגיאה בבדיקת אזור משלוח',
+                'error' => $e->getMessage(),
+            ], 500);
         }
     }
 
@@ -473,6 +579,209 @@ class OrderController extends Controller
                 'error' => $e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * Validate delivery location and calculate delivery fee
+     * 
+     * @param float|null $lat Customer latitude
+     * @param float|null $lng Customer longitude
+     * @param int $restaurantId Restaurant ID
+     * @param Restaurant $restaurant Restaurant model
+     * @return array ['success' => bool, 'zone' => DeliveryZone|null, 'distance_km' => float|null, 'fee' => float, 'message' => string|null]
+     */
+    private function validateDeliveryLocation(?float $lat, ?float $lng, int $restaurantId, Restaurant $restaurant): array
+    {
+        if ($lat === null || $lng === null) {
+            return [
+                'success' => false,
+                'message' => 'נא לאשר מיקום למשלוח',
+                'zone' => null,
+                'distance_km' => null,
+                'fee' => 0.0,
+            ];
+        }
+
+        // Get active delivery zones
+        $zones = DeliveryZone::where('restaurant_id', $restaurantId)
+            ->where('is_active', true)
+            ->with('city')
+            ->orderBy('sort_order')
+            ->get();
+
+        if ($zones->isEmpty()) {
+            return [
+                'success' => false,
+                'message' => 'המסעדה לא הגדירה אזורי משלוח',
+                'zone' => null,
+                'distance_km' => null,
+                'fee' => 0.0,
+            ];
+        }
+
+        $matchedZone = null;
+
+        // Try to match zone
+        foreach ($zones as $zone) {
+            // Check city-based zone
+            if ($zone->city_id && $zone->city) {
+                $cityLat = (float) $zone->city->latitude;
+                $cityLng = (float) $zone->city->longitude;
+                $distanceToCity = $this->calculateDistanceKm($lat, $lng, $cityLat, $cityLng);
+
+                // Within 10km of city center = considered in city
+                if ($distanceToCity <= 10) {
+                    $matchedZone = $zone;
+                    break;
+                }
+            }
+
+            // Check polygon-based zone
+            $polygon = $zone->polygon ?? [];
+            if (!empty($polygon) && $this->isPointInPolygon($lat, $lng, $polygon)) {
+                $matchedZone = $zone;
+                break;
+            }
+        }
+
+        if (!$matchedZone) {
+            return [
+                'success' => false,
+                'message' => 'הכתובת מחוץ לאזורי המשלוח של המסעדה',
+                'zone' => null,
+                'distance_km' => null,
+                'fee' => 0.0,
+            ];
+        }
+
+        // Calculate distance from restaurant
+        $distanceKm = null;
+        if ($restaurant->latitude !== null && $restaurant->longitude !== null) {
+            $distanceKm = $this->calculateDistanceKm(
+                (float) $restaurant->latitude,
+                (float) $restaurant->longitude,
+                $lat,
+                $lng
+            );
+        }
+
+        // Validate distance calculation for non-fixed pricing
+        if ($matchedZone->pricing_type !== 'fixed' && $distanceKm === null) {
+            return [
+                'success' => false,
+                'message' => 'לא ניתן לחשב דמי משלוח ללא מיקום מסעדה',
+                'zone' => $matchedZone,
+                'distance_km' => null,
+                'fee' => 0.0,
+            ];
+        }
+
+        // Calculate delivery fee
+        $deliveryFee = $this->calculateDeliveryFee($matchedZone, $distanceKm);
+
+        return [
+            'success' => true,
+            'message' => null,
+            'zone' => $matchedZone,
+            'distance_km' => $distanceKm,
+            'fee' => $deliveryFee,
+        ];
+    }
+
+    private function resolveDeliveryZone(int $restaurantId, ?float $lat, ?float $lng): ?DeliveryZone
+    {
+        if ($lat === null || $lng === null) {
+            return null;
+        }
+
+        $zones = DeliveryZone::where('restaurant_id', $restaurantId)
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->get();
+
+        foreach ($zones as $zone) {
+            $polygon = $zone->polygon ?? [];
+            if ($this->isPointInPolygon($lat, $lng, $polygon)) {
+                return $zone;
+            }
+        }
+
+        return null;
+    }
+
+    private function calculateDistanceKm(float $lat1, float $lng1, float $lat2, float $lng2): float
+    {
+        $earthRadius = 6371; // km
+        $dLat = deg2rad($lat2 - $lat1);
+        $dLng = deg2rad($lng2 - $lng1);
+        $a = sin($dLat / 2) ** 2
+            + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($dLng / 2) ** 2;
+        $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
+        return round($earthRadius * $c, 2);
+    }
+
+    private function isPointInPolygon(float $lat, float $lng, array $polygon): bool
+    {
+        if (count($polygon) < 3) {
+            return false;
+        }
+
+        $inside = false;
+        $j = count($polygon) - 1;
+        for ($i = 0; $i < count($polygon); $i++) {
+            $xi = (float) ($polygon[$i]['lat'] ?? 0);
+            $yi = (float) ($polygon[$i]['lng'] ?? 0);
+            $xj = (float) ($polygon[$j]['lat'] ?? 0);
+            $yj = (float) ($polygon[$j]['lng'] ?? 0);
+
+            $intersect = (($yi > $lng) !== ($yj > $lng))
+                && ($lat < ($xj - $xi) * ($lng - $yi) / (($yj - $yi) ?: 1e-9) + $xi);
+            if ($intersect) {
+                $inside = !$inside;
+            }
+            $j = $i;
+        }
+
+        return $inside;
+    }
+
+    private function calculateDeliveryFee(DeliveryZone $zone, ?float $distanceKm): float
+    {
+        $pricingType = $zone->pricing_type ?? 'fixed';
+
+        if ($pricingType === 'fixed') {
+            return round((float) ($zone->fixed_fee ?? 0), 2);
+        }
+
+        if ($distanceKm === null) {
+            return 0.0;
+        }
+
+        if ($pricingType === 'per_km') {
+            $fee = (float) ($zone->per_km_fee ?? 0) * $distanceKm;
+            return round($fee, 2);
+        }
+
+        if ($pricingType === 'tiered') {
+            $tiers = $zone->tiered_fees ?? [];
+            if (!is_array($tiers) || empty($tiers)) {
+                return 0.0;
+            }
+
+            usort($tiers, fn($a, $b) => ($a['upto_km'] ?? 0) <=> ($b['upto_km'] ?? 0));
+            foreach ($tiers as $tier) {
+                $upto = (float) ($tier['upto_km'] ?? 0);
+                $fee = (float) ($tier['fee'] ?? 0);
+                if ($distanceKm <= $upto) {
+                    return round($fee, 2);
+                }
+            }
+
+            $last = end($tiers);
+            return round((float) ($last['fee'] ?? 0), 2);
+        }
+
+        return 0.0;
     }
 
     private function filterAddonGroupsByScope($groups, MenuItem $item, ?int $categoryId)

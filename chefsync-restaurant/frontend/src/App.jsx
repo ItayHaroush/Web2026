@@ -20,6 +20,7 @@ import AdminEmployees from './pages/admin/AdminEmployees';
 import AdminRestaurant from './pages/admin/AdminRestaurant';
 import AdminTerminal from './pages/admin/AdminTerminal';
 import AdminPaywall from './pages/admin/AdminPaywall';
+import AdminDeliveryZones from './pages/admin/AdminDeliveryZones';
 import SuperAdminDashboard from './pages/super-admin/SuperAdminDashboard';
 import SuperAdminNotifications from './pages/super-admin/SuperAdminNotifications';
 import SuperAdminReports from './pages/super-admin/SuperAdminReports';
@@ -177,6 +178,14 @@ function AppRoutes() {
         element={
           <AdminRoute>
             <AdminRestaurant />
+          </AdminRoute>
+        }
+      />
+      <Route
+        path="/admin/delivery-zones"
+        element={
+          <AdminRoute>
+            <AdminDeliveryZones />
           </AdminRoute>
         }
       />

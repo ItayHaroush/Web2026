@@ -109,6 +109,11 @@ class Restaurant extends Model
         return $this->hasMany(RestaurantAddonGroup::class);
     }
 
+    public function deliveryZones(): HasMany
+    {
+        return $this->hasMany(DeliveryZone::class)->orderBy('sort_order');
+    }
+
     /**
      * הזמנות של המסעדה
      */

@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Log;
 use App\Services\Otp\OtpProviderInterface;
 use App\Services\Otp\Sms019OtpService;
 use App\Services\Otp\TwilioOtpProvider;
+use App\Services\PhoneValidationService;
 
 class SmsService
 {
@@ -22,28 +23,48 @@ class SmsService
 
     public static function sendOtp(string $phone, string $code): bool
     {
+        $normalized = PhoneValidationService::normalizeIsraeliMobileE164($phone);
+        if ($normalized === null) {
+            Log::warning('SMS OTP blocked: invalid phone', ['phone' => $phone]);
+            return false;
+        }
+
         if (app()->environment('local')) {
             Log::info('Local SMS bypass: OTP generated', [
-                'phone' => $phone,
+                'phone' => $normalized,
                 'code' => $code,
             ]);
             return true;
         }
 
-        return self::provider()->sendOtp($phone, $code);
+        return self::provider()->sendOtp($normalized, $code);
     }
 
     public static function sendOtpDetailed(string $phone, string $code): array
     {
+        $normalized = PhoneValidationService::normalizeIsraeliMobileE164($phone);
+        if ($normalized === null) {
+            return [
+                'sent' => false,
+                'resolved_source' => null,
+                'resolved_destination' => null,
+                'used_username' => null,
+                'token_tail' => null,
+                'http_status' => null,
+                'provider_status' => null,
+                'provider_message' => 'invalid destination phone',
+            ];
+        }
+
         if (app()->environment('local')) {
             Log::info('Local SMS bypass: OTP generated (detailed)', [
-                'phone' => $phone,
+                'phone' => $normalized,
                 'code' => $code,
             ]);
             return [
                 'sent' => true,
                 'resolved_source' => 'local-bypass',
-                'resolved_destination' => $phone,
+                'resolved_destination' => $normalized,
                 'used_username' => null,
                 'token_tail' => null,
                 'http_status' => 200,
@@ -57,11 +78,11 @@ class SmsService
 
         if (is_callable([$provider, 'sendOtpDetailed'])) {
             /** @var array $result */
-            $result = call_user_func([$provider, 'sendOtpDetailed'], $phone, $code);
+            $result = call_user_func([$provider, 'sendOtpDetailed'], $normalized, $code);
             return $result;
         }
 
-        $sent = $provider->sendOtp($phone, $code);
+        $sent = $provider->sendOtp($normalized, $code);
 
         return [
             'sent' => $sent,
@@ -88,9 +109,15 @@ class SmsService
 
     public static function sendPlainText(string $phone, string $message): bool
     {
+        $normalized = PhoneValidationService::normalizeIsraeliMobileE164($phone);
+        if ($normalized === null) {
+            Log::warning('SMS plain text blocked: invalid phone', ['phone' => $phone]);
+            return false;
+        }
+
         if (app()->environment('local')) {
             Log::info('Local SMS bypass: plain text', [
-                'phone' => $phone,
+                'phone' => $normalized,
                 'message' => $message,
             ]);
             return true;
@@ -99,8 +126,8 @@ class SmsService
         $provider = self::resolveProvider();
 
         return match ($provider) {
-            'sms019', '019sms', '019' => self::sendPlainTextVia019($phone, $message),
-            default => self::sendPlainTextViaTwilio($phone, $message),
+            'sms019', '019sms', '019' => self::sendPlainTextVia019($normalized, $message),
+            default => self::sendPlainTextViaTwilio($normalized, $message),
         };
     }
 

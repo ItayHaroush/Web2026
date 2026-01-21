@@ -4,6 +4,23 @@ import { useAuth } from '../context/AuthContext';
 import { CustomerLayout } from '../layouts/CustomerLayout';
 import orderService from '../services/orderService';
 import { ORDER_STATUS, ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from '../constants/api';
+import CountdownTimer from '../components/CountdownTimer';
+
+/**
+ * פורמט מספר טלפון ישראלי
+ * @param {string} phone - מספר טלפון בפורמט E.164 (+972501234567)
+ * @returns {string} - מספר מפורמט (050-123-4567)
+ */
+function formatIsraeliPhone(phone) {
+    if (!phone) return '';
+    // הסרת + ו-972
+    let cleaned = phone.replace(/\+972/, '0').replace(/\D/g, '');
+    // פורמט: 050-123-4567
+    if (cleaned.length === 10) {
+        return `${cleaned.slice(0, 3)}-${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
+    }
+    return phone; // אם לא תקין, החזר כמו שהוא
+}
 
 /**
  * עמוד סטטוס הזמנה
@@ -206,9 +223,9 @@ export default function OrderStatusPage() {
     if (error || !order) {
         return (
             <CustomerLayout>
-                <div className="bg-red-50 border border-red-200 text-red-900 px-4 py-6 rounded-2xl space-y-4">
+                <div className="bg-red-50 border border-red-200 text-red-900 px-3 sm:px-4 py-4 sm:py-6 rounded-2xl space-y-3 sm:space-y-4">
                     <div>
-                        <p className="font-semibold text-lg">{error}</p>
+                        <p className="font-semibold text-base sm:text-lg">{error}</p>
                         {fatalErrorMessage ? (
                             <p className="text-sm text-red-700 mt-2">עצרתנו את בדיקות הסטטוס כדי שלא תתבצע פניה חוזרת ללא צורך.</p>
                         ) : (
@@ -218,21 +235,21 @@ export default function OrderStatusPage() {
                     {fatalErrorMessage ? (
                         <button
                             onClick={() => navigate('/')}
-                            className="bg-gray-900 text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition"
+                            className="w-full sm:w-auto bg-red-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-red-700 transition whitespace-nowrap"
                         >
                             חזרה לבחירת מסעדה
                         </button>
                     ) : (
-                        <div className="flex gap-3">
+                        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                             <button
-                                onClick={handleRetry}
-                                className="bg-brand-primary text-white px-4 py-2 rounded-lg hover:bg-brand-secondary transition"
+                                onClick={retryFetch}
+                                className="w-full sm:w-auto bg-brand-primary text-white px-4 py-2 rounded-lg text-sm hover:bg-brand-secondary transition"
                             >
                                 נסה שוב
                             </button>
                             <button
                                 onClick={() => navigate('/')}
-                                className="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300 transition"
+                                className="w-full sm:w-auto bg-gray-200 text-gray-800 px-4 py-2 rounded-lg text-sm hover:bg-gray-300 transition"
                             >
                                 חזרה לבחירת מסעדה
                             </button>
@@ -259,21 +276,21 @@ export default function OrderStatusPage() {
         <CustomerLayout>
             <div className="space-y-8">
                 <div className="text-center">
-                    <h1 className="text-3xl font-bold text-brand-primary mb-2">סטטוס הזמנה</h1>
-                    <p className="text-gray-600">הזמנה #{order.id}</p>
+                    <h1 className="text-2xl sm:text-3xl font-bold text-brand-primary mb-2">סטטוס הזמנה</h1>
+                    <p className="text-sm sm:text-base text-gray-600">הזמנה #{order.id}</p>
                 </div>
 
                 {etaAlert && (
-                    <div className="max-w-2xl mx-auto bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-xl text-center">
+                    <div className="max-w-2xl mx-auto bg-amber-50 border border-amber-200 text-amber-800 px-3 sm:px-4 py-2 sm:py-3 rounded-xl text-center text-sm sm:text-base">
                         {etaAlert}
                     </div>
                 )}
 
                 {cancelNotice && (
-                    <div className="max-w-2xl mx-auto bg-red-50 border border-red-200 text-red-900 px-4 py-4 rounded-xl flex items-start justify-between gap-4">
-                        <div>
-                            <p className="font-semibold text-lg">ההזמנה בוטלה</p>
-                            <p className="text-sm text-red-800 mt-1">{cancelNotice}</p>
+                    <div className="max-w-2xl mx-auto bg-red-50 border border-red-200 text-red-900 px-3 sm:px-4 py-3 sm:py-4 rounded-xl flex flex-col sm:flex-row items-start justify-between gap-3 sm:gap-4">
+                        <div className="flex-1">
+                            <p className="font-semibold text-base sm:text-lg">ההזמנה בוטלה</p>
+                            <p className="text-xs sm:text-sm text-red-800 mt-1">{cancelNotice}</p>
                         </div>
                         <button
                             onClick={handleCloseCancelNotice}
@@ -286,15 +303,15 @@ export default function OrderStatusPage() {
 
                 {/* כרטיס הזמנה */}
                 {showStatusCard && (
-                    <div className="bg-white border-2 border-brand-primary rounded-lg p-6 max-w-2xl mx-auto">
-                        <div className="grid grid-cols-2 gap-4 mb-6">
+                    <div className="bg-white border-2 border-brand-primary rounded-lg p-4 sm:p-6 max-w-2xl mx-auto">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
                             <div>
                                 <p className="text-sm text-gray-600 mb-1">שם</p>
                                 <p className="font-semibold text-gray-900">{order.customer_name}</p>
                             </div>
                             <div>
                                 <p className="text-sm text-gray-600 mb-1">טלפון</p>
-                                <p className="font-semibold text-gray-900">{order.customer_phone}</p>
+                                <p className="font-semibold text-gray-900">{formatIsraeliPhone(order.customer_phone)}</p>
                             </div>
 
                             <div>
@@ -328,6 +345,18 @@ export default function OrderStatusPage() {
                                 )}
                             </div>
                         </div>
+
+                        {/* שעון ספירה לאחור */}
+                        {!isCancelled && (
+                            <div className="my-6">
+                                <CountdownTimer 
+                                    startTime={order.created_at}
+                                    etaMinutes={order.eta_minutes}
+                                    etaNote={order.eta_note}
+                                    deliveryMethod={order.delivery_method}
+                                />
+                            </div>
+                        )}
 
                         {!isCancelled && (
                             <>
@@ -430,9 +459,28 @@ export default function OrderStatusPage() {
                                 </div>
                             );
                         })}
-                        <div className="border-t pt-3 flex items-center justify-between text-lg font-bold text-gray-900">
-                            <span>סה"כ</span>
-                            <span>₪{Number(order.total_amount || 0).toFixed(2)}</span>
+                        
+                        {/* פירוט מחיר */}
+                        <div className="bg-gray-100 rounded-lg p-4 space-y-2">
+                            <div className="flex items-center justify-between text-gray-700">
+                                <span>סכום ביניים</span>
+                                <span>₪{(Number(order.total_amount || 0) - Number(order.delivery_fee || 0)).toFixed(2)}</span>
+                            </div>
+                            {order.delivery_method === 'delivery' && order.delivery_fee > 0 && (
+                                <div className="flex items-center justify-between text-gray-700">
+                                    <span>
+                                        משלוח
+                                        {order.delivery_distance_km && (
+                                            <span className="text-sm text-gray-500"> ({Number(order.delivery_distance_km).toFixed(1)} ק"מ)</span>
+                                        )}
+                                    </span>
+                                    <span>₪{Number(order.delivery_fee).toFixed(2)}</span>
+                                </div>
+                            )}
+                            <div className="border-t border-gray-300 pt-2 flex items-center justify-between text-lg font-bold text-gray-900">
+                                <span>סה"כ</span>
+                                <span>₪{Number(order.total_amount || 0).toFixed(2)}</span>
+                            </div>
                         </div>
                     </div>
                 )}

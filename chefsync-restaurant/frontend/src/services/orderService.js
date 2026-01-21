@@ -52,6 +52,25 @@ class OrderService {
     }
 
     /**
+     * בדיקה האם משלוח זמין למיקום נתון
+     * @param {number} lat - קואורדינטת latitude
+     * @param {number} lng - קואורדינטת longitude
+     * @returns {Promise<{available: boolean, zone: object|null, fee: number, distance_km: number|null, message: string}>}
+     */
+    async checkDeliveryZone(lat, lng) {
+        try {
+            const response = await apiClient.post('/check-delivery-zone', {
+                delivery_lat: lat,
+                delivery_lng: lng,
+            });
+            return response.data;
+        } catch (error) {
+            console.error('שגיאה בבדיקת אזור משלוח:', error);
+            throw error;
+        }
+    }
+
+    /**
      * עדכון סטטוס הזמנה
      * @param {string|number} orderId - מזהה ההזמנה
      * @param {string} status - הסטטוס החדש

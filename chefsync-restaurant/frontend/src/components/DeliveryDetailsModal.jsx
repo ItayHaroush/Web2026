@@ -43,11 +43,11 @@ export default function DeliveryDetailsModal({ open, onClose, customerInfo, setC
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-            <div className="bg-white rounded-xl shadow-xl w-full max-w-lg p-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+            <div className="bg-white rounded-xl shadow-xl w-full max-w-lg p-4 sm:p-6 mx-4">
                 <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-xl font-bold text-gray-900">פרטי משלוח</h3>
-                    <button onClick={handleClose} type="button" className="text-gray-500 hover:text-gray-700 text-2xl">×</button>
+                    <h3 className="text-lg sm:text-xl font-bold text-gray-900">פרטי משלוח</h3>
+                    <button onClick={handleClose} type="button" className="text-gray-500 hover:text-gray-700 text-2xl leading-none">×</button>
                 </div>
                 <form onSubmit={handleSave} className="space-y-4">
                     <div>
@@ -71,11 +71,11 @@ export default function DeliveryDetailsModal({ open, onClose, customerInfo, setC
                             placeholder="לדוגמה: דירה 4, קוד שער 1234"
                         />
                     </div>
-                    <div className="flex justify-end gap-3">
-                        <button type="button" onClick={handleClose} className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100">
+                    <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
+                        <button type="button" onClick={handleClose} className="w-full sm:w-auto px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 text-sm sm:text-base">
                             ביטול
                         </button>
-                        <button type="submit" className="px-4 py-2 rounded-lg bg-brand-primary text-white hover:bg-brand-primary/90">
+                        <button type="submit" className="w-full sm:w-auto px-4 py-2 rounded-lg bg-brand-primary text-white hover:bg-brand-primary/90 text-sm sm:text-base">
                             שמירה
                         </button>
                     </div>

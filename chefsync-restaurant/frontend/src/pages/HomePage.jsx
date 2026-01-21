@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { CustomerLayout } from '../layouts/CustomerLayout';
 import { Link, useNavigate } from 'react-router-dom';
 import { getAllRestaurants, getCities } from '../services/restaurantService';
+import LocationPickerModal from '../components/LocationPickerModal';
 import logo from '../images/ChefSyncLogoIcon.png';
 import { resolveAssetUrl } from '../utils/assets';
 import { PRODUCT_BYLINE_HE, PRODUCT_NAME } from '../constants/brand';
@@ -23,7 +24,24 @@ export default function HomePage() {
     const [closestRestaurantId, setClosestRestaurantId] = useState(null);
     const [autoSelectedCity, setAutoSelectedCity] = useState(false);
     const [activeOrderId, setActiveOrderId] = useState(null);
+    const [showLocationModal, setShowLocationModal] = useState(false);
+    const [deliveryLocation, setDeliveryLocation] = useState(null);
     const navigate = useNavigate();
+
+    // טען מיקום שמור למשלוח
+    useEffect(() => {
+        try {
+            const saved = localStorage.getItem('user_delivery_location');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                if (parsed.lat && parsed.lng) {
+                    setDeliveryLocation(parsed);
+                }
+            }
+        } catch (e) {
+            console.warn('Failed to load delivery location', e);
+        }
+    }, []);
 
     // בדוק הזמנה פעילה כשיש tenant ID
     useEffect(() => {
@@ -44,6 +62,7 @@ export default function HomePage() {
                     const lng = position.coords.longitude;
 
                     setUserLocation({ lat, lng });
+                    localStorage.setItem('user_location', JSON.stringify({ lat, lng }));
 
                     // קבל שם עיר אמיתי מקואורדינטות (Reverse Geocoding)
                     try {
@@ -178,6 +197,15 @@ export default function HomePage() {
 
     return (
         <CustomerLayout>
+            <LocationPickerModal
+                open={showLocationModal}
+                onClose={() => setShowLocationModal(false)}
+                onLocationSelected={(location) => {
+                    setDeliveryLocation(location);
+                    setShowLocationModal(false);
+                }}
+            />
+
             {/* כרטיסייה של הזמנה פעילה */}
             {activeOrderId && (
                 <div className="mb-6 p-4 bg-gradient-to-r from-brand-primary to-brand-secondary rounded-2xl shadow-lg text-white cursor-pointer hover:shadow-xl transition-shadow"
@@ -214,11 +242,19 @@ export default function HomePage() {
                         </button>
 
                         {currentCityName && (
-                            <div className="inline-flex items-center gap-1.5 sm:gap-2 bg-white/90 backdrop-blur-md text-brand-dark px-3 sm:px-4 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm shadow-md font-medium">
+                            <div
+                                onClick={() => setShowLocationModal(true)}
+                                className="inline-flex items-center gap-1.5 sm:gap-2 bg-white/90 backdrop-blur-md text-brand-dark px-3 sm:px-4 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm shadow-md font-medium cursor-pointer hover:bg-white transition-all"
+                            >
                                 <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-brand-primary" fill="currentColor" viewBox="0 0 24 24">
                                     <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
                                 </svg>
-                                <span>{currentCityName}</span>
+                                <span>
+                                    {deliveryLocation?.fullAddress ||
+                                        (deliveryLocation?.street && deliveryLocation?.cityName
+                                            ? `${deliveryLocation.street}, ${deliveryLocation.cityName}`
+                                            : deliveryLocation?.cityName || currentCityName)}
+                                </span>
                             </div>
                         )}
                     </div>
