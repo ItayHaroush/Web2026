@@ -349,7 +349,7 @@ export default function OrderStatusPage() {
                         {/* שעון ספירה לאחור */}
                         {!isCancelled && (
                             <div className="my-6">
-                                <CountdownTimer 
+                                <CountdownTimer
                                     startTime={order.created_at}
                                     etaMinutes={order.eta_minutes}
                                     etaNote={order.eta_note}
@@ -459,7 +459,7 @@ export default function OrderStatusPage() {
                                 </div>
                             );
                         })}
-                        
+
                         {/* פירוט מחיר */}
                         <div className="bg-gray-100 rounded-lg p-4 space-y-2">
                             <div className="flex items-center justify-between text-gray-700">
