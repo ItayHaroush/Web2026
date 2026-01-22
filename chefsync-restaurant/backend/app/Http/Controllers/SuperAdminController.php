@@ -142,6 +142,7 @@ class SuperAdminController extends Controller
             'latitude' => 'nullable|numeric|between:-90,90',
             'longitude' => 'nullable|numeric|between:-180,180',
             'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'is_demo' => 'nullable|boolean',
 
             // פרטי בעל המסעדה
             'owner_name' => 'required|string|max:255',
@@ -200,6 +201,7 @@ class SuperAdminController extends Controller
                 'logo_url' => $logoUrl,
                 'is_open' => false, // כברירת מחדל סגור עד שיסיימו הגדרה
                 'is_approved' => false,
+                'is_demo' => $validated['is_demo'] ?? true,
             ]);
 
             // יצירת משתמש בעלים
@@ -256,6 +258,7 @@ class SuperAdminController extends Controller
             'description' => 'nullable|string',
             'logo_url' => 'nullable|url',
             'is_open' => 'sometimes|boolean',
+            'is_demo' => 'sometimes|boolean',
         ]);
 
         // אם השם משתנה, עדכן את ה-slug
@@ -333,6 +336,7 @@ class SuperAdminController extends Controller
         }
 
         $restaurant->is_approved = true;
+        $restaurant->is_demo = false; // אישור = מסעדה אמיתית
         $restaurant->is_open = false; // נותר סגור עד שבעלים יפתח ידנית לאחר אישור
         $restaurant->is_override_status = false;
         $restaurant->save();
@@ -356,6 +360,32 @@ class SuperAdminController extends Controller
                 'sms_sent' => $smsSent,
                 'owner_id' => $owner?->id,
             ],
+        ]);
+    }
+
+    /**
+     * ביטול אישור מסעדה (סופר אדמין בלבד)
+     */
+    public function revokeApproval($id)
+    {
+        $restaurant = Restaurant::withoutGlobalScopes()->findOrFail($id);
+
+        if (!$restaurant->is_approved) {
+            return response()->json([
+                'success' => true,
+                'message' => 'המסעדה כבר לא מאושרת',
+                'restaurant' => $restaurant,
+            ]);
+        }
+
+        $restaurant->is_approved = false;
+        $restaurant->is_open = false;
+        $restaurant->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'אישור המסעדה בוטל בהצלחה',
+            'restaurant' => $restaurant,
         ]);
     }
 

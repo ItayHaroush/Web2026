@@ -190,6 +190,21 @@ export default function MenuPage() {
                 </div>
             )}
 
+            {/* באנר דמו */}
+            {restaurant?.is_demo && (
+                <div className="mb-6 p-4 bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-400 rounded-2xl shadow-lg">
+                    <div className="flex items-start gap-3">
+                        <span className="text-3xl">🎭</span>
+                        <div className="flex-1">
+                            <h3 className="font-bold text-amber-900 mb-1">מסעדה לדוגמא</h3>
+                            <p className="text-sm text-amber-800">
+                                זוהי מסעדת דמו לצורכי הדגמה בלבד. ההזמנות כאן אינן אמיתיות.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Hero Section - סגנון Wolt */}
             <div className="relative -mx-4 sm:-mx-6 lg:-mx-8 -mt-8 mb-8">
                 {/* רקע עם לוגו גדול */}

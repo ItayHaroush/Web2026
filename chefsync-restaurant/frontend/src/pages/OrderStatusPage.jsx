@@ -5,6 +5,7 @@ import { CustomerLayout } from '../layouts/CustomerLayout';
 import orderService from '../services/orderService';
 import { ORDER_STATUS, ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from '../constants/api';
 import CountdownTimer from '../components/CountdownTimer';
+import apiClient from '../services/apiClient';
 
 /**
  * פורמט מספר טלפון ישראלי
@@ -31,6 +32,7 @@ export default function OrderStatusPage() {
     const { tenantId, loginAsCustomer } = useAuth();
     const navigate = useNavigate();
     const [order, setOrder] = useState(null);
+    const [restaurant, setRestaurant] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [fatalErrorMessage, setFatalErrorMessage] = useState('');
@@ -79,7 +81,16 @@ export default function OrderStatusPage() {
 
         setPrecheckPassed(true);
     }, [orderId, urlTenantId]);
+// Fetch restaurant info
+    useEffect(() => {
+        if (urlTenantId) {
+            apiClient.get(`/restaurants/by-tenant/${encodeURIComponent(urlTenantId)}`)
+                .then(response => setRestaurant(response.data?.data))
+                .catch(err => console.error('Failed to load restaurant:', err));
+        }
+    }, [urlTenantId]);
 
+    
     const loadOrder = useCallback(async ({ withLoading = false } = {}) => {
         if (!orderId || !urlTenantId || !precheckPassed) {
             return;
@@ -275,6 +286,16 @@ export default function OrderStatusPage() {
     return (
         <CustomerLayout>
             <div className="space-y-8">
+                {/* תג דמו */}
+                {restaurant?.is_demo && (
+                    <div className="max-w-2xl mx-auto bg-gradient-to-r from-amber-100 to-orange-100 border-2 border-amber-400 rounded-2xl p-3 shadow-lg">
+                        <div className="flex items-center justify-center gap-2">
+                            <span className="text-2xl">🎭</span>
+                            <span className="font-bold text-amber-900">הזמנה להמחשה - לא אמיתית</span>
+                        </div>
+                    </div>
+                )}
+
                 <div className="text-center">
                     <h1 className="text-2xl sm:text-3xl font-bold text-brand-primary mb-2">סטטוס הזמנה</h1>
                     <p className="text-sm sm:text-base text-gray-600">הזמנה #{order.id}</p>

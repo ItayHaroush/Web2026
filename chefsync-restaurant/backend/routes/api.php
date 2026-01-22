@@ -61,6 +61,7 @@ Route::prefix('super-admin')->middleware(['auth:sanctum', 'super_admin'])->group
     Route::delete('/restaurants/{id}', [SuperAdminController::class, 'deleteRestaurant'])->name('super-admin.restaurants.delete');
     Route::patch('/restaurants/{id}/toggle-status', [SuperAdminController::class, 'toggleRestaurantStatus'])->name('super-admin.restaurants.toggle');
     Route::post('/restaurants/{id}/approve', [SuperAdminController::class, 'approveRestaurant'])->name('super-admin.restaurants.approve');
+    Route::post('/restaurants/{id}/revoke-approval', [SuperAdminController::class, 'revokeApproval'])->name('super-admin.restaurants.revoke');
 
     // סטטיסטיקות מסעדה
     Route::get('/restaurants/{id}/stats', [SuperAdminController::class, 'getRestaurantStats'])->name('super-admin.restaurants.stats');

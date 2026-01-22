@@ -377,6 +377,13 @@ export default function HomePage() {
                                         </div>
                                     )}
 
+                                    {/* תג דמו */}
+                                    {restaurant.is_demo && (
+                                        <div className="absolute bottom-3 left-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white px-4 py-2 rounded-full text-xs font-bold shadow-xl border-2 border-white">
+                                            🎭 מסעדה לדוגמא
+                                        </div>
+                                    )}
+
                                     {/* תג סטטוס */}
                                     <div className={`absolute top-3 right-3 px-3 py-1.5 rounded-full text-xs font-bold shadow-md ${(restaurant.is_open_now ?? restaurant.is_open) ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
                                         {(restaurant.is_open_now ?? restaurant.is_open) ? '🟢 פתוח' : '🔴 סגור'}

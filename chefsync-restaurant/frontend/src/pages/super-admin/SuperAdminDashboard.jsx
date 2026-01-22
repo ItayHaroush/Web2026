@@ -12,6 +12,7 @@ export default function SuperAdminDashboard() {
     const [restaurants, setRestaurants] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterStatus, setFilterStatus] = useState('');
+    const [demoFilter, setDemoFilter] = useState('all'); // all / demo / real
     const [showAddRestaurant, setShowAddRestaurant] = useState(false);
 
     useEffect(() => {
@@ -90,6 +91,26 @@ export default function SuperAdminDashboard() {
             }
         } catch (error) {
             toast.error(error.response?.data?.message || 'שגיאה באישור המסעדה');
+        }
+    };
+
+    const revokeApproval = async (restaurantId) => {
+        if (!confirm('האם לבטל את אישור המסעדה? המסעדה תוסר מהרשימה הציבורית.')) return;
+
+        try {
+            const response = await api.post(
+                `/super-admin/restaurants/${restaurantId}/revoke-approval`,
+                {},
+                { headers: getAuthHeaders() }
+            );
+
+            if (response.data.success) {
+                toast.success(response.data.message || 'אישור המסעדה בוטל');
+                fetchRestaurants();
+                fetchDashboard();
+            }
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'שגיאה בביטול אישור');
         }
     };
 
@@ -179,6 +200,40 @@ export default function SuperAdminDashboard() {
                     </button>
                 </div>
 
+                {/* פילטרים לפי סוג מסעדה */}
+                <div className="flex gap-2 mb-4">
+                    <button
+                        onClick={() => setDemoFilter('all')}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                            demoFilter === 'all'
+                                ? 'bg-brand-primary text-white shadow-md'
+                                : 'bg-white text-gray-700 hover:bg-gray-50'
+                        }`}
+                    >
+                        הכל ({restaurants.length})
+                    </button>
+                    <button
+                        onClick={() => setDemoFilter('demo')}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                            demoFilter === 'demo'
+                                ? 'bg-amber-500 text-white shadow-md'
+                                : 'bg-white text-gray-700 hover:bg-gray-50'
+                        }`}
+                    >
+                        🎭 דמו ({restaurants.filter(r => r.is_demo).length})
+                    </button>
+                    <button
+                        onClick={() => setDemoFilter('real')}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                            demoFilter === 'real'
+                                ? 'bg-green-500 text-white shadow-md'
+                                : 'bg-white text-gray-700 hover:bg-gray-50'
+                        }`}
+                    >
+                        ✅ אמיתי ({restaurants.filter(r => !r.is_demo).length})
+                    </button>
+                </div>
+
                 {/* רשימת מסעדות */}
                 {loading ? (
                     <div className="text-center py-8">
@@ -191,7 +246,13 @@ export default function SuperAdminDashboard() {
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 gap-3 sm:gap-4">
-                        {restaurants.map((restaurant) => (
+                        {restaurants
+                            .filter(r => {
+                                if (demoFilter === 'demo') return r.is_demo;
+                                if (demoFilter === 'real') return !r.is_demo;
+                                return true;
+                            })
+                            .map((restaurant) => (
                             <div key={restaurant.id} className="bg-white rounded-2xl shadow-sm p-4 sm:p-6 hover:shadow-md transition-all">
                                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                                     <div className="flex items-center gap-3 sm:gap-4 flex-1">
@@ -224,6 +285,11 @@ export default function SuperAdminDashboard() {
                                                         ממתין לאישור
                                                     </span>
                                                 )}
+                                                {restaurant.is_demo && (
+                                                    <span className="px-2 py-1 rounded-full text-xs bg-amber-500 text-white font-semibold">
+                                                        🎭 דמו
+                                                    </span>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
@@ -239,12 +305,19 @@ export default function SuperAdminDashboard() {
                                             </p>
                                         </div>
                                         <div className="flex gap-2 flex-wrap justify-end">
-                                            {restaurant.is_approved === false && (
+                                            {restaurant.is_approved === false ? (
                                                 <button
                                                     onClick={() => approveRestaurant(restaurant.id)}
-                                                    className="px-3 py-1 text-sm rounded-lg font-medium bg-amber-500 text-white hover:bg-amber-600"
+                                                    className="px-3 py-1 text-sm rounded-lg font-medium bg-green-500 text-white hover:bg-green-600"
                                                 >
-                                                    אשר מסעדה
+                                                    ✅ אשר מסעדה
+                                                </button>
+                                            ) : (
+                                                <button
+                                                    onClick={() => revokeApproval(restaurant.id)}
+                                                    className="px-3 py-1 text-sm rounded-lg font-medium bg-red-500 text-white hover:bg-red-600"
+                                                >
+                                                    🚫 בטל אישור
                                                 </button>
                                             )}
                                             <button
@@ -302,6 +375,7 @@ function AddRestaurantModal({ onClose, onSuccess, getAuthHeaders }) {
         address: '',
         description: '',
         logo: null,
+        is_demo: true, // דמו כברירת מחדל
         owner_name: '',
         owner_email: '',
         owner_phone: '',
@@ -479,6 +553,18 @@ function AddRestaurantModal({ onClose, onSuccess, getAuthHeaders }) {
                                 className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-brand-primary col-span-2"
                                 rows="2"
                             />
+                            <label className="flex items-center gap-3 px-4 py-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors col-span-2">
+                                <input
+                                    type="checkbox"
+                                    checked={formData.is_demo}
+                                    onChange={(e) => setFormData({ ...formData, is_demo: e.target.checked })}
+                                    className="w-5 h-5 rounded border-gray-300 text-amber-500 focus:ring-amber-500"
+                                />
+                                <div className="flex-1">
+                                    <span className="font-medium text-gray-800">🎭 מסעדת דמו</span>
+                                    <p className="text-xs text-gray-500 mt-0.5">מסעדה לדוגמא (לא אמיתית)</p>
+                                </div>
+                            </label>
                         </div>
                     </div>
 
