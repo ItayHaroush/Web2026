@@ -19,6 +19,8 @@ class DeliveryZone extends Model
         'tiered_fees',
         'is_active',
         'sort_order',
+        'city_radius',
+        'preview_image',
     ];
 
     protected $casts = [
@@ -28,6 +30,7 @@ class DeliveryZone extends Model
         'per_km_fee' => 'decimal:2',
         'is_active' => 'boolean',
         'sort_order' => 'integer',
+        'city_radius' => 'decimal:2',
     ];
 
     public function restaurant(): BelongsTo

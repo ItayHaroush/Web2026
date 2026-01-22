@@ -54,6 +54,10 @@ export default function LocationPickerModal({ open, onClose, onLocationSelected 
     const [fullAddress, setFullAddress] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchResults, setSearchResults] = useState([]);
+    const [searching, setSearching] = useState(false);
+    const searchTimeoutRef = useRef(null);
 
     // Get address details from coordinates
     const getAddressFromCoordinates = async (lat, lng) => {
@@ -84,6 +88,62 @@ export default function LocationPickerModal({ open, onClose, onLocationSelected 
         }
     };
 
+    // Search for addresses with debounce
+    const searchAddress = (query) => {
+        // Clear previous timeout
+        if (searchTimeoutRef.current) {
+            clearTimeout(searchTimeoutRef.current);
+        }
+
+        if (!query || query.length < 3) {
+            setSearchResults([]);
+            setSearching(false);
+            return;
+        }
+
+        setSearching(true);
+
+        // Debounce search for 500ms
+        searchTimeoutRef.current = setTimeout(async () => {
+            try {
+                const response = await fetch(
+                    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}, Israel&accept-language=he&limit=5&addressdetails=1`
+                );
+                const data = await response.json();
+                setSearchResults(data);
+            } catch (error) {
+                console.error('Search error:', error);
+                setSearchResults([]);
+            } finally {
+                setSearching(false);
+            }
+        }, 500);
+    };
+
+    const selectSearchResult = (result) => {
+        const lat = parseFloat(result.lat);
+        const lng = parseFloat(result.lon);
+        setPosition([lat, lng]);
+
+        const city = result.address?.city || result.address?.town || result.address?.village || '';
+        const road = result.address?.road || '';
+        const houseNumber = result.address?.house_number || '';
+
+        let addressParts = [];
+        if (road) {
+            addressParts.push(houseNumber ? `${road} ${houseNumber}` : road);
+        }
+        if (city) {
+            addressParts.push(city);
+        }
+
+        setCityName(city);
+        setStreet(road);
+        setFullAddress(addressParts.join(', '));
+        setSearchQuery('');
+        setSearchResults([]);
+    };
+
     useEffect(() => {
         if (open) {
             // Try to load saved location
@@ -101,7 +161,19 @@ export default function LocationPickerModal({ open, onClose, onLocationSelected 
             } catch (e) {
                 console.warn('Failed to parse saved location', e);
             }
+        } else {
+            // Reset search when modal closes
+            setSearchQuery('');
+            setSearchResults([]);
+            setSearching(false);
         }
+
+        // Cleanup timeout on unmount
+        return () => {
+            if (searchTimeoutRef.current) {
+                clearTimeout(searchTimeoutRef.current);
+            }
+        };
     }, [open]);
 
     const handleGetCurrentLocation = () => {
@@ -166,6 +238,82 @@ export default function LocationPickerModal({ open, onClose, onLocationSelected 
                             {error}
                         </div>
                     )}
+
+                    {/* שורת חיפוש */}
+                    <div className="relative">
+                        <div className="relative">
+                            <input
+                                type="text"
+                                placeholder="🔍 חפש עיר, רחוב או כתובת מלאה..."
+                                value={searchQuery}
+                                onChange={(e) => {
+                                    setSearchQuery(e.target.value);
+                                    searchAddress(e.target.value);
+                                }}
+                                onBlur={() => {
+                                    // Delay to allow clicking on results
+                                    setTimeout(() => {
+                                        setSearchResults([]);
+                                    }, 200);
+                                }}
+                                className="w-full px-4 py-3 pr-10 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary text-right transition-all"
+                            />
+                            {searching && (
+                                <div className="absolute left-3 top-1/2 -translate-y-1/2">
+                                    <div className="animate-spin h-5 w-5 border-2 border-brand-primary border-t-transparent rounded-full"></div>
+                                </div>
+                            )}
+                            {searchQuery && !searching && (
+                                <button
+                                    onClick={() => {
+                                        setSearchQuery('');
+                                        setSearchResults([]);
+                                    }}
+                                    className="absolute left-10 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xl font-bold transition-colors"
+                                    type="button"
+                                >
+                                    ✕
+                                </button>
+                            )}
+                        </div>
+
+                        {/* תוצאות חיפוש */}
+                        {searchResults.length > 0 && (
+                            <div className="absolute top-full mt-2 w-full bg-white rounded-xl shadow-2xl z-[9999] max-h-64 overflow-y-auto border-2 border-gray-100">
+                                {searchResults.map((result, index) => (
+                                    <div
+                                        key={index}
+                                        onClick={() => selectSearchResult(result)}
+                                        className="px-4 py-3 hover:bg-blue-50 cursor-pointer border-b last:border-b-0 text-right transition-all group"
+                                    >
+                                        <div className="flex items-start gap-3">
+                                            <span className="text-xl mt-0.5 group-hover:scale-110 transition-transform">📍</span>
+                                            <div className="flex-1">
+                                                <div className="text-sm font-bold text-gray-900 group-hover:text-brand-primary transition-colors">
+                                                    {result.address?.road && result.address?.house_number
+                                                        ? `${result.address.road} ${result.address.house_number}`
+                                                        : result.address?.road || result.address?.neighbourhood || 'כתובת'}
+                                                </div>
+                                                <div className="text-xs text-gray-600 mt-1 flex items-center gap-1">
+                                                    <span>📌</span>
+                                                    <span>
+                                                        {result.address?.city || result.address?.town || result.address?.village || ''}
+                                                        {result.address?.state ? `, ${result.address.state}` : ''}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {searchQuery.length >= 3 && searchResults.length === 0 && !searching && (
+                            <div className="absolute top-full mt-2 w-full bg-white rounded-xl shadow-lg p-4 text-center text-gray-500 text-sm border border-gray-200 z-[9999]">
+                                ❌ לא נמצאו תוצאות עבור "{searchQuery}"
+                            </div>
+                        )}
+                    </div>
 
                     {fullAddress && (
                         <div className="bg-blue-50 border border-blue-200 p-3 sm:p-4 rounded-xl">

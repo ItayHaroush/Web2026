@@ -242,9 +242,9 @@ export default function HomePage() {
                         </button>
 
                         {currentCityName && (
-                            <div
+                            <button
                                 onClick={() => setShowLocationModal(true)}
-                                className="inline-flex items-center gap-1.5 sm:gap-2 bg-white/90 backdrop-blur-md text-brand-dark px-3 sm:px-4 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm shadow-md font-medium cursor-pointer hover:bg-white transition-all"
+                                className="inline-flex items-center gap-1.5 sm:gap-2 backdrop-blur-md bg-white/90 text-brand-dark px-3 sm:px-4 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm hover:bg-white shadow-md font-medium transition-all cursor-pointer"
                             >
                                 <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-brand-primary" fill="currentColor" viewBox="0 0 24 24">
                                     <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
@@ -255,7 +255,7 @@ export default function HomePage() {
                                             ? `${deliveryLocation.street}, ${deliveryLocation.cityName}`
                                             : deliveryLocation?.cityName || currentCityName)}
                                 </span>
-                            </div>
+                            </button>
                         )}
                     </div>
 

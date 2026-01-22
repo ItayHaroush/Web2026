@@ -570,6 +570,7 @@ class AdminController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'city_id' => 'nullable|exists:cities,id',
+            'city_radius' => 'nullable|numeric|min:0.5|max:50',
             'polygon' => 'nullable|array|min:3',
             'polygon.*.lat' => 'required_with:polygon|numeric|between:-90,90',
             'polygon.*.lng' => 'required_with:polygon|numeric|between:-180,180',
@@ -577,6 +578,7 @@ class AdminController extends Controller
             'fixed_fee' => 'nullable|numeric|min:0|max:999.99',
             'per_km_fee' => 'nullable|numeric|min:0|max:999.99',
             'tiered_fees' => 'nullable|array',
+            'preview_image' => 'nullable|string',
             'is_active' => 'sometimes|boolean',
             'sort_order' => 'sometimes|integer|min:0',
         ]);
@@ -632,6 +634,7 @@ class AdminController extends Controller
             'restaurant_id' => $restaurant->id,
             'tenant_id' => $restaurant->tenant_id,
             'city_id' => $request->input('city_id'),
+            'city_radius' => $request->input('city_radius'),
             'name' => $request->input('name'),
             'polygon' => $request->input('polygon'),
             'pricing_type' => $pricingType,
@@ -640,6 +643,7 @@ class AdminController extends Controller
             'tiered_fees' => $request->input('tiered_fees'),
             'is_active' => $request->boolean('is_active', true),
             'sort_order' => (int) $request->input('sort_order', 0),
+            'preview_image' => $request->input('preview_image'),
         ]);
 
         return response()->json([
@@ -663,6 +667,7 @@ class AdminController extends Controller
         $request->validate([
             'name' => 'sometimes|string|max:255',
             'city_id' => 'nullable|exists:cities,id',
+            'city_radius' => 'nullable|numeric|min:0.5|max:50',
             'polygon' => 'nullable|sometimes|array|min:3',
             'polygon.*.lat' => 'required_with:polygon|numeric|between:-90,90',
             'polygon.*.lng' => 'required_with:polygon|numeric|between:-180,180',
@@ -672,6 +677,7 @@ class AdminController extends Controller
             'tiered_fees' => 'nullable|array',
             'is_active' => 'sometimes|boolean',
             'sort_order' => 'sometimes|integer|min:0',
+            'preview_image' => 'nullable|string',
         ]);
 
         $restaurant = $user->restaurant;
@@ -710,6 +716,7 @@ class AdminController extends Controller
         $payload = $request->only([
             'name',
             'city_id',
+            'city_radius',
             'polygon',
             'pricing_type',
             'fixed_fee',
@@ -717,6 +724,7 @@ class AdminController extends Controller
             'tiered_fees',
             'is_active',
             'sort_order',
+            'preview_image',
         ]);
 
         $zone->update($payload);

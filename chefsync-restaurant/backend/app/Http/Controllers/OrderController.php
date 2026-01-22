@@ -623,14 +623,22 @@ class OrderController extends Controller
 
         // Try to match zone
         foreach ($zones as $zone) {
-            // Check city-based zone
+            // Check city-based zone with dynamic radius
             if ($zone->city_id && $zone->city) {
                 $cityLat = (float) $zone->city->latitude;
                 $cityLng = (float) $zone->city->longitude;
+                $cityRadius = $zone->city_radius ?? 10; // ברירת מחדל 10 ק"מ אם לא מוגדר
                 $distanceToCity = $this->calculateDistanceKm($lat, $lng, $cityLat, $cityLng);
 
-                // Within 10km of city center = considered in city
-                if ($distanceToCity <= 10) {
+                \Log::info('City zone check', [
+                    'zone_id' => $zone->id,
+                    'zone_name' => $zone->name,
+                    'city_radius' => $cityRadius,
+                    'distance_to_city' => $distanceToCity,
+                    'is_within' => $distanceToCity <= $cityRadius
+                ]);
+
+                if ($distanceToCity <= $cityRadius) {
                     $matchedZone = $zone;
                     break;
                 }
@@ -729,13 +737,15 @@ class OrderController extends Controller
         $inside = false;
         $j = count($polygon) - 1;
         for ($i = 0; $i < count($polygon); $i++) {
-            $xi = (float) ($polygon[$i]['lat'] ?? 0);
-            $yi = (float) ($polygon[$i]['lng'] ?? 0);
-            $xj = (float) ($polygon[$j]['lat'] ?? 0);
-            $yj = (float) ($polygon[$j]['lng'] ?? 0);
+            // X = longitude (אורך - ציר אופקי), Y = latitude (רוחב - ציר אנכי)
+            $lngI = (float) ($polygon[$i]['lng'] ?? 0);
+            $latI = (float) ($polygon[$i]['lat'] ?? 0);
+            $lngJ = (float) ($polygon[$j]['lng'] ?? 0);
+            $latJ = (float) ($polygon[$j]['lat'] ?? 0);
 
-            $intersect = (($yi > $lng) !== ($yj > $lng))
-                && ($lat < ($xj - $xi) * ($lng - $yi) / (($yj - $yi) ?: 1e-9) + $xi);
+            $intersect = (($latI > $lat) !== ($latJ > $lat))
+                && ($lng < ($lngJ - $lngI) * ($lat - $latI) / (($latJ - $latI) ?: 1e-9) + $lngI);
+
             if ($intersect) {
                 $inside = !$inside;
             }
