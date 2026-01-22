@@ -204,31 +204,28 @@ export default function SuperAdminDashboard() {
                 <div className="flex gap-2 mb-4">
                     <button
                         onClick={() => setDemoFilter('all')}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                            demoFilter === 'all'
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${demoFilter === 'all'
                                 ? 'bg-brand-primary text-white shadow-md'
                                 : 'bg-white text-gray-700 hover:bg-gray-50'
-                        }`}
+                            }`}
                     >
                         הכל ({restaurants.length})
                     </button>
                     <button
                         onClick={() => setDemoFilter('demo')}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                            demoFilter === 'demo'
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${demoFilter === 'demo'
                                 ? 'bg-amber-500 text-white shadow-md'
                                 : 'bg-white text-gray-700 hover:bg-gray-50'
-                        }`}
+                            }`}
                     >
                         🎭 דמו ({restaurants.filter(r => r.is_demo).length})
                     </button>
                     <button
                         onClick={() => setDemoFilter('real')}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                            demoFilter === 'real'
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${demoFilter === 'real'
                                 ? 'bg-green-500 text-white shadow-md'
                                 : 'bg-white text-gray-700 hover:bg-gray-50'
-                        }`}
+                            }`}
                     >
                         ✅ אמיתי ({restaurants.filter(r => !r.is_demo).length})
                     </button>
@@ -253,93 +250,93 @@ export default function SuperAdminDashboard() {
                                 return true;
                             })
                             .map((restaurant) => (
-                            <div key={restaurant.id} className="bg-white rounded-2xl shadow-sm p-4 sm:p-6 hover:shadow-md transition-all">
-                                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                                    <div className="flex items-center gap-3 sm:gap-4 flex-1">
-                                        {restaurant.logo_url ? (
-                                            <img
-                                                src={resolveAssetUrl(restaurant.logo_url)}
-                                                alt={restaurant.name}
-                                                className="w-12 h-12 sm:w-16 sm:h-16 rounded-lg object-cover"
-                                            />
-                                        ) : (
-                                            <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-lg bg-brand-primary/10 flex items-center justify-center text-xl sm:text-2xl">
-                                                🍽️
-                                            </div>
-                                        )}
-                                        <div>
-                                            <h3 className="text-lg sm:text-xl font-bold">{restaurant.name}</h3>
-                                            <p className="text-xs sm:text-sm text-gray-500">
-                                                {restaurant.tenant_id}
-                                            </p>
-                                            <div className="flex flex-wrap gap-2 sm:gap-4 mt-2 text-xs sm:text-sm">
-                                                <span className="text-gray-600">📞 {restaurant.phone}</span>
-                                                {restaurant.city && (
-                                                    <span className="text-gray-600">📍 {restaurant.city}</span>
-                                                )}
-                                                <span className={`font-medium ${(restaurant.is_open_now ?? restaurant.is_open) ? 'text-green-600' : 'text-red-600'}`}>
-                                                    {(restaurant.is_open_now ?? restaurant.is_open) ? '✅ פתוח' : '❌ סגור'}
-                                                </span>
-                                                {restaurant.is_approved === false && (
-                                                    <span className="px-2 py-1 rounded-full text-xs bg-amber-100 text-amber-700 font-semibold">
-                                                        ממתין לאישור
-                                                    </span>
-                                                )}
-                                                {restaurant.is_demo && (
-                                                    <span className="px-2 py-1 rounded-full text-xs bg-amber-500 text-white font-semibold">
-                                                        🎭 דמו
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="text-right">
-                                        <div className="mb-3 sm:mb-4">
-                                            <p className="text-xs sm:text-sm text-gray-500">הכנסה</p>
-                                            <p className="text-lg sm:text-2xl font-bold text-orange-600">
-                                                ₪{Number(restaurant.total_revenue || 0).toFixed(0)}
-                                            </p>
-                                            <p className="text-xs text-gray-500">
-                                                {restaurant.orders_count} הזמנות
-                                            </p>
-                                        </div>
-                                        <div className="flex gap-2 flex-wrap justify-end">
-                                            {restaurant.is_approved === false ? (
-                                                <button
-                                                    onClick={() => approveRestaurant(restaurant.id)}
-                                                    className="px-3 py-1 text-sm rounded-lg font-medium bg-green-500 text-white hover:bg-green-600"
-                                                >
-                                                    ✅ אשר מסעדה
-                                                </button>
+                                <div key={restaurant.id} className="bg-white rounded-2xl shadow-sm p-4 sm:p-6 hover:shadow-md transition-all">
+                                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                                        <div className="flex items-center gap-3 sm:gap-4 flex-1">
+                                            {restaurant.logo_url ? (
+                                                <img
+                                                    src={resolveAssetUrl(restaurant.logo_url)}
+                                                    alt={restaurant.name}
+                                                    className="w-12 h-12 sm:w-16 sm:h-16 rounded-lg object-cover"
+                                                />
                                             ) : (
-                                                <button
-                                                    onClick={() => revokeApproval(restaurant.id)}
-                                                    className="px-3 py-1 text-sm rounded-lg font-medium bg-red-500 text-white hover:bg-red-600"
-                                                >
-                                                    🚫 בטל אישור
-                                                </button>
+                                                <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-lg bg-brand-primary/10 flex items-center justify-center text-xl sm:text-2xl">
+                                                    🍽️
+                                                </div>
                                             )}
-                                            <button
-                                                onClick={() => toggleRestaurant(restaurant.id)}
-                                                className={`px-3 py-1 text-sm rounded-lg font-medium transition-all ${(restaurant.is_open_now ?? restaurant.is_open)
-                                                    ? 'bg-red-100 text-red-700 hover:bg-red-200'
-                                                    : 'bg-green-100 text-green-700 hover:bg-green-200'
-                                                    }`}
-                                            >
-                                                {(restaurant.is_open_now ?? restaurant.is_open) ? 'סגור' : 'פתח'}
-                                            </button>
-                                            <button
-                                                onClick={() => deleteRestaurant(restaurant.id)}
-                                                className="px-3 py-1 text-sm rounded-lg font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-all"
-                                            >
-                                                🗑️ מחק
-                                            </button>
+                                            <div>
+                                                <h3 className="text-lg sm:text-xl font-bold">{restaurant.name}</h3>
+                                                <p className="text-xs sm:text-sm text-gray-500">
+                                                    {restaurant.tenant_id}
+                                                </p>
+                                                <div className="flex flex-wrap gap-2 sm:gap-4 mt-2 text-xs sm:text-sm">
+                                                    <span className="text-gray-600">📞 {restaurant.phone}</span>
+                                                    {restaurant.city && (
+                                                        <span className="text-gray-600">📍 {restaurant.city}</span>
+                                                    )}
+                                                    <span className={`font-medium ${(restaurant.is_open_now ?? restaurant.is_open) ? 'text-green-600' : 'text-red-600'}`}>
+                                                        {(restaurant.is_open_now ?? restaurant.is_open) ? '✅ פתוח' : '❌ סגור'}
+                                                    </span>
+                                                    {restaurant.is_approved === false && (
+                                                        <span className="px-2 py-1 rounded-full text-xs bg-amber-100 text-amber-700 font-semibold">
+                                                            ממתין לאישור
+                                                        </span>
+                                                    )}
+                                                    {restaurant.is_demo && (
+                                                        <span className="px-2 py-1 rounded-full text-xs bg-amber-500 text-white font-semibold">
+                                                            🎭 דמו
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="text-right">
+                                            <div className="mb-3 sm:mb-4">
+                                                <p className="text-xs sm:text-sm text-gray-500">הכנסה</p>
+                                                <p className="text-lg sm:text-2xl font-bold text-orange-600">
+                                                    ₪{Number(restaurant.total_revenue || 0).toFixed(0)}
+                                                </p>
+                                                <p className="text-xs text-gray-500">
+                                                    {restaurant.orders_count} הזמנות
+                                                </p>
+                                            </div>
+                                            <div className="flex gap-2 flex-wrap justify-end">
+                                                {restaurant.is_approved === false ? (
+                                                    <button
+                                                        onClick={() => approveRestaurant(restaurant.id)}
+                                                        className="px-3 py-1 text-sm rounded-lg font-medium bg-green-500 text-white hover:bg-green-600"
+                                                    >
+                                                        ✅ אשר מסעדה
+                                                    </button>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => revokeApproval(restaurant.id)}
+                                                        className="px-3 py-1 text-sm rounded-lg font-medium bg-red-500 text-white hover:bg-red-600"
+                                                    >
+                                                        🚫 בטל אישור
+                                                    </button>
+                                                )}
+                                                <button
+                                                    onClick={() => toggleRestaurant(restaurant.id)}
+                                                    className={`px-3 py-1 text-sm rounded-lg font-medium transition-all ${(restaurant.is_open_now ?? restaurant.is_open)
+                                                        ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                                                        : 'bg-green-100 text-green-700 hover:bg-green-200'
+                                                        }`}
+                                                >
+                                                    {(restaurant.is_open_now ?? restaurant.is_open) ? 'סגור' : 'פתח'}
+                                                </button>
+                                                <button
+                                                    onClick={() => deleteRestaurant(restaurant.id)}
+                                                    className="px-3 py-1 text-sm rounded-lg font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-all"
+                                                >
+                                                    🗑️ מחק
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                        ))}
+                            ))}
                     </div>
                 )}
 
