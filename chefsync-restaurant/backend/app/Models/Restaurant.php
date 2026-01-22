@@ -33,6 +33,7 @@ class Restaurant extends Model
         'longitude',
         'is_open',
         'is_approved',
+        'is_demo',
         'has_delivery',
         'has_pickup',
         'is_override_status',
@@ -68,6 +69,7 @@ class Restaurant extends Model
     protected $casts = [
         'is_open' => 'boolean',
         'is_approved' => 'boolean',
+        'is_demo' => 'boolean',
         'has_delivery' => 'boolean',
         'has_pickup' => 'boolean',
         'is_override_status' => 'boolean',

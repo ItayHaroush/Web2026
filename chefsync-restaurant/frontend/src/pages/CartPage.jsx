@@ -9,6 +9,7 @@ import orderService from '../services/orderService';
 import { UI_TEXT } from '../constants/ui';
 import DeliveryDetailsModal from '../components/DeliveryDetailsModal';
 import { isValidIsraeliMobile } from '../utils/phone';
+import apiClient from '../services/apiClient';
 
 /**
  * עמוד סל קניות
@@ -28,6 +29,16 @@ export default function CartPage() {
     const [deliveryFee, setDeliveryFee] = useState(0);
     const [deliveryZoneAvailable, setDeliveryZoneAvailable] = useState(true);
     const [checkingZone, setCheckingZone] = useState(false);
+    const [restaurant, setRestaurant] = useState(null);
+
+    // Fetch restaurant info
+    React.useEffect(() => {
+        if (tenantId) {
+            apiClient.get(`/restaurants/by-tenant/${encodeURIComponent(tenantId)}`)
+                .then(response => setRestaurant(response.data?.data))
+                .catch(err => console.error('Failed to load restaurant:', err));
+        }
+    }, [tenantId]);
 
     React.useEffect(() => {
         // Load saved delivery location
@@ -225,6 +236,23 @@ export default function CartPage() {
                     }}
                 />
                 <h1 className="text-3xl font-bold text-brand-primary">סל קניות</h1>
+
+                {/* באנר דמו */}
+                {restaurant?.is_demo && (
+                    <div className="bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 border-2 border-amber-400 rounded-2xl p-4 shadow-lg">
+                        <div className="flex items-center gap-3">
+                            <div className="bg-amber-500 rounded-full p-3 animate-pulse">
+                                <span className="text-2xl">🎭</span>
+                            </div>
+                            <div className="flex-1">
+                                <h3 className="font-bold text-amber-900 text-lg mb-1">הזמנה להמחשה</h3>
+                                <p className="text-sm text-amber-800">
+                                    זוהי הזמנת דמו - <strong>אין צורך באימות טלפון</strong>. כל השלבים מסומלצים.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {error && (
                     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">

@@ -50,6 +50,7 @@ class RestaurantController extends Controller
             'latitude' => $latitude,
             'longitude' => $longitude,
             'is_approved' => (bool) ($restaurant->is_approved ?? false),
+            'is_demo' => (bool) ($restaurant->is_demo ?? false),
             'is_open' => (bool) $restaurant->is_open,
             'is_override_status' => (bool) ($restaurant->is_override_status ?? false),
             'is_open_now' => (bool) ($restaurant->is_open_now ?? false),
