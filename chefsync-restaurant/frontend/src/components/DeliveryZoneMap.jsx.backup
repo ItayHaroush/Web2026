@@ -1,7 +1,6 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { MapContainer, TileLayer, useMap } from 'react-leaflet';
 import L from 'leaflet';
-import leafletImage from 'leaflet-image';
 import 'leaflet/dist/leaflet.css';
 
 const normalizeBounds = (bounds) => {
@@ -25,25 +24,17 @@ function MapController({ onMapReady }) {
     return null;
 }
 
-export default function DeliveryZoneMap({ center, polygon, onPolygonChange, selectedCity, cityRadius, onRadiusChange, onMapCaptured }) {
+export default function DeliveryZoneMap({ center, polygon, onPolygonChange, selectedCity }) {
     const mapRef = useRef(null);
     const featureGroupRef = useRef(null);
     const cityMarkerRef = useRef(null);
     const drawHandlerRef = useRef(null);
-    const canvasRendererRef = useRef(null);
     const [mapCenter, setMapCenter] = useState(center);
     const lastCityIdRef = useRef(null);
-    const [localRadius, setLocalRadius] = useState(cityRadius || 5);
 
     useEffect(() => {
         setMapCenter(center);
     }, [center]);
-
-    useEffect(() => {
-        if (cityRadius) {
-            setLocalRadius(cityRadius);
-        }
-    }, [cityRadius]);
 
     useEffect(() => {
         if (!navigator.geolocation) {
@@ -89,20 +80,13 @@ export default function DeliveryZoneMap({ center, polygon, onPolygonChange, sele
 
             console.log('✅ Creating city circle at:', cityLatLng);
 
-            // Create canvas renderer if not exists
-            if (!canvasRendererRef.current) {
-                canvasRendererRef.current = L.canvas({ padding: 0.5 });
-            }
-
             // Create circle marker for city
-            const radiusInMeters = localRadius * 1000; // המרה מק"מ למטרים - חישוב מדויק 1:1
             const circle = L.circle(cityLatLng, {
                 color: '#3b82f6',
                 fillColor: '#3b82f6',
                 fillOpacity: 0.2,
-                radius: radiusInMeters,
-                weight: 2,
-                renderer: canvasRendererRef.current
+                radius: 5000, // 5km radius
+                weight: 2
             });
 
             circle.addTo(map);
@@ -117,13 +101,8 @@ export default function DeliveryZoneMap({ center, polygon, onPolygonChange, sele
         }
 
         // Cleanup only runs when component unmounts
-    }, [selectedCity?.id, selectedCity?.latitude, selectedCity?.longitude, localRadius]);
-    const handleRadiusChange = (newRadius) => {
-        setLocalRadius(newRadius);
-        if (onRadiusChange) {
-            onRadiusChange(newRadius);
-        }
-    };
+    }, [selectedCity?.id, selectedCity?.latitude, selectedCity?.longitude]);
+
     // יצירת featureGroup חד פעמית - פשוט ונקי
     useEffect(() => {
         const map = mapRef.current;
@@ -169,11 +148,6 @@ export default function DeliveryZoneMap({ center, polygon, onPolygonChange, sele
         group.clearLayers();
 
         if (Array.isArray(polygon) && polygon.length === 4) {
-            // Create canvas renderer if not exists
-            if (!canvasRendererRef.current) {
-                canvasRendererRef.current = L.canvas({ padding: 0.5 });
-            }
-
             const bounds = [
                 [polygon[0].lat, polygon[0].lng],
                 [polygon[2].lat, polygon[2].lng]
@@ -182,8 +156,7 @@ export default function DeliveryZoneMap({ center, polygon, onPolygonChange, sele
                 color: '#3b82f6',
                 fillColor: '#3b82f6',
                 fillOpacity: 0.3,
-                weight: 2,
-                renderer: canvasRendererRef.current
+                weight: 2
             });
             group.addLayer(rect);
             console.log('✅ polygon נוצר על המפה');
@@ -224,19 +197,13 @@ export default function DeliveryZoneMap({ center, polygon, onPolygonChange, sele
             startLatLng = e.latlng;
             map.dragging.disable();
 
-            // Create canvas renderer if not exists
-            if (!canvasRendererRef.current) {
-                canvasRendererRef.current = L.canvas({ padding: 0.5 });
-            }
-
             // יצירת מלבן זמני
             tempRect = L.rectangle([startLatLng, startLatLng], {
                 color: '#3b82f6',
                 fillColor: '#3b82f6',
                 fillOpacity: 0.3,
                 weight: 2,
-                dashArray: '5, 5',
-                renderer: canvasRendererRef.current
+                dashArray: '5, 5'
             }).addTo(map);
             console.log('🖱️ התחלת ציור');
         };
@@ -263,8 +230,7 @@ export default function DeliveryZoneMap({ center, polygon, onPolygonChange, sele
                     color: '#3b82f6',
                     fillColor: '#3b82f6',
                     fillOpacity: 0.3,
-                    weight: 2,
-                    renderer: canvasRendererRef.current
+                    weight: 2
                 });
 
                 // וודא שה-featureGroup עדיין קיים
@@ -310,44 +276,6 @@ export default function DeliveryZoneMap({ center, polygon, onPolygonChange, sele
         onPolygonChange([]);
     };
 
-    // Capture map as image
-    const captureMapImage = useCallback(() => {
-        if (!mapRef.current) return null;
-
-        const map = mapRef.current;
-
-        return new Promise((resolve, reject) => {
-            // המתן קצת כדי שכל השכבות יעובדו ויצוירו
-            setTimeout(() => {
-                // כפה רענון של המפה
-                map.invalidateSize();
-
-                // המתן עוד רגע קצר לאחר הרענון
-                setTimeout(() => {
-                    leafletImage(map, (err, canvas) => {
-                        if (err) {
-                            console.error('Map capture error:', err);
-                            reject(err);
-                            return;
-                        }
-
-                        // Convert to base64
-                        const base64Image = canvas.toDataURL('image/jpeg', 0.8);
-                        console.log('✅ Map captured successfully with all layers');
-                        resolve(base64Image);
-                    });
-                }, 100);
-            }, 100);
-        });
-    }, []);
-
-    // Expose function to parent via callback
-    useEffect(() => {
-        if (onMapCaptured) {
-            onMapCaptured(captureMapImage);
-        }
-    }, [captureMapImage, onMapCaptured]);
-
     return (
         <MapContainer
             center={mapCenter}
@@ -376,26 +304,6 @@ export default function DeliveryZoneMap({ center, polygon, onPolygonChange, sele
                     >
                         נקה
                     </button>
-                    {selectedCity && (
-                        <div className="mt-2 px-2 py-2 bg-white rounded text-xs">
-                            <label className="block text-gray-700 font-medium mb-1">רדיוס מעגל (ק״מ)</label>
-                            <input
-                                type="range"
-                                min="1"
-                                max="20"
-                                step="0.5"
-                                value={localRadius}
-                                onChange={(e) => handleRadiusChange(Number(e.target.value))}
-                                className="w-full"
-                            />
-                            <div className="text-center font-bold text-brand-primary mt-1">
-                                {localRadius} ק״מ
-                            </div>
-                            <div className="text-xs text-gray-500 text-center mt-1">
-                                רדיוס מדויק: {(localRadius * 1000).toFixed(0)} מטר
-                            </div>
-                        </div>
-                    )}
                 </div>
             </div>
         </MapContainer>

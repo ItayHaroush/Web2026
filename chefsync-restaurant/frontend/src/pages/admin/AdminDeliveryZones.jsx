@@ -7,6 +7,7 @@ import DeliveryZoneMap from '../../components/DeliveryZoneMap';
 const emptyForm = {
     name: '',
     city_id: '',
+    city_radius: 5,
     pricing_type: 'fixed',
     fixed_fee: '0',
     per_km_fee: '',
@@ -25,6 +26,7 @@ export default function AdminDeliveryZones() {
     const [modalOpen, setModalOpen] = useState(false);
     const [editZone, setEditZone] = useState(null);
     const [form, setForm] = useState(emptyForm);
+    const [captureMapFunction, setCaptureMapFunction] = useState(null);
 
     // שומר על אותו אובייקט עיר כל עוד city_id לא השתנה
     const selectedCity = useMemo(() => {
@@ -82,6 +84,7 @@ export default function AdminDeliveryZones() {
         setForm({
             name: zone.name || '',
             city_id: zone.city_id || '',
+            city_radius: zone.city_radius || 5,
             pricing_type: zone.pricing_type || 'fixed',
             fixed_fee: zone.fixed_fee ?? '0',
             per_km_fee: zone.per_km_fee ?? '',
@@ -139,9 +142,20 @@ export default function AdminDeliveryZones() {
             }
         }
 
+        // Capture map preview
+        let previewImage = null;
+        if (captureMapFunction) {
+            try {
+                previewImage = await captureMapFunction();
+            } catch (error) {
+                console.error('Failed to capture map:', error);
+            }
+        }
+
         const payload = {
             name: form.name,
             city_id: form.city_id || null,
+            city_radius: form.city_id ? Number(form.city_radius) : null,
             pricing_type: form.pricing_type,
             // תמיד שולחים 0 ולא null כדי למנוע שגיאות SQL
             fixed_fee: form.pricing_type === 'fixed' ? Number(form.fixed_fee || 0) : 0,
@@ -149,6 +163,7 @@ export default function AdminDeliveryZones() {
             tiered_fees: form.pricing_type === 'tiered' ? tieredFees : null,
             polygon: polygon, // null או מערך עם לפחות נקודה אחת
             is_active: Boolean(form.is_active),
+            preview_image: previewImage,
         };
 
         try {
@@ -210,6 +225,15 @@ export default function AdminDeliveryZones() {
                 ) : (
                     zones.map((zone) => (
                         <div key={zone.id} className="bg-white rounded-2xl shadow-sm p-4 space-y-3">
+                            {zone.preview_image && (
+                                <div className="w-full h-32 rounded-lg overflow-hidden border border-gray-200 mb-2">
+                                    <img
+                                        src={zone.preview_image}
+                                        alt={`Preview of ${zone.name}`}
+                                        className="w-full h-full object-cover"
+                                    />
+                                </div>
+                            )}
                             <div className="flex items-start justify-between">
                                 <div>
                                     <h3 className="font-semibold text-gray-800">{zone.name}</h3>
@@ -362,6 +386,9 @@ export default function AdminDeliveryZones() {
                                     polygon={form.polygon}
                                     onPolygonChange={handlePolygonChange}
                                     selectedCity={selectedCity}
+                                    cityRadius={form.city_radius}
+                                    onRadiusChange={(radius) => setForm({ ...form, city_radius: radius })}
+                                    onMapCaptured={(fn) => setCaptureMapFunction(() => fn)}
                                 />
                             </div>
 
