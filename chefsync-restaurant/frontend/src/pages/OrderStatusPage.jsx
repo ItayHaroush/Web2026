@@ -81,7 +81,7 @@ export default function OrderStatusPage() {
 
         setPrecheckPassed(true);
     }, [orderId, urlTenantId]);
-// Fetch restaurant info
+    // Fetch restaurant info
     useEffect(() => {
         if (urlTenantId) {
             apiClient.get(`/restaurants/by-tenant/${encodeURIComponent(urlTenantId)}`)
@@ -90,7 +90,7 @@ export default function OrderStatusPage() {
         }
     }, [urlTenantId]);
 
-    
+
     const loadOrder = useCallback(async ({ withLoading = false } = {}) => {
         if (!orderId || !urlTenantId || !precheckPassed) {
             return;
