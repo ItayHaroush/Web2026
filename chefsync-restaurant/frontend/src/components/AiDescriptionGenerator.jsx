@@ -78,8 +78,8 @@ const AiDescriptionGenerator = ({ menuItem, onDescriptionGenerated }) => {
                         disabled={!canGenerate}
                         className={`
                             group flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300
-                            ${!canGenerate 
-                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                            ${!canGenerate
+                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                                 : 'bg-white border border-purple-200 text-purple-700 hover:bg-purple-50 hover:shadow-md hover:border-purple-300 active:scale-95'
                             }
                         `}
@@ -112,8 +112,8 @@ const AiDescriptionGenerator = ({ menuItem, onDescriptionGenerated }) => {
                         <div className="flex-1">
                             <p className="font-semibold mb-1">{error}</p>
                             {error.includes('קרדיטים') && (
-                                <a 
-                                    href="/admin/paywall" 
+                                <a
+                                    href="/admin/paywall"
                                     className="inline-flex items-center gap-1 mt-2 text-xs text-purple-600 hover:text-purple-800 font-medium underline"
                                 >
                                     <span>שדרג לחבילת Pro</span>
@@ -139,21 +139,21 @@ const AiDescriptionGenerator = ({ menuItem, onDescriptionGenerated }) => {
                                 <span className="text-sm font-bold">הצעה מה-AI</span>
                             </div>
                             <div className="flex gap-1">
-                                <button 
+                                <button
                                     onClick={() => setIsEditing(!isEditing)}
                                     className="p-1.5 hover:bg-white/20 rounded-lg transition-colors"
                                     title="ערוך לפני שמירה"
                                 >
                                     <FaEdit size={14} />
                                 </button>
-                                <button 
+                                <button
                                     onClick={() => handleGenerate(true)}
                                     className="p-1.5 hover:bg-white/20 rounded-lg transition-colors"
                                     title="נסה שוב"
                                 >
                                     <FaRedo size={14} />
                                 </button>
-                                <button 
+                                <button
                                     onClick={() => setGeneratedDescription(null)}
                                     className="p-1.5 hover:bg-white/20 rounded-lg transition-colors"
                                     title="סגור"

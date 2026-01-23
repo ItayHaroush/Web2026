@@ -47,7 +47,7 @@ const AiInsightsPanel = () => {
     return (
         <div className="bg-white rounded-2xl shadow-sm border border-purple-100 overflow-hidden transition-all duration-300">
             {/* Header / Toggle Area */}
-            <div 
+            <div
                 onClick={toggleOpen}
                 className={`
                     p-4 flex items-center justify-between cursor-pointer 
@@ -89,7 +89,7 @@ const AiInsightsPanel = () => {
                             <FaSync size={14} />
                         </button>
                     )}
-                    
+
                     <div className={`
                         p-1 text-gray-400 transition-transform duration-300
                         ${isOpen ? 'rotate-180 text-purple-600' : ''}
@@ -105,7 +105,7 @@ const AiInsightsPanel = () => {
                 ${isOpen ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0'}
             `}>
                 <div className="p-6 bg-gradient-to-b from-white to-purple-50/30">
-                    
+
                     {loading ? (
                         <div className="space-y-4 animate-pulse">
                             <div className="h-20 bg-gray-100 rounded-xl"></div>
