@@ -5,6 +5,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { CustomerLayout } from '../layouts/CustomerLayout';
+import { FaMask } from 'react-icons/fa';
 import orderService from '../services/orderService';
 import { UI_TEXT } from '../constants/ui';
 import DeliveryDetailsModal from '../components/DeliveryDetailsModal';
@@ -242,7 +243,7 @@ export default function CartPage() {
                     <div className="bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 border-2 border-amber-400 rounded-2xl p-4 shadow-lg">
                         <div className="flex items-center gap-3">
                             <div className="bg-amber-500 rounded-full p-3 animate-pulse">
-                                <span className="text-2xl">🎭</span>
+                                <FaMask className="text-2xl text-white" />
                             </div>
                             <div className="flex-1">
                                 <h3 className="font-bold text-amber-900 text-lg mb-1">הזמנה להמחשה</h3>

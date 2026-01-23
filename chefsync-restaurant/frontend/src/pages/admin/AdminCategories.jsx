@@ -2,6 +2,21 @@ import { useState, useEffect } from 'react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import AdminLayout from '../../layouts/AdminLayout';
 import api from '../../services/apiClient';
+import { FaChevronDown, FaChevronUp, FaSmile, FaSearch } from 'react-icons/fa';
+
+const COMMON_EMOJIS = ['🍕', '🍔', '🍟', '🌭', '🥪', '🌮', '🌯', '🥗', '🍝', '🍜', '🍱', '🍣', '🥩', '🍗', '🍖', '🐟', '🍷', '🍺', '🥤', '☕', '🍰', '🍦', '🍧', '🍩', '🥦', '🍇', '🍉', '🥐', '🍳', '🧀'];
+const EXTENDED_EMOJIS = [
+    // פירות וירקות
+    '🍏', '🍎', '🍐', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓', '🫐', '🍈', '🍒', '🍑', '🥭', '🍍', '🥥', '🥝', '🍅', '🍆', '🥑', '🥦', '🥬', '🥒', '🌶️', '🫑', '🌽', '🥕', '🫒', '🧄', '🧅', '🥔', '🍠',
+    // מאפים ומתוקים
+    '🥐', '🥯', '🍞', '🥖', '🥨', '🥞', '🧇', '🧀', '🍖', '🍗', '🥩', '🥓', '🍔', '🍟', '🍕', '🌭', '🥪', '🌮', '🌯', '🫔', '🥙', '🧆', '🥚', '🍳', '🥘', '🍲', '🫕', '🥣', '🥗', '🍿', '🧈', '🧂', '🥫',
+    // ארוחות
+    '🍱', '🍘', '🍙', '🍚', '🍛', '🍜', '🍝', '🍠', '🍢', '🍣', '🍤', '🍥', '🥮', '🍡', '🥟', '🥠', '🥡', '🦀', '🦞', '🦐', '🦑', '🦪',
+    // קינוחים
+    '🍦', '🍧', '🍨', '🍩', '🍪', '🎂', '🍰', '🧁', '🥧', '🍫', '🍬', '🍭', '🍮', '🍯', '🍼', '🥛', '☕', '🫖', '🍵', '🍶', '🍾', '🍷', '🍸', '🍹', '🍺', '🍻', '🥂', '🥃', '🥤', '🧋', '🧃', '🧉', '🧊',
+    // אחר
+    '🥢', '🍽️', '🍴', '🥄'
+];
 
 export default function AdminCategories() {
     const { getAuthHeaders, isManager } = useAdminAuth();
@@ -10,6 +25,8 @@ export default function AdminCategories() {
     const [showModal, setShowModal] = useState(false);
     const [editCategory, setEditCategory] = useState(null);
     const [form, setForm] = useState({ name: '', description: '', icon: '📂', dish_type: 'both' });
+    const [showIconPicker, setShowIconPicker] = useState(false);
+    const [showAllIcons, setShowAllIcons] = useState(false);
 
     useEffect(() => {
         fetchCategories();
@@ -63,6 +80,8 @@ export default function AdminCategories() {
     const openNew = () => {
         setEditCategory(null);
         setForm({ name: '', description: '', icon: '📂', dish_type: 'both' });
+        setShowIconPicker(false);
+        setShowAllIcons(false);
         setShowModal(true);
     };
 
@@ -179,13 +198,59 @@ export default function AdminCategories() {
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">אייקון (Emoji)</label>
-                                <input
-                                    type="text"
-                                    value={form.icon}
-                                    onChange={(e) => setForm({ ...form, icon: e.target.value })}
-                                    maxLength={4}
-                                    className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary"
-                                />
+                                <div className="space-y-2">
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="text"
+                                            value={form.icon}
+                                            onChange={(e) => setForm({ ...form, icon: e.target.value })}
+                                            maxLength={4}
+                                            className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary text-center text-2xl"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowIconPicker(!showIconPicker)}
+                                            className={`px-4 rounded-xl border transition-colors flex items-center justify-center text-xl ${showIconPicker ? 'bg-brand-primary text-white border-brand-primary' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
+                                                }`}
+                                            title="בחר אייקון"
+                                        >
+                                            {showIconPicker ? <FaChevronUp /> : <FaSmile />}
+                                        </button>
+                                    </div>
+
+                                    {showIconPicker && (
+                                        <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 animate-fadeIn">
+                                            <div className="flex justify-between items-center mb-2">
+                                                <p className="text-xs text-gray-500 font-medium">בחר אייקון מהרשימה:</p>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowAllIcons(!showAllIcons)}
+                                                    className="text-xs text-brand-primary font-bold hover:underline"
+                                                >
+                                                    {showAllIcons ? 'הצג פחות' : 'הצג הכל (+100)'}
+                                                </button>
+                                            </div>
+
+                                            <div className="max-h-48 overflow-y-auto custom-scrollbar">
+                                                <div className="grid grid-cols-6 sm:grid-cols-8 gap-2">
+                                                    {(showAllIcons ? EXTENDED_EMOJIS : COMMON_EMOJIS).map((emoji, index) => (
+                                                        <button
+                                                            key={`${emoji}-${index}`}
+                                                            type="button"
+                                                            onClick={() => setForm({ ...form, icon: emoji })}
+                                                            className={`h-9 w-9 flex items-center justify-center text-xl rounded-lg transition-all ${form.icon === emoji
+                                                                    ? 'bg-brand-primary text-white shadow-md transform scale-110'
+                                                                    : 'bg-white hover:bg-gray-100 border border-gray-200 shadow-sm'
+                                                                }`}
+                                                        >
+                                                            {emoji}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">סוג הגשה</label>

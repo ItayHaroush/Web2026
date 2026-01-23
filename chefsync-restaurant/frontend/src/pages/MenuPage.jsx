@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { FaWhatsapp, FaPhoneAlt } from 'react-icons/fa';
+import { FaWhatsapp, FaPhoneAlt, FaMask } from 'react-icons/fa';
 import { SiWaze } from 'react-icons/si';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
@@ -194,7 +194,7 @@ export default function MenuPage() {
             {restaurant?.is_demo && (
                 <div className="mb-6 p-4 bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-400 rounded-2xl shadow-lg">
                     <div className="flex items-start gap-3">
-                        <span className="text-3xl">🎭</span>
+                        <FaMask className="text-3xl text-orange-500" />
                         <div className="flex-1">
                             <h3 className="font-bold text-amber-900 mb-1">מסעדה לדוגמא</h3>
                             <p className="text-sm text-amber-800">
