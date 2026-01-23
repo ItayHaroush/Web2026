@@ -93,6 +93,8 @@ export const normalizeCartItem = (rawItem) => {
         unitPrice,
         totalPrice: Number((unitPrice * qty).toFixed(2)),
         imageUrl: rawItem.imageUrl ?? rawItem.image_url ?? null,
+        restaurantId: rawItem.restaurantId ?? rawItem.restaurant_id ?? null,
+        restaurantName: rawItem.restaurantName ?? rawItem.restaurant_name ?? null,
     };
 };
 

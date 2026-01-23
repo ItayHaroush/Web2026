@@ -97,6 +97,10 @@ export default function MenuPage() {
             const currentRestaurant = response.data?.data || null;
             console.log('🏪 Restaurant loaded:', currentRestaurant?.name, 'Logo:', currentRestaurant?.logo_url);
             setRestaurant(currentRestaurant);
+            // שמור את שם המסעדה ל-localStorage לשימוש בסל
+            if (currentRestaurant?.name) {
+                localStorage.setItem(`restaurant_name_${effectiveTenantId}`, currentRestaurant.name);
+            }
         } catch (err) {
             console.error('שגיאה בטעינת מידע מסעדה:', err);
         }
