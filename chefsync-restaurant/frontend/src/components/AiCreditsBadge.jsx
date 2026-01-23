@@ -68,18 +68,18 @@ const AiCreditsBadge = ({ detailed = false }) => {
         if (isLowCredits) return 'yellow';
         return 'purple';
     };
-    
+
     const theme = getThemeColor();
 
     return (
-        <div 
+        <div
             className={`
                 bg-white rounded-2xl border transition-all duration-300 overflow-hidden
                 ${isOpen ? 'shadow-md border-gray-200' : 'shadow-sm border-gray-100 hover:border-gray-300'}
             `}
         >
             {/* Header - Always visible, Click to toggle */}
-            <div 
+            <div
                 onClick={() => setIsOpen(!isOpen)}
                 className="p-4 flex items-center justify-between cursor-pointer select-none bg-white relative z-10"
             >
@@ -90,7 +90,7 @@ const AiCreditsBadge = ({ detailed = false }) => {
                     `}>
                         <FaMagic size={18} />
                     </div>
-                    
+
                     <div>
                         <div className="flex items-center gap-2">
                             <h3 className="font-bold text-gray-800">ניצולת AI</h3>
@@ -98,11 +98,11 @@ const AiCreditsBadge = ({ detailed = false }) => {
                                 {tierNames[credits.tier]}
                             </span>
                         </div>
-                        
+
                         {/* Compact Stats for Header */}
                         <div className="flex items-center gap-2 mt-1">
                             <div className="w-24 h-2 bg-gray-100 rounded-full overflow-hidden">
-                                <div 
+                                <div
                                     className={`h-full rounded-full transition-all duration-500
                                         ${theme === 'red' ? 'bg-red-500' : theme === 'yellow' ? 'bg-yellow-500' : 'bg-purple-500'}
                                     `}
@@ -136,9 +136,9 @@ const AiCreditsBadge = ({ detailed = false }) => {
                         <div className="w-full bg-gray-100 rounded-full h-4 overflow-hidden shadow-inner">
                             <div
                                 className={`h-full transition-all duration-700
-                                    ${theme === 'red' ? 'bg-gradient-to-r from-red-500 to-red-600' : 
-                                      theme === 'yellow' ? 'bg-gradient-to-r from-yellow-500 to-orange-500' : 
-                                      'bg-gradient-to-r from-purple-500 to-indigo-500'}
+                                    ${theme === 'red' ? 'bg-gradient-to-r from-red-500 to-red-600' :
+                                        theme === 'yellow' ? 'bg-gradient-to-r from-yellow-500 to-orange-500' :
+                                            'bg-gradient-to-r from-purple-500 to-indigo-500'}
                                 `}
                                 style={{ width: `${Math.min(percentageUsed, 100)}%` }}
                             />
@@ -195,9 +195,9 @@ const AiCreditsBadge = ({ detailed = false }) => {
                                         {Object.entries(stats.by_feature).map(([feature, data]) => (
                                             <div key={feature} className="flex justify-between items-center text-xs">
                                                 <span className="text-gray-500">
-                                                    {feature === 'description_generator' ? 'תיאורי מנות' : 
-                                                     feature === 'dashboard_insights' ? 'תובנות עסקיות' :
-                                                     feature === 'price_recommendations' ? 'המלצות מחיר' : feature}
+                                                    {feature === 'description_generator' ? 'תיאורי מנות' :
+                                                        feature === 'dashboard_insights' ? 'תובנות עסקיות' :
+                                                            feature === 'price_recommendations' ? 'המלצות מחיר' : feature}
                                                 </span>
                                                 <span className="bg-gray-100 px-2 py-0.5 rounded text-gray-700 font-medium">
                                                     {data.count}

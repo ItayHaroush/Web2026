@@ -61,7 +61,7 @@ class CopilotService
 
         try {
             $prompt = $this->buildDescriptionPrompt($menuItemData);
-            
+
             // Add random seed to prompt for variety in mock responses
             $promptWithVariety = $prompt . "\n\n[Request ID: " . time() . "-" . rand(1000, 9999) . "]";
             $response = $this->callCopilot($promptWithVariety);
@@ -220,18 +220,18 @@ class CopilotService
         preg_match('/שם המנה: (.+?)\\n/', $prompt, $nameMatches);
         preg_match('/מחיר: ₪(\d+(?:\.\d+)?)/', $prompt, $priceMatches);
         preg_match('/קטגוריה: (.+?)\\n/', $prompt, $categoryMatches);
-        
+
         $itemName = $nameMatches[1] ?? 'פריט תפריט';
         $price = isset($priceMatches[1]) ? (float)$priceMatches[1] : 0;
         $category = $categoryMatches[1] ?? '';
-        
+
         $isVegan = str_contains($prompt, 'טבעונים');
         $isVegetarian = str_contains($prompt, 'צמחונים');
         $hasAllergens = str_contains($prompt, 'אלרגנים:');
 
         // Smart description based on context
         $description = $this->buildSmartDescription($itemName, $price, $category, $isVegan, $isVegetarian);
-        
+
         // Add allergen warning if needed
         if ($hasAllergens) {
             $description .= " מומלץ לבדוק עם הצוות לגבי אלרגנים.";
@@ -247,13 +247,13 @@ class CopilotService
     {
         $name = trim($name);
         $lowerName = mb_strtolower($name);
-        
+
         // Price-based adjectives
         $priceLevel = $price > 50 ? 'premium' : ($price > 30 ? 'mid' : 'budget');
-        
+
         // Category-specific templates
         $templates = [];
-        
+
         // Pizza templates
         if (str_contains($lowerName, 'פיצ') || str_contains($category, 'פיצ')) {
             $templates = [
@@ -318,7 +318,7 @@ class CopilotService
                 "{$name} עם שילוב מושלם של טעמים וטקסטורות. אחת המנות האהובות על הלקוחות שלנו!",
             ];
         }
-        
+
         // Add vegan/vegetarian note
         $description = $templates[array_rand($templates)];
         if ($isVegan) {
@@ -326,12 +326,12 @@ class CopilotService
         } elseif ($isVegetarian) {
             $description .= " 🥗 צמחוני.";
         }
-        
+
         // Add premium note for expensive items
         if ($priceLevel === 'premium') {
             $description = str_replace('!', ' - ברמה פרימיום!', $description);
         }
-        
+
         return $description;
     }
 
@@ -344,7 +344,7 @@ class CopilotService
         preg_match('/הזמנות השבוע: (\d+)/', $prompt, $ordersThisWeek);
         preg_match('/הזמנות שבוע שעבר: (\d+)/', $prompt, $ordersLastWeek);
         preg_match('/שינוי: ([+-]?\d+(?:\.\d+)?)%/', $prompt, $growth);
-        
+
         $thisWeek = isset($ordersThisWeek[1]) ? (int)$ordersThisWeek[1] : 0;
         $lastWeek = isset($ordersLastWeek[1]) ? (int)$ordersLastWeek[1] : 0;
         $growthPct = isset($growth[1]) ? (float)$growth[1] : 0;
@@ -352,7 +352,7 @@ class CopilotService
         // Extract popular items
         preg_match_all('/- (.+?): (\d+) הזמנות/', $prompt, $popularMatches);
         $topItem = $popularMatches[1][0] ?? 'פיצה מרגריטה';
-        
+
         // Extract peak hours
         preg_match_all('/- שעה (\d+):00: (\d+) הזמנות/', $prompt, $hourMatches);
         $peakHour = $hourMatches[1][0] ?? '12';
@@ -393,7 +393,7 @@ class CopilotService
     private function generateRecommendations(float $growth, int $orders, string $topItem): array
     {
         $recommendations = [];
-        
+
         if ($growth < 0) {
             $recommendations[] = "הפעילו מבצע 'המבורגר + משקה' במחיר מיוחד למשיכת לקוחות";
             $recommendations[] = "שלחו SMS ללקוחות קיימים עם קופון הנחה 15%";
@@ -407,7 +407,7 @@ class CopilotService
             $recommendations[] = "שקלו תפריט ארוחת צהריים מהירה (ביזנס לאנץ') למשיכת קהל עובדים";
             $recommendations[] = "הפעילו תוכנית נאמנות - 'קנה 5 קבל אחת חינם' משפרת שימור לקוחות";
         }
-        
+
         return $recommendations;
     }
 
@@ -982,18 +982,18 @@ PROMPT;
         $prompt .= "פרטי המנה:\n";
         $prompt .= "שם: {$name}\n";
         $prompt .= "קטגוריה: {$categoryName}\n";
-        
+
         if ($description) {
             $prompt .= "תיאור: {$description}\n";
         }
-        
+
         if ($currentPrice !== null) {
             $prompt .= "מחיר נוכחי: ₪{$currentPrice}\n";
         }
 
         $prompt .= "\nניתוח שוק:\n";
         $prompt .= "כמות פריטים דומים בקטגוריה: {$marketData['item_count']}\n";
-        
+
         if ($marketData['item_count'] > 0) {
             $prompt .= "מחיר ממוצע: ₪{$marketData['avg_price']}\n";
             $prompt .= "טווח מחירים: ₪{$marketData['min_price']} - ₪{$marketData['max_price']}\n\n";
@@ -1051,7 +1051,7 @@ PROMPT;
 
         // Fallback: use average price or simple calculation
         $recommendedPrice = $marketData['avg_price'];
-        
+
         if ($recommendedPrice == 0) {
             // No market data, suggest a default
             $recommendedPrice = 35.00;
@@ -1060,7 +1060,7 @@ PROMPT;
         return [
             'recommended_price' => round($recommendedPrice, 2),
             'confidence' => 'low',
-            'reasoning' => $marketData['item_count'] > 0 
+            'reasoning' => $marketData['item_count'] > 0
                 ? "המחיר מבוסס על ממוצע של {$marketData['item_count']} פריטים דומים בקטגוריה"
                 : "לא נמצאו פריטים דומים, המחיר המוצע הוא אומדן ראשוני",
             'factors' => [
