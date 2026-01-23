@@ -7,6 +7,7 @@ import LocationPickerModal from '../components/LocationPickerModal';
 import logo from '../images/ChefSyncLogoIcon.png';
 import { resolveAssetUrl } from '../utils/assets';
 import { PRODUCT_BYLINE_HE, PRODUCT_NAME } from '../constants/brand';
+import { FaRocket, FaUserShield, FaMobileAlt, FaMask } from 'react-icons/fa';
 
 /**
  * עמוד בית - בחירת מסעדה מרשימה
@@ -27,6 +28,36 @@ export default function HomePage() {
     const [showLocationModal, setShowLocationModal] = useState(false);
     const [deliveryLocation, setDeliveryLocation] = useState(null);
     const navigate = useNavigate();
+
+    // Feature Carousel Logic
+    const [activeFeature, setActiveFeature] = useState(0);
+    const features = [
+        {
+            icon: FaRocket,
+            title: "מהיר ופשוט",
+            description: "הזמנה ב-3 קליקים בלבד, בלי הרשמה מסובכת",
+            colors: "from-orange-400 to-red-500"
+        },
+        {
+            icon: FaUserShield,
+            title: "פרטיות מלאה",
+            description: "ללא מידע אישי מיותר - רק שם וטלפון",
+            colors: "from-blue-500 to-indigo-600"
+        },
+        {
+            icon: FaMobileAlt,
+            title: "בכל מכשיר",
+            description: "עיצוב רספונסיבי שעובד מושלם בכל מסך",
+            colors: "from-emerald-400 to-teal-500"
+        }
+    ];
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setActiveFeature(prev => (prev + 1) % features.length);
+        }, 3000);
+        return () => clearInterval(interval);
+    }, []);
 
     // טען מיקום שמור למשלוח
     useEffect(() => {
@@ -380,7 +411,7 @@ export default function HomePage() {
                                     {/* תג דמו */}
                                     {restaurant.is_demo && (
                                         <div className="absolute bottom-3 left-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white px-4 py-2 rounded-full text-xs font-bold shadow-xl border-2 border-white">
-                                            🎭 מסעדה לדוגמא
+                                            <FaMask className="inline-block ml-1" /> מסעדה לדוגמא
                                         </div>
                                     )}
 
@@ -433,27 +464,33 @@ export default function HomePage() {
                 {/* יתרונות - סגנון Wolt */}
                 <div className="mt-16 pt-10 border-t border-gray-100">
                     <h3 className="text-2xl font-bold text-brand-dark text-center mb-8">למה {PRODUCT_NAME}?</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                        <div className="bg-gradient-to-br from-brand-primary/5 to-brand-secondary/5 rounded-2xl p-6 text-center hover:shadow-lg transition-all duration-300 border border-brand-primary/10">
-                            <div className="w-16 h-16 bg-brand-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                                <span className="text-3xl">⚡</span>
+
+                    <div className="max-w-md mx-auto px-4">
+                        <div className="group relative p-8 bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 border border-gray-100 overflow-hidden transform hover:-translate-y-1 min-h-[260px] flex flex-col items-center justify-center">
+                            <div className="absolute inset-0 bg-gradient-to-br from-brand-primary/5 to-brand-secondary/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+
+                            <div className={`relative w-16 h-16 mb-6 rounded-2xl bg-gradient-to-br ${features[activeFeature].colors} flex items-center justify-center shadow-lg mx-auto transition-all duration-500`}>
+                                {React.createElement(features[activeFeature].icon, { className: "text-2xl text-white" })}
                             </div>
-                            <h4 className="font-bold text-brand-dark mb-2 text-lg">מהיר ופשוט</h4>
-                            <p className="text-sm text-gray-500">הזמנה ב-3 קליקים בלבד, בלי הרשמה מסובכת</p>
+
+                            <h4 className="relative text-xl font-bold text-gray-900 mb-3 text-center transition-all duration-300">
+                                {features[activeFeature].title}
+                            </h4>
+                            <p className="relative text-gray-600 leading-relaxed text-center transition-all duration-300">
+                                {features[activeFeature].description}
+                            </p>
                         </div>
-                        <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-6 text-center hover:shadow-lg transition-all duration-300 border border-green-100">
-                            <div className="w-16 h-16 bg-green-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                                <span className="text-3xl">🔒</span>
-                            </div>
-                            <h4 className="font-bold text-brand-dark mb-2 text-lg">פרטיות מלאה</h4>
-                            <p className="text-sm text-gray-500">ללא מידע אישי מיותר - רק שם וטלפון</p>
-                        </div>
-                        <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-2xl p-6 text-center hover:shadow-lg transition-all duration-300 border border-purple-100">
-                            <div className="w-16 h-16 bg-purple-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                                <span className="text-3xl">📱</span>
-                            </div>
-                            <h4 className="font-bold text-brand-dark mb-2 text-lg">בכל מכשיר</h4>
-                            <p className="text-sm text-gray-500">עיצוב רספונסיבי שעובד מושלם בכל מסך</p>
+
+                        <div className="flex justify-center gap-2 mt-6">
+                            {features.map((_, index) => (
+                                <button
+                                    key={index}
+                                    onClick={() => setActiveFeature(index)}
+                                    className={`h-2 rounded-full transition-all duration-300 ${index === activeFeature ? 'w-8 bg-brand-primary' : 'w-2 bg-gray-300'
+                                        }`}
+                                    aria-label={`Go to feature ${index + 1}`}
+                                />
+                            ))}
                         </div>
                     </div>
 

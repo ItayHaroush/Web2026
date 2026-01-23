@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import AdminLayout from '../../layouts/AdminLayout';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import api from '../../services/apiClient';
+import { FaPlus } from 'react-icons/fa';
 
 export default function AdminSalads() {
     const { getAuthHeaders, isManager } = useAdminAuth();
@@ -193,7 +194,7 @@ export default function AdminSalads() {
         <AdminLayout>
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-800">➕ תוספות</h1>
+                    <h1 className="text-2xl font-bold text-gray-800"><FaPlus className="inline ml-2" /> תוספות</h1>
                     <p className="text-gray-500">{salads.length} תוספות מוגדרות במסעדה</p>
                 </div>
                 {isManager() && (
@@ -201,7 +202,7 @@ export default function AdminSalads() {
                         onClick={() => openModal()}
                         className="bg-brand-primary text-white px-6 py-3 rounded-xl font-medium hover:bg-brand-dark transition-colors flex items-center gap-2"
                     >
-                        ➕ הוסף תוספת
+                        <FaPlus className="inline ml-2" /> הוסף תוספת
                     </button>
                 )}
             </div>

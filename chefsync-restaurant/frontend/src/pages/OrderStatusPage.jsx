@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { CustomerLayout } from '../layouts/CustomerLayout';
+import { FaMask } from 'react-icons/fa';
 import orderService from '../services/orderService';
 import { ORDER_STATUS, ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from '../constants/api';
 import CountdownTimer from '../components/CountdownTimer';
@@ -290,7 +291,7 @@ export default function OrderStatusPage() {
                 {restaurant?.is_demo && (
                     <div className="max-w-2xl mx-auto bg-gradient-to-r from-amber-100 to-orange-100 border-2 border-amber-400 rounded-2xl p-3 shadow-lg">
                         <div className="flex items-center justify-center gap-2">
-                            <span className="text-2xl">🎭</span>
+                            <FaMask className="text-2xl text-orange-500" />
                             <span className="font-bold text-amber-900">הזמנה להמחשה - לא אמיתית</span>
                         </div>
                     </div>
