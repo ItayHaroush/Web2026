@@ -4,6 +4,8 @@ import AdminLayout from '../../layouts/AdminLayout';
 import api from '../../services/apiClient';
 import { clearStoredFcmToken, disableFcm, getStoredFcmToken, listenForegroundMessages, requestFcmToken } from '../../services/fcm';
 import { PRODUCT_NAME } from '../../constants/brand';
+import AiCreditsBadge from '../../components/AiCreditsBadge';
+import AiInsightsPanel from '../../components/AiInsightsPanel';
 
 export default function AdminDashboard() {
     const { getAuthHeaders, isOwner, isManager } = useAdminAuth();
@@ -281,6 +283,16 @@ export default function AdminDashboard() {
                         </div>
                     </div>
                 </div>
+            </div>
+
+            {/* AI Credits Section */}
+            <div className="mb-6">
+                <AiCreditsBadge detailed={canViewRevenue} />
+            </div>
+
+            {/* AI Insights Section */}
+            <div className="mb-6">
+                <AiInsightsPanel />
             </div>
 
             {/* הזמנות אחרונות */}
