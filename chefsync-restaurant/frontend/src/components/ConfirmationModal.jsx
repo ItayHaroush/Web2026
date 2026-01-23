@@ -7,11 +7,11 @@ const ConfirmationModal = ({ isOpen, title, message, onConfirm, onCancel, confir
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             {/* Backdrop */}
-            <div 
-                className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity" 
+            <div
+                className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
                 onClick={onCancel}
             />
-            
+
             {/* Modal Content */}
             <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 transform transition-all scale-100">
                 <div className="flex flex-col items-center text-center">

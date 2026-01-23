@@ -25,7 +25,7 @@ export function CartProvider({ children }) {
     const { addToast } = useToast();
     const [currentTenantId, setCurrentTenantId] = useState(null);
     const [phoneVerified, setPhoneVerified] = useState(false);
-    
+
     // State for Confirmation Modal
     const [pendingItem, setPendingItem] = useState(null);
     const [confirmationModal, setConfirmationModal] = useState({
@@ -157,16 +157,16 @@ export function CartProvider({ children }) {
 
         // בדיקה אם הסל מכיל מוצרים ממסעדה אחרת
         const currentTenant = localStorage.getItem('tenantId');
-        
+
         // קבל את ה-restaurant ID של הפריט החדש (עדיפות למה שנשלח בפריט, אחרת tenantId הנוכחי)
         const newItemRestaurant = normalizedItem.restaurantId || currentTenant;
-        
+
         // בדוק אם יש פריטים בסל ואם כן, קבל את ה-restaurant ID של הפריט הראשון
         let firstItemRestaurant = null;
         if (cartItems.length > 0) {
             firstItemRestaurant = cartItems[0].restaurantId || currentTenant;
         }
-        
+
         console.log('🛒 Cart Check:', {
             cartItemsCount: cartItems.length,
             firstItemRestaurant,
@@ -180,7 +180,7 @@ export function CartProvider({ children }) {
             // קבל את שמות המסעדות
             const oldRestaurantName = cartItems[0]?.restaurantName || localStorage.getItem(`restaurant_name_${firstItemRestaurant}`) || 'מסעדה קודמת';
             const newRestaurantName = normalizedItem.restaurantName || localStorage.getItem(`restaurant_name_${newItemRestaurant}`) || 'מסעדה חדשה';
-            
+
             setPendingItem(normalizedItem);
             setConfirmationModal({
                 isOpen: true,
@@ -206,13 +206,13 @@ export function CartProvider({ children }) {
         commitCartItems([]);
         setCustomerInfo(createEmptyCustomerInfo());
         setPhoneVerified(false);
-        
+
         // הוסף את הפריט החדש לסל הריק
         if (pendingItem) {
             processAddItem(pendingItem);
             addToast(`הסל נוקה - עברת ל${confirmationModal.newRestaurantName} 🎉`, 'success');
         }
-        
+
         closeModal();
     };
 
