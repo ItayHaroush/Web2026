@@ -149,6 +149,11 @@ export default function MenuItemModal({
         if (!canSubmit) {
             return;
         }
+        
+        // Get the current tenant/restaurant ID and name
+        const currentRestaurantId = localStorage.getItem('tenantId');
+        const currentRestaurantName = localStorage.getItem(`restaurant_name_${currentRestaurantId}`);
+        
         onAdd({
             menuItemId: item.id,
             name: item.name,
@@ -157,6 +162,8 @@ export default function MenuItemModal({
             addons: normalizedAddons,
             qty,
             imageUrl: item.image_url,
+            restaurantId: currentRestaurantId,
+            restaurantName: currentRestaurantName,
         });
         onClose();
     };

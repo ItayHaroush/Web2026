@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { useToast } from './ToastContext';
 import { normalizeCartItem, normalizeCartItems } from '../utils/cart';
+import ConfirmationModal from '../components/ConfirmationModal';
 
 /**
  * Context להנהלת סל קניות
@@ -24,6 +25,16 @@ export function CartProvider({ children }) {
     const { addToast } = useToast();
     const [currentTenantId, setCurrentTenantId] = useState(null);
     const [phoneVerified, setPhoneVerified] = useState(false);
+    
+    // State for Confirmation Modal
+    const [pendingItem, setPendingItem] = useState(null);
+    const [confirmationModal, setConfirmationModal] = useState({
+        isOpen: false,
+        title: '',
+        message: '',
+        newRestaurantName: '',
+        oldRestaurantName: ''
+    });
 
     const [cartItems, setCartItems] = useState(() => {
         const tenantId = localStorage.getItem('tenantId');
@@ -111,13 +122,8 @@ export function CartProvider({ children }) {
         }
     }, [commitCartItems, currentTenantId]);
 
-    const addToCart = useCallback((rawItem) => {
-        const normalizedItem = normalizeCartItem(rawItem);
-        if (!normalizedItem) {
-            console.warn('Attempted to add invalid cart item', rawItem);
-            return;
-        }
-
+    // Internal function to actually add the item to state
+    const processAddItem = useCallback((normalizedItem) => {
         commitCartItems((prevItems) => {
             const existingIndex = prevItems.findIndex((item) => item.cartKey === normalizedItem.cartKey);
 
@@ -141,6 +147,84 @@ export function CartProvider({ children }) {
         const variantLabel = normalizedItem.variant?.name ? ` (${normalizedItem.variant.name})` : '';
         addToast(`${normalizedItem.name || 'פריט'}${variantLabel} נוסף לסל!`, 'success');
     }, [commitCartItems, addToast]);
+
+    const addToCart = useCallback((rawItem) => {
+        const normalizedItem = normalizeCartItem(rawItem);
+        if (!normalizedItem) {
+            console.warn('Attempted to add invalid cart item', rawItem);
+            return;
+        }
+
+        // בדיקה אם הסל מכיל מוצרים ממסעדה אחרת
+        const currentTenant = localStorage.getItem('tenantId');
+        
+        // קבל את ה-restaurant ID של הפריט החדש (עדיפות למה שנשלח בפריט, אחרת tenantId הנוכחי)
+        const newItemRestaurant = normalizedItem.restaurantId || currentTenant;
+        
+        // בדוק אם יש פריטים בסל ואם כן, קבל את ה-restaurant ID של הפריט הראשון
+        let firstItemRestaurant = null;
+        if (cartItems.length > 0) {
+            firstItemRestaurant = cartItems[0].restaurantId || currentTenant;
+        }
+        
+        console.log('🛒 Cart Check:', {
+            cartItemsCount: cartItems.length,
+            firstItemRestaurant,
+            newItemRestaurant,
+            currentTenant,
+            rawItem: { name: rawItem.name, restaurantId: rawItem.restaurantId, restaurant_id: rawItem.restaurant_id }
+        });
+
+        // אם יש מוצרים ממסעדה שונה - הצג מודל אישור
+        if (cartItems.length > 0 && firstItemRestaurant && newItemRestaurant && firstItemRestaurant !== newItemRestaurant) {
+            // קבל את שמות המסעדות
+            const oldRestaurantName = cartItems[0]?.restaurantName || localStorage.getItem(`restaurant_name_${firstItemRestaurant}`) || 'מסעדה קודמת';
+            const newRestaurantName = normalizedItem.restaurantName || localStorage.getItem(`restaurant_name_${newItemRestaurant}`) || 'מסעדה חדשה';
+            
+            setPendingItem(normalizedItem);
+            setConfirmationModal({
+                isOpen: true,
+                title: 'החלפת מסעדה',
+                message: `הסל שלך מכיל מוצרים מ${oldRestaurantName}\nהאם תרצה למחוק אותם ולהמשיך עם ${newRestaurantName}?`,
+                oldRestaurantName,
+                newRestaurantName
+            });
+            return;
+        }
+
+        processAddItem(normalizedItem);
+    }, [commitCartItems, addToast, cartItems, processAddItem]);
+
+    const handleConfirmClearCart = () => {
+        // נקה סל ועבור למסעדה החדשה
+        const tenantId = localStorage.getItem('tenantId');
+        if (tenantId) {
+            localStorage.removeItem(`cart_${tenantId}`);
+            localStorage.removeItem(`cart_timestamp_${tenantId}`);
+            localStorage.removeItem(`customer_info_${tenantId}`);
+        }
+        commitCartItems([]);
+        setCustomerInfo(createEmptyCustomerInfo());
+        setPhoneVerified(false);
+        
+        // הוסף את הפריט החדש לסל הריק
+        if (pendingItem) {
+            processAddItem(pendingItem);
+            addToast(`הסל נוקה - עברת ל${confirmationModal.newRestaurantName} 🎉`, 'success');
+        }
+        
+        closeModal();
+    };
+
+    const handleCancelClearCart = () => {
+        addToast(`הפריט לא נוסף - הסל נשאר עם ${confirmationModal.oldRestaurantName}`, 'info');
+        closeModal();
+    };
+
+    const closeModal = () => {
+        setConfirmationModal(prev => ({ ...prev, isOpen: false }));
+        setPendingItem(null);
+    };
 
     const removeFromCart = useCallback((identifier) => {
         commitCartItems((prevItems) =>
@@ -221,6 +305,15 @@ export function CartProvider({ children }) {
     return (
         <CartContext.Provider value={value}>
             {children}
+            <ConfirmationModal
+                isOpen={confirmationModal.isOpen}
+                title={confirmationModal.title}
+                message={confirmationModal.message}
+                onConfirm={handleConfirmClearCart}
+                onCancel={handleCancelClearCart}
+                confirmText={`כן, עבור ל${confirmationModal.newRestaurantName}`}
+                cancelText="לא, ביטול"
+            />
         </CartContext.Provider>
     );
 }
