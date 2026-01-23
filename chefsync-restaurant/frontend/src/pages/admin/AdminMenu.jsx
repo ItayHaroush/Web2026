@@ -4,6 +4,8 @@ import { useRestaurantStatus } from '../../context/RestaurantStatusContext';
 import AdminLayout from '../../layouts/AdminLayout';
 import api from '../../services/apiClient';
 import { resolveAssetUrl } from '../../utils/assets';
+import AiDescriptionGenerator from '../../components/AiDescriptionGenerator';
+import AiPriceRecommender from '../../components/AiPriceRecommender';
 
 export default function AdminMenu() {
     const { getAuthHeaders, isManager } = useAdminAuth();
@@ -263,11 +265,11 @@ export default function AdminMenu() {
                     return filteredItems.map((item) => (
                         <div
                             key={item.id}
-                            className={`bg-white rounded-2xl shadow-sm overflow-hidden ${!item.is_available ? 'opacity-60' : ''
+                            className={`bg-white rounded-2xl shadow-sm ${!item.is_available ? 'opacity-60' : ''
                                 }`}
                         >
                             {/* תמונה */}
-                            <div className="h-40 bg-gray-100 relative">
+                            <div className="h-40 bg-gray-100 relative rounded-t-2xl overflow-hidden">
                                 {item.image_url ? (
                                     <img
                                         src={resolveAssetUrl(item.image_url)}
@@ -381,11 +383,26 @@ export default function AdminMenu() {
                                     onChange={(e) => setForm({ ...form, description: e.target.value })}
                                     rows={3}
                                     className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                                    placeholder="תיאור המנה - או השתמש במחולל התיאורים החכם למטה"
                                 />
+
+                                {/* AI Description Generator */}
+                                <div className="mt-3">
+                                    <AiDescriptionGenerator
+                                        menuItem={{
+                                            name: form.name,
+                                            price: form.price,
+                                            category_name: categories.find(c => c.id === parseInt(form.category_id))?.name || '',
+                                        }}
+                                        onDescriptionGenerated={(description) => {
+                                            setForm({ ...form, description });
+                                        }}
+                                    />
+                                </div>
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
-                                <div>
+                                <div className="space-y-2">
                                     <label className="block text-sm font-medium text-gray-700 mb-1">מחיר (₪)</label>
                                     <input
                                         type="number"
@@ -395,6 +412,19 @@ export default function AdminMenu() {
                                         onChange={(e) => setForm({ ...form, price: e.target.value })}
                                         required
                                         className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                                    />
+                                    {/* AI Price Recommender */}
+                                    <AiPriceRecommender
+                                        itemData={{
+                                            name: form.name,
+                                            category_id: form.category_id,
+                                            category_name: categories.find(c => c.id == form.category_id)?.name || '',
+                                            description: form.description,
+                                            price: form.price,
+                                        }}
+                                        onPriceRecommended={(recommendedPrice) => {
+                                            setForm({ ...form, price: recommendedPrice.toString() });
+                                        }}
                                     />
                                 </div>
 

@@ -86,7 +86,7 @@ Route::prefix('super-admin')->middleware(['auth:sanctum', 'super_admin'])->group
 // ============================================
 // פאנל ניהול - Admin Routes
 // ============================================
-Route::prefix('admin')->middleware(['auth:sanctum'])->group(function () {
+Route::prefix('admin')->middleware(['auth:sanctum', 'tenant'])->group(function () {
     // סטטוס מנוי + תשלום - זמין גם אם פג הניסיון
     Route::get('/subscription/status', [AdminController::class, 'subscriptionStatus'])->name('admin.subscription.status');
     Route::post('/subscription/activate', [AdminController::class, 'activateSubscription'])->name('admin.subscription.activate');
@@ -94,6 +94,22 @@ Route::prefix('admin')->middleware(['auth:sanctum'])->group(function () {
     Route::middleware(\App\Http\Middleware\CheckRestaurantAccess::class)->group(function () {
         // דשבורד
         Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard');
+
+        // ============================================
+        // AI Features - Description Generator & More
+        // ============================================
+        Route::prefix('ai')->group(function () {
+            Route::post('/generate-description', [\App\Http\Controllers\AiController::class, 'generateDescription'])
+                ->name('admin.ai.generate-description');
+            Route::get('/credits', [\App\Http\Controllers\AiController::class, 'getCreditsStatus'])
+                ->name('admin.ai.credits');
+            Route::get('/usage-stats', [\App\Http\Controllers\AiController::class, 'getUsageStats'])
+                ->name('admin.ai.usage-stats');
+            Route::get('/dashboard-insights', [\App\Http\Controllers\AiController::class, 'getDashboardInsights'])
+                ->name('admin.ai.dashboard-insights');
+            Route::post('/recommend-price', [\App\Http\Controllers\AiController::class, 'recommendPrice'])
+                ->name('admin.ai.recommend-price');
+        });
 
         // ניהול מסעדה
         Route::get('/restaurant', [AdminController::class, 'getRestaurant'])->name('admin.restaurant.get');

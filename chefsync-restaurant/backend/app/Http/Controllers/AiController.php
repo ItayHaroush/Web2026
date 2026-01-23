@@ -1,0 +1,286 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Services\CopilotService;
+use App\Models\Restaurant;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+
+class AiController extends Controller
+{
+    /**
+     * Generate description for menu item
+     * 
+     * POST /admin/ai/generate-description
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function generateDescription(Request $request)
+    {
+        try {
+            // Validate request
+            $validated = $request->validate([
+                'name' => 'required|string|max:255',
+                'price' => 'required|numeric|min:0',
+                'category' => 'nullable|string',
+                'allergens' => 'nullable|array',
+                'is_vegetarian' => 'nullable|boolean',
+                'is_vegan' => 'nullable|boolean',
+                'force_regenerate' => 'nullable|boolean',
+            ]);
+
+            $tenantId = app('tenant_id');
+            $restaurant = Restaurant::where('tenant_id', $tenantId)->firstOrFail();
+            $user = auth()->user();
+
+            // Check if Copilot is enabled
+            if (!config('copilot.enabled')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'פיצ\'ר AI אינו זמין כרגע',
+                ], 503);
+            }
+
+            // Initialize Copilot Service
+            $copilot = new CopilotService($tenantId, $restaurant, $user);
+
+            // Generate description (bypass cache if regenerating)
+            $forceRegenerate = $validated['force_regenerate'] ?? false;
+            $result = $copilot->generateDescription($validated, $forceRegenerate);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'תיאור נוצר בהצלחה',
+                'data' => $result,
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'שגיאה בנתונים שהוזנו',
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (\Exception $e) {
+            Log::error('AI Description Generation Failed', [
+                'tenant_id' => app('tenant_id'),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            // Check for specific error types
+            if (str_contains($e->getMessage(), 'קרדיטים')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $e->getMessage(),
+                    'error_code' => 'insufficient_credits',
+                ], 402); // Payment Required
+            }
+
+            if (str_contains($e->getMessage(), 'מגבלת')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $e->getMessage(),
+                    'error_code' => 'rate_limit_exceeded',
+                ], 429); // Too Many Requests
+            }
+
+            return response()->json([
+                'success' => false,
+                'message' => 'שגיאה ביצירת תיאור. נסה שוב.',
+                'error_code' => 'generation_failed',
+            ], 500);
+        }
+    }
+
+    /**
+     * Get AI credits status
+     * 
+     * GET /admin/ai/credits
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getCreditsStatus(Request $request)
+    {
+        try {
+            $tenantId = app('tenant_id');
+            $restaurant = Restaurant::where('tenant_id', $tenantId)->firstOrFail();
+
+            $status = CopilotService::getCreditsStatus($restaurant);
+
+            return response()->json([
+                'success' => true,
+                'data' => $status,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'שגיאה בקבלת מידע על קרדיטים',
+            ], 500);
+        }
+    }
+
+    /**
+     * Get AI usage statistics
+     * 
+     * GET /admin/ai/usage-stats
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getUsageStats(Request $request)
+    {
+        try {
+            $tenantId = app('tenant_id');
+            $restaurant = Restaurant::where('tenant_id', $tenantId)->firstOrFail();
+
+            // Optional date range
+            $startDate = $request->input('start_date')
+                ? \Carbon\Carbon::parse($request->input('start_date'))
+                : now()->startOfMonth();
+            $endDate = $request->input('end_date')
+                ? \Carbon\Carbon::parse($request->input('end_date'))
+                : now()->endOfMonth();
+
+            $stats = CopilotService::getUsageStats($restaurant, $startDate, $endDate);
+
+            return response()->json([
+                'success' => true,
+                'data' => $stats,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('AI Usage Stats Failed', [
+                'tenant_id' => app('tenant_id'),
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'שגיאה בקבלת נתוני שימוש',
+            ], 500);
+        }
+    }
+
+    /**
+     * Get AI-generated dashboard insights
+     * 
+     * GET /admin/ai/dashboard-insights
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getDashboardInsights(Request $request)
+    {
+        try {
+            $tenantId = app('tenant_id');
+            $restaurant = Restaurant::where('tenant_id', $tenantId)->firstOrFail();
+            $user = auth()->user();
+
+            if (!config('copilot.enabled')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'פיצ\'ר AI אינו זמין כרגע',
+                ], 503);
+            }
+
+            // Check cache first (24 hours)
+            $cacheKey = "ai:insights:tenant:{$tenantId}:" . now()->format('Y-m-d');
+            $cached = \Cache::get($cacheKey);
+
+            if ($cached) {
+                return response()->json([
+                    'success' => true,
+                    'data' => $cached,
+                    'cached' => true,
+                ]);
+            }
+
+            // Initialize Copilot Service
+            $copilot = new CopilotService($tenantId, $restaurant, $user);
+
+            // Generate insights
+            $insights = $copilot->generateDashboardInsights();
+
+            // Cache for 24 hours
+            \Cache::put($cacheKey, $insights, 86400);
+
+            return response()->json([
+                'success' => true,
+                'data' => $insights,
+                'cached' => false,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('AI Dashboard Insights Failed', [
+                'tenant_id' => app('tenant_id'),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            // Return empty insights on error (graceful degradation)
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'insights' => [],
+                    'error' => 'לא ניתן לייצר תובנות כרגע',
+                ],
+            ]);
+        }
+    }
+
+    /**
+     * Recommend optimal price for menu item
+     * 
+     * POST /admin/ai/recommend-price
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function recommendPrice(Request $request)
+    {
+        try {
+            // Validate request
+            $validated = $request->validate([
+                'name' => 'required|string|max:255',
+                'category_id' => 'required|integer|exists:categories,id',
+                'category_name' => 'nullable|string',
+                'description' => 'nullable|string',
+                'price' => 'nullable|numeric|min:0',
+            ]);
+
+            $tenantId = app('tenant_id');
+            $restaurant = Restaurant::where('tenant_id', $tenantId)->firstOrFail();
+            $user = auth()->user();
+
+            // Check if Copilot is enabled
+            if (!config('copilot.enabled')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'פיצ\'ר AI אינו זמין כרגע',
+                ], 503);
+            }
+
+            // Initialize Copilot Service
+            $copilot = new CopilotService($tenantId, $restaurant, $user);
+
+            // Generate price recommendation
+            $recommendation = $copilot->recommendPrice($validated);
+
+            return response()->json([
+                'success' => true,
+                'data' => $recommendation,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('AI Price Recommendation Failed', [
+                'tenant_id' => app('tenant_id'),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'לא ניתן לייצר המלצת מחיר: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+}
