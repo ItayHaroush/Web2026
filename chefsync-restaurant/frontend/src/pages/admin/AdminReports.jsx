@@ -1,11 +1,11 @@
 import React from 'react';
 import AdminLayout from '../../layouts/AdminLayout';
-import { 
-    FaChartLine, 
-    FaShoppingBag, 
-    FaUsers, 
-    FaTimesCircle, 
-    FaArrowUp, 
+import {
+    FaChartLine,
+    FaShoppingBag,
+    FaUsers,
+    FaTimesCircle,
+    FaArrowUp,
     FaArrowDown,
     FaCalendarAlt,
     FaDownload,
@@ -15,34 +15,34 @@ import {
 
 export default function AdminReports() {
     const stats = [
-        { 
-            title: 'הכנסות היום', 
-            value: '₪2,450', 
-            change: '+12.5%', 
+        {
+            title: 'הכנסות היום',
+            value: '₪2,450',
+            change: '+12.5%',
             isPositive: true,
             icon: <FaMoneyBillWave />,
             color: 'emerald'
         },
-        { 
-            title: 'הזמנות היום', 
-            value: '45', 
-            change: '+5.2%', 
+        {
+            title: 'הזמנות היום',
+            value: '45',
+            change: '+5.2%',
             isPositive: true,
             icon: <FaShoppingBag />,
             color: 'blue'
         },
-        { 
-            title: 'לקוחות חדשים', 
-            value: '12', 
-            change: '+20.1%', 
+        {
+            title: 'לקוחות חדשים',
+            value: '12',
+            change: '+20.1%',
             isPositive: true,
             icon: <FaUsers />,
             color: 'purple'
         },
-        { 
-            title: 'ביטולים', 
-            value: '1', 
-            change: '-50.0%', 
+        {
+            title: 'ביטולים',
+            value: '1',
+            change: '-50.0%',
             isPositive: true, // שיפור זה ירידה בביטולים
             icon: <FaTimesCircle />,
             color: 'rose'
@@ -65,7 +65,7 @@ export default function AdminReports() {
                             ניתוח נתוני מכירות, לקוחות ופריטים פופולריים בזמן אמת
                         </p>
                     </div>
-                    
+
                     <div className="flex gap-3 w-full md:w-auto">
                         <button className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-white border border-gray-100 rounded-2xl font-black text-gray-700 hover:bg-gray-50 transition-all shadow-sm">
                             <FaCalendarAlt className="text-brand-primary" />
@@ -83,7 +83,7 @@ export default function AdminReports() {
                     {stats.map((stat, index) => (
                         <div key={index} className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
                             <div className={`absolute top-0 left-0 w-2 h-full bg-${stat.color}-500 opacity-20`} />
-                            
+
                             <div className="flex items-start justify-between mb-4">
                                 <div className={`p-3 rounded-2xl bg-${stat.color}-50 text-${stat.color}-600 group-hover:scale-110 transition-transform`}>
                                     {stat.icon}
@@ -93,7 +93,7 @@ export default function AdminReports() {
                                     {stat.change}
                                 </div>
                             </div>
-                            
+
                             <p className="text-gray-500 text-xs font-black uppercase tracking-wider mb-1">{stat.title}</p>
                             <h3 className="text-3xl font-black text-gray-900">{stat.value}</h3>
                         </div>
@@ -138,9 +138,9 @@ export default function AdminReports() {
                                             <span className="text-xs font-black text-brand-primary">142 הזמנות</span>
                                         </div>
                                         <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-                                            <div 
-                                                className="h-full bg-brand-primary transition-all duration-1000" 
-                                                style={{ width: `${100 - (i * 15)}%`, transitionDelay: `${i * 100}ms` }} 
+                                            <div
+                                                className="h-full bg-brand-primary transition-all duration-1000"
+                                                style={{ width: `${100 - (i * 15)}%`, transitionDelay: `${i * 100}ms` }}
                                             />
                                         </div>
                                     </div>

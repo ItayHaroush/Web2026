@@ -2,15 +2,15 @@ import { useState, useEffect } from 'react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import AdminLayout from '../../layouts/AdminLayout';
 import api from '../../services/apiClient';
-import { 
-    FaChevronDown, 
-    FaChevronUp, 
-    FaSmile, 
-    FaSearch, 
-    FaTags, 
-    FaPlus, 
-    FaEdit, 
-    FaTrash, 
+import {
+    FaChevronDown,
+    FaChevronUp,
+    FaSmile,
+    FaSearch,
+    FaTags,
+    FaPlus,
+    FaEdit,
+    FaTrash,
     FaFolderOpen,
     FaInfoCircle,
     FaRegEdit,
@@ -174,8 +174,8 @@ export default function AdminCategories() {
                 ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 px-4">
                         {categories.map((cat) => (
-                            <div 
-                                key={cat.id} 
+                            <div
+                                key={cat.id}
                                 className="group bg-white rounded-[3rem] shadow-sm border border-gray-100 p-10 flex flex-col gap-8 hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 relative overflow-hidden"
                             >
                                 <div className="flex items-start justify-between">
@@ -248,8 +248,8 @@ export default function AdminCategories() {
                                         <p className="text-gray-500 font-medium text-sm mt-0.5">ניהול קבוצת פריטים בתפריט</p>
                                     </div>
                                 </div>
-                                <button 
-                                    onClick={closeModal} 
+                                <button
+                                    onClick={closeModal}
                                     className="p-3 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-2xl transition-all"
                                 >
                                     <FaTimes size={24} />
@@ -298,11 +298,10 @@ export default function AdminCategories() {
                                                     <button
                                                         type="button"
                                                         onClick={() => setShowIconPicker(!showIconPicker)}
-                                                        className={`w-full py-5 rounded-[1.5rem] border-2 transition-all font-black flex items-center justify-center gap-3 text-lg ${
-                                                            showIconPicker 
-                                                                ? 'bg-brand-primary text-white border-brand-primary shadow-xl shadow-brand-primary/20' 
+                                                        className={`w-full py-5 rounded-[1.5rem] border-2 transition-all font-black flex items-center justify-center gap-3 text-lg ${showIconPicker
+                                                                ? 'bg-brand-primary text-white border-brand-primary shadow-xl shadow-brand-primary/20'
                                                                 : 'bg-white text-gray-700 border-gray-100 hover:border-brand-primary/30 hover:bg-gray-50'
-                                                        }`}
+                                                            }`}
                                                     >
                                                         {showIconPicker ? <FaChevronUp /> : <FaSmile />}
                                                         {showIconPicker ? 'סגור בוחר אייקונים' : 'בחר אייקון מהרשימה'}
@@ -333,11 +332,10 @@ export default function AdminCategories() {
                                                                         setForm({ ...form, icon: emoji });
                                                                         setShowIconPicker(false);
                                                                     }}
-                                                                    className={`h-14 w-14 flex items-center justify-center text-3xl rounded-2xl transition-all ${
-                                                                        form.icon === emoji
+                                                                    className={`h-14 w-14 flex items-center justify-center text-3xl rounded-2xl transition-all ${form.icon === emoji
                                                                             ? 'bg-brand-primary text-white shadow-xl shadow-brand-primary/30 transform scale-110 rotate-3 z-10'
                                                                             : 'bg-white hover:bg-brand-primary/5 border border-white hover:border-brand-primary/20 shadow-sm'
-                                                                    }`}
+                                                                        }`}
                                                                 >
                                                                     {emoji}
                                                                 </button>
@@ -363,11 +361,10 @@ export default function AdminCategories() {
                                                     key={type.id}
                                                     type="button"
                                                     onClick={() => setForm({ ...form, dish_type: type.id })}
-                                                    className={`group flex flex-col items-center justify-center gap-3 p-6 rounded-[2rem] border-2 transition-all duration-300 relative ${
-                                                        form.dish_type === type.id
+                                                    className={`group flex flex-col items-center justify-center gap-3 p-6 rounded-[2rem] border-2 transition-all duration-300 relative ${form.dish_type === type.id
                                                             ? 'bg-brand-primary/5 border-brand-primary text-brand-primary shadow-lg shadow-brand-primary/5'
                                                             : 'bg-gray-50 border-transparent text-gray-400 hover:bg-gray-100'
-                                                    }`}
+                                                        }`}
                                                 >
                                                     <span className={`text-4xl transition-transform duration-500 ${form.dish_type === type.id ? 'scale-110' : 'group-hover:scale-110'}`}>{type.icon}</span>
                                                     <div className="text-center">
@@ -386,16 +383,16 @@ export default function AdminCategories() {
                                 </div>
 
                                 <div className="flex gap-6 pt-10">
-                                    <button 
-                                        type="submit" 
+                                    <button
+                                        type="submit"
                                         className="flex-1 bg-brand-primary text-white py-6 rounded-[2rem] font-black text-xl hover:bg-brand-dark transition-all shadow-xl shadow-brand-primary/20 active:scale-95 flex items-center justify-center gap-4"
                                     >
                                         <FaCheckCircle size={22} />
                                         {editCategory ? 'עדכן קטגוריה' : 'צור קטגוריה'}
                                     </button>
-                                    <button 
-                                        type="button" 
-                                        onClick={closeModal} 
+                                    <button
+                                        type="button"
+                                        onClick={closeModal}
                                         className="px-12 py-6 bg-gray-100 text-gray-700 rounded-[2rem] font-black hover:bg-gray-200 transition-all active:scale-95"
                                     >
                                         ביטול
