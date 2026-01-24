@@ -32,7 +32,8 @@ class RegisterRestaurantController extends Controller
             'owner_phone' => 'required|string|max:20',
             'password' => 'required|string|min:6|confirmed',
             'password_confirmation' => 'required|string|min:6',
-            'plan_type' => 'required|in:monthly,annual',
+            'tier' => 'required|in:basic,pro',
+            'plan_type' => 'required|in:monthly,yearly,annual',
             'paid_upfront' => 'nullable|boolean',
             'verification_code' => 'required|string',
             'latitude' => 'nullable|numeric|between:-90,90',
@@ -73,20 +74,33 @@ class RegisterRestaurantController extends Controller
             $verification->save();
         }
 
-        $monthlyPrice = 600; // ILS
-        $annualPrice = 5000; // ILS
+        // מחירים דינמיים לפי tier
+        $pricing = [
+            'basic' => ['monthly' => 450, 'yearly' => 4500, 'ai_credits' => 0],
+            'pro' => ['monthly' => 600, 'yearly' => 5000, 'ai_credits' => 500, 'trial_ai_credits' => 50],
+        ];
 
+        $tier = $validated['tier'];
         $planType = $validated['plan_type'];
         $paidUpfront = (bool) ($validated['paid_upfront'] ?? false);
 
+        $monthlyPrice = $pricing[$tier]['monthly'];
+        $yearlyPrice = $pricing[$tier]['yearly'];
+        // אם Pro בניסיון (לא שילם מראש) - רק 50 credits, אחרת מלא
+        $aiCreditsMonthly = $tier === 'pro' && !$paidUpfront 
+            ? $pricing[$tier]['trial_ai_credits'] 
+            : $pricing[$tier]['ai_credits'];
+
+        // תמיכה גם ב-annual (legacy) וגם ב-yearly (חדש)
+        $isYearly = in_array($planType, ['annual', 'yearly']);
+        $chargeAmount = $isYearly ? $yearlyPrice : $monthlyPrice;
+        $monthlyFeeForTracking = $isYearly ? round($yearlyPrice / 12, 2) : $monthlyPrice;
+
         $trialEndsAt = now()->addDays(14)->endOfDay();
-        $planDurationEnd = $planType === 'annual'
+        $planDurationEnd = $isYearly
             ? $trialEndsAt->copy()->addYear()
             : $trialEndsAt->copy()->addMonth();
         $subscriptionStatus = $paidUpfront ? 'active' : 'trial';
-
-        $chargeAmount = $planType === 'annual' ? $annualPrice : $monthlyPrice;
-        $monthlyFeeForTracking = $planType === 'annual' ? round($annualPrice / 12, 2) : $monthlyPrice;
 
         $logoUrl = null;
         if ($request->hasFile('logo') && $request->file('logo')->isValid()) {
@@ -135,13 +149,15 @@ class RegisterRestaurantController extends Controller
                 'logo_url' => $logoUrl,
                 'is_open' => false,
                 'is_approved' => false,
+                'tier' => $tier,
+                'ai_credits_monthly' => $aiCreditsMonthly,
                 'subscription_status' => $subscriptionStatus,
                 'trial_ends_at' => $trialEndsAt,
-                'subscription_plan' => $planType,
+                'subscription_plan' => $isYearly ? 'yearly' : 'monthly',
                 'subscription_ends_at' => $subscriptionStatus === 'active' ? $planDurationEnd : $trialEndsAt,
                 'last_payment_at' => $paidUpfront ? now() : null,
                 'next_payment_at' => $subscriptionStatus === 'active'
-                    ? ($planType === 'annual'
+                    ? ($isYearly
                         ? $planDurationEnd->copy()->addYear()
                         : $planDurationEnd->copy()->addMonth())
                     : $trialEndsAt,
@@ -157,16 +173,30 @@ class RegisterRestaurantController extends Controller
                 'is_active' => true,
             ]);
 
+            // אתחול רשומת AI Credits
+            if ($aiCreditsMonthly > 0) {
+                \App\Models\AiCredit::create([
+                    'tenant_id' => $restaurant->tenant_id,
+                    'restaurant_id' => $restaurant->id,
+                    'tier' => $tier,
+                    'monthly_limit' => $aiCreditsMonthly,
+                    'credits_remaining' => $aiCreditsMonthly,
+                    'credits_used' => 0,
+                    'billing_cycle_start' => now()->startOfMonth(),
+                    'billing_cycle_end' => now()->endOfMonth(),
+                ]);
+            }
+
             $billingDay = now()->day > 28 ? 28 : now()->day;
             $nextCharge = $paidUpfront
-                ? ($planType === 'annual'
+                ? ($isYearly
                     ? $planDurationEnd->copy()->addYear()->startOfDay()
                     : $planDurationEnd->copy()->addMonth()->startOfDay())
                 : $trialEndsAt->copy()->startOfDay();
 
             $subscription = RestaurantSubscription::create([
                 'restaurant_id' => $restaurant->id,
-                'plan_type' => $planType,
+                'plan_type' => $isYearly ? 'yearly' : 'monthly',
                 'monthly_fee' => $monthlyFeeForTracking,
                 'billing_day' => $billingDay,
                 'currency' => 'ILS',

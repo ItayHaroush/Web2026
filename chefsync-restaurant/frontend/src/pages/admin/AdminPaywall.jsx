@@ -34,6 +34,7 @@ const PLANS = {
         monthly: 600,
         yearly: 5000,
         aiCredits: 500,
+        trialAiCredits: 50, // קרדיטים מוגבלים בניסיון
         features: [
             '✨ כל התכונות של Basic',
             '🤖 500 קרדיטים AI לחודש',
@@ -41,7 +42,8 @@ const PLANS = {
             '📊 דו"חות בזמן אמת',
             '🎯 המלצות מחיר חכמות',
             '⚡ תמיכה עדיפות'
-        ]
+        ],
+        trialNote: '* בתקופת הניסיון: 50 קרדיטים AI בלבד'
     }
 };
 
@@ -51,6 +53,8 @@ export default function AdminPaywall() {
     const [loading, setLoading] = useState(true);
     const [selectedTier, setSelectedTier] = useState('pro'); // basic or pro
     const [billingCycle, setBillingCycle] = useState('monthly'); // monthly or yearly
+    const [registeredTier, setRegisteredTier] = useState(null); // הטיר שנבחר בהרשמה
+    const [registeredPlan, setRegisteredPlan] = useState(null); // התוכנית שנבחרה בהרשמה
 
     useEffect(() => {
         try {
@@ -67,14 +71,19 @@ export default function AdminPaywall() {
                 const statusData = data?.data || {};
                 setStatus(statusData);
                 try { localStorage.removeItem('paywall_data'); } catch { }
-                // קביעת ברירת מחדל לפי התוכנית הקיימת
-                if (statusData.subscription_plan) {
-                    if (statusData.subscription_plan.includes('yearly')) {
-                        setBillingCycle('yearly');
-                    }
-                    if (statusData.subscription_plan.includes('basic')) {
-                        setSelectedTier('basic');
-                    }
+                
+                // אם יש tier בהרשמה, נעול אותו (לא ניתן לשנות)
+                const dbTier = statusData.tier || 'pro';
+                const dbPlan = statusData.subscription_plan || 'monthly';
+                
+                setRegisteredTier(dbTier);
+                setRegisteredPlan(dbPlan);
+                setSelectedTier(dbTier);
+                
+                if (dbPlan.includes('yearly') || dbPlan.includes('annual')) {
+                    setBillingCycle('yearly');
+                } else {
+                    setBillingCycle('monthly');
                 }
             } catch (error) {
                 const message = error.response?.data?.message || 'שגיאה בטעינת סטטוס מנוי';
@@ -137,6 +146,14 @@ export default function AdminPaywall() {
                 </div>
 
                 {/* Tier Selection Cards */}
+                {registeredTier && (
+                    <div className="text-center mb-4">
+                        <p className="text-sm text-gray-500 bg-blue-50 border border-blue-200 rounded-lg px-4 py-2 inline-flex items-center gap-2">
+                            <FaGift className="text-blue-500" />
+                            <span>נבחרה תוכנית <strong className="text-brand-primary">{registeredTier === 'basic' ? 'Basic' : 'Pro'}</strong> בהרשמה</span>
+                        </p>
+                    </div>
+                )}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
                     <TierCard
                         tier="basic"
@@ -147,9 +164,10 @@ export default function AdminPaywall() {
                         aiCredits={PLANS.basic.aiCredits}
                         features={PLANS.basic.features}
                         selected={selectedTier === 'basic'}
-                        onSelect={() => setSelectedTier('basic')}
+                        onSelect={() => !registeredTier && setSelectedTier('basic')}
                         icon={<FaRocket />}
                         color="from-blue-500 to-indigo-600"
+                        disabled={registeredTier && registeredTier !== 'basic'}
                     />
                     <TierCard
                         tier="pro"
@@ -159,11 +177,13 @@ export default function AdminPaywall() {
                         yearlyPrice={PLANS.pro.yearly}
                         aiCredits={PLANS.pro.aiCredits}
                         features={PLANS.pro.features}
+                        trialNote={PLANS.pro.trialNote}
                         selected={selectedTier === 'pro'}
-                        onSelect={() => setSelectedTier('pro')}
+                        onSelect={() => !registeredTier && setSelectedTier('pro')}
                         icon={<FaBrain />}
                         color="from-amber-500 to-orange-600"
                         badge="מומלץ"
+                        disabled={registeredTier && registeredTier !== 'pro'}
                     />
                 </div>
 
@@ -258,12 +278,15 @@ export default function AdminPaywall() {
 }
 
 // Tier Selection Card (Basic or Pro)
-function TierCard({ tier, title, subtitle, monthlyPrice, yearlyPrice, aiCredits, features, selected, onSelect, icon, color, badge }) {
+function TierCard({ tier, title, subtitle, monthlyPrice, yearlyPrice, aiCredits, features, selected, onSelect, icon, color, badge, disabled = false, trialNote }) {
     return (
         <button
             onClick={onSelect}
+            disabled={disabled}
             className={`relative w-full text-right bg-white rounded-3xl p-8 border-2 transition-all duration-300 ${selected
                     ? 'border-brand-primary shadow-2xl shadow-brand-primary/20 scale-105'
+                    : disabled 
+                    ? 'border-gray-200 opacity-50 cursor-not-allowed'
                     : 'border-gray-200 hover:border-brand-primary/50 hover:shadow-xl'
                 }`}
         >
@@ -296,6 +319,11 @@ function TierCard({ tier, title, subtitle, monthlyPrice, yearlyPrice, aiCredits,
                     <p className="text-brand-primary font-black text-sm text-center">
                         🤖 {aiCredits} קרדיטים AI לחודש
                     </p>
+                    {trialNote && (
+                        <p className="text-xs text-gray-500 text-center mt-2 font-medium">
+                            {trialNote}
+                        </p>
+                    )}
                 </div>
             ) : (
                 <div className="bg-gray-100 border border-gray-200 rounded-xl p-3 mb-6">
