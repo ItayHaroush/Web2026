@@ -1,13 +1,33 @@
 import { useState, useEffect } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import { useRestaurantStatus } from '../context/RestaurantStatusContext';
 import api from '../services/apiClient';
-import logo from '../images/ChefSyncLogoIcon.png';
 import { PRODUCT_NAME } from '../constants/brand';
+import DashboardSidebar from '../components/admin/DashboardSidebar';
+import DashboardHeader from '../components/admin/DashboardHeader';
+import {
+    FaChartPie,
+    FaClipboardList,
+    FaUtensils,
+    FaBreadSlice,
+    FaCarrot,
+    FaTags,
+    FaUsers,
+    FaStore,
+    FaMapMarkedAlt,
+    FaTicketAlt,
+    FaPrint,
+    FaMobileAlt,
+    FaQrcode,
+    FaDesktop,
+    FaChartBar,
+    FaShieldAlt
+} from 'react-icons/fa';
 
 export default function AdminLayout({ children }) {
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [isCollapsed, setIsCollapsed] = useState(false);
     const { user, logout, isOwner, isManager, getAuthHeaders } = useAdminAuth();
     const { restaurantStatus, setRestaurantStatus } = useRestaurantStatus();
     const location = useLocation();
@@ -47,201 +67,136 @@ export default function AdminLayout({ children }) {
     const menuItems = [
         {
             path: '/admin/dashboard',
-            icon: '📊',
+            icon: <FaChartPie />,
             label: 'דשבורד',
             show: true
         },
         {
             path: '/admin/orders',
-            icon: '📋',
+            icon: <FaClipboardList />,
             label: 'הזמנות',
             show: true
         },
         {
             path: '/admin/menu',
-            icon: '🍽️',
+            icon: <FaUtensils />,
             label: 'תפריט',
             show: isManager()
         },
         {
             path: '/admin/menu/bases',
-            icon: '🥖',
+            icon: <FaBreadSlice />,
             label: 'בסיסים',
             show: isManager()
         },
         {
             path: '/admin/menu/salads',
-            icon: '🥗',
+            icon: <FaCarrot />,
             label: 'תוספות',
             show: isManager()
         },
         {
             path: '/admin/categories',
-            icon: '📁',
+            icon: <FaTags />,
             label: 'קטגוריות',
             show: isManager()
         },
         {
             path: '/admin/employees',
-            icon: '👥',
+            icon: <FaUsers />,
             label: 'עובדים',
             show: isManager()
         },
         {
             path: '/admin/restaurant',
-            icon: '🏪',
+            icon: <FaStore />,
             label: 'פרטי מסעדה',
-            show: isManager() || isOwner()  // ← הוספנו isManager()
+            show: isManager() || isOwner()
         },
         {
             path: '/admin/delivery-zones',
-            icon: '🚚',
+            icon: <FaMapMarkedAlt />,
             label: 'אזורי משלוח',
             show: isManager()
         },
         {
             path: '/admin/terminal',
-            icon: '🖥️',
+            icon: <FaDesktop />,
             label: 'מסוף סניף',
             show: true
         },
-    ];
+        {
+            path: '/admin/coupons',
+            icon: <FaTicketAlt />,
+            label: 'קופונים',
+            show: isManager()
+        },
+        {
+            path: '/admin/printers',
+            icon: <FaPrint />,
+            label: 'מדפסות',
+            show: isManager()
+        },
+        {
+            path: '/admin/simulator',
+            icon: <FaMobileAlt />,
+            label: 'סימולטור',
+            show: isManager()
+        },
+        {
+            path: '/admin/qr-code',
+            icon: <FaQrcode />,
+            label: 'QR Code',
+            show: isManager()
+        }
+    ].filter(item => item.show);
 
-    const getRoleBadge = (role) => {
-        const badges = {
-            owner: { text: 'בעלים', color: 'bg-purple-100 text-purple-700' },
-            manager: { text: 'מנהל', color: 'bg-blue-100 text-blue-700' },
-            employee: { text: 'עובד', color: 'bg-green-100 text-green-700' },
-            delivery: { text: 'שליח', color: 'bg-orange-100 text-orange-700' },
-        };
-        return badges[role] || { text: role, color: 'bg-gray-100 text-gray-700' };
-    };
-
-    const roleBadge = getRoleBadge(user?.role);
+    const statusBadge = (
+        <div className="flex items-center gap-2">
+            <span className={`px-3 py-1 rounded-full text-xs font-bold transition-all flex items-center gap-1 shadow-sm ${restaurantStatus.is_open
+                ? 'bg-green-100 text-green-700 border border-green-200'
+                : 'bg-red-100 text-red-700 border border-red-200'
+                }`}>
+                <span className={`w-2 h-2 rounded-full ${restaurantStatus.is_open ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                {restaurantStatus.is_open ? 'פתוח' : 'סגור'}
+            </span>
+            {restaurantStatus.is_approved === false && (
+                <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700 border border-amber-200">
+                    ממתין לאישור
+                </span>
+            )}
+            {restaurantStatus.is_override && (
+                <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full font-semibold border border-yellow-200">
+                    🔒 כפוי
+                </span>
+            )}
+        </div>
+    );
 
     return (
-        <div className="min-h-screen bg-gray-50" dir="rtl">
-            {/* Sidebar - Mobile Overlay */}
-            {sidebarOpen && (
-                <div
-                    className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-                    onClick={() => setSidebarOpen(false)}
+        <div className="min-h-screen bg-gray-50 flex" dir="rtl">
+            <DashboardSidebar
+                isOpen={sidebarOpen}
+                isCollapsed={isCollapsed}
+                toggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+                toggleCollapse={() => setIsCollapsed(!isCollapsed)}
+                menuItems={menuItems}
+                onLogout={handleLogout}
+                title={PRODUCT_NAME}
+            />
+
+            <div className={`flex-1 flex flex-col min-h-screen transition-all duration-300 ${isCollapsed ? 'lg:mr-20' : 'lg:mr-72'}`}>
+                <DashboardHeader
+                    toggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+                    user={user}
+                    title={menuItems.find(item => item.path === location.pathname)?.label || 'ניהול מסעדה'}
+                    isCollapsed={isCollapsed}
+                    endContent={statusBadge}
                 />
-            )}
 
-            {/* Sidebar */}
-            <aside className={`
-                fixed top-0 right-0 h-full w-64 bg-white shadow-xl z-50
-                transform transition-transform duration-300 ease-in-out
-                ${sidebarOpen ? 'translate-x-0' : 'translate-x-full'}
-                lg:translate-x-0
-            `}>
-                {/* Logo */}
-                <div className="h-16 flex items-center justify-center border-b">
-                    <img src={logo} alt={PRODUCT_NAME} className="h-10" />
-                </div>
-
-                {/* User Info */}
-                <div className="p-4 border-b bg-gray-50">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-brand-primary rounded-full flex items-center justify-center text-white font-bold">
-                            {user?.name?.charAt(0) || '?'}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                            <p className="font-medium text-gray-900 truncate">{user?.name}</p>
-                            <span className={`text-xs px-2 py-0.5 rounded-full ${roleBadge.color}`}>
-                                {roleBadge.text}
-                            </span>
-                        </div>
-                    </div>
-                    <p className="text-sm text-gray-500 mt-2 truncate">🏪 {user?.restaurant_name}</p>
-                </div>
-
-                {/* Navigation */}
-                <nav className="p-4 space-y-1">
-                    {menuItems.filter(item => item.show).map((item) => (
-                        <Link
-                            key={item.path}
-                            to={item.path}
-                            onClick={() => setSidebarOpen(false)}
-                            className={`
-                                flex items-center gap-3 px-4 py-3 rounded-xl transition-all
-                                ${location.pathname === item.path
-                                    ? 'bg-brand-primary text-white shadow-lg'
-                                    : 'text-gray-600 hover:bg-gray-100'
-                                }
-                            `}
-                        >
-                            <span className="text-xl">{item.icon}</span>
-                            <span className="font-medium">{item.label}</span>
-                        </Link>
-                    ))}
-                </nav>
-
-                {/* Logout Button */}
-                <div className="absolute bottom-0 left-0 right-0 p-4 border-t">
-                    <button
-                        onClick={handleLogout}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-all"
-                    >
-                        <span>🚪</span>
-                        <span className="font-medium">התנתק</span>
-                    </button>
-                </div>
-            </aside>
-
-            {/* Main Content */}
-            <div className="lg:mr-64">
-                {/* Top Header */}
-                <header className="h-16 bg-white border-b flex items-center justify-between px-4 sticky top-0 z-30">
-                    <button
-                        onClick={() => setSidebarOpen(true)}
-                        className="lg:hidden p-2 hover:bg-gray-100 rounded-lg"
-                    >
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                        </svg>
-                    </button>
-
-                    <h1 className="text-lg font-bold text-gray-800">
-                        {menuItems.find(item => item.path === location.pathname)?.label || 'פאנל ניהול'}
-                    </h1>
-
-                    <div className="flex items-center gap-4">
-                        {/* סטטוס בזמן אמת */}
-                        <div className="flex items-center gap-2">
-                            <span className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${restaurantStatus.is_open
-                                ? 'bg-green-100 text-green-700'
-                                : 'bg-red-100 text-red-700'
-                                }`}>
-                                {restaurantStatus.is_open ? '✓ פתוח' : '✗ סגור'}
-                            </span>
-                            {restaurantStatus.is_approved === false && (
-                                <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700">
-                                    ממתין לאישור מנהל מערכת
-                                </span>
-                            )}
-                            {restaurantStatus.is_override && (
-                                <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full font-semibold">
-                                    🔒 כפוי
-                                </span>
-                            )}
-                        </div>
-
-                        <span className="text-sm text-gray-500 hidden sm:block">
-                            {new Date().toLocaleDateString('he-IL', {
-                                weekday: 'long',
-                                day: 'numeric',
-                                month: 'long'
-                            })}
-                        </span>
-                    </div>
-                </header>
-
-                {/* Page Content */}
-                <main className="p-4 lg:p-6">
+                <main className="flex-1 p-4 lg:p-8 mt-20 overflow-x-hidden">
                     {restaurantStatus.is_approved === false && (
-                        <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-800 shadow-sm">
+                        <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-800 shadow-sm animate-pulse-slow">
                             <div className="flex items-start gap-3">
                                 <span className="text-xl">⏳</span>
                                 <div>
@@ -251,7 +206,9 @@ export default function AdminLayout({ children }) {
                             </div>
                         </div>
                     )}
-                    {children}
+                    <div className="max-w-7xl mx-auto space-y-6">
+                        {children}
+                    </div>
                 </main>
             </div>
         </div>

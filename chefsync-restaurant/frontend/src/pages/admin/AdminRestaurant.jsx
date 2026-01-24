@@ -5,6 +5,26 @@ import AdminLayout from '../../layouts/AdminLayout';
 import api from '../../services/apiClient';
 import { resolveAssetUrl } from '../../utils/assets';
 import { QRCodeCanvas } from 'qrcode.react';
+import { 
+    FaStore, 
+    FaClock, 
+    FaMapMarkerAlt, 
+    FaPhone, 
+    FaInfoCircle, 
+    FaCheckCircle, 
+    FaTimesCircle, 
+    FaSave, 
+    FaQrcode, 
+    FaShareAlt, 
+    FaCamera, 
+    FaClipboard,
+    FaChevronDown,
+    FaChevronUp,
+    FaGlobe,
+    FaLock,
+    FaUndo,
+    FaEye
+} from 'react-icons/fa';
 
 const DAYS_OF_WEEK = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 
@@ -380,409 +400,544 @@ export default function AdminRestaurant() {
     if (!restaurant) {
         return (
             <AdminLayout>
-                <div className="p-8 text-center text-gray-500">לא נמצאו נתוני מסעדה</div>
+                <div className="p-8 text-center text-gray-500 font-bold">לא נמצאו נתוני מסעדה</div>
             </AdminLayout>
         );
     }
 
     return (
         <AdminLayout>
-            <div className="max-w-3xl mx-auto">
-                <h1 className="text-2xl font-bold text-gray-800 mb-6">🏪 פרטי מסעדה</h1>
-                <form onSubmit={save} className="bg-white rounded-2xl shadow-sm p-6 space-y-4">
-                    <div className="flex flex-col sm:flex-row gap-6">
-                        <div className="flex-1 space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">שם</label>
-                                <input
-                                    type="text"
-                                    value={restaurant.name || ''}
-                                    onChange={(e) => handleChange('name', e.target.value)}
-                                    required
-                                    className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">תיאור</label>
-                                <textarea
-                                    value={restaurant.description || ''}
-                                    onChange={(e) => handleChange('description', e.target.value)}
-                                    rows={3}
-                                    className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">משפט פתיחה בעמוד QR</label>
-                                <textarea
-                                    value={restaurant.share_incentive_text || ''}
-                                    onChange={(e) => handleChange('share_incentive_text', e.target.value)}
-                                    rows={3}
-                                    placeholder="הרעב מתחיל כאן..."
-                                    className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary"
-                                />
-                                <p className="text-xs text-gray-500 mt-1">אפשר להכניס שורות חדשות עם Enter</p>
-                            </div>
-                        </div>
-                        <div className="w-full sm:w-48">
-                            <div className="bg-gray-50 rounded-2xl p-4 text-center">
-                                {logoPreview ? (
-                                    <img src={logoPreview} alt="logo" className="w-32 h-32 object-contain mx-auto mb-2" />
-                                ) : (
-                                    <div className="w-32 h-32 mx-auto bg-white border rounded-2xl flex items-center justify-center text-3xl">🏪</div>
-                                )}
-                                <label className="block mt-3 text-sm font-medium text-brand-primary cursor-pointer">
-                                    העלאת לוגו
-                                    <input type="file" accept="image/*" className="hidden" onChange={(e) => handleLogo(e.target.files[0])} />
-                                </label>
-                            </div>
-                        </div>
+            <div className="max-w-5xl mx-auto space-y-6 pb-20 animate-in fade-in duration-500">
+                {/* Header Section */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <h1 className="text-4xl font-black text-gray-900 flex items-center gap-3">
+                            <span className="p-3 bg-brand-primary/10 rounded-2xl text-brand-primary">
+                                <FaStore size={32} />
+                            </span>
+                            פרטי מסעדה
+                        </h1>
+                        <p className="text-gray-500 mt-2 mr-16 font-medium">
+                            ניהול הגדרות בסיסיות, שעות פעילות וסטטוס פתיחה
+                        </p>
                     </div>
+                </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">טלפון</label>
-                            <input
-                                type="text"
-                                value={restaurant.phone || ''}
-                                onChange={(e) => handleChange('phone', e.target.value)}
-                                className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">כתובת</label>
-                            <input
-                                type="text"
-                                value={restaurant.address || ''}
-                                onChange={(e) => handleChange('address', e.target.value)}
-                                className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary"
-                            />
-                        </div>
-                        <div className="sm:col-span-2">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">עיר</label>
-                            <input
-                                type="text"
-                                value={restaurant.city || ''}
-                                onChange={(e) => handleChange('city', e.target.value)}
-                                className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary"
-                                disabled
-                            />
-                            <p className="text-xs text-gray-500 mt-1">עיר לא ניתנת לעריכה.</p>
-                        </div>
-                    </div>
+                <form onSubmit={save} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* Left Column: Essential Info */}
+                    <div className="lg:col-span-2 space-y-6">
+                        <section className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 p-8 hover:shadow-md transition-shadow">
+                            <div className="flex items-center gap-3 mb-6">
+                                <div className="p-2 bg-blue-50 text-blue-600 rounded-xl">
+                                    <FaInfoCircle size={20} />
+                                </div>
+                                <h3 className="text-xl font-black text-gray-900">מידע בסיסי</h3>
+                            </div>
 
-                    <div className="border-t pt-4 space-y-3">
-                        <h3 className="text-sm font-bold text-gray-700">⏱️ זמני הכנה (בדקות)</h3>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">משלוח - זמן משוער</label>
-                                <input
-                                    type="number"
-                                    min="1"
-                                    max="240"
-                                    value={restaurant.delivery_time_minutes ?? ''}
-                                    onChange={(e) => handleChange('delivery_time_minutes', e.target.value)}
-                                    className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">משלוח - כוכבית</label>
-                                <input
-                                    type="text"
-                                    value={restaurant.delivery_time_note || ''}
-                                    onChange={(e) => handleChange('delivery_time_note', e.target.value)}
-                                    placeholder="* יתכנו עיכובים"
-                                    className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">איסוף עצמי - זמן משוער</label>
-                                <input
-                                    type="number"
-                                    min="1"
-                                    max="240"
-                                    value={restaurant.pickup_time_minutes ?? ''}
-                                    onChange={(e) => handleChange('pickup_time_minutes', e.target.value)}
-                                    className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">איסוף עצמי - כוכבית</label>
-                                <input
-                                    type="text"
-                                    value={restaurant.pickup_time_note || ''}
-                                    onChange={(e) => handleChange('pickup_time_note', e.target.value)}
-                                    placeholder="* זמן הכנה עשוי להשתנות"
-                                    className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary"
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* ימי פתיחה + שעות לפי יום */}
-                    <div className="border-t pt-4 space-y-4">
-                        <h3 className="text-sm font-bold text-gray-700">📅 ימי פתיחה ושעות</h3>
-
-                        {/* שעות ברירת מחדל */}
-                        <div className="grid grid-cols-2 gap-4 sm:w-96 md:w-[28rem] items-start default-hours-row">
-                            <div>
-                                <label className="block text-sm text-gray-700 mb-1">שעת פתיחה (ברירת מחדל)</label>
-                                <input
-                                    type="time"
-                                    value={restaurant.operating_hours?.default?.open || restaurant.operating_hours?.open || '09:00'}
-                                    onChange={(e) => handleOperatingHoursChange('open', e.target.value)}
-                                    className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary time-ltr"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm text-gray-700 mb-1">שעת סגירה (ברירת מחדל)</label>
-                                <input
-                                    type="time"
-                                    value={restaurant.operating_hours?.default?.close || restaurant.operating_hours?.close || '23:00'}
-                                    onChange={(e) => handleOperatingHoursChange('close', e.target.value)}
-                                    className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary time-ltr"
-                                />
-                            </div>
-                        </div>
-
-                        {/* שעות מותאמות לפי יום */}
-                        <div className="space-y-2">
-                            {DAYS_OF_WEEK.map((day) => {
-                                const dayCfg = restaurant.operating_hours?.days?.[day] || {};
-                                const isOpenDay = restaurant.operating_days?.[day] ?? false;
-                                const panelOpen = openDayPanels[day] || false;
-                                return (
-                                    <div key={day} className="border rounded-xl p-3 bg-gray-50">
-                                        <div className="flex items-center justify-between gap-2">
-                                            <label className="flex items-center gap-2 cursor-pointer">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={isOpenDay}
-                                                    onChange={(e) => handleOperatingDaysChange(day, e.target.checked)}
-                                                    className="w-4 h-4 rounded"
-                                                />
-                                                <span className="text-sm text-gray-800" onClick={() => toggleDayPanel(day)}>
-                                                    {day}
-                                                </span>
-                                            </label>
-                                            <button
-                                                type="button"
-                                                onClick={() => toggleDayPanel(day)}
-                                                className="text-xs text-brand-primary underline"
-                                            >
-                                                {panelOpen ? 'סגור שעות' : 'הגדר שעות'}
-                                            </button>
-                                        </div>
-                                        {panelOpen && (
-                                            <div className="mt-3 grid grid-cols-2 gap-3 sm:w-80">
-                                                <div>
-                                                    <label className="block text-xs text-gray-600 mb-1">פתיחה</label>
-                                                    <input
-                                                        type="time"
-                                                        value={dayCfg.open || restaurant.operating_hours?.default?.open || '09:00'}
-                                                        onChange={(e) => handleDayHoursChange(day, 'open', e.target.value)}
-                                                        disabled={!isOpenDay}
-                                                        className="w-full px-3 py-2 border rounded-lg text-sm time-ltr"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="block text-xs text-gray-600 mb-1">סגירה</label>
-                                                    <input
-                                                        type="time"
-                                                        value={dayCfg.close || restaurant.operating_hours?.default?.close || '23:00'}
-                                                        onChange={(e) => handleDayHoursChange(day, 'close', e.target.value)}
-                                                        disabled={!isOpenDay}
-                                                        className="w-full px-3 py-2 border rounded-lg text-sm time-ltr"
-                                                    />
-                                                </div>
-                                                <label className="flex items-center gap-2 text-xs text-gray-600 col-span-2">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={!!dayCfg.closed || !isOpenDay}
-                                                        onChange={(e) => handleDayHoursChange(day, 'closed', e.target.checked)}
-                                                        className="w-4 h-4"
-                                                    />
-                                                    סגור ביום זה (גובר על שעות)
-                                                </label>
-                                            </div>
-                                        )}
+                            <div className="space-y-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-black text-gray-700 mr-1 flex items-center gap-2">
+                                            שם המסעדה
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={restaurant.name || ''}
+                                            onChange={(e) => handleChange('name', e.target.value)}
+                                            required
+                                            className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-brand-primary text-gray-900 font-bold transition-all"
+                                            placeholder="שם המסעדה..."
+                                        />
                                     </div>
-                                );
-                            })}
-                        </div>
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-black text-gray-700 mr-1 flex items-center gap-2">
+                                            טלפון
+                                        </label>
+                                        <div className="relative">
+                                            <FaPhone className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400" />
+                                            <input
+                                                type="text"
+                                                value={restaurant.phone || ''}
+                                                onChange={(e) => handleChange('phone', e.target.value)}
+                                                className="w-full pr-12 pl-5 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-brand-primary text-gray-900 font-bold transition-all ltr"
+                                                placeholder="050-0000000"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-sm font-black text-gray-700 mr-1">תיאור המסעדה</label>
+                                    <textarea
+                                        value={restaurant.description || ''}
+                                        onChange={(e) => handleChange('description', e.target.value)}
+                                        rows={3}
+                                        className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-brand-primary text-gray-900 font-bold transition-all resize-none"
+                                        placeholder="ספר קצת על המסעדה שלך..."
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-sm font-black text-gray-700 mr-1">משפט פתיחה בעמוד QR</label>
+                                    <textarea
+                                        value={restaurant.share_incentive_text || ''}
+                                        onChange={(e) => handleChange('share_incentive_text', e.target.value)}
+                                        rows={2}
+                                        placeholder="למשל: הרעב מתחיל כאן..."
+                                        className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-brand-primary text-gray-900 font-bold transition-all resize-none"
+                                    />
+                                    <p className="text-xs text-gray-400 font-medium mr-1 select-none">אפשר להכניס שורות חדשות עם Enter</p>
+                                </div>
+                            </div>
+                        </section>
+
+                        {/* Location Details */}
+                        <section className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 p-8 hover:shadow-md transition-shadow">
+                            <div className="flex items-center gap-3 mb-6">
+                                <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
+                                    <FaMapMarkerAlt size={20} />
+                                </div>
+                                <h3 className="text-xl font-black text-gray-900">מיקום וכתובת</h3>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <label className="text-sm font-black text-gray-700 mr-1">כתובת המסעדה</label>
+                                    <input
+                                        type="text"
+                                        value={restaurant.address || ''}
+                                        onChange={(e) => handleChange('address', e.target.value)}
+                                        className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-brand-primary text-gray-900 font-bold transition-all"
+                                        placeholder="למשל: הרצל 1, תל אביב"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-black text-gray-700 mr-1 opacity-60">עיר (לא ניתן לעריכה)</label>
+                                    <input
+                                        type="text"
+                                        value={restaurant.city || ''}
+                                        disabled
+                                        className="w-full px-5 py-4 bg-gray-100 border-none rounded-2xl text-gray-500 font-bold cursor-not-allowed"
+                                    />
+                                </div>
+                            </div>
+                        </section>
+
+                        {/* Prep Times Section */}
+                        <section className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 p-8">
+                            <div className="flex items-center gap-3 mb-6">
+                                <div className="p-2 bg-amber-50 text-amber-600 rounded-xl">
+                                    <FaClock size={20} />
+                                </div>
+                                <h3 className="text-xl font-black text-gray-900">זמני הכנה (בדקות)</h3>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div className="space-y-4 p-5 bg-gray-50 rounded-3xl border border-gray-100">
+                                    <h4 className="font-black text-gray-800 flex items-center gap-2">
+                                        🚀 משלוחים
+                                    </h4>
+                                    <div className="space-y-4">
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-black text-gray-500 mr-1">זמן משוער</label>
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                max="240"
+                                                value={restaurant.delivery_time_minutes ?? ''}
+                                                onChange={(e) => handleChange('delivery_time_minutes', e.target.value)}
+                                                className="w-full px-4 py-3 bg-white border-2 border-transparent focus:border-brand-primary rounded-xl focus:outline-none text-gray-900 font-black text-center text-xl"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-black text-gray-500 mr-1">הערה (כוכבית)</label>
+                                            <input
+                                                type="text"
+                                                value={restaurant.delivery_time_note || ''}
+                                                onChange={(e) => handleChange('delivery_time_note', e.target.value)}
+                                                placeholder="* יתכנו עיכובים בעומס"
+                                                className="w-full px-4 py-3 bg-white border-none rounded-xl focus:ring-2 focus:ring-brand-primary text-gray-700 font-medium text-sm"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4 p-5 bg-gray-50 rounded-3xl border border-gray-100">
+                                    <h4 className="font-black text-gray-800 flex items-center gap-2">
+                                        🥡 איסוף עצמי
+                                    </h4>
+                                    <div className="space-y-4">
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-black text-gray-500 mr-1">זמן משוער</label>
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                max="240"
+                                                value={restaurant.pickup_time_minutes ?? ''}
+                                                onChange={(e) => handleChange('pickup_time_minutes', e.target.value)}
+                                                className="w-full px-4 py-3 bg-white border-2 border-transparent focus:border-brand-primary rounded-xl focus:outline-none text-gray-900 font-black text-center text-xl"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-black text-gray-500 mr-1">הערה (כוכבית)</label>
+                                            <input
+                                                type="text"
+                                                value={restaurant.pickup_time_note || ''}
+                                                onChange={(e) => handleChange('pickup_time_note', e.target.value)}
+                                                placeholder="* זמן הכנה מהיר במיוחד"
+                                                className="w-full px-4 py-3 bg-white border-none rounded-xl focus:ring-2 focus:ring-brand-primary text-gray-700 font-medium text-sm"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
                     </div>
 
-                    {/* סטטוס פתיחה */}
-                    <div className="border-t pt-4">
-                        <h3 className="text-sm font-bold text-gray-700 mb-4">🚪 סטטוס פתיחה</h3>
+                    {/* Right Column: Profile & Status */}
+                    <div className="space-y-6">
+                        {/* Status Card */}
+                        <section className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 p-6 overflow-hidden relative">
+                            <div className="relative z-10">
+                                <div className="flex items-center justify-between mb-6">
+                                    <div className="flex items-center gap-2">
+                                        <div className={`p-2 rounded-xl ${restaurant.is_open ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
+                                            <FaClock />
+                                        </div>
+                                        <h3 className="font-black text-gray-900">סטטוס פתיחה</h3>
+                                    </div>
+                                    <span className={`px-3 py-1 rounded-full text-[10px] font-black tracking-wider uppercase ${
+                                        overrideStatus ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'
+                                    }`}>
+                                        {overrideStatus ? '🔒 כפוי ידנית' : '✨ חישוב אוטומטי'}
+                                    </span>
+                                </div>
 
-                        <div className="space-y-3">
-                            {/* הצגת הסטטוס הנוכחי */}
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
+                                <div className="flex flex-col items-center gap-4 py-2">
                                     <button
                                         type="button"
                                         onClick={() => {
-                                            if (overrideStatus) {
+                                            if (overrideStatus && isApproved) {
                                                 handleChange('is_open', !restaurant.is_open);
                                             }
                                         }}
                                         disabled={!overrideStatus || !isApproved}
-                                        className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${restaurant.is_open
-                                            ? 'bg-green-100 text-green-700'
-                                            : 'bg-red-100 text-red-700'
-                                            } ${(!overrideStatus || !isApproved) && 'opacity-70 cursor-not-allowed'}`}
+                                        className={`w-full py-8 rounded-[2rem] flex flex-col items-center justify-center gap-3 transition-all transform active:scale-95 ${
+                                            restaurant.is_open
+                                                ? 'bg-green-500 text-white shadow-[0_10px_30px_-10px_rgba(34,197,94,0.5)] border-b-4 border-green-700'
+                                                : 'bg-red-500 text-white shadow-[0_10px_30px_-10px_rgba(239,68,68,0.5)] border-b-4 border-red-700'
+                                        } ${(!overrideStatus || !isApproved) && 'opacity-80 saturate-50 grayscale-[0.2]'}`}
                                     >
-                                        {restaurant.is_open ? '✓ פתוח' : '✗ סגור'}
+                                        <span className="text-4xl">
+                                            {restaurant.is_open ? <FaCheckCircle /> : <FaTimesCircle />}
+                                        </span>
+                                        <span className="text-2xl font-black">
+                                            {restaurant.is_open ? 'פתוח להזמנות' : 'סגור להזמנות'}
+                                        </span>
                                     </button>
-                                    {/* סטטוס קונקרטי */}
-                                    <span className="text-xs font-semibold">
-                                        {overrideStatus
-                                            ? '🔒 מכופה ידנית'
-                                            : `📅 חישוב: ${calculatedStatus ? '✓ פתוח' : '✗ סגור'}`
-                                        }
-                                    </span>
+
+                                    {!isApproved && (
+                                        <div className="w-full p-4 bg-amber-50 rounded-2xl border border-amber-100 animate-pulse">
+                                            <p className="text-xs text-amber-800 font-black text-center flex items-center justify-center gap-2">
+                                                <FaLock /> ממתין לאישור מנהל
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    {isApproved && (
+                                        <div className="w-full space-y-3">
+                                            <label className="flex items-center gap-3 p-4 bg-gray-50 rounded-2xl cursor-pointer hover:bg-gray-100 transition-colors border border-transparent hover:border-gray-200 group">
+                                                <div className={`w-10 h-6 flex items-center rounded-full p-1 transition-colors ${overrideStatus ? 'bg-brand-primary' : 'bg-gray-300'}`}>
+                                                    <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${overrideStatus ? '-translate-x-4' : 'translate-x-0'}`}></div>
+                                                </div>
+                                                <input
+                                                    type="checkbox"
+                                                    className="hidden"
+                                                    checked={overrideStatus}
+                                                    onChange={(e) => {
+                                                        setOverrideStatus(e.target.checked);
+                                                        if (!e.target.checked) setRestaurant((prev) => ({ ...prev, is_open: calculatedStatus }));
+                                                    }}
+                                                />
+                                                <span className="text-sm font-black text-gray-700 group-hover:text-gray-900">כפיית סטטוס ידנית</span>
+                                            </label>
+
+                                            {overrideStatus && (
+                                                <button
+                                                    type="button"
+                                                    onClick={clearOverride}
+                                                    className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-2xl text-sm font-black transition-all"
+                                                >
+                                                    <FaUndo size={14} /> בטל כפייה
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </section>
+
+                        {/* Logo Card */}
+                        <section className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 p-6">
+                            <h3 className="font-black text-gray-900 mb-6 flex items-center gap-2">
+                                <FaCamera className="text-indigo-500" /> לוגו המסעדה
+                            </h3>
+                            <div className="flex flex-col items-center gap-6">
+                                <div className="relative group">
+                                    <div className="w-40 h-40 rounded-[2.5rem] overflow-hidden bg-gray-50 border-4 border-white shadow-xl flex items-center justify-center transition-transform hover:scale-105">
+                                        {logoPreview ? (
+                                            <img src={logoPreview} alt="logo" className="w-full h-full object-contain p-4" />
+                                        ) : (
+                                            <FaStore size={60} className="text-gray-200" />
+                                        )}
+                                    </div>
+                                    <label className="absolute -bottom-2 -right-2 bg-brand-primary text-white p-3 rounded-2xl shadow-lg cursor-pointer hover:bg-brand-dark transition-all hover:scale-110">
+                                        <FaCamera size={20} />
+                                        <input type="file" accept="image/*" className="hidden" onChange={(e) => handleLogo(e.target.files[0])} />
+                                    </label>
+                                </div>
+                                <p className="text-[10px] text-gray-400 font-bold text-center">מומלץ: תמונה ריבועית על רקע לבן/שקוף</p>
+                            </div>
+                        </section>
+                    </div>
+
+                    {/* Full Width Sections */}
+                    <div className="lg:col-span-3 space-y-6">
+                        {/* Operating Hours */}
+                        <section className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 p-8">
+                            <div className="flex items-center justify-between mb-8">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-purple-50 text-purple-600 rounded-xl">
+                                        <FaGlobe size={20} />
+                                    </div>
+                                    <h3 className="text-xl font-black text-gray-900">ימי פתיחה ושעות פעילות</h3>
                                 </div>
                             </div>
 
-                            {/* כפיית סטטוס ידנית */}
-                            <label className="flex items-center gap-2 cursor-pointer py-2">
-                                <input
-                                    type="checkbox"
-                                    checked={overrideStatus}
-                                    onChange={(e) => {
-                                        setOverrideStatus(e.target.checked);
-                                        if (!e.target.checked) {
-                                            // חזור לסטטוס מחושב
-                                            setRestaurant((prev) => ({ ...prev, is_open: calculatedStatus }));
-                                        }
-                                    }}
-                                    disabled={!isApproved}
-                                    className="w-4 h-4 rounded"
-                                />
-                                <span className="text-sm text-gray-600">אפשר כפיית סטטוס ידנית</span>
-                            </label>
-
-                            {overrideStatus && (
-                                <button
-                                    type="button"
-                                    onClick={clearOverride}
-                                    disabled={saving || !isApproved}
-                                    className="inline-flex items-center justify-center px-4 py-2 rounded-xl text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-60"
-                                >
-                                    בטל כפייה (חזור לאוטומטי)
-                                </button>
-                            )}
-
-                            {!isApproved && (
-                                <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2">
-                                    פתיחה וסגירה ידנית תתאפשר רק לאחר אישור מנהל מערכת.
-                                </p>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* לינק ישיר לתפריט */}
-                    <div className="border-t pt-4">
-                        <h3 className="text-sm font-bold text-gray-700 mb-3">🔗 לינק ישיר לדף המסעדה</h3>
-                        <div className="flex gap-2">
-                            <input
-                                type="text"
-                                readOnly
-                                value={`${window.location.origin}/${restaurant.tenant_id}/menu`}
-                                className="flex-1 px-4 py-3 border rounded-xl bg-gray-50 text-gray-600 text-sm"
-                            />
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    const link = `${window.location.origin}/${restaurant.tenant_id}/menu`;
-                                    navigator.clipboard.writeText(link);
-                                    alert('הלינק הועתק ללוח!');
-                                }}
-                                className="px-6 py-3 bg-blue-500 text-white rounded-xl font-medium hover:bg-blue-600 whitespace-nowrap"
-                            >
-                                📋 העתק
-                            </button>
-                        </div>
-                        <p className="text-xs text-gray-500 mt-2">
-                            שתפו לינק זה עם לקוחות לגישה ישירה לדף המסעדה המלא (תמונה, פרטים ותפריט)
-                        </p>
-                    </div>
-
-                    {/* עמוד שיתוף + QR */}
-                    <div className="border-t pt-4">
-                        <h3 className="text-sm font-bold text-gray-700 mb-3">🔗 עמוד שיתוף / QR</h3>
-                        <div className="flex flex-col lg:flex-row gap-3 items-stretch">
-                            <div className="flex-1">
-                                <div className="flex gap-2">
-                                    <input
-                                        type="text"
-                                        readOnly
-                                        value={getShareLink()}
-                                        className="flex-1 px-4 py-3 border rounded-xl bg-gray-50 text-gray-600 text-sm"
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            const link = getShareLink();
-                                            if (!link) return;
-                                            navigator.clipboard.writeText(link);
-                                            alert('הלינק הועתק ללוח!');
-                                        }}
-                                        className="px-6 py-3 bg-gray-900 text-white rounded-xl font-medium hover:bg-black whitespace-nowrap"
-                                    >
-                                        📋 העתק
-                                    </button>
+                            <div className="bg-gray-50 rounded-3xl p-6 mb-8 border border-gray-100">
+                                <h4 className="font-black text-gray-800 mb-4 flex items-center gap-2">
+                                    <span className="w-2 h-2 rounded-full bg-brand-primary"></span>
+                                    שעות פתיחה קבועות (ברירת מחדל לכל הימים)
+                                </h4>
+                                <div className="grid grid-cols-2 gap-6 max-w-sm">
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-black text-gray-500 mr-2">פתיחה</label>
+                                        <input
+                                            type="time"
+                                            value={restaurant.operating_hours?.default?.open || restaurant.operating_hours?.open || '09:00'}
+                                            onChange={(e) => handleOperatingHoursChange('open', e.target.value)}
+                                            className="w-full px-5 py-3 bg-white border-none rounded-2xl text-gray-900 font-black text-center text-lg shadow-sm"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-black text-gray-500 mr-2">סגירה</label>
+                                        <input
+                                            type="time"
+                                            value={restaurant.operating_hours?.default?.close || restaurant.operating_hours?.close || '23:00'}
+                                            onChange={(e) => handleOperatingHoursChange('close', e.target.value)}
+                                            className="w-full px-5 py-3 bg-white border-none rounded-2xl text-gray-900 font-black text-center text-lg shadow-sm"
+                                        />
+                                    </div>
                                 </div>
-
-                                <div className="mt-3 flex flex-wrap gap-2">
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            const link = getShareLink();
-                                            if (!link) return;
-                                            window.open(link, '_blank', 'noopener,noreferrer');
-                                        }}
-                                        className="px-4 py-2 bg-blue-500 text-white rounded-xl font-medium hover:bg-blue-600"
-                                    >
-                                        👁️ תצוגה מקדימה
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={downloadShareQrPng}
-                                        className="px-4 py-2 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200"
-                                    >
-                                        ⬇️ הורדת QR (PNG)
-                                    </button>
-                                </div>
-
-                                <p className="text-xs text-gray-500 mt-2">
-                                    זה העמוד שמתאים להדפסה/שיתוף בוואטסאפ. QR יוביל לעמוד הזה.
-                                </p>
                             </div>
 
-                            <div className="flex items-center justify-center p-3 border rounded-xl bg-white">
-                                <QRCodeCanvas value={getShareLink()} size={120} includeMargin ref={shareQrRef} />
-                            </div>
-                        </div>
-                    </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                                {DAYS_OF_WEEK.map((day) => {
+                                    const dayCfg = restaurant.operating_hours?.days?.[day] || {};
+                                    const isOpenDay = restaurant.operating_days?.[day] ?? false;
+                                    const panelOpen = openDayPanels[day] || false;
+                                    return (
+                                        <div 
+                                            key={day} 
+                                            className={`rounded-3xl border transition-all duration-300 ${
+                                                isOpenDay 
+                                                    ? 'bg-white border-brand-primary' 
+                                                    : 'bg-gray-50 border-gray-100 opacity-60 grayscale-[0.5]'
+                                            }`}
+                                        >
+                                            <div className="p-4 flex items-center justify-between gap-3">
+                                                <label className="flex items-center gap-3 cursor-pointer select-none">
+                                                    <div 
+                                                        className={`w-10 h-6 flex items-center rounded-full p-1 transition-colors ${isOpenDay ? 'bg-brand-primary' : 'bg-gray-300'}`}
+                                                        onClick={(e) => {
+                                                            e.preventDefault();
+                                                            handleOperatingDaysChange(day, !isOpenDay);
+                                                        }}
+                                                    >
+                                                        <div className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform ${isOpenDay ? '-translate-x-4' : 'translate-x-0'}`}></div>
+                                                    </div>
+                                                    <span className="text-lg font-black text-gray-800">{day}</span>
+                                                </label>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => toggleDayPanel(day)}
+                                                    className={`p-2 rounded-xl transition-colors ${panelOpen ? 'bg-brand-primary text-white' : 'text-brand-primary hover:bg-brand-primary/10'}`}
+                                                >
+                                                    {panelOpen ? <FaChevronUp /> : <FaChevronDown />}
+                                                </button>
+                                            </div>
 
-                    <div className="flex gap-3 pt-2 border-t">
+                                            {panelOpen && (
+                                                <div className="px-4 pb-6 pt-2 space-y-4 border-t border-gray-50 border-dashed animate-in slide-in-from-top-2 duration-200">
+                                                    <div className="grid grid-cols-2 gap-3">
+                                                        <div className="space-y-1">
+                                                            <label className="text-[10px] font-black text-gray-400 mr-2">פתיחה</label>
+                                                            <input
+                                                                type="time"
+                                                                value={dayCfg.open || restaurant.operating_hours?.default?.open || '09:00'}
+                                                                onChange={(e) => handleDayHoursChange(day, 'open', e.target.value)}
+                                                                disabled={!isOpenDay}
+                                                                className="w-full px-2 py-2 bg-gray-50 border-none rounded-xl text-center font-black text-sm ltr"
+                                                            />
+                                                        </div>
+                                                        <div className="space-y-1">
+                                                            <label className="text-[10px] font-black text-gray-400 mr-2">סגירה</label>
+                                                            <input
+                                                                type="time"
+                                                                value={dayCfg.close || restaurant.operating_hours?.default?.close || '23:00'}
+                                                                onChange={(e) => handleDayHoursChange(day, 'close', e.target.value)}
+                                                                disabled={!isOpenDay}
+                                                                className="w-full px-2 py-2 bg-gray-50 border-none rounded-xl text-center font-black text-sm ltr"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <label className="flex items-center gap-2 group cursor-pointer pt-2 border-t border-gray-50">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={!!dayCfg.closed || !isOpenDay}
+                                                            onChange={(e) => handleDayHoursChange(day, 'closed', e.target.checked)}
+                                                            className="w-4 h-4 rounded border-gray-300 text-brand-primary focus:ring-brand-primary"
+                                                        />
+                                                        <span className="text-xs font-black text-gray-500 group-hover:text-gray-700">סגור ביום זה</span>
+                                                    </label>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </section>
+
+                        {/* Direct Menu Link */}
+                        <section className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 p-8">
+                            <div className="flex items-center gap-3 mb-6">
+                                <div className="p-2 bg-sky-50 text-sky-600 rounded-xl">
+                                    <FaShareAlt size={20} />
+                                </div>
+                                <h3 className="text-xl font-black text-gray-900">קישורים ושיתוף</h3>
+                            </div>
+
+                            <div className="space-y-8">
+                                <div className="space-y-3">
+                                    <label className="text-sm font-black text-gray-700 mr-1 flex items-center gap-2">
+                                        🔗 לינק ישיר להזמנות (Menu Only)
+                                    </label>
+                                    <div className="flex gap-3">
+                                        <div className="flex-1 relative group">
+                                            <input
+                                                type="text"
+                                                readOnly
+                                                value={`${window.location.origin}/${restaurant.tenant_id}/menu`}
+                                                className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl text-gray-600 font-bold ltr text-sm"
+                                            />
+                                            <div className="absolute inset-0 rounded-2xl bg-black/5 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity" />
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const link = `${window.location.origin}/${restaurant.tenant_id}/menu`;
+                                                navigator.clipboard.writeText(link);
+                                            }}
+                                            className="px-6 py-4 bg-brand-primary text-white rounded-2xl font-black hover:bg-brand-dark transition-all flex items-center gap-2 active:scale-95 whitespace-nowrap"
+                                        >
+                                            <FaClipboard /> העתק קישור
+                                        </button>
+                                    </div>
+                                    <p className="text-xs text-gray-400 font-medium mr-1 uppercase tracking-wider">
+                                        לגישה ישירה לתפריט ההזמנות ללא עמוד נחיתה
+                                    </p>
+                                </div>
+
+                                <div className="pt-8 border-t border-gray-100 flex flex-col xl:flex-row gap-8">
+                                    <div className="flex-1 space-y-6">
+                                        <div className="space-y-3">
+                                            <label className="text-sm font-black text-gray-700 mr-1 flex items-center gap-2">
+                                                📱 עמוד שיתוף ו-QR
+                                            </label>
+                                            <div className="flex gap-3">
+                                                <input
+                                                    type="text"
+                                                    readOnly
+                                                    value={getShareLink()}
+                                                    className="flex-1 px-5 py-4 bg-gray-50 border-none rounded-2xl text-gray-600 font-bold ltr text-sm"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const link = getShareLink();
+                                                        if (link) navigator.clipboard.writeText(link);
+                                                    }}
+                                                    className="px-6 py-4 bg-gray-900 text-white rounded-2xl font-black hover:bg-black transition-all flex items-center gap-2 active:scale-95 whitespace-nowrap"
+                                                >
+                                                    <FaClipboard /> העתק קישור
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex flex-wrap gap-3">
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const link = getShareLink();
+                                                    if (link) window.open(link, '_blank');
+                                                }}
+                                                className="px-6 py-4 bg-blue-600 text-white rounded-2xl font-black hover:bg-blue-700 transition-all flex items-center gap-2"
+                                            >
+                                                <FaEye /> תצוגה מקדימה
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={downloadShareQrPng}
+                                                className="px-6 py-4 bg-white border-2 border-gray-100 text-gray-700 rounded-2xl font-black hover:bg-gray-50 transition-all flex items-center gap-2"
+                                            >
+                                                <FaQrcode /> הורדת QR
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex flex-col items-center justify-center p-8 bg-gray-50 rounded-[2.5rem] border border-gray-100 min-w-[240px]">
+                                        <div className="p-4 bg-white rounded-3xl shadow-sm mb-4">
+                                            <QRCodeCanvas value={getShareLink()} size={140} includeMargin ref={shareQrRef} />
+                                        </div>
+                                        <span className="text-[10px] uppercase font-black tracking-[0.2em] text-gray-400">Scan to preview</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+                </form>
+
+                {/* Floating Action Bar */}
+                <div className="fixed bottom-8 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-4xl z-50">
+                    <div className="bg-white/80 backdrop-blur-xl border border-white/20 shadow-[0_20px_50px_-15px_rgba(0,0,0,0.15)] rounded-[2rem] p-4 flex gap-4">
                         <button
-                            type="submit"
+                            type="button"
+                            onClick={save}
                             disabled={saving}
-                            className="flex-1 bg-brand-primary text-white py-3 rounded-xl font-medium hover:bg-brand-dark disabled:opacity-50"
+                            className="flex-1 bg-brand-primary text-white py-4 rounded-2xl font-black text-lg hover:shadow-[0_10px_20px_-5px_rgba(var(--brand-primary-rgb),0.4)] hover:bg-brand-dark transition-all flex items-center justify-center gap-3 disabled:opacity-50 active:scale-95"
                         >
-                            {saving ? 'שומר...' : 'שמור'}
+                            <FaSave />
+                            {saving ? 'שומר שינויים...' : 'שמור הגדרות'}
                         </button>
                         <button
                             type="button"
                             onClick={fetchRestaurant}
-                            className="px-6 py-3 bg-gray-100 text-gray-600 rounded-xl font-medium hover:bg-gray-200"
+                            className="px-8 py-4 bg-white border border-gray-100 text-gray-700 rounded-2xl font-black hover:bg-gray-50 transition-all active:scale-95"
                         >
                             רענן
                         </button>
                     </div>
-                </form>
+                </div>
             </div>
         </AdminLayout>
     );

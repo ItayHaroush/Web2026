@@ -1,8 +1,28 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { useRestaurantStatus } from '../../context/RestaurantStatusContext';
 import AdminLayout from '../../layouts/AdminLayout';
 import api from '../../services/apiClient';
+import { 
+    FaReceipt, 
+    FaClock, 
+    FaUser, 
+    FaPhone, 
+    FaMapMarkerAlt, 
+    FaInfoCircle, 
+    FaCheckCircle, 
+    FaSpinner, 
+    FaBoxOpen, 
+    FaTruck, 
+    FaCheck, 
+    FaTimes, 
+    FaBell, 
+    FaExclamationTriangle,
+    FaArrowLeft,
+    FaMotorcycle,
+    FaShoppingBag,
+    FaHistory
+} from 'react-icons/fa';
 
 export default function AdminOrders() {
     const { getAuthHeaders } = useAdminAuth();
@@ -208,27 +228,67 @@ export default function AdminOrders() {
     };
 
     const statusOptions = [
-        { value: '', label: 'הכל', icon: '📋' },
-        { value: 'pending', label: 'ממתין', icon: '⏳' },
-        { value: 'received', label: 'התקבל', icon: '📥' },
-        { value: 'preparing', label: 'בהכנה', icon: '👨‍🍳' },
-        { value: 'ready', label: 'מוכן', icon: '✅' },
-        { value: 'delivering', label: 'במשלוח', icon: '🚗' },
-        { value: 'delivered', label: 'נמסר', icon: '📦' },
-        { value: 'cancelled', label: 'בוטל', icon: '❌' },
+        { value: '', label: 'הכל', icon: <FaReceipt /> },
+        { value: 'pending', label: 'ממתין', icon: <FaClock /> },
+        { value: 'received', label: 'התקבל', icon: <FaBell /> },
+        { value: 'preparing', label: 'בהכנה', icon: <FaSpinner className="animate-spin" /> },
+        { value: 'ready', label: 'מוכן', icon: <FaCheckCircle /> },
+        { value: 'delivering', label: 'במשלוח', icon: <FaMotorcycle /> },
+        { value: 'delivered', label: 'נמסר', icon: <FaBoxOpen /> },
+        { value: 'cancelled', label: 'בוטל', icon: <FaTimes /> },
     ];
 
     const getStatusBadge = (status) => {
         const statuses = {
-            pending: { text: 'ממתין', color: 'bg-yellow-100 text-yellow-700', nextStatus: 'preparing' },
-            received: { text: 'התקבל', color: 'bg-yellow-100 text-yellow-700', nextStatus: 'preparing' },
-            preparing: { text: 'בהכנה', color: 'bg-blue-100 text-blue-700', nextStatus: 'ready' },
-            ready: { text: 'מוכן', color: 'bg-green-100 text-green-700', nextStatus: 'delivering' },
-            delivering: { text: 'במשלוח', color: 'bg-purple-100 text-purple-700', nextStatus: 'delivered' },
-            delivered: { text: 'נמסר', color: 'bg-gray-100 text-gray-700', nextStatus: null },
-            cancelled: { text: 'בוטל', color: 'bg-red-100 text-red-700', nextStatus: null },
+            pending: { 
+                text: 'ממתין', 
+                color: 'bg-amber-50 text-amber-600 border-amber-100', 
+                icon: <FaClock />,
+                nextStatus: 'preparing' 
+            },
+            received: { 
+                text: 'התקבל', 
+                color: 'bg-amber-50 text-amber-600 border-amber-100', 
+                icon: <FaBell />,
+                nextStatus: 'preparing' 
+            },
+            preparing: { 
+                text: 'בהכנה', 
+                color: 'bg-blue-50 text-blue-600 border-blue-100', 
+                icon: <FaSpinner className="animate-spin" />,
+                nextStatus: 'ready' 
+            },
+            ready: { 
+                text: 'מוכן', 
+                color: 'bg-emerald-50 text-emerald-600 border-emerald-100', 
+                icon: <FaCheckCircle />,
+                nextStatus: 'delivering' 
+            },
+            delivering: { 
+                text: 'במשלוח', 
+                color: 'bg-purple-50 text-purple-600 border-purple-100', 
+                icon: <FaMotorcycle />,
+                nextStatus: 'delivered' 
+            },
+            delivered: { 
+                text: 'נמסר', 
+                color: 'bg-slate-50 text-slate-600 border-slate-100', 
+                icon: <FaBoxOpen />,
+                nextStatus: null 
+            },
+            cancelled: { 
+                text: 'בוטל', 
+                color: 'bg-red-50 text-red-600 border-red-100', 
+                icon: <FaTimes />,
+                nextStatus: null 
+            },
         };
-        return statuses[status] || { text: status, color: 'bg-gray-100 text-gray-700', nextStatus: null };
+        return statuses[status] || { 
+            text: status, 
+            color: 'bg-gray-50 text-gray-700 border-gray-100', 
+            icon: <FaInfoCircle />,
+            nextStatus: null 
+        };
     };
 
     if (loading) {
@@ -243,58 +303,79 @@ export default function AdminOrders() {
 
     return (
         <AdminLayout>
-            {/* התרעת הזמנה חדשה */}
+            {/* התרעת הזמנה חדשה מודרנית */}
             {newOrderAlert && (
                 <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-50 animate-bounce">
-                    <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-8 py-4 rounded-2xl shadow-2xl flex items-center gap-3">
-                        <span className="text-3xl">🔔</span>
+                    <div className="bg-white rounded-3xl shadow-2xl p-4 flex items-center gap-4 border-2 border-emerald-500 backdrop-blur-xl">
+                        <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center animate-pulse">
+                            <FaBell size={24} />
+                        </div>
                         <div>
-                            <p className="font-bold text-lg">הזמנה חדשה!</p>
-                            <p className="text-sm opacity-90">יש לך הזמנה חדשה שממתינה</p>
+                            <p className="font-black text-gray-900 text-lg leading-none">הזמנה חדשה!</p>
+                            <p className="text-xs font-bold text-emerald-600 uppercase tracking-widest mt-1">יש להכין את המנה במהירות</p>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* כותרת ומונה הזמנות ממתינות */}
-            <div className="bg-gradient-to-r from-brand-primary to-brand-secondary rounded-2xl shadow-lg p-6 mb-6 text-white">
-                <div className="flex items-center justify-between">
+            {/* כותרת ומונה הזמנות מודרנית */}
+            <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-4 sm:p-6 mb-6 overflow-hidden relative">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-brand-primary/5 rounded-full -mr-16 -mt-16 blur-2xl" />
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 relative z-10">
                     <div>
-                        <h1 className="text-2xl font-bold mb-1">ניהול הזמנות</h1>
-                        <p className="opacity-90">סה"כ {(allOrders.length || orders.length)} הזמנות</p>
+                        <h1 className="text-2xl font-black text-gray-900 flex items-center gap-3">
+                            <div className="w-10 h-10 bg-brand-primary text-white rounded-xl flex items-center justify-center shadow-lg shadow-brand-primary/20">
+                                <FaReceipt size={18} />
+                            </div>
+                            ניהול הזמנות
+                        </h1>
+                        <p className="text-xs font-black text-gray-400 uppercase tracking-widest mt-2 flex items-center gap-2">
+                             {(allOrders.length || orders.length)} הזמנות במערכת
+                        </p>
                     </div>
-                    <div className="text-center">
-                        <div className="bg-white/20 rounded-2xl px-6 py-3 backdrop-blur-sm">
-                            <p className="text-sm opacity-90">ממתינות</p>
-                            <p className="text-4xl font-bold">
+                    <div className="flex items-center gap-4 bg-slate-50 p-2 rounded-2xl border border-gray-100">
+                        <div className="text-center px-4 border-l border-gray-200">
+                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-tight">ממתינות</p>
+                            <p className="text-2xl font-black text-amber-600 leading-none mt-1">
                                 {(allOrders.length ? allOrders : orders).filter(o => ['pending', 'received'].includes(o.status)).length}
+                            </p>
+                        </div>
+                        <div className="text-center px-4">
+                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-tight">סה"כ היום</p>
+                            <p className="text-2xl font-black text-brand-primary leading-none mt-1">
+                                {allOrders.length || orders.length}
                             </p>
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* פילטרים */}
-            <div className="bg-white rounded-2xl shadow-sm p-4 mb-6">
-                <div className="flex flex-wrap gap-2">
+            {/* פילטרים - טאבים מודרניים */}
+            <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-2 mb-6 overflow-x-auto no-scrollbar">
+                <div className="flex items-center gap-1 min-w-max">
                     {statusOptions.map((option) => {
                         const ordersToCount = allOrders.length ? allOrders : orders;
                         const count = option.value ? ordersToCount.filter(o => o.status === option.value).length : ordersToCount.length;
+                        const isActive = filterStatus === option.value;
+                        
                         return (
                             <button
                                 key={option.value}
                                 onClick={() => setFilterStatus(option.value)}
-                                className={`px-4 py-2 rounded-xl font-medium transition-all relative ${filterStatus === option.value
-                                    ? 'bg-brand-primary text-white'
-                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                    }`}
+                                className={`px-4 py-2.5 rounded-2xl font-black text-[11px] uppercase tracking-wider transition-all flex items-center gap-2.5 group relative ${
+                                    isActive
+                                    ? 'bg-gray-900 text-white shadow-lg'
+                                    : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
+                                }`}
                             >
-                                {option.icon} {option.label}
+                                <span className={`${isActive ? 'text-white' : 'text-gray-400 group-hover:text-brand-primary'} transition-colors`}>
+                                    {option.icon}
+                                </span>
+                                {option.label}
                                 {count > 0 && (
-                                    <span className={`mr-2 px-2 py-0.5 rounded-full text-xs ${filterStatus === option.value
-                                        ? 'bg-white/20'
-                                        : 'bg-gray-200'
-                                        }`}>
+                                    <span className={`px-1.5 py-0.5 rounded-lg text-[9px] font-black min-w-[20px] ${
+                                        isActive ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'
+                                    }`}>
                                         {count}
                                     </span>
                                 )}
@@ -304,74 +385,99 @@ export default function AdminOrders() {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 {/* רשימת הזמנות */}
-                <div className="lg:col-span-2">
-                    <div className="bg-white rounded-2xl shadow-sm">
-                        <div className="p-4 border-b">
-                            <h2 className="font-bold text-gray-800">
-                                📋 הזמנות ({orders.length})
+                <div className="lg:col-span-12 xl:col-span-7">
+                    <div className="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden">
+                        <div className="p-5 border-b border-gray-50 flex items-center justify-between bg-slate-50/50">
+                            <h2 className="font-black text-gray-900 flex items-center gap-2 uppercase tracking-wide text-sm">
+                                <FaHistory className="text-gray-400" />
+                                רשימת הזמנות
                             </h2>
+                            <div className="px-3 py-1 bg-white rounded-full border border-gray-200 text-[10px] font-bold text-gray-500">
+                                {orders.length} תוצאות
+                            </div>
                         </div>
-                        <div className="divide-y max-h-[600px] overflow-y-auto">
+                        <div className="divide-y divide-gray-50 max-h-[700px] overflow-y-auto custom-scrollbar">
                             {orders.length === 0 ? (
-                                <div className="p-8 text-center text-gray-500">
-                                    <span className="text-4xl mb-4 block">📭</span>
-                                    <p>אין הזמנות להצגה</p>
+                                <div className="p-20 text-center">
+                                    <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6 border border-dashed border-gray-200">
+                                        <FaReceipt size={32} className="text-gray-300" />
+                                    </div>
+                                    <p className="text-sm font-black text-gray-400 uppercase tracking-[0.2em]">אין הזמנות להצגה</p>
                                 </div>
                             ) : (
                                 orders.map((order) => {
                                     const statusBadge = getStatusBadge(order.status);
                                     const isPending = ['pending', 'received'].includes(order.status);
                                     const isDelivery = order.delivery_method === 'delivery' || (!!order.delivery_address);
+                                    const isSelected = selectedOrder?.id === order.id;
 
                                     return (
                                         <div
                                             key={order.id}
                                             onClick={() => setSelectedOrder(order)}
-                                            className={`p-4 cursor-pointer transition-all relative ${selectedOrder?.id === order.id
-                                                ? 'bg-brand-primary/5 border-r-4 border-brand-primary'
-                                                : 'hover:bg-gray-50'
-                                                } ${isPending ? 'border-r-4 border-yellow-400 bg-yellow-50/30' : ''}`}
+                                            className={`p-4 sm:p-5 cursor-pointer transition-all relative group ${
+                                                isSelected
+                                                ? 'bg-brand-primary/5'
+                                                : 'hover:bg-gray-50/80 active:bg-gray-100'
+                                            }`}
                                         >
-                                            {isPending && (
-                                                <div className="absolute top-2 left-2">
-                                                    <span className="flex h-3 w-3">
-                                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
-                                                        <span className="relative inline-flex rounded-full h-3 w-3 bg-yellow-500"></span>
-                                                    </span>
-                                                </div>
+                                            {/* אינדיקטור בחירה */}
+                                            {isSelected && (
+                                                <div className="absolute inset-y-0 right-0 w-1.5 bg-brand-primary rounded-l-full shadow-[0_0_15px_rgba(var(--brand-primary-rgb),0.5)]" />
                                             )}
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-3">
-                                                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${isPending
-                                                        ? 'bg-yellow-100 animate-pulse'
-                                                        : 'bg-brand-primary/10'
-                                                        }`}>
-                                                        <span className={`font-bold ${isPending ? 'text-yellow-700' : 'text-brand-primary'
-                                                            }`}>#{order.id}</span>
+
+                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                                <div className="flex items-center gap-4">
+                                                    <div className={`w-14 h-14 rounded-2xl border flex flex-col items-center justify-center shrink-0 transition-transform group-hover:scale-105 ${
+                                                        isPending
+                                                        ? 'bg-amber-50 border-amber-200 shadow-[0_0_10px_rgba(251,191,36,0.3)] animate-pulse'
+                                                        : isSelected ? 'bg-white border-brand-primary/30 shadow-md' : 'bg-white border-gray-100 shadow-sm'
+                                                    }`}>
+                                                        <span className="text-[10px] font-black text-gray-400 tracking-tighter leading-none">#</span>
+                                                        <span className={`text-sm font-black mt-0.5 ${isPending ? 'text-amber-700' : 'text-gray-900'}`}>{order.id}</span>
                                                     </div>
-                                                    <div>
-                                                        <p className={`font-medium ${isPending ? 'text-yellow-900' : 'text-gray-800'
-                                                            }`}>{order.customer_name}</p>
-                                                        <p className="text-sm text-gray-500">
-                                                            {new Date(order.created_at).toLocaleString('he-IL')}
-                                                        </p>
-                                                        <p className="text-xs text-gray-500 flex items-center gap-1">
-                                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-100 text-gray-700">
+                                                    
+                                                    <div className="min-w-0">
+                                                        <div className="flex items-center gap-3 mb-1.5">
+                                                            <p className="font-black text-gray-900 text-base truncate">{order.customer_name}</p>
+                                                            <div className={`px-2.5 py-0.5 rounded-lg text-[9px] font-black uppercase border flex items-center gap-1.5 ${statusBadge.color}`}>
+                                                                <span className="w-1 h-1 rounded-full bg-current animate-pulse" />
+                                                                {statusBadge.text}
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+                                                            <div className="flex items-center gap-1.5 text-xs font-bold text-gray-500">
+                                                                <FaClock size={10} className="text-gray-400" />
+                                                                {new Date(order.created_at).toLocaleString('he-IL', { hour: '2-digit', minute: '2-digit' })}
+                                                            </div>
+                                                            <div className={`flex items-center gap-1.5 text-[10px] font-black uppercase tracking-tight py-0.5 px-2 rounded-full border ${
+                                                                isDelivery ? 'bg-purple-50 text-purple-600 border-purple-100' : 'bg-orange-50 text-orange-600 border-orange-100'
+                                                            }`}>
+                                                                {isDelivery ? <FaMotorcycle size={10} /> : <FaShoppingBag size={10} />}
                                                                 {isDelivery ? 'משלוח' : 'איסוף עצמי'}
-                                                            </span>
+                                                            </div>
                                                             {isDelivery && order.delivery_address && (
-                                                                <span className="truncate max-w-[140px]">📍 {order.delivery_address}</span>
+                                                                <div className="flex items-center gap-1.5 text-xs font-bold text-gray-400 truncate max-w-[200px]">
+                                                                    <FaMapMarkerAlt size={10} />
+                                                                    {order.delivery_address}
+                                                                </div>
                                                             )}
-                                                        </p>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                                <div className="text-left">
-                                                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusBadge.color}`}>
-                                                        {statusBadge.text}
-                                                    </span>
-                                                    <p className="text-lg font-bold text-gray-800 mt-1">₪{order.total}</p>
+
+                                                <div className="flex items-center justify-between sm:flex-col sm:items-end sm:justify-center gap-2 pr-0 sm:pr-4">
+                                                    <p className="text-xl font-black text-gray-900">
+                                                        ₪{Number(order.total).toFixed(2)}
+                                                    </p>
+                                                    <div className={`w-8 h-8 rounded-full border border-gray-100 flex items-center justify-center transition-all ${
+                                                        isSelected ? 'bg-brand-primary text-white border-brand-primary border-2 animate-bounce' : 'bg-white text-gray-300 group-hover:bg-gray-100'
+                                                    }`}>
+                                                        <FaArrowLeft size={10} />
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -382,123 +488,185 @@ export default function AdminOrders() {
                     </div>
                 </div>
 
-                {/* פרטי הזמנה */}
-                <div className="lg:col-span-1">
+                {/* פרטי הזמנה - פאנל צדדי מודרני */}
+                <div className="lg:col-span-12 xl:col-span-5">
                     {selectedOrder ? (
-                        <div className="bg-white rounded-2xl shadow-sm sticky top-20">
-                            <div className="p-4 border-b bg-brand-primary/5">
-                                <div className="flex items-center justify-between">
-                                    <h3 className="font-bold text-lg">הזמנה #{selectedOrder.id}</h3>
+                        <div className="bg-white rounded-[2rem] border border-gray-200 shadow-xl overflow-hidden sticky top-24 animate-in fade-in slide-in-from-left-4 duration-300">
+                            {/* כותרת הפרטים */}
+                            <div className="p-6 border-b border-gray-100 bg-slate-50 relative">
+                                <div className="absolute top-0 left-0 w-24 h-24 bg-brand-primary/5 rounded-full -ml-12 -mt-12" />
+                                <div className="flex items-center justify-between relative z-10">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-12 h-12 bg-white rounded-2xl shadow-sm border border-gray-100 flex items-center justify-center text-gray-900 font-black">
+                                            #{selectedOrder.id}
+                                        </div>
+                                        <div>
+                                            <h3 className="font-black text-gray-900 text-lg leading-none">פרטי הזמנה</h3>
+                                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mt-2 flex items-center gap-2">
+                                                <FaClock size={10} />
+                                                {new Date(selectedOrder.created_at).toLocaleString('he-IL', {
+                                                    day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit'
+                                                })}
+                                            </p>
+                                        </div>
+                                    </div>
                                     <button
                                         onClick={() => setSelectedOrder(null)}
-                                        className="text-gray-400 hover:text-gray-600"
+                                        className="w-8 h-8 rounded-full bg-white border border-gray-100 text-gray-400 hover:text-red-500 hover:bg-red-50 flex items-center justify-center transition-all shadow-sm"
                                     >
-                                        ✕
+                                        <FaTimes size={12} />
                                     </button>
                                 </div>
                             </div>
 
-                            <div className="p-4 space-y-4">
-                                {/* סטטוס נוכחי */}
-                                <div className={`rounded-xl p-4 text-center ${getStatusBadge(selectedOrder.status).color.replace('text-', 'border-').replace('bg-', 'bg-')} border-2`}>
-                                    <p className="text-sm opacity-75 mb-1">סטטוס נוכחי</p>
-                                    <p className="text-2xl font-bold">{getStatusBadge(selectedOrder.status).text}</p>
-                                    <p className="text-xs mt-2 opacity-75">
-                                        {new Date(selectedOrder.created_at).toLocaleString('he-IL', {
-                                            day: 'numeric',
-                                            month: 'long',
-                                            hour: '2-digit',
-                                            minute: '2-digit'
-                                        })}
-                                    </p>
-                                    {selectedOrder.updated_by_name && (
-                                        <p className="text-xs mt-2 opacity-75 border-t pt-2">
-                                            עודכן על ידי: <span className="font-medium">{selectedOrder.updated_by_name}</span>
-                                        </p>
-                                    )}
-                                </div>
-
-                                {/* פרטי לקוח */}
-                                <div className="bg-gray-50 rounded-xl p-4">
-                                    <h4 className="font-medium text-gray-800 mb-2">👤 פרטי לקוח</h4>
-                                    <p className="text-gray-600 font-medium">{selectedOrder.customer_name}</p>
-                                    <p className="text-gray-600 dir-ltr text-right">{selectedOrder.customer_phone}</p>
-                                    <div className="text-sm text-gray-600 mt-2 space-y-2">
-                                        <p className="inline-flex items-center gap-2 px-2 py-1 bg-white rounded-lg">
-                                            <span className="text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-700">
-                                                {selectedOrder.delivery_method === 'delivery' ? 'משלוח' : 'איסוף עצמי'}
-                                            </span>
-                                            {selectedOrder.delivery_method === 'delivery' && selectedOrder.delivery_address && (
-                                                <span>📍 {selectedOrder.delivery_address}</span>
+                            <div className="p-6 space-y-6 max-h-[calc(100vh-250px)] overflow-y-auto custom-scrollbar">
+                                {/* סטטוס נוכחי - כרטיס בולט */}
+                                <div className={`rounded-3xl p-5 border-2 relative overflow-hidden group ${getStatusBadge(selectedOrder.status).color}`}>
+                                    <div className="absolute -right-4 -bottom-4 opacity-5 group-hover:scale-110 transition-transform">
+                                        {getStatusBadge(selectedOrder.status).icon && React.cloneElement(getStatusBadge(selectedOrder.status).icon, { size: 80 })}
+                                    </div>
+                                    <div className="relative z-10">
+                                        <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60 mb-1">סטטוס הזמנה</p>
+                                        <div className="flex items-center gap-3">
+                                            <div className="text-2xl font-black">{getStatusBadge(selectedOrder.status).text}</div>
+                                            {selectedOrder.status === 'preparing' && (
+                                                <div className="flex gap-1">
+                                                    <span className="w-1.5 h-1.5 bg-current rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                                                    <span className="w-1.5 h-1.5 bg-current rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                                                    <span className="w-1.5 h-1.5 bg-current rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                                                </div>
                                             )}
-                                        </p>
-                                        {selectedOrder.delivery_notes && (
-                                            <p className="p-2 bg-white rounded-lg">הערות משלוח: {selectedOrder.delivery_notes}</p>
+                                        </div>
+                                        {selectedOrder.updated_by_name && (
+                                            <div className="mt-4 pt-3 border-t border-current/10 flex items-center gap-2 opacity-70">
+                                                <FaUser size={10} />
+                                                <span className="text-[10px] font-bold uppercase">טופל ע"י {selectedOrder.updated_by_name}</span>
+                                            </div>
                                         )}
                                     </div>
                                 </div>
 
-                                {/* זמן משוער */}
-                                <div className="bg-white border rounded-xl p-4">
-                                    <h4 className="font-medium text-gray-800 mb-3">⏱️ זמן משוער ללקוח</h4>
-                                    <div className="text-sm text-gray-700 space-y-2">
-                                        {selectedOrder.eta_minutes ? (
-                                            <div>
-                                                זמן משוער: <span className="font-semibold">{selectedOrder.eta_minutes} דק'</span>
+                                {/* פרטי לקוח - גריד */}
+                                <div className="bg-slate-50 rounded-3xl p-5 border border-gray-100">
+                                    <h4 className="font-black text-gray-900 text-xs uppercase tracking-widest mb-4 flex items-center gap-2">
+                                        <FaUser className="text-gray-400" />
+                                        מידע לקוח
+                                    </h4>
+                                    <div className="space-y-4">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 bg-white rounded-xl shadow-sm border border-gray-100 flex items-center justify-center text-brand-primary">
+                                                    <FaUser size={16} />
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs font-black text-gray-400 uppercase tracking-tighter">שם מלא</p>
+                                                    <p className="text-sm font-black text-gray-900">{selectedOrder.customer_name}</p>
+                                                </div>
                                             </div>
-                                        ) : (
-                                            <div className="text-gray-500">לא הוגדר זמן משוער</div>
-                                        )}
-                                        {selectedOrder.eta_note && (
-                                            <div className="text-gray-500">* {selectedOrder.eta_note}</div>
-                                        )}
-                                        {selectedOrder.eta_updated_at && (
-                                            <div className="text-xs text-gray-400">
-                                                עודכן לאחרונה: {new Date(selectedOrder.eta_updated_at).toLocaleString('he-IL')}
+                                            <div className="flex items-center gap-2">
+                                                <a 
+                                                    href={`tel:${selectedOrder.customer_phone}`}
+                                                    className="w-10 h-10 bg-white rounded-xl shadow-sm border border-gray-100 flex items-center justify-center text-emerald-500 hover:bg-emerald-50 hover:border-emerald-200 transition-all"
+                                                >
+                                                    <FaPhone size={14} />
+                                                </a>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 bg-white rounded-xl shadow-sm border border-gray-100 flex items-center justify-center text-brand-primary">
+                                                <FaMapMarkerAlt size={16} />
+                                            </div>
+                                            <div className="min-w-0">
+                                                <p className="text-xs font-black text-gray-400 uppercase tracking-tighter">
+                                                    {selectedOrder.delivery_method === 'delivery' ? 'כתובת משלוח' : 'אופן קבלת הזמנה'}
+                                                </p>
+                                                <p className="text-sm font-black text-gray-900 truncate">
+                                                    {selectedOrder.delivery_method === 'delivery' 
+                                                        ? (selectedOrder.delivery_address || 'לא צוינה כתובת')
+                                                        : 'איסוף עצמי מהמסעדה'
+                                                    }
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        {selectedOrder.delivery_notes && (
+                                            <div className="bg-amber-50 rounded-2xl p-3 border border-amber-100 flex items-start gap-3">
+                                                <FaInfoCircle className="text-amber-500 mt-1 shrink-0" size={14} />
+                                                <p className="text-xs font-bold text-amber-700 leading-normal">
+                                                    <span className="block uppercase tracking-widest text-[9px] mb-0.5 opacity-70">הערות לקוח:</span>
+                                                    {selectedOrder.delivery_notes}
+                                                </p>
                                             </div>
                                         )}
                                     </div>
+                                </div>
 
-                                    <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                        <div>
-                                            <label className="block text-xs text-gray-600 mb-1">הארכת זמן (בדקות)</label>
-                                            <input
-                                                type="number"
-                                                min="1"
-                                                max="240"
-                                                value={etaExtraMinutes}
-                                                onChange={(e) => setEtaExtraMinutes(e.target.value)}
-                                                className="w-full px-3 py-2 border rounded-lg text-sm"
-                                            />
+                                {/* ניהול זמן (ETA) - עיצוב חדש */}
+                                <div className="bg-white border-2 border-slate-100 rounded-3xl p-5 shadow-sm group hover:border-brand-primary/20 transition-all">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <h4 className="font-black text-gray-900 text-xs uppercase tracking-widest flex items-center gap-2">
+                                            <FaClock className="text-brand-primary" />
+                                            זמן משוער (ETA)
+                                        </h4>
+                                        {selectedOrder.eta_minutes && (
+                                            <span className="px-3 py-1 bg-brand-primary/10 text-brand-primary rounded-full text-[10px] font-black">
+                                                {selectedOrder.eta_minutes} דק'
+                                            </span>
+                                        )}
+                                    </div>
+                                    
+                                    <div className="grid grid-cols-2 gap-3 mb-4">
+                                        <div className="space-y-1.5 text-right">
+                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-tight mr-1">הארכה (דק')</label>
+                                            <div className="relative">
+                                                <input
+                                                    type="number"
+                                                    value={etaExtraMinutes}
+                                                    onChange={(e) => setEtaExtraMinutes(e.target.value)}
+                                                    className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 text-sm font-black focus:ring-2 focus:ring-brand-primary group-hover:bg-slate-100"
+                                                    placeholder="0"
+                                                />
+                                            </div>
                                         </div>
-                                        <div>
-                                            <label className="block text-xs text-gray-600 mb-1">כוכבית ללקוח</label>
+                                        <div className="space-y-1.5 text-right">
+                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-tight mr-1">הערה ללקוח</label>
                                             <input
                                                 type="text"
                                                 value={etaNote}
                                                 onChange={(e) => setEtaNote(e.target.value)}
-                                                placeholder="* יתכנו עיכובים"
-                                                className="w-full px-3 py-2 border rounded-lg text-sm"
+                                                className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 text-sm font-black focus:ring-2 focus:ring-brand-primary group-hover:bg-slate-100"
+                                                placeholder="* ייתכן עיכוב"
                                             />
                                         </div>
                                     </div>
+
                                     <button
                                         onClick={updateEta}
                                         disabled={etaUpdating || !etaExtraMinutes || isLocked}
-                                        className="mt-3 w-full bg-gray-900 text-white py-2 rounded-lg text-sm font-semibold disabled:opacity-50"
+                                        className="w-full bg-slate-900 text-white p-3.5 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] shadow-lg hover:shadow-slate-200 transition-all active:scale-95 disabled:opacity-50"
                                     >
-                                        {etaUpdating ? 'מעדכן...' : 'הארכת זמן והודעה ללקוח'}
+                                        {etaUpdating ? (
+                                            <FaSpinner className="animate-spin mx-auto" />
+                                        ) : 'עדכן זמן ושלח SMS'}
                                     </button>
                                 </div>
 
-                                {/* פריטים */}
+                                {/* פריטי הזמנה */}
                                 <div>
-                                    <h4 className="font-medium text-gray-800 mb-2">🍽️ פריטים</h4>
-                                    <div className="divide-y">
+                                    <h4 className="font-black text-gray-900 text-xs uppercase tracking-widest mb-4 flex items-center gap-2">
+                                        <FaShoppingBag className="text-gray-400" />
+                                        פירוט הזמנה
+                                    </h4>
+                                    <div className="space-y-6">
                                         {groupItemsByCategory(selectedOrder.items || []).map((group) => (
-                                            <div key={group.label} className="py-3">
-                                                <div className="text-xs font-semibold text-gray-500 mb-2">{group.label}</div>
-                                                <div className="space-y-3">
+                                            <div key={group.label} className="space-y-3">
+                                                <div className="flex items-center gap-3">
+                                                    <span className="h-[1px] flex-1 bg-gray-100" />
+                                                    <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest px-3 py-1 bg-white border border-gray-100 rounded-full">{group.label}</span>
+                                                    <span className="h-[1px] flex-1 bg-gray-100" />
+                                                </div>
+                                                <div className="space-y-2">
                                                     {group.items.map((item, index) => {
                                                         const quantity = Number(item.quantity ?? item.qty ?? 1);
                                                         const unitPrice = Number(item.price_at_order ?? item.price ?? 0);
@@ -510,32 +678,36 @@ export default function AdminOrders() {
                                                         const hasCustomizations = Boolean(item.variant_name) || addons.length > 0 || variantDelta > 0 || addonsTotal > 0;
 
                                                         return (
-                                                            <div key={`${group.label}-${index}`} className="space-y-2">
+                                                            <div key={`${group.label}-${index}`} className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow">
                                                                 <div className="flex justify-between items-start">
-                                                                    <div className="space-y-1">
-                                                                        <div className="font-medium text-gray-900">
+                                                                    <div className="space-y-1.5">
+                                                                        <div className="font-black text-gray-900 text-base leading-none">
                                                                             {item.menu_item?.name || item.name || 'פריט'}
-                                                                            <span className="text-gray-500 mr-2">× {quantity}</span>
+                                                                            <span className="text-brand-primary mr-2">×{quantity}</span>
                                                                         </div>
                                                                         {item.variant_name && (
-                                                                            <div className="text-sm text-gray-700">סוג לחם: {item.variant_name}</div>
+                                                                            <div className="flex items-center gap-1.5 px-2 py-0.5 bg-slate-50 rounded-lg text-[10px] font-bold text-slate-600 w-fit">
+                                                                                <FaInfoCircle size={8} />
+                                                                                {item.variant_name}
+                                                                            </div>
                                                                         )}
                                                                         {addons.length > 0 && (
-                                                                            <div className="text-sm text-gray-700">
-                                                                                תוספות: {formatAddons(addons)}
+                                                                            <div className="text-[11px] font-medium text-gray-500 bg-emerald-50/50 p-2 rounded-xl border border-emerald-100/50">
+                                                                                <span className="font-black text-emerald-700 uppercase tracking-tighter text-[9px] block mb-0.5">תוספות:</span>
+                                                                                {formatAddons(addons)}
                                                                             </div>
                                                                         )}
                                                                     </div>
-                                                                    <div className="text-right">
-                                                                        <div className="font-semibold text-gray-900">₪{lineTotal}</div>
-                                                                        <div className="text-xs text-gray-600">₪{unitPrice.toFixed(2)} ליחידה</div>
+                                                                    <div className="text-left">
+                                                                        <div className="font-black text-gray-900 text-lg leading-none">₪{lineTotal}</div>
+                                                                        <div className="text-[10px] font-black text-gray-400 mt-1 uppercase tracking-tighter">₪{unitPrice.toFixed(2)} / יח'</div>
                                                                     </div>
                                                                 </div>
                                                                 {hasCustomizations && (
-                                                                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-600">
+                                                                    <div className="mt-3 pt-3 border-t border-gray-50 flex flex-wrap gap-x-4 gap-y-1 text-[9px] font-black uppercase tracking-widest text-gray-400">
                                                                         <div>בסיס: ₪{basePrice.toFixed(2)}</div>
-                                                                        {variantDelta > 0 && <div>סוג לחם: ₪{variantDelta.toFixed(2)}</div>}
-                                                                        {addonsTotal > 0 && <div>תוספות: ₪{addonsTotal.toFixed(2)}</div>}
+                                                                        {variantDelta > 0 && <div>וריאציה: +₪{variantDelta.toFixed(2)}</div>}
+                                                                        {addonsTotal > 0 && <div>תוספות: +₪{addonsTotal.toFixed(2)}</div>}
                                                                     </div>
                                                                 )}
                                                             </div>
@@ -547,36 +719,47 @@ export default function AdminOrders() {
                                     </div>
                                 </div>
 
-                                {/* סיכום */}
-                                <div className="border-t pt-4">
-                                    <div className="flex justify-between text-lg font-bold">
-                                        <span>סה"כ</span>
-                                        <span>₪{Number(selectedOrder.total || 0).toFixed(2)}</span>
+                                {/* סיכום - כרטיס בולט */}
+                                <div className="bg-gray-900 rounded-3xl p-6 text-white shadow-xl relative overflow-hidden">
+                                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16" />
+                                    <div className="relative z-10">
+                                        <div className="flex justify-between items-end">
+                                            <div>
+                                                <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-50 mb-1">סה"כ לתשלום</p>
+                                                <p className="text-3xl font-black">₪{Number(selectedOrder.total || 0).toFixed(2)}</p>
+                                            </div>
+                                            <div className="text-left opacity-30">
+                                                <FaReceipt size={40} />
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
-                                {/* כפתורי פעולה */}
-                                <div className="space-y-2">
+                                {/* כפתורי פעולה - מודרניים */}
+                                <div className="space-y-4 pt-2 pb-6">
                                     {(() => {
                                         const currentBadge = getStatusBadge(selectedOrder.status);
                                         const nextStatus = currentBadge.nextStatus;
 
                                         if (nextStatus) {
                                             const nextBadge = getStatusBadge(nextStatus);
-                                            const buttonTexts = {
-                                                'preparing': 'אישור והתחלת הכנה',
-                                                'ready': 'סיום הכנה - מוכן',
-                                                'delivering': 'שליחה למשלוח',
-                                                'delivered': 'אישור מסירה ללקוח'
+                                            const buttonConfigs = {
+                                                'preparing': { text: 'אישור והתחלת הכנה', icon: <FaCheckCircle />, color: 'from-brand-primary to-brand-secondary' },
+                                                'ready': { text: 'סיום הכנה - מוכן!', icon: <FaCheckCircle />, color: 'from-emerald-500 to-emerald-600' },
+                                                'delivering': { text: 'יצא למשלוח', icon: <FaMotorcycle />, color: 'from-purple-500 to-purple-600' },
+                                                'delivered': { text: 'מסירה ללקוח', icon: <FaBoxOpen />, color: 'from-slate-700 to-slate-800' }
                                             };
+
+                                            const config = buttonConfigs[nextStatus] || { text: `העבר ל${nextBadge.text}`, icon: nextBadge.icon, color: 'from-gray-700 to-gray-800' };
 
                                             return (
                                                 <button
                                                     onClick={() => updateStatus(selectedOrder.id, nextStatus)}
                                                     disabled={isLocked}
-                                                    className="w-full bg-gradient-to-r from-brand-primary to-brand-secondary text-white py-4 rounded-xl font-bold text-lg hover:shadow-lg transition-all transform hover:scale-105 disabled:opacity-60 disabled:cursor-not-allowed"
+                                                    className={`w-full bg-gradient-to-r ${config.color} text-white py-5 rounded-[2rem] font-black text-lg shadow-xl shadow-current/10 hover:shadow-2xl transition-all active:scale-95 flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-wider`}
                                                 >
-                                                    {buttonTexts[nextStatus] || `העבר ל${nextBadge.text}`}
+                                                    {config.icon}
+                                                    {config.text}
                                                 </button>
                                             );
                                         }
@@ -586,23 +769,29 @@ export default function AdminOrders() {
                                     {selectedOrder.status !== 'cancelled' && selectedOrder.status !== 'delivered' && (
                                         <button
                                             onClick={() => {
-                                                if (confirm('האם אתה בטוח שברצונך לבטל הזמנה זו?')) {
+                                                if (confirm('האם אתה בטוח שברצונך לבטל את ההזמנה?')) {
                                                     updateStatus(selectedOrder.id, 'cancelled');
                                                 }
                                             }}
                                             disabled={isLocked}
-                                            className="w-full bg-red-50 text-red-600 py-3 rounded-xl font-medium hover:bg-red-100 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                                            className="w-full bg-red-50 text-red-600 p-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] hover:bg-red-100 transition-all active:scale-95 flex items-center justify-center gap-2 group disabled:opacity-50"
                                         >
-                                            ❌ ביטול הזמנה
+                                            <FaTimes size={14} className="group-hover:rotate-90 transition-transform" />
+                                            ביטול הזמנה לצמיתות
                                         </button>
                                     )}
                                 </div>
                             </div>
                         </div>
                     ) : (
-                        <div className="bg-white rounded-2xl shadow-sm p-8 text-center text-gray-500">
-                            <span className="text-4xl mb-4 block">👆</span>
-                            <p>בחר הזמנה לצפייה בפרטים</p>
+                        <div className="bg-white rounded-[2rem] border border-gray-100 shadow-sm p-12 text-center sticky top-24">
+                            <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6 border border-dashed border-gray-200">
+                                <FaInfoCircle size={32} className="text-gray-300 animate-pulse" />
+                            </div>
+                            <h3 className="text-lg font-black text-gray-900 mb-2 uppercase tracking-tight">נא לבחור הזמנה</h3>
+                            <p className="text-xs font-bold text-gray-400 leading-relaxed max-w-[200px] mx-auto uppercase tracking-widest mt-4">
+                                בחר הזמנה מהרשימה בצד ימין כדי לצפות בפרטים המלאים ולעדכן סטטוס
+                            </p>
                         </div>
                     )}
                 </div>

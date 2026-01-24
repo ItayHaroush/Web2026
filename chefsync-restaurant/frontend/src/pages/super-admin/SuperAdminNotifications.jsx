@@ -3,6 +3,19 @@ import SuperAdminLayout from '../../layouts/SuperAdminLayout';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import api from '../../services/apiClient';
 import { toast } from 'react-hot-toast';
+import {
+    FaBell,
+    FaPaperPlane,
+    FaVial,
+    FaUndo,
+    FaSearch,
+    FaStore,
+    FaCheck,
+    FaTimes,
+    FaInfoCircle,
+    FaBullseye,
+    FaBoxOpen
+} from 'react-icons/fa';
 
 export default function SuperAdminNotifications() {
     const { getAuthHeaders } = useAdminAuth();
@@ -105,82 +118,113 @@ export default function SuperAdminNotifications() {
 
     return (
         <SuperAdminLayout>
-            <div className="max-w-5xl mx-auto">
-                <div className="mb-6">
-                    <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">🔔 התראות מערכת</h1>
-                    <p className="text-sm text-gray-600 mt-1">שליחת התראות לפי בחירת מסעדות בלבד (כדי למנוע טעויות שידור).</p>
+            <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-4">
+                <div className="mb-8">
+                    <h1 className="text-2xl font-black text-gray-900 flex items-center gap-2">
+                        <div className="p-2 bg-brand-primary/10 rounded-lg">
+                            <FaBell className="text-brand-primary" size={20} />
+                        </div>
+                        מרכז התראות PWA
+                    </h1>
+                    <p className="text-sm text-gray-500 mt-1">שילוח הודעות Push למכשירי קצה מבוססי מסעדות</p>
                 </div>
 
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 sm:p-6">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">כותרת</label>
-                            <input
-                                value={title}
-                                onChange={(e) => setTitle(e.target.value)}
-                                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-brand-primary"
-                                placeholder="לדוגמה: מבצע חדש השבוע"
-                                maxLength={80}
-                            />
+                <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+                    {/* עמודה שמאלית - טופס ובחירה */}
+                    <div className="xl:col-span-2 space-y-6">
+                        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
+                            <h2 className="text-lg font-black text-gray-900 mb-6 flex items-center gap-2">
+                                <FaPaperPlane className="text-brand-primary" size={16} />
+                                פרטי ההודעה
+                            </h2>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-black text-gray-500 mr-1 uppercase tracking-wider">כותרת ההתראה</label>
+                                    <input
+                                        value={title}
+                                        onChange={(e) => setTitle(e.target.value)}
+                                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none transition-all text-sm font-bold"
+                                        placeholder="לדוגמה: עדכון מערכת חשוב"
+                                        maxLength={80}
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-black text-gray-500 mr-1 uppercase tracking-wider">תוכן ההודעה</label>
+                                    <input
+                                        value={body}
+                                        onChange={(e) => setBody(e.target.value)}
+                                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none transition-all text-sm font-medium"
+                                        placeholder="לדוגמה: המערכת תבצע תחזוקה הלילה ב-02:00"
+                                        maxLength={200}
+                                    />
+                                </div>
+                            </div>
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">תוכן</label>
-                            <input
-                                value={body}
-                                onChange={(e) => setBody(e.target.value)}
-                                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-brand-primary"
-                                placeholder="לדוגמה: 10% הנחה על כל התפריט"
-                                maxLength={200}
-                            />
-                        </div>
-                    </div>
 
-                    <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-4">
-                        <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
-                            <h2 className="font-bold text-gray-900 mb-3">🎯 בחירת מסעדות</h2>
-
-                            <div className="mb-3">
-                                <label className="block text-sm font-medium text-gray-700 mb-1">חיפוש</label>
-                                <input
-                                    value={search}
-                                    onChange={(e) => setSearch(e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white"
-                                    placeholder="חפש לפי שם מסעדה או tenant_id..."
-                                />
+                        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                                <h2 className="text-lg font-black text-gray-900 flex items-center gap-2">
+                                    <FaBullseye className="text-brand-primary" size={16} />
+                                    בחירת קהל יעד
+                                </h2>
+                                <div className="relative">
+                                    <FaSearch className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs" />
+                                    <input
+                                        value={search}
+                                        onChange={(e) => setSearch(e.target.value)}
+                                        className="pr-9 pl-4 py-2 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none transition-all text-xs font-bold w-full md:w-64"
+                                        placeholder="חפש מסעדה או מזהה..."
+                                    />
+                                </div>
                             </div>
 
-                            <div className="flex items-center justify-between mb-2">
-                                <p className="text-sm text-gray-600">נבחרו: {selectedRestaurantIds.length}</p>
+                            <div className="mb-4 flex items-center justify-between px-2">
+                                <span className="text-xs font-black text-brand-primary uppercase tracking-widest bg-brand-primary/5 px-3 py-1 rounded-lg">
+                                    נבחרו: {selectedRestaurantIds.length} מסעדות
+                                </span>
                                 <div className="flex gap-2">
                                     <button
                                         type="button"
                                         onClick={() => setSelectedRestaurantIds(filteredRestaurants.map((r) => r.id))}
-                                        className="text-sm px-3 py-1 rounded-lg bg-white border border-gray-200 hover:bg-gray-50"
+                                        className="text-[10px] font-black uppercase px-3 py-1.5 rounded-lg border border-gray-100 hover:bg-gray-50 transition-all text-gray-500"
                                         disabled={loadingFilters}
                                     >
-                                        בחר הכל (מסונן)
+                                        בחר הכל
                                     </button>
                                     <button
                                         type="button"
                                         onClick={() => setSelectedRestaurantIds([])}
-                                        className="text-sm px-3 py-1 rounded-lg bg-white border border-gray-200 hover:bg-gray-50"
+                                        className="text-[10px] font-black uppercase px-3 py-1.5 rounded-lg border border-gray-100 hover:bg-gray-50 transition-all text-gray-500"
                                     >
                                         נקה
                                     </button>
                                 </div>
                             </div>
 
-                            <div className="bg-white border border-gray-200 rounded-xl max-h-[360px] overflow-auto">
+                            <div className="border border-gray-50 rounded-2xl max-h-[400px] overflow-y-auto custom-scrollbar">
                                 {loadingFilters ? (
-                                    <p className="p-3 text-sm text-gray-600">טוען מסעדות...</p>
+                                    <div className="p-12 text-center text-gray-400">
+                                        <div className="w-8 h-8 border-2 border-brand-primary/20 border-t-brand-primary rounded-full animate-spin mx-auto mb-3" />
+                                        <p className="text-xs font-bold uppercase tracking-widest">טוען נתונים...</p>
+                                    </div>
                                 ) : filteredRestaurants.length === 0 ? (
-                                    <p className="p-3 text-sm text-gray-600">לא נמצאו מסעדות.</p>
+                                    <div className="p-12 text-center text-gray-300">
+                                        <FaSearch size={32} className="mx-auto mb-3 opacity-20" />
+                                        <p className="text-xs font-bold uppercase tracking-widest">לא נמצאו מסעדות</p>
+                                    </div>
                                 ) : (
-                                    <div className="divide-y">
+                                    <div className="divide-y divide-gray-50">
                                         {filteredRestaurants.map((r) => {
                                             const checked = selectedRestaurantIds.includes(r.id);
                                             return (
-                                                <label key={r.id} className="flex items-center gap-3 p-3 cursor-pointer hover:bg-gray-50">
+                                                <label key={r.id} className={`flex items-center gap-4 p-4 cursor-pointer transition-all hover:bg-gray-50/80 ${checked ? 'bg-brand-primary/5' : ''}`}>
+                                                    <div className={`w-5 h-5 rounded-md border-2 transition-all flex items-center justify-center ${checked ? 'bg-brand-primary border-brand-primary shadow-sm shadow-brand-primary/20' : 'border-gray-200 bg-white'}`}>
+                                                        {checked && <FaCheck className="text-white" size={10} />}
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <p className="text-sm font-black text-gray-900 leading-none mb-1">{r.name}</p>
+                                                        <p className="text-[10px] text-gray-400 font-mono tracking-wider">@{r.tenant_id}</p>
+                                                    </div>
                                                     <input
                                                         type="checkbox"
                                                         checked={checked}
@@ -190,75 +234,115 @@ export default function SuperAdminNotifications() {
                                                                 : selectedRestaurantIds.filter((id) => id !== r.id);
                                                             setSelectedRestaurantIds(next);
                                                         }}
+                                                        className="hidden"
                                                     />
-                                                    <div className="flex-1">
-                                                        <p className="text-sm font-medium text-gray-900">{r.name}</p>
-                                                        <p className="text-xs text-gray-500">{r.tenant_id}</p>
-                                                    </div>
                                                 </label>
                                             );
                                         })}
                                     </div>
                                 )}
                             </div>
+                        </div>
 
-                            <div className="mt-4 flex flex-col sm:flex-row gap-3">
-                                <button
-                                    onClick={() => send(true)}
-                                    disabled={submitting || !title || !body || !selectedRestaurantIds.length}
-                                    className="px-4 py-2 rounded-lg bg-gray-900 text-white hover:bg-gray-800 disabled:opacity-50"
-                                >
-                                    {submitting ? 'טוען...' : 'בדיקת יעד (Dry run)'}
-                                </button>
-                                <button
-                                    onClick={() => send(false)}
-                                    disabled={submitting || !title || !body || !selectedRestaurantIds.length}
-                                    className="px-4 py-2 rounded-lg bg-brand-primary text-white hover:bg-brand-primary/90 disabled:opacity-50"
-                                >
-                                    {submitting ? 'שולח...' : 'שלח התראה'}
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        setSelectedRestaurantIds([]);
-                                        setSearch('');
-                                        setResult(null);
-                                    }}
-                                    className="px-4 py-2 rounded-lg bg-white border border-gray-200 hover:bg-gray-50"
-                                >
-                                    נקה בחירה
-                                </button>
+                        <div className="flex flex-col sm:flex-row gap-4">
+                            <button
+                                onClick={() => send(true)}
+                                disabled={submitting || !title || !body || !selectedRestaurantIds.length}
+                                className="flex-1 px-6 py-3.5 bg-gray-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-black transition-all shadow-lg shadow-gray-200 disabled:opacity-50 flex items-center justify-center gap-2"
+                            >
+                                <FaVial size={14} />
+                                בדיקת יעד (Dry run)
+                            </button>
+                            <button
+                                onClick={() => send(false)}
+                                disabled={submitting || !title || !body || !selectedRestaurantIds.length}
+                                className="flex-2 px-6 py-3.5 bg-brand-primary text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-brand-primary/95 transition-all shadow-lg shadow-brand-primary/20 disabled:opacity-50 flex items-center justify-center gap-2"
+                            >
+                                {submitting ? (
+                                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                ) : (
+                                    <FaPaperPlane size={14} />
+                                )}
+                                שלח התראה ללקוחות
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setSelectedRestaurantIds([]);
+                                    setSearch('');
+                                    setResult(null);
+                                }}
+                                className="px-6 py-3.5 bg-white border border-gray-200 text-gray-500 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-gray-50 transition-all flex items-center justify-center gap-2"
+                            >
+                                <FaUndo size={14} />
+                                אפס הכל
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* עמודה ימנית - נתונים ותוצאות */}
+                    <div className="space-y-6">
+                        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
+                            <h2 className="text-lg font-black text-gray-900 mb-6 flex items-center gap-2">
+                                <FaInfoCircle className="text-brand-primary" size={16} />
+                                נתוני בסיס
+                            </h2>
+                            <div className="space-y-4">
+                                <div className="p-3 bg-gray-50 rounded-2xl border border-gray-100 flex items-center justify-between">
+                                    <span className="text-xs font-bold text-gray-500 uppercase">מסעדות במאגר</span>
+                                    <span className="text-sm font-black text-gray-900">{filtersData?.restaurants?.length || 0}</span>
+                                </div>
+                                <div className="p-3 bg-gray-50 rounded-2xl border border-gray-100 flex items-center justify-between">
+                                    <span className="text-xs font-bold text-gray-500 uppercase">ערים פעילות</span>
+                                    <span className="text-sm font-black text-gray-900">{filtersData?.cities?.length || 0}</span>
+                                </div>
+                                <div className="p-3 bg-gray-50 rounded-2xl border border-gray-100 flex items-center justify-between">
+                                    <span className="text-xs font-bold text-gray-500 uppercase">סוגי מטבח</span>
+                                    <span className="text-sm font-black text-gray-900">{filtersData?.cuisine_types?.length || 0}</span>
+                                </div>
                             </div>
                         </div>
 
-                        <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
-                            <h2 className="font-bold text-gray-900 mb-3">📦 תוצאה</h2>
-
-                            {loadingFilters ? (
-                                <p className="text-sm text-gray-600">טוען פילטרים...</p>
-                            ) : !filtersData ? (
-                                <p className="text-sm text-gray-600">לא נטענו פילטרים.</p>
+                        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
+                            <h2 className="text-lg font-black text-gray-900 mb-6 flex items-center gap-2">
+                                <FaBoxOpen className="text-brand-primary" size={16} />
+                                סטטוס שליחה
+                            </h2>
+                            {result ? (
+                                <div className="space-y-4">
+                                    <div className={`p-4 rounded-2xl border ${result.dry_run ? 'bg-amber-50 border-amber-100' : 'bg-green-50 border-green-100'} transition-all`}>
+                                        <div className="flex items-center justify-between mb-3">
+                                            <span className="text-[10px] font-black uppercase text-gray-500 tracking-widest">משימת שידור</span>
+                                            <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md ${result.dry_run ? 'bg-amber-200 text-amber-800' : 'bg-green-200 text-green-800'}`}>
+                                                {result.dry_run ? 'בדיקת יעד' : 'שידור חי'}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-4">
+                                            <div className="flex-1">
+                                                <p className="text-2xl font-black text-gray-900 leading-none">{result.data?.tokens_targeted ?? 0}</p>
+                                                <p className="text-[10px] font-bold text-gray-500 uppercase mt-1">טוקנים שזוהו</p>
+                                            </div>
+                                            {!result.dry_run && (
+                                                <div className="text-left">
+                                                    <p className="text-2xl font-black text-green-600 leading-none">{result.data?.sent_ok ?? 0}</p>
+                                                    <p className="text-[10px] font-bold text-gray-500 uppercase mt-1">בוצעו בהצלחה</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                                        <p className="text-[11px] font-bold text-gray-400 uppercase mb-2 tracking-widest">תצוגה מקדימה</p>
+                                        <div className="bg-white rounded-xl p-3 border border-gray-100 shadow-sm">
+                                            <p className="text-xs font-black text-gray-900 mb-1">{title || 'כותרת ההתראה...'}</p>
+                                            <p className="text-[10px] text-gray-500 font-medium leading-tight">{body || 'תוכן ההתראה יופיע כאן...'}</p>
+                                        </div>
+                                    </div>
+                                </div>
                             ) : (
-                                <div className="text-sm text-gray-700 space-y-2">
-                                    <p>סוגי מטבח: {filtersData.cuisine_types?.length || 0}</p>
-                                    <p>אזורים: {filtersData.regions?.length || 0}</p>
-                                    <p>ערים: {filtersData.cities?.length || 0}</p>
-                                    <p>מסעדות: {filtersData.restaurants?.length || 0}</p>
+                                <div className="py-8 text-center bg-gray-50 rounded-3xl border border-dashed border-gray-200">
+                                    <FaBell className="mx-auto mb-3 text-gray-200" size={32} />
+                                    <p className="text-xs font-black text-gray-400 uppercase leading-relaxed px-6">ממתין לפעולת<br />שליחה או בדיקה</p>
                                 </div>
                             )}
-
-                            <div className="mt-4">
-                                {result ? (
-                                    <div className="bg-white rounded-xl p-4 border border-gray-200">
-                                        <p className="text-sm text-gray-700">dry_run: <span className="font-mono">{String(!!result.dry_run)}</span></p>
-                                        <p className="text-sm text-gray-700">tokens_targeted: <span className="font-mono">{result.data?.tokens_targeted ?? '-'}</span></p>
-                                        {result.data?.sent_ok !== undefined && (
-                                            <p className="text-sm text-gray-700">sent_ok: <span className="font-mono">{result.data.sent_ok}</span></p>
-                                        )}
-                                    </div>
-                                ) : (
-                                    <p className="text-sm text-gray-600">הרץ Dry run כדי לראות כמה טוקנים יישלחו.</p>
-                                )}
-                            </div>
                         </div>
                     </div>
                 </div>

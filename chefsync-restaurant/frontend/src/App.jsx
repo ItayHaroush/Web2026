@@ -21,6 +21,12 @@ import AdminRestaurant from './pages/admin/AdminRestaurant';
 import AdminTerminal from './pages/admin/AdminTerminal';
 import AdminPaywall from './pages/admin/AdminPaywall';
 import AdminDeliveryZones from './pages/admin/AdminDeliveryZones';
+import AdminCoupons from './pages/admin/AdminCoupons';
+import AdminPrinters from './pages/admin/AdminPrinters';
+import AdminSimulator from './pages/admin/AdminSimulator';
+import AdminQrCode from './pages/admin/AdminQrCode';
+import AdminReports from './pages/admin/AdminReports';
+import AdminAuthDebug from './pages/admin/AdminAuthDebug';
 import SuperAdminDashboard from './pages/super-admin/SuperAdminDashboard';
 import SuperAdminNotifications from './pages/super-admin/SuperAdminNotifications';
 import SuperAdminReports from './pages/super-admin/SuperAdminReports';
@@ -202,6 +208,54 @@ function AppRoutes() {
         element={
           <AdminRoute>
             <AdminTerminal />
+          </AdminRoute>
+        }
+      />
+      <Route
+        path="/admin/coupons"
+        element={
+          <AdminRoute>
+            <AdminCoupons />
+          </AdminRoute>
+        }
+      />
+      <Route
+        path="/admin/printers"
+        element={
+          <AdminRoute>
+            <AdminPrinters />
+          </AdminRoute>
+        }
+      />
+      <Route
+        path="/admin/simulator"
+        element={
+          <AdminRoute>
+            <AdminSimulator />
+          </AdminRoute>
+        }
+      />
+      <Route
+        path="/admin/qr-code"
+        element={
+          <AdminRoute>
+            <AdminQrCode />
+          </AdminRoute>
+        }
+      />
+      <Route
+        path="/admin/reports"
+        element={
+          <AdminRoute>
+            <AdminReports />
+          </AdminRoute>
+        }
+      />
+      <Route
+        path="/admin/auth-debug"
+        element={
+          <AdminRoute>
+            <AdminAuthDebug />
           </AdminRoute>
         }
       />
