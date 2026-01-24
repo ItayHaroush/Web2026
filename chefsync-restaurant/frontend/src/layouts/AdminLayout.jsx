@@ -174,7 +174,7 @@ export default function AdminLayout({ children }) {
     );
 
     return (
-        <div className="min-h-screen bg-gray-50 flex" dir="rtl">
+        <div className="min-h-screen bg-gray-50 flex w-full overflow-x-hidden" dir="rtl">
             <DashboardSidebar
                 isOpen={sidebarOpen}
                 isCollapsed={isCollapsed}
@@ -185,7 +185,7 @@ export default function AdminLayout({ children }) {
                 title={PRODUCT_NAME}
             />
 
-            <div className={`flex-1 flex flex-col min-h-screen transition-all duration-300 ${isCollapsed ? 'lg:mr-20' : 'lg:mr-72'}`}>
+            <div className={`flex-1 min-w-0 flex flex-col min-h-screen transition-all duration-300 ${isCollapsed ? 'lg:mr-20' : 'lg:mr-72'}`}>
                 <DashboardHeader
                     toggleSidebar={() => setSidebarOpen(!sidebarOpen)}
                     user={user}
@@ -206,9 +206,7 @@ export default function AdminLayout({ children }) {
                             </div>
                         </div>
                     )}
-                    <div className="max-w-7xl mx-auto space-y-6">
-                        {children}
-                    </div>
+                    {children}
                 </main>
             </div>
         </div>
