@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { FaChartLine, FaStar, FaClock, FaLightbulb, FaExclamationTriangle, FaSync, FaChevronDown, FaChevronUp } from 'react-icons/fa';
 import apiClient from '../services/apiClient';
 
@@ -8,21 +8,36 @@ const AiInsightsPanel = () => {
     const [error, setError] = useState(null);
     const [cached, setCached] = useState(false);
     const [isOpen, setIsOpen] = useState(false);
+    const hasFetchedRef = useRef(false);
+    const abortControllerRef = useRef(null);
 
-    const fetchInsights = async () => {
+    const fetchInsights = async (signal) => {
         try {
             setLoading(true);
             setError(null);
 
-            const { data } = await apiClient.get('/admin/ai/dashboard-insights');
+            const { data } = await apiClient.get('/admin/ai/dashboard-insights', {
+                signal // Pass abort signal to axios
+            });
 
             if (data.success) {
-                setInsights(data.data.insights);
-                setCached(data.cached || false);
+                // Handle graceful degradation where backend sends success:true but includes inner error
+                if (data.data?.error) {
+                    setError(data.data.error);
+                    setInsights(null);
+                } else {
+                    setInsights(data.data.insights);
+                    setCached(data.cached || false);
+                }
             } else {
                 setError(data.message || 'שגיאה בטעינת תובנות');
             }
         } catch (err) {
+            // Ignore abort errors
+            if (err.name === 'CanceledError' || err.code === 'ERR_CANCELED') {
+                console.log('Insights request canceled');
+                return;
+            }
             console.error('Failed to fetch AI insights:', err);
             setError('לא ניתן לטעון תובנות כרגע');
         } finally {
@@ -31,14 +46,23 @@ const AiInsightsPanel = () => {
     };
 
     useEffect(() => {
-        // Fetch only if opened or first load? User wants "won't take up space unless opened".
-        // Maybe fetch on first open? Or fetch immediately but show collapsed?
-        // Let's fetch immediately to show "Data ready" badge or something, 
-        // OR better: lazy load on open.
-        // User said "won't take up space unless opened".
-        // Let's fetch on mount so we can distinct between "loading" and "ready".
-        fetchInsights();
-    }, []);
+        // ✅ LAZY LOAD: Only fetch when panel is opened
+        if (!isOpen) return;
+        if (hasFetchedRef.current) return;
+
+        hasFetchedRef.current = true;
+
+        // Create abort controller for this request
+        abortControllerRef.current = new AbortController();
+        fetchInsights(abortControllerRef.current.signal);
+
+        // Cleanup: abort request if component unmounts or panel closes
+        return () => {
+            if (abortControllerRef.current) {
+                abortControllerRef.current.abort();
+            }
+        };
+    }, [isOpen]);
 
     const toggleOpen = () => setIsOpen(!isOpen);
 

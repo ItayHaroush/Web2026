@@ -116,7 +116,7 @@ class Order extends Model
     {
         static::addGlobalScope('tenant', function ($query) {
             if (app()->has('tenant_id')) {
-                $query->where('tenant_id', app('tenant_id'));
+                $query->where('orders.tenant_id', app('tenant_id'));
             }
         });
     }

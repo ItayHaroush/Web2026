@@ -79,12 +79,29 @@ export default function AdminEmployees() {
     const createEmployee = async (e) => {
         e.preventDefault();
         try {
-            await api.post('/auth/register', form, { headers: getAuthHeaders() });
+            if (form.id) {
+                // עדכון עובד קיים
+                const updateData = {
+                    name: form.name,
+                    email: form.email,
+                    phone: form.phone,
+                    role: form.role,
+                };
+                // רק אם הוזן סיסמא חדשה
+                if (form.password) {
+                    updateData.password = form.password;
+                    updateData.password_confirmation = form.password_confirmation;
+                }
+                await api.put(`/admin/employees/${form.id}`, updateData, { headers: getAuthHeaders() });
+            } else {
+                // יצירת עובד חדש
+                await api.post('/auth/register', form, { headers: getAuthHeaders() });
+            }
             setShowModal(false);
             setForm({ name: '', email: '', phone: '', role: 'employee', password: '', password_confirmation: '' });
             fetchEmployees();
         } catch (error) {
-            alert(error.response?.data?.message || 'שגיאה בהוספת עובד');
+            alert(error.response?.data?.message || 'שגיאה בשמירת פרטי עובד');
         }
     };
 
@@ -150,6 +167,8 @@ export default function AdminEmployees() {
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-10 px-4">
                     {employees.map((emp) => {
                         const roleInfo = roleMap[emp.role] || { label: emp.role, color: 'bg-gray-50 text-gray-600', icon: null };
+                        const canManage = isManager() && emp.role !== 'owner';
+                        console.log('Employee:', emp.name, 'Role:', emp.role, 'isManager():', isManager(), 'canManage:', canManage);
                         return (
                             <div
                                 key={emp.id}
@@ -162,7 +181,7 @@ export default function AdminEmployees() {
                                         {roleInfo.label}
                                     </div>
 
-                                    {isManager() && emp.role !== 'owner' && (
+                                    {canManage && (
                                         <button
                                             onClick={() => toggleActive(emp)}
                                             className={`p-3 rounded-2xl transition-all shadow-sm active:scale-90 ${emp.is_active ? 'text-emerald-500 bg-emerald-50 hover:bg-emerald-500 hover:text-white' : 'text-gray-400 bg-gray-50 hover:bg-gray-400 hover:text-white'}`}
@@ -205,7 +224,7 @@ export default function AdminEmployees() {
                                 </div>
 
                                 {/* Actions Section */}
-                                {isManager() && emp.role !== 'owner' && (
+                                {canManage && (
                                     <div className="flex flex-col gap-4">
                                         <div className="space-y-2">
                                             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mr-2">עדכון תפקיד</label>
@@ -219,13 +238,34 @@ export default function AdminEmployees() {
                                                 ))}
                                             </select>
                                         </div>
-                                        <button
-                                            onClick={() => deleteEmployee(emp)}
-                                            className="w-full flex items-center justify-center gap-3 py-4 bg-rose-50 text-rose-600 rounded-[1.5rem] text-xs font-black hover:bg-rose-600 hover:text-white transition-all active:scale-95 border border-rose-100/50"
-                                        >
-                                            <FaTrash size={14} />
-                                            הסרה מהצוות
-                                        </button>
+
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <button
+                                                onClick={() => {
+                                                    setForm({
+                                                        id: emp.id,
+                                                        name: emp.name,
+                                                        email: emp.email,
+                                                        phone: emp.phone || '',
+                                                        role: emp.role,
+                                                        password: '',
+                                                        password_confirmation: '',
+                                                    });
+                                                    setShowModal(true);
+                                                }}
+                                                className="flex items-center justify-center gap-2 py-4 bg-blue-50 text-blue-600 rounded-[1.5rem] text-xs font-black hover:bg-blue-600 hover:text-white transition-all active:scale-95 border border-blue-100/50"
+                                            >
+                                                <FaUserTag size={14} />
+                                                עריכה
+                                            </button>
+                                            <button
+                                                onClick={() => deleteEmployee(emp)}
+                                                className="flex items-center justify-center gap-2 py-4 bg-rose-50 text-rose-600 rounded-[1.5rem] text-xs font-black hover:bg-rose-600 hover:text-white transition-all active:scale-95 border border-rose-100/50"
+                                            >
+                                                <FaTrash size={14} />
+                                                מחיקה
+                                            </button>
+                                        </div>
                                     </div>
                                 )}
 
@@ -267,12 +307,19 @@ export default function AdminEmployees() {
                                         <FaUserPlus size={24} />
                                     </div>
                                     <div>
-                                        <h2 className="text-3xl font-black text-gray-900 tracking-tight">צירוף איש צוות</h2>
-                                        <p className="text-gray-500 font-bold text-sm mt-0.5 whitespace-nowrap">הגדרת הרשאות ופרטי גישה</p>
+                                        <h2 className="text-3xl font-black text-gray-900 tracking-tight">
+                                            {form.id ? 'עריכת פרטי עובד' : 'צירוף איש צוות'}
+                                        </h2>
+                                        <p className="text-gray-500 font-bold text-sm mt-0.5 whitespace-nowrap">
+                                            {form.id ? 'עדכון הרשאות ופרטי גישה' : 'הגדרת הרשאות ופרטי גישה'}
+                                        </p>
                                     </div>
                                 </div>
                                 <button
-                                    onClick={() => setShowModal(false)}
+                                    onClick={() => {
+                                        setShowModal(false);
+                                        setForm({ name: '', email: '', phone: '', role: 'employee', password: '', password_confirmation: '' });
+                                    }}
                                     className="p-4 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-[1.5rem] transition-all"
                                 >
                                     <FaTimes size={24} />
@@ -348,15 +395,15 @@ export default function AdminEmployees() {
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-10 pt-6">
                                         <div className="space-y-4">
                                             <label className="text-xs font-black text-gray-500 mr-2 uppercase tracking-[0.2em] flex items-center gap-2">
-                                                <FaLock className="text-brand-primary" /> סיסמה חזקה
+                                                <FaLock className="text-brand-primary" /> סיסמה {form.id && '(אופציונלי)'}
                                             </label>
                                             <input
                                                 type="password"
                                                 value={form.password}
                                                 onChange={(e) => setForm({ ...form, password: e.target.value })}
-                                                required
+                                                required={!form.id}
                                                 className="w-full px-8 py-5 bg-gray-50 border-none rounded-[1.5rem] focus:ring-4 focus:ring-brand-primary/10 text-gray-900 font-black transition-all"
-                                                placeholder="••••••••"
+                                                placeholder={form.id ? "השאר ריק אם לא רוצה לשנות" : "••••••••"}
                                             />
                                         </div>
                                         <div className="space-y-4">
@@ -365,7 +412,7 @@ export default function AdminEmployees() {
                                                 type="password"
                                                 value={form.password_confirmation}
                                                 onChange={(e) => setForm({ ...form, password_confirmation: e.target.value })}
-                                                required
+                                                required={!form.id && form.password}
                                                 className="w-full px-8 py-5 bg-gray-50 border-none rounded-[1.5rem] focus:ring-4 focus:ring-brand-primary/10 text-gray-900 font-black transition-all"
                                                 placeholder="••••••••"
                                             />
@@ -379,7 +426,7 @@ export default function AdminEmployees() {
                                         className="flex-[2] bg-gray-900 text-white py-6 rounded-[2rem] font-black text-xl hover:shadow-2xl hover:shadow-gray-200 hover:bg-black transition-all active:scale-95 flex items-center justify-center gap-4"
                                     >
                                         <FaCheckCircle />
-                                        יצירת חשבון עובד
+                                        {form.id ? 'שמור שינויים' : 'יצירת חשבון עובד'}
                                     </button>
                                     <button
                                         type="button"

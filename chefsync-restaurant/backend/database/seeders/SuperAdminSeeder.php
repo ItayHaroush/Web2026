@@ -32,11 +32,13 @@ class SuperAdminSeeder extends Seeder
             'role' => 'owner', // role לא רלוונטי ל-Super Admin
             'is_active' => true,
             'is_super_admin' => true,
+            'ai_unlimited' => true, // Unlimited AI access for system owner
         ]);
 
         $this->command->info('Super Admin created successfully!');
         $this->command->info('Email: admin@chefsync.com');
         $this->command->info('Password: admin123');
+        $this->command->info('AI Access: Unlimited (bypasses credit limits)');
         $this->command->warn('⚠️  Change this password in production!');
     }
 }

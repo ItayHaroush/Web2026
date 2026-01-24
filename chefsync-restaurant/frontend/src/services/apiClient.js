@@ -129,15 +129,27 @@ apiClient.interceptors.response.use(
         }
 
         if (error.response?.status === 401) {
+            // ✅ ISOLATE AI ERRORS: Don't logout for AI endpoint failures
+            const isAiEndpoint = error.config?.url?.includes('/ai/');
+
+            if (isAiEndpoint) {
+                // Let the component handle the error gracefully
+                console.warn('AI endpoint returned 401 - component will handle:', error.config?.url);
+                return Promise.reject(error);
+            }
+
             // Token לא תקף - נקה מידע רלוונטי והפנה לפי סוג משתמש
-            const hasAdminToken = !!localStorage.getItem('admin_token');
+            const hasAdminToken = !!(localStorage.getItem('authToken') || localStorage.getItem('admin_token'));
+            const isAdminRoute = error.config?.url?.includes('/admin/') || window.location.pathname.includes('/admin');
+
             localStorage.removeItem('authToken');
             localStorage.removeItem('tenantId');
-            if (hasAdminToken) {
+
+            if (hasAdminToken || isAdminRoute) {
                 localStorage.removeItem('admin_token');
                 window.location.href = '/admin/login';
             } else {
-                window.location.href = '/login';
+                window.location.href = '/';
             }
         }
 

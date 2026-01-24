@@ -38,6 +38,9 @@ class AuthController extends Controller
         // יצירת טוקן
         $token = $user->createToken('auth-token', [$user->role])->plainTextToken;
 
+        // סופר אדמין לא חייב לשייך למסעדה
+        $restaurant = $user->restaurant;
+
         return response()->json([
             'success' => true,
             'message' => 'התחברת בהצלחה!',
@@ -48,9 +51,9 @@ class AuthController extends Controller
                 'role' => $user->role,
                 'is_super_admin' => $user->is_super_admin ?? false,
                 'restaurant_id' => $user->restaurant_id,
-                'restaurant_name' => $user->restaurant->name ?? null,
-                'tenant_id' => $user->restaurant->tenant_id ?? null,
-                'restaurant' => $user->restaurant,
+                'restaurant_name' => $restaurant?->name,
+                'tenant_id' => $restaurant?->tenant_id,
+                'restaurant' => $restaurant,
             ],
             'token' => $token,
         ]);

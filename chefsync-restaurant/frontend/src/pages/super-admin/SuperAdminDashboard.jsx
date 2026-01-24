@@ -422,8 +422,8 @@ export default function SuperAdminDashboard() {
                                                     onClick={() => toggleRestaurant(restaurant.id)}
                                                     title={(restaurant.is_open_now ?? restaurant.is_open) ? 'סגור מסעדה' : 'פתח מסעדה'}
                                                     className={`p-2.5 rounded-xl transition-all border ${(restaurant.is_open_now ?? restaurant.is_open)
-                                                            ? 'bg-amber-50 text-amber-600 border-amber-100 hover:bg-amber-100'
-                                                            : 'bg-green-50 text-green-600 border-green-100 hover:bg-green-100'
+                                                        ? 'bg-amber-50 text-amber-600 border-amber-100 hover:bg-amber-100'
+                                                        : 'bg-green-50 text-green-600 border-green-100 hover:bg-green-100'
                                                         }`}
                                                 >
                                                     <FaPowerOff size={16} />

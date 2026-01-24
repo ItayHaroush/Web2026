@@ -72,6 +72,27 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Development Mode (Testing/Staging Only)
+    |--------------------------------------------------------------------------
+    | When enabled, bypasses billing checks, subscription validation,
+    | and AI credit limits. MUST only be used in local/staging environments.
+    | Will abort with 403 if enabled in production.
+    */
+
+    'dev_mode' => (function () {
+        $devMode = env('DEV_MODE', false);
+        $environment = env('APP_ENV', 'production');
+
+        // Security: Prevent dev mode in production
+        if ($devMode && $environment === 'production') {
+            abort(403, 'DEV_MODE cannot be enabled in production environment');
+        }
+
+        return (bool) $devMode;
+    })(),
+
+    /*
+    |--------------------------------------------------------------------------
     | Maintenance Mode Driver
     |--------------------------------------------------------------------------
     */

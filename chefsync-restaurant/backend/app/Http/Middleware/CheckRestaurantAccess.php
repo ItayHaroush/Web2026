@@ -41,6 +41,29 @@ class CheckRestaurantAccess
             ], 404);
         }
 
+        // Bypass subscription check in dev mode
+        if (config('app.dev_mode')) {
+            \Log::info('Dev Mode: Bypassing subscription check', [
+                'tenant_id' => $tenantId,
+                'restaurant_id' => $restaurant->id,
+            ]);
+
+            $request->attributes->set('restaurant', $restaurant);
+            return $next($request);
+        }
+
+        // Bypass subscription check for super admin
+        if ($request->user() && $request->user()->is_super_admin) {
+            \Log::info('Super Admin: Bypassing subscription check', [
+                'user_id' => $request->user()->id,
+                'tenant_id' => $tenantId,
+                'restaurant_id' => $restaurant->id,
+            ]);
+
+            $request->attributes->set('restaurant', $restaurant);
+            return $next($request);
+        }
+
         if (!$restaurant->hasAccess()) {
             return response()->json([
                 'success' => false,

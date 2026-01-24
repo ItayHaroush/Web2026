@@ -14,6 +14,9 @@ return [
     // Enable/disable Copilot SDK
     'enabled' => env('COPILOT_ENABLED', false),
 
+    // Operation mode: 'mock' (development) or 'real' (production)
+    'mode' => env('COPILOT_MODE', 'mock'),
+
     // Path to Copilot CLI executable
     'cli_path' => env('COPILOT_CLI_PATH', null),
 
@@ -70,10 +73,21 @@ return [
             'cache_enabled' => false,
         ],
         'dashboard_insights' => [
-            'enabled' => false, // Not implemented yet
+            'enabled' => true, // ✅ Enabled for restaurant analytics
             'cost_credits' => 5, // Higher cost for complex analysis
             'cache_enabled' => true,
             'cache_ttl' => 86400, // 1 day
+        ],
+        'price_recommendations' => [
+            'enabled' => true, // ✅ Enabled for price suggestions
+            'cost_credits' => 3,
+            'cache_enabled' => true,
+            'cache_ttl' => 3600, // 1 hour
+        ],
+        'restaurant_chat' => [
+            'enabled' => true, // ✅ Enabled for restaurant chat assistant
+            'cost_credits' => 1,
+            'cache_enabled' => false, // Chat should not be cached
         ],
     ],
 

@@ -111,7 +111,9 @@ class AiController extends Controller
 
             return response()->json([
                 'success' => true,
-                'data' => $status,
+                'credits_remaining' => $status['credits_remaining'],
+                'credits_limit' => $status['monthly_limit'],
+                'data' => $status, // פרטים נוספים
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -191,7 +193,7 @@ class AiController extends Controller
             if ($cached) {
                 return response()->json([
                     'success' => true,
-                    'data' => $cached,
+                    'data' => $cached, // ✅ Return cached data as-is
                     'cached' => true,
                 ]);
             }
@@ -200,14 +202,14 @@ class AiController extends Controller
             $copilot = new CopilotService($tenantId, $restaurant, $user);
 
             // Generate insights
-            $insights = $copilot->generateDashboardInsights();
+            $insightsData = $copilot->generateDashboardInsights();
 
             // Cache for 24 hours
-            \Cache::put($cacheKey, $insights, 86400);
+            \Cache::put($cacheKey, $insightsData, 86400);
 
             return response()->json([
                 'success' => true,
-                'data' => $insights,
+                'data' => $insightsData, // ✅ Return fresh data as-is
                 'cached' => false,
             ]);
         } catch (\Exception $e) {
@@ -222,9 +224,9 @@ class AiController extends Controller
                 'success' => true,
                 'data' => [
                     'insights' => [],
-                    'error' => 'לא ניתן לייצר תובנות כרגע',
+                    'error' => $e->getMessage(),
                 ],
-            ]);
+            ], 200);
         }
     }
 
@@ -279,8 +281,8 @@ class AiController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'לא ניתן לייצר המלצת מחיר: ' . $e->getMessage(),
-            ], 500);
+                'message' => $e->getMessage(),
+            ], 200);
         }
     }
 }

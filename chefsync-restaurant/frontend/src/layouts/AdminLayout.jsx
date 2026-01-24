@@ -6,6 +6,7 @@ import api from '../services/apiClient';
 import { PRODUCT_NAME } from '../constants/brand';
 import DashboardSidebar from '../components/admin/DashboardSidebar';
 import DashboardHeader from '../components/admin/DashboardHeader';
+import FloatingRestaurantAssistant from '../components/admin/FloatingRestaurantAssistant';
 import {
     FaChartPie,
     FaClipboardList,
@@ -209,6 +210,9 @@ export default function AdminLayout({ children }) {
                     {children}
                 </main>
             </div>
+
+            {/* סוכן AI ספציפי למסעדה - עם מכסת קרדיטים */}
+            <FloatingRestaurantAssistant />
         </div>
     );
 }
