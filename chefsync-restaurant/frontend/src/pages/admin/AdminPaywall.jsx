@@ -2,12 +2,12 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { activateSubscription, getSubscriptionStatus } from '../../services/subscriptionService';
-import { 
-    FaLock, 
-    FaRocket, 
-    FaCheckCircle, 
-    FaClock, 
-    FaCalendarAlt, 
+import {
+    FaLock,
+    FaRocket,
+    FaCheckCircle,
+    FaClock,
+    FaCalendarAlt,
     FaCreditCard,
     FaArrowLeft,
     FaCrown,
@@ -67,7 +67,7 @@ export default function AdminPaywall() {
     };
 
     const isTrialActive = status?.subscription_status === 'trial' && status?.days_left_in_trial > 0;
-    
+
     if (loading) {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -95,8 +95,8 @@ export default function AdminPaywall() {
                     <div>
                         <h1 className="text-4xl font-black text-gray-900 tracking-tight">שדרוג ל-Premium</h1>
                         <p className="text-gray-500 font-medium text-lg mt-2 max-w-lg mx-auto leading-relaxed">
-                            {isTrialActive 
-                                ? `נהנית מהגרסה החינמית? נשארו לך עוד ${status?.days_left_in_trial} ימים.` 
+                            {isTrialActive
+                                ? `נהנית מהגרסה החינמית? נשארו לך עוד ${status?.days_left_in_trial} ימים.`
                                 : 'תקופת הניסיון הסתיימה. כדי להמשיך להשתמש במערכת, יש להפעיל מנוי.'}
                         </p>
                     </div>
@@ -109,17 +109,17 @@ export default function AdminPaywall() {
                             <h3 className="text-xl font-black text-gray-900 flex items-center gap-3">
                                 <FaClock className="text-amber-500" /> מצב מנוי נוכחי
                             </h3>
-                            
+
                             <div className="space-y-6">
-                                <InfoItem 
-                                    icon={<FaRocket className="text-indigo-500" />} 
-                                    label="סטטוס" 
-                                    value={status?.subscription_status === 'trial' ? 'תקופת ניסיון' : 'לא פעיל'} 
+                                <InfoItem
+                                    icon={<FaRocket className="text-indigo-500" />}
+                                    label="סטטוס"
+                                    value={status?.subscription_status === 'trial' ? 'תקופת ניסיון' : 'לא פעיל'}
                                 />
-                                <InfoItem 
-                                    icon={<FaCalendarAlt className="text-emerald-500" />} 
-                                    label="סיום התנסות" 
-                                    value={status?.trial_ends_at ? new Date(status.trial_ends_at).toLocaleDateString('he-IL') : '-'} 
+                                <InfoItem
+                                    icon={<FaCalendarAlt className="text-emerald-500" />}
+                                    label="סיום התנסות"
+                                    value={status?.trial_ends_at ? new Date(status.trial_ends_at).toLocaleDateString('he-IL') : '-'}
                                 />
                                 {status?.outstanding_amount > 0 && (
                                     <div className="p-4 bg-rose-50 rounded-2xl border border-rose-100">
@@ -206,7 +206,7 @@ export default function AdminPaywall() {
                                     )}
                                 </button>
                             </div>
-                            
+
                             <div className="text-center md:text-right pt-6 border-t border-gray-50">
                                 <p className="text-xs font-medium text-gray-400 flex items-center justify-center md:justify-end gap-2">
                                     <FaLock className="inline" /> מאובטח בסטנדרט תעשייתי. החיוב יתבצע באופן אוטומטי.
@@ -225,21 +225,19 @@ function PlanCard({ title, price, subtitle, selected, onSelect, icon, badge }) {
         <button
             type="button"
             onClick={onSelect}
-            className={`relative w-full text-right bg-white rounded-[2.5rem] p-8 border-2 transition-all duration-500 flex flex-col gap-5 group overflow-hidden ${
-                selected 
-                    ? 'border-brand-primary shadow-2xl shadow-brand-primary/10 -translate-y-1' 
+            className={`relative w-full text-right bg-white rounded-[2.5rem] p-8 border-2 transition-all duration-500 flex flex-col gap-5 group overflow-hidden ${selected
+                    ? 'border-brand-primary shadow-2xl shadow-brand-primary/10 -translate-y-1'
                     : 'border-gray-100 hover:border-brand-primary/30 hover:shadow-xl'
-            }`}
+                }`}
         >
             {badge && (
                 <div className="absolute top-0 left-0 bg-brand-primary text-white px-5 py-2 rounded-br-2xl text-[10px] font-black uppercase tracking-widest shadow-lg">
                     {badge}
                 </div>
             )}
-            
-            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl transition-all duration-500 ${
-                selected ? 'bg-brand-primary text-white scale-110 rotate-3' : 'bg-gray-50 text-gray-400'
-            }`}>
+
+            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl transition-all duration-500 ${selected ? 'bg-brand-primary text-white scale-110 rotate-3' : 'bg-gray-50 text-gray-400'
+                }`}>
                 {icon}
             </div>
 

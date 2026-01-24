@@ -6,16 +6,16 @@ import api from '../../services/apiClient';
 import { resolveAssetUrl } from '../../utils/assets';
 import AiDescriptionGenerator from '../../components/AiDescriptionGenerator';
 import AiPriceRecommender from '../../components/AiPriceRecommender';
-import { 
-    FaUtensils, 
-    FaPlus, 
-    FaEdit, 
-    FaTrash, 
-    FaPowerOff, 
-    FaImage, 
-    FaToggleOn, 
-    FaToggleOff, 
-    FaMagic, 
+import {
+    FaUtensils,
+    FaPlus,
+    FaEdit,
+    FaTrash,
+    FaPowerOff,
+    FaImage,
+    FaToggleOn,
+    FaToggleOff,
+    FaMagic,
     FaMoneyBillWave,
     FaSearch,
     FaLayerGroup,
@@ -240,7 +240,7 @@ export default function AdminMenu() {
                             ניהול תפריט
                         </h1>
                         <p className="text-xs font-black text-gray-400 uppercase tracking-widest mt-2 flex items-center gap-2">
-                             {items.length} פריטים במערכת
+                            {items.length} פריטים במערכת
                         </p>
                     </div>
                     {isManager() && (
@@ -261,11 +261,10 @@ export default function AdminMenu() {
                 <div className="flex items-center gap-1 min-w-max">
                     <button
                         onClick={() => setFilterCategory('')}
-                        className={`px-4 py-2.5 rounded-2xl font-black text-[11px] uppercase tracking-wider transition-all flex items-center gap-2 group relative ${
-                            filterCategory === ''
-                            ? 'bg-gray-900 text-white shadow-lg'
-                            : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
-                        }`}
+                        className={`px-4 py-2.5 rounded-2xl font-black text-[11px] uppercase tracking-wider transition-all flex items-center gap-2 group relative ${filterCategory === ''
+                                ? 'bg-gray-900 text-white shadow-lg'
+                                : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
+                            }`}
                     >
                         <FaLayerGroup size={10} />
                         הכל
@@ -274,11 +273,10 @@ export default function AdminMenu() {
                         <button
                             key={cat.id}
                             onClick={() => setFilterCategory(cat.id.toString())}
-                            className={`px-4 py-2.5 rounded-2xl font-black text-[11px] uppercase tracking-wider transition-all flex items-center gap-2 group relative ${
-                                filterCategory === cat.id.toString()
-                                ? 'bg-gray-900 text-white shadow-lg'
-                                : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
-                            }`}
+                            className={`px-4 py-2.5 rounded-2xl font-black text-[11px] uppercase tracking-wider transition-all flex items-center gap-2 group relative ${filterCategory === cat.id.toString()
+                                    ? 'bg-gray-900 text-white shadow-lg'
+                                    : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
+                                }`}
                         >
                             <span className="text-[14px]">{cat.icon}</span>
                             {cat.name}
@@ -292,9 +290,8 @@ export default function AdminMenu() {
                 {filteredItems.map((item) => (
                     <div
                         key={item.id}
-                        className={`bg-white rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 group overflow-hidden flex flex-col ${
-                            !item.is_available ? 'opacity-80' : ''
-                        }`}
+                        className={`bg-white rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 group overflow-hidden flex flex-col ${!item.is_available ? 'opacity-80' : ''
+                            }`}
                     >
                         {/* תמונה מודרנית */}
                         <div className="aspect-[4/3] bg-slate-50 relative overflow-hidden">
@@ -310,7 +307,7 @@ export default function AdminMenu() {
                                     <span className="text-[10px] font-black uppercase tracking-widest">אין תמונה</span>
                                 </div>
                             )}
-                            
+
                             {/* באג' קטגוריה וזמינות */}
                             <div className="absolute top-4 left-4 right-4 flex justify-between items-start pointer-events-none">
                                 <div className="bg-white/90 backdrop-blur px-2.5 py-1 rounded-lg shadow-sm">
@@ -355,11 +352,10 @@ export default function AdminMenu() {
                                     <button
                                         onClick={() => toggleAvailability(item)}
                                         disabled={isLocked}
-                                        className={`flex-1 flex items-center justify-center gap-2 h-10 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all disabled:opacity-50 ${
-                                            item.is_available
-                                            ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'
-                                            : 'bg-red-50 text-red-600 hover:bg-red-100'
-                                        }`}
+                                        className={`flex-1 flex items-center justify-center gap-2 h-10 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all disabled:opacity-50 ${item.is_available
+                                                ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'
+                                                : 'bg-red-50 text-red-600 hover:bg-red-100'
+                                            }`}
                                     >
                                         {item.is_available ? <FaToggleOn size={14} /> : <FaToggleOff size={14} />}
                                         {item.is_available ? 'זמין' : 'כבוי'}
@@ -423,7 +419,7 @@ export default function AdminMenu() {
                                     <span className="w-1 h-1 bg-brand-primary rounded-full" />
                                     מידע בסיסי
                                 </h3>
-                                
+
                                 <div className="space-y-1.5">
                                     <label className="text-[11px] font-black text-gray-500 uppercase tracking-tight mr-1">שם הפריט</label>
                                     <input
@@ -590,11 +586,10 @@ export default function AdminMenu() {
                                                     key={group.id}
                                                     type="button"
                                                     onClick={() => setForm({ ...form, addons_group_scope: group.id })}
-                                                    className={`px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-tight transition-all ${
-                                                        form.addons_group_scope === group.id
-                                                        ? 'bg-gray-900 text-white shadow-md'
-                                                        : 'bg-white text-gray-500 border border-gray-100'
-                                                    }`}
+                                                    className={`px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-tight transition-all ${form.addons_group_scope === group.id
+                                                            ? 'bg-gray-900 text-white shadow-md'
+                                                            : 'bg-white text-gray-500 border border-gray-100'
+                                                        }`}
                                                 >
                                                     {group.label}
                                                 </button>

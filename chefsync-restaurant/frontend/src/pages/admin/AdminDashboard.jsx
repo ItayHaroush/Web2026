@@ -229,11 +229,10 @@ export default function AdminDashboard() {
                         <button
                             onClick={enablePush}
                             disabled={pushState.status === 'loading' || permission === 'denied' || isPushEnabled}
-                            className={`flex-1 lg:flex-none px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-sm flex items-center justify-center gap-2 ${
-                                isPushEnabled 
-                                ? 'bg-green-50 text-green-700 border border-green-100 cursor-default' 
-                                : 'bg-brand-primary text-white hover:shadow-brand-primary/20 hover:shadow-lg disabled:opacity-50'
-                            }`}
+                            className={`flex-1 lg:flex-none px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-sm flex items-center justify-center gap-2 ${isPushEnabled
+                                    ? 'bg-green-50 text-green-700 border border-green-100 cursor-default'
+                                    : 'bg-brand-primary text-white hover:shadow-brand-primary/20 hover:shadow-lg disabled:opacity-50'
+                                }`}
                         >
                             {pushState.status === 'loading' ? (
                                 <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />

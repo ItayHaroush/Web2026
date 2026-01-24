@@ -2,13 +2,13 @@ import { useEffect, useState } from 'react';
 import AdminLayout from '../../layouts/AdminLayout';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import api from '../../services/apiClient';
-import { 
-    FaBreadSlice, 
-    FaPlus, 
-    FaEdit, 
-    FaTrash, 
-    FaCheckCircle, 
-    FaTimesCircle, 
+import {
+    FaBreadSlice,
+    FaPlus,
+    FaEdit,
+    FaTrash,
+    FaCheckCircle,
+    FaTimesCircle,
     FaStar,
     FaToggleOn,
     FaToggleOff,
@@ -175,8 +175,8 @@ export default function AdminBases() {
                         </div>
                     ) : (
                         bases.map((base) => (
-                            <div 
-                                key={base.id} 
+                            <div
+                                key={base.id}
                                 className={`group bg-white rounded-[3rem] shadow-sm border border-gray-100 p-10 flex flex-col gap-8 hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 relative overflow-hidden ${!base.is_active && 'opacity-60 grayscale-[0.5]'}`}
                             >
                                 {/* Default Star Overflow */}
@@ -256,8 +256,8 @@ export default function AdminBases() {
                                         <p className="text-gray-500 font-medium text-sm">הגדרת שם, מחיר וסטטוס</p>
                                     </div>
                                 </div>
-                                <button 
-                                    onClick={closeModal} 
+                                <button
+                                    onClick={closeModal}
                                     className="p-3 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-2xl transition-all"
                                 >
                                     <FaTimes size={24} />
@@ -329,17 +329,17 @@ export default function AdminBases() {
                                 </div>
 
                                 <div className="flex gap-4 pt-4">
-                                    <button 
-                                        type="submit" 
+                                    <button
+                                        type="submit"
                                         disabled={saving}
                                         className="flex-1 bg-brand-primary text-white py-5 rounded-[1.5rem] font-black text-lg hover:shadow-2xl hover:shadow-brand-primary/20 hover:bg-brand-dark transition-all active:scale-95 flex items-center justify-center gap-3 disabled:opacity-50"
                                     >
                                         <FaSave />
                                         {saving ? 'שומר...' : editBase ? 'עדכון בסיס' : 'הוספת בסיס'}
                                     </button>
-                                    <button 
-                                        type="button" 
-                                        onClick={closeModal} 
+                                    <button
+                                        type="button"
+                                        onClick={closeModal}
                                         className="px-10 py-5 bg-gray-100 text-gray-700 rounded-[1.5rem] font-black hover:bg-gray-200 transition-all active:scale-95"
                                     >
                                         ביטול

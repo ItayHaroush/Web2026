@@ -3,14 +3,14 @@ import AdminLayout from '../../layouts/AdminLayout';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import api from '../../services/apiClient';
 import DeliveryZoneMap from '../../components/DeliveryZoneMap';
-import { 
-    FaMapMarkedAlt, 
-    FaPlus, 
-    FaEdit, 
-    FaTrash, 
-    FaDrawPolygon, 
-    FaCity, 
-    FaRoute, 
+import {
+    FaMapMarkedAlt,
+    FaPlus,
+    FaEdit,
+    FaTrash,
+    FaDrawPolygon,
+    FaCity,
+    FaRoute,
     FaShekelSign,
     FaCheckCircle,
     FaTimesCircle,
@@ -265,8 +265,8 @@ export default function AdminDeliveryZones() {
                         </div>
                     ) : (
                         zones.map((zone) => (
-                            <div 
-                                key={zone.id} 
+                            <div
+                                key={zone.id}
                                 className={`group bg-white rounded-[2.5rem] shadow-sm border border-gray-100 p-6 flex flex-col gap-5 hover:shadow-xl transition-all duration-300 relative overflow-hidden ${!zone.is_active && 'opacity-60 grayscale-[0.5]'}`}
                             >
                                 {/* Active Badge Overflow */}
@@ -348,8 +348,8 @@ export default function AdminDeliveryZones() {
                                         {editZone ? 'עריכת אזור משלוח' : 'הגדרת אזור משלוח חדש'}
                                     </h2>
                                 </div>
-                                <button 
-                                    onClick={closeModal} 
+                                <button
+                                    onClick={closeModal}
                                     className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-all"
                                 >
                                     <FaTimes size={20} />
@@ -483,15 +483,15 @@ export default function AdminDeliveryZones() {
                                                 <FaDrawPolygon className="text-brand-primary" />
                                                 <h3 className="font-black text-gray-800 text-sm">הגדרת אזור במפה</h3>
                                             </div>
-                                            <button 
-                                                type="button" 
+                                            <button
+                                                type="button"
                                                 onClick={() => setForm(prev => ({ ...prev, polygon: [] }))}
                                                 className="text-[10px] font-black text-brand-primary hover:underline flex items-center gap-1"
                                             >
                                                 <FaUndo size={10} /> נקה מפה
                                             </button>
                                         </div>
-                                        
+
                                         <div className="flex-1 min-h-[300px] sm:min-h-[400px] relative rounded-2xl overflow-hidden shadow-inner border-4 border-white">
                                             <DeliveryZoneMap
                                                 center={DEFAULT_CENTER}
@@ -502,7 +502,7 @@ export default function AdminDeliveryZones() {
                                                 onRadiusChange={(radius) => setForm({ ...form, city_radius: radius })}
                                                 onMapCaptured={(fn) => setCaptureMapFunction(() => fn)}
                                             />
-                                            
+
                                             {/* Map hint for mobile */}
                                             <div className="absolute top-4 left-4 right-4 bg-black/50 backdrop-blur-md p-2 rounded-xl border border-white/10 flex items-center gap-2 pointer-events-none">
                                                 <div className="w-2 h-2 rounded-full bg-brand-primary animate-pulse" />
@@ -515,7 +515,7 @@ export default function AdminDeliveryZones() {
 
                             {/* Modal Footer */}
                             <div className="px-8 py-6 bg-gray-50 border-t border-gray-100 flex gap-4 flex-shrink-0">
-                                <button 
+                                <button
                                     onClick={handleSubmit}
                                     type="button"
                                     className="flex-1 bg-brand-primary text-white py-4 rounded-2xl font-black text-lg hover:shadow-lg hover:shadow-brand-primary/20 hover:bg-brand-dark transition-all active:scale-95 flex items-center justify-center gap-3"
@@ -523,8 +523,8 @@ export default function AdminDeliveryZones() {
                                     <FaSave />
                                     {editZone ? 'שמור שינויים' : 'צור אזור משלוח'}
                                 </button>
-                                <button 
-                                    onClick={closeModal} 
+                                <button
+                                    onClick={closeModal}
                                     type="button"
                                     className="px-8 py-4 bg-white border border-gray-100 text-gray-700 rounded-2xl font-black hover:bg-gray-50 transition-all active:scale-95"
                                 >

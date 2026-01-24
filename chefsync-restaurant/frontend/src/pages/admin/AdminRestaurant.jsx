@@ -5,18 +5,18 @@ import AdminLayout from '../../layouts/AdminLayout';
 import api from '../../services/apiClient';
 import { resolveAssetUrl } from '../../utils/assets';
 import { QRCodeCanvas } from 'qrcode.react';
-import { 
-    FaStore, 
-    FaClock, 
-    FaMapMarkerAlt, 
-    FaPhone, 
-    FaInfoCircle, 
-    FaCheckCircle, 
-    FaTimesCircle, 
-    FaSave, 
-    FaQrcode, 
-    FaShareAlt, 
-    FaCamera, 
+import {
+    FaStore,
+    FaClock,
+    FaMapMarkerAlt,
+    FaPhone,
+    FaInfoCircle,
+    FaCheckCircle,
+    FaTimesCircle,
+    FaSave,
+    FaQrcode,
+    FaShareAlt,
+    FaCamera,
     FaClipboard,
     FaChevronDown,
     FaChevronUp,
@@ -606,9 +606,8 @@ export default function AdminRestaurant() {
                                         </div>
                                         <h3 className="font-black text-gray-900">סטטוס פתיחה</h3>
                                     </div>
-                                    <span className={`px-3 py-1 rounded-full text-[10px] font-black tracking-wider uppercase ${
-                                        overrideStatus ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'
-                                    }`}>
+                                    <span className={`px-3 py-1 rounded-full text-[10px] font-black tracking-wider uppercase ${overrideStatus ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'
+                                        }`}>
                                         {overrideStatus ? '🔒 כפוי ידנית' : '✨ חישוב אוטומטי'}
                                     </span>
                                 </div>
@@ -622,11 +621,10 @@ export default function AdminRestaurant() {
                                             }
                                         }}
                                         disabled={!overrideStatus || !isApproved}
-                                        className={`w-full py-8 rounded-[2rem] flex flex-col items-center justify-center gap-3 transition-all transform active:scale-95 ${
-                                            restaurant.is_open
+                                        className={`w-full py-8 rounded-[2rem] flex flex-col items-center justify-center gap-3 transition-all transform active:scale-95 ${restaurant.is_open
                                                 ? 'bg-green-500 text-white shadow-[0_10px_30px_-10px_rgba(34,197,94,0.5)] border-b-4 border-green-700'
                                                 : 'bg-red-500 text-white shadow-[0_10px_30px_-10px_rgba(239,68,68,0.5)] border-b-4 border-red-700'
-                                        } ${(!overrideStatus || !isApproved) && 'opacity-80 saturate-50 grayscale-[0.2]'}`}
+                                            } ${(!overrideStatus || !isApproved) && 'opacity-80 saturate-50 grayscale-[0.2]'}`}
                                     >
                                         <span className="text-4xl">
                                             {restaurant.is_open ? <FaCheckCircle /> : <FaTimesCircle />}
@@ -747,17 +745,16 @@ export default function AdminRestaurant() {
                                     const isOpenDay = restaurant.operating_days?.[day] ?? false;
                                     const panelOpen = openDayPanels[day] || false;
                                     return (
-                                        <div 
-                                            key={day} 
-                                            className={`rounded-3xl border transition-all duration-300 ${
-                                                isOpenDay 
-                                                    ? 'bg-white border-brand-primary' 
+                                        <div
+                                            key={day}
+                                            className={`rounded-3xl border transition-all duration-300 ${isOpenDay
+                                                    ? 'bg-white border-brand-primary'
                                                     : 'bg-gray-50 border-gray-100 opacity-60 grayscale-[0.5]'
-                                            }`}
+                                                }`}
                                         >
                                             <div className="p-4 flex items-center justify-between gap-3">
                                                 <label className="flex items-center gap-3 cursor-pointer select-none">
-                                                    <div 
+                                                    <div
                                                         className={`w-10 h-6 flex items-center rounded-full p-1 transition-colors ${isOpenDay ? 'bg-brand-primary' : 'bg-gray-300'}`}
                                                         onClick={(e) => {
                                                             e.preventDefault();

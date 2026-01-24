@@ -2,14 +2,14 @@ import { useState, useEffect } from 'react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import AdminLayout from '../../layouts/AdminLayout';
 import api from '../../services/apiClient';
-import { 
-    FaDesktop, 
-    FaClock, 
-    FaInfoCircle, 
-    FaCheckCircle, 
-    FaRoute, 
-    FaPrint, 
-    FaTimes 
+import {
+    FaDesktop,
+    FaClock,
+    FaInfoCircle,
+    FaCheckCircle,
+    FaRoute,
+    FaPrint,
+    FaTimes
 } from 'react-icons/fa';
 
 // מסוף סניף לעובדים/שליחים: מציג הזמנות פתוחות ומאפשר עדכון סטטוס מהיר
@@ -145,7 +145,7 @@ export default function AdminTerminal() {
                                 {orders.length} הזמנות פתוחות
                             </span>
                         </div>
-                        <button 
+                        <button
                             onClick={fetchOrders}
                             className="p-4 bg-gray-900 text-white rounded-[1.5rem] hover:bg-black transition-all active:scale-95 shadow-lg group flex-1 md:flex-none justify-center font-black"
                         >
@@ -170,20 +170,18 @@ export default function AdminTerminal() {
                             const categoryGroups = groupItemsByCategory(items);
 
                             return (
-                                <div 
-                                    key={order.id} 
-                                    className={`group flex flex-col bg-white rounded-[3.5rem] shadow-sm border-2 transition-all duration-500 hover:shadow-2xl hover:-translate-y-2 overflow-hidden ${
-                                        order.status === 'ready' ? 'border-amber-200' : 
-                                        order.status === 'preparing' ? 'border-brand-primary/20' : 
-                                        'border-gray-50'
-                                    }`}
+                                <div
+                                    key={order.id}
+                                    className={`group flex flex-col bg-white rounded-[3.5rem] shadow-sm border-2 transition-all duration-500 hover:shadow-2xl hover:-translate-y-2 overflow-hidden ${order.status === 'ready' ? 'border-amber-200' :
+                                            order.status === 'preparing' ? 'border-brand-primary/20' :
+                                                'border-gray-50'
+                                        }`}
                                 >
                                     {/* Order Header Card */}
-                                    <div className={`p-8 pb-6 border-b border-gray-50 transition-colors ${
-                                        order.status === 'ready' ? 'bg-amber-50/50' : 
-                                        order.status === 'preparing' ? 'bg-brand-primary/[0.03]' : 
-                                        'bg-gray-50/30'
-                                    }`}>
+                                    <div className={`p-8 pb-6 border-b border-gray-50 transition-colors ${order.status === 'ready' ? 'bg-amber-50/50' :
+                                            order.status === 'preparing' ? 'bg-brand-primary/[0.03]' :
+                                                'bg-gray-50/30'
+                                        }`}>
                                         <div className="flex justify-between items-start mb-4">
                                             <div>
                                                 <h3 className="text-3xl font-black text-gray-900">#{order.id.toString().slice(-4)}</h3>
@@ -192,11 +190,10 @@ export default function AdminTerminal() {
                                                     {new Date(order.created_at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}
                                                 </p>
                                             </div>
-                                            <div className={`px-5 py-2 rounded-2xl text-xs font-black uppercase tracking-widest shadow-sm ${
-                                                order.status === 'ready' ? 'bg-amber-500 text-white animate-bounce' :
-                                                order.status === 'preparing' ? 'bg-brand-primary text-white' :
-                                                'bg-indigo-500 text-white'
-                                            }`}>
+                                            <div className={`px-5 py-2 rounded-2xl text-xs font-black uppercase tracking-widest shadow-sm ${order.status === 'ready' ? 'bg-amber-500 text-white animate-bounce' :
+                                                    order.status === 'preparing' ? 'bg-brand-primary text-white' :
+                                                        'bg-indigo-500 text-white'
+                                                }`}>
                                                 {statusLabel[order.status]}
                                             </div>
                                         </div>
@@ -264,11 +261,10 @@ export default function AdminTerminal() {
                                         {next ? (
                                             <button
                                                 onClick={() => updateStatus(order.id, next)}
-                                                className={`w-full py-5 rounded-[2rem] font-black text-lg transition-all active:scale-95 shadow-xl flex items-center justify-center gap-4 hover:-translate-y-1 ${
-                                                    order.status === 'ready' ? 'bg-emerald-500 text-white shadow-emerald-500/20 hover:bg-emerald-600' :
-                                                    order.status === 'preparing' ? 'bg-amber-500 text-white shadow-amber-500/20 hover:bg-amber-600' :
-                                                    'bg-brand-primary text-white shadow-brand-primary/20 hover:bg-brand-dark'
-                                                }`}
+                                                className={`w-full py-5 rounded-[2rem] font-black text-lg transition-all active:scale-95 shadow-xl flex items-center justify-center gap-4 hover:-translate-y-1 ${order.status === 'ready' ? 'bg-emerald-500 text-white shadow-emerald-500/20 hover:bg-emerald-600' :
+                                                        order.status === 'preparing' ? 'bg-amber-500 text-white shadow-amber-500/20 hover:bg-amber-600' :
+                                                            'bg-brand-primary text-white shadow-brand-primary/20 hover:bg-brand-dark'
+                                                    }`}
                                             >
                                                 {order.status === 'ready' ? (
                                                     <><FaCheckCircle /> הכר כנמסר</>
@@ -281,15 +277,15 @@ export default function AdminTerminal() {
                                                 <FaCheckCircle /> הושלם
                                             </div>
                                         )}
-                                        
+
                                         <div className="grid grid-cols-2 gap-3 mt-4">
-                                            <button 
+                                            <button
                                                 className="py-3 bg-white text-gray-600 rounded-2xl text-xs font-black shadow-sm border border-gray-100 hover:bg-gray-50 transition-all active:scale-95 flex items-center justify-center gap-2"
                                                 onClick={() => window.print()}
                                             >
                                                 <FaPrint size={12} /> הדפס
                                             </button>
-                                            <button 
+                                            <button
                                                 onClick={() => updateStatus(order.id, 'cancelled')}
                                                 className="py-3 bg-white text-rose-500 rounded-2xl text-xs font-black shadow-sm border border-gray-100 hover:bg-rose-50 transition-all active:scale-95 flex items-center justify-center gap-2"
                                             >

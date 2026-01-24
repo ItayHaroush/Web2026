@@ -3,20 +3,20 @@ import { useAdminAuth } from '../../context/AdminAuthContext';
 import { useRestaurantStatus } from '../../context/RestaurantStatusContext';
 import AdminLayout from '../../layouts/AdminLayout';
 import api from '../../services/apiClient';
-import { 
-    FaReceipt, 
-    FaClock, 
-    FaUser, 
-    FaPhone, 
-    FaMapMarkerAlt, 
-    FaInfoCircle, 
-    FaCheckCircle, 
-    FaSpinner, 
-    FaBoxOpen, 
-    FaTruck, 
-    FaCheck, 
-    FaTimes, 
-    FaBell, 
+import {
+    FaReceipt,
+    FaClock,
+    FaUser,
+    FaPhone,
+    FaMapMarkerAlt,
+    FaInfoCircle,
+    FaCheckCircle,
+    FaSpinner,
+    FaBoxOpen,
+    FaTruck,
+    FaCheck,
+    FaTimes,
+    FaBell,
     FaExclamationTriangle,
     FaArrowLeft,
     FaMotorcycle,
@@ -240,54 +240,54 @@ export default function AdminOrders() {
 
     const getStatusBadge = (status) => {
         const statuses = {
-            pending: { 
-                text: 'ממתין', 
-                color: 'bg-amber-50 text-amber-600 border-amber-100', 
+            pending: {
+                text: 'ממתין',
+                color: 'bg-amber-50 text-amber-600 border-amber-100',
                 icon: <FaClock />,
-                nextStatus: 'preparing' 
+                nextStatus: 'preparing'
             },
-            received: { 
-                text: 'התקבל', 
-                color: 'bg-amber-50 text-amber-600 border-amber-100', 
+            received: {
+                text: 'התקבל',
+                color: 'bg-amber-50 text-amber-600 border-amber-100',
                 icon: <FaBell />,
-                nextStatus: 'preparing' 
+                nextStatus: 'preparing'
             },
-            preparing: { 
-                text: 'בהכנה', 
-                color: 'bg-blue-50 text-blue-600 border-blue-100', 
+            preparing: {
+                text: 'בהכנה',
+                color: 'bg-blue-50 text-blue-600 border-blue-100',
                 icon: <FaSpinner className="animate-spin" />,
-                nextStatus: 'ready' 
+                nextStatus: 'ready'
             },
-            ready: { 
-                text: 'מוכן', 
-                color: 'bg-emerald-50 text-emerald-600 border-emerald-100', 
+            ready: {
+                text: 'מוכן',
+                color: 'bg-emerald-50 text-emerald-600 border-emerald-100',
                 icon: <FaCheckCircle />,
-                nextStatus: 'delivering' 
+                nextStatus: 'delivering'
             },
-            delivering: { 
-                text: 'במשלוח', 
-                color: 'bg-purple-50 text-purple-600 border-purple-100', 
+            delivering: {
+                text: 'במשלוח',
+                color: 'bg-purple-50 text-purple-600 border-purple-100',
                 icon: <FaMotorcycle />,
-                nextStatus: 'delivered' 
+                nextStatus: 'delivered'
             },
-            delivered: { 
-                text: 'נמסר', 
-                color: 'bg-slate-50 text-slate-600 border-slate-100', 
+            delivered: {
+                text: 'נמסר',
+                color: 'bg-slate-50 text-slate-600 border-slate-100',
                 icon: <FaBoxOpen />,
-                nextStatus: null 
+                nextStatus: null
             },
-            cancelled: { 
-                text: 'בוטל', 
-                color: 'bg-red-50 text-red-600 border-red-100', 
+            cancelled: {
+                text: 'בוטל',
+                color: 'bg-red-50 text-red-600 border-red-100',
                 icon: <FaTimes />,
-                nextStatus: null 
+                nextStatus: null
             },
         };
-        return statuses[status] || { 
-            text: status, 
-            color: 'bg-gray-50 text-gray-700 border-gray-100', 
+        return statuses[status] || {
+            text: status,
+            color: 'bg-gray-50 text-gray-700 border-gray-100',
             icon: <FaInfoCircle />,
-            nextStatus: null 
+            nextStatus: null
         };
     };
 
@@ -330,7 +330,7 @@ export default function AdminOrders() {
                             ניהול הזמנות
                         </h1>
                         <p className="text-xs font-black text-gray-400 uppercase tracking-widest mt-2 flex items-center gap-2">
-                             {(allOrders.length || orders.length)} הזמנות במערכת
+                            {(allOrders.length || orders.length)} הזמנות במערכת
                         </p>
                     </div>
                     <div className="flex items-center gap-4 bg-slate-50 p-2 rounded-2xl border border-gray-100">
@@ -357,25 +357,23 @@ export default function AdminOrders() {
                         const ordersToCount = allOrders.length ? allOrders : orders;
                         const count = option.value ? ordersToCount.filter(o => o.status === option.value).length : ordersToCount.length;
                         const isActive = filterStatus === option.value;
-                        
+
                         return (
                             <button
                                 key={option.value}
                                 onClick={() => setFilterStatus(option.value)}
-                                className={`px-4 py-2.5 rounded-2xl font-black text-[11px] uppercase tracking-wider transition-all flex items-center gap-2.5 group relative ${
-                                    isActive
-                                    ? 'bg-gray-900 text-white shadow-lg'
-                                    : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
-                                }`}
+                                className={`px-4 py-2.5 rounded-2xl font-black text-[11px] uppercase tracking-wider transition-all flex items-center gap-2.5 group relative ${isActive
+                                        ? 'bg-gray-900 text-white shadow-lg'
+                                        : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
+                                    }`}
                             >
                                 <span className={`${isActive ? 'text-white' : 'text-gray-400 group-hover:text-brand-primary'} transition-colors`}>
                                     {option.icon}
                                 </span>
                                 {option.label}
                                 {count > 0 && (
-                                    <span className={`px-1.5 py-0.5 rounded-lg text-[9px] font-black min-w-[20px] ${
-                                        isActive ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'
-                                    }`}>
+                                    <span className={`px-1.5 py-0.5 rounded-lg text-[9px] font-black min-w-[20px] ${isActive ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'
+                                        }`}>
                                         {count}
                                     </span>
                                 )}
@@ -417,11 +415,10 @@ export default function AdminOrders() {
                                         <div
                                             key={order.id}
                                             onClick={() => setSelectedOrder(order)}
-                                            className={`p-4 sm:p-5 cursor-pointer transition-all relative group ${
-                                                isSelected
-                                                ? 'bg-brand-primary/5'
-                                                : 'hover:bg-gray-50/80 active:bg-gray-100'
-                                            }`}
+                                            className={`p-4 sm:p-5 cursor-pointer transition-all relative group ${isSelected
+                                                    ? 'bg-brand-primary/5'
+                                                    : 'hover:bg-gray-50/80 active:bg-gray-100'
+                                                }`}
                                         >
                                             {/* אינדיקטור בחירה */}
                                             {isSelected && (
@@ -430,15 +427,14 @@ export default function AdminOrders() {
 
                                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                                 <div className="flex items-center gap-4">
-                                                    <div className={`w-14 h-14 rounded-2xl border flex flex-col items-center justify-center shrink-0 transition-transform group-hover:scale-105 ${
-                                                        isPending
-                                                        ? 'bg-amber-50 border-amber-200 shadow-[0_0_10px_rgba(251,191,36,0.3)] animate-pulse'
-                                                        : isSelected ? 'bg-white border-brand-primary/30 shadow-md' : 'bg-white border-gray-100 shadow-sm'
-                                                    }`}>
+                                                    <div className={`w-14 h-14 rounded-2xl border flex flex-col items-center justify-center shrink-0 transition-transform group-hover:scale-105 ${isPending
+                                                            ? 'bg-amber-50 border-amber-200 shadow-[0_0_10px_rgba(251,191,36,0.3)] animate-pulse'
+                                                            : isSelected ? 'bg-white border-brand-primary/30 shadow-md' : 'bg-white border-gray-100 shadow-sm'
+                                                        }`}>
                                                         <span className="text-[10px] font-black text-gray-400 tracking-tighter leading-none">#</span>
                                                         <span className={`text-sm font-black mt-0.5 ${isPending ? 'text-amber-700' : 'text-gray-900'}`}>{order.id}</span>
                                                     </div>
-                                                    
+
                                                     <div className="min-w-0">
                                                         <div className="flex items-center gap-3 mb-1.5">
                                                             <p className="font-black text-gray-900 text-base truncate">{order.customer_name}</p>
@@ -447,15 +443,14 @@ export default function AdminOrders() {
                                                                 {statusBadge.text}
                                                             </div>
                                                         </div>
-                                                        
+
                                                         <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
                                                             <div className="flex items-center gap-1.5 text-xs font-bold text-gray-500">
                                                                 <FaClock size={10} className="text-gray-400" />
                                                                 {new Date(order.created_at).toLocaleString('he-IL', { hour: '2-digit', minute: '2-digit' })}
                                                             </div>
-                                                            <div className={`flex items-center gap-1.5 text-[10px] font-black uppercase tracking-tight py-0.5 px-2 rounded-full border ${
-                                                                isDelivery ? 'bg-purple-50 text-purple-600 border-purple-100' : 'bg-orange-50 text-orange-600 border-orange-100'
-                                                            }`}>
+                                                            <div className={`flex items-center gap-1.5 text-[10px] font-black uppercase tracking-tight py-0.5 px-2 rounded-full border ${isDelivery ? 'bg-purple-50 text-purple-600 border-purple-100' : 'bg-orange-50 text-orange-600 border-orange-100'
+                                                                }`}>
                                                                 {isDelivery ? <FaMotorcycle size={10} /> : <FaShoppingBag size={10} />}
                                                                 {isDelivery ? 'משלוח' : 'איסוף עצמי'}
                                                             </div>
@@ -473,9 +468,8 @@ export default function AdminOrders() {
                                                     <p className="text-xl font-black text-gray-900">
                                                         ₪{Number(order.total).toFixed(2)}
                                                     </p>
-                                                    <div className={`w-8 h-8 rounded-full border border-gray-100 flex items-center justify-center transition-all ${
-                                                        isSelected ? 'bg-brand-primary text-white border-brand-primary border-2 animate-bounce' : 'bg-white text-gray-300 group-hover:bg-gray-100'
-                                                    }`}>
+                                                    <div className={`w-8 h-8 rounded-full border border-gray-100 flex items-center justify-center transition-all ${isSelected ? 'bg-brand-primary text-white border-brand-primary border-2 animate-bounce' : 'bg-white text-gray-300 group-hover:bg-gray-100'
+                                                        }`}>
                                                         <FaArrowLeft size={10} />
                                                     </div>
                                                 </div>
@@ -564,7 +558,7 @@ export default function AdminOrders() {
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-2">
-                                                <a 
+                                                <a
                                                     href={`tel:${selectedOrder.customer_phone}`}
                                                     className="w-10 h-10 bg-white rounded-xl shadow-sm border border-gray-100 flex items-center justify-center text-emerald-500 hover:bg-emerald-50 hover:border-emerald-200 transition-all"
                                                 >
@@ -582,7 +576,7 @@ export default function AdminOrders() {
                                                     {selectedOrder.delivery_method === 'delivery' ? 'כתובת משלוח' : 'אופן קבלת הזמנה'}
                                                 </p>
                                                 <p className="text-sm font-black text-gray-900 truncate">
-                                                    {selectedOrder.delivery_method === 'delivery' 
+                                                    {selectedOrder.delivery_method === 'delivery'
                                                         ? (selectedOrder.delivery_address || 'לא צוינה כתובת')
                                                         : 'איסוף עצמי מהמסעדה'
                                                     }
@@ -615,7 +609,7 @@ export default function AdminOrders() {
                                             </span>
                                         )}
                                     </div>
-                                    
+
                                     <div className="grid grid-cols-2 gap-3 mb-4">
                                         <div className="space-y-1.5 text-right">
                                             <label className="text-[10px] font-black text-gray-400 uppercase tracking-tight mr-1">הארכה (דק')</label>

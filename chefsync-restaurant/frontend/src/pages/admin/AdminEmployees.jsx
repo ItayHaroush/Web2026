@@ -2,15 +2,15 @@ import { useState, useEffect } from 'react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import AdminLayout from '../../layouts/AdminLayout';
 import api from '../../services/apiClient';
-import { 
-    FaUsers, 
-    FaUserPlus, 
-    FaUserShield, 
-    FaEnvelope, 
-    FaPhone, 
-    FaTrash, 
-    FaCheckCircle, 
-    FaTimesCircle, 
+import {
+    FaUsers,
+    FaUserPlus,
+    FaUserShield,
+    FaEnvelope,
+    FaPhone,
+    FaTrash,
+    FaCheckCircle,
+    FaTimesCircle,
     FaClock,
     FaLock,
     FaUserTag,
@@ -151,8 +151,8 @@ export default function AdminEmployees() {
                     {employees.map((emp) => {
                         const roleInfo = roleMap[emp.role] || { label: emp.role, color: 'bg-gray-50 text-gray-600', icon: null };
                         return (
-                            <div 
-                                key={emp.id} 
+                            <div
+                                key={emp.id}
                                 className={`group bg-white rounded-[3.5rem] shadow-xl shadow-gray-200/50 border border-gray-100 p-10 flex flex-col gap-8 hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 relative overflow-hidden ${!emp.is_active && 'opacity-60 grayscale-[0.6]'}`}
                             >
                                 {/* Role Badge & Status Toggle */}
@@ -161,9 +161,9 @@ export default function AdminEmployees() {
                                         {roleInfo.icon}
                                         {roleInfo.label}
                                     </div>
-                                    
+
                                     {isManager() && emp.role !== 'owner' && (
-                                        <button 
+                                        <button
                                             onClick={() => toggleActive(emp)}
                                             className={`p-3 rounded-2xl transition-all shadow-sm active:scale-90 ${emp.is_active ? 'text-emerald-500 bg-emerald-50 hover:bg-emerald-500 hover:text-white' : 'text-gray-400 bg-gray-50 hover:bg-gray-400 hover:text-white'}`}
                                             title={emp.is_active ? 'השבת עובד' : 'הפעל עובד'}
@@ -228,7 +228,7 @@ export default function AdminEmployees() {
                                         </button>
                                     </div>
                                 )}
-                                
+
                                 {emp.role === 'owner' && (
                                     <div className="bg-indigo-50/50 p-6 rounded-[2rem] border border-indigo-100 text-center">
                                         <span className="text-[11px] font-black text-indigo-700 tracking-tight flex items-center justify-center gap-2 italic">
@@ -271,8 +271,8 @@ export default function AdminEmployees() {
                                         <p className="text-gray-500 font-bold text-sm mt-0.5 whitespace-nowrap">הגדרת הרשאות ופרטי גישה</p>
                                     </div>
                                 </div>
-                                <button 
-                                    onClick={() => setShowModal(false)} 
+                                <button
+                                    onClick={() => setShowModal(false)}
                                     className="p-4 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-[1.5rem] transition-all"
                                 >
                                     <FaTimes size={24} />
@@ -374,16 +374,16 @@ export default function AdminEmployees() {
                                 </div>
 
                                 <div className="flex gap-6 pt-10 sticky bottom-0 bg-white/80 backdrop-blur-md z-10">
-                                    <button 
-                                        type="submit" 
+                                    <button
+                                        type="submit"
                                         className="flex-[2] bg-gray-900 text-white py-6 rounded-[2rem] font-black text-xl hover:shadow-2xl hover:shadow-gray-200 hover:bg-black transition-all active:scale-95 flex items-center justify-center gap-4"
                                     >
                                         <FaCheckCircle />
                                         יצירת חשבון עובד
                                     </button>
-                                    <button 
-                                        type="button" 
-                                        onClick={() => setShowModal(false)} 
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowModal(false)}
                                         className="flex-1 px-10 py-6 bg-gray-100 text-gray-600 rounded-[2rem] font-black hover:bg-gray-200 transition-all active:scale-95"
                                     >
                                         ביטול

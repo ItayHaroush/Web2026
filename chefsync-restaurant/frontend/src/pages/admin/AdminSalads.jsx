@@ -2,11 +2,11 @@ import { useEffect, useMemo, useState } from 'react';
 import AdminLayout from '../../layouts/AdminLayout';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import api from '../../services/apiClient';
-import { 
-    FaPlus, 
-    FaClock, 
-    FaInfoCircle, 
-    FaRoute, 
+import {
+    FaPlus,
+    FaClock,
+    FaInfoCircle,
+    FaRoute,
     FaCheckCircle,
     FaSave,
     FaTrash,
@@ -163,7 +163,7 @@ export default function AdminSalads() {
         if (!isManager()) return;
         const edit = groupEdits[groupId];
         if (!edit) return;
-        
+
         setUpdatingGroup(groupId);
         try {
             await api.put(`/admin/addon-groups/${groupId}`,
@@ -255,14 +255,14 @@ export default function AdminSalads() {
 
                 {/* Main Configuration Layout */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 px-4">
-                    
+
                     {/* Sidebar: Group Selector (3 Columns) */}
                     <div className="lg:col-span-4 space-y-6">
                         <div className="flex items-center gap-3 px-2">
                             <FaLayerGroup className="text-brand-primary" />
                             <h3 className="text-lg font-black text-gray-900 uppercase tracking-wider">קבוצות תוספות</h3>
                         </div>
-                        
+
                         <div className="flex flex-col gap-3">
                             {groups.map((group) => (
                                 <button
@@ -289,7 +289,7 @@ export default function AdminSalads() {
                                 </button>
                             ))}
                         </div>
-                        
+
                         {/* Group Rules Info */}
                         <div className="bg-amber-50/50 rounded-[2.5rem] p-8 border border-amber-100/50 space-y-4">
                             <div className="flex items-center gap-3 text-amber-700">
@@ -349,7 +349,7 @@ export default function AdminSalads() {
                                         />
                                         <p className="text-[10px] text-gray-400 text-center font-bold">למשל: 1 מחייב בחירה אחת</p>
                                     </div>
-                                    
+
                                     <div className="space-y-3">
                                         <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest mr-2 flex items-center gap-2">
                                             <FaMagic className="text-blue-400" /> מקסימום בחירה
@@ -372,7 +372,7 @@ export default function AdminSalads() {
                                             סדר תצוגה בתפריט
                                         </label>
                                         <div className="flex items-center gap-3 bg-gray-50 p-2 rounded-[2rem] border border-gray-100 shadow-inner">
-                                            <button 
+                                            <button
                                                 onClick={() => {
                                                     const current = Number(groupEdits[selectedGroup.id]?.sort_order || 0);
                                                     setGroupEdits(prev => ({ ...prev, [selectedGroup.id]: { ...prev[selectedGroup.id], sort_order: Math.max(0, current - 1) } }));
@@ -381,7 +381,7 @@ export default function AdminSalads() {
                                             >
                                                 <FaChevronRight size={14} className="group-hover/btn:scale-125 transition-transform" />
                                             </button>
-                                            
+
                                             <div className="flex-1 text-center py-2">
                                                 <div className="text-[10px] font-black text-brand-primary/50 uppercase tracking-widest mb-0.5">
                                                     {selectedGroup.name}
@@ -398,7 +398,7 @@ export default function AdminSalads() {
                                                 </div>
                                             </div>
 
-                                            <button 
+                                            <button
                                                 onClick={() => {
                                                     const current = Number(groupEdits[selectedGroup.id]?.sort_order || 0);
                                                     setGroupEdits(prev => ({ ...prev, [selectedGroup.id]: { ...prev[selectedGroup.id], sort_order: current + 1 } }));
@@ -411,7 +411,7 @@ export default function AdminSalads() {
                                         <p className="text-[10px] text-gray-400 text-center font-bold">החצים משנים את סדר הופעת הקבוצה ללקוח</p>
                                     </div>
                                 </div>
-                                
+
                                 <div className="p-8 pt-0 flex justify-center">
                                     <label className="flex items-center gap-4 px-8 py-4 bg-gray-50 rounded-[2rem] cursor-pointer hover:bg-gray-100 transition-all border border-gray-100">
                                         <div className={`w-12 h-7 flex items-center rounded-full p-1 transition-colors ${groupEdits[selectedGroup.id]?.is_active ? 'bg-emerald-500' : 'bg-gray-300'}`}>
@@ -451,7 +451,7 @@ export default function AdminSalads() {
                                         </div>
                                         <h3 className="text-2xl font-black text-gray-900">הקבוצה כרגע ריקה</h3>
                                         <p className="text-gray-500 mt-2 font-medium">זה הזמן להוסיף את התוספת המנצחת שלך!</p>
-                                        <button 
+                                        <button
                                             onClick={() => openModal()}
                                             className="mt-8 px-8 py-3 bg-brand-primary text-white rounded-2xl font-black hover:bg-brand-dark transition-all shadow-lg shadow-brand-primary/20"
                                         >
@@ -460,8 +460,8 @@ export default function AdminSalads() {
                                     </div>
                                 ) : (
                                     visibleSalads.map((salad) => (
-                                        <div 
-                                            key={salad.id} 
+                                        <div
+                                            key={salad.id}
                                             className={`group bg-white rounded-[3rem] shadow-sm border border-gray-100 p-8 flex flex-col gap-8 hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 relative overflow-hidden ${!salad.is_active && 'opacity-60 grayscale-[0.6]'}`}
                                         >
                                             <div className="flex justify-between items-start">
@@ -541,8 +541,8 @@ export default function AdminSalads() {
                                         <p className="text-gray-500 font-bold text-sm mt-0.5 whitespace-nowrap">ניהול קטלוג התוספות והסלטים שלך</p>
                                     </div>
                                 </div>
-                                <button 
-                                    onClick={closeModal} 
+                                <button
+                                    onClick={closeModal}
                                     className="p-4 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-[1.5rem] transition-all"
                                 >
                                     <FaTimes size={24} />
@@ -628,8 +628,8 @@ export default function AdminSalads() {
                                         </div>
                                         <div className="bg-gray-50/50 rounded-[3rem] p-8 max-h-72 overflow-y-auto grid grid-cols-2 sm:grid-cols-4 gap-4 custom-scrollbar border border-gray-100">
                                             {categories.map((cat) => (
-                                                <label 
-                                                    key={cat.id} 
+                                                <label
+                                                    key={cat.id}
                                                     className={`flex flex-col items-center justify-center p-5 rounded-[2rem] cursor-pointer border-2 transition-all gap-2 relative group-active:scale-95 ${form.category_ids.includes(String(cat.id)) ? 'border-brand-primary bg-brand-primary/5 text-brand-primary shadow-lg shadow-brand-primary/5' : 'border-white bg-white hover:border-gray-200 text-gray-400'}`}
                                                 >
                                                     <input
@@ -654,8 +654,8 @@ export default function AdminSalads() {
                                 </div>
 
                                 <div className="flex gap-6 pt-10 sticky bottom-0 bg-white/80 backdrop-blur-md z-10">
-                                    <button 
-                                        type="submit" 
+                                    <button
+                                        type="submit"
                                         disabled={saving}
                                         className="flex-[2] bg-gray-900 text-white py-6 rounded-[2rem] font-black text-xl hover:shadow-2xl hover:shadow-gray-200 hover:bg-black transition-all active:scale-95 flex items-center justify-center gap-4 disabled:opacity-50"
                                     >
@@ -668,9 +668,9 @@ export default function AdminSalads() {
                                             </>
                                         )}
                                     </button>
-                                    <button 
-                                        type="button" 
-                                        onClick={closeModal} 
+                                    <button
+                                        type="button"
+                                        onClick={closeModal}
                                         className="flex-1 px-10 py-6 bg-gray-100 text-gray-600 rounded-[2rem] font-black hover:bg-gray-200 transition-all active:scale-95"
                                     >
                                         ביטול
