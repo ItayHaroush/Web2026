@@ -71,15 +71,15 @@ export default function AdminPaywall() {
                 const statusData = data?.data || {};
                 setStatus(statusData);
                 try { localStorage.removeItem('paywall_data'); } catch { }
-                
+
                 // אם יש tier בהרשמה, נעול אותו (לא ניתן לשנות)
                 const dbTier = statusData.tier || 'pro';
                 const dbPlan = statusData.subscription_plan || 'monthly';
-                
+
                 setRegisteredTier(dbTier);
                 setRegisteredPlan(dbPlan);
                 setSelectedTier(dbTier);
-                
+
                 if (dbPlan.includes('yearly') || dbPlan.includes('annual')) {
                     setBillingCycle('yearly');
                 } else {
@@ -193,8 +193,8 @@ export default function AdminPaywall() {
                         <button
                             onClick={() => setBillingCycle('monthly')}
                             className={`flex-1 py-4 px-6 rounded-2xl font-bold text-sm transition-all ${billingCycle === 'monthly'
-                                    ? 'bg-brand-primary text-white shadow-lg'
-                                    : 'text-gray-600 hover:bg-gray-50'
+                                ? 'bg-brand-primary text-white shadow-lg'
+                                : 'text-gray-600 hover:bg-gray-50'
                                 }`}
                         >
                             <div className="text-center">
@@ -205,8 +205,8 @@ export default function AdminPaywall() {
                         <button
                             onClick={() => setBillingCycle('yearly')}
                             className={`flex-1 py-4 px-6 rounded-2xl font-bold text-sm transition-all relative ${billingCycle === 'yearly'
-                                    ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg'
-                                    : 'text-gray-600 hover:bg-gray-50'
+                                ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg'
+                                : 'text-gray-600 hover:bg-gray-50'
                                 }`}
                         >
                             <div className="text-center">
@@ -284,8 +284,8 @@ function TierCard({ tier, title, subtitle, monthlyPrice, yearlyPrice, aiCredits,
             onClick={onSelect}
             disabled={disabled}
             className={`relative w-full text-right bg-white rounded-3xl p-8 border-2 transition-all duration-300 ${selected
-                    ? 'border-brand-primary shadow-2xl shadow-brand-primary/20 scale-105'
-                    : disabled 
+                ? 'border-brand-primary shadow-2xl shadow-brand-primary/20 scale-105'
+                : disabled
                     ? 'border-gray-200 opacity-50 cursor-not-allowed'
                     : 'border-gray-200 hover:border-brand-primary/50 hover:shadow-xl'
                 }`}

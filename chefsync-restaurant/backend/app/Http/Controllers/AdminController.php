@@ -1590,7 +1590,7 @@ class AdminController extends Controller
         // עדכון/יצירת AI Credits למנוי Pro
         if ($tier === 'pro' && $prices[$tier]['ai_credits'] > 0) {
             $aiCredit = \App\Models\AiCredit::where('restaurant_id', $restaurant->id)->first();
-            
+
             if ($aiCredit) {
                 // עדכון לקרדיטים מלאים (500) אחרי תשלום
                 $aiCredit->update([
