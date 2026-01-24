@@ -230,13 +230,13 @@ export default function AdminLayout({ children }) {
 // Trial Banner Component
 function TrialBanner({ subscription_status, trial_ends_at, tier, subscription_plan, navigate }) {
     if (subscription_status !== 'trial' || !trial_ends_at) return null;
-    
+
     const daysLeft = Math.ceil((new Date(trial_ends_at) - new Date()) / (1000 * 60 * 60 * 24));
-    
+
     if (daysLeft <= 0) return null; // אם פג התוקף, Middleware יפנה ל-paywall
-    
+
     const isUrgent = daysLeft <= 3;
-    
+
     return (
         <div className={`mb-6 ${isUrgent ? 'bg-gradient-to-r from-red-50 to-orange-50 border-red-200' : 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200'} border-2 rounded-3xl p-6 shadow-lg animate-in fade-in zoom-in-95 duration-500`}>
             <div className="flex items-center justify-between gap-4 flex-wrap">

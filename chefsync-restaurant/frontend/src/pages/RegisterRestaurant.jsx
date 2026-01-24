@@ -86,7 +86,7 @@ export default function RegisterRestaurant() {
             requiredFields.forEach((field) => {
                 formData.append(field, form[field]);
             });
-            
+
             // הוספת tier
             formData.append('tier', selectedTier);
 
@@ -151,8 +151,8 @@ export default function RegisterRestaurant() {
         }
     };
 
-    const currentPrice = form.plan_type === 'annual' 
-        ? PRICING[selectedTier].yearly 
+    const currentPrice = form.plan_type === 'annual'
+        ? PRICING[selectedTier].yearly
         : PRICING[selectedTier].monthly;
 
     return (
@@ -165,7 +165,7 @@ export default function RegisterRestaurant() {
                 <div className="mb-8">
                     <h2 className="text-lg font-semibold text-gray-900 mb-4">בחר תוכנית</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <TierCard 
+                        <TierCard
                             tier="basic"
                             title="Basic"
                             subtitle="מערכת בסיסית מלאה"
@@ -183,7 +183,7 @@ export default function RegisterRestaurant() {
                             onSelect={() => setSelectedTier('basic')}
                             icon={<FaRocket />}
                         />
-                        <TierCard 
+                        <TierCard
                             tier="pro"
                             title="Pro"
                             subtitle="מערכת + AI חכמה"
@@ -209,19 +209,19 @@ export default function RegisterRestaurant() {
                 <div className="mb-8">
                     <h2 className="text-lg font-semibold text-gray-900 mb-4">מחזור חיוב</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <PlanCard 
-                            title="חודשי" 
-                            price={PRICING[selectedTier].monthly} 
-                            subtitle="חיוב חודשי" 
-                            selected={form.plan_type === 'monthly'} 
-                            onSelect={() => setForm((p) => ({ ...p, plan_type: 'monthly' }))} 
+                        <PlanCard
+                            title="חודשי"
+                            price={PRICING[selectedTier].monthly}
+                            subtitle="חיוב חודשי"
+                            selected={form.plan_type === 'monthly'}
+                            onSelect={() => setForm((p) => ({ ...p, plan_type: 'monthly' }))}
                         />
-                        <PlanCard 
-                            title="שנתי" 
-                            price={PRICING[selectedTier].yearly} 
-                            subtitle="חיסכון מול חודשי" 
-                            selected={form.plan_type === 'annual'} 
-                            onSelect={() => setForm((p) => ({ ...p, plan_type: 'annual' }))} 
+                        <PlanCard
+                            title="שנתי"
+                            price={PRICING[selectedTier].yearly}
+                            subtitle="חיסכון מול חודשי"
+                            selected={form.plan_type === 'annual'}
+                            onSelect={() => setForm((p) => ({ ...p, plan_type: 'annual' }))}
                         />
                     </div>
                 </div>

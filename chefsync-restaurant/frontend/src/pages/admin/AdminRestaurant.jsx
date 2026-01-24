@@ -624,8 +624,8 @@ export default function AdminRestaurant() {
                                         }}
                                         disabled={!overrideStatus || !isApproved}
                                         className={`w-full py-8 rounded-[2rem] flex flex-col items-center justify-center gap-3 transition-all transform active:scale-95 ${restaurant.is_open
-                                                ? 'bg-green-500 text-white shadow-[0_10px_30px_-10px_rgba(34,197,94,0.5)] border-b-4 border-green-700'
-                                                : 'bg-red-500 text-white shadow-[0_10px_30px_-10px_rgba(239,68,68,0.5)] border-b-4 border-red-700'
+                                            ? 'bg-green-500 text-white shadow-[0_10px_30px_-10px_rgba(34,197,94,0.5)] border-b-4 border-green-700'
+                                            : 'bg-red-500 text-white shadow-[0_10px_30px_-10px_rgba(239,68,68,0.5)] border-b-4 border-red-700'
                                             } ${(!overrideStatus || !isApproved) && 'opacity-80 saturate-50 grayscale-[0.2]'}`}
                                     >
                                         <span className="text-4xl">
@@ -750,8 +750,8 @@ export default function AdminRestaurant() {
                                         <div
                                             key={day}
                                             className={`rounded-3xl border transition-all duration-300 ${isOpenDay
-                                                    ? 'bg-white border-brand-primary'
-                                                    : 'bg-gray-50 border-gray-100 opacity-60 grayscale-[0.5]'
+                                                ? 'bg-white border-brand-primary'
+                                                : 'bg-gray-50 border-gray-100 opacity-60 grayscale-[0.5]'
                                                 }`}
                                         >
                                             <div className="p-4 flex items-center justify-between gap-3">

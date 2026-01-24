@@ -87,8 +87,8 @@ class RegisterRestaurantController extends Controller
         $monthlyPrice = $pricing[$tier]['monthly'];
         $yearlyPrice = $pricing[$tier]['yearly'];
         // אם Pro בניסיון (לא שילם מראש) - רק 50 credits, אחרת מלא
-        $aiCreditsMonthly = $tier === 'pro' && !$paidUpfront 
-            ? $pricing[$tier]['trial_ai_credits'] 
+        $aiCreditsMonthly = $tier === 'pro' && !$paidUpfront
+            ? $pricing[$tier]['trial_ai_credits']
             : $pricing[$tier]['ai_credits'];
 
         // תמיכה גם ב-annual (legacy) וגם ב-yearly (חדש)
