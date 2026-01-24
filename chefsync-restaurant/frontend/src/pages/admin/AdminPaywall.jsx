@@ -11,18 +11,46 @@ import {
     FaCreditCard,
     FaArrowLeft,
     FaCrown,
-    FaGift
+    FaGift,
+    FaBrain,
+    FaStar
 } from 'react-icons/fa';
 
-const MONTHLY_PRICE = 600;
-const ANNUAL_PRICE = 5000;
+// תוכניות תמחור חדשות - משולבות עם AI
+const PLANS = {
+    basic: {
+        monthly: 450,
+        yearly: 4500,
+        aiCredits: 0,
+        features: [
+            'ניהול תפריט מלא',
+            'קבלת הזמנות ללא הגבלה',
+            'ניהול עובדים',
+            'דו"חות חודשיים',
+            'תמיכה בדוא"ל'
+        ]
+    },
+    pro: {
+        monthly: 600,
+        yearly: 5000,
+        aiCredits: 500,
+        features: [
+            '✨ כל התכונות של Basic',
+            '🤖 500 קרדיטים AI לחודש',
+            '📝 תיאורי מנות אוטומטיים',
+            '📊 דו"חות בזמן אמת',
+            '🎯 המלצות מחיר חכמות',
+            '⚡ תמיכה עדיפות'
+        ]
+    }
+};
 
 export default function AdminPaywall() {
     const navigate = useNavigate();
     const [status, setStatus] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [activating, setActivating] = useState(false);
-    const [planType, setPlanType] = useState('monthly');
+    const [selectedTier, setSelectedTier] = useState('pro'); // basic or pro
+    const [billingCycle, setBillingCycle] = useState('monthly'); // monthly or yearly
 
     useEffect(() => {
         try {
@@ -39,8 +67,14 @@ export default function AdminPaywall() {
                 const statusData = data?.data || {};
                 setStatus(statusData);
                 try { localStorage.removeItem('paywall_data'); } catch { }
+                // קביעת ברירת מחדל לפי התוכנית הקיימת
                 if (statusData.subscription_plan) {
-                    setPlanType(statusData.subscription_plan);
+                    if (statusData.subscription_plan.includes('yearly')) {
+                        setBillingCycle('yearly');
+                    }
+                    if (statusData.subscription_plan.includes('basic')) {
+                        setSelectedTier('basic');
+                    }
                 }
             } catch (error) {
                 const message = error.response?.data?.message || 'שגיאה בטעינת סטטוס מנוי';
@@ -52,18 +86,18 @@ export default function AdminPaywall() {
         loadStatus();
     }, []);
 
-    const handleActivate = async () => {
-        setActivating(true);
-        try {
-            await activateSubscription(planType);
-            toast.success('המנוי הופעל בהצלחה');
-            navigate('/admin/dashboard');
-        } catch (error) {
-            const message = error.response?.data?.message || 'שגיאה בהפעלת המנוי';
-            toast.error(message);
-        } finally {
-            setActivating(false);
-        }
+    const handleActivate = () => {
+        // חישוב הסכום לתשלום
+        const amount = PLANS[selectedTier][billingCycle];
+
+        // מעבר לדף תשלום עם הפרטים
+        navigate('/admin/payment', {
+            state: {
+                tier: selectedTier,
+                billingCycle,
+                amount
+            }
+        });
     };
 
     const isTrialActive = status?.subscription_status === 'trial' && status?.days_left_in_trial > 0;
@@ -93,165 +127,195 @@ export default function AdminPaywall() {
                         <FaCrown size={36} />
                     </div>
                     <div>
-                        <h1 className="text-4xl font-black text-gray-900 tracking-tight">שדרוג ל-Premium</h1>
-                        <p className="text-gray-500 font-medium text-lg mt-2 max-w-lg mx-auto leading-relaxed">
+                        <h1 className="text-4xl font-black text-gray-900 tracking-tight">בחר את התוכנית המושלמת</h1>
+                        <p className="text-gray-500 font-medium text-lg mt-2 max-w-2xl mx-auto leading-relaxed">
                             {isTrialActive
-                                ? `נהנית מהגרסה החינמית? נשארו לך עוד ${status?.days_left_in_trial} ימים.`
-                                : 'תקופת הניסיון הסתיימה. כדי להמשיך להשתמש במערכת, יש להפעיל מנוי.'}
+                                ? `נשארו ${status?.days_left_in_trial} ימים בתקופת הניסיון`
+                                : 'שדרג עכשיו וקבל גישה מלאה לכל התכונות'}
                         </p>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-                    {/* Left Column: Status info */}
-                    <div className="lg:col-span-5 space-y-8 order-2 lg:order-1">
-                        <div className="bg-white rounded-[3rem] p-8 shadow-sm border border-gray-100 space-y-8">
-                            <h3 className="text-xl font-black text-gray-900 flex items-center gap-3">
-                                <FaClock className="text-amber-500" /> מצב מנוי נוכחי
-                            </h3>
+                {/* Tier Selection Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+                    <TierCard
+                        tier="basic"
+                        title="Basic"
+                        subtitle="מערכת בסיסית מלאה"
+                        monthlyPrice={PLANS.basic.monthly}
+                        yearlyPrice={PLANS.basic.yearly}
+                        aiCredits={PLANS.basic.aiCredits}
+                        features={PLANS.basic.features}
+                        selected={selectedTier === 'basic'}
+                        onSelect={() => setSelectedTier('basic')}
+                        icon={<FaRocket />}
+                        color="from-blue-500 to-indigo-600"
+                    />
+                    <TierCard
+                        tier="pro"
+                        title="Pro"
+                        subtitle="מערכת + AI חכמה"
+                        monthlyPrice={PLANS.pro.monthly}
+                        yearlyPrice={PLANS.pro.yearly}
+                        aiCredits={PLANS.pro.aiCredits}
+                        features={PLANS.pro.features}
+                        selected={selectedTier === 'pro'}
+                        onSelect={() => setSelectedTier('pro')}
+                        icon={<FaBrain />}
+                        color="from-amber-500 to-orange-600"
+                        badge="מומלץ"
+                    />
+                </div>
 
-                            <div className="space-y-6">
-                                <InfoItem
-                                    icon={<FaRocket className="text-indigo-500" />}
-                                    label="סטטוס"
-                                    value={status?.subscription_status === 'trial' ? 'תקופת ניסיון' : 'לא פעיל'}
-                                />
-                                <InfoItem
-                                    icon={<FaCalendarAlt className="text-emerald-500" />}
-                                    label="סיום התנסות"
-                                    value={status?.trial_ends_at ? new Date(status.trial_ends_at).toLocaleDateString('he-IL') : '-'}
-                                />
-                                {status?.outstanding_amount > 0 && (
-                                    <div className="p-4 bg-rose-50 rounded-2xl border border-rose-100">
-                                        <p className="text-rose-600 font-black text-sm">סכום ממתין לחיוב: ₪{Number(status.outstanding_amount).toLocaleString()}</p>
-                                    </div>
-                                )}
+                {/* Billing Cycle Toggle */}
+                <div className="max-w-md mx-auto">
+                    <div className="bg-white rounded-3xl p-2 shadow-sm border border-gray-100 flex gap-2">
+                        <button
+                            onClick={() => setBillingCycle('monthly')}
+                            className={`flex-1 py-4 px-6 rounded-2xl font-bold text-sm transition-all ${billingCycle === 'monthly'
+                                    ? 'bg-brand-primary text-white shadow-lg'
+                                    : 'text-gray-600 hover:bg-gray-50'
+                                }`}
+                        >
+                            <div className="text-center">
+                                <div>חיוב חודשי</div>
+                                <div className="text-xs font-medium opacity-80 mt-1">חיוב אוטומטי חודשי</div>
                             </div>
-
-                            <div className="pt-6 border-t border-gray-50 space-y-4">
-                                <p className="text-xs font-black text-gray-400 uppercase tracking-widest">מה מקבלים?</p>
-                                <ul className="space-y-3">
-                                    {[
-                                        'ניהול תפריט מלא ללא הגבלה',
-                                        'מערכת ניהול הזמנות בזמן אמת',
-                                        'ניהול צוות עובדים והרשאות',
-                                        'דוחות מכירה חודשיים',
-                                        'ליווי ותמיכה טכנית VIP'
-                                    ].map((feature, i) => (
-                                        <li key={i} className="flex items-center gap-3 text-sm font-bold text-gray-700">
-                                            <FaCheckCircle className="text-emerald-500 shrink-0" /> {feature}
-                                        </li>
-                                    ))}
-                                </ul>
+                        </button>
+                        <button
+                            onClick={() => setBillingCycle('yearly')}
+                            className={`flex-1 py-4 px-6 rounded-2xl font-bold text-sm transition-all relative ${billingCycle === 'yearly'
+                                    ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg'
+                                    : 'text-gray-600 hover:bg-gray-50'
+                                }`}
+                        >
+                            <div className="text-center">
+                                <div>חיוב שנתי</div>
+                                <div className="text-xs font-medium opacity-80 mt-1">תשלום חד-פעמי</div>
                             </div>
-                        </div>
-
-                        <div className="bg-indigo-600 rounded-[3rem] p-8 text-white shadow-xl shadow-indigo-200 space-y-4 relative overflow-hidden group">
-                            <div className="absolute -right-10 -bottom-10 opacity-10 group-hover:scale-110 transition-transform duration-700">
-                                <FaGift size={180} />
-                            </div>
-                            <h4 className="text-lg font-black flex items-center gap-2">
-                                <FaGift /> הטבה בלעדית
-                            </h4>
-                            <p className="text-indigo-100 text-sm font-medium leading-relaxed">בבחירת מסלול שנתי מקבלים חודשיים שלמים במתנה (חיסכון של ₪1,200)!</p>
-                        </div>
+                            <span className="absolute -top-2 -left-2 bg-emerald-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full">
+                                חיסכון
+                            </span>
+                        </button>
                     </div>
+                </div>
 
-                    {/* Right Column: Pricing Plans */}
-                    <div className="lg:col-span-7 space-y-8 order-1 lg:order-2">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <PlanCard
-                                title="מסלול חודשי"
-                                price={MONTHLY_PRICE}
-                                subtitle="ללא התחייבות, חיוב חודשי"
-                                selected={planType === 'monthly'}
-                                onSelect={() => setPlanType('monthly')}
-                                icon={<FaCreditCard />}
-                            />
-                            <PlanCard
-                                title="מסלול שנתי"
-                                price={ANNUAL_PRICE}
-                                subtitle="הכי משתלם! חיסכון ענק"
-                                selected={planType === 'annual'}
-                                onSelect={() => setPlanType('annual')}
-                                icon={<FaStar />}
-                                badge="פופולרי"
-                            />
-                        </div>
-
-                        <div className="bg-white rounded-[3.5rem] p-10 shadow-2xl shadow-gray-200/50 border border-gray-100 space-y-10 relative overflow-hidden">
-                            <div className="flex flex-col md:flex-row items-center justify-between gap-8">
-                                <div className="text-center md:text-right">
-                                    <p className="text-gray-400 font-bold text-sm uppercase tracking-widest mb-1">סה"כ לתשלום</p>
-                                    <div className="flex items-baseline gap-2 justify-center md:justify-end">
-                                        <span className="text-5xl font-black text-gray-900 tracking-tighter">₪{planType === 'annual' ? ANNUAL_PRICE : MONTHLY_PRICE}</span>
-                                        <span className="text-gray-400 font-bold text-lg">/{planType === 'annual' ? 'שנה' : 'חודש'}</span>
-                                    </div>
-                                </div>
-                                <button
-                                    onClick={handleActivate}
-                                    disabled={activating}
-                                    className="w-full md:w-auto px-12 py-6 bg-brand-primary text-white rounded-[2rem] font-black text-xl hover:bg-brand-dark transition-all shadow-xl shadow-brand-primary/20 active:scale-95 flex items-center justify-center gap-4 disabled:opacity-50"
-                                >
-                                    {activating ? (
-                                        <>
-                                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                            מפעיל מנוי...
-                                        </>
-                                    ) : (
-                                        <>
-                                            הפעל מנוי עכשיו
-                                            <FaArrowLeft className="animate-pulse" />
-                                        </>
-                                    )}
-                                </button>
+                {/* Payment Summary & Activation */}
+                <div className="bg-white rounded-3xl p-10 shadow-2xl border border-gray-100 max-w-2xl mx-auto">
+                    <div className="text-center space-y-6">
+                        <div>
+                            <p className="text-gray-400 font-bold text-sm uppercase tracking-widest mb-2">סה"כ לתשלום</p>
+                            <div className="flex items-baseline gap-2 justify-center">
+                                <span className="text-6xl font-black text-gray-900">
+                                    ₪{billingCycle === 'yearly' ? PLANS[selectedTier].yearly.toLocaleString() : PLANS[selectedTier].monthly}
+                                </span>
+                                <span className="text-gray-400 font-bold text-xl">/{billingCycle === 'yearly' ? 'שנה' : 'חודש'}</span>
                             </div>
-
-                            <div className="text-center md:text-right pt-6 border-t border-gray-50">
-                                <p className="text-xs font-medium text-gray-400 flex items-center justify-center md:justify-end gap-2">
-                                    <FaLock className="inline" /> מאובטח בסטנדרט תעשייתי. החיוב יתבצע באופן אוטומטי.
+                            <p className="text-gray-500 font-medium text-sm mt-2">
+                                {billingCycle === 'yearly'
+                                    ? '💳 תשלום חד-פעמי לשנה מלאה'
+                                    : '🔄 חיוב חודשי אוטומטי'
+                                }
+                            </p>
+                            {selectedTier === 'pro' && (
+                                <p className="text-brand-primary font-bold text-sm mt-2">
+                                    🤖 כולל {PLANS.pro.aiCredits} קרדיטים AI בחודש
                                 </p>
-                            </div>
+                            )}
+                            {billingCycle === 'yearly' && (
+                                <p className="text-emerald-600 font-bold text-sm mt-2">
+                                    💰 חיסכון של {((PLANS[selectedTier].monthly * 12) - PLANS[selectedTier].yearly).toLocaleString()}₪ לשנה
+                                </p>
+                            )}
                         </div>
+
+                        <button
+                            onClick={handleActivate}
+                            className="w-full px-12 py-6 bg-gradient-to-r from-brand-primary to-brand-secondary text-white rounded-2xl font-black text-xl hover:shadow-2xl transition-all active:scale-95 flex items-center justify-center gap-4"
+                        >
+                            המשך לתשלום
+                            <FaArrowLeft className="animate-pulse" />
+                        </button>
+
+                        <p className="text-xs font-medium text-gray-400 flex items-center justify-center gap-2">
+                            <FaLock /> תשלום מאובטח בהצפנה מלאה
+                        </p>
                     </div>
+                </div>
+
+                {/* Back Button */}
+                <div className="text-center">
+                    <button
+                        onClick={() => navigate('/admin/dashboard')}
+                        className="text-gray-500 hover:text-gray-900 font-medium transition-colors inline-flex items-center gap-2"
+                    >
+                        <FaArrowLeft className="text-sm" /> חזור לדשבורד
+                    </button>
                 </div>
             </div>
         </div>
     );
 }
 
-function PlanCard({ title, price, subtitle, selected, onSelect, icon, badge }) {
+// Tier Selection Card (Basic or Pro)
+function TierCard({ tier, title, subtitle, monthlyPrice, yearlyPrice, aiCredits, features, selected, onSelect, icon, color, badge }) {
     return (
         <button
-            type="button"
             onClick={onSelect}
-            className={`relative w-full text-right bg-white rounded-[2.5rem] p-8 border-2 transition-all duration-500 flex flex-col gap-5 group overflow-hidden ${selected
-                    ? 'border-brand-primary shadow-2xl shadow-brand-primary/10 -translate-y-1'
-                    : 'border-gray-100 hover:border-brand-primary/30 hover:shadow-xl'
+            className={`relative w-full text-right bg-white rounded-3xl p-8 border-2 transition-all duration-300 ${selected
+                    ? 'border-brand-primary shadow-2xl shadow-brand-primary/20 scale-105'
+                    : 'border-gray-200 hover:border-brand-primary/50 hover:shadow-xl'
                 }`}
         >
             {badge && (
-                <div className="absolute top-0 left-0 bg-brand-primary text-white px-5 py-2 rounded-br-2xl text-[10px] font-black uppercase tracking-widest shadow-lg">
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-amber-500 to-orange-600 text-white px-4 py-1 rounded-full text-xs font-black uppercase shadow-lg">
                     {badge}
                 </div>
             )}
 
-            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl transition-all duration-500 ${selected ? 'bg-brand-primary text-white scale-110 rotate-3' : 'bg-gray-50 text-gray-400'
+            <div className={`w-16 h-16 bg-gradient-to-br ${color} rounded-2xl flex items-center justify-center text-3xl text-white mb-4 mx-auto shadow-lg transition-transform ${selected ? 'scale-110' : ''
                 }`}>
                 {icon}
             </div>
 
-            <div>
-                <p className={`text-lg font-black transition-colors ${selected ? 'text-brand-primary' : 'text-gray-900 group-hover:text-brand-primary'}`}>{title}</p>
-                <div className="flex items-baseline gap-1 mt-1">
-                    <span className="text-3xl font-black text-gray-900 tracking-tighter">₪{price}</span>
-                    <span className="text-gray-400 font-bold text-xs">{title.includes('שנתי') ? '/שנה' : '/חודש'}</span>
+            <h3 className="text-2xl font-black text-gray-900 text-center mb-2">{title}</h3>
+            <p className="text-sm text-gray-500 font-medium text-center mb-4">{subtitle}</p>
+
+            <div className="bg-gray-50 rounded-2xl p-4 mb-6">
+                <div className="text-center">
+                    <span className="text-3xl font-black text-gray-900">₪{monthlyPrice}</span>
+                    <span className="text-gray-500 text-sm font-bold">/חודש</span>
                 </div>
-                <p className="text-[11px] font-medium text-gray-400 mt-2">{subtitle}</p>
+                <div className="text-center mt-1 text-xs text-gray-400 font-medium">
+                    או ₪{yearlyPrice.toLocaleString()}/שנה
+                </div>
             </div>
 
+            {aiCredits > 0 ? (
+                <div className="bg-gradient-to-r from-brand-primary/10 to-brand-secondary/10 border border-brand-primary/20 rounded-xl p-3 mb-6">
+                    <p className="text-brand-primary font-black text-sm text-center">
+                        🤖 {aiCredits} קרדיטים AI לחודש
+                    </p>
+                </div>
+            ) : (
+                <div className="bg-gray-100 border border-gray-200 rounded-xl p-3 mb-6">
+                    <p className="text-gray-500 font-bold text-sm text-center">
+                        ללא תכונות AI
+                    </p>
+                </div>
+            )}
+
+            <ul className="space-y-2.5 text-right">
+                {features.map((feature, i) => (
+                    <li key={i} className="flex items-start gap-2 text-sm text-gray-700 font-medium">
+                        <FaCheckCircle className={`mt-0.5 flex-shrink-0 ${selected ? 'text-brand-primary' : 'text-gray-400'}`} />
+                        <span>{feature}</span>
+                    </li>
+                ))}
+            </ul>
+
             {selected && (
-                <div className="absolute top-6 left-6 text-brand-primary animate-in zoom-in duration-300">
+                <div className="absolute top-4 left-4 text-brand-primary">
                     <FaCheckCircle size={24} />
                 </div>
             )}
@@ -259,16 +323,13 @@ function PlanCard({ title, price, subtitle, selected, onSelect, icon, badge }) {
     );
 }
 
-function InfoItem({ icon, label, value }) {
-    return (
-        <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center text-xl shrink-0">
-                {icon}
-            </div>
-            <div>
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">{label}</p>
-                <p className="text-base font-black text-gray-900">{value}</p>
-            </div>
-        </div>
-    );
+function PlanCard({ title, price, subtitle, selected, onSelect, icon, badge }) {
+    // Legacy component - not used anymore, keeping for backward compatibility
+    return null;
 }
+
+function InfoItem({ icon, label, value }) {
+    // Legacy component - not used anymore
+    return null;
+}
+

@@ -50,7 +50,19 @@ class AiCredit extends Model
      */
     public function hasCredits(int $amount = 1): bool
     {
+        if ($this->monthly_limit === 0 && $this->tier === 'enterprise') {
+            return true;
+        }
+
         return $this->credits_remaining >= $amount;
+    }
+
+    /**
+     * Backward compatibility alias
+     */
+    public function hasCreditsRemaining(int $amount = 1): bool
+    {
+        return $this->hasCredits($amount);
     }
 
     /**
@@ -146,18 +158,58 @@ class AiCredit extends Model
     /**
      * Get or create credits for a restaurant
      */
-    public static function getOrCreateForRestaurant(Restaurant $restaurant): self
+    public static function getOrCreateForRestaurant(?Restaurant $restaurant): self
     {
+        if (!$restaurant) {
+            return self::firstOrCreate(
+                [
+                    'tenant_id' => 'super-admin',
+                    'restaurant_id' => null,
+                ],
+                [
+                    'tier' => 'enterprise',
+                    'monthly_limit' => 0,
+                    'credits_used' => 0,
+                    'credits_remaining' => 0,
+                    'billing_cycle_start' => now()->startOfMonth(),
+                    'billing_cycle_end' => now()->endOfMonth(),
+                    'total_credits_used' => 0,
+                    'total_requests' => 0,
+                ]
+            );
+        }
+
+        // קביעת tier ו-limit לפי מנוי המסעדה
+        $tier = $restaurant->tier ?? 'basic';
+        $monthlyLimit = $restaurant->ai_credits_monthly;
+
+        // במידה ולא הוגדר ai_credits_monthly, נשתמש בערכי ברירת מחדל
+        if ($monthlyLimit === null || $monthlyLimit <= 0) {
+            $normalizedTier = match ($tier) {
+                'basic', 'free' => 'free',
+                'pro' => 'pro',
+                'enterprise' => 'enterprise',
+                default => 'free',
+            };
+
+            $monthlyLimit = match ($normalizedTier) {
+                'pro' => (int) config('copilot.credits.pro_tier', 300),
+                'enterprise' => 0,
+                default => (int) config('copilot.credits.free_tier', 20),
+            };
+            $tier = $normalizedTier;
+        }
+
         return self::firstOrCreate(
             [
                 'tenant_id' => $restaurant->tenant_id,
                 'restaurant_id' => $restaurant->id,
             ],
             [
-                'tier' => 'free', // Default tier
-                'monthly_limit' => config('copilot.credits.free_tier', 20),
+                'tier' => $tier,
+                'monthly_limit' => $monthlyLimit,
                 'credits_used' => 0,
-                'credits_remaining' => config('copilot.credits.free_tier', 20),
+                'credits_remaining' => $monthlyLimit,
                 'billing_cycle_start' => now()->startOfMonth(),
                 'billing_cycle_end' => now()->endOfMonth(),
                 'total_credits_used' => 0,

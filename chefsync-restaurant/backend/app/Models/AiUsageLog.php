@@ -13,6 +13,8 @@ class AiUsageLog extends Model
         'user_id',
         'feature',
         'action',
+        'prompt_type',       // 'chat'|'insight'|'sms_draft'
+        'bypass_reason',     // 'dev_mode'|'ai_unlimited'|null
         'credits_used',
         'tokens_used',
         'response_time_ms',

@@ -45,6 +45,8 @@ class Restaurant extends Model
         'trial_ends_at',
         'subscription_ends_at',
         'subscription_plan',
+        'tier', // basic או pro
+        'ai_credits_monthly', // קרדיטי AI חודשיים
         'tranzila_terminal_name',
         'tranzila_token',
         'payment_method_last4',
@@ -83,6 +85,7 @@ class Restaurant extends Model
         'updated_at' => 'datetime',
         'delivery_time_minutes' => 'integer',
         'pickup_time_minutes' => 'integer',
+        'ai_credits_monthly' => 'integer', // קרדיטים חודשיים
     ];
 
     /**

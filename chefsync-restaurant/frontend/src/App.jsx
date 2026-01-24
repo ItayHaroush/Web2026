@@ -4,6 +4,7 @@ import { AdminAuthProvider, useAdminAuth } from './context/AdminAuthContext';
 import { RestaurantStatusProvider } from './context/RestaurantStatusContext';
 import { CartProvider } from './context/CartContext';
 import { ToastProvider } from './context/ToastContext';
+import DevModeBanner from './components/DevModeBanner';
 import HomePage from './pages/HomePage';
 import MenuPage from './pages/MenuPage';
 import CartPage from './pages/CartPage';
@@ -20,6 +21,7 @@ import AdminEmployees from './pages/admin/AdminEmployees';
 import AdminRestaurant from './pages/admin/AdminRestaurant';
 import AdminTerminal from './pages/admin/AdminTerminal';
 import AdminPaywall from './pages/admin/AdminPaywall';
+import PaymentDemo from './pages/admin/PaymentDemo';
 import AdminDeliveryZones from './pages/admin/AdminDeliveryZones';
 import AdminCoupons from './pages/admin/AdminCoupons';
 import AdminPrinters from './pages/admin/AdminPrinters';
@@ -204,6 +206,14 @@ function AppRoutes() {
         }
       />
       <Route
+        path="/admin/payment"
+        element={
+          <AdminRoute>
+            <PaymentDemo />
+          </AdminRoute>
+        }
+      />
+      <Route
         path="/admin/terminal"
         element={
           <AdminRoute>
@@ -327,6 +337,7 @@ export default function App() {
               <CartProvider>
                 <AppRoutes />
                 <Toaster position="bottom-right" />
+                <DevModeBanner />
               </CartProvider>
             </ToastProvider>
           </AuthProvider>

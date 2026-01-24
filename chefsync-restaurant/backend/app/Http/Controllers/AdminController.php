@@ -1349,9 +1349,17 @@ class AdminController extends Controller
             'phone' => 'nullable|string|max:20',
             'role' => 'sometimes|in:manager,employee,delivery',
             'is_active' => 'sometimes|boolean',
+            'password' => 'nullable|string|min:6|confirmed',
         ]);
 
-        $employee->update($request->only(['name', 'phone', 'role', 'is_active']));
+        $updateData = $request->only(['name', 'phone', 'role', 'is_active']);
+
+        // עדכון סיסמה רק אם סופק שדה password
+        if ($request->filled('password')) {
+            $updateData['password'] = bcrypt($request->password);
+        }
+
+        $employee->update($updateData);
 
         return response()->json([
             'success' => true,
@@ -1509,20 +1517,37 @@ class AdminController extends Controller
         }
 
         $validated = $request->validate([
-            'plan_type' => 'nullable|in:monthly,annual',
+            'plan_type' => 'required|in:monthly,yearly',
+            'tier' => 'required|in:basic,pro',
         ]);
 
-        $planType = $validated['plan_type'] ?? $restaurant->subscription_plan ?? 'monthly';
-        $monthlyPrice = 600;
-        $annualPrice = 5000;
-        $chargeAmount = $planType === 'annual' ? $annualPrice : $monthlyPrice;
-        $monthlyFeeForTracking = $planType === 'annual' ? round($annualPrice / 12, 2) : $monthlyPrice;
+        $planType = $validated['plan_type'];
+        $tier = $validated['tier'];
+
+        // מחירים לפי tier
+        $prices = [
+            'basic' => [
+                'monthly' => 450,
+                'yearly' => 4500,
+                'ai_credits' => 0, // אין AI ב-Basic
+            ],
+            'pro' => [
+                'monthly' => 600,
+                'yearly' => 5000,
+                'ai_credits' => 500, // 500 קרדיטים ב-Pro
+            ],
+        ];
+
+        $chargeAmount = $prices[$tier][$planType === 'yearly' ? 'yearly' : 'monthly'];
+        $monthlyFeeForTracking = $planType === 'yearly'
+            ? round($chargeAmount / 12, 2)
+            : $chargeAmount;
 
         $periodStart = $restaurant->trial_ends_at && now()->lt($restaurant->trial_ends_at)
             ? $restaurant->trial_ends_at->copy()->startOfDay()
             : now()->startOfDay();
 
-        $periodEnd = $planType === 'annual'
+        $periodEnd = $planType === 'yearly'
             ? $periodStart->copy()->addYear()
             : $periodStart->copy()->addMonth();
 
@@ -1555,6 +1580,8 @@ class AdminController extends Controller
         $restaurant->update([
             'subscription_status' => 'active',
             'subscription_plan' => $planType,
+            'tier' => $tier, // שמירת tier
+            'ai_credits_monthly' => $prices[$tier]['ai_credits'], // הגדרת קרדיטים
             'subscription_ends_at' => $periodEnd,
             'last_payment_at' => now(),
             'next_payment_at' => $periodEnd,

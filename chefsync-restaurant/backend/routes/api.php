@@ -12,6 +12,7 @@ use App\Http\Controllers\SuperAdminBillingController;
 use App\Http\Controllers\SuperAdminNotificationController;
 use App\Http\Controllers\RegisterRestaurantController;
 use App\Http\Controllers\FcmTokenController;
+use App\Http\Controllers\ChatController;
 
 /**
  * API Routes
@@ -81,6 +82,9 @@ Route::prefix('super-admin')->middleware(['auth:sanctum', 'super_admin'])->group
     // התראות (Broadcast) לפי פילטרים
     Route::get('/notifications/filters', [SuperAdminNotificationController::class, 'filters'])->name('super-admin.notifications.filters');
     Route::post('/notifications/send', [SuperAdminNotificationController::class, 'send'])->name('super-admin.notifications.send');
+
+    // עוזר AI לסופר אדמין
+    Route::post('/ai/chat', [ChatController::class, 'chat'])->name('super-admin.ai.chat');
 });
 
 // ============================================
@@ -109,6 +113,10 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'tenant'])->group(function (
                 ->name('admin.ai.dashboard-insights');
             Route::post('/recommend-price', [\App\Http\Controllers\AiController::class, 'recommendPrice'])
                 ->name('admin.ai.recommend-price');
+
+            // צ'אט אינטראקטיבי עם סוכן AI (מותאם למנהל מסעדה)
+            Route::post('/chat', [ChatController::class, 'restaurantChat'])
+                ->name('admin.ai.chat');
         });
 
         // ניהול מסעדה

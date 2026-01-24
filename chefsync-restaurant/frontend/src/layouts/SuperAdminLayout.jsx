@@ -4,6 +4,7 @@ import { useAdminAuth } from '../context/AdminAuthContext';
 import { PRODUCT_NAME } from '../constants/brand';
 import DashboardSidebar from '../components/admin/DashboardSidebar';
 import DashboardHeader from '../components/admin/DashboardHeader';
+import FloatingAiAssistant from '../components/admin/FloatingAiAssistant';
 import {
     FaChartPie,
     FaBell,
@@ -84,6 +85,9 @@ export default function SuperAdminLayout({ children }) {
                     </div>
                 </main>
             </div>
+
+            {/* סוכן AI צף - זמין בכל דפי Super Admin */}
+            <FloatingAiAssistant />
         </div>
     );
 }

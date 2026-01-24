@@ -10,7 +10,8 @@ import {
     FaCalendarAlt,
     FaDownload,
     FaChartPie,
-    FaMoneyBillWave
+    FaMoneyBillWave,
+    FaInfoCircle
 } from 'react-icons/fa';
 
 export default function AdminReports() {
