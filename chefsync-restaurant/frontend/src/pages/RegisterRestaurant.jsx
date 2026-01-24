@@ -4,14 +4,20 @@ import api from '../services/apiClient';
 import { requestPhoneCode } from '../services/phoneAuthService';
 import { toast } from 'react-hot-toast';
 import { isValidIsraeliMobile } from '../utils/phone';
+import { FaCheckCircle } from 'react-icons/fa';
+import { FaRocket, FaBrain } from 'react-icons/fa6';
 
-const MONTHLY_PRICE = 600;
-const ANNUAL_PRICE = 5000;
+// מחירים חדשים לפי tier
+const PRICING = {
+    basic: { monthly: 450, yearly: 4500, aiCredits: 0 },
+    pro: { monthly: 600, yearly: 5000, aiCredits: 500, trialAiCredits: 50 },
+};
 
 export default function RegisterRestaurant() {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     const [cities, setCities] = useState([]);
+    const [selectedTier, setSelectedTier] = useState('pro'); // basic or pro
     const [form, setForm] = useState({
         name: '',
         tenant_id: '',
@@ -80,6 +86,9 @@ export default function RegisterRestaurant() {
             requiredFields.forEach((field) => {
                 formData.append(field, form[field]);
             });
+            
+            // הוספת tier
+            formData.append('tier', selectedTier);
 
             if (form.address) {
                 formData.append('address', form.address);
@@ -142,7 +151,9 @@ export default function RegisterRestaurant() {
         }
     };
 
-    const currentPrice = form.plan_type === 'annual' ? ANNUAL_PRICE : MONTHLY_PRICE;
+    const currentPrice = form.plan_type === 'annual' 
+        ? PRICING[selectedTier].yearly 
+        : PRICING[selectedTier].monthly;
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-brand-primary/10 to-white py-12 px-4">
@@ -150,9 +161,69 @@ export default function RegisterRestaurant() {
                 <h1 className="text-3xl font-bold text-gray-900 mb-2">הצטרפות כמסעדה</h1>
                 <p className="text-gray-600 mb-6">14 ימים ראשונים בחינם. בחרו מסלול, מלאו פרטים והתחילו להשתמש במערכת.</p>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-                    <PlanCard title="חודשי" price={MONTHLY_PRICE} subtitle="חיוב חודשי" selected={form.plan_type === 'monthly'} onSelect={() => setForm((p) => ({ ...p, plan_type: 'monthly' }))} />
-                    <PlanCard title="שנתי" price={ANNUAL_PRICE} subtitle="חיסכון מול חודשי" selected={form.plan_type === 'annual'} onSelect={() => setForm((p) => ({ ...p, plan_type: 'annual' }))} />
+                {/* בחירת Tier */}
+                <div className="mb-8">
+                    <h2 className="text-lg font-semibold text-gray-900 mb-4">בחר תוכנית</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <TierCard 
+                            tier="basic"
+                            title="Basic"
+                            subtitle="מערכת בסיסית מלאה"
+                            monthlyPrice={PRICING.basic.monthly}
+                            yearlyPrice={PRICING.basic.yearly}
+                            aiCredits={PRICING.basic.aiCredits}
+                            features={[
+                                'ניהול תפריט מלא',
+                                'קבלת הזמנות ללא הגבלה',
+                                'ניהול עובדים',
+                                'דוחות חודשיים',
+                                'תמיכה בדואל'
+                            ]}
+                            selected={selectedTier === 'basic'}
+                            onSelect={() => setSelectedTier('basic')}
+                            icon={<FaRocket />}
+                        />
+                        <TierCard 
+                            tier="pro"
+                            title="Pro"
+                            subtitle="מערכת + AI חכמה"
+                            monthlyPrice={PRICING.pro.monthly}
+                            yearlyPrice={PRICING.pro.yearly}
+                            aiCredits={PRICING.pro.aiCredits}
+                            features={[
+                                '✨ כל התכונות של Basic',
+                                '🤖 500 קרדיטים AI לחודש',
+                                '📝 תיאורי מנות אוטומטיים',
+                                '🎯 המלצות מחיר חכמות',
+                                '⚡ תמיכה עדיפות'
+                            ]}
+                            selected={selectedTier === 'pro'}
+                            onSelect={() => setSelectedTier('pro')}
+                            icon={<FaBrain />}
+                            badge="מומלץ"
+                        />
+                    </div>
+                </div>
+
+                {/* בחירת מחזור חיוב */}
+                <div className="mb-8">
+                    <h2 className="text-lg font-semibold text-gray-900 mb-4">מחזור חיוב</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <PlanCard 
+                            title="חודשי" 
+                            price={PRICING[selectedTier].monthly} 
+                            subtitle="חיוב חודשי" 
+                            selected={form.plan_type === 'monthly'} 
+                            onSelect={() => setForm((p) => ({ ...p, plan_type: 'monthly' }))} 
+                        />
+                        <PlanCard 
+                            title="שנתי" 
+                            price={PRICING[selectedTier].yearly} 
+                            subtitle="חיסכון מול חודשי" 
+                            selected={form.plan_type === 'annual'} 
+                            onSelect={() => setForm((p) => ({ ...p, plan_type: 'annual' }))} 
+                        />
+                    </div>
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-6">
@@ -305,6 +376,60 @@ function Select({ label, name, value, onChange, options = [], placeholder = '', 
                 ))}
             </select>
         </label>
+    );
+}
+
+function TierCard({ tier, title, subtitle, monthlyPrice, yearlyPrice, aiCredits, features, selected, onSelect, icon, badge }) {
+    return (
+        <button
+            type="button"
+            onClick={onSelect}
+            className={`relative w-full text-right border-2 rounded-2xl p-6 hover:border-brand-primary transition-all ${selected ? 'border-brand-primary bg-brand-primary/5 shadow-lg' : 'border-gray-200'}`}
+        >
+            {badge && (
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-brand-primary text-white px-3 py-1 rounded-full text-xs font-bold">
+                    {badge}
+                </div>
+            )}
+            <div className="flex items-center gap-3 mb-4">
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl ${selected ? 'bg-brand-primary text-white' : 'bg-gray-100 text-gray-600'}`}>
+                    {icon}
+                </div>
+                <div className="text-right">
+                    <h3 className="text-xl font-bold text-gray-900">{title}</h3>
+                    <p className="text-xs text-gray-500">{subtitle}</p>
+                </div>
+            </div>
+            <div className="bg-gray-50 rounded-xl p-3 mb-4">
+                <div className="text-center">
+                    <span className="text-2xl font-bold text-gray-900">₪{monthlyPrice}</span>
+                    <span className="text-gray-500 text-sm">/חודש</span>
+                </div>
+                <div className="text-center text-xs text-gray-400 mt-1">
+                    או ₪{yearlyPrice.toLocaleString()}/שנה
+                </div>
+            </div>
+            {aiCredits > 0 && (
+                <div className="bg-brand-primary/10 border border-brand-primary/20 rounded-lg p-2 mb-4 text-center">
+                    <p className="text-brand-primary font-bold text-xs">
+                        🤖 {aiCredits} קרדיטים AI/חודש
+                    </p>
+                    {tier === 'pro' && (
+                        <p className="text-[10px] text-gray-500 mt-1">
+                            * בתקופת הניסיון: 50 קרדיטים בלבד
+                        </p>
+                    )}
+                </div>
+            )}
+            <ul className="space-y-2 text-right text-sm">
+                {features.map((feature, i) => (
+                    <li key={i} className="flex items-start gap-2 text-gray-700">
+                        <FaCheckCircle className={`mt-0.5 flex-shrink-0 ${selected ? 'text-brand-primary' : 'text-gray-400'}`} />
+                        <span>{feature}</span>
+                    </li>
+                ))}
+            </ul>
+        </button>
     );
 }
 

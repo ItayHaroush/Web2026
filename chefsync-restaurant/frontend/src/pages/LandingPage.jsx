@@ -1,541 +1,423 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { CustomerLayout } from '../layouts/CustomerLayout';
-import woltLogo from '../images/woltLogo.png';
-import tenBisLogo from '../images/tenBisLogo.png';
-import mishlohaLogo from '../images/mishlohaLogo.jpeg';
-import logo from '../images/ChefSyncLogoIcon.png';
+import {
+    FaCheck,
+    FaRocket,
+    FaGift,
+    FaCreditCard,
+    FaMapLocationDot,
+    FaBurger,
+    FaStore,
+    FaWandMagicSparkles,
+    FaCircleXmark,
+    FaArrowLeft,
+    FaMobileScreen,
+    FaCircleCheck,
+    FaChartLine,
+    FaWhatsapp,
+    FaUtensils
+} from "react-icons/fa6";
 import { PRODUCT_BYLINE_HE, PRODUCT_NAME } from '../constants/brand';
-/**
- * דף נחיתה שיווקי – TakeEat
- * מסעדה אונליין מלאה | כמו וולט / תן ביס / משלוחה – בלי אחוזים
- */
+
 export default function LandingPage() {
     const benefits = [
         {
-            title: 'מסעדה אונליין מלאה',
-            desc: 'הלקוח מזמין מהספה: תפריט, סל קניות, תוספות, משלוח וסטטוס – הכול אונליין עד לדלת.'
+            title: 'ללא עמלות – 0%',
+            desc: 'הפסק לשלם 30% על כל הזמנה. ב-ChefSync, כל ההכנסות נשארות אצלך.',
+            icon: <FaChartLine className="w-6 h-6 text-green-500" />
         },
         {
-            title: 'אותה חוויה כמו אפליקציות משלוחים',
-            desc: 'עובד כמו וולט, תן ביס או משלוחה – רק שהלקוחות מזמינים ישירות מהמסעדה.'
+            title: 'בינה מלאכותית מתקדמת',
+            desc: 'כלים חכמים לשיפור תמונות, שיווק וניהול שחוסכים לך זמן.',
+            icon: <FaWandMagicSparkles className="w-6 h-6 text-purple-500" />
         },
         {
-            title: 'בלי אחוזים מכל הזמנה',
-            desc: 'במקום לשלם עמלות – משלמים מנוי חודשי קבוע. יותר רווח, פחות תלות.'
+            title: 'שליטה מלאה במשלוחים',
+            desc: 'ניהול אזורי חלוקה, זמנים ושליחים ללא תלות באחרים.',
+            icon: <FaMapLocationDot className="w-6 h-6 text-blue-500" />
         },
         {
-            title: 'המותג והלקוחות נשארים אצלך',
-            desc: 'האתר, ההזמנות והנתונים שייכים למסעדה. אנחנו רק הפלטפורמה.'
-        },
+            title: 'המותג שלך במרכז',
+            desc: 'האתר והלקוחות שלך. אנחנו רק הטכנולוגיה מאחורי הקלעים.',
+            icon: <FaStore className="w-6 h-6 text-orange-500" />
+        }
     ];
 
-    const steps = [
+    const capabilities = [
         {
-            label: '1. הלקוח מזמין אונליין',
-            detail: 'נכנס לעמוד המסעדה, בוחר מנות ומשלים הזמנה מהטלפון.'
+            title: 'אזורי חלוקה חכמים',
+            desc: 'שרטוט אזורים על מפה, תמחור דינמי ומינימום הזמנה לכל אזור.',
+            icon: <FaMapLocationDot className="w-10 h-10 text-brand-primary" />
         },
         {
-            label: '2. המסעדה מקבלת ומכינה',
-            detail: 'ההזמנה נכנסת למערכת, הסטטוס מתעדכן והמטבח עובד מסודר.'
+            title: 'בניית תפריט גמיש',
+            desc: 'ממשק ניהול פשוט לוריאציות, תוספות, אופציות ומבצעים מורכבים.',
+            icon: <FaBurger className="w-10 h-10 text-brand-primary" />
         },
         {
-            label: '3. ההזמנה מגיעה ללקוח',
-            detail: 'משלוח או איסוף עצמי – עד לסיפוק מלא של ההזמנה.'
-        },
+            title: 'התאמה לכל עסק',
+            desc: 'מתאים לפיצריות, המבורגריות, סושי ועוד – המערכת גמישה לכולם.',
+            icon: <FaUtensils className="w-10 h-10 text-brand-primary" />
+        }
     ];
 
     const plans = [
         {
-            name: 'חודשי',
-            price: '₪600',
-            period: 'למסעדה / חודש',
+            name: 'Standard',
+            price: '₪450',
+            period: '/ חודש',
+            yearlyPrice: 'או ₪4,500 לשנה',
             features: [
-                'מסעדה אונליין מלאה',
-                'הזמנות ומשלוחים',
-                'ניהול סטטוס למטבח',
-                'ללא עמלות הזמנה',
-                'תמיכה מלאה בעברית'
+                'מערכת הזמנות מלאה',
+                'תפריט דיגיטלי',
+                'AI בסיסי (שיפור תמונות)',
+                'ניהול משלוחים בסיסי',
+                'תמיכה בוואטסאפ'
             ],
-            badge: 'הכי גמיש',
+            highlight: false,
+            badge: 'בסיסי'
         },
         {
-            name: 'שנתי',
-            price: '₪5,000',
-            period: 'למסעדה / שנה',
+            name: 'Pro',
+            price: '₪600',
+            period: '/ חודש',
+            yearlyPrice: 'תשלום חודשי',
             features: [
-                'חיסכון משמעותי',
-                'הטמעת תפריט ללא עלות',
-                'עדיפות בתמיכה',
-                'כל הפיצ׳רים פתוחים'
+                'כל הפיצ׳רים ב-Standard',
+                'AI מתקדם (ניתוח ושיפורים)',
+                'תמיכה בעדיפות (Priority)',
+                'דוחות וניתוחים מתקדמים',
+                'ניהול מספר סניפים'
             ],
-            badge: 'הכי משתלם',
-        },
+            highlight: true,
+            badge: 'המומלץ ביותר'
+        }
     ];
 
     return (
         <CustomerLayout>
-            <div className="-mx-4 sm:-mx-6 lg:-mx-8">
+            <div className="-mx-4 sm:-mx-6 lg:-mx-8 space-y-24 pb-20">
 
                 {/* Hero */}
-                <div className="relative overflow-hidden bg-gradient-to-br from-brand-dark via-brand-primary to-brand-secondary text-white rounded-3xl px-6 sm:px-10 py-14 sm:py-18">
-                    <div className="absolute inset-0 opacity-15 bg-[radial-gradient(circle_at_top_left,#ffffff33,transparent_45%)]" />
+                <div className="relative overflow-hidden bg-brand-dark text-white rounded-b-[2.5rem] sm:rounded-b-[4rem] px-6 sm:px-10 py-20 lg:py-28 shadow-2xl isolate">
+                    {/* Abstract Background Shapes */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-brand-dark via-brand-primary/90 to-brand-secondary/80 -z-10" />
+                    <div className="absolute top-0 right-0 -translate-y-12 translate-x-12 w-64 h-64 bg-white/5 rounded-full blur-3xl" />
+                    <div className="absolute bottom-0 left-0 translate-y-12 -translate-x-12 w-64 h-64 bg-brand-primary/20 rounded-full blur-3xl" />
 
-                    <div className="relative grid gap-8 lg:grid-cols-[1.1fr_0.9fr] items-center">
-                        <div className="space-y-6">
-                            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-500 to-brand-primary text-white text-sm font-semibold px-4 py-2 rounded-full shadow-lg animate-pulse">
-                                <span>🎁</span>
-                                <span>14 ימי התנסות חינם - ללא התחייבות!</span>
-                            </div>
-
-                            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight">
-                                {PRODUCT_NAME} – המסעדה שלך אונליין
-                            </h1>
-
-                            <p className="text-white/70 text-sm font-medium">{PRODUCT_BYLINE_HE}</p>
-
-                            <p className="text-white/90 text-lg max-w-2xl">
-                                פלטפורמת הזמנות מלאה למסעדות:
-                                הלקוח מזמין מהספה, המערכת מרכזת הכול,
-                                והמסעדה מספקת עד הדלת – במנוי חודשי קבוע.
-                            </p>
-
-                            <div className="flex flex-wrap gap-4">
-                                <Link
-                                    to="/register-restaurant"
-                                    className="px-6 py-3 bg-white text-brand-dark font-semibold rounded-xl shadow hover:shadow-xl transition flex items-center gap-2"
-                                >
-                                    <span>התחל ניסיון חינם 14 יום</span>
-                                    <span>🎁</span>
-                                </Link>
-                                <a
-                                    href="#comparison"
-                                    className="px-6 py-3 border border-white/70 rounded-xl font-semibold hover:bg-white/10 transition"
-                                >
-                                    השוואה לפלטפורמות
-                                </a>
-                            </div>
-
-                            <div className="text-sm text-white/80 flex flex-wrap gap-4">
-                                <span>💳 מנוי חודשי / שנתי</span>
-                                <span>❌ בלי אחוזים</span>
-                                <span>🛡️ שליטה מלאה</span>
-                            </div>
+                    <div className="relative max-w-5xl mx-auto text-center space-y-10">
+                        {/* Pill Badge */}
+                        <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md border border-white/20 text-white px-5 py-2 rounded-full text-sm font-semibold shadow-lg hover:bg-white/15 transition-colors cursor-default">
+                            <FaWandMagicSparkles className="text-yellow-300" />
+                            <span>המהפכה בניהול המשלוחים כבר כאן</span>
                         </div>
 
-                        <div className="bg-white text-brand-dark rounded-2xl shadow-2xl p-6 space-y-4">
-                            <div className="bg-gradient-to-r from-blue-50 to-brand-light border border-brand-primary/30 rounded-xl p-3 mb-2">
-                                <p className="text-brand-primary font-semibold text-sm text-center">🎁 14 ימי ניסיון חינם</p>
-                            </div>
-                            <h3 className="text-2xl font-bold">מהזמנה – עד משלוח</h3>
-                            <p className="text-gray-700 text-sm">
-                                תפריט, סל קניות, הזמנה, סטטוס ומשלוח –
-                                הכול מרוכז בפאנל אחד למטבח.
-                            </p>
+                        {/* Heading */}
+                        <h1 className="text-5xl sm:text-6xl lg:text-8xl font-black tracking-tight leading-tight drop-shadow-sm">
+                            למה לשלם עמלות?<br />
+                            <span className="text-blue-300 bg-clip-text text-transparent bg-gradient-to-r from-blue-200 to-blue-400">
+                                שלם חודשית.
+                            </span>
+                        </h1>
 
-                            <div className="grid gap-3 sm:grid-cols-2">
-                                <div className="p-4 rounded-xl bg-brand-light">
-                                    <p className="text-xs text-gray-600 mb-1">עלות חודשית</p>
-                                    <p className="text-2xl font-bold">₪600</p>
-                                </div>
-                                <div className="p-4 rounded-xl bg-brand-dark text-white">
-                                    <p className="text-xs text-white/80 mb-1">ללא עמלות</p>
-                                    <p className="text-lg font-bold">100% למסעדה</p>
-                                </div>
-                            </div>
+                        <p className="text-xl sm:text-2xl text-blue-100/90 font-medium max-w-3xl mx-auto leading-relaxed">
+                            מערכת מתקדמת, 0% עמלה, 100% שליטה שלך.
+                        </p>
+
+                        {/* Buttons */}
+                        <div className="flex flex-wrap justify-center gap-4 pt-6">
+                            <Link
+                                to="/register-restaurant"
+                                className="group relative px-8 py-4 bg-white text-brand-dark font-bold rounded-2xl shadow-xl hover:shadow-2xl hover:-translate-y-1 transition text-lg flex items-center gap-3 overflow-hidden"
+                            >
+                                <span className="relative z-10">התחל 14 יום חינם</span>
+                                <FaGift className="relative z-10 text-brand-primary group-hover:rotate-12 transition-transform" />
+                                <div className="absolute inset-0 bg-gradient-to-r from-gray-50 to-gray-200 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </Link>
+                            <a
+                                href="#demo"
+                                className="px-8 py-4 bg-white/10 backdrop-blur border border-white/20 text-white font-bold rounded-2xl hover:bg-white/20 transition-all text-lg flex items-center gap-3"
+                            >
+                                <span>דמו חי</span>
+                                <FaCircleCheck className="text-green-400" />
+                            </a>
+                        </div>
+
+                        {/* Trust Badges */}
+                        <div className="pt-10 flex flex-wrap justify-center gap-x-8 gap-y-4 text-sm sm:text-base text-white/70 font-medium">
+                            <span className="flex items-center gap-2 bg-white/5 px-4 py-2 rounded-full border border-white/10">
+                                <FaCreditCard className="text-white/50" /> ללא כרטיס אשראי
+                            </span>
+                            <span className="flex items-center gap-2 bg-white/5 px-4 py-2 rounded-full border border-white/10">
+                                <FaRocket className="text-white/50" /> הקמה מיידית
+                            </span>
+                            <span className="flex items-center gap-2 bg-white/5 px-4 py-2 rounded-full border border-white/10">
+                                <FaCircleCheck className="text-white/50" /> ביטול בכל עת
+                            </span>
                         </div>
                     </div>
                 </div>
 
-
-
                 {/* Live Demo Section */}
-                <section className="mt-16 bg-gradient-to-b from-gray-50 to-white rounded-3xl p-4 sm:p-8 lg:p-12">
-                    <div className="text-center mb-8 sm:mb-10">
-                        <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-3 sm:mb-4">
+                <section id="demo" className="max-w-7xl mx-auto px-4 sm:px-6">
+                    <div className="text-center mb-16">
+                        <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 text-gray-900">
                             ראה את המערכת בפעולה
                         </h2>
-                        <p className="text-gray-600 text-base sm:text-lg">
-                            המערכת כבר חיה ועובדת – נסה בעצמך עכשיו
+                        <p className="text-xl text-gray-500 max-w-2xl mx-auto">
+                            המערכת כבר חיה ועובדת – נסה בעצמך עכשיו ותראה כמה זה פשוט
                         </p>
                     </div>
 
-                    <div className="flex flex-col lg:grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
-                        {/* iPhone Mockup */}
-                        <div className="relative mx-auto w-full max-w-[280px] sm:max-w-[300px]">
-                            <div className="relative w-full aspect-[9/18] max-w-[280px] sm:max-w-[300px] mx-auto">
-                                {/* iPhone Frame */}
-                                <div className="absolute inset-0 bg-black rounded-[40px] sm:rounded-[55px] shadow-2xl p-2 sm:p-3">
-                                    <div className="w-full h-full bg-white rounded-[32px] sm:rounded-[45px] overflow-hidden">
-                                        {/* Notch */}
-                                        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-24 sm:w-32 h-5 sm:h-7 bg-black rounded-b-2xl sm:rounded-b-3xl z-10"></div>
+                    <div className="bg-white rounded-[2.5rem] p-8 sm:p-12 lg:p-16 border border-gray-100 shadow-2xl shadow-gray-200/50 relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-full h-full bg-grid-slate-50 [mask-image:linear-gradient(to_bottom,white,transparent)] pointer-events-none" />
 
-                                        {/* Screen Content - Scrolling Demo */}
-                                        <div className="w-full h-full overflow-hidden">
-                                            <iframe
-                                                src="https://chefsync.vercel.app/"
-                                                className="w-full h-full border-0"
-                                                title="TakeEat Demo"
-                                                loading="lazy"
-                                            />
+                        <div className="flex flex-col lg:grid lg:grid-cols-2 gap-12 lg:gap-20 items-center relative z-10">
+                            {/* iPhone Mockup */}
+                            <div className="relative mx-auto w-full max-w-[300px] lg:order-last">
+                                <div className="relative w-full aspect-[9/19] mx-auto transition-transform hover:scale-[1.02] duration-500 group">
+                                    {/* iPhone Frame */}
+                                    <div className="absolute inset-0 bg-gray-900 rounded-[50px] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.3)] p-3 ring-4 ring-gray-100 z-20">
+                                        <div className="w-full h-full bg-white rounded-[40px] overflow-hidden relative">
+                                            {/* Notch */}
+                                            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-28 h-7 bg-gray-900 rounded-b-2xl z-20"></div>
+                                            {/* Screen Content */}
+                                            <div className="w-full h-full overflow-hidden bg-white">
+                                                <iframe
+                                                    src="https://chefsync.vercel.app/"
+                                                    className="w-full h-full border-0"
+                                                    title="ChefSync Demo"
+                                                    loading="lazy"
+                                                />
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
 
-                                {/* Floating badges - Hidden on mobile, shown on larger screens */}
-                                <div className="hidden sm:block absolute -right-8 top-20 bg-green-500 text-white text-xs px-3 py-2 rounded-full shadow-lg animate-pulse">
-                                    🟢 LIVE
-                                </div>
-                                <div className="hidden sm:block absolute -left-8 bottom-32 bg-blue-500 text-white text-xs px-3 py-2 rounded-full shadow-lg">
-                                    📱 PWA
-                                </div>
-                            </div>
-
-                            {/* Mobile badges below phone */}
-                            <div className="sm:hidden flex justify-center gap-2 mt-4">
-                                <span className="bg-green-500 text-white text-xs px-3 py-1.5 rounded-full shadow animate-pulse">
-                                    🟢 LIVE
-                                </span>
-                                <span className="bg-blue-500 text-white text-xs px-3 py-1.5 rounded-full shadow">
-                                    📱 PWA
-                                </span>
-                            </div>
-                        </div>
-
-                        {/* Demo Controls */}
-                        <div className="space-y-4 sm:space-y-6 w-full">
-                            <div className="bg-white p-4 sm:p-6 rounded-2xl border shadow-sm">
-                                <h3 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4">🍕 נסה מסעדות דוגמה</h3>
-                                <div className="space-y-2 sm:space-y-3">
-                                    <a
-                                        href="https://chefsync.vercel.app/pizza-palace/menu"
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="block p-4 border rounded-xl hover:border-brand-primary hover:bg-brand-light/30 transition group"
-                                    >
-                                        <div className="flex items-center justify-between">
-                                            <div>
-                                                <p className="font-semibold group-hover:text-brand-primary">Pizza Palace</p>
-                                                <p className="text-sm text-gray-500">פיצה איטלקית אמיתית</p>
-                                            </div>
-                                            <span className="text-2xl">→</span>
-                                        </div>
-                                    </a>
-
-                                    <a
-                                        href="https://chefsync.vercel.app/burger-central/menu"
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="block p-4 border rounded-xl hover:border-brand-primary hover:bg-brand-light/30 transition group"
-                                    >
-                                        <div className="flex items-center justify-between">
-                                            <div>
-                                                <p className="font-semibold group-hover:text-brand-primary">Burger Central</p>
-                                                <p className="text-sm text-gray-500">המבורגרים עסיסיים</p>
-                                            </div>
-                                            <span className="text-2xl">→</span>
-                                        </div>
-                                    </a>
-
-                                    <a
-                                        href="https://chefsync.vercel.app/sushi-master/menu"
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="block p-4 border rounded-xl hover:border-brand-primary hover:bg-brand-light/30 transition group"
-                                    >
-                                        <div className="flex items-center justify-between">
-                                            <div>
-                                                <p className="font-semibold group-hover:text-brand-primary">Sushi Master</p>
-                                                <p className="text-sm text-gray-500">סושי טרי מהים</p>
-                                            </div>
-                                            <span className="text-2xl">→</span>
-                                        </div>
-                                    </a>
+                                    {/* Floating Badges */}
+                                    <div className="hidden sm:flex absolute -right-8 top-20 bg-emerald-500 text-white text-xs font-bold px-4 py-2 rounded-full shadow-lg animate-bounce z-30 items-center gap-2">
+                                        <span className="w-2 h-2 bg-white rounded-full animate-pulse"></span>
+                                        LIVE
+                                    </div>
+                                    <div className="hidden sm:flex absolute -left-8 bottom-32 bg-blue-600 text-white text-xs font-bold px-4 py-2 rounded-full shadow-lg z-30 items-center gap-2">
+                                        <FaMobileScreen />
+                                        PWA
+                                    </div>
                                 </div>
                             </div>
 
-                            <div className="bg-brand-primary text-white p-4 sm:p-6 rounded-2xl">
-                                <h3 className="text-base sm:text-lg font-bold mb-2">💡 טיפ</h3>
-                                <p className="text-sm text-white/90">
-                                    נסה להוסיף מנות לעגלה, לעקוב אחרי הזמנה ולראות איך המערכת עובדת בזמן אמת
-                                </p>
-                            </div>
-
-                            <a
-                                href="https://chefsync.vercel.app/admin/login"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="block text-center p-3 sm:p-4 bg-gray-800 text-white rounded-xl text-sm sm:text-base font-semibold hover:bg-gray-900 transition"
-                            >
-                                🔑 כניסה לפאנל ניהול (דמו)
-                            </a>
-                        </div>
-                    </div>
-                </section>
-
-                {/* Free Trial Section */}
-                <section className="mt-16 bg-gradient-to-br from-blue-50 via-brand-light/50 to-purple-50 rounded-3xl p-8 sm:p-12 border border-brand-primary/20">
-                    <div className="text-center mb-8">
-                        <div className="inline-block bg-gradient-to-r from-blue-500 to-brand-primary text-white px-6 py-2 rounded-full font-bold text-lg mb-4">
-                            🎁 הצעה מיוחדת
-                        </div>
-                        <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-                            14 ימי התנסות חינם
-                        </h2>
-                        <p className="text-gray-700 text-lg max-w-2xl mx-auto">
-                            נסה את המערכת המלאה ללא עלות ו<strong>ללא התחייבות</strong>
-                        </p>
-                    </div>
-
-                    <div className="grid md:grid-cols-3 gap-6 mb-8">
-                        <div className="bg-white p-6 rounded-2xl shadow-sm text-center">
-                            <div className="text-4xl mb-3">✅</div>
-                            <h3 className="font-bold text-lg mb-2">גישה מלאה</h3>
-                            <p className="text-gray-600 text-sm">
-                                כל הפיצ'רים והיכולות ללא הגבלה
-                            </p>
-                        </div>
-
-                        <div className="bg-white p-6 rounded-2xl shadow-sm text-center">
-                            <div className="text-4xl mb-3">💳</div>
-                            <h3 className="font-bold text-lg mb-2">כרטיס אשראי</h3>
-                            <p className="text-gray-600 text-sm">
-                                נדרש לצורך אימות בלבד - <strong>לא יחויב</strong> בתקופת הניסיון
-                            </p>
-                        </div>
-
-                        <div className="bg-white p-6 rounded-2xl shadow-sm text-center">
-                            <div className="text-4xl mb-3">🔔</div>
-                            <h3 className="font-bold text-lg mb-2">תזכורת מראש</h3>
-                            <p className="text-gray-600 text-sm">
-                                נשלח תזכורת 3 ימים לפני סיום הניסיון
-                            </p>
-                        </div>
-                    </div>
-
-                    <div className="bg-white/90 backdrop-blur p-6 rounded-2xl border border-brand-primary/30 shadow-sm">
-                        <h3 className="font-bold text-lg mb-3 text-center">📋 תנאי הניסיון</h3>
-                        <ul className="space-y-2 text-gray-700 max-w-2xl mx-auto">
-                            <li className="flex items-start gap-2">
-                                <span className="text-brand-primary font-bold">•</span>
-                                <span>14 ימים מלאים להתנסות בכל יכולות המערכת</span>
-                            </li>
-                            <li className="flex items-start gap-2">
-                                <span className="text-brand-primary font-bold">•</span>
-                                <span>ללא חיוב עד סיום תקופת הניסיון</span>
-                            </li>
-                            <li className="flex items-start gap-2">
-                                <span className="text-brand-primary font-bold">•</span>
-                                <span>ניתן לבטל בכל עת ללא עלות</span>
-                            </li>
-                            <li className="flex items-start gap-2">
-                                <span className="text-brand-primary font-bold">•</span>
-                                <span>לאחר הניסיון - חיוב חודשי של ₪600 או שנתי של ₪5,000</span>
-                            </li>
-                            <li className="flex items-start gap-2">
-                                <span className="text-brand-primary font-bold">•</span>
-                                <span>סליקה מאובטחת דרך טרנזילה</span>
-                            </li>
-                        </ul>
-                    </div>
-
-                    <div className="text-center mt-8">
-                        <Link
-                            to="/register-restaurant"
-                            className="inline-block px-8 py-4 bg-gradient-to-r from-blue-500 to-brand-primary text-white text-lg font-bold rounded-xl shadow-lg hover:shadow-xl transition transform hover:scale-105"
-                        >
-                            🎁 התחל ניסיון חינם עכשיו
-                        </Link>
-                        <p className="text-sm text-gray-500 mt-3">
-                            ללא התחייבות • ביטול בקליק אחד
-                        </p>
-                    </div>
-                </section>
-
-                {/* Benefits */}
-                <section className="mt-16">
-                    <h2 className="text-2xl sm:text-3xl font-bold mb-6">
-                        אותה פלטפורמה – מודל אחר
-                    </h2>
-
-                    <div className="grid gap-6 md:grid-cols-2">
-                        {benefits.map(item => (
-                            <div key={item.title} className="p-6 bg-white rounded-2xl border shadow-sm">
-                                <h3 className="text-lg font-semibold mb-2">{item.title}</h3>
-                                <p className="text-gray-600">{item.desc}</p>
-                            </div>
-                        ))}
-                    </div>
-                </section>
-
-                {/* Comparison */}
-                <section id="comparison" className="mt-16 bg-white rounded-3xl p-8 border shadow-sm">
-                    <h2 className="text-2xl sm:text-3xl font-bold mb-8">
-                        השוואה לפלטפורמות משלוחים
-                    </h2>
-
-                    <div className="grid md:grid-cols-2 gap-8">
-                        <div className="p-6 rounded-2xl border">
-                            <div className="flex items-center gap-3 flex-wrap mb-4">
-                                <img src={woltLogo} alt="Wolt" className="h-6 opacity-80" />
-                                <img src={tenBisLogo} alt="10bis" className="h-6 opacity-80" />
-                                <img src={mishlohaLogo} alt="משלוחה" className="h-6 opacity-80" />
-                            </div>
-                            <ul className="space-y-2 text-gray-700">
-                                <li>✔ פלטפורמת הזמנות מלאה</li>
-                                <li>✔ חוויית לקוח מעולה</li>
-                                <li>❌ אחוזים מכל הזמנה</li>
-                                <li>❌ הלקוח שייך לפלטפורמה</li>
-                            </ul>
-                        </div>
-
-                        <div className="p-6 rounded-2xl border border-brand-primary">
-                            <div className="flex items-center gap-3 mb-4">
-                                <img src={logo} alt={PRODUCT_NAME} className="h-6" />
-                                <div>
-                                    <span className="text-xl font-bold text-brand-primary">{PRODUCT_NAME}</span>
-                                    <p className="text-xs text-gray-500">{PRODUCT_BYLINE_HE}</p>
-                                </div>
-                            </div>
-                            <ul className="space-y-2 text-gray-700">
-                                <li>✔ אותה חוויית הזמנה</li>
-                                <li>✔ משלוחים וסטטוס</li>
-                                <li>✔ מנוי חודשי קבוע</li>
-                                <li>✔ הלקוחות שייכים למסעדה</li>
-                            </ul>
-                        </div>
-                    </div>
-                </section>
-
-                {/* Steps */}
-                <section className="mt-16 bg-white rounded-3xl p-8 border shadow-sm">
-                    <h2 className="text-2xl sm:text-3xl font-bold mb-6">
-                        מהספה של הלקוח – עד לדלת
-                    </h2>
-
-                    <div className="grid gap-6 md:grid-cols-3">
-                        {steps.map(step => (
-                            <div key={step.label} className="p-5 bg-brand-light rounded-2xl">
-                                <p className="font-semibold text-brand-primary mb-2">{step.label}</p>
-                                <p className="text-gray-700">{step.detail}</p>
-                            </div>
-                        ))}
-                    </div>
-                </section>
-                {/* Special Onboarding Package */}
-                <section className="mt-12 sm:mt-16 bg-white rounded-3xl p-6 sm:p-10 border border-brand-primary/20 shadow-sm">
-                    <div className="flex flex-col gap-4 sm:gap-5">
-                        <div className="flex flex-wrap items-center gap-3">
-                            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary text-white text-sm sm:text-base font-bold shadow">
-                                🎁 חבילת הטמעה מיוחדת – 10 הראשונות בלבד
-                            </span>
-                            <span className="text-xs sm:text-sm text-gray-500">עד גמר המלאי | טל״ח</span>
-                        </div>
-
-                        <p className="text-gray-700 text-base sm:text-lg font-semibold">אם הגעת לפה מוקדם – הרווחת.</p>
-
-                        <div className="grid md:grid-cols-2 gap-6 sm:gap-8">
-                            <div className="bg-brand-light/60 border border-brand-primary/20 rounded-2xl p-5 sm:p-6 shadow-sm">
-                                <h3 className="text-lg sm:text-xl font-bold mb-3">✅ מה כלול בחבילה:</h3>
-                                <ul className="space-y-2 text-gray-700 text-sm sm:text-base">
-                                    <li>• הקמת מסעדה מלאה במערכת</li>
-                                    <li>• בניית תפריט וקטגוריות</li>
-                                    <li>• חיבור TakeEat (PWA – עובד על טאבלט / נייד קיים)</li>
-                                    <li>• קישור הזמנה ישיר למסעדה</li>
-                                    <li>• מיתוג בסיסי</li>
-                                    <li>• הדרכה והפעלה</li>
-                                    <li>• ליווי אישי בשבועיים הראשונים</li>
-                                </ul>
-                            </div>
-
-                            <div className="bg-white border border-gray-200 rounded-2xl p-5 sm:p-6 shadow-sm">
-                                <h3 className="text-lg sm:text-xl font-bold mb-3">❌ מה לא כלול (שקיפות מלאה):</h3>
-                                <ul className="space-y-2 text-gray-700 text-sm sm:text-base">
-                                    <li>• טאבלט</li>
-                                    <li>• מדפסת מטבח</li>
-                                    <li>• שליחים</li>
-                                    <li>• פרסום / טראפיק</li>
-                                </ul>
-
-                                <div className="mt-4 p-4 rounded-xl bg-brand-light/60 border border-brand-primary/10 text-sm sm:text-base text-gray-800">
-                                    <p className="font-semibold mb-2">📱 חומרה – בלי קומבינות</p>
-                                    <p className="mb-1">המערכת עובדת על טאבלט או סמארטפון שיש למסעדה.</p>
-                                    <p>צריך טאבלט? אפשר בתוספת תשלום – המחיר תלוי בדגם הנבחר.</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="grid md:grid-cols-[1.2fr_0.8fr] gap-6 sm:gap-8">
-                            <div className="bg-brand-dark text-white rounded-2xl p-5 sm:p-6 shadow-md">
-                                <h3 className="text-lg sm:text-xl font-bold mb-3">💰 מחיר מיוחד ל־10 הראשונות:</h3>
-                                <ul className="space-y-2 text-sm sm:text-base">
-                                    <li>• ₪499 הטמעה חד־פעמי</li>
-                                    <li>• 30 ימי ניסיון חינם</li>
-                                    <li>• לאחר מכן: ₪299 לחודש</li>
-                                </ul>
-                                <p className="mt-4 text-sm sm:text-base">בלי עמלות. בלי אחוזים. בלי התחייבות ארוכה.</p>
-                            </div>
-
-                            <div className="bg-white border border-brand-primary/20 rounded-2xl p-5 sm:p-6 shadow-sm flex flex-col gap-3 text-sm sm:text-base text-gray-800">
-                                <div>
-                                    <p className="font-semibold mb-1">⏳ למה עכשיו?</p>
-                                    <ul className="space-y-1">
-                                        <li>• מספר המקומות מוגבל</li>
-                                        <li>• כל מסעדה אחרי זה – במחיר רגיל</li>
-                                        <li>• מי שנכנס עכשיו חוסך כסף ונכנס ראשון</li>
-                                    </ul>
+                            {/* Demo Controls */}
+                            <div className="space-y-8 w-full">
+                                <div className="space-y-4">
+                                    <div className="flex items-center gap-2 text-brand-primary font-bold tracking-wide text-sm uppercase">
+                                        <FaUtensils />
+                                        <span>נסה בעצמך</span>
+                                    </div>
+                                    <h3 className="text-3xl font-bold text-gray-900">
+                                        אחת המערכות, אינסוף אפשרויות
+                                    </h3>
+                                    <p className="text-gray-600 leading-relaxed">
+                                        בין אם יש לך פיצרייה, המבורגריה או סושייה, ChefSync מתאימה את עצמה למותג שלך.
+                                    </p>
                                 </div>
 
-                                <div className="pt-2">
-                                    <p className="font-semibold mb-2">👉 רוצה להיכנס לפני שנסגר?</p>
-                                    <div className="flex flex-wrap gap-3">
-                                        <Link
-                                            to="/register-restaurant"
-                                            className="px-5 py-3 bg-brand-primary text-white rounded-xl font-bold shadow hover:shadow-lg transition"
-                                        >
-                                            התחל ניסיון חינם
-                                        </Link>
+                                <div className="space-y-4">
+                                    {[
+                                        { name: 'Pizza Palace', sub: 'פיצה איטלקית', url: 'https://chefsync.vercel.app/pizza-palace/menu', color: 'hover:border-red-500 hover:bg-red-50' },
+                                        { name: 'Burger Central', sub: 'המבורגר פרימיום', url: 'https://chefsync.vercel.app/burger-central/menu', color: 'hover:border-orange-500 hover:bg-orange-50' }
+                                    ].map((store) => (
                                         <a
-                                            href="mailto:support@chefsync.co.il"
-                                            className="px-5 py-3 border border-brand-primary text-brand-primary rounded-xl font-bold hover:bg-brand-primary/5 transition"
+                                            key={store.name}
+                                            href={store.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className={`block p-5 border border-gray-200 rounded-2xl bg-white transition-all duration-300 group ${store.color}`}
                                         >
-                                            דבר איתנו בוואטסאפ / מייל
+                                            <div className="flex items-center justify-between">
+                                                <div>
+                                                    <p className="font-bold text-lg text-gray-900">{store.name}</p>
+                                                    <p className="text-sm text-gray-500">{store.sub}</p>
+                                                </div>
+                                                <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center group-hover:bg-white transition-colors">
+                                                    <FaArrowLeft className="text-gray-400 group-hover:text-gray-900 transition-colors" />
+                                                </div>
+                                            </div>
                                         </a>
+                                    ))}
+                                </div>
+
+                                <div className="bg-blue-50/50 border border-blue-100 p-6 rounded-2xl flex gap-4">
+                                    <div className="mt-1 bg-blue-100 text-blue-600 w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0">
+                                        <FaWandMagicSparkles className="text-sm" />
                                     </div>
-                                    <p className="text-xs text-gray-500 mt-2">TakeEat – הזמנות ישירות מהמסעדה. טל״ח | עד גמר המלאי</p>
+                                    <div>
+                                        <h4 className="font-bold text-gray-900 text-sm mb-1">טיפ לבדיקה</h4>
+                                        <p className="text-sm text-gray-600 leading-relaxed">
+                                            נסה להוסיף מנות לעגלה ולראות כמה מהר המערכת מגיבה.
+                                            הכל עובד חלק, בלי טעינות מיותרות.
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </section>
-                {/* Plans */}
-                <section id="plans" className="mt-16">
-                    <h2 className="text-2xl sm:text-3xl font-bold mb-6">
-                        תמחור פשוט. בלי הפתעות.
-                    </h2>
 
-                    <div className="grid gap-6 md:grid-cols-2">
-                        {plans.map(plan => (
-                            <div key={plan.name} className="relative p-6 bg-white rounded-2xl border shadow-sm">
-                                <span className="absolute -top-3 right-4 bg-brand-primary text-white text-xs px-3 py-1 rounded-full">
-                                    {plan.badge}
-                                </span>
+                {/* Capabilities Cards */}
+                <section className="max-w-7xl mx-auto px-4 sm:px-6">
+                    <div className="grid md:grid-cols-3 gap-8">
+                        {capabilities.map((cap, i) => (
+                            <div key={i} className="group bg-white p-8 rounded-[2rem] shadow-sm border border-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+                                <div className="mb-6 bg-brand-light/30 w-20 h-20 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                                    {cap.icon}
+                                </div>
+                                <h3 className="text-2xl font-bold mb-4 text-gray-900">{cap.title}</h3>
+                                <p className="text-gray-600 leading-relaxed">{cap.desc}</p>
+                            </div>
+                        ))}
+                    </div>
+                </section>
 
-                                <h3 className="text-2xl font-bold">{plan.name}</h3>
-                                <p className="text-sm text-gray-500 mb-3">{plan.period}</p>
-                                <p className="text-3xl font-bold mb-4">{plan.price}</p>
+                {/* Benefits Grid */}
+                <section className="bg-gray-50/50 py-24 border-y border-gray-100/50">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6">
+                        <h2 className="text-4xl font-bold text-center mb-16 text-gray-900">היתרונות שלנו</h2>
+                        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                            {benefits.map((item, i) => (
+                                <div key={i} className="bg-white p-8 rounded-3xl shadow-[0_2px_20px_rgb(0,0,0,0.04)] border border-gray-100 hover:border-brand-primary/30 transition duration-300 flex flex-col items-start gap-4">
+                                    <div className="p-3 bg-gray-50 rounded-2xl">
+                                        {item.icon}
+                                    </div>
+                                    <div>
+                                        <h3 className="text-xl font-bold mb-2 text-gray-900">{item.title}</h3>
+                                        <p className="text-sm text-gray-500 leading-relaxed">{item.desc}</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </section>
 
-                                <ul className="space-y-2 mb-4">
-                                    {plan.features.map(f => (
-                                        <li key={f} className="text-gray-700">• {f}</li>
+                {/* Comparison Section */}
+                <section className="max-w-5xl mx-auto px-4 sm:px-6">
+                    <div className="text-center mb-12">
+                        <span className="text-brand-primary font-bold tracking-wider text-sm uppercase">השוואה עסקית</span>
+                        <h2 className="text-4xl font-bold mt-2 mb-4 text-gray-900">למה לשלם יותר?</h2>
+                        <p className="text-gray-600 text-lg">ההבדל בין שותף לבין ספק שירות</p>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 shadow-2xl shadow-gray-200/50 rounded-[2.5rem] overflow-hidden border border-gray-100 bg-white">
+                        {/* Commission Model */}
+                        <div className="p-10 bg-gray-50/80 border-b md:border-b-0 md:border-l border-gray-100">
+                            <h3 className="text-xl font-bold text-gray-500 mb-8 flex items-center gap-3">
+                                <div className="p-2 bg-gray-200 rounded-lg"><FaStore /></div>
+                                <span>מודל העמלות</span>
+                                <span className="mr-auto text-xs font-bold bg-gray-200 px-2 py-1 rounded text-gray-600">הישן</span>
+                            </h3>
+                            <ul className="space-y-6">
+                                {[
+                                    { label: 'עלות למסעדה', val: '27% - 30% מהמחזור', bad: true },
+                                    { label: 'בעלות על הלקוח', val: 'של הפלטפורמה' },
+                                    { label: 'מיתוג', val: 'כללי / גנרי' },
+                                    { label: 'שליטה באזורים', val: 'מוגבלת' }
+                                ].map((row, i) => (
+                                    <li key={i} className="flex justify-between items-center text-gray-500">
+                                        <span>{row.label}</span>
+                                        <span className={`font-medium ${row.bad ? 'text-red-500 bg-red-50 px-2 py-1 rounded' : 'text-gray-700 bg-gray-200/50 px-2 py-1 rounded text-sm'}`}>
+                                            {row.val}
+                                        </span>
+                                    </li>
+                                ))}
+                            </ul>
+                            <div className="mt-8 pt-8 border-t border-gray-200 text-center text-gray-400 text-sm">
+                                <FaCircleXmark className="inline-block mb-1 text-red-300 text-xl" />
+                                <p>שוחק את הרווחיות</p>
+                            </div>
+                        </div>
+
+                        {/* Fixed Model (ChefSync) */}
+                        <div className="p-10 bg-white relative">
+                            <div className="absolute top-0 left-0 w-full h-1.5 bg-brand-primary"></div>
+                            <h3 className="text-xl font-bold text-brand-primary mb-8 flex items-center gap-3">
+                                <div className="p-2 bg-brand-primary/10 rounded-lg"><FaRocket /></div>
+                                <span>מודל קבוע</span>
+                                <span className="mr-auto text-xs font-bold bg-brand-primary text-white px-2 py-1 rounded">ChefSync</span>
+                            </h3>
+                            <ul className="space-y-6">
+                                {[
+                                    { label: 'עלות למסעדה', val: '0% עמלה', super: true },
+                                    { label: 'בעלות על הלקוח', val: '100% שלך' },
+                                    { label: 'מיתוג', val: 'המותג שלך במרכז' },
+                                    { label: 'שליטה באזורים', val: 'שליטה מלאה' }
+                                ].map((row, i) => (
+                                    <li key={i} className="flex justify-between items-center text-gray-900 font-medium">
+                                        <span>{row.label}</span>
+                                        <span className={`text-sm px-2 py-1 rounded ${row.super ? 'text-green-600 bg-green-50 font-bold text-base' : 'bg-brand-light text-brand-dark'}`}>
+                                            {row.val}
+                                        </span>
+                                    </li>
+                                ))}
+                            </ul>
+                            <div className="mt-8 pt-8 border-t border-gray-100 text-center text-brand-primary text-sm font-medium">
+                                <FaCircleCheck className="inline-block mb-1 text-green-500 text-xl" />
+                                <p>מקסימום רווח למסעדה</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                {/* Pricing Plans */}
+                <section id="pricing" className="max-w-5xl mx-auto px-4 sm:px-6">
+                    <h2 className="text-4xl font-bold text-center mb-16 text-gray-900">תכניות ומחירים</h2>
+
+                    <div className="grid md:grid-cols-2 gap-8 items-start">
+                        {plans.map((plan) => (
+                            <div
+                                key={plan.name}
+                                className={`relative p-8 rounded-[2rem] border transition-all duration-300 ${plan.highlight
+                                        ? 'bg-white shadow-2xl shadow-brand-primary/10 border-brand-primary ring-1 ring-brand-primary/20 scale-105 z-10'
+                                        : 'bg-white border-gray-100 text-gray-600 hover:border-gray-300 hover:shadow-lg'
+                                    }`}
+                            >
+                                {plan.highlight && (
+                                    <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-brand-primary text-white text-sm font-bold px-4 py-1.5 rounded-full shadow-lg flex items-center gap-1">
+                                        <FaWandMagicSparkles className="text-yellow-300 text-xs" />
+                                        {plan.badge}
+                                    </div>
+                                )}
+
+                                <div className="text-center mb-8">
+                                    <h3 className={`text-2xl font-bold mb-4 ${plan.highlight ? 'text-brand-primary' : 'text-gray-900'}`}>
+                                        {plan.name}
+                                    </h3>
+                                    <div className="flex justify-center items-baseline gap-1">
+                                        <span className={`text-5xl font-black ${plan.highlight ? 'text-gray-900' : 'text-gray-900'}`}>
+                                            {plan.price}
+                                        </span>
+                                        <span className="text-gray-500 font-medium text-lg">{plan.period}</span>
+                                    </div>
+                                    <p className="text-sm text-gray-400 mt-2 font-medium">{plan.yearlyPrice}</p>
+                                </div>
+
+                                <ul className="space-y-4 mb-10">
+                                    {plan.features.map((feature, i) => (
+                                        <li key={i} className="flex items-start gap-3">
+                                            <div className={`mt-1 rounded-full p-0.5 ${plan.highlight ? 'bg-brand-primary/10 text-brand-primary' : 'bg-gray-100 text-gray-400'}`}>
+                                                <FaCheck className="text-xs" />
+                                            </div>
+                                            <span className="text-gray-600 text-[15px]">{feature}</span>
+                                        </li>
                                     ))}
                                 </ul>
 
                                 <Link
                                     to="/register-restaurant"
-                                    className="inline-block px-5 py-3 bg-brand-primary text-white rounded-xl font-semibold"
+                                    className={`block w-full py-4 rounded-xl font-bold text-center transition-all ${plan.highlight
+                                            ? 'bg-brand-primary text-white hover:bg-brand-primary/90 shadow-lg hover:shadow-brand-primary/30 hover:-translate-y-0.5'
+                                            : 'bg-gray-50 border border-gray-200 text-gray-900 hover:bg-gray-100 hover:border-gray-300'
+                                        }`}
                                 >
-                                    פותחים מסעדה אונליין
+                                    בחר {plan.name}
                                 </Link>
                             </div>
                         ))}
@@ -543,22 +425,26 @@ export default function LandingPage() {
                 </section>
 
                 {/* CTA */}
-                <section className="mt-16 bg-brand-dark text-white rounded-2xl p-8 flex flex-col sm:flex-row justify-between gap-6">
-                    <div>
-                        <h3 className="text-2xl font-bold mb-2">
-                            אותה חוויה ללקוח – פחות הוצאות למסעדה
-                        </h3>
-                        <p className="text-white/80">
-                            אם כבר יש לך משלוחים – למה לשלם אחוזים?
-                        </p>
-                    </div>
+                <section className="bg-brand-dark text-white rounded-t-[3rem] mt-24 px-6 py-24 text-center relative overflow-hidden">
+                    {/* Background Glow */}
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-brand-primary/20 rounded-full blur-3xl -z-10" />
 
-                    <Link
-                        to="/register-restaurant"
-                        className="px-6 py-3 bg-white text-brand-dark rounded-xl font-semibold"
-                    >
-                        מתחילים עכשיו
-                    </Link>
+                    <div className="max-w-3xl mx-auto space-y-8 relative z-10">
+                        <h2 className="text-4xl sm:text-5xl font-black tracking-tight">מוכנים להתקדם?</h2>
+                        <p className="text-xl text-blue-100/80 leading-relaxed max-w-2xl mx-auto">
+                            הצטרפו למאות מסעדות שכבר עברו למודל קבוע והתחילו לחסוך עמלות כבר מההזמנה הראשונה.
+                        </p>
+                        <div className="pt-4">
+                            <Link
+                                to="/register-restaurant"
+                                className="inline-flex items-center gap-3 px-12 py-6 bg-white text-brand-dark font-bold rounded-2xl text-xl hover:scale-105 transition-transform shadow-2xl"
+                            >
+                                <span>התחל 14 ימי ניסיון חינם</span>
+                                <FaArrowLeft className="text-brand-primary" />
+                            </Link>
+                        </div>
+                        <p className="text-sm text-white/30 font-medium">ללא התחייבות • ללא כרטיס אשראי • שירות אישי</p>
+                    </div>
                 </section>
 
             </div>

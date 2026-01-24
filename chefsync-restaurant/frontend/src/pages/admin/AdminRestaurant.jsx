@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { useRestaurantStatus } from '../../context/RestaurantStatusContext';
 import AdminLayout from '../../layouts/AdminLayout';
@@ -75,6 +76,7 @@ const isTimeInRange = (now, open, close) => {
 };
 
 export default function AdminRestaurant() {
+    const navigate = useNavigate();
     const { getAuthHeaders, isOwner } = useAdminAuth();
     const { setRestaurantStatus } = useRestaurantStatus();
     const [restaurant, setRestaurant] = useState(null);

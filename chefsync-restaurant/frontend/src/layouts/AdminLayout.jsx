@@ -23,12 +23,14 @@ import {
     FaQrcode,
     FaDesktop,
     FaChartBar,
-    FaShieldAlt
+    FaShieldAlt,
+    FaClock
 } from 'react-icons/fa';
 
 export default function AdminLayout({ children }) {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [isCollapsed, setIsCollapsed] = useState(false);
+    const [subscriptionData, setSubscriptionData] = useState(null);
     const { user, logout, isOwner, isManager, getAuthHeaders } = useAdminAuth();
     const { restaurantStatus, setRestaurantStatus } = useRestaurantStatus();
     const location = useLocation();
@@ -45,6 +47,13 @@ export default function AdminLayout({ children }) {
                         is_open: restaurant.is_open_now ?? restaurant.is_open,
                         is_override: restaurant.is_override_status || false,
                         is_approved: restaurant.is_approved ?? false,
+                    });
+                    // שמור נתוני subscription לתצוגת Trial Banner
+                    setSubscriptionData({
+                        subscription_status: restaurant.subscription_status,
+                        trial_ends_at: restaurant.trial_ends_at,
+                        tier: restaurant.tier,
+                        subscription_plan: restaurant.subscription_plan
                     });
                 }
             } catch (error) {
@@ -207,12 +216,51 @@ export default function AdminLayout({ children }) {
                             </div>
                         </div>
                     )}
+                    {subscriptionData && <TrialBanner {...subscriptionData} navigate={navigate} />}
                     {children}
                 </main>
             </div>
 
             {/* סוכן AI ספציפי למסעדה - עם מכסת קרדיטים */}
             <FloatingRestaurantAssistant />
+        </div>
+    );
+}
+
+// Trial Banner Component
+function TrialBanner({ subscription_status, trial_ends_at, tier, subscription_plan, navigate }) {
+    if (subscription_status !== 'trial' || !trial_ends_at) return null;
+    
+    const daysLeft = Math.ceil((new Date(trial_ends_at) - new Date()) / (1000 * 60 * 60 * 24));
+    
+    if (daysLeft <= 0) return null; // אם פג התוקף, Middleware יפנה ל-paywall
+    
+    const isUrgent = daysLeft <= 3;
+    
+    return (
+        <div className={`mb-6 ${isUrgent ? 'bg-gradient-to-r from-red-50 to-orange-50 border-red-200' : 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200'} border-2 rounded-3xl p-6 shadow-lg animate-in fade-in zoom-in-95 duration-500`}>
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+                <div className="flex items-center gap-4">
+                    <div className={`w-14 h-14 ${isUrgent ? 'bg-red-500' : 'bg-blue-500'} rounded-2xl flex items-center justify-center text-white shadow-lg`}>
+                        <FaClock size={24} />
+                    </div>
+                    <div>
+                        <h3 className="text-xl font-black text-gray-900">
+                            {isUrgent ? '⏰ תקופת הניסיון עומדת להסתיים!' : '🎉 תקופת ניסיון פעילה'}
+                        </h3>
+                        <p className="text-gray-600 font-medium mt-1">
+                            נותרו <strong className={isUrgent ? 'text-red-600' : 'text-blue-600'}>{daysLeft} ימים</strong>
+                            {' '}לתקופת הניסיון החינמית • תוכנית: <strong>{tier === 'basic' ? 'Basic' : 'Pro'}</strong>
+                        </p>
+                    </div>
+                </div>
+                <button
+                    onClick={() => navigate('/admin/paywall')}
+                    className={`${isUrgent ? 'bg-gradient-to-r from-red-500 to-orange-600' : 'bg-gradient-to-r from-brand-primary to-blue-600'} text-white px-6 py-3 rounded-2xl font-black hover:shadow-xl transition-all whitespace-nowrap`}
+                >
+                    {isUrgent ? '🚀 שלם עכשיו' : '💳 הפעל מנוי'}
+                </button>
+            </div>
         </div>
     );
 }

@@ -1587,6 +1587,33 @@ class AdminController extends Controller
             'next_payment_at' => $periodEnd,
         ]);
 
+        // עדכון/יצירת AI Credits למנוי Pro
+        if ($tier === 'pro' && $prices[$tier]['ai_credits'] > 0) {
+            $aiCredit = \App\Models\AiCredit::where('restaurant_id', $restaurant->id)->first();
+            
+            if ($aiCredit) {
+                // עדכון לקרדיטים מלאים (500) אחרי תשלום
+                $aiCredit->update([
+                    'monthly_limit' => $prices[$tier]['ai_credits'],
+                    'credits_remaining' => $prices[$tier]['ai_credits'], // איפוס ל-500
+                    'billing_cycle_start' => now()->startOfMonth(),
+                    'billing_cycle_end' => now()->endOfMonth(),
+                ]);
+            } else {
+                // יצירה חדשה אם לא קיים
+                \App\Models\AiCredit::create([
+                    'tenant_id' => $restaurant->tenant_id,
+                    'restaurant_id' => $restaurant->id,
+                    'tier' => $tier,
+                    'monthly_limit' => $prices[$tier]['ai_credits'],
+                    'credits_remaining' => $prices[$tier]['ai_credits'],
+                    'credits_used' => 0,
+                    'billing_cycle_start' => now()->startOfMonth(),
+                    'billing_cycle_end' => now()->endOfMonth(),
+                ]);
+            }
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'המנוי הופעל בהצלחה',
