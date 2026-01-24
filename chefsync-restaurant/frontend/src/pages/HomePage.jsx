@@ -7,7 +7,20 @@ import LocationPickerModal from '../components/LocationPickerModal';
 import logo from '../images/ChefSyncLogoIcon.png';
 import { resolveAssetUrl } from '../utils/assets';
 import { PRODUCT_BYLINE_HE, PRODUCT_NAME } from '../constants/brand';
-import { FaRocket, FaUserShield, FaMobileAlt, FaMask } from 'react-icons/fa';
+import {
+    FaRocket,
+    FaUserShield,
+    FaMobileAlt,
+    FaMask,
+    FaMapMarkerAlt,
+    FaChevronLeft,
+    FaUtensils,
+    FaArrowLeft,
+    FaStore,
+    FaClock,
+    FaCircle
+} from 'react-icons/fa';
+import { HiGlobeAlt, HiLocationMarker } from 'react-icons/hi';
 
 /**
  * עמוד בית - בחירת מסעדה מרשימה
@@ -239,26 +252,30 @@ export default function HomePage() {
 
             {/* כרטיסייה של הזמנה פעילה */}
             {activeOrderId && (
-                <div className="mb-6 p-4 bg-gradient-to-r from-brand-primary to-brand-secondary rounded-2xl shadow-lg text-white cursor-pointer hover:shadow-xl transition-shadow"
+                <div className="mb-6 p-4 bg-gradient-to-r from-brand-primary to-brand-secondary rounded-2xl shadow-lg text-white cursor-pointer hover:shadow-xl transition-all border border-white/10 flex items-center justify-between"
                     onClick={() => navigate(`/${tenantId || ''}/order-status/${activeOrderId}`)}>
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="font-semibold mb-1">📍 הזמנה בעיצומה</p>
-                            <p className="text-sm opacity-90">הזמנה #{activeOrderId}</p>
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
+                            <FaMapMarkerAlt className="text-white animate-bounce" />
                         </div>
-                        <div className="text-2xl">👉</div>
+                        <div>
+                            <p className="font-bold text-lg mb-0.5">הזמנה בעיצומה</p>
+                            <p className="text-xs opacity-90 font-medium">הזמנה #{activeOrderId} • לחץ לצפייה בסטטוס</p>
+                        </div>
                     </div>
-                    <p className="text-xs opacity-75 mt-2">לחץ כדי לראות סטטוס מלא</p>
+                    <FaChevronLeft className="text-white/70" />
                 </div>
             )}
 
-            {/* Hero Section - סגנון Wolt */}
+            {/* Hero Section - סגנון Wolt משודרג */}
             <div className="relative -mx-4 sm:-mx-6 lg:-mx-8 -mt-8 mb-6">
-                <div className="relative h-64 sm:h-[420px] bg-gradient-to-br from-brand-dark via-brand-primary to-brand-secondary overflow-hidden">
-                    {/* אלמנטים דקורטיביים */}
-                    <div className="absolute inset-0 opacity-10">
-                        <div className="absolute top-5 right-5 sm:top-10 sm:right-10 w-20 sm:w-32 h-20 sm:h-32 bg-white rounded-full blur-3xl"></div>
-                        <div className="absolute bottom-5 left-10 sm:bottom-10 sm:left-20 w-32 sm:w-48 h-32 sm:h-48 bg-brand-accent rounded-full blur-3xl"></div>
+                <div className="relative h-[320px] sm:h-[460px] bg-gradient-to-br from-brand-dark via-brand-primary to-brand-secondary overflow-hidden">
+                    {/* אפקט עומק וגרדיאנט מודרני (Mesh Gradient Style) */}
+                    <div className="absolute inset-0 opacity-30">
+                        <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[80%] bg-white/20 rounded-full blur-[120px] animate-pulse"></div>
+                        <div className="absolute bottom-[-10%] left-[-5%] w-[40%] h-[70%] bg-brand-accent/20 rounded-full blur-[100px]"></div>
+                        {/* תבנית נקודות עדינה לרקע */}
+                        <div className="absolute inset-0 opacity-[0.1]" style={{ backgroundImage: 'radial-gradient(#fff 1px, transparent 1px)', backgroundSize: '30px 30px' }}></div>
                     </div>
 
                     {/* שורה עליונה: מיקום + כניסת מנהלים */}
@@ -266,20 +283,18 @@ export default function HomePage() {
                         <button
                             type="button"
                             onClick={handleAdminLogin}
-                            className="bg-white/95 backdrop-blur-sm text-brand-dark px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl shadow-lg border border-white/80 hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center gap-2 text-xs sm:text-sm font-semibold cursor-pointer"
+                            className="bg-white/95 backdrop-blur-md text-brand-dark px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl shadow-lg border border-white/80 hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center gap-2 text-xs sm:text-sm font-semibold cursor-pointer"
                         >
-                            <span>🛡️</span>
+                            <FaUserShield className="text-brand-primary" />
                             <span className="hidden sm:inline">כניסת מנהלים</span>
                         </button>
 
                         {currentCityName && (
                             <button
                                 onClick={() => setShowLocationModal(true)}
-                                className="inline-flex items-center gap-1.5 sm:gap-2 backdrop-blur-md bg-white/90 text-brand-dark px-3 sm:px-4 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm hover:bg-white shadow-md font-medium transition-all cursor-pointer"
+                                className="inline-flex items-center gap-1.5 sm:gap-2 backdrop-blur-md bg-white/90 text-brand-dark px-3 sm:px-4 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm hover:bg-white shadow-md font-semibold transition-all cursor-pointer group"
                             >
-                                <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-brand-primary" fill="currentColor" viewBox="0 0 24 24">
-                                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
-                                </svg>
+                                <HiLocationMarker className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-brand-primary group-hover:animate-bounce" />
                                 <span>
                                     {deliveryLocation?.fullAddress ||
                                         (deliveryLocation?.street && deliveryLocation?.cityName
@@ -290,51 +305,80 @@ export default function HomePage() {
                         )}
                     </div>
 
-                    {/* תוכן ה-Hero */}
-                    <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="text-center text-white px-4 sm:px-6 w-full max-w-3xl">
-                            <div className="relative mx-auto w-64 sm:w-96 lg:w-[480px] pointer-events-none select-none -mt-2 sm:-mt-2">
-                                <img
-                                    src={logo}
-                                    alt={PRODUCT_NAME}
-                                    className="w-full h-auto object-contain drop-shadow-[0_20px_35px_rgba(0,0,0,0.5)]"
-                                />
+                    {/* תוכן ה-Hero - מרכוז גמיש למובייל ודסקטופ */}
+                    <div className="absolute inset-0 pt-12 sm:pt-0 flex items-center justify-center">
+                        <div className="text-center px-4 sm:px-6 w-full max-w-4xl relative z-10 flex flex-col items-center">
 
-                                {/* טקסט לבן ישירות על הלוגו */}
-                                <div className="absolute inset-x-0 bottom-8 sm:bottom-5 flex flex-col items-center text-white gap-1 sm:gap-1.5">
-                                    <p className="text-sm sm:text-base font-semibold opacity-95 drop-shadow-[0_6px_14px_rgba(0,0,0,0.65)]">
-                                        {PRODUCT_BYLINE_HE}
-                                    </p>
-                                    <p className="text-xs sm:text-lg opacity-95 drop-shadow-[0_6px_14px_rgba(0,0,0,0.65)]">
-                                        הזמנת אוכל ממסעדות מובחרות
-                                    </p>
+                            {/* אפקט הילה מרכזי מודגש */}
+                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-brand-primary/20 blur-[120px] -z-10 rounded-full animate-pulse"></div>
+
+                            {/* לוגו - לבן בוהק, מרכזי ונקי */}
+                            <div className="relative group mb-2 sm:mb-12">
+                                <div className="absolute inset-0 bg-white/5 blur-2xl rounded-full scale-110 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                <div className="relative w-40 sm:w-64 lg:w-72 pointer-events-none select-none transition-all duration-700 group-hover:scale-105">
+                                    <img
+                                        src={logo}
+                                        alt={PRODUCT_NAME}
+                                        className="w-full h-auto object-contain filter brightness-0 invert drop-shadow-[0_0_20px_rgba(255,255,255,0.25)]"
+                                    />
                                 </div>
                             </div>
+
+                            {/* קרוסלת לוגואים של מסעדות */}
+                            {restaurants.filter(r => r.logo_url).length > 0 && (
+                                <div className="w-full max-w-5xl overflow-hidden relative group/ticker pb-2">
+                                    <p className="text-[10px] sm:text-xs font-black text-white uppercase tracking-[0.4em] mb-3 sm:mb-4 drop-shadow-sm opacity-80">
+                                        הנבחרת של ChefSync
+                                    </p>
+                                    <div className="animate-ticker flex gap-10 sm:gap-16 items-center py-2">
+                                        {/* שכפול רשימה ליצירת לופ אינסופי */}
+                                        {[...restaurants.filter(r => r.logo_url), ...restaurants.filter(r => r.logo_url), ...restaurants.filter(r => r.logo_url)].map((r, i) => (
+                                            <div
+                                                key={`${r.id}-${i}`}
+                                                className="flex-shrink-0 transition-all duration-300 hover:scale-110 cursor-pointer group/logo bg-white/95 backdrop-blur-sm p-1.5 sm:p-2.5 rounded-2xl shadow-lg border border-white/20"
+                                                onClick={() => handleRestaurantClick(r)}
+                                            >
+                                                <img
+                                                    src={resolveAssetUrl(r.logo_url)}
+                                                    alt={r.name}
+                                                    className="h-8 sm:h-12 w-auto object-contain opacity-100 transition-transform"
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
 
                 {/* חיפוש/סינון צף */}
-                <div className="mx-3 sm:mx-6 lg:mx-8 -mt-5 sm:-mt-6 relative z-10">
+                <div className="mx-3 sm:mx-6 lg:mx-8 -mt-6 sm:-mt-8 relative z-10">
                     <div className="bg-white rounded-xl sm:rounded-2xl shadow-xl p-3 sm:p-4">
                         <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 items-center">
-                            <div className="flex-1 w-full">
+                            <div className="flex-1 w-full relative group">
+                                <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-gray-400 group-focus-within:text-brand-primary transition-colors">
+                                    <HiGlobeAlt className="w-5 h-5" />
+                                </div>
                                 <select
                                     value={selectedCity}
                                     onChange={(e) => setSelectedCity(e.target.value)}
-                                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-gray-50 border border-gray-200 rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent text-gray-700 font-medium text-sm sm:text-base"
+                                    className="w-full pr-10 pl-4 py-2.5 sm:py-3 bg-gray-50 border border-gray-200 rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary text-gray-700 font-semibold text-sm sm:text-base transition-all appearance-none cursor-pointer"
                                 >
-                                    <option value="">🌍 כל הערים</option>
+                                    <option value="">כל הערים</option>
                                     {cities.filter(Boolean).map((city, index) => (
                                         <option key={`${city}-${index}`} value={city}>
-                                            📍 {city}
+                                            {city}
                                         </option>
                                     ))}
                                 </select>
+                                <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-gray-400">
+                                    <FaChevronLeft className="w-3 h-3 -rotate-90" />
+                                </div>
                             </div>
-                            <div className="text-center sm:text-right">
-                                <p className="text-xl sm:text-2xl font-bold text-brand-primary">{restaurants.length}</p>
-                                <p className="text-xs sm:text-sm text-gray-500">מסעדות זמינות</p>
+                            <div className="text-center sm:text-right px-4">
+                                <p className="text-xl sm:text-2xl font-black text-brand-primary leading-tight">{restaurants.length}</p>
+                                <p className="text-[10px] sm:text-xs uppercase tracking-wider font-bold text-gray-400">מסעדות</p>
                             </div>
                         </div>
                     </div>
@@ -344,22 +388,25 @@ export default function HomePage() {
             <div className="space-y-10">
                 {/* כותרת רשימת מסעדות */}
                 <div className="flex items-center justify-between">
-                    <h2 className="text-2xl sm:text-3xl font-bold text-brand-dark">
+                    <h2 className="text-2xl sm:text-3xl font-black text-brand-dark tracking-tight">
                         {selectedCity ? `מסעדות ב${selectedCity}` : 'כל המסעדות'}
                     </h2>
                     {userLocation && (
-                        <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1.5 rounded-full">
-                            ממוין לפי מרחק
-                        </span>
+                        <div className="flex items-center gap-1.5 text-xs font-bold text-gray-500 bg-gray-100 px-3 py-1.5 rounded-full uppercase tracking-wider">
+                            <FaStore className="w-3 h-3" />
+                            <span>לפי מרחק</span>
+                        </div>
                     )}
                 </div>
 
                 {/* רשימת מסעדות - Grid בסגנון Wolt */}
                 {restaurants.length === 0 ? (
-                    <div className="text-center py-20 bg-white rounded-2xl shadow-sm">
-                        <div className="text-6xl mb-4">🍽️</div>
-                        <p className="text-gray-500 text-lg mb-2">לא נמצאו מסעדות</p>
-                        <p className="text-gray-400 text-sm">נסה לבחור עיר אחרת</p>
+                    <div className="text-center py-20 bg-white rounded-3xl shadow-sm border border-gray-50">
+                        <div className="inline-flex items-center justify-center w-20 h-20 bg-gray-50 rounded-full mb-6">
+                            <FaUtensils className="text-4xl text-gray-300" />
+                        </div>
+                        <p className="text-gray-900 text-xl font-bold mb-2">לא נמצאו מסעדות</p>
+                        <p className="text-gray-400 text-sm font-medium">נסה לבחור עיר אחרת או להרחיב את החיפוש</p>
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -395,65 +442,70 @@ export default function HomePage() {
                                         </>
                                     ) : (
                                         <div className="absolute inset-0 flex items-center justify-center">
-                                            <div className="w-24 h-24 bg-brand-primary/10 rounded-2xl flex items-center justify-center">
-                                                <span className="text-5xl">🍽️</span>
+                                            <div className="w-24 h-24 bg-brand-primary/10 rounded-3xl flex items-center justify-center">
+                                                <FaUtensils className="text-4xl text-brand-primary/30" />
                                             </div>
                                         </div>
                                     )}
 
                                     {/* תג מרחק */}
                                     {restaurant.distance !== null && Number.isFinite(restaurant.distance) && (
-                                        <div className="absolute top-3 left-3 bg-white/95 backdrop-blur-sm text-brand-primary px-3 py-1.5 rounded-full text-sm font-bold shadow-md">
-                                            📍 {restaurant.distance.toFixed(1)} ק"מ
+                                        <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-md text-brand-primary px-3 py-1.5 rounded-full text-xs font-black shadow-lg border border-white/50 flex items-center gap-1">
+                                            <FaMapMarkerAlt className="w-3 h-3" />
+                                            {restaurant.distance.toFixed(1)} ק"מ
                                         </div>
                                     )}
 
                                     {/* תג דמו */}
                                     {restaurant.is_demo && (
-                                        <div className="absolute bottom-3 left-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white px-4 py-2 rounded-full text-xs font-bold shadow-xl border-2 border-white">
-                                            <FaMask className="inline-block ml-1" /> מסעדה לדוגמא
+                                        <div className="absolute bottom-3 left-3 bg-gradient-to-r from-amber-500 to-orange-600 text-white px-3 py-1.5 rounded-full text-[10px] font-black shadow-xl border border-white/20 uppercase tracking-widest flex items-center gap-1.5">
+                                            <FaMask className="text-xs" /> מסעדה לדוגמא
                                         </div>
                                     )}
 
                                     {/* תג סטטוס */}
-                                    <div className={`absolute top-3 right-3 px-3 py-1.5 rounded-full text-xs font-bold shadow-md ${(restaurant.is_open_now ?? restaurant.is_open) ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
-                                        {(restaurant.is_open_now ?? restaurant.is_open) ? '🟢 פתוח' : '🔴 סגור'}
+                                    <div className={`absolute top-3 right-3 px-3 py-1.5 rounded-full text-[10px] font-black shadow-lg flex items-center gap-1.5 border border-white/20 uppercase tracking-wider ${(restaurant.is_open_now ?? restaurant.is_open) ? 'bg-emerald-500/90 backdrop-blur-md text-white' : 'bg-rose-500/90 backdrop-blur-md text-white'}`}>
+                                        <FaCircle className={`w-1.5 h-1.5 ${(restaurant.is_open_now ?? restaurant.is_open) ? 'animate-pulse' : ''}`} />
+                                        {(restaurant.is_open_now ?? restaurant.is_open) ? 'פתוח עכשיו' : 'סגור כרגע'}
                                     </div>
                                 </div>
 
                                 {/* פרטים */}
                                 <div className="p-5">
                                     <div className="flex items-start justify-between gap-2 mb-2">
-                                        <h3 className="text-xl font-bold text-brand-dark group-hover:text-brand-primary transition-colors line-clamp-1">
+                                        <h3 className="text-xl font-bold text-brand-dark group-hover:text-brand-primary transition-colors line-clamp-1 tracking-tight">
                                             {restaurant.name}
                                         </h3>
                                         {restaurant.cuisine_type && (
-                                            <span className="bg-brand-primary/10 text-brand-primary text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap">
+                                            <span className="bg-gray-100 text-gray-600 text-[10px] font-black px-2 py-1 rounded-md uppercase tracking-wider">
                                                 {restaurant.cuisine_type}
                                             </span>
                                         )}
                                     </div>
 
-                                    <p className="text-sm text-gray-500 mb-4 line-clamp-2 leading-relaxed min-h-[40px]">
-                                        {restaurant.description || 'מסעדה מעולה עם מגוון מנות טעימות'}
+                                    <p className="text-sm text-gray-500 mb-5 line-clamp-2 leading-relaxed min-h-[40px] font-medium">
+                                        {restaurant.description || 'מסעדה מעולה עם מגוון מנות טעימות ושירות איכותי'}
                                     </p>
 
-                                    <div className="flex items-center text-sm text-gray-400 mb-4">
-                                        <svg className="w-4 h-4 ml-1.5" fill="currentColor" viewBox="0 0 24 24">
-                                            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
-                                        </svg>
-                                        <span>{restaurant.city}</span>
+                                    <div className="flex items-center text-xs text-gray-400 mb-5 font-bold uppercase tracking-wide">
+                                        <div className="flex items-center gap-1">
+                                            <HiLocationMarker className="w-3.5 h-3.5 text-gray-300" />
+                                            <span>{restaurant.city}</span>
+                                        </div>
                                         {restaurant.phone && (
                                             <>
-                                                <span className="mx-2">•</span>
-                                                <span>{restaurant.phone}</span>
+                                                <span className="mx-2 text-gray-200">|</span>
+                                                <div className="flex items-center gap-1">
+                                                    <FaClock className="w-3 h-3 text-gray-300" />
+                                                    <span>במשלוחים</span>
+                                                </div>
                                             </>
                                         )}
                                     </div>
 
-                                    <button className="w-full bg-gradient-to-l from-brand-primary to-brand-secondary text-white font-bold py-3 rounded-xl hover:shadow-lg hover:scale-[1.02] transition-all duration-300 flex items-center justify-center gap-2">
+                                    <button className="w-full bg-gray-900 text-white font-bold py-3.5 rounded-xl group-hover:bg-brand-primary transition-all duration-300 flex items-center justify-center gap-2 shadow-sm group-hover:shadow-brand-primary/25">
                                         <span>צפה בתפריט</span>
-                                        <span>←</span>
+                                        <FaArrowLeft className="w-3 h-3 group-hover:-translate-x-1 transition-transform" />
                                     </button>
                                 </div>
                             </div>
@@ -466,27 +518,27 @@ export default function HomePage() {
                     <h3 className="text-2xl font-bold text-brand-dark text-center mb-8">למה {PRODUCT_NAME}?</h3>
 
                     <div className="max-w-md mx-auto px-4">
-                        <div className="group relative p-8 bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 border border-gray-100 overflow-hidden transform hover:-translate-y-1 min-h-[260px] flex flex-col items-center justify-center">
+                        <div className="group relative p-8 bg-white rounded-[2rem] shadow-xl hover:shadow-2xl transition-all duration-500 border border-gray-100/50 overflow-hidden transform hover:-translate-y-1 min-h-[280px] flex flex-col items-center justify-center">
                             <div className="absolute inset-0 bg-gradient-to-br from-brand-primary/5 to-brand-secondary/5 opacity-0 group-hover:opacity-100 transition-opacity" />
 
-                            <div className={`relative w-16 h-16 mb-6 rounded-2xl bg-gradient-to-br ${features[activeFeature].colors} flex items-center justify-center shadow-lg mx-auto transition-all duration-500`}>
-                                {React.createElement(features[activeFeature].icon, { className: "text-2xl text-white" })}
+                            <div className={`relative w-20 h-20 mb-6 rounded-2xl bg-gradient-to-br ${features[activeFeature].colors} flex items-center justify-center shadow-lg mx-auto transition-all duration-500 group-hover:scale-110 group-hover:rotate-3`}>
+                                {React.createElement(features[activeFeature].icon, { className: "text-3xl text-white drop-shadow-md" })}
                             </div>
 
-                            <h4 className="relative text-xl font-bold text-gray-900 mb-3 text-center transition-all duration-300">
+                            <h4 className="relative text-2xl font-black text-gray-900 mb-3 text-center tracking-tight transition-all duration-300">
                                 {features[activeFeature].title}
                             </h4>
-                            <p className="relative text-gray-600 leading-relaxed text-center transition-all duration-300">
+                            <p className="relative text-gray-500 font-medium leading-relaxed text-center transition-all duration-300 max-w-[240px]">
                                 {features[activeFeature].description}
                             </p>
                         </div>
 
-                        <div className="flex justify-center gap-2 mt-6">
+                        <div className="flex justify-center gap-3 mt-8">
                             {features.map((_, index) => (
                                 <button
                                     key={index}
                                     onClick={() => setActiveFeature(index)}
-                                    className={`h-2 rounded-full transition-all duration-300 ${index === activeFeature ? 'w-8 bg-brand-primary' : 'w-2 bg-gray-300'
+                                    className={`h-1.5 rounded-full transition-all duration-500 ${index === activeFeature ? 'w-10 bg-brand-primary' : 'w-2 bg-gray-200 hover:bg-gray-300'
                                         }`}
                                     aria-label={`Go to feature ${index + 1}`}
                                 />
