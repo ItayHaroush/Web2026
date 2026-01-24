@@ -2,6 +2,15 @@ import { useState, useEffect } from 'react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import AdminLayout from '../../layouts/AdminLayout';
 import api from '../../services/apiClient';
+import { 
+    FaDesktop, 
+    FaClock, 
+    FaInfoCircle, 
+    FaCheckCircle, 
+    FaRoute, 
+    FaPrint, 
+    FaTimes 
+} from 'react-icons/fa';
 
 // מסוף סניף לעובדים/שליחים: מציג הזמנות פתוחות ומאפשר עדכון סטטוס מהיר
 export default function AdminTerminal() {
@@ -102,8 +111,9 @@ export default function AdminTerminal() {
     if (loading) {
         return (
             <AdminLayout>
-                <div className="flex items-center justify-center h-64">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary"></div>
+                <div className="flex flex-col items-center justify-center h-96">
+                    <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-brand-primary"></div>
+                    <p className="mt-4 text-gray-500 font-black animate-pulse">טוען מסוף סניף...</p>
                 </div>
             </AdminLayout>
         );
@@ -111,91 +121,186 @@ export default function AdminTerminal() {
 
     return (
         <AdminLayout>
-            <div className="flex items-center justify-between mb-4">
-                <div>
-                    <h1 className="text-2xl font-bold text-gray-800">🖥️ מסוף סניף</h1>
-                    <p className="text-gray-500">הזמנות פתוחות</p>
+            <div className="max-w-[1600px] mx-auto space-y-10 pb-32 animate-in fade-in duration-500">
+                {/* Header Section */}
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 px-4">
+                    <div className="flex items-center gap-5">
+                        <div className="w-20 h-20 bg-indigo-50 rounded-[2.5rem] flex items-center justify-center text-indigo-600 shadow-sm border border-indigo-100/50">
+                            <FaDesktop size={32} />
+                        </div>
+                        <div>
+                            <h1 className="text-4xl font-black text-gray-900 tracking-tight flex items-center gap-4">
+                                מסוף סניף
+                                <span className="text-sm bg-brand-primary/10 text-brand-primary px-4 py-1.5 rounded-full font-black animate-pulse">
+                                    LIVE
+                                </span>
+                            </h1>
+                            <p className="text-gray-500 font-medium mt-1">ניהול הזמנות בזמן אמת - מטבח, שליחים ושירות</p>
+                        </div>
+                    </div>
+                    <div className="flex flex-wrap gap-4 w-full md:w-auto">
+                        <div className="flex items-center gap-3 bg-white px-6 py-4 rounded-[1.5rem] shadow-sm border border-gray-100 flex-1 md:flex-none">
+                            <div className="w-3 h-3 bg-emerald-500 rounded-full animate-ping" />
+                            <span className="text-sm font-black text-gray-900 whitespace-nowrap">
+                                {orders.length} הזמנות פתוחות
+                            </span>
+                        </div>
+                        <button 
+                            onClick={fetchOrders}
+                            className="p-4 bg-gray-900 text-white rounded-[1.5rem] hover:bg-black transition-all active:scale-95 shadow-lg group flex-1 md:flex-none justify-center font-black"
+                        >
+                            רענן נתונים
+                        </button>
+                    </div>
                 </div>
-                <button
-                    onClick={fetchOrders}
-                    className="px-4 py-2 bg-gray-100 rounded-lg text-gray-700 hover:bg-gray-200"
-                >
-                    רענן
-                </button>
-            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {orders.length === 0 ? (
-                    <div className="bg-white rounded-2xl shadow-sm p-8 text-center text-gray-500 md:col-span-2 lg:col-span-3">
-                        <span className="text-4xl mb-4 block">📭</span>
-                        <p>אין הזמנות פתוחות</p>
+                    <div className="flex flex-col items-center justify-center py-32 bg-white rounded-[4rem] border-2 border-dashed border-gray-100 shadow-sm mx-4">
+                        <div className="w-32 h-32 bg-gray-50 rounded-[3rem] flex items-center justify-center text-6xl mb-8 group-hover:scale-110 transition-transform">
+                            🍕
+                        </div>
+                        <h2 className="text-3xl font-black text-gray-900 mb-3">אין הזמנות פתוחות כרגע</h2>
+                        <p className="text-gray-500 font-medium text-lg">כאשר לקוחות יזמינו, הם יופיעו כאן באופן אוטומטי</p>
                     </div>
                 ) : (
-                    orders.map((order) => (
-                        <div key={order.id} className="bg-white rounded-2xl shadow-sm p-4 space-y-3">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="font-bold text-lg">#{order.id}</p>
-                                    <p className="text-sm text-gray-500">{order.customer_name}</p>
-                                </div>
-                                <span className="text-sm px-3 py-1 rounded-full bg-orange-100 text-orange-700">
-                                    {statusLabel[order.status] || order.status}
-                                </span>
-                            </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 px-4">
+                        {orders.map((order) => {
+                            const next = nextStatus(order.status);
+                            const items = order.items || [];
+                            const categoryGroups = groupItemsByCategory(items);
 
-                            <div className="space-y-2 max-h-40 overflow-y-auto">
-                                {groupItemsByCategory(order.items || []).map((group) => (
-                                    <div key={group.label} className="py-2">
-                                        <div className="text-xs font-semibold text-gray-500 mb-2">{group.label}</div>
-                                        <div className="space-y-2">
-                                            {group.items.map((item, idx) => {
-                                                const quantity = Number(item.quantity ?? item.qty ?? 1);
-                                                const unitPrice = Number(item.price_at_order ?? item.price ?? 0);
-                                                const variantDelta = Number(item.variant_price_delta ?? 0);
-                                                const addons = Array.isArray(item.addons) ? item.addons : [];
-                                                const lineTotal = (unitPrice * quantity).toFixed(2);
+                            return (
+                                <div 
+                                    key={order.id} 
+                                    className={`group flex flex-col bg-white rounded-[3.5rem] shadow-sm border-2 transition-all duration-500 hover:shadow-2xl hover:-translate-y-2 overflow-hidden ${
+                                        order.status === 'ready' ? 'border-amber-200' : 
+                                        order.status === 'preparing' ? 'border-brand-primary/20' : 
+                                        'border-gray-50'
+                                    }`}
+                                >
+                                    {/* Order Header Card */}
+                                    <div className={`p-8 pb-6 border-b border-gray-50 transition-colors ${
+                                        order.status === 'ready' ? 'bg-amber-50/50' : 
+                                        order.status === 'preparing' ? 'bg-brand-primary/[0.03]' : 
+                                        'bg-gray-50/30'
+                                    }`}>
+                                        <div className="flex justify-between items-start mb-4">
+                                            <div>
+                                                <h3 className="text-3xl font-black text-gray-900">#{order.id.toString().slice(-4)}</h3>
+                                                <p className="text-gray-400 font-bold text-xs mt-1 uppercase tracking-widest flex items-center gap-2">
+                                                    <FaClock size={10} />
+                                                    {new Date(order.created_at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}
+                                                </p>
+                                            </div>
+                                            <div className={`px-5 py-2 rounded-2xl text-xs font-black uppercase tracking-widest shadow-sm ${
+                                                order.status === 'ready' ? 'bg-amber-500 text-white animate-bounce' :
+                                                order.status === 'preparing' ? 'bg-brand-primary text-white' :
+                                                'bg-indigo-500 text-white'
+                                            }`}>
+                                                {statusLabel[order.status]}
+                                            </div>
+                                        </div>
 
-                                                return (
-                                                    <div key={`${group.label}-${idx}`} className="text-sm">
-                                                        <div className="flex justify-between items-start">
-                                                            <div className="space-y-1">
-                                                                <div className="font-medium text-gray-900">
-                                                                    {item.menu_item?.name || item.name || 'פריט'}
-                                                                    <span className="text-gray-600 mr-2">× {quantity}</span>
-                                                                </div>
-                                                                {item.variant_name && (
-                                                                    <div className="text-xs text-gray-700">סוג לחם: {item.variant_name} (₪{variantDelta.toFixed(2)})</div>
-                                                                )}
-                                                                {addons.length > 0 && (
-                                                                    <div className="text-xs text-gray-700">תוספות: {formatAddons(addons)}</div>
-                                                                )}
-                                                            </div>
-                                                            <div className="text-right text-gray-900 font-semibold">₪{lineTotal}</div>
-                                                        </div>
-                                                        <div className="text-xs text-gray-600">₪{unitPrice.toFixed(2)} ליחידה</div>
-                                                    </div>
-                                                );
-                                            })}
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-xl shadow-sm border border-gray-100">
+                                                👤
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-lg font-black text-gray-900 truncate tracking-tight">{order.customer_name}</p>
+                                                <p className="text-gray-400 text-sm font-bold ltr text-right">{order.customer_phone}</p>
+                                            </div>
                                         </div>
                                     </div>
-                                ))}
-                            </div>
 
-                            <div className="flex justify-between items-center">
-                                <span className="font-bold text-gray-800">₪{order.total}</span>
-                                {nextStatus(order.status) ? (
-                                    <button
-                                        onClick={() => updateStatus(order.id, nextStatus(order.status))}
-                                        className="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-dark"
-                                    >
-                                        קדם ל{statusLabel[nextStatus(order.status)]}
-                                    </button>
-                                ) : (
-                                    <span className="text-sm text-gray-500">אין פעולות</span>
-                                )}
-                            </div>
-                        </div>
-                    ))
+                                    {/* Order Items (Scrollable Body) */}
+                                    <div className="flex-1 p-8 space-y-6 overflow-y-auto max-h-[400px] custom-scrollbar shadow-inner bg-white/50">
+                                        {categoryGroups.map((group, idx) => (
+                                            <div key={idx} className="space-y-3">
+                                                <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                                                    <div className="h-px bg-gray-100 flex-1" />
+                                                    {group.label}
+                                                    <div className="h-px bg-gray-100 flex-1" />
+                                                </h4>
+                                                {group.items.map((item, itemIdx) => (
+                                                    <div key={itemIdx} className="bg-gray-50/50 rounded-2xl p-4 border border-gray-50 group/item hover:bg-white hover:shadow-md transition-all">
+                                                        <div className="flex justify-between gap-4">
+                                                            <div className="flex items-start gap-3">
+                                                                <span className="w-7 h-7 bg-white rounded-lg flex items-center justify-center text-xs font-black text-brand-primary shadow-sm border border-gray-100">
+                                                                    {item.quantity || 1}
+                                                                </span>
+                                                                <p className="font-black text-gray-900 text-sm leading-tight">{item.menu_item?.name || item.name || 'פריט'}</p>
+                                                            </div>
+                                                            <div className="text-right text-gray-900 font-bold text-xs">₪{(Number(item.price_at_order || item.price || 0) * Number(item.quantity || 1)).toFixed(2)}</div>
+                                                        </div>
+                                                        {formatAddons(item.addons) && (
+                                                            <p className="mt-2 text-[11px] text-gray-500 font-medium leading-relaxed mr-10 bg-white/60 p-2 rounded-xl border border-gray-100/50">
+                                                                {formatAddons(item.addons)}
+                                                            </p>
+                                                        )}
+                                                        {item.variant_name && (
+                                                            <p className="mt-1 text-[10px] text-gray-400 font-black mr-10 italic">
+                                                                סוג: {item.variant_name}
+                                                            </p>
+                                                        )}
+                                                        {item.notes && (
+                                                            <div className="mt-2 mr-10 flex items-start gap-2 text-[10px] text-rose-500 font-bold bg-rose-50 p-2 rounded-xl">
+                                                                <FaInfoCircle className="mt-0.5 shrink-0" />
+                                                                <span>הערה: {item.notes}</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {/* Action Footers */}
+                                    <div className="p-8 bg-gray-50/50 border-t border-gray-100 mt-auto">
+                                        <div className="flex justify-between items-center mb-6 px-2">
+                                            <span className="text-sm font-black text-gray-400">סה"כ לתשלום</span>
+                                            <span className="text-2xl font-black text-gray-900 tracking-tighter">₪{Number(order.total).toFixed(2)}</span>
+                                        </div>
+
+                                        {next ? (
+                                            <button
+                                                onClick={() => updateStatus(order.id, next)}
+                                                className={`w-full py-5 rounded-[2rem] font-black text-lg transition-all active:scale-95 shadow-xl flex items-center justify-center gap-4 hover:-translate-y-1 ${
+                                                    order.status === 'ready' ? 'bg-emerald-500 text-white shadow-emerald-500/20 hover:bg-emerald-600' :
+                                                    order.status === 'preparing' ? 'bg-amber-500 text-white shadow-amber-500/20 hover:bg-amber-600' :
+                                                    'bg-brand-primary text-white shadow-brand-primary/20 hover:bg-brand-dark'
+                                                }`}
+                                            >
+                                                {order.status === 'ready' ? (
+                                                    <><FaCheckCircle /> הכר כנמסר</>
+                                                ) : (
+                                                    <><FaRoute /> {statusLabel[next]}</>
+                                                )}
+                                            </button>
+                                        ) : (
+                                            <div className="text-center py-4 bg-emerald-50 text-emerald-600 rounded-3xl font-black text-sm border border-emerald-100 flex items-center justify-center gap-2">
+                                                <FaCheckCircle /> הושלם
+                                            </div>
+                                        )}
+                                        
+                                        <div className="grid grid-cols-2 gap-3 mt-4">
+                                            <button 
+                                                className="py-3 bg-white text-gray-600 rounded-2xl text-xs font-black shadow-sm border border-gray-100 hover:bg-gray-50 transition-all active:scale-95 flex items-center justify-center gap-2"
+                                                onClick={() => window.print()}
+                                            >
+                                                <FaPrint size={12} /> הדפס
+                                            </button>
+                                            <button 
+                                                onClick={() => updateStatus(order.id, 'cancelled')}
+                                                className="py-3 bg-white text-rose-500 rounded-2xl text-xs font-black shadow-sm border border-gray-100 hover:bg-rose-50 transition-all active:scale-95 flex items-center justify-center gap-2"
+                                            >
+                                                <FaTimes size={12} /> ביטול
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
                 )}
             </div>
         </AdminLayout>

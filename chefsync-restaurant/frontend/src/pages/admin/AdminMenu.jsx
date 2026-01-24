@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { useRestaurantStatus } from '../../context/RestaurantStatusContext';
 import AdminLayout from '../../layouts/AdminLayout';
@@ -6,6 +6,23 @@ import api from '../../services/apiClient';
 import { resolveAssetUrl } from '../../utils/assets';
 import AiDescriptionGenerator from '../../components/AiDescriptionGenerator';
 import AiPriceRecommender from '../../components/AiPriceRecommender';
+import { 
+    FaUtensils, 
+    FaPlus, 
+    FaEdit, 
+    FaTrash, 
+    FaPowerOff, 
+    FaImage, 
+    FaToggleOn, 
+    FaToggleOff, 
+    FaMagic, 
+    FaMoneyBillWave,
+    FaSearch,
+    FaLayerGroup,
+    FaCheck,
+    FaTimes,
+    FaSync
+} from 'react-icons/fa';
 
 export default function AdminMenu() {
     const { getAuthHeaders, isManager } = useAdminAuth();
@@ -211,340 +228,402 @@ export default function AdminMenu() {
 
     return (
         <AdminLayout>
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-                <div>
-                    <h1 className="text-2xl font-bold text-gray-800">🍽️ ניהול תפריט</h1>
-                    <p className="text-gray-500">{items.length} פריטים</p>
+            {/* כותרת מודרנית */}
+            <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-4 sm:p-6 mb-6 overflow-hidden relative">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-brand-primary/5 rounded-full -mr-16 -mt-16 blur-2xl" />
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 relative z-10">
+                    <div>
+                        <h1 className="text-2xl font-black text-gray-900 flex items-center gap-3">
+                            <div className="w-10 h-10 bg-brand-primary text-white rounded-xl flex items-center justify-center shadow-lg shadow-brand-primary/20">
+                                <FaUtensils size={18} />
+                            </div>
+                            ניהול תפריט
+                        </h1>
+                        <p className="text-xs font-black text-gray-400 uppercase tracking-widest mt-2 flex items-center gap-2">
+                             {items.length} פריטים במערכת
+                        </p>
+                    </div>
+                    {isManager() && (
+                        <button
+                            onClick={openNewModal}
+                            disabled={isLocked}
+                            className="w-full sm:w-auto px-6 py-3.5 bg-gray-900 text-white rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] shadow-xl hover:shadow-slate-200 transition-all active:scale-95 flex items-center justify-center gap-2.5 disabled:opacity-50"
+                        >
+                            <FaPlus size={10} />
+                            הוסף פריט חדש
+                        </button>
+                    )}
                 </div>
-                {isManager() && (
-                    <button
-                        onClick={openNewModal}
-                        disabled={isLocked}
-                        className="bg-brand-primary text-white px-6 py-3 rounded-xl font-medium hover:bg-brand-dark transition-colors flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
-                    >
-                        <span>➕</span>
-                        הוסף פריט
-                    </button>
-                )}
             </div>
 
-            {/* פילטר קטגוריות */}
-            <div className="bg-white rounded-2xl shadow-sm p-4 mb-6">
-                <div className="flex flex-wrap gap-2">
+            {/* פילטר קטגוריות - טאבים מודרניים */}
+            <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-2 mb-6 overflow-x-auto no-scrollbar">
+                <div className="flex items-center gap-1 min-w-max">
                     <button
                         onClick={() => setFilterCategory('')}
-                        className={`px-4 py-2 rounded-xl font-medium transition-all ${filterCategory === ''
-                            ? 'bg-brand-primary text-white'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                            }`}
+                        className={`px-4 py-2.5 rounded-2xl font-black text-[11px] uppercase tracking-wider transition-all flex items-center gap-2 group relative ${
+                            filterCategory === ''
+                            ? 'bg-gray-900 text-white shadow-lg'
+                            : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
+                        }`}
                     >
+                        <FaLayerGroup size={10} />
                         הכל
                     </button>
                     {categories.map((cat) => (
                         <button
                             key={cat.id}
                             onClick={() => setFilterCategory(cat.id.toString())}
-                            className={`px-4 py-2 rounded-xl font-medium transition-all ${filterCategory === cat.id.toString()
-                                ? 'bg-brand-primary text-white'
-                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                }`}
+                            className={`px-4 py-2.5 rounded-2xl font-black text-[11px] uppercase tracking-wider transition-all flex items-center gap-2 group relative ${
+                                filterCategory === cat.id.toString()
+                                ? 'bg-gray-900 text-white shadow-lg'
+                                : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
+                            }`}
                         >
-                            {cat.icon} {cat.name}
+                            <span className="text-[14px]">{cat.icon}</span>
+                            {cat.name}
                         </button>
                     ))}
                 </div>
             </div>
 
-            {/* רשימת פריטים */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {(() => {
-                    console.log('Rendering items. Total items:', items.length, 'Filtered items:', filteredItems.length);
-                    console.log('Filter category:', filterCategory);
-                    console.log('Filtered items:', filteredItems);
-                    return filteredItems.map((item) => (
-                        <div
-                            key={item.id}
-                            className={`bg-white rounded-2xl shadow-sm ${!item.is_available ? 'opacity-60' : ''
-                                }`}
-                        >
-                            {/* תמונה */}
-                            <div className="h-40 bg-gray-100 relative rounded-t-2xl overflow-hidden">
-                                {item.image_url ? (
-                                    <img
-                                        src={resolveAssetUrl(item.image_url)}
-                                        alt={item.name}
-                                        className="w-full h-full object-cover"
-                                    />
-                                ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-4xl text-gray-300">
-                                        🍽️
-                                    </div>
-                                )}
-                                {!item.is_available && (
-                                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                                        <span className="bg-red-500 text-white px-4 py-2 rounded-full font-bold">
-                                            לא זמין
-                                        </span>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* תוכן */}
-                            <div className="p-4">
-                                <div className="flex items-start justify-between mb-2">
-                                    <div>
-                                        <h3 className="font-bold text-gray-800">{item.name}</h3>
-                                        <p className="text-sm text-gray-500">{item.category?.name}</p>
-                                    </div>
-                                    <span className="text-lg font-bold text-brand-primary">₪{item.price}</span>
+            {/* רשימת פריטים - גריד מודרני */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {filteredItems.map((item) => (
+                    <div
+                        key={item.id}
+                        className={`bg-white rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 group overflow-hidden flex flex-col ${
+                            !item.is_available ? 'opacity-80' : ''
+                        }`}
+                    >
+                        {/* תמונה מודרנית */}
+                        <div className="aspect-[4/3] bg-slate-50 relative overflow-hidden">
+                            {item.image_url ? (
+                                <img
+                                    src={resolveAssetUrl(item.image_url)}
+                                    alt={item.name}
+                                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                                />
+                            ) : (
+                                <div className="w-full h-full flex flex-col items-center justify-center text-gray-200 gap-2">
+                                    <FaImage size={40} className="opacity-20" />
+                                    <span className="text-[10px] font-black uppercase tracking-widest">אין תמונה</span>
                                 </div>
-
-                                {item.description && (
-                                    <p className="text-sm text-gray-600 mb-4 line-clamp-2">{item.description}</p>
-                                )}
-
-                                {/* כפתורי פעולה */}
-                                {isManager() && (
-                                    <div className="flex gap-2">
-                                        <button
-                                            onClick={() => toggleAvailability(item)}
-                                            disabled={isLocked}
-                                            className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${item.is_available
-                                                ? 'bg-green-50 text-green-600 hover:bg-green-100'
-                                                : 'bg-red-50 text-red-600 hover:bg-red-100'
-                                                } disabled:opacity-60 disabled:cursor-not-allowed`}
-                                        >
-                                            {item.is_available ? '✓ זמין' : '✕ לא זמין'}
-                                        </button>
-                                        <button
-                                            onClick={() => openEditModal(item)}
-                                            disabled={isLocked}
-                                            className="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 disabled:opacity-60 disabled:cursor-not-allowed"
-                                        >
-                                            ✏️
-                                        </button>
-                                        <button
-                                            onClick={() => deleteItem(item.id)}
-                                            disabled={isLocked}
-                                            className="px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 disabled:opacity-60 disabled:cursor-not-allowed"
-                                        >
-                                            🗑️
-                                        </button>
+                            )}
+                            
+                            {/* באג' קטגוריה וזמינות */}
+                            <div className="absolute top-4 left-4 right-4 flex justify-between items-start pointer-events-none">
+                                <div className="bg-white/90 backdrop-blur px-2.5 py-1 rounded-lg shadow-sm">
+                                    <p className="text-[10px] font-black text-gray-900 uppercase tracking-tight flex items-center gap-1.5">
+                                        <span className="text-xs">{item.category?.icon}</span>
+                                        {item.category?.name}
+                                    </p>
+                                </div>
+                                {!item.is_available && (
+                                    <div className="bg-red-500/90 backdrop-blur text-white px-3 py-1 rounded-lg shadow-lg">
+                                        <p className="text-[10px] font-black uppercase tracking-widest">לא זמין</p>
                                     </div>
                                 )}
                             </div>
                         </div>
-                    ))
-                })()}
+
+                        {/* תוכן הפריט */}
+                        <div className="p-5 flex-1 flex flex-col">
+                            <div className="flex items-start justify-between gap-3 mb-2">
+                                <div className="min-w-0">
+                                    <h3 className="font-black text-gray-900 text-sm leading-tight truncate group-hover:text-brand-primary transition-colors">
+                                        {item.name}
+                                    </h3>
+                                    <p className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-tight">
+                                        ID: #{item.id}
+                                    </p>
+                                </div>
+                                <div className="px-3 py-1 bg-brand-primary/10 text-brand-primary rounded-xl shrink-0">
+                                    <span className="text-sm font-black">₪{item.price}</span>
+                                </div>
+                            </div>
+
+                            {item.description && (
+                                <p className="text-[11px] font-medium text-gray-500 line-clamp-2 mb-5 leading-relaxed">
+                                    {item.description}
+                                </p>
+                            )}
+
+                            {/* כפתורי פעולה מודרניים */}
+                            {isManager() && (
+                                <div className="mt-auto flex gap-2">
+                                    <button
+                                        onClick={() => toggleAvailability(item)}
+                                        disabled={isLocked}
+                                        className={`flex-1 flex items-center justify-center gap-2 h-10 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all disabled:opacity-50 ${
+                                            item.is_available
+                                            ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'
+                                            : 'bg-red-50 text-red-600 hover:bg-red-100'
+                                        }`}
+                                    >
+                                        {item.is_available ? <FaToggleOn size={14} /> : <FaToggleOff size={14} />}
+                                        {item.is_available ? 'זמין' : 'כבוי'}
+                                    </button>
+                                    <button
+                                        onClick={() => openEditModal(item)}
+                                        disabled={isLocked}
+                                        className="w-10 h-10 bg-slate-50 text-slate-500 rounded-xl flex items-center justify-center hover:bg-slate-100 hover:text-gray-900 transition-all disabled:opacity-50"
+                                        title="ערוך פריט"
+                                    >
+                                        <FaEdit size={14} />
+                                    </button>
+                                    <button
+                                        onClick={() => deleteItem(item.id)}
+                                        disabled={isLocked}
+                                        className="w-10 h-10 bg-red-50 text-red-400 rounded-xl flex items-center justify-center hover:bg-red-500 hover:text-white transition-all disabled:opacity-50"
+                                        title="מחק פריט"
+                                    >
+                                        <FaTrash size={12} />
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                ))}
             </div>
 
             {filteredItems.length === 0 && (
-                <div className="bg-white rounded-2xl shadow-sm p-8 text-center text-gray-500">
-                    <span className="text-4xl mb-4 block">🍽️</span>
-                    <p>אין פריטים להצגה</p>
-                    {items.length > 0 && (
-                        <p className="text-sm mt-2">יש {items.length} פריטים בסך הכל, אך הפילטר לא תואם</p>
-                    )}
+                <div className="bg-white rounded-[2rem] border border-gray-100 shadow-sm p-20 text-center">
+                    <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6 border border-dashed border-gray-200">
+                        <FaUtensils size={32} className="text-gray-300" />
+                    </div>
+                    <h3 className="text-lg font-black text-gray-900 mb-2 uppercase tracking-tight">אין פריטים להצגה</h3>
+                    <p className="text-xs font-bold text-gray-400 leading-relaxed max-w-[200px] mx-auto uppercase tracking-widest mt-4">
+                        {items.length > 0 ? `יש ${items.length} פריטים בסך הכל, אך הפילטר לא תואם את הבחירה שלך` : 'לא נמצאו פריטים בתפריט. לחץ על הכפתור "הוסף פריט חדש" כדי להתחיל.'}
+                    </p>
                 </div>
             )}
 
-            {/* Modal */}
+            {/* Modal - מודרני ומרווח */}
             {showModal && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-                        <div className="p-6 border-b">
-                            <div className="flex items-center justify-between">
-                                <h2 className="text-xl font-bold">
-                                    {editItem ? '✏️ עריכת פריט' : '➕ פריט חדש'}
+                <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-300">
+                    <div className="bg-white rounded-[2.5rem] max-w-lg w-full max-h-[90vh] overflow-hidden shadow-2xl flex flex-col">
+                        <div className="p-6 border-b border-gray-100 bg-slate-50/50 flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${editItem ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'}`}>
+                                    {editItem ? <FaEdit size={16} /> : <FaPlus size={16} />}
+                                </div>
+                                <h2 className="text-xl font-black text-gray-900">
+                                    {editItem ? 'עריכת פריט' : 'הוספת פריט חדש'}
                                 </h2>
-                                <button onClick={closeModal} className="text-gray-400 hover:text-gray-600">
-                                    ✕
-                                </button>
                             </div>
+                            <button onClick={closeModal} className="w-10 h-10 rounded-full bg-white border border-gray-100 text-gray-400 hover:text-red-500 hover:bg-red-50 flex items-center justify-center transition-all shadow-sm">
+                                <FaTimes size={14} />
+                            </button>
                         </div>
 
-                        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">שם הפריט</label>
-                                <input
-                                    type="text"
-                                    value={form.name}
-                                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                                    required
-                                    className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">תיאור</label>
-                                <textarea
-                                    value={form.description}
-                                    onChange={(e) => setForm({ ...form, description: e.target.value })}
-                                    rows={3}
-                                    className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary"
-                                    placeholder="תיאור המנה - או השתמש במחולל התיאורים החכם למטה"
-                                />
-
-                                {/* AI Description Generator */}
-                                <div className="mt-3">
-                                    <AiDescriptionGenerator
-                                        menuItem={{
-                                            name: form.name,
-                                            price: form.price,
-                                            category_name: categories.find(c => c.id === parseInt(form.category_id))?.name || '',
-                                        }}
-                                        onDescriptionGenerated={(description) => {
-                                            setForm({ ...form, description });
-                                        }}
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">מחיר (₪)</label>
+                        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto custom-scrollbar p-6 sm:p-8 space-y-6">
+                            <div className="space-y-4">
+                                <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                                    <span className="w-1 h-1 bg-brand-primary rounded-full" />
+                                    מידע בסיסי
+                                </h3>
+                                
+                                <div className="space-y-1.5">
+                                    <label className="text-[11px] font-black text-gray-500 uppercase tracking-tight mr-1">שם הפריט</label>
                                     <input
-                                        type="number"
-                                        step="0.01"
-                                        min="0"
-                                        value={form.price}
-                                        onChange={(e) => setForm({ ...form, price: e.target.value })}
+                                        type="text"
+                                        value={form.name}
+                                        onChange={(e) => setForm({ ...form, name: e.target.value })}
                                         required
-                                        className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary"
-                                    />
-                                    {/* AI Price Recommender */}
-                                    <AiPriceRecommender
-                                        itemData={{
-                                            name: form.name,
-                                            category_id: form.category_id,
-                                            category_name: categories.find(c => c.id == form.category_id)?.name || '',
-                                            description: form.description,
-                                            price: form.price,
-                                        }}
-                                        onPriceRecommended={(recommendedPrice) => {
-                                            setForm({ ...form, price: recommendedPrice.toString() });
-                                        }}
+                                        className="w-full bg-slate-50 border-none rounded-2xl px-5 py-4 text-sm font-black focus:ring-2 focus:ring-brand-primary transition-all"
+                                        placeholder="למשל: שווארמה בפיתה"
                                     />
                                 </div>
 
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">קטגוריה</label>
-                                    <select
-                                        value={form.category_id}
-                                        onChange={(e) => setForm({ ...form, category_id: e.target.value })}
-                                        required
-                                        className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary"
-                                    >
-                                        {categories.map((cat) => (
-                                            <option key={cat.id} value={cat.id}>
-                                                {cat.icon} {cat.name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">תמונה</label>
-                                <input
-                                    type="file"
-                                    accept="image/*"
-                                    onChange={(e) => setForm({ ...form, image: e.target.files[0] })}
-                                    className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary"
-                                />
-                            </div>
-
-                            <div className="border-t border-gray-100 pt-4 space-y-4">
-                                <h3 className="text-sm font-bold text-gray-700">אפשרויות למנה</h3>
-
-                                <label className="flex items-start gap-3 cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        checked={form.use_variants}
-                                        onChange={(e) => setForm({ ...form, use_variants: e.target.checked })}
-                                        className="mt-1 w-4 h-4 rounded"
+                                <div className="space-y-1.5">
+                                    <label className="text-[11px] font-black text-gray-500 uppercase tracking-tight mr-1">תיאור המנה</label>
+                                    <textarea
+                                        value={form.description}
+                                        onChange={(e) => setForm({ ...form, description: e.target.value })}
+                                        rows={3}
+                                        className="w-full bg-slate-50 border-none rounded-2xl px-5 py-4 text-sm font-black focus:ring-2 focus:ring-brand-primary transition-all resize-none"
+                                        placeholder="מה יש במנה..."
                                     />
-                                    <div>
-                                        <p className="text-sm font-medium text-gray-800">🥙 בסיס כריך</p>
-                                        <p className="text-xs text-gray-500">אם מסומן, יוצגו כל הבסיסים הפעילים (פיתה / בגט / לאפה וכו').</p>
-                                    </div>
-                                </label>
-
-                                <div className="space-y-2">
-                                    <label className="flex items-start gap-3 cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            checked={form.use_addons}
-                                            onChange={(e) => setForm({ ...form, use_addons: e.target.checked })}
-                                            className="mt-1 w-4 h-4 rounded"
+                                    <div className="pt-2">
+                                        <AiDescriptionGenerator
+                                            menuItem={{
+                                                name: form.name,
+                                                price: form.price,
+                                                category_name: categories.find(c => c.id === parseInt(form.category_id))?.name || '',
+                                            }}
+                                            onDescriptionGenerated={(description) => {
+                                                setForm({ ...form, description });
+                                            }}
                                         />
-                                        <div>
-                                            <p className="text-sm font-medium text-gray-800">➕ תוספות</p>
-                                            <p className="text-xs text-gray-500">הצגת תוספות גלובליות לפי קבוצות עבור מנה זו.</p>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-1.5">
+                                        <label className="text-[11px] font-black text-gray-500 uppercase tracking-tight mr-1 text-right block">מחיר (₪)</label>
+                                        <div className="relative">
+                                            <input
+                                                type="number"
+                                                step="0.01"
+                                                min="0"
+                                                value={form.price}
+                                                onChange={(e) => setForm({ ...form, price: e.target.value })}
+                                                required
+                                                className="w-full bg-slate-50 border-none rounded-2xl px-5 py-4 text-sm font-black focus:ring-2 focus:ring-brand-primary transition-all"
+                                                placeholder="0.00"
+                                            />
+                                        </div>
+                                        <div className="pt-1">
+                                            <AiPriceRecommender
+                                                itemData={{
+                                                    name: form.name,
+                                                    category_id: form.category_id,
+                                                    category_name: categories.find(c => c.id == form.category_id)?.name || '',
+                                                    description: form.description,
+                                                    price: form.price,
+                                                }}
+                                                onPriceRecommended={(recommendedPrice) => {
+                                                    setForm({ ...form, price: recommendedPrice.toString() });
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-1.5 text-right w-full">
+                                        <label className="text-[11px] font-black text-gray-500 uppercase tracking-tight mr-1 block">קטגוריה</label>
+                                        <select
+                                            value={form.category_id}
+                                            onChange={(e) => setForm({ ...form, category_id: e.target.value })}
+                                            required
+                                            className="w-full bg-slate-50 border-none rounded-2xl px-5 py-4 text-sm font-black appearance-none focus:ring-2 focus:ring-brand-primary transition-all pr-12 text-right"
+                                            dir="rtl"
+                                        >
+                                            {categories.map((cat) => (
+                                                <option key={cat.id} value={cat.id}>
+                                                    {cat.name}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <label className="text-[11px] font-black text-gray-500 uppercase tracking-tight mr-1">תמונת מנה</label>
+                                    <div className="relative group">
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={(e) => setForm({ ...form, image: e.target.files[0] })}
+                                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                                        />
+                                        <div className="w-full bg-slate-50 border-2 border-dashed border-gray-200 rounded-2xl px-5 py-8 text-center transition-all group-hover:border-brand-primary group-hover:bg-slate-100 flex flex-col items-center gap-2">
+                                            <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center text-gray-400 group-hover:text-brand-primary group-hover:scale-110 transition-all">
+                                                <FaImage size={18} />
+                                            </div>
+                                            <p className="text-xs font-black text-gray-500 uppercase tracking-widest mt-2">
+                                                {form.image ? form.image.name : 'בחר תמונה או גרור לכאן'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="pt-6 border-t border-gray-100 space-y-6">
+                                <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                                    <span className="w-1 h-1 bg-brand-primary rounded-full" />
+                                    אפשרויות ותוספות
+                                </h3>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <label className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl cursor-pointer hover:bg-slate-100 transition-all group">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-orange-500 shadow-sm border border-orange-100">
+                                                <FaLayerGroup size={16} />
+                                            </div>
+                                            <div>
+                                                <p className="text-xs font-black text-gray-900 leading-none">בסיס מנה</p>
+                                                <p className="text-[9px] font-bold text-gray-400 mt-1 uppercase tracking-tighter">פיתה / בגט / לאפה</p>
+                                            </div>
+                                        </div>
+                                        <div className="relative flex items-center">
+                                            <input
+                                                type="checkbox"
+                                                checked={form.use_variants}
+                                                onChange={(e) => setForm({ ...form, use_variants: e.target.checked })}
+                                                className="w-5 h-5 rounded-lg border-2 border-gray-300 checked:bg-brand-primary text-brand-primary focus:ring-offset-0 focus:ring-0 transition-all"
+                                            />
                                         </div>
                                     </label>
 
-                                    {form.use_addons && (
-                                        <div className="space-y-3">
-                                            <div>
-                                                <label className="block text-xs font-medium text-gray-600 mb-1">קבוצת תוספות להצגה</label>
-                                                <div className="flex flex-wrap gap-3 text-sm text-gray-700">
-                                                    <label className="flex items-center gap-2">
-                                                        <input
-                                                            type="radio"
-                                                            name="addons_group_scope"
-                                                            value="salads"
-                                                            checked={form.addons_group_scope === 'salads'}
-                                                            onChange={(e) => setForm({ ...form, addons_group_scope: e.target.value })}
-                                                        />
-                                                        סלטים קבועים
-                                                    </label>
-                                                    <label className="flex items-center gap-2">
-                                                        <input
-                                                            type="radio"
-                                                            name="addons_group_scope"
-                                                            value="hot"
-                                                            checked={form.addons_group_scope === 'hot'}
-                                                            onChange={(e) => setForm({ ...form, addons_group_scope: e.target.value })}
-                                                        />
-                                                        תוספות חמות
-                                                    </label>
-                                                    <label className="flex items-center gap-2">
-                                                        <input
-                                                            type="radio"
-                                                            name="addons_group_scope"
-                                                            value="both"
-                                                            checked={form.addons_group_scope === 'both'}
-                                                            onChange={(e) => setForm({ ...form, addons_group_scope: e.target.value })}
-                                                        />
-                                                        גם וגם
-                                                    </label>
-                                                </div>
+                                    <label className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl cursor-pointer hover:bg-slate-100 transition-all group">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-emerald-500 shadow-sm border border-emerald-100">
+                                                <FaPlus size={16} />
                                             </div>
-
+                                            <div>
+                                                <p className="text-xs font-black text-gray-900 leading-none">תוספות</p>
+                                                <p className="text-[9px] font-bold text-gray-400 mt-1 uppercase tracking-tighter">סלטים / רטבים / חם</p>
+                                            </div>
                                         </div>
-                                    )}
+                                        <div className="relative flex items-center">
+                                            <input
+                                                type="checkbox"
+                                                checked={form.use_addons}
+                                                onChange={(e) => setForm({ ...form, use_addons: e.target.checked })}
+                                                className="w-5 h-5 rounded-lg border-2 border-gray-300 checked:bg-brand-primary text-brand-primary focus:ring-offset-0 focus:ring-0 transition-all"
+                                            />
+                                        </div>
+                                    </label>
                                 </div>
-                            </div>
 
-                            <div className="flex gap-3 pt-4">
-                                <button
-                                    type="submit"
-                                    disabled={isLocked}
-                                    className="flex-1 bg-brand-primary text-white py-3 rounded-xl font-medium hover:bg-brand-dark disabled:opacity-60 disabled:cursor-not-allowed"
-                                >
-                                    {editItem ? 'עדכן' : 'הוסף'}
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={closeModal}
-                                    className="px-6 py-3 bg-gray-100 text-gray-600 rounded-xl font-medium hover:bg-gray-200"
-                                >
-                                    ביטול
-                                </button>
+                                {form.use_addons && (
+                                    <div className="bg-slate-50 rounded-2xl p-5 space-y-4 animate-in slide-in-from-top-2 duration-300">
+                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest block text-right">קבוצת תוספות פעילה למנה זו</p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {[
+                                                { id: 'salads', label: 'סלטים קבועים' },
+                                                { id: 'hot', label: 'תוספות חמות' },
+                                                { id: 'both', label: 'גם וגם' }
+                                            ].map((group) => (
+                                                <button
+                                                    key={group.id}
+                                                    type="button"
+                                                    onClick={() => setForm({ ...form, addons_group_scope: group.id })}
+                                                    className={`px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-tight transition-all ${
+                                                        form.addons_group_scope === group.id
+                                                        ? 'bg-gray-900 text-white shadow-md'
+                                                        : 'bg-white text-gray-500 border border-gray-100'
+                                                    }`}
+                                                >
+                                                    {group.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </form>
+
+                        <div className="p-6 bg-slate-50 flex gap-3 border-t border-gray-100 relative overflow-hidden">
+                            <div className="absolute top-0 right-0 w-24 h-24 bg-brand-primary/5 rounded-full -mr-12 -mt-12" />
+                            <button
+                                type="button"
+                                onClick={handleSubmit}
+                                disabled={isLocked}
+                                className="flex-1 bg-gray-900 text-white py-4 rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] shadow-xl hover:shadow-slate-200 transition-all active:scale-95 flex items-center justify-center gap-2.5 disabled:opacity-50 z-10"
+                            >
+                                <FaCheck size={12} />
+                                {editItem ? 'שמור שינויים' : 'צור פריט חדש'}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={closeModal}
+                                className="px-8 py-4 bg-white text-gray-500 border border-gray-100 rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] hover:bg-red-50 hover:text-red-500 hover:border-red-100 transition-all z-10"
+                            >
+                                ביטול
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

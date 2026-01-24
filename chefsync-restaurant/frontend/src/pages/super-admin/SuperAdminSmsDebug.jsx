@@ -3,6 +3,17 @@ import SuperAdminLayout from '../../layouts/SuperAdminLayout';
 import api from '../../services/apiClient';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { toast } from 'react-hot-toast';
+import {
+    FaSms,
+    FaTerminal,
+    FaPhone,
+    FaServer,
+    FaFlask,
+    FaEye,
+    FaTrash,
+    FaPlay,
+    FaVial
+} from 'react-icons/fa';
 
 export default function SuperAdminSmsDebug() {
     const { getAuthHeaders } = useAdminAuth();
@@ -55,80 +66,159 @@ export default function SuperAdminSmsDebug() {
 
     return (
         <SuperAdminLayout>
-            <div className="max-w-3xl">
-                <h2 className="text-2xl font-bold text-gray-900">SMS Debug (OTP)</h2>
-                <p className="text-sm text-gray-600 mt-1">
-                    בדיקת שליחת הודעת אימות דרך ספק ה-SMS. ברירת המחדל היא Twilio, ואפשר לבחור 019 לפי הצורך.
-                </p>
-
-                <form onSubmit={submit} className="mt-6 bg-white border border-gray-200 rounded-xl p-6 space-y-5">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700">טלפון יעד</label>
-                        <input
-                            value={phone}
-                            onChange={(e) => setPhone(e.target.value)}
-                            placeholder="05XXXXXXXX או +9725XXXXXXXX"
-                            className="mt-2 w-full rounded-lg border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-primary"
-                            dir="ltr"
-                        />
-                        <p className="text-xs text-gray-500 mt-2">המערכת תייצר קוד 6 ספרות ותשלח הודעת אימות.</p>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">ספק</label>
-                            <select
-                                value={provider}
-                                onChange={(e) => setProvider(e.target.value)}
-                                className="mt-2 w-full rounded-lg border border-gray-300 px-4 py-3 bg-white"
-                            >
-                                <option value="auto">אוטומטי (לפי הגדרות שרת)</option>
-                                <option value="twilio">Twilio</option>
-                                <option value="sms019">019 (sms019)</option>
-                            </select>
+            <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-4">
+                <div className="mb-8">
+                    <h1 className="text-2xl font-black text-gray-900 flex items-center gap-2">
+                        <div className="p-2 bg-brand-primary/10 rounded-lg">
+                            <FaSms className="text-brand-primary" size={20} />
                         </div>
+                        SMS Debug Console
+                    </h1>
+                    <p className="text-sm text-gray-500 mt-1">אבחון וסימולציה של שליחת הודעות OTP ומערכת</p>
+                </div>
 
-                        <div className="flex items-end gap-4">
-                            <label className="flex items-center gap-2 text-sm text-gray-700">
-                                <input type="checkbox" checked={dryRun} onChange={(e) => setDryRun(e.target.checked)} />
-                                Dry-Run (לא שולח בפועל)
-                            </label>
+                <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+                    {/* עמודה ראשית - תצורה */}
+                    <div className="xl:col-span-2 space-y-6">
+                        <form onSubmit={submit} className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 space-y-6">
+                            <h2 className="text-lg font-black text-gray-900 flex items-center gap-2 mb-2">
+                                <FaTerminal className="text-brand-primary" size={16} />
+                                פקודות שידור
+                            </h2>
+
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-black text-gray-500 mr-1 uppercase tracking-wider flex items-center gap-1.5">
+                                    <FaPhone className="text-gray-400" size={10} />
+                                    טלפון יעד (נמען)
+                                </label>
+                                <input
+                                    value={phone}
+                                    onChange={(e) => setPhone(e.target.value)}
+                                    placeholder="05XXXXXXXX או +9725XXXXXXXX"
+                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none transition-all text-sm font-bold tracking-widest text-left"
+                                    dir="ltr"
+                                />
+                                <p className="text-[10px] text-gray-400 font-bold mr-1">המערכת תשלח קוד אימות חד-פעמי (OTP)</p>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-black text-gray-500 mr-1 uppercase tracking-wider flex items-center gap-1.5">
+                                        <FaServer className="text-gray-400" size={10} />
+                                        ספק שירות (Provider)
+                                    </label>
+                                    <select
+                                        value={provider}
+                                        onChange={(e) => setProvider(e.target.value)}
+                                        className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none transition-all text-sm font-bold appearance-none cursor-pointer"
+                                    >
+                                        <option value="auto">Auto (Default config)</option>
+                                        <option value="twilio">Twilio (International)</option>
+                                        <option value="sms019">019 Mobile (Local)</option>
+                                    </select>
+                                </div>
+
+                                <div className="flex flex-col justify-end space-y-3 pb-1">
+                                    <label className="flex items-center gap-3 cursor-pointer group">
+                                        <div className="relative">
+                                            <input
+                                                type="checkbox"
+                                                className="sr-only peer"
+                                                checked={dryRun}
+                                                onChange={(e) => setDryRun(e.target.checked)}
+                                            />
+                                            <div className="w-10 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-brand-primary"></div>
+                                        </div>
+                                        <span className="text-xs font-black text-gray-600 uppercase tracking-wide group-hover:text-gray-900 transition-colors">
+                                            Simulation Mode (Dry-Run)
+                                        </span>
+                                    </label>
+
+                                    <label className="flex items-center gap-3 cursor-pointer group">
+                                        <div className="relative">
+                                            <input
+                                                type="checkbox"
+                                                className="sr-only peer"
+                                                checked={revealCode}
+                                                onChange={(e) => setRevealCode(e.target.checked)}
+                                            />
+                                            <div className="w-10 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-brand-primary"></div>
+                                        </div>
+                                        <span className="text-xs font-black text-gray-600 uppercase tracking-wide group-hover:text-gray-900 transition-colors flex items-center gap-1.5">
+                                            <FaEye size={12} className="opacity-50" />
+                                            החזרת קוד בתגובה
+                                        </span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div className="pt-4 flex items-center gap-4">
+                                <button
+                                    type="submit"
+                                    disabled={!canSubmit || loading}
+                                    className="flex-1 px-6 py-4 bg-brand-primary text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-brand-primary/95 transition-all shadow-lg shadow-brand-primary/20 disabled:opacity-50 flex items-center justify-center gap-2"
+                                >
+                                    {loading ? (
+                                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    ) : dryRun ? (
+                                        <>
+                                            <FaVial size={14} />
+                                            בצע סימולציית שליחה
+                                        </>
+                                    ) : (
+                                        <>
+                                            <FaPlay size={14} />
+                                            שלח הודעה חיה (Production)
+                                        </>
+                                    )}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setResult(null);
+                                        setPhone('');
+                                    }}
+                                    className="px-6 py-4 bg-white border border-gray-200 text-gray-500 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-gray-50 transition-all flex items-center justify-center gap-2"
+                                >
+                                    <FaTrash size={14} />
+                                    ניקוי
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    {/* עמודה משנית - דפים ותוצאות */}
+                    <div className="space-y-6">
+                        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
+                            <h2 className="text-lg font-black text-gray-900 flex items-center gap-2 mb-6">
+                                <FaFlask className="text-brand-primary" size={16} />
+                                פלט מערכת (Output)
+                            </h2>
+
+                            <div className="relative group">
+                                <div className="absolute -top-2 -right-2 px-2 py-0.5 bg-gray-900 text-[9px] font-black text-white rounded uppercase tracking-tighter opacity-0 group-hover:opacity-100 transition-opacity">
+                                    Raw JSON
+                                </div>
+                                <div className="bg-gray-900 rounded-2xl p-4 min-h-[160px] max-h-[400px] overflow-auto custom-scrollbar shadow-inner">
+                                    <pre className="text-[11px] font-mono text-green-400 whitespace-pre-wrap leading-relaxed" dir="ltr">
+                                        {result ? JSON.stringify(result, null, 2) : '// No request executed...'}
+                                    </pre>
+                                </div>
+                            </div>
+
+                            {result && result.success && (
+                                <div className="mt-4 p-4 bg-green-50 rounded-2xl border border-green-100 flex items-start gap-3">
+                                    <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center shrink-0">
+                                        <FaFlask className="text-green-600" size={14} />
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-black text-green-900 uppercase">Status: Success</p>
+                                        <p className="text-[10px] text-green-700 font-bold mt-0.5">פרוטוקול השליחה עבר בהצלחה מול הספק.</p>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
-
-                    <div className="flex items-center gap-4">
-                        <label className="flex items-center gap-2 text-sm text-gray-700">
-                            <input
-                                type="checkbox"
-                                checked={revealCode}
-                                onChange={(e) => setRevealCode(e.target.checked)}
-                            />
-                            להחזיר קוד בתגובה (לבדיקות)
-                        </label>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                        <button
-                            disabled={!canSubmit || loading}
-                            className="px-5 py-3 rounded-lg bg-brand-primary text-white font-medium disabled:opacity-50"
-                        >
-                            {loading ? 'שולח…' : dryRun ? 'בצע Dry-Run' : 'שלח SMS'}
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setResult(null)}
-                            className="px-5 py-3 rounded-lg border border-gray-300 text-gray-700"
-                        >
-                            נקה תוצאה
-                        </button>
-                    </div>
-                </form>
-
-                <div className="mt-6">
-                    <h3 className="text-lg font-semibold text-gray-900">תוצאה</h3>
-                    <pre className="mt-2 bg-gray-900 text-gray-100 rounded-xl p-4 overflow-auto text-xs" dir="ltr">
-                        {result ? JSON.stringify(result, null, 2) : '—'}
-                    </pre>
                 </div>
             </div>
         </SuperAdminLayout>

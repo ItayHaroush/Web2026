@@ -1,11 +1,24 @@
+import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import { PRODUCT_NAME } from '../constants/brand';
+import DashboardSidebar from '../components/admin/DashboardSidebar';
+import DashboardHeader from '../components/admin/DashboardHeader';
+import {
+    FaChartPie,
+    FaBell,
+    FaFileInvoiceDollar,
+    FaCogs,
+    FaSms,
+    FaUserShield
+} from 'react-icons/fa';
 
 export default function SuperAdminLayout({ children }) {
     const navigate = useNavigate();
     const location = useLocation();
     const { user, logout } = useAdminAuth();
+    const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [isCollapsed, setIsCollapsed] = useState(true); // התחל במצב מצומצם
 
     const handleLogout = async () => {
         await logout();
@@ -16,85 +29,59 @@ export default function SuperAdminLayout({ children }) {
         {
             label: 'דשבורד',
             path: '/super-admin/dashboard',
-            icon: '📊',
+            icon: <FaChartPie />,
         },
         {
             label: 'התראות',
             path: '/super-admin/notifications',
-            icon: '🔔',
+            icon: <FaBell />,
         },
         {
             label: 'דוחות',
             path: '/super-admin/reports',
-            icon: '📈',
+            icon: <FaFileInvoiceDollar />,
         },
         {
             label: 'הגדרות',
             path: '/super-admin/settings',
-            icon: '⚙️',
+            icon: <FaCogs />,
         },
         {
             label: 'SMS Debug',
             path: '/super-admin/sms-debug',
-            icon: '📨',
+            icon: <FaSms />,
         },
         {
-            label: '🔍 בדיקת Auth',
+            label: 'בדיקת Auth',
             path: '/super-admin/debug',
-            icon: '🐛',
+            icon: <FaUserShield />,
         },
     ];
 
     return (
-        <div className="min-h-screen bg-gray-50">
-            {/* Header */}
-            <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
-                <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-brand-primary/10 flex items-center justify-center text-xl">
-                            👨‍💼
-                        </div>
-                        <h1 className="text-xl font-bold">{PRODUCT_NAME} Admin</h1>
+        <div className="min-h-screen bg-slate-50 flex" dir="rtl">
+            <DashboardSidebar
+                isOpen={sidebarOpen}
+                isCollapsed={isCollapsed}
+                toggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+                toggleCollapse={() => setIsCollapsed(!isCollapsed)}
+                menuItems={menuItems}
+                onLogout={handleLogout}
+                title={`${PRODUCT_NAME} Admin`}
+            />
+
+            <div className={`flex-1 flex flex-col min-h-screen min-w-0 transition-all duration-300 ${isCollapsed ? 'lg:mr-20' : 'lg:mr-72'}`}>
+                <DashboardHeader
+                    toggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+                    user={user}
+                    title={menuItems.find(item => item.path === location.pathname)?.label || 'ניהול מערכת'}
+                    isCollapsed={isCollapsed}
+                />
+
+                <main className="flex-1 p-4 sm:p-6 mt-20 overflow-x-hidden">
+                    <div className="max-w-7xl mx-auto">
+                        {children}
                     </div>
-
-                    <div className="flex items-center gap-4">
-                        <div className="text-right">
-                            <p className="font-medium text-gray-800">{user?.name || 'Super Admin'}</p>
-                            <p className="text-xs text-gray-500">מנהל מערכת</p>
-                        </div>
-                        <button
-                            onClick={handleLogout}
-                            className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-all font-medium"
-                        >
-                            יציאה
-                        </button>
-                    </div>
-                </div>
-            </header>
-
-            <div className="flex">
-                {/* Sidebar */}
-                <aside className="w-64 bg-white border-r border-gray-200 min-h-[calc(100vh-80px)]">
-                    <nav className="p-4 space-y-2">
-                        {menuItems.map((item) => (
-                            <button
-                                key={item.path}
-                                onClick={() => navigate(item.path)}
-                                className={`w-full text-right px-4 py-3 rounded-lg transition-all flex items-center gap-3 ${location.pathname === item.path
-                                    ? 'bg-brand-primary text-white'
-                                    : 'text-gray-700 hover:bg-gray-50'
-                                    }`}
-                            >
-                                <span className="text-xl">{item.icon}</span>
-                                <span className="font-medium">{item.label}</span>
-                            </button>
-                        ))}
-                    </nav>
-                </aside>
-
-                {/* Main Content */}
-                <main className="flex-1 p-8">
-                    {children}
                 </main>
             </div>
         </div>
