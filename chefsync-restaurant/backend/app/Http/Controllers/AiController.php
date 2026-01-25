@@ -187,8 +187,21 @@ class AiController extends Controller
             // Initialize AI Service
             $ai = new AiService($tenantId, $restaurant, $user);
 
+            // Build dashboard context
+            $context = [
+                'restaurant_name' => $restaurant->name,
+                'total_menu_items' => $restaurant->menuItems()->count(),
+                'active_categories' => $restaurant->categories()->count(),
+                'orders_today' => $restaurant->orders()->whereDate('created_at', today())->count(),
+                'orders_week' => $restaurant->orders()->where('created_at', '>=', now()->subDays(7))->count(),
+                'orders_month' => $restaurant->orders()->where('created_at', '>=', now()->subDays(30))->count(),
+                'revenue_today' => $restaurant->orders()->whereDate('created_at', today())->sum('total_price'),
+                'revenue_week' => $restaurant->orders()->where('created_at', '>=', now()->subDays(7))->sum('total_price'),
+                'pending_orders' => $restaurant->orders()->where('status', 'received')->count(),
+            ];
+
             // Generate insights
-            $insightsData = $ai->getDashboardInsights([]);
+            $insightsData = $ai->getDashboardInsights($context);
 
             // Cache for 24 hours
             Cache::put($cacheKey, $insightsData, 86400);
