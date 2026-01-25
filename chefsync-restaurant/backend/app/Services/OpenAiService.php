@@ -151,21 +151,40 @@ class OpenAiService extends BaseAiService
      */
     public function chatWithSuperAdmin(string $message, array $context = [], ?string $preset = null): array
     {
-        $systemPrompt = "You are a helpful AI assistant for TakeEat super admin. Provide insights about the restaurant management platform.";
+        Log::info('Super Admin Chat Request', [
+            'message_length' => strlen($message),
+            'preset' => $preset,
+            'mock_mode' => $this->mockMode
+        ]);
 
-        $messages = [
-            ['role' => 'system', 'content' => $systemPrompt],
-            ['role' => 'user', 'content' => $message]
-        ];
+        try {
+            $systemPrompt = "You are a helpful AI assistant for TakeEat super admin. Provide insights about the restaurant management platform.";
 
-        $response = $this->callOpenAi($messages);
+            $messages = [
+                ['role' => 'system', 'content' => $systemPrompt],
+                ['role' => 'user', 'content' => $message]
+            ];
 
-        return [
-            'response' => $response['content'] ?? '',
-            'provider' => 'openai',
-            'model' => $this->mockMode ? 'mock' : $this->model,
-            'tokens' => $response['tokens'] ?? 0
-        ];
+            $response = $this->callOpenAi($messages);
+
+            Log::info('Super Admin Chat Success', [
+                'response_length' => strlen($response['content'] ?? ''),
+                'tokens' => $response['tokens'] ?? 0
+            ]);
+
+            return [
+                'response' => $response['content'] ?? '',
+                'provider' => 'openai',
+                'model' => $this->mockMode ? 'mock' : $this->model,
+                'tokens' => $response['tokens'] ?? 0
+            ];
+        } catch (\Exception $e) {
+            Log::error('Super Admin Chat Error', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            throw $e;
+        }
     }
 
     /**
