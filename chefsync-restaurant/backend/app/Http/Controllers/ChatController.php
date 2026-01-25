@@ -76,7 +76,7 @@ class ChatController extends Controller
             $dummyRestaurant->id = 0; // Dummy ID למניעת errors
             $dummyRestaurant->tenant_id = 'super-admin';
             $dummyRestaurant->name = 'Super Admin';
-            
+
             $aiService = new AiService('super-admin', $dummyRestaurant, $user);
 
             // קריאה ל-AI Service
