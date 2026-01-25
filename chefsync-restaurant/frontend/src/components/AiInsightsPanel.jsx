@@ -9,16 +9,13 @@ const AiInsightsPanel = () => {
     const [cached, setCached] = useState(false);
     const [isOpen, setIsOpen] = useState(false);
     const hasFetchedRef = useRef(false);
-    const abortControllerRef = useRef(null);
 
-    const fetchInsights = async (signal) => {
+    const fetchInsights = async () => {
         try {
             setLoading(true);
             setError(null);
 
-            const { data } = await apiClient.get('/admin/ai/dashboard-insights', {
-                signal // Pass abort signal to axios
-            });
+            const { data } = await apiClient.get('/admin/ai/dashboard-insights');
 
             if (data.success) {
                 // Handle graceful degradation where backend sends success:true but includes inner error
@@ -26,18 +23,13 @@ const AiInsightsPanel = () => {
                     setError(data.data.error);
                     setInsights(null);
                 } else {
-                    setInsights(data.data.insights);
+                    setInsights(data.data);
                     setCached(data.cached || false);
                 }
             } else {
                 setError(data.message || 'שגיאה בטעינת תובנות');
             }
         } catch (err) {
-            // Ignore abort errors
-            if (err.name === 'CanceledError' || err.code === 'ERR_CANCELED') {
-                console.log('Insights request canceled');
-                return;
-            }
             console.error('Failed to fetch AI insights:', err);
             setError('לא ניתן לטעון תובנות כרגע');
         } finally {
@@ -51,17 +43,7 @@ const AiInsightsPanel = () => {
         if (hasFetchedRef.current) return;
 
         hasFetchedRef.current = true;
-
-        // Create abort controller for this request
-        abortControllerRef.current = new AbortController();
-        fetchInsights(abortControllerRef.current.signal);
-
-        // Cleanup: abort request if component unmounts or panel closes
-        return () => {
-            if (abortControllerRef.current) {
-                abortControllerRef.current.abort();
-            }
-        };
+        fetchInsights();
     }, [isOpen]);
 
     const toggleOpen = () => setIsOpen(!isOpen);
