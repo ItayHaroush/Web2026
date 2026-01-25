@@ -256,16 +256,110 @@ class OpenAiService extends BaseAiService
     public function getDashboardInsights(array $context): array
     {
         $feature = 'dashboard_insights';
-        $this->validateAccess($feature, $this->restaurant, $this->user);
+        $startTime = microtime(true);
+        
+        try {
+            $this->validateAccess($feature, $this->restaurant, $this->user);
 
-        $prompt = "Analyze this restaurant dashboard data and provide insights:\n\n" . json_encode($context, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+            $restaurantName = $context['restaurant_name'] ?? 'המסעדה';
+        $ordersToday = $context['orders_today'] ?? 0;
+        $ordersWeek = $context['orders_week'] ?? 0;
+        $ordersMonth = $context['orders_month'] ?? 0;
+        $revenueToday = $context['revenue_today'] ?? 0;
+        $revenueWeek = $context['revenue_week'] ?? 0;
+        $menuItems = $context['total_menu_items'] ?? 0;
+        $categories = $context['active_categories'] ?? 0;
+        $pendingOrders = $context['pending_orders'] ?? 0;
 
-        $response = $this->callOpenAi($prompt);
+        $prompt = "אתה יועץ עסקי למסעדות בישראל. נתח את נתוני הדשבורד הבאים עבור מסעדת \"{$restaurantName}\":\n\n"
+            . "📊 סטטיסטיקות:\n"
+            . "- הזמנות היום: {$ordersToday}\n"
+            . "- הזמנות השבוע: {$ordersWeek}\n"
+            . "- הזמנות החודש: {$ordersMonth}\n"
+            . "- הכנסות היום: ₪{$revenueToday}\n"
+            . "- הכנסות השבוע: ₪{$revenueWeek}\n"
+            . "- פריטים בתפריט: {$menuItems}\n"
+            . "- קטגוריות פעילות: {$categories}\n"
+            . "- הזמנות ממתינות: {$pendingOrders}\n\n"
+            . "החזר תשובה בפורמט JSON הבא בעברית:\n"
+            . "{\n"
+            . '  "sales_trend": "ניתוח מגמת המכירות - האם עולות/יורדות/יציבות",' . "\n"
+            . '  "top_performers": "הפריטים/קטגוריות המובילים (על סמך הנתונים)",' . "\n"
+            . '  "peak_times": "ניתוח זמני העומס והשקט",' . "\n"
+            . '  "recommendations": ["המלצה 1", "המלצה 2", "המלצה 3"],' . "\n"
+            . '  "alert": "אזהרה חשובה אם יש (או null)"' . "\n"
+            . "}\n\nהחזר רק JSON, ללא טקסט נוסף.";
 
-        return [
-            'insights' => $response['content'] ?? 'No insights available',
-            'provider' => 'openai'
-        ];
+            $response = $this->callOpenAi($prompt);
+            $responseTime = (int)((microtime(true) - $startTime) * 1000);
+
+            // Parse JSON response
+            $content = $response['content'] ?? '';
+            
+            $result = null;
+            // Try to extract JSON from response
+            if (preg_match('/\{[\s\S]*\}/', $content, $matches)) {
+                try {
+                    $parsed = json_decode($matches[0], true);
+                    if (json_last_error() === JSON_ERROR_NONE) {
+                        $result = array_merge([
+                            'sales_trend' => $parsed['sales_trend'] ?? 'אין נתונים',
+                            'top_performers' => $parsed['top_performers'] ?? 'אין נתונים',
+                            'peak_times' => $parsed['peak_times'] ?? 'אין נתונים',
+                            'recommendations' => $parsed['recommendations'] ?? [],
+                            'alert' => $parsed['alert'] ?? null,
+                            'provider' => 'openai'
+                        ]);
+                    }
+                } catch (\Exception $e) {
+                    \Log::warning('Failed to parse dashboard insights JSON', ['error' => $e->getMessage()]);
+                }
+            }
+
+            // Fallback: return default structure
+            if (!$result) {
+                $result = [
+                    'sales_trend' => 'לא ניתן לנתח את הנתונים כרגע',
+                    'top_performers' => 'אין מספיק נתונים',
+                    'peak_times' => 'אין מספיק נתונים',
+                    'recommendations' => [],
+                    'alert' => null,
+                    'provider' => 'openai'
+                ];
+            }
+
+            // Log usage
+            $costCredits = config("ai.features.{$feature}.cost_credits", 1);
+            $this->logUsage(
+                $feature,
+                'analyze',
+                $costCredits,
+                $response['tokens'] ?? 0,
+                false,
+                null,
+                'success',
+                null,
+                $responseTime,
+                ['mock' => $this->mockMode]
+            );
+
+            return $result;
+        } catch (\Exception $e) {
+            $responseTime = (int)((microtime(true) - $startTime) * 1000);
+            $this->logUsage(
+                $feature,
+                'analyze',
+                0,
+                0,
+                false,
+                null,
+                'error',
+                $responseTime,
+                null,
+                ['error' => $e->getMessage()]
+            );
+            throw $e;
+        }
     }
 
     /**
@@ -274,7 +368,10 @@ class OpenAiService extends BaseAiService
     public function recommendPrice(array $menuItemData, array $context = []): array
     {
         $feature = 'price_recommendation';
-        $this->validateAccess($feature, $this->restaurant, $this->user);
+        $startTime = microtime(true);
+        
+        try {
+            $this->validateAccess($feature, $this->restaurant, $this->user);
 
         $prompt = "אתה יועץ תמחור למסעדות בישראל. נתח את הפריט הבא והמלץ על מחיר הוגן:\n\n"
             . "שם: " . ($menuItemData['name'] ?? 'לא צוין') . "\n"
@@ -295,39 +392,75 @@ class OpenAiService extends BaseAiService
             . "}\n\nהחזר רק JSON, ללא טקסט נוסף.";
 
         $response = $this->callOpenAi($prompt);
+            $responseTime = (int)((microtime(true) - $startTime) * 1000);
 
-        // Parse JSON response
-        $content = $response['content'] ?? '';
-
-        // Try to extract JSON from response
-        if (preg_match('/\{[\s\S]*\}/', $content, $matches)) {
-            try {
-                $parsed = json_decode($matches[0], true);
-                if (json_last_error() === JSON_ERROR_NONE) {
-                    return [
-                        'recommended_price' => floatval($parsed['recommended_price'] ?? 0),
-                        'confidence' => $parsed['confidence'] ?? 'medium',
-                        'reasoning' => $parsed['reasoning'] ?? 'אין הסבר זמין',
-                        'market_data' => $parsed['market_data'] ?? null,
-                        'factors' => $parsed['factors'] ?? [],
-                        'provider' => 'openai'
-                    ];
+            // Parse JSON response
+            $content = $response['content'] ?? '';
+            
+            $result = null;
+            // Try to extract JSON from response
+            if (preg_match('/\{[\s\S]*\}/', $content, $matches)) {
+                try {
+                    $parsed = json_decode($matches[0], true);
+                    if (json_last_error() === JSON_ERROR_NONE) {
+                        $result = [
+                            'recommended_price' => floatval($parsed['recommended_price'] ?? 0),
+                            'confidence' => $parsed['confidence'] ?? 'medium',
+                            'reasoning' => $parsed['reasoning'] ?? 'אין הסבר זמין',
+                            'market_data' => $parsed['market_data'] ?? null,
+                            'factors' => $parsed['factors'] ?? [],
+                            'provider' => 'openai'
+                        ];
+                    }
+                } catch (\Exception $e) {
+                    \Log::warning('Failed to parse price recommendation JSON', ['error' => $e->getMessage()]);
                 }
-            } catch (\Exception $e) {
-                \Log::warning('Failed to parse price recommendation JSON', ['error' => $e->getMessage()]);
             }
-        }
 
-        // Fallback: return raw response with default values
-        return [
-            'recommended_price' => 0,
-            'confidence' => 'low',
-            'reasoning' => $content ?: 'לא ניתן לקבל המלצה',
-            'market_data' => null,
-            'factors' => [],
-            'provider' => 'openai'
-        ];
-    }
+            // Fallback: return raw response with default values
+            if (!$result) {
+                $result = [
+                    'recommended_price' => 0,
+                    'confidence' => 'low',
+                    'reasoning' => $content ?: 'לא ניתן לקבל המלצה',
+                    'market_data' => null,
+                    'factors' => [],
+                    'provider' => 'openai'
+                ];
+            }
+
+            // Log usage
+            $costCredits = config("ai.features.{$feature}.cost_credits", 1);
+            $this->logUsage(
+                $feature,
+                'recommend',
+                $costCredits,
+                $response['tokens'] ?? 0,
+                false,
+                null,
+                'success',
+                null,
+                $responseTime,
+                ['item' => $menuItemData['name'] ?? 'unknown', 'mock' => $this->mockMode]
+            );
+
+            return $result;
+        } catch (\Exception $e) {
+            $responseTime = (int)((microtime(true) - $startTime) * 1000);
+            $this->logUsage(
+                $feature,
+                'recommend',
+                0,
+                0,
+                false,
+                null,
+                'error',
+                $responseTime,
+                null,
+                ['error' => $e->getMessage()]
+            );
+            throw $e;
+        }
 
     /**
      * Call OpenAI API (or return mock response)
