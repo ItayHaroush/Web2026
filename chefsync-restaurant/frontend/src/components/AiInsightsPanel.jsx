@@ -66,8 +66,6 @@ const AiInsightsPanel = () => {
 
     const toggleOpen = () => setIsOpen(!isOpen);
 
-    const { sales_trend, top_performers, peak_times, recommendations, alert } = insights || {};
-
     return (
         <div className="bg-white rounded-2xl shadow-sm border border-purple-100 overflow-hidden transition-all duration-300">
             {/* Header / Toggle Area */}
@@ -150,81 +148,20 @@ const AiInsightsPanel = () => {
                             </button>
                         </div>
                     ) : insights && (
-                        <>
-                            {/* Alert Section */}
-                            {alert && (
-                                <div className="mb-6 p-4 bg-amber-50 border border-amber-100 rounded-xl flex items-start gap-4 shadow-sm">
-                                    <div className="p-2 bg-amber-100 rounded-lg text-amber-600 shrink-0">
-                                        <FaExclamationTriangle size={18} />
-                                    </div>
-                                    <div>
-                                        <h4 className="font-bold text-amber-800 text-sm mb-1">שים לב</h4>
-                                        <p className="text-amber-700 text-sm leading-relaxed">{alert}</p>
-                                    </div>
+                        <div className="p-5 bg-white rounded-2xl border border-gray-100 shadow-sm">
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="p-2 bg-gradient-to-br from-purple-100 to-indigo-100 rounded-xl">
+                                    <FaLightbulb className="text-purple-600" size={20} />
                                 </div>
-                            )}
-
-                            {/* Main Grid */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                                {/* Sales Trend */}
-                                <div className="p-5 bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-                                    <div className="flex items-center gap-3 mb-3">
-                                        <div className="p-1.5 bg-blue-50 text-blue-600 rounded-lg">
-                                            <FaChartLine size={14} />
-                                        </div>
-                                        <h4 className="font-bold text-gray-800 text-sm">מגמת מכירות</h4>
-                                    </div>
-                                    <p className="text-gray-600 text-sm leading-relaxed">{sales_trend}</p>
-                                </div>
-
-                                {/* Top Performers */}
-                                <div className="p-5 bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-                                    <div className="flex items-center gap-3 mb-3">
-                                        <div className="p-1.5 bg-yellow-50 text-yellow-600 rounded-lg">
-                                            <FaStar size={14} />
-                                        </div>
-                                        <h4 className="font-bold text-gray-800 text-sm">כוכבי התפריט</h4>
-                                    </div>
-                                    <p className="text-gray-600 text-sm leading-relaxed">{top_performers}</p>
-                                </div>
-
-                                {/* Peak Times - Full Width */}
-                                <div className="p-5 bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow md:col-span-2">
-                                    <div className="flex items-center gap-3 mb-3">
-                                        <div className="p-1.5 bg-green-50 text-green-600 rounded-lg">
-                                            <FaClock size={14} />
-                                        </div>
-                                        <h4 className="font-bold text-gray-800 text-sm">זמני עומס</h4>
-                                    </div>
-                                    <p className="text-gray-600 text-sm leading-relaxed">{peak_times}</p>
-                                </div>
+                                <h4 className="font-bold text-gray-800">ניתוח עסקי מבוסס AI</h4>
                             </div>
-
-                            {/* Recommendations */}
-                            {recommendations && recommendations.length > 0 && (
-                                <div className="mt-6">
-                                    <h4 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
-                                        <FaLightbulb className="text-purple-500" />
-                                        המלצות לביצוע
-                                    </h4>
-                                    <div className="grid gap-3">
-                                        {recommendations.map((rec, index) => (
-                                            <div key={index} className="flex items-start gap-4 p-4 bg-white rounded-xl border border-purple-100 hover:border-purple-300 transition-colors">
-                                                <div className="mt-1 flex-shrink-0 w-6 h-6 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center text-xs font-bold">
-                                                    {index + 1}
-                                                </div>
-                                                <p className="text-gray-700 text-sm leading-relaxed">{rec}</p>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Footer */}
-                            <div className="mt-8 text-center text-xs text-gray-400">
-                                נוצר באמצעות מודל AI • מתעדכן כל 24 שעות
+                            <div className="prose prose-sm max-w-none text-gray-700 leading-relaxed whitespace-pre-wrap">
+                                {insights}
                             </div>
-                        </>
+                            <div className="mt-6 pt-4 border-t border-gray-100 text-center text-xs text-gray-400">
+                                נוצר באמצעות OpenAI • {cached ? 'עיבוד מארכיון' : 'עיבוד בזמן אמת'}
+                            </div>
+                        </div>
                     )}
                 </div>
             </div>

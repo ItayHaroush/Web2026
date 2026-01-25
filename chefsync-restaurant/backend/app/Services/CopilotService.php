@@ -338,7 +338,7 @@ class CopilotService
     private function generateMockDescription(string $prompt): string|array
     {
         // Check if this is super admin chat request
-        if (str_contains($prompt, 'עוזר AI חכם לניהול מערכת ChefSync')) {
+        if (str_contains($prompt, 'עוזר AI חכם לניהול מערכת TakeEat')) {
             return $this->generateMockSuperAdminResponse($prompt);
         }
 
@@ -655,8 +655,8 @@ class CopilotService
     private function mockDormantSmsDraft($active, $total): array
     {
         $variations = [
-            "היי! 👋 שמנו לב שלא היו הזמנות לאחרונה. הכל בסדר? אנחנו כאן לכל עזרה טכנית או שיווקית. דברו איתנו! צוות ChefSync.",
-            "מתגעגעים אליכם ב-ChefSync! 💔 יש לנו לקוחות באזור שמחפשים את האוכל שלכם. בואו נחזיר את המסעדה לאוויר ביחד - יש לנו הטבה מיוחדת לחזרה.",
+            "היי! 👋 שמנו לב שלא היו הזמנות לאחרונה. הכל בסדר? אנחנו כאן לכל עזרה טכנית או שיווקית. דברו איתנו! צוות TakeEat.",
+            "מתגעגעים אליכם ב-TakeEat! 💔 יש לנו לקוחות באזור שמחפשים את האוכל שלכם. בואו נחזיר את המסעדה לאוויר ביחד - יש לנו הטבה מיוחדת לחזרה.",
             "שלום שותף, המערכת מזהה ירידה בפעילות. רוצים שיחת ייעוץ קצרה עם מומחה שיווק (עלינו)? השיבו לתיאום שיחה. 📈"
         ];
 
@@ -689,7 +689,7 @@ class CopilotService
         $variations = [
             "שלום! {$active} מ-{$total} מסעדות שלנו פעילות השבוע 🔥 הצטרפו למובילים כמו {$topName}! צרו קשר לשדרוג ➡️ 050-xxx",
             "עדכון מערכת: שדרגנו את חווית הניהול! 🚀 כנסו למערכת לראות את הדוחות החדשים. שאלות? אנחנו זמינים.",
-            "חג שמח ממערכת ChefSync! 🍷 מאחלים לכל שותפינו שבוע מוצלח ומלא הזמנות."
+            "חג שמח ממערכת TakeEat! 🍷 מאחלים לכל שותפינו שבוע מוצלח ומלא הזמנות."
         ];
 
         $content = $variations[array_rand($variations)];
@@ -1644,7 +1644,7 @@ PROMPT;
      */
     private function buildSuperAdminSystemPrompt(array $context, ?string $preset): string
     {
-        $systemPrompt = "אתה עוזר AI חכם לניהול מערכת ChefSync - פלטפורמת הזמנות למסעדות.\n\n";
+        $systemPrompt = "אתה עוזר AI חכם לניהול מערכת TakeEat - פלטפורמת הזמנות למסעדות.\n\n";
         $systemPrompt .= "תפקידך: לספק תובנות עסקיות, זיהוי מגמות, והמלצות פעולה לסופר אדמין.\n\n";
 
         // הוסף סיכום המערכת
@@ -1685,7 +1685,7 @@ PROMPT;
     private function buildRestaurantSystemPrompt(array $context): string
     {
         $restaurant = $context['restaurant'] ?? [];
-        $systemPrompt = "אתה עוזר AI חכם למסעדה '{$restaurant['name']}' במערכת ChefSync.\n\n";
+        $systemPrompt = "אתה עוזר AI חכם למסעדה '{$restaurant['name']}' במערכת TakeEat.\n\n";
         $systemPrompt .= "תפקידך: לספק תובנות עסקיות, המלצות תפריט, וניתוח ביצועים **רק עבור מסעדה זו**.\n\n";
         $systemPrompt .= "⚠️ חשוב: אל תתייחס לנתונים של מסעדות אחרות - רק למסעדה הזו!\n\n";
 

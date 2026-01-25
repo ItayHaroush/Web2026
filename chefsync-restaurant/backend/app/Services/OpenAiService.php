@@ -276,13 +276,55 @@ class OpenAiService extends BaseAiService
         $feature = 'price_recommendation';
         $this->validateAccess($feature, $this->restaurant, $this->user);
 
-        $prompt = "Recommend a price for this menu item:\n\n" . json_encode($menuItemData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        $prompt = "אתה יועץ תמחור למסעדות בישראל. נתח את הפריט הבא והמלץ על מחיר הוגן:\n\n"
+            . "שם: " . ($menuItemData['name'] ?? 'לא צוין') . "\n"
+            . "קטגוריה: " . ($menuItemData['category_name'] ?? 'לא צוין') . "\n"
+            . "תיאור: " . ($menuItemData['description'] ?? 'לא צוין') . "\n"
+            . "מחיר נוכחי: " . ($menuItemData['price'] ?? 'אין') . " ₪\n\n"
+            . "החזר תשובה בפורמט JSON הבא:\n"
+            . "{\n"
+            . '  "recommended_price": 45.00,' . "\n"
+            . '  "confidence": "high/medium/low",' . "\n"
+            . '  "reasoning": "הסבר קצר בעברית למה המחיר הזה הגיוני",' . "\n"
+            . '  "market_data": {' . "\n"
+            . '    "min_price": 35.00,' . "\n"
+            . '    "avg_price": 42.00,' . "\n"
+            . '    "max_price": 55.00' . "\n"
+            . '  },' . "\n"
+            . '  "factors": ["מרכיבים איכותיים", "גודל מנה", "תחרות"]' . "\n"
+            . "}\n\nהחזר רק JSON, ללא טקסט נוסף.";
 
         $response = $this->callOpenAi($prompt);
 
+        // Parse JSON response
+        $content = $response['content'] ?? '';
+        
+        // Try to extract JSON from response
+        if (preg_match('/\{[\s\S]*\}/', $content, $matches)) {
+            try {
+                $parsed = json_decode($matches[0], true);
+                if (json_last_error() === JSON_ERROR_NONE) {
+                    return [
+                        'recommended_price' => floatval($parsed['recommended_price'] ?? 0),
+                        'confidence' => $parsed['confidence'] ?? 'medium',
+                        'reasoning' => $parsed['reasoning'] ?? 'אין הסבר זמין',
+                        'market_data' => $parsed['market_data'] ?? null,
+                        'factors' => $parsed['factors'] ?? [],
+                        'provider' => 'openai'
+                    ];
+                }
+            } catch (\Exception $e) {
+                \Log::warning('Failed to parse price recommendation JSON', ['error' => $e->getMessage()]);
+            }
+        }
+
+        // Fallback: return raw response with default values
         return [
-            'recommended_price' => 0, // Parse from response
-            'reasoning' => $response['content'] ?? '',
+            'recommended_price' => 0,
+            'confidence' => 'low',
+            'reasoning' => $content ?: 'לא ניתן לקבל המלצה',
+            'market_data' => null,
+            'factors' => [],
             'provider' => 'openai'
         ];
     }
@@ -373,7 +415,7 @@ class OpenAiService extends BaseAiService
      */
     private function buildRestaurantChatPrompt(array $context): string
     {
-        $prompt = "אתה עוזר AI ידידותי למנהלי מסעדות המשתמשים במערכת ChefSync.\n\n";
+        $prompt = "אתה עוזר AI ידידותי למנהלי מסעדות המשתמשים במערכת TakeEat.\n\n";
         $prompt .= "תפקידך: לעזור בניהול תפריט, הזמנות, וניתוח עסקי.\n\n";
 
         // Add Hebrew glossary from config
