@@ -195,7 +195,7 @@ export default function FloatingRestaurantAssistant() {
         return (
             <button
                 onClick={() => setIsOpen(true)}
-                className="fixed bottom-6 left-6 z-50 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-full p-4 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 group"
+                className="fixed bottom-4 left-4 sm:bottom-6 sm:left-6 z-50 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-full p-4 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 group"
                 aria-label="פתח עוזר AI"
             >
                 <FaRobot className="text-2xl" />
@@ -207,9 +207,9 @@ export default function FloatingRestaurantAssistant() {
     }
 
     return (
-        <div className="fixed bottom-6 left-6 z-50 w-96 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl flex flex-col" style={{ height: '600px' }}>
+        <div className="fixed bottom-4 sm:bottom-6 left-4 sm:left-6 z-50 w-[calc(100vw-2rem)] sm:w-96 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl flex flex-col overflow-hidden transition-all duration-300" style={{ height: 'min(600px, 80vh)' }}>
             {/* Header */}
-            <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white p-4 rounded-t-2xl flex items-center justify-between">
+            <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white p-4 rounded-t-2xl flex items-center justify-between shrink-0">
                 <div className="flex items-center gap-3">
                     <FaRobot className="text-2xl" />
                     <div>
@@ -302,7 +302,7 @@ export default function FloatingRestaurantAssistant() {
             )}
 
             {/* Input Area */}
-            <div className="p-4 bg-white dark:bg-gray-800 border-t dark:border-gray-700 rounded-b-2xl">
+            <div className="p-4 bg-white dark:bg-gray-800 border-t dark:border-gray-700 rounded-b-2xl shrink-0">
                 <div className="flex gap-2 items-center">
                     <input
                         ref={inputRef}
@@ -312,7 +312,7 @@ export default function FloatingRestaurantAssistant() {
                         onKeyPress={(e) => e.key === 'Enter' && !isLoading && sendMessage(inputMessage)}
                         placeholder="שאל שאלה על המסעדה שלך..."
                         disabled={isLoading}
-                        className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 dark:bg-gray-700 dark:text-white disabled:opacity-50 text-sm"
+                        className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 dark:bg-gray-700 dark:text-white disabled:opacity-50 text-base"
                     />
                     <button
                         onClick={() => sendMessage(inputMessage)}

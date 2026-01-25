@@ -179,19 +179,19 @@ export default function FloatingAiAssistant() {
             {/* כפתור צף */}
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className={`fixed bottom-8 left-8 w-16 h-16 rounded-full shadow-2xl flex items-center justify-center text-white transition-all duration-300 z-50 ${isOpen
+                className={`fixed bottom-4 left-4 sm:bottom-8 sm:left-8 w-14 h-14 sm:w-16 sm:h-16 rounded-full shadow-2xl flex items-center justify-center text-white transition-all duration-300 z-50 ${isOpen
                     ? 'bg-gray-600 hover:bg-gray-700 scale-90'
                     : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:scale-110 hover:shadow-purple-500/50'
                     }`}
             >
-                {isOpen ? <FaTimes size={24} /> : <FaRobot size={28} />}
+                {isOpen ? <FaTimes size={20} /> : <FaRobot size={24} />}
             </button>
 
             {/* חלון צ'אט */}
             {isOpen && (
-                <div className="fixed bottom-28 left-8 w-96 h-[600px] bg-white rounded-3xl shadow-2xl flex flex-col z-50 animate-in fade-in zoom-in-95 duration-300">
+                <div className="fixed bottom-20 sm:bottom-28 left-4 sm:left-8 w-[calc(100vw-2rem)] sm:w-96 bg-white rounded-3xl shadow-2xl flex flex-col z-50 animate-in fade-in zoom-in-95 duration-300 overflow-hidden" style={{ height: 'min(600px, 75vh)' }}>
                     {/* Header */}
-                    <div className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-6 rounded-t-3xl">
+                    <div className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-5 sm:p-6 rounded-t-3xl shrink-0">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
@@ -302,7 +302,7 @@ export default function FloatingAiAssistant() {
                     </div>
 
                     {/* Input */}
-                    <div className="p-4 border-t border-gray-100">
+                    <div className="p-4 border-t border-gray-100 shrink-0">
                         <form
                             onSubmit={(e) => {
                                 e.preventDefault();
@@ -316,7 +316,7 @@ export default function FloatingAiAssistant() {
                                 onChange={(e) => setInputMessage(e.target.value)}
                                 disabled={isLoading}
                                 placeholder="שאל שאלה..."
-                                className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:outline-none text-sm font-medium disabled:bg-gray-50 disabled:cursor-not-allowed"
+                                className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:outline-none text-base font-medium disabled:bg-gray-50 disabled:cursor-not-allowed"
                             />
                             <button
                                 type="submit"
