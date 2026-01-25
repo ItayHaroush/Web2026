@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use App\Models\Restaurant;
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Middleware שמוודא שהמסעדה נמצאת בתקופת ניסיון או שיש לה מנוי פעיל.
@@ -43,7 +44,7 @@ class CheckRestaurantAccess
 
         // Bypass subscription check in dev mode
         if (config('app.dev_mode')) {
-            \Log::info('Dev Mode: Bypassing subscription check', [
+            Log::info('Dev Mode: Bypassing subscription check', [
                 'tenant_id' => $tenantId,
                 'restaurant_id' => $restaurant->id,
             ]);
@@ -54,7 +55,7 @@ class CheckRestaurantAccess
 
         // Bypass subscription check for super admin
         if ($request->user() && $request->user()->is_super_admin) {
-            \Log::info('Super Admin: Bypassing subscription check', [
+            Log::info('Super Admin: Bypassing subscription check', [
                 'user_id' => $request->user()->id,
                 'tenant_id' => $tenantId,
                 'restaurant_id' => $restaurant->id,
