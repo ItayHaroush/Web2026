@@ -257,45 +257,45 @@ class OpenAiService extends BaseAiService
     {
         $feature = 'dashboard_insights';
         $startTime = microtime(true);
-        
+
         try {
             $this->validateAccess($feature, $this->restaurant, $this->user);
 
             $restaurantName = $context['restaurant_name'] ?? 'המסעדה';
-        $ordersToday = $context['orders_today'] ?? 0;
-        $ordersWeek = $context['orders_week'] ?? 0;
-        $ordersMonth = $context['orders_month'] ?? 0;
-        $revenueToday = $context['revenue_today'] ?? 0;
-        $revenueWeek = $context['revenue_week'] ?? 0;
-        $menuItems = $context['total_menu_items'] ?? 0;
-        $categories = $context['active_categories'] ?? 0;
-        $pendingOrders = $context['pending_orders'] ?? 0;
+            $ordersToday = $context['orders_today'] ?? 0;
+            $ordersWeek = $context['orders_week'] ?? 0;
+            $ordersMonth = $context['orders_month'] ?? 0;
+            $revenueToday = $context['revenue_today'] ?? 0;
+            $revenueWeek = $context['revenue_week'] ?? 0;
+            $menuItems = $context['total_menu_items'] ?? 0;
+            $categories = $context['active_categories'] ?? 0;
+            $pendingOrders = $context['pending_orders'] ?? 0;
 
-        $prompt = "אתה יועץ עסקי למסעדות בישראל. נתח את נתוני הדשבורד הבאים עבור מסעדת \"{$restaurantName}\":\n\n"
-            . "📊 סטטיסטיקות:\n"
-            . "- הזמנות היום: {$ordersToday}\n"
-            . "- הזמנות השבוע: {$ordersWeek}\n"
-            . "- הזמנות החודש: {$ordersMonth}\n"
-            . "- הכנסות היום: ₪{$revenueToday}\n"
-            . "- הכנסות השבוע: ₪{$revenueWeek}\n"
-            . "- פריטים בתפריט: {$menuItems}\n"
-            . "- קטגוריות פעילות: {$categories}\n"
-            . "- הזמנות ממתינות: {$pendingOrders}\n\n"
-            . "החזר תשובה בפורמט JSON הבא בעברית:\n"
-            . "{\n"
-            . '  "sales_trend": "ניתוח מגמת המכירות - האם עולות/יורדות/יציבות",' . "\n"
-            . '  "top_performers": "הפריטים/קטגוריות המובילים (על סמך הנתונים)",' . "\n"
-            . '  "peak_times": "ניתוח זמני העומס והשקט",' . "\n"
-            . '  "recommendations": ["המלצה 1", "המלצה 2", "המלצה 3"],' . "\n"
-            . '  "alert": "אזהרה חשובה אם יש (או null)"' . "\n"
-            . "}\n\nהחזר רק JSON, ללא טקסט נוסף.";
+            $prompt = "אתה יועץ עסקי למסעדות בישראל. נתח את נתוני הדשבורד הבאים עבור מסעדת \"{$restaurantName}\":\n\n"
+                . "📊 סטטיסטיקות:\n"
+                . "- הזמנות היום: {$ordersToday}\n"
+                . "- הזמנות השבוע: {$ordersWeek}\n"
+                . "- הזמנות החודש: {$ordersMonth}\n"
+                . "- הכנסות היום: ₪{$revenueToday}\n"
+                . "- הכנסות השבוע: ₪{$revenueWeek}\n"
+                . "- פריטים בתפריט: {$menuItems}\n"
+                . "- קטגוריות פעילות: {$categories}\n"
+                . "- הזמנות ממתינות: {$pendingOrders}\n\n"
+                . "החזר תשובה בפורמט JSON הבא בעברית:\n"
+                . "{\n"
+                . '  "sales_trend": "ניתוח מגמת המכירות - האם עולות/יורדות/יציבות",' . "\n"
+                . '  "top_performers": "הפריטים/קטגוריות המובילים (על סמך הנתונים)",' . "\n"
+                . '  "peak_times": "ניתוח זמני העומס והשקט",' . "\n"
+                . '  "recommendations": ["המלצה 1", "המלצה 2", "המלצה 3"],' . "\n"
+                . '  "alert": "אזהרה חשובה אם יש (או null)"' . "\n"
+                . "}\n\nהחזר רק JSON, ללא טקסט נוסף.";
 
             $response = $this->callOpenAi($prompt);
             $responseTime = (int)((microtime(true) - $startTime) * 1000);
 
             // Parse JSON response
             $content = $response['content'] ?? '';
-            
+
             $result = null;
             // Try to extract JSON from response
             if (preg_match('/\{[\s\S]*\}/', $content, $matches)) {
@@ -369,34 +369,34 @@ class OpenAiService extends BaseAiService
     {
         $feature = 'price_recommendation';
         $startTime = microtime(true);
-        
+
         try {
             $this->validateAccess($feature, $this->restaurant, $this->user);
 
-        $prompt = "אתה יועץ תמחור למסעדות בישראל. נתח את הפריט הבא והמלץ על מחיר הוגן:\n\n"
-            . "שם: " . ($menuItemData['name'] ?? 'לא צוין') . "\n"
-            . "קטגוריה: " . ($menuItemData['category_name'] ?? 'לא צוין') . "\n"
-            . "תיאור: " . ($menuItemData['description'] ?? 'לא צוין') . "\n"
-            . "מחיר נוכחי: " . ($menuItemData['price'] ?? 'אין') . " ₪\n\n"
-            . "החזר תשובה בפורמט JSON הבא:\n"
-            . "{\n"
-            . '  "recommended_price": 45.00,' . "\n"
-            . '  "confidence": "high/medium/low",' . "\n"
-            . '  "reasoning": "הסבר קצר בעברית למה המחיר הזה הגיוני",' . "\n"
-            . '  "market_data": {' . "\n"
-            . '    "min_price": 35.00,' . "\n"
-            . '    "avg_price": 42.00,' . "\n"
-            . '    "max_price": 55.00' . "\n"
-            . '  },' . "\n"
-            . '  "factors": ["מרכיבים איכותיים", "גודל מנה", "תחרות"]' . "\n"
-            . "}\n\nהחזר רק JSON, ללא טקסט נוסף.";
+            $prompt = "אתה יועץ תמחור למסעדות בישראל. נתח את הפריט הבא והמלץ על מחיר הוגן:\n\n"
+                . "שם: " . ($menuItemData['name'] ?? 'לא צוין') . "\n"
+                . "קטגוריה: " . ($menuItemData['category_name'] ?? 'לא צוין') . "\n"
+                . "תיאור: " . ($menuItemData['description'] ?? 'לא צוין') . "\n"
+                . "מחיר נוכחי: " . ($menuItemData['price'] ?? 'אין') . " ₪\n\n"
+                . "החזר תשובה בפורמט JSON הבא:\n"
+                . "{\n"
+                . '  "recommended_price": 45.00,' . "\n"
+                . '  "confidence": "high/medium/low",' . "\n"
+                . '  "reasoning": "הסבר קצר בעברית למה המחיר הזה הגיוני",' . "\n"
+                . '  "market_data": {' . "\n"
+                . '    "min_price": 35.00,' . "\n"
+                . '    "avg_price": 42.00,' . "\n"
+                . '    "max_price": 55.00' . "\n"
+                . '  },' . "\n"
+                . '  "factors": ["מרכיבים איכותיים", "גודל מנה", "תחרות"]' . "\n"
+                . "}\n\nהחזר רק JSON, ללא טקסט נוסף.";
 
-        $response = $this->callOpenAi($prompt);
+            $response = $this->callOpenAi($prompt);
             $responseTime = (int)((microtime(true) - $startTime) * 1000);
 
             // Parse JSON response
             $content = $response['content'] ?? '';
-            
+
             $result = null;
             // Try to extract JSON from response
             if (preg_match('/\{[\s\S]*\}/', $content, $matches)) {
