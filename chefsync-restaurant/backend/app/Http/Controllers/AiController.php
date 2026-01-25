@@ -195,8 +195,8 @@ class AiController extends Controller
                 'orders_today' => $restaurant->orders()->whereDate('created_at', today())->count(),
                 'orders_week' => $restaurant->orders()->where('created_at', '>=', now()->subDays(7))->count(),
                 'orders_month' => $restaurant->orders()->where('created_at', '>=', now()->subDays(30))->count(),
-                'revenue_today' => $restaurant->orders()->whereDate('created_at', today())->sum('total_price'),
-                'revenue_week' => $restaurant->orders()->where('created_at', '>=', now()->subDays(7))->sum('total_price'),
+                'revenue_today' => $restaurant->orders()->whereDate('created_at', today())->sum('total_amount'),
+                'revenue_week' => $restaurant->orders()->where('created_at', '>=', now()->subDays(7))->sum('total_amount'),
                 'pending_orders' => $restaurant->orders()->where('status', 'received')->count(),
             ];
 
