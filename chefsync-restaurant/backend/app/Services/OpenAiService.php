@@ -163,7 +163,8 @@ class OpenAiService extends BaseAiService
         return [
             'response' => $response['content'] ?? '',
             'provider' => 'openai',
-            'model' => $this->model
+            'model' => $this->mockMode ? 'mock' : $this->model,
+            'tokens' => $response['tokens'] ?? 0
         ];
     }
 
