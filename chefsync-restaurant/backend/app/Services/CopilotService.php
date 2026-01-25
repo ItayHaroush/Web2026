@@ -224,17 +224,12 @@ class CopilotService
      */
     private function callCopilotCli(string $prompt): array
     {
-        $cliPath = trim(config('copilot.cli_path'), '"\'');
-
-        if (!$cliPath) {
-            Log::error('Copilot CLI path not configured');
-            throw new \RuntimeException('Copilot CLI path not configured in .env');
-        }
+        // Use direct copilot CLI instead of gh wrapper
+        $cliPath = '/Users/itaymac/Library/Application Support/Code/User/globalStorage/github.copilot-chat/copilotCli/copilot';
 
         if (!file_exists($cliPath)) {
-            Log::warning('Copilot CLI path not found, falling back to mock response', [
+            Log::warning('Copilot CLI not found, falling back to mock response', [
                 'configured_path' => $cliPath,
-                'raw_config' => config('copilot.cli_path'),
                 'mode' => 'real (fallback)'
             ]);
 
@@ -243,9 +238,9 @@ class CopilotService
         }
 
         // Create process with the CLI command
-        // Using -s (silent) to suppress stats and -p (prompt) for non-interactive mode
+        // Using Copilot CLI: copilot -p [prompt] --allow-all
         $process = new \Symfony\Component\Process\Process(
-            [$cliPath, '-s', '-p', $prompt],
+            [$cliPath, '-p', $prompt, '--allow-all'],
             null,
             array_merge($_SERVER, [
                 'HOME' => $_SERVER['HOME'] ?? getenv('HOME'),

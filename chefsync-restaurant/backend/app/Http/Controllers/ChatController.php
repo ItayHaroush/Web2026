@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Services\CopilotService;
+use App\Services\AiService;
 use App\Models\AiCredit;
 use App\Models\AiUsageLog;
 use App\Models\Restaurant;
@@ -83,12 +83,12 @@ class ChatController extends Controller
         $startTime = microtime(true);
 
         try {
-            // יצירת CopilotService זמני (ללא tenant/restaurant כי זה super admin)
+            // יצירת AiService זמני (ללא tenant/restaurant כי זה super admin)
             // נעביר null במקום tenant_id ו-restaurant
-            $copilotService = new CopilotService('super-admin', new Restaurant(), $user);
+            $aiService = new AiService('super-admin', new Restaurant(), $user);
 
-            // קריאה ל-Copilot Service
-            $response = $copilotService->chatWithSuperAdmin(
+            // קריאה ל-AI Service
+            $response = $aiService->chatWithSuperAdmin(
                 $message,
                 $fullContext,
                 $preset
@@ -320,12 +320,12 @@ class ChatController extends Controller
             // בניית הקשר של המסעדה
             $context = $this->buildRestaurantContext($tenantId, $restaurant);
 
-            // יצירת CopilotService עם הפרמטרים הנכונים
-            $copilotService = new CopilotService($tenantId, $restaurant, $user);
+            // יצירת AiService עם הפרמטרים הנכונים
+            $aiService = new AiService($tenantId, $restaurant, $user);
 
             // קריאה לסוכן AI עם preset אם קיים
             $preset = $request->input('preset');
-            $response = $copilotService->chatWithRestaurant(
+            $response = $aiService->chatWithRestaurant(
                 $request->input('message'),
                 $context,
                 $preset
@@ -356,7 +356,7 @@ class ChatController extends Controller
                 'response' => $response,
                 'credits_remaining' => $creditsRemaining,
                 'credits_limit' => $aiCredit->monthly_limit,
-                'suggested_actions' => $copilotService->getRestaurantSuggestedActions($context, $preset)
+                'suggested_actions' => $aiService->getRestaurantSuggestedActions($context, $preset)
             ]);
         } catch (\Exception $e) {
             Log::error('Restaurant AI Chat Error', [
