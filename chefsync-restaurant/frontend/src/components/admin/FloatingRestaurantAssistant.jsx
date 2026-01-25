@@ -247,10 +247,10 @@ export default function FloatingRestaurantAssistant() {
                     >
                         <div
                             className={`max-w-[80%] rounded-2xl px-4 py-3 ${msg.role === 'user'
-                                    ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
-                                    : msg.isError
-                                        ? 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
-                                        : 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 shadow-md'
+                                ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
+                                : msg.isError
+                                    ? 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
+                                    : 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 shadow-md'
                                 }`}
                         >
                             <p className="text-sm whitespace-pre-wrap leading-relaxed">{msg.content}</p>
