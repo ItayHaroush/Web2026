@@ -71,8 +71,13 @@ class ChatController extends Controller
 
         try {
             // יצירת AiService זמני (ללא tenant/restaurant כי זה super admin)
-            // נעביר null במקום tenant_id ו-restaurant
-            $aiService = new AiService('super-admin', new Restaurant(), $user);
+            // Super Admin לא צריך restaurant object - נעביר dummy restaurant עם ID
+            $dummyRestaurant = new Restaurant();
+            $dummyRestaurant->id = 0; // Dummy ID למניעת errors
+            $dummyRestaurant->tenant_id = 'super-admin';
+            $dummyRestaurant->name = 'Super Admin';
+            
+            $aiService = new AiService('super-admin', $dummyRestaurant, $user);
 
             // קריאה ל-AI Service
             $response = $aiService->chatWithSuperAdmin(
