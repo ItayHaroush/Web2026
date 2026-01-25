@@ -1592,8 +1592,9 @@ class AdminController extends Controller
             $aiCredit = \App\Models\AiCredit::where('restaurant_id', $restaurant->id)->first();
 
             if ($aiCredit) {
-                // עדכון לקרדיטים מלאים (500) אחרי תשלום
+                // עדכון לקרדיטים מלאים (500) אחרי תשלום + עדכון tier
                 $aiCredit->update([
+                    'tier' => $tier, // ✅ עדכון tier ל-pro
                     'monthly_limit' => $prices[$tier]['ai_credits'],
                     'credits_remaining' => $prices[$tier]['ai_credits'], // איפוס ל-500
                     'billing_cycle_start' => now()->startOfMonth(),
@@ -1610,6 +1611,16 @@ class AdminController extends Controller
                     'credits_used' => 0,
                     'billing_cycle_start' => now()->startOfMonth(),
                     'billing_cycle_end' => now()->endOfMonth(),
+                ]);
+            }
+        } elseif ($tier === 'basic') {
+            // ✅ גם אם עובר ל-Basic, נוודא עדכון
+            $aiCredit = \App\Models\AiCredit::where('restaurant_id', $restaurant->id)->first();
+            if ($aiCredit) {
+                $aiCredit->update([
+                    'tier' => 'basic',
+                    'monthly_limit' => 0,
+                    'credits_remaining' => 0,
                 ]);
             }
         }

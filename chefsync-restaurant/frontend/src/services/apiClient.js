@@ -129,27 +129,15 @@ apiClient.interceptors.response.use(
         }
 
         if (error.response?.status === 401) {
-            // ✅ ISOLATE AI ERRORS: Don't logout for AI endpoint failures
-            const isAiEndpoint = error.config?.url?.includes('/ai/');
-
-            if (isAiEndpoint) {
-                // Let the component handle the error gracefully
-                console.warn('AI endpoint returned 401 - component will handle:', error.config?.url);
-                return Promise.reject(error);
-            }
-
             // Token לא תקף - נקה מידע רלוונטי והפנה לפי סוג משתמש
-            const hasAdminToken = !!(localStorage.getItem('authToken') || localStorage.getItem('admin_token'));
-            const isAdminRoute = error.config?.url?.includes('/admin/') || window.location.pathname.includes('/admin');
-
+            const hasAdminToken = !!localStorage.getItem('admin_token');
             localStorage.removeItem('authToken');
             localStorage.removeItem('tenantId');
-
-            if (hasAdminToken || isAdminRoute) {
+            if (hasAdminToken) {
                 localStorage.removeItem('admin_token');
                 window.location.href = '/admin/login';
             } else {
-                window.location.href = '/';
+                window.location.href = '/login';
             }
         }
 
@@ -157,11 +145,11 @@ apiClient.interceptors.response.use(
             const hasAdminToken = !!(localStorage.getItem('authToken') || localStorage.getItem('admin_token'));
             // Don't auto-redirect for AI endpoints - let components handle it
             const isAiEndpoint = error.config?.url?.includes('/ai/');
-            if (hasAdminToken && !isAiEndpoint && window.location.pathname !== '/admin/paywall') {
+            if (hasAdminToken && !isAiEndpoint && window.location.pathname !== '/admin/subscription') {
                 try {
                     localStorage.setItem('paywall_data', JSON.stringify(error.response?.data?.data || {}));
                 } catch { }
-                window.location.href = '/admin/paywall';
+                window.location.href = '/admin/subscription';
             }
         }
         return Promise.reject(error);
