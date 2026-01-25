@@ -292,20 +292,6 @@ class ChatController extends Controller
         // קבלת מסעדה
         $restaurant = Restaurant::where('tenant_id', $tenantId)->firstOrFail();
 
-        // בדיקת קרדיטים
-        $aiCredit = AiCredit::getOrCreateForRestaurant($restaurant);
-        $aiCredit->checkAndResetIfNeeded();
-
-        // בדיקה אם יש מספיק קרדיטים
-        if (!$aiCredit->hasCredits(1)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'הגעת למכסת השאילתות החודשית. שדרג למנוי Pro לקבלת 300 שאילתות חודשיות.',
-                'credits_remaining' => $aiCredit->credits_remaining,
-                'credits_limit' => $aiCredit->monthly_limit
-            ], 429);
-        }
-
         try {
             // בניית הקשר של המסעדה
             $context = $this->buildRestaurantContext($tenantId, $restaurant);
@@ -321,30 +307,13 @@ class ChatController extends Controller
                 $preset
             );
 
-            // רישום השימוש
-            AiUsageLog::create([
-                'tenant_id' => $tenantId,
-                'restaurant_id' => $restaurant->id,
-                'user_id' => $user->id,
-                'feature' => 'restaurant_chat',
-                'action' => $preset ?? 'chat',
-                'prompt' => $request->input('message'),
-                'response' => $response['response'] ?? $response['content'] ?? json_encode($response),
-                'credits_used' => 1,
-                'tokens_used' => $response['tokens'] ?? 1, // שימוש בספירה אמיתית
-                'status' => 'success',
-                'cached' => false,
-                'prompt_type' => 'chat',
-            ]);
-
-            // עדכון מונה הקרדיטים
-            $aiCredit->useCredits(1);
-            $creditsRemaining = $aiCredit->credits_remaining;
+            // קבלת מצב קרדיטים עדכני (הופחת כבר בתוך AiService)
+            $aiCredit = AiCredit::getOrCreateForRestaurant($restaurant);
 
             return response()->json([
                 'success' => true,
                 'answer' => $response['response'] ?? $response['content'] ?? '',
-                'credits_remaining' => $creditsRemaining,
+                'credits_remaining' => $aiCredit->credits_remaining,
                 'credits_limit' => $aiCredit->monthly_limit,
                 'suggested_actions' => $response['suggested_actions'] ?? []
             ]);

@@ -550,7 +550,40 @@ class OpenAiService extends BaseAiService
     private function buildRestaurantChatPrompt(array $context): string
     {
         $prompt = "אתה עוזר AI ידידותי למנהלי מסעדות המשתמשים במערכת TakeEat.\n\n";
-        $prompt .= "תפקידך: לעזור בניהול תפריט, הזמנות, וניתוח עסקי.\n\n";
+
+        // Add restaurant specific context
+        if (!empty($context['restaurant'])) {
+            $r = $context['restaurant'];
+            $prompt .= "המסעדה: " . ($r['name'] ?? 'לא ידוע') . "\n";
+            $prompt .= "מסלול מנוי: " . ($r['subscription_tier'] ?? 'free') . "\n\n";
+        }
+
+        if (!empty($context['orders'])) {
+            $o = $context['orders'];
+            $prompt .= "נתוני הזמנות:\n";
+            $prompt .= "- היום: " . ($o['today'] ?? 0) . "\n";
+            $prompt .= "- השבוע: " . ($o['this_week'] ?? 0) . "\n";
+            $prompt .= "- החודש: " . ($o['this_month'] ?? 0) . "\n\n";
+        }
+
+        if (!empty($context['revenue'])) {
+            $rev = $context['revenue'];
+            $prompt .= "הכנסות:\n";
+            $prompt .= "- היום: ₪" . number_format($rev['today'] ?? 0, 2) . "\n";
+            $prompt .= "- השבוע: ₪" . number_format($rev['this_week'] ?? 0, 2) . "\n";
+            $prompt .= "- החודש: ₪" . number_format($rev['this_month'] ?? 0, 2) . "\n\n";
+        }
+
+        if (!empty($context['top_items'])) {
+            $prompt .= "מנות מובילות (רבי מכר):\n";
+            foreach ($context['top_items'] as $item) {
+                $prompt .= "- " . ($item['name'] ?? 'לא ידוע') . " (" . ($item['orders'] ?? 0) . " הזמנות)\n";
+            }
+            $prompt .= "\n";
+        }
+
+        $prompt .= "תפקידך: לעזור בניהול תפריט, הזמנות, וניתוח עסקי.\n";
+        $prompt .= "השתמש בנתונים האמיתיים שלך למתן תשובות מדויקות.\n\n";
 
         // Add Hebrew glossary from config
         $glossary = config('ai.language.glossary', [
