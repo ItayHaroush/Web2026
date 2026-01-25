@@ -329,9 +329,9 @@ class ChatController extends Controller
                 'feature' => 'restaurant_chat',
                 'action' => $preset ?? 'chat',
                 'prompt' => $request->input('message'),
-                'response' => $response,
+                'response' => $response['response'] ?? $response['content'] ?? json_encode($response),
                 'credits_used' => 1,
-                'tokens_used' => 1, // ספירה פשוטה - 1 שאילתה
+                'tokens_used' => $response['tokens'] ?? 1, // שימוש בספירה אמיתית
                 'status' => 'success',
                 'cached' => false,
                 'prompt_type' => 'chat',
@@ -343,10 +343,10 @@ class ChatController extends Controller
 
             return response()->json([
                 'success' => true,
-                'response' => $response,
+                'answer' => $response['response'] ?? $response['content'] ?? '',
                 'credits_remaining' => $creditsRemaining,
                 'credits_limit' => $aiCredit->monthly_limit,
-                'suggested_actions' => $aiService->getRestaurantSuggestedActions($context, $preset)
+                'suggested_actions' => $response['suggested_actions'] ?? []
             ]);
         } catch (\Exception $e) {
             Log::error('Restaurant AI Chat Error', [

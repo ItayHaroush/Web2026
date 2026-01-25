@@ -24,6 +24,10 @@ export function AdminAuthProvider({ children }) {
             if (response.data.success) {
                 setUser(response.data.user);
                 setTenantFromUser(response.data.user);
+
+                // DEBUG: ודא שה-tenant נשמר
+                console.log('👤 User loaded:', response.data.user);
+                console.log('🏪 Tenant ID set:', localStorage.getItem('tenantId'));
             } else {
                 logout();
             }
