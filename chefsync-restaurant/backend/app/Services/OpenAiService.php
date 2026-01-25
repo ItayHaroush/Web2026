@@ -298,7 +298,7 @@ class OpenAiService extends BaseAiService
 
         // Parse JSON response
         $content = $response['content'] ?? '';
-        
+
         // Try to extract JSON from response
         if (preg_match('/\{[\s\S]*\}/', $content, $matches)) {
             try {
