@@ -106,12 +106,12 @@ class ChatController extends Controller
                 'cached' => false,
                 'status' => 'success',
                 'prompt' => config('app.debug') ? $message : null,
-                'response' => config('app.debug') ? $response['content'] : null,
+                'response' => config('app.debug') ? ($response['response'] ?? $response['content'] ?? null) : null,
             ]);
 
             return response()->json([
                 'success' => true,
-                'answer' => $response['content'],
+                'answer' => $response['response'] ?? $response['content'] ?? '',
                 'actions' => $response['actions'] ?? [],
                 'meta' => [
                     'credits_used' => $creditsUsed,
