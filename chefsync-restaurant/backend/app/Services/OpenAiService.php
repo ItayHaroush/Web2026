@@ -461,6 +461,7 @@ class OpenAiService extends BaseAiService
             );
             throw $e;
         }
+    }
 
     /**
      * Call OpenAI API (or return mock response)
