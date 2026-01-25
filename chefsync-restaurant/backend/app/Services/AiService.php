@@ -32,10 +32,10 @@ class AiService
         $this->tenantId = $tenantId;
         $this->restaurant = $restaurant;
         $this->user = $user;
-        
+
         // Get provider from env (copilot or openai)
         $this->provider = config('ai.provider', 'copilot');
-        
+
         // SECURITY: Block Copilot in production
         if ($this->provider === 'copilot' && app()->environment('production')) {
             Log::critical('SECURITY: Attempted to use Copilot CLI in production environment', [
@@ -124,7 +124,7 @@ class AiService
         if ($this->provider === 'openai') {
             return new OpenAiService($this->tenantId, $this->restaurant, $this->user);
         }
-        
+
         return new CopilotService($this->tenantId, $this->restaurant, $this->user);
     }
 

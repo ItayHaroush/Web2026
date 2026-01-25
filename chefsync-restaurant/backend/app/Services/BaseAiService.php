@@ -43,7 +43,7 @@ abstract class BaseAiService
         if (is_string($endDate)) {
             $endDate = Carbon::parse($endDate);
         }
-        
+
         $startDate = $startDate ?? now()->startOfMonth();
         $endDate = $endDate ?? now()->endOfMonth();
 
@@ -80,15 +80,35 @@ abstract class BaseAiService
     {
         // Bypass 1: Dev Mode
         if (config('app.dev_mode')) {
-            $this->logUsage($feature, 'validate', 0, 0, false, null, 'success', 
-                null, null, ['bypass_reason' => 'dev_mode']);
+            $this->logUsage(
+                $feature,
+                'validate',
+                0,
+                0,
+                false,
+                null,
+                'success',
+                null,
+                null,
+                ['bypass_reason' => 'dev_mode']
+            );
             return;
         }
 
         // Bypass 2: Unlimited AI Users (super admin)
         if ($user && $user->ai_unlimited) {
-            $this->logUsage($feature, 'validate', 0, 0, false, null, 'success',
-                null, null, ['bypass_reason' => 'ai_unlimited']);
+            $this->logUsage(
+                $feature,
+                'validate',
+                0,
+                0,
+                false,
+                null,
+                'success',
+                null,
+                null,
+                ['bypass_reason' => 'ai_unlimited']
+            );
             return;
         }
 
@@ -126,10 +146,14 @@ abstract class BaseAiService
         ?int $responseTimeMs,
         ?array $metadata = null
     ): void {
+        $tenantId = property_exists($this, 'tenantId') ? $this->{'tenantId'} : null;
+        $restaurantId = property_exists($this, 'restaurant') ? $this->{'restaurant'}?->id : null;
+        $userId = property_exists($this, 'user') ? $this->{'user'}?->id : null;
+
         AiUsageLog::create([
-            'tenant_id' => $this->tenantId ?? null,
-            'restaurant_id' => $this->restaurant?->id,
-            'user_id' => $this->user?->id,
+            'tenant_id' => $tenantId,
+            'restaurant_id' => $restaurantId,
+            'user_id' => $userId,
             'feature' => $feature,
             'action' => $action,
             'credits_used' => $creditsUsed,

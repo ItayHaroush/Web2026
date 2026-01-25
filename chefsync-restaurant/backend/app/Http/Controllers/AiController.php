@@ -6,6 +6,7 @@ use App\Services\AiService;
 use App\Models\Restaurant;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
 
 class AiController extends Controller
 {
@@ -33,18 +34,10 @@ class AiController extends Controller
 
             $tenantId = app('tenant_id');
             $restaurant = Restaurant::where('tenant_id', $tenantId)->firstOrFail();
-            $user = auth()->user();
+            $user = $request->user();
 
-            // Check if Copilot is enabled
-            if (!config('copilot.enabled')) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'פיצ\'ר AI אינו זמין כרגע',
-                ], 503);
-            }
-
-            // Initialize Copilot Service
-            $copilot = new CopilotService($tenantId, $restaurant, $user);
+            // Initialize AI Service
+            $ai = new AiService($tenantId, $restaurant, $user);
 
             // Generate description (bypass cache if regenerating)
             $forceRegenerate = $validated['force_regenerate'] ?? false;
@@ -177,11 +170,11 @@ class AiController extends Controller
         try {
             $tenantId = app('tenant_id');
             $restaurant = Restaurant::where('tenant_id', $tenantId)->firstOrFail();
-            $user = auth()->user();
+            $user = $request->user();
 
             // Check cache first (24 hours)
             $cacheKey = "ai:insights:tenant:{$tenantId}:" . now()->format('Y-m-d');
-            $cached = \Cache::get($cacheKey);
+            $cached = Cache::get($cacheKey);
 
             if ($cached) {
                 return response()->json([
@@ -195,10 +188,10 @@ class AiController extends Controller
             $ai = new AiService($tenantId, $restaurant, $user);
 
             // Generate insights
-            $insightsData = $copilot->generateDashboardInsights();
+            $insightsData = $ai->getDashboardInsights([]);
 
             // Cache for 24 hours
-            \Cache::put($cacheKey, $insightsData, 86400);
+            Cache::put($cacheKey, $insightsData, 86400);
 
             return response()->json([
                 'success' => true,
@@ -245,21 +238,13 @@ class AiController extends Controller
 
             $tenantId = app('tenant_id');
             $restaurant = Restaurant::where('tenant_id', $tenantId)->firstOrFail();
-            $user = auth()->user();
+            $user = $request->user();
 
-            // Check if Copilot is enabled
-            if (!config('copilot.enabled')) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'פיצ\'ר AI אינו זמין כרגע',
-                ], 503);
-            }
-
-            // Initialize Copilot Service
-            $copilot = new CopilotService($tenantId, $restaurant, $user);
+            // Initialize AI Service
+            $ai = new AiService($tenantId, $restaurant, $user);
 
             // Generate price recommendation
-            $recommendation = $copilot->recommendPrice($validated);
+            $recommendation = $ai->recommendPrice($validated);
 
             return response()->json([
                 'success' => true,
