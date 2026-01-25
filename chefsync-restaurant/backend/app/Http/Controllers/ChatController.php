@@ -47,37 +47,24 @@ class ChatController extends Controller
         $systemContext = $this->buildSuperAdminContext();
         $fullContext = array_merge($systemContext, $userContext);
 
-        // בדיקת קרדיטים (super admin עם ai_unlimited מקבל bypass)
+        // בדיקת קרדיטים (super admin תמיד מקבל bypass)
         $bypassReason = null;
         $creditsUsed = 0;
 
-        if ($user->ai_unlimited) {
+        // Super Admin תמיד מקבל bypass (אין לו restaurant_id)
+        if ($user->is_super_admin) {
+            $bypassReason = 'super_admin';
+        } elseif ($user->ai_unlimited) {
             $bypassReason = 'ai_unlimited';
         } elseif (config('app.env') === 'local') {
             $bypassReason = 'dev_mode';
         } else {
-            // בדיקת קרדיטים רגילה
-            $aiCredit = AiCredit::getOrCreateForRestaurant(null); // super admin ללא restaurant_id
-
-            if (!$aiCredit->hasCredits(1)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'אין מספיק קרדיטי AI',
-                    'meta' => [
-                        'credits_remaining' => $aiCredit->credits_remaining,
-                        'monthly_limit' => $aiCredit->monthly_limit,
-                    ],
-                ], 429);
-            }
-
-            if (!$aiCredit->isWithinRateLimit()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'חרגת ממגבלת הבקשות לדקה',
-                ], 429);
-            }
-
-            $creditsUsed = 1;
+            // בדיקת קרדיטים רגילה - לא אמור להגיע לכאן עבור Super Admin
+            // אבל אם הגענו, זה שגיאה בלוגיקה
+            return response()->json([
+                'success' => false,
+                'message' => 'שגיאה במערכת - Super Admin צריך bypass אוטומטי',
+            ], 500);
         }
 
         $startTime = microtime(true);
@@ -96,10 +83,8 @@ class ChatController extends Controller
 
             $responseTime = round((microtime(true) - $startTime) * 1000);
 
-            // ספירת קרדיטים (אם לא bypass)
-            if ($creditsUsed > 0 && !$bypassReason) {
-                $aiCredit->useCredits($creditsUsed);
-            }
+            // ספירת קרדיטים - לא רלוונטי לSuper Admin (תמיד יש bypass)
+            // Super Admin לא צורך קרדיטים מה-AiCredit table
 
             // רישום ב-AiUsageLog
             AiUsageLog::create([
