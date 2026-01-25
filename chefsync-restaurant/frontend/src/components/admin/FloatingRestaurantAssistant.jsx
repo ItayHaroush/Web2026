@@ -119,7 +119,7 @@ export default function FloatingRestaurantAssistant() {
             if (response.data.success) {
                 const aiMessage = {
                     role: 'assistant',
-                    content: response.data.response,
+                    content: response.data.answer || response.data.response,
                     timestamp: new Date().toISOString(),
                     suggested_actions: response.data.suggested_actions || []
                 };
