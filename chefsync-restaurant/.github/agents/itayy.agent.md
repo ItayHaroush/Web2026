@@ -1,6 +1,6 @@
 ---
 description: |
-  סוכן פיתוח ראשי לפרויקט ChefSync.
+  סוכן פיתוח ראשי לפרויקט TakeEat.
   מתמקד בלוגיקה עסקית, backend Laravel, frontend React,
   וזרימות הזמנה (Menu, Variants, Addons, Orders).
   נותן פתרונות פשוטים, מדורגי-שלבים, בלי סיבוך מיותר.

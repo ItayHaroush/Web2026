@@ -24,7 +24,7 @@ export default function LandingPage() {
     const benefits = [
         {
             title: 'ללא עמלות – 0%',
-            desc: 'הפסק לשלם 30% על כל הזמנה. ב-ChefSync, כל ההכנסות נשארות אצלך.',
+            desc: 'הפסק לשלם 30% על כל הזמנה. ב-TakeEat, כל ההכנסות נשארות אצלך.',
             icon: <FaChartLine className="w-6 h-6 text-green-500" />
         },
         {
@@ -67,31 +67,35 @@ export default function LandingPage() {
             name: 'Standard',
             price: '₪450',
             period: '/ חודש',
-            yearlyPrice: 'או ₪4,500 לשנה',
+            yearlyPrice: 'פיילוט פתוח • ללא התחייבות',
             features: [
-                'מערכת הזמנות מלאה',
-                'תפריט דיגיטלי',
-                'AI בסיסי (שיפור תמונות)',
-                'ניהול משלוחים בסיסי',
-                'תמיכה בוואטסאפ'
+                'מערכת הזמנות מלאה (משלוח ואיסוף)',
+                'דף אישי למסעדה + תפריט דיגיטלי',
+                'שליטה באזורי משלוח והגבלות',
+                'מסוף הזמנות למסעדה (Tablet / PWA)',
+                'ניהול תפריט, תוספות וקטגוריות',
+                'תמיכה בוואטסאפ',
+                'סוכן Ai חכם בסיסי למסעדן'
             ],
             highlight: false,
-            badge: 'בסיסי'
+            badge: 'המערכת המלאה'
         },
         {
             name: 'Pro',
             price: '₪600',
             period: '/ חודש',
-            yearlyPrice: 'תשלום חודשי',
+            yearlyPrice: 'סוכן חכם מתקדם',
             features: [
-                'כל הפיצ׳רים ב-Standard',
-                'AI מתקדם (ניתוח ושיפורים)',
-                'תמיכה בעדיפות (Priority)',
-                'דוחות וניתוחים מתקדמים',
-                'ניהול מספר סניפים'
+                'כל מה שיש ב־Standard',
+                'סוכן Ai חכם לתובנות עסקיות',
+                'שיפור תיאורי מנות אוטומטי',
+                'המלצות תמחור חכמות',
+                'ניתוח ביצועים ומכירות',
+                'הצעות לשיפור תפריט',
+                'תמיכה בעדיפות'
             ],
             highlight: true,
-            badge: 'המומלץ ביותר'
+            badge: 'סוכן חכם מלא'
         }
     ];
 
@@ -147,7 +151,7 @@ export default function LandingPage() {
                         {/* Trust Badges */}
                         <div className="pt-10 flex flex-wrap justify-center gap-x-8 gap-y-4 text-sm sm:text-base text-white/70 font-medium">
                             <span className="flex items-center gap-2 bg-white/5 px-4 py-2 rounded-full border border-white/10">
-                                <FaCreditCard className="text-white/50" /> ללא כרטיס אשראי
+                                <FaCreditCard className="text-white/50" /> התנסות חינם
                             </span>
                             <span className="flex items-center gap-2 bg-white/5 px-4 py-2 rounded-full border border-white/10">
                                 <FaRocket className="text-white/50" /> הקמה מיידית
@@ -187,7 +191,7 @@ export default function LandingPage() {
                                                 <iframe
                                                     src="https://chefsync.vercel.app/"
                                                     className="w-full h-full border-0"
-                                                    title="ChefSync Demo"
+                                                    title="TakeEat Demo"
                                                     loading="lazy"
                                                 />
                                             </div>
@@ -217,7 +221,7 @@ export default function LandingPage() {
                                         אחת המערכות, אינסוף אפשרויות
                                     </h3>
                                     <p className="text-gray-600 leading-relaxed">
-                                        בין אם יש לך פיצרייה, המבורגריה או סושייה, ChefSync מתאימה את עצמה למותג שלך.
+                                        בין אם יש לך פיצרייה, המבורגריה או סושייה, TakeEat מתאימה את עצמה למותג שלך.
                                     </p>
                                 </div>
 
@@ -335,13 +339,13 @@ export default function LandingPage() {
                             </div>
                         </div>
 
-                        {/* Fixed Model (ChefSync) */}
+                        {/* Fixed Model (TakeEat) */}
                         <div className="p-10 bg-white relative">
                             <div className="absolute top-0 left-0 w-full h-1.5 bg-brand-primary"></div>
                             <h3 className="text-xl font-bold text-brand-primary mb-8 flex items-center gap-3">
                                 <div className="p-2 bg-brand-primary/10 rounded-lg"><FaRocket /></div>
                                 <span>מודל קבוע</span>
-                                <span className="mr-auto text-xs font-bold bg-brand-primary text-white px-2 py-1 rounded">ChefSync</span>
+                                <span className="mr-auto text-xs font-bold bg-brand-primary text-white px-2 py-1 rounded">TakeEat</span>
                             </h3>
                             <ul className="space-y-6">
                                 {[
@@ -375,8 +379,8 @@ export default function LandingPage() {
                             <div
                                 key={plan.name}
                                 className={`relative p-8 rounded-[2rem] border transition-all duration-300 ${plan.highlight
-                                        ? 'bg-white shadow-2xl shadow-brand-primary/10 border-brand-primary ring-1 ring-brand-primary/20 scale-105 z-10'
-                                        : 'bg-white border-gray-100 text-gray-600 hover:border-gray-300 hover:shadow-lg'
+                                    ? 'bg-white shadow-2xl shadow-brand-primary/10 border-brand-primary ring-1 ring-brand-primary/20 scale-105 z-10'
+                                    : 'bg-white border-gray-100 text-gray-600 hover:border-gray-300 hover:shadow-lg'
                                     }`}
                             >
                                 {plan.highlight && (
@@ -413,8 +417,8 @@ export default function LandingPage() {
                                 <Link
                                     to="/register-restaurant"
                                     className={`block w-full py-4 rounded-xl font-bold text-center transition-all ${plan.highlight
-                                            ? 'bg-brand-primary text-white hover:bg-brand-primary/90 shadow-lg hover:shadow-brand-primary/30 hover:-translate-y-0.5'
-                                            : 'bg-gray-50 border border-gray-200 text-gray-900 hover:bg-gray-100 hover:border-gray-300'
+                                        ? 'bg-brand-primary text-white hover:bg-brand-primary/90 shadow-lg hover:shadow-brand-primary/30 hover:-translate-y-0.5'
+                                        : 'bg-gray-50 border border-gray-200 text-gray-900 hover:bg-gray-100 hover:border-gray-300'
                                         }`}
                                 >
                                     בחר {plan.name}
@@ -432,8 +436,8 @@ export default function LandingPage() {
                     <div className="max-w-3xl mx-auto space-y-8 relative z-10">
                         <h2 className="text-4xl sm:text-5xl font-black tracking-tight">מוכנים להתקדם?</h2>
                         <p className="text-xl text-blue-100/80 leading-relaxed max-w-2xl mx-auto">
-                            הצטרפו למאות מסעדות שכבר עברו למודל קבוע והתחילו לחסוך עמלות כבר מההזמנה הראשונה.
-                        </p>
+                            הצטרפו למסעדות הראשונות שעוברות למודל קבוע
+                            והתחילו לחסוך עמלות כבר מההזמנה הראשונה                         </p>
                         <div className="pt-4">
                             <Link
                                 to="/register-restaurant"
@@ -443,7 +447,7 @@ export default function LandingPage() {
                                 <FaArrowLeft className="text-brand-primary" />
                             </Link>
                         </div>
-                        <p className="text-sm text-white/30 font-medium">ללא התחייבות • ללא כרטיס אשראי • שירות אישי</p>
+                        <p className="text-sm text-white/30 font-medium">ללא התחייבות • שירות אישי</p>
                     </div>
                 </section>
 

@@ -16,7 +16,7 @@ return [
             'endpoint' => env('SMS_019_ENDPOINT', 'https://019sms.co.il/api'),
             'token' => env('SMS_019_TOKEN'),
             'username' => env('SMS_019_USERNAME'),
-            'source' => env('SMS_019_SOURCE', 'ChefSync'),
+            'source' => env('SMS_019_SOURCE', 'TakeEat'),
             'timeout' => (int) env('SMS_019_TIMEOUT', 10),
         ],
     ],

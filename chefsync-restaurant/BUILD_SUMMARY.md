@@ -1,4 +1,4 @@
-# Build Summary - ChefSync Project
+# Build Summary - TakeEat Project
 
 ## ✅ Completed
 

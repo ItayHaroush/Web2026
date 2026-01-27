@@ -1,4 +1,4 @@
-# API Documentation - ChefSync
+# API Documentation - TakeEat
 
 API ללא סליקה לניהול הזמנות למסעדות במערכת Multi-Tenant.
 

@@ -328,7 +328,7 @@ export default function HomePage() {
                             {restaurants.filter(r => r.logo_url).length > 0 && (
                                 <div className="w-full max-w-5xl overflow-hidden relative group/ticker pb-2">
                                     <p className="text-[10px] sm:text-xs font-black text-white uppercase tracking-[0.4em] mb-3 sm:mb-4 drop-shadow-sm opacity-80">
-                                        הנבחרת של ChefSync
+                                        הנבחרת של TakeEat
                                     </p>
                                     <div className="animate-ticker flex gap-10 sm:gap-16 items-center py-2">
                                         {/* שכפול רשימה ליצירת לופ אינסופי */}

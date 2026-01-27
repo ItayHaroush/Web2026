@@ -199,7 +199,7 @@ export default function FloatingAiAssistant() {
                                 </div>
                                 <div>
                                     <h3 className="font-black text-lg">עוזר AI</h3>
-                                    <p className="text-xs text-purple-100">סופר אדמין • מערכת ChefSync</p>
+                                    <p className="text-xs text-purple-100">סופר אדמין • מערכת TakeEat</p>
                                 </div>
                             </div>
                             {messages.length > 0 && (

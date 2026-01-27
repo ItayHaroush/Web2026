@@ -1,9 +1,9 @@
 #!/bin/bash
-# Quick Start Script for ChefSync
+# Quick Start Script for TakeEat
 
 set -e
 
-echo "🚀 ChefSync - Quick Start"
+echo "🚀 TakeEat - Quick Start"
 echo "========================"
 
 # Frontend Setup

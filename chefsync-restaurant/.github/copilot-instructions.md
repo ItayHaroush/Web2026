@@ -1,8 +1,8 @@
-# ChefSync Codebase Guide for AI Agents
+# TakeEat Codebase Guide for AI Agents
 
 ## Project Overview
 
-**ChefSync** is a multi-tenant restaurant ordering PWA (React + Laravel). Each restaurant operates as an isolated tenant with separate data, while sharing the same infrastructure.
+**TakeEat** is a multi-tenant restaurant ordering PWA (React + Laravel). Each restaurant operates as an isolated tenant with separate data, while sharing the same infrastructure.
 
 - **Frontend:** React 19 + Vite + Tailwind CSS (RTL/Hebrew)
 - **Backend:** Laravel 11 API + MySQL

@@ -1,9 +1,9 @@
 export const PRODUCT_NAME = 'TakeEat';
 // Company legal/official name (contracts, legal docs, invoices, etc.)
-export const COMPANY_LEGAL_NAME = 'ChefSync IL';
+export const COMPANY_LEGAL_NAME = 'TakeEat IL';
 
 // Company brand name for small "by ..." placements
-export const COMPANY_BRAND_NAME = 'ChefSync';
+export const COMPANY_BRAND_NAME = 'TakeEat';
 
 export const PRODUCT_TAGLINE_HE = 'הזמנות למסעדה בקלות';
 export const PRODUCT_BYLINE_HE = `מבית ${COMPANY_BRAND_NAME}`;

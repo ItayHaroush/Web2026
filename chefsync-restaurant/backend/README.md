@@ -1,4 +1,4 @@
-# ChefSync Backend - Laravel API
+# TakeEat Backend - Laravel API
 
 Backend API לאפליקציית הזמנות למסעדות בעמדה רבת-ערים (Multi-Tenant).
 
