@@ -1,4 +1,4 @@
-# Frontend - ChefSync
+# Frontend - TakeEat
 
 React + Vite PWA עם עברית וRTL מלא
 
@@ -52,4 +52,4 @@ VITE_API_URL=http://localhost:8000/api
 
 ---
 
-ChefSync IL Frontend © 2026
+TakeEat IL Frontend © 2026

@@ -71,7 +71,7 @@ received  → preparing → ready → delivered
 ## 📂 מבנה קבצים
 
 ```
-chefsync-restaurant/
+TakeEat-restaurant/
 ├── README.md                  # סקירה כללית
 ├── BUILD_SUMMARY.md           # סיכום בנייה זה
 ├── start.sh                   # Quick start script

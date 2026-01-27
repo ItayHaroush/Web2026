@@ -8,7 +8,7 @@ export default function DashboardSidebar({
     toggleSidebar,
     toggleCollapse,
     menuItems,
-    title = 'ChefSync',
+    title = 'TakeEat',
     onLogout
 }) {
     const showCollapsed = isCollapsed && !isOpen;

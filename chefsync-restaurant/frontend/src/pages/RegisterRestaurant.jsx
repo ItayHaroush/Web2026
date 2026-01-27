@@ -5,7 +5,7 @@ import { requestPhoneCode } from '../services/phoneAuthService';
 import { toast } from 'react-hot-toast';
 import { isValidIsraeliMobile } from '../utils/phone';
 import { FaCheckCircle } from 'react-icons/fa';
-import { FaRocket, FaBrain } from 'react-icons/fa6';
+import { FaStore, FaBrain } from 'react-icons/fa6';
 
 // מחירים חדשים לפי tier
 const PRICING = {
@@ -160,48 +160,53 @@ export default function RegisterRestaurant() {
             <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
                 <h1 className="text-3xl font-bold text-gray-900 mb-2">הצטרפות כמסעדה</h1>
                 <p className="text-gray-600 mb-6">14 ימים ראשונים בחינם. בחרו מסלול, מלאו פרטים והתחילו להשתמש במערכת.</p>
-
                 {/* בחירת Tier */}
                 <div className="mb-8">
-                    <h2 className="text-lg font-semibold text-gray-900 mb-4">בחר תוכנית</h2>
+                    <h2 className="text-lg font-semibold text-gray-900 mb-4">בחר מסלול</h2>
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
                         <TierCard
                             tier="basic"
-                            title="Basic"
-                            subtitle="מערכת בסיסית מלאה"
+                            title="Standard"
+                            subtitle="המערכת המלאה למסעדה"
                             monthlyPrice={PRICING.basic.monthly}
                             yearlyPrice={PRICING.basic.yearly}
                             aiCredits={PRICING.basic.aiCredits}
                             features={[
-                                'ניהול תפריט מלא',
-                                'קבלת הזמנות ללא הגבלה',
-                                'ניהול עובדים',
-                                'דוחות חודשיים',
-                                'תמיכה בדואל'
+                                'דף אישי למסעדה + תפריט דיגיטלי',
+                                'מערכת הזמנות (איסוף ומשלוח)',
+                                'הגדרת אזורי משלוח והגבלות',
+                                'מסוף הזמנות למסעדה (PWA / טאבלט)',
+                                'ניהול תפריט, תוספות וקטגוריות',
+                                'תמיכה בוואטסאפ'
                             ]}
                             selected={selectedTier === 'basic'}
                             onSelect={() => setSelectedTier('basic')}
-                            icon={<FaRocket />}
+                            icon={<FaStore />}
                         />
+
                         <TierCard
                             tier="pro"
                             title="Pro"
-                            subtitle="מערכת + AI חכמה"
+                            subtitle="מערכת + סוכן חכם מלא"
                             monthlyPrice={PRICING.pro.monthly}
                             yearlyPrice={PRICING.pro.yearly}
                             aiCredits={PRICING.pro.aiCredits}
                             features={[
-                                '✨ כל התכונות של Basic',
-                                '🤖 500 קרדיטים AI לחודש',
-                                '📝 תיאורי מנות אוטומטיים',
-                                '🎯 המלצות מחיר חכמות',
-                                '⚡ תמיכה עדיפות'
+                                '✨ כל מה שיש ב־Standard',
+                                '🤖 סוכן חכם לתובנות עסקיות',
+                                '📝 שיפור תיאורי מנות',
+                                '💰 המלצות מחיר חכמות',
+                                '📊 ניתוח ביצועים',
+                                '⚡ תמיכה בעדיפות'
                             ]}
                             selected={selectedTier === 'pro'}
                             onSelect={() => setSelectedTier('pro')}
                             icon={<FaBrain />}
-                            badge="מומלץ"
+                            badge="הסוכן החכם"
                         />
+
                     </div>
                 </div>
 

@@ -1,8 +1,8 @@
-# GitHub Copilot SDK Integration - ChefSync
+# GitHub Copilot SDK Integration - TakeEat
 
 ## סקירה
 
-מערכת ChefSync משלבת את GitHub Copilot SDK להוספת יכולות AI חכמות למנהלי מסעדות ולקוחות.
+מערכת TakeEat משלבת את GitHub Copilot SDK להוספת יכולות AI חכמות למנהלי מסעדות ולקוחות.
 
 ## פיצ'רים מיושמים
 
@@ -408,7 +408,7 @@ ORDER BY created_at DESC LIMIT 10;
 
 ## License
 
-Same as ChefSync main project (proprietary).
+Same as TakeEat main project (proprietary).
 
 ---
 

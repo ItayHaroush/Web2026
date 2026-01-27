@@ -128,7 +128,7 @@
 
 ## 16) יצירת קשר
 
-דוא״ל: support@chefsync.co.il
+דוא״ל: support@TakeEat.co.il
 כתובת: עפולה, ישראל
 
 ⸻
