@@ -5,6 +5,7 @@ import { RestaurantStatusProvider } from './context/RestaurantStatusContext';
 import { CartProvider } from './context/CartContext';
 import { ToastProvider } from './context/ToastContext';
 import DevModeBanner from './components/DevModeBanner';
+import CookieConsent from './components/CookieConsent';
 import HomePage from './pages/HomePage';
 import MenuPage from './pages/MenuPage';
 import CartPage from './pages/CartPage';
@@ -338,6 +339,7 @@ export default function App() {
                 <AppRoutes />
                 <Toaster position="bottom-right" />
                 <DevModeBanner />
+                <CookieConsent />
               </CartProvider>
             </ToastProvider>
           </AuthProvider>
