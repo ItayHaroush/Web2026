@@ -26,6 +26,7 @@ class Restaurant extends Model
         'tenant_id',
         'name',
         'slug',
+        'restaurant_type',
         'phone',
         'address',
         'city',

@@ -111,4 +111,49 @@ return [
             'פיצה' => 'pizza',
         ],
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Restaurant Type Prompt Configuration
+    |--------------------------------------------------------------------------
+    | Maps restaurant types to their specific prompt files and metadata
+    */
+    'restaurant_types' => [
+        'pizza' => [
+            'label_he' => 'פיצרייה',
+            'label_en' => 'Pizzeria',
+            'prompt_file' => 'pizza.txt',
+            'keywords' => ['בצק', 'גבינה', 'תוספות', 'קריספי'],
+        ],
+        'shawarma' => [
+            'label_he' => 'שווארמה / פלאפל',
+            'label_en' => 'Shawarma / Falafel',
+            'prompt_file' => 'shawarma.txt',
+            'keywords' => ['טריות', 'מהירות', 'סלטים', 'פיתה'],
+        ],
+        'burger' => [
+            'label_he' => 'המבורגר',
+            'label_en' => 'Burger',
+            'prompt_file' => 'burger.txt',
+            'keywords' => ['פרימיום', 'עסיסי', 'גריל', 'בשר'],
+        ],
+        'bistro' => [
+            'label_he' => 'ביסטרו / שף',
+            'label_en' => 'Bistro / Chef',
+            'prompt_file' => 'bistro.txt',
+            'keywords' => ['אסתטיקה', 'דיוק', 'טכניקה', 'מובחר'],
+        ],
+        'catering' => [
+            'label_he' => 'קייטרינג',
+            'label_en' => 'Catering',
+            'prompt_file' => 'catering.txt',
+            'keywords' => ['כמות', 'סדר', 'אירוע', 'מנות גדולות'],
+        ],
+        'general' => [
+            'label_he' => 'כללי',
+            'label_en' => 'General',
+            'prompt_file' => 'general.txt',
+            'keywords' => ['טרי', 'איכותי'],
+        ],
+    ],
 ];

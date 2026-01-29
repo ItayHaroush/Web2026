@@ -34,7 +34,7 @@ export default function CookieConsent() {
                                 <span className="font-semibold">אנחנו משתמשים בעוקבים (Cookies)</span> כדי לשפר את חווית המשתמש ולנתח את השימוש באתר.
                                 המשך גלישה באתר מהווה הסכמה לשימוש בעוקבים אלו.
                                 <a
-                                    href="/privacy-policy"
+                                    href="/legal/privacy"
                                     className="text-orange-400 hover:text-orange-300 underline mr-1"
                                     target="_blank"
                                     rel="noopener noreferrer"

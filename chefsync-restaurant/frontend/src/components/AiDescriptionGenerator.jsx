@@ -100,7 +100,7 @@ const AiDescriptionGenerator = ({ menuItem, onDescriptionGenerated }) => {
             {loading && (
                 <div className="flex items-center gap-3 p-3 bg-purple-50 rounded-xl border border-purple-100 animate-pulse">
                     <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
-                    <span className="text-purple-700 text-sm font-medium">ה-AI כותב תיאור מגרה...</span>
+                    <span className="text-purple-700 text-sm font-medium">יוצר תיאור...</span>
                 </div>
             )}
 

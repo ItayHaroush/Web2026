@@ -5,7 +5,8 @@ import { requestPhoneCode } from '../services/phoneAuthService';
 import { toast } from 'react-hot-toast';
 import { isValidIsraeliMobile } from '../utils/phone';
 import { FaCheckCircle } from 'react-icons/fa';
-import { FaStore, FaBrain } from 'react-icons/fa6';
+import { FaStore, FaBrain, FaPizzaSlice, FaHamburger, FaUtensils, FaConciergeBell } from 'react-icons/fa';
+import { GiKebabSpit, GiChefToque } from 'react-icons/gi';
 
 // מחירים חדשים לפי tier
 const PRICING = {
@@ -21,6 +22,7 @@ export default function RegisterRestaurant() {
     const [form, setForm] = useState({
         name: '',
         tenant_id: '',
+        restaurant_type: 'general', // ברירת מחדל
         phone: '',
         address: '',
         city: '',
@@ -89,6 +91,9 @@ export default function RegisterRestaurant() {
 
             // הוספת tier
             formData.append('tier', selectedTier);
+            
+            // הוספת restaurant_type
+            formData.append('restaurant_type', form.restaurant_type);
 
             if (form.address) {
                 formData.append('address', form.address);
@@ -264,6 +269,41 @@ export default function RegisterRestaurant() {
                             </div>
                             <Input name="address" label="כתובת" value={form.address} onChange={handleChange} className="md:col-span-2" />
                         </div>
+                    </Section>
+
+                    <Section title="סוג המסעדה (לתוצאות AI טובות יותר)">
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                            {[ 
+                                { value: 'pizza', label: 'פיצרייה', icon: FaPizzaSlice, color: 'text-orange-600' },
+                                { value: 'shawarma', label: 'שווארמה / פלאפל', icon: GiKebabSpit, color: 'text-amber-600' },
+                                { value: 'burger', label: 'המבורגר', icon: FaHamburger, color: 'text-red-600' },
+                                { value: 'bistro', label: 'ביסטרו / שף', icon: GiChefToque, color: 'text-purple-600' },
+                                { value: 'catering', label: 'קייטרינג', icon: FaConciergeBell, color: 'text-blue-600' },
+                                { value: 'general', label: 'כללי', icon: FaUtensils, color: 'text-gray-600' },
+                            ].map(type => {
+                                const Icon = type.icon;
+                                return (
+                                    <button
+                                        key={type.value}
+                                        type="button"
+                                        onClick={() => setForm(p => ({ ...p, restaurant_type: type.value }))}
+                                        className={`p-4 rounded-xl border-2 transition-all ${
+                                            form.restaurant_type === type.value
+                                                ? 'border-brand-primary bg-brand-primary/10 shadow-md'
+                                                : 'border-gray-200 hover:border-brand-primary/50'
+                                        }`}
+                                    >
+                                        <Icon className={`text-3xl mb-1 mx-auto ${type.color}`} />
+                                        <div className="text-sm font-medium text-gray-900">{type.label}</div>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                        {form.restaurant_type === 'general' && (
+                            <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
+                                💡 בחירת סוג ספציפי תשפר את תיאורי המנות מה-AI
+                            </div>
+                        )}
                     </Section>
 
                     <Section title="פרטי בעלים">

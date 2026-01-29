@@ -49,7 +49,7 @@ const AiPriceRecommender = ({ itemData, onPriceRecommended }) => {
             } else if (err.response?.status === 429) {
                 setError('חרגת ממגבלת השימוש. נסה שוב בעוד כמה דקות');
             } else {
-                setError(err.response?.data?.message || 'לא ניתן לקבל המלצה כרגע');
+                setError(err.response?.data?.message || 'לא הצלחנו לקבל המלצה');
             }
         } finally {
             setLoading(false);

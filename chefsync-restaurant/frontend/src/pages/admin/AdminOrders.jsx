@@ -630,7 +630,7 @@ export default function AdminOrders() {
                                                 value={etaNote}
                                                 onChange={(e) => setEtaNote(e.target.value)}
                                                 className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 text-sm font-black focus:ring-2 focus:ring-brand-primary group-hover:bg-slate-100"
-                                                placeholder="* ייתכן עיכוב"
+                                                placeholder="עיכוב אפשרי"
                                             />
                                         </div>
                                     </div>

@@ -24,8 +24,13 @@ import {
     FaGlobe,
     FaLock,
     FaUndo,
-    FaEye
+    FaEye,
+    FaPizzaSlice,
+    FaHamburger,
+    FaUtensils,
+    FaConciergeBell
 } from 'react-icons/fa';
+import { GiKebabSpit, GiChefToque } from 'react-icons/gi';
 
 const DAYS_OF_WEEK = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 
@@ -155,6 +160,10 @@ export default function AdminRestaurant() {
             if (response.data.success) {
                 const normalized = {
                     ...response.data.restaurant,
+                    // המרה מפורשת לבוליאן כדי להימנע מבעיות עם 0/1
+                    is_open: Boolean(response.data.restaurant.is_open),
+                    is_override_status: Boolean(response.data.restaurant.is_override_status),
+                    is_approved: Boolean(response.data.restaurant.is_approved),
                     operating_hours: normalizeOperatingHours(response.data.restaurant.operating_hours),
                 };
                 normalized.operating_hours = buildOperatingHoursPayload(
@@ -477,6 +486,42 @@ export default function AdminRestaurant() {
                                         className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-brand-primary text-gray-900 font-bold transition-all resize-none"
                                         placeholder="ספר קצת על המסעדה שלך..."
                                     />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-sm font-black text-gray-700 mr-1">סוג מסעדה (לתוצאות AI)</label>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {[ 
+                                            { value: 'pizza', label: 'פיצה', icon: FaPizzaSlice, color: 'text-orange-600' },
+                                            { value: 'shawarma', label: 'שווארמה', icon: GiKebabSpit, color: 'text-amber-600' },
+                                            { value: 'burger', label: 'המבורגר', icon: FaHamburger, color: 'text-red-600' },
+                                            { value: 'bistro', label: 'ביסטרו', icon: GiChefToque, color: 'text-purple-600' },
+                                            { value: 'catering', label: 'קייטרינג', icon: FaConciergeBell, color: 'text-blue-600' },
+                                            { value: 'general', label: 'כללי', icon: FaUtensils, color: 'text-gray-600' },
+                                        ].map(type => {
+                                            const Icon = type.icon;
+                                            return (
+                                                <button
+                                                    key={type.value}
+                                                    type="button"
+                                                    onClick={() => handleChange('restaurant_type', type.value)}
+                                                    className={`p-3 rounded-xl border-2 transition-all ${
+                                                        (restaurant.restaurant_type || 'general') === type.value
+                                                            ? 'border-brand-primary bg-brand-primary/10 shadow-md'
+                                                            : 'border-gray-200 hover:border-brand-primary/50'
+                                                    }`}
+                                                >
+                                                    <Icon className={`text-2xl mb-1 mx-auto ${type.color}`} />
+                                                    <div className="text-xs font-medium text-gray-900">{type.label}</div>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                    {(!restaurant.restaurant_type || restaurant.restaurant_type === 'general') && (
+                                        <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded-lg text-xs text-yellow-800">
+                                            💡 בחר סוג ספציפי לשיפור תיאורי AI
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="space-y-2">
