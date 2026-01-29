@@ -13,9 +13,9 @@ return new class extends Migration
     {
         Schema::table('restaurants', function (Blueprint $table) {
             $table->enum('restaurant_type', ['pizza', 'shawarma', 'burger', 'bistro', 'catering', 'general'])
-                  ->default('general')
-                  ->after('slug')
-                  ->comment('סוג המסעדה - משפיע על prompts של AI');
+                ->default('general')
+                ->after('slug')
+                ->comment('סוג המסעדה - משפיע על prompts של AI');
         });
     }
 

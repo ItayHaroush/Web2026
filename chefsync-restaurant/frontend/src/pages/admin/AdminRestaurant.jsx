@@ -491,7 +491,7 @@ export default function AdminRestaurant() {
                                 <div className="space-y-2">
                                     <label className="text-sm font-black text-gray-700 mr-1">סוג מסעדה (לתוצאות AI)</label>
                                     <div className="grid grid-cols-3 gap-2">
-                                        {[ 
+                                        {[
                                             { value: 'pizza', label: 'פיצה', icon: FaPizzaSlice, color: 'text-orange-600' },
                                             { value: 'shawarma', label: 'שווארמה', icon: GiKebabSpit, color: 'text-amber-600' },
                                             { value: 'burger', label: 'המבורגר', icon: FaHamburger, color: 'text-red-600' },
@@ -505,11 +505,10 @@ export default function AdminRestaurant() {
                                                     key={type.value}
                                                     type="button"
                                                     onClick={() => handleChange('restaurant_type', type.value)}
-                                                    className={`p-3 rounded-xl border-2 transition-all ${
-                                                        (restaurant.restaurant_type || 'general') === type.value
+                                                    className={`p-3 rounded-xl border-2 transition-all ${(restaurant.restaurant_type || 'general') === type.value
                                                             ? 'border-brand-primary bg-brand-primary/10 shadow-md'
                                                             : 'border-gray-200 hover:border-brand-primary/50'
-                                                    }`}
+                                                        }`}
                                                 >
                                                     <Icon className={`text-2xl mb-1 mx-auto ${type.color}`} />
                                                     <div className="text-xs font-medium text-gray-900">{type.label}</div>

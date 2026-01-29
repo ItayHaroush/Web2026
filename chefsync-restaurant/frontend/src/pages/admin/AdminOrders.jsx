@@ -363,8 +363,8 @@ export default function AdminOrders() {
                                 key={option.value}
                                 onClick={() => setFilterStatus(option.value)}
                                 className={`px-4 py-2.5 rounded-2xl font-black text-[11px] uppercase tracking-wider transition-all flex items-center gap-2.5 group relative ${isActive
-                                        ? 'bg-gray-900 text-white shadow-lg'
-                                        : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
+                                    ? 'bg-gray-900 text-white shadow-lg'
+                                    : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
                                     }`}
                             >
                                 <span className={`${isActive ? 'text-white' : 'text-gray-400 group-hover:text-brand-primary'} transition-colors`}>
@@ -416,8 +416,8 @@ export default function AdminOrders() {
                                             key={order.id}
                                             onClick={() => setSelectedOrder(order)}
                                             className={`p-4 sm:p-5 cursor-pointer transition-all relative group ${isSelected
-                                                    ? 'bg-brand-primary/5'
-                                                    : 'hover:bg-gray-50/80 active:bg-gray-100'
+                                                ? 'bg-brand-primary/5'
+                                                : 'hover:bg-gray-50/80 active:bg-gray-100'
                                                 }`}
                                         >
                                             {/* אינדיקטור בחירה */}
@@ -428,8 +428,8 @@ export default function AdminOrders() {
                                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                                 <div className="flex items-center gap-4">
                                                     <div className={`w-14 h-14 rounded-2xl border flex flex-col items-center justify-center shrink-0 transition-transform group-hover:scale-105 ${isPending
-                                                            ? 'bg-amber-50 border-amber-200 shadow-[0_0_10px_rgba(251,191,36,0.3)] animate-pulse'
-                                                            : isSelected ? 'bg-white border-brand-primary/30 shadow-md' : 'bg-white border-gray-100 shadow-sm'
+                                                        ? 'bg-amber-50 border-amber-200 shadow-[0_0_10px_rgba(251,191,36,0.3)] animate-pulse'
+                                                        : isSelected ? 'bg-white border-brand-primary/30 shadow-md' : 'bg-white border-gray-100 shadow-sm'
                                                         }`}>
                                                         <span className="text-[10px] font-black text-gray-400 tracking-tighter leading-none">#</span>
                                                         <span className={`text-sm font-black mt-0.5 ${isPending ? 'text-amber-700' : 'text-gray-900'}`}>{order.id}</span>
