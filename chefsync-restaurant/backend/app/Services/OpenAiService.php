@@ -271,24 +271,13 @@ class OpenAiService extends BaseAiService
             $categories = $context['active_categories'] ?? 0;
             $pendingOrders = $context['pending_orders'] ?? 0;
 
-            $prompt = "אתה יועץ עסקי למסעדות בישראל. נתח את נתוני הדשבורד הבאים עבור מסעדת \"{$restaurantName}\":\n\n"
-                . "📊 סטטיסטיקות:\n"
-                . "- הזמנות היום: {$ordersToday}\n"
-                . "- הזמנות השבוע: {$ordersWeek}\n"
-                . "- הזמנות החודש: {$ordersMonth}\n"
-                . "- הכנסות היום: ₪{$revenueToday}\n"
-                . "- הכנסות השבוע: ₪{$revenueWeek}\n"
-                . "- פריטים בתפריט: {$menuItems}\n"
-                . "- קטגוריות פעילות: {$categories}\n"
-                . "- הזמנות ממתינות: {$pendingOrders}\n\n"
-                . "החזר תשובה בפורמט JSON הבא בעברית:\n"
-                . "{\n"
-                . '  "sales_trend": "ניתוח מגמת המכירות - האם עולות/יורדות/יציבות",' . "\n"
-                . '  "top_performers": "הפריטים/קטגוריות המובילים (על סמך הנתונים)",' . "\n"
-                . '  "peak_times": "ניתוח זמני העומס והשקט",' . "\n"
-                . '  "recommendations": ["המלצה 1", "המלצה 2", "המלצה 3"],' . "\n"
-                . '  "alert": "אזהרה חשובה אם יש (או null)"' . "\n"
-                . "}\n\nהחזר רק JSON, ללא טקסט נוסף.";
+            $prompt = "נתח נתוני דשבורד \"{$restaurantName}\". החזר JSON:\n\n"
+                . "הזמנות: יום={$ordersToday}, שבוע={$ordersWeek}, חודש={$ordersMonth}\n"
+                . "הכנסות: יום=₪{$revenueToday}, שבוע=₪{$revenueWeek}\n"
+                . "תפריט: {$menuItems} מנות, {$categories} קטגוריות\n"
+                . "ממתינות: {$pendingOrders}\n\n"
+                . '{"sales_trend": "עולות/יורדות/יציבות", "top_performers": "מה מוביל", '
+                . '"peak_times": "זמני עומס", "recommendations": ["המלצה1", "המלצה2"], "alert": null}';
 
             $response = $this->callOpenAi($prompt);
             $responseTime = (int)((microtime(true) - $startTime) * 1000);
@@ -373,23 +362,14 @@ class OpenAiService extends BaseAiService
         try {
             $this->validateAccess($feature, $this->restaurant, $this->user);
 
-            $prompt = "אתה יועץ תמחור למסעדות בישראל. נתח את הפריט הבא והמלץ על מחיר הוגן:\n\n"
+            $prompt = "המלץ מחיר למנה. החזר JSON:\n\n"
                 . "שם: " . ($menuItemData['name'] ?? 'לא צוין') . "\n"
                 . "קטגוריה: " . ($menuItemData['category_name'] ?? 'לא צוין') . "\n"
                 . "תיאור: " . ($menuItemData['description'] ?? 'לא צוין') . "\n"
                 . "מחיר נוכחי: " . ($menuItemData['price'] ?? 'אין') . " ₪\n\n"
-                . "החזר תשובה בפורמט JSON הבא:\n"
-                . "{\n"
-                . '  "recommended_price": 45.00,' . "\n"
-                . '  "confidence": "high/medium/low",' . "\n"
-                . '  "reasoning": "הסבר קצר בעברית למה המחיר הזה הגיוני",' . "\n"
-                . '  "market_data": {' . "\n"
-                . '    "min_price": 35.00,' . "\n"
-                . '    "avg_price": 42.00,' . "\n"
-                . '    "max_price": 55.00' . "\n"
-                . '  },' . "\n"
-                . '  "factors": ["מרכיבים איכותיים", "גודל מנה", "תחרות"]' . "\n"
-                . "}\n\nהחזר רק JSON, ללא טקסט נוסף.";
+                . '{"recommended_price": 45.00, "confidence": "high", "reasoning": "סיבה קצרה", '
+                . '"market_data": {"min_price": 35, "avg_price": 42, "max_price": 55}, '
+                . '"factors": ["מרכיב1", "מרכיב2"]}';
 
             $response = $this->callOpenAi($prompt);
             $responseTime = (int)((microtime(true) - $startTime) * 1000);
@@ -610,11 +590,50 @@ class OpenAiService extends BaseAiService
      */
     private function buildDescriptionPrompt(array $menuItemData): string
     {
-        $name = $menuItemData['name'] ?? 'Unknown';
-        $category = $menuItemData['category'] ?? 'Food';
-        $price = $menuItemData['price'] ?? 0;
+        $restaurantType = $this->restaurant->restaurant_type ?? 'general';
+        $promptFile = config("ai.restaurant_types.{$restaurantType}.prompt_file", 'general.txt');
+        $promptPath = storage_path("prompts/{$promptFile}");
 
-        return "צור תיאור מפתה וטעים לפריט תפריט זה:\n\nשם: {$name}\nקטגוריה: {$category}\nמחיר: ₪{$price}\n\nספק תיאור של 2-3 משפטים בעברית.";
+        // Load prompt template from file
+        if (file_exists($promptPath)) {
+            $template = file_get_contents($promptPath);
+        } else {
+            // Fallback to general if file not found
+            $fallbackPath = storage_path('prompts/general.txt');
+            $template = file_exists($fallbackPath) ? file_get_contents($fallbackPath) : $this->getFallbackPrompt();
+        }
+
+        // Prepare data
+        $name = $menuItemData['name'] ?? 'Unknown';
+        $price = $menuItemData['price'] ?? 0;
+        $category = $menuItemData['category'] ?? 'Food';
+        $allergens = $menuItemData['allergens'] ?? [];
+        $isVegetarian = $menuItemData['is_vegetarian'] ?? false;
+        $isVegan = $menuItemData['is_vegan'] ?? false;
+
+        // Build allergens and diet text
+        $allergensText = empty($allergens) ? '' : "אלרגנים: " . implode(', ', $allergens) . "\n";
+        $dietText = '';
+        if ($isVegan) {
+            $dietText = "מתאים לטבעונים\n";
+        } elseif ($isVegetarian) {
+            $dietText = "מתאים לצמחונים\n";
+        }
+
+        // Replace placeholders
+        return str_replace(
+            ['{name}', '{price}', '{category}', '{allergens}', '{dietary}'],
+            [$name, $price, $category, $allergensText, $dietText],
+            $template
+        );
+    }
+
+    /**
+     * Fallback prompt if files missing
+     */
+    private function getFallbackPrompt(): string
+    {
+        return "כתוב תיאור אפטיטי למנה (1-2 משפטים):\n\nשם: {name}\nמחיר: ₪{price}\nקטגוריה: {category}\n{allergens}{dietary}\n\nהחזר רק תיאור בעברית.";
     }
 
     /**

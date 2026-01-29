@@ -125,6 +125,20 @@ class CopilotService
      */
     private function buildDescriptionPrompt(array $menuItemData): string
     {
+        $restaurantType = $this->restaurant->restaurant_type ?? 'general';
+        $promptFile = config("ai.restaurant_types.{$restaurantType}.prompt_file", 'general.txt');
+        $promptPath = storage_path("prompts/{$promptFile}");
+
+        // Load prompt template from file
+        if (file_exists($promptPath)) {
+            $template = file_get_contents($promptPath);
+        } else {
+            // Fallback to general if file not found
+            $fallbackPath = storage_path('prompts/general.txt');
+            $template = file_exists($fallbackPath) ? file_get_contents($fallbackPath) : $this->getFallbackPrompt();
+        }
+
+        // Prepare data
         $name = $menuItemData['name'] ?? '';
         $price = $menuItemData['price'] ?? 0;
         $category = $menuItemData['category'] ?? '';
@@ -132,39 +146,29 @@ class CopilotService
         $isVegetarian = $menuItemData['is_vegetarian'] ?? false;
         $isVegan = $menuItemData['is_vegan'] ?? false;
 
-        // Build allergens text
-        $allergensText = empty($allergens) ? '' : "\nאלרגנים: " . implode(', ', $allergens);
+        // Build allergens and diet text
+        $allergensText = empty($allergens) ? '' : "אלרגנים: " . implode(', ', $allergens) . "\n";
         $dietText = '';
         if ($isVegan) {
-            $dietText = "\nמתאים לטבעונים";
+            $dietText = "מתאים לטבעונים\n";
         } elseif ($isVegetarian) {
-            $dietText = "\nמתאים לצמחונים";
+            $dietText = "מתאים לצמחונים\n";
         }
 
-        $systemPrompt = "אתה כותב מקצועי שמתמחה ביצירת תיאורים מושכים ואפטיטיים לפריטי תפריט במסעדות ישראליות. התיאורים שלך צריכים להיות:\n";
-        $systemPrompt .= "- בעברית תקנית וזורמת\n";
-        $systemPrompt .= "- קצרים ותמציתיים (1-3 משפטים)\n";
-        $systemPrompt .= "- מעוררי תיאבון ומפתים\n";
-        $systemPrompt .= "- מדגישים את הייחודיות והטריות של המנה\n";
-        $systemPrompt .= "- מתאימים לטון של מסעדה ישראלית\n\n";
+        // Replace placeholders
+        return str_replace(
+            ['{name}', '{price}', '{category}', '{allergens}', '{dietary}'],
+            [$name, $price, $category, $allergensText, $dietText],
+            $template
+        );
+    }
 
-        // Add glossary context
-        $systemPrompt .= "מונחים נפוצים:\n";
-        foreach (config('copilot.language.glossary', []) as $hebrew => $english) {
-            $systemPrompt .= "- {$hebrew}\n";
-        }
-
-        $userPrompt = "צור תיאור מושך למנה הבאה:\n\n";
-        $userPrompt .= "שם המנה: {$name}\n";
-        $userPrompt .= "מחיר: ₪{$price}\n";
-        if ($category) {
-            $userPrompt .= "קטגוריה: {$category}\n";
-        }
-        $userPrompt .= $allergensText;
-        $userPrompt .= $dietText;
-        $userPrompt .= "\n\nהחזר רק את התיאור בעברית, ללא כותרות או הסברים נוספים.";
-
-        return $systemPrompt . "\n\n" . $userPrompt;
+    /**
+     * Fallback prompt if files missing
+     */
+    private function getFallbackPrompt(): string
+    {
+        return "כתוב תיאור אפטיטי למנה (1-2 משפטים):\n\nשם: {name}\nמחיר: ₪{price}\nקטגוריה: {category}\n{allergens}{dietary}\n\nהחזר רק תיאור בעברית.";
     }
 
     /**
