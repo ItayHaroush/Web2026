@@ -91,7 +91,7 @@ export default function RegisterRestaurant() {
 
             // הוספת tier
             formData.append('tier', selectedTier);
-            
+
             // הוספת restaurant_type
             formData.append('restaurant_type', form.restaurant_type);
 
@@ -273,7 +273,7 @@ export default function RegisterRestaurant() {
 
                     <Section title="סוג המסעדה (לתוצאות AI טובות יותר)">
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                            {[ 
+                            {[
                                 { value: 'pizza', label: 'פיצרייה', icon: FaPizzaSlice, color: 'text-orange-600' },
                                 { value: 'shawarma', label: 'שווארמה / פלאפל', icon: GiKebabSpit, color: 'text-amber-600' },
                                 { value: 'burger', label: 'המבורגר', icon: FaHamburger, color: 'text-red-600' },
@@ -287,11 +287,10 @@ export default function RegisterRestaurant() {
                                         key={type.value}
                                         type="button"
                                         onClick={() => setForm(p => ({ ...p, restaurant_type: type.value }))}
-                                        className={`p-4 rounded-xl border-2 transition-all ${
-                                            form.restaurant_type === type.value
+                                        className={`p-4 rounded-xl border-2 transition-all ${form.restaurant_type === type.value
                                                 ? 'border-brand-primary bg-brand-primary/10 shadow-md'
                                                 : 'border-gray-200 hover:border-brand-primary/50'
-                                        }`}
+                                            }`}
                                     >
                                         <Icon className={`text-3xl mb-1 mx-auto ${type.color}`} />
                                         <div className="text-sm font-medium text-gray-900">{type.label}</div>
