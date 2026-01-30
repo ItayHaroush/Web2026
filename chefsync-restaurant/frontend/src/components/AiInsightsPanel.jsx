@@ -10,12 +10,16 @@ const AiInsightsPanel = () => {
     const [isOpen, setIsOpen] = useState(false);
     const hasFetchedRef = useRef(false);
 
-    const fetchInsights = async () => {
+    const fetchInsights = async (force = false) => {
         try {
             setLoading(true);
             setError(null);
 
-            const { data } = await apiClient.get('/admin/ai/dashboard-insights');
+            const url = force 
+                ? '/admin/ai/dashboard-insights?force_regenerate=1' 
+                : '/admin/ai/dashboard-insights';
+
+            const { data } = await apiClient.get(url);
 
             if (data.success) {
                 // Handle graceful degradation where backend sends success:true but includes inner error
@@ -87,7 +91,7 @@ const AiInsightsPanel = () => {
                         <button
                             onClick={(e) => {
                                 e.stopPropagation();
-                                fetchInsights();
+                                fetchInsights(true);
                             }}
                             className="p-2 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-full transition-all"
                             title="רענן ניתוח"

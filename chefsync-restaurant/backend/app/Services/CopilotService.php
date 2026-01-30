@@ -1508,6 +1508,86 @@ PROMPT;
     }
 
     /**
+     * Get dashboard insights
+     */
+    public function getDashboardInsights(array $context): array
+    {
+        $feature = 'dashboard_insights';
+        $creditsRequired = 1;
+
+        $this->validateAccess($feature);
+
+        $restaurantName = $context['restaurant_name'] ?? 'המסעדה';
+        $ordersToday = $context['orders_today'] ?? 0;
+        $ordersWeek = $context['orders_week'] ?? 0;
+        $ordersMonth = $context['orders_month'] ?? 0;
+        $revenueToday = $context['revenue_today'] ?? 0;
+        $revenueWeek = $context['revenue_week'] ?? 0;
+        $menuItems = $context['total_menu_items'] ?? 0;
+        $categories = $context['active_categories'] ?? 0;
+        $pendingOrders = $context['pending_orders'] ?? 0;
+
+        $prompt = "אתה יועץ עסקי למסעדות. נתח את הנתונים והחזר JSON בלבד:\n\n"
+            . "מסעדה: \"{$restaurantName}\"\n"
+            . "הזמנות: יום={$ordersToday}, שבוע={$ordersWeek}, חודש={$ordersMonth}\n"
+            . "הכנסות: יום=₪{$revenueToday}, שבוע=₪{$revenueWeek}\n"
+            . "תפריט: {$menuItems} מנות, {$categories} קטגוריות\n"
+            . "ממתינות: {$pendingOrders}\n\n"
+            . "מבנה ה-JSON הנדרש:\n"
+            . '{"sales_trend": "טקסט קצר על המגמה", "top_performers": "מה מוביל (טקסט)", '
+            . '"peak_times": "זיהוי עומס (טקסט)", "recommendations": ["המלצה1", "המלצה2", "המלצה3"], "alert": "התראה קריטית או null"}';
+
+        // Call Copilot
+        $response = $this->callCopilot($prompt, [
+            'temperature' => 0.7
+        ]);
+
+        $content = $response['content'] ?? '';
+        $result = null;
+
+        if (preg_match('/\{[\s\S]*\}/', $content, $matches)) {
+            $parsed = json_decode($matches[0], true);
+            if ($parsed) {
+                $result = array_merge([
+                    'sales_trend' => 'אין נתונים',
+                    'top_performers' => 'אין נתונים',
+                    'peak_times' => 'אין נתונים',
+                    'recommendations' => [],
+                    'alert' => null,
+                    'provider' => 'copilot_cli'
+                ], $parsed);
+            }
+        }
+
+        if (!$result) {
+            // Fallback mock if JSON fails
+            $result = [
+                'sales_trend' => 'מגמת מכירות יציבה',
+                'top_performers' => 'נתונים בתהליך עיבוד',
+                'peak_times' => 'נדרש עוד מידע לזיהוי שעות עומס',
+                'recommendations' => ['בדוק את מלאי המנות הפופולריות', 'רענן את התמונות בתפריט'],
+                'alert' => null,
+                'provider' => 'copilot_mock_fallback'
+            ];
+        }
+
+        // Log usage
+        $this->logUsage(
+            $feature,
+            'analyze',
+            $creditsRequired,
+            $response['tokens'] ?? 0,
+            false,
+            null,
+            'success',
+            $prompt,
+            json_encode($result)
+        );
+
+        return $result;
+    }
+
+    /**
      * Build Hebrew prompt for price recommendation
      */
     private function buildPricingPrompt(array $itemData, array $marketData): string
@@ -1522,8 +1602,11 @@ PROMPT;
         $prompt .= "שם: {$name}\n";
         $prompt .= "קטגוריה: {$categoryName}\n";
 
-        if ($description) {
-            $prompt .= "תיאור: {$description}\n";
+        if (!empty($description)) {
+            $cleanedDescription = preg_replace('/\s+/', ' ', trim($description));
+            $prompt .= "תיאור המנה (חשוב): {$cleanedDescription}\n";
+        } else {
+            $prompt .= "תיאור: לא צוין (הסתמך על השם והקטגוריה)\n";
         }
 
         if ($currentPrice !== null) {
