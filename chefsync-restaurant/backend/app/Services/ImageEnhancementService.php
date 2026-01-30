@@ -122,7 +122,11 @@ class ImageEnhancementService
             throw new \Exception('אינדקס לא תקין');
         }
 
-        $selectedPath = $enhancement->variations[$selectedIndex];
+        // Support both old format (string) and new format (object with 'path')
+        $variationData = $enhancement->variations[$selectedIndex];
+        $selectedPath = is_array($variationData) && isset($variationData['path']) 
+            ? $variationData['path'] 
+            : $variationData;
 
         // עדכון הרשומה
         $enhancement->update([
