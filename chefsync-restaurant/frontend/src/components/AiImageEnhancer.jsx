@@ -25,6 +25,64 @@ export default function AiImageEnhancer({ onComplete, menuItem = null, buttonCla
 
     const { addToast } = useToast();
 
+    /**
+     * דחיסת תמונה ל-JPEG עם איכות 85%
+     * מקטין תמונות גדולות כדי להיות מתחת ל-2MB (הגבלת PHP)
+     */
+    const compressImage = (file) => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+
+                    // אם התמונה גדולה מ-2048px, הקטן אותה
+                    const maxDimension = 2048;
+                    if (width > maxDimension || height > maxDimension) {
+                        if (width > height) {
+                            height = (height * maxDimension) / width;
+                            width = maxDimension;
+                        } else {
+                            width = (width * maxDimension) / height;
+                            height = maxDimension;
+                        }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    // המרה ל-JPEG עם איכות 85%
+                    canvas.toBlob(
+                        (blob) => {
+                            if (!blob) {
+                                reject(new Error('Failed to compress image'));
+                                return;
+                            }
+                            // יצירת File חדש עם הגודל המקוטן
+                            const compressedFile = new File([blob], file.name.replace(/\.\w+$/, '.jpg'), {
+                                type: 'image/jpeg',
+                                lastModified: Date.now(),
+                            });
+                            resolve(compressedFile);
+                        },
+                        'image/jpeg',
+                        0.85
+                    );
+                };
+                img.onerror = () => reject(new Error('Failed to load image'));
+                img.src = e.target.result;
+            };
+            reader.onerror = () => reject(new Error('Failed to read file'));
+            reader.readAsDataURL(file);
+        });
+    };
+
     const backgroundOptions = [
         { value: 'marble', label: 'שיש מרשים', icon: <GiStoneBlock size={32} /> },
         { value: 'wood', label: 'עץ חם', icon: <GiWoodBeam size={32} /> },
@@ -37,7 +95,7 @@ export default function AiImageEnhancer({ onComplete, menuItem = null, buttonCla
         { value: 'hands', label: 'עם ידיים', icon: <IoMdHand size={32} /> },
     ];
 
-    const handleFileChange = (e) => {
+    const handleFileChange = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
 
@@ -47,15 +105,37 @@ export default function AiImageEnhancer({ onComplete, menuItem = null, buttonCla
             return;
         }
 
-        // בדיקת גודל (מקס 5MB)
-        if (file.size > 5 * 1024 * 1024) {
-            addToast('גודל התמונה חייב להיות עד 5MB', 'error');
+        // בדיקת גודל ראשוני
+        const maxSize = 10 * 1024 * 1024; // 10MB לפני דחיסה
+        if (file.size > maxSize) {
+            addToast('התמונה גדולה מדי! גודל מקסימלי: 10MB', 'error');
             return;
         }
 
-        setUploadedFile(file);
-        setPreviewUrl(URL.createObjectURL(file));
-        setStep(2);
+        try {
+            // דחיסת התמונה תמיד (למנוע בעיות עם הגבלת PHP 2MB)
+            addToast('מכין את התמונה...', 'info');
+            const compressedFile = await compressImage(file);
+
+            console.log('📸 Image compressed:', {
+                original: `${(file.size / 1024).toFixed(1)}KB`,
+                compressed: `${(compressedFile.size / 1024).toFixed(1)}KB`,
+                saved: `${((1 - compressedFile.size / file.size) * 100).toFixed(1)}%`
+            });
+
+            // בדיקה שהדחיסה הצליחה להביא מתחת ל-2MB
+            if (compressedFile.size > 2 * 1024 * 1024) {
+                addToast('התמונה גדולה מדי גם אחרי דחיסה. נסה תמונה קטנה יותר', 'error');
+                return;
+            }
+
+            setUploadedFile(compressedFile);
+            setPreviewUrl(URL.createObjectURL(compressedFile));
+            setStep(2);
+        } catch (error) {
+            console.error('Error compressing image:', error);
+            addToast('שגיאה בעיבוד התמונה', 'error');
+        }
     };
 
     const handleGenerate = async () => {
