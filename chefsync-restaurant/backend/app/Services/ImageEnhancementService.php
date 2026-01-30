@@ -183,19 +183,191 @@ class ImageEnhancementService
     }
 
     /**
-     * בניית Prompt לפי חוקים סגורים (Rule-Based System)
+     * בניית Prompt לפי חוקים סגורים (Rule-Based System) או Preset System
      * 
-     * @param array $options [category, subType, serving, level, background]
+     * @param array $options [category, presentation, dish_name, description, etc.]
      * @return array ['positive' => string, 'negative' => string, 'strength' => float]
      */
     private function buildPrompt(array $options = []): array
     {
+        // נסיון לטעון Preset System (חדש)
+        $presets = config('ai.image_presets');
+        
+        if ($presets) {
+            // ✅ Preset System זמין
+            return $this->buildPromptFromPreset($options);
+        }
+        
+        // ⚠️ Fallback: Rule-Based System (ישן)
+        Log::warning('⚠️ image_presets not found, falling back to old prompt_rules');
+        return $this->buildPromptFromRules($options);
+    }
+
+    /**
+     * בניית Prompt מ-Preset System (חדש)
+     */
+    private function buildPromptFromPreset(array $options): array
+    {
+        $presets = config('ai.image_presets');
+        $baseNegative = config('ai.base_negative', 'blurry, low quality');
+
+        // 1️⃣ בחירת Preset
+        $presetKey = $this->selectPreset($options);
+        
+        if (!isset($presets[$presetKey])) {
+            Log::warning('⚠️ Preset not found', ['key' => $presetKey]);
+            $presetKey = 'generic_food';
+        }
+
+        if (!isset($presets[$presetKey])) {
+            // Fallback אם גם generic לא קיים
+            return [
+                'positive' => 'professional food photography, clean presentation, natural lighting',
+                'negative' => $baseNegative,
+                'strength' => 0.65,
+            ];
+        }
+
+        $preset = $presets[$presetKey];
+        Log::info('🎯 Selected Preset', ['key' => $presetKey, 'strength' => $preset['strength']]);
+
+        // 2️⃣ העשרת הפרומפט עם פרטי המנה
+        $enhancedPrompt = $this->enrichPromptWithDishDetails($preset['prompt'], $options);
+
+        // 3️⃣ Negative prompt
+        $fullNegative = $preset['negative'] . ', ' . $baseNegative;
+        
+        if (!empty($options['is_vegan'])) {
+            $fullNegative .= ', meat, chicken, fish, seafood, dairy, eggs, cheese';
+        } elseif (!empty($options['is_vegetarian'])) {
+            $fullNegative .= ', meat, chicken, fish, seafood';
+        }
+
+        return [
+            'positive' => $enhancedPrompt,
+            'negative' => $fullNegative,
+            'strength' => $preset['strength'],
+        ];
+    }
+
+    /**
+     * בחירת Preset לפי category + presentation
+     */
+    private function selectPreset(array $options): string
+    {
+        if (isset($options['preset'])) {
+            return $options['preset'];
+        }
+
+        $category = $options['category'] ?? 'generic';
+        $presentation = $options['presentation'] ?? 'plate';
+        
+        $presetKey = $category . '_' . $presentation;
+        
+        $presets = config('ai.image_presets');
+        if (!isset($presets[$presetKey])) {
+            if (isset($presets[$category . '_plate'])) {
+                return $category . '_plate';
+            }
+            return 'generic_food';
+        }
+        
+        return $presetKey;
+    }
+
+    /**
+     * העשרת פרומפט עם שם מנה + מרכיבים + רמת פרמיום
+     */
+    private function enrichPromptWithDishDetails(string $basePrompt, array $options): string
+    {
+        $enrichments = [];
+
+        // שם המנה (מתורגם)
+        if (!empty($options['dish_name'])) {
+            $translated = $this->translateDishName($options['dish_name']);
+            if (!empty($translated)) {
+                $enrichments[] = $translated;
+            }
+        }
+
+        // מרכיבים מהתיאור
+        if (!empty($options['description'])) {
+            $ingredients = $this->extractIngredients($options['description']);
+            if (!empty($ingredients)) {
+                $enrichments[] = 'with ' . implode(', ', $ingredients);
+            }
+        }
+
+        // פרמיום לפי מחיר
+        if (!empty($options['price']) && $options['price'] > 60) {
+            $enrichments[] = 'premium quality, gourmet presentation';
+        }
+
+        if (!empty($enrichments)) {
+            return implode(', ', $enrichments) . ', ' . $basePrompt;
+        }
+
+        return $basePrompt;
+    }
+
+    /**
+     * תרגום שם מנה
+     */
+    private function translateDishName(string $hebrewName): string
+    {
+        $translations = config('ai.dish_translations', []);
+        $nameLower = mb_strtolower($hebrewName);
+        $result = [];
+        
+        foreach ($translations as $he => $en) {
+            if (mb_stripos($nameLower, $he) !== false) {
+                $result[] = $en;
+            }
+        }
+        
+        return implode(' ', $result);
+    }
+
+    /**
+     * חילוץ מרכיבים
+     */
+    private function extractIngredients(string $description): array
+    {
+        $keywords = config('ai.ingredient_keywords', []);
+        $ingredients = [];
+        $descLower = mb_strtolower($description);
+        
+        foreach ($keywords as $he => $en) {
+            if (mb_stripos($descLower, $he) !== false) {
+                $ingredients[] = $en;
+            }
+        }
+        
+        return array_slice(array_unique($ingredients), 0, 4);
+    }
+
+    /**
+     * בניית Prompt מ-Rule-Based System (ישן - fallback)
+     */
+    private function buildPromptFromRules(array $options): array
+    {
         $rules = config('ai.prompt_rules');
+        
+        // אם גם prompt_rules לא קיים
+        if (!$rules || !isset($rules['base'])) {
+            Log::error('❌ No prompt config found! Using emergency fallback');
+            return [
+                'positive' => 'professional food photography, clean presentation, natural lighting',
+                'negative' => 'blurry, low quality, text, watermark',
+                'strength' => 0.65,
+            ];
+        }
 
         // אתחול
         $positive = [];
         $negative = [];
-        $strength = 0.35; // ברירת מחדל
+        // קריאה מ-config במקום קודד קשיח - מאפשר שליטה מרכזית
+        $strength = config('ai.image_enhancement.stability.strength', 0.70);
 
         // 1️⃣ שלד קבוע (BASE - תמיד)
         $positive[] = $rules['base']['positive'];
@@ -287,6 +459,7 @@ class ImageEnhancementService
 
     /**
      * קריאה אמיתית ל-Stability AI (Image-to-Image)
+     * יוצר 3 וריאציות שונות
      */
     private function generateWithStabilityAI(string $originalPath, array $promptData): array
     {
@@ -304,76 +477,110 @@ class ImageEnhancementService
             throw new \Exception("Original image not found: {$fullPath}");
         }
 
-        // ✅ קריאה ל-API (img2img) - multipart/form-data
-        Log::info('📤 Stability AI Request', [
-            'prompt' => substr($promptData['positive'], 0, 100),
-            'negative_prompt' => substr($promptData['negative'], 0, 100),
-            'strength' => $strength,
-            'image_size' => filesize($fullPath),
-        ]);
+        $variations = [];
+        $imageContent = file_get_contents($fullPath);
 
-        $response = Http::timeout(60)
-            ->withHeaders([
-                'Authorization' => 'Bearer ' . $apiKey,
-                'Accept' => 'application/json',
-            ])
-            ->asMultipart()
-            ->attach('image', file_get_contents($fullPath), 'original.jpg')
-            ->attach('prompt', $promptData['positive'])
-            ->attach('negative_prompt', $promptData['negative'])
-            ->attach('mode', 'image-to-image')
-            ->attach('strength', (string)$strength)
-            ->attach('output_format', 'jpeg')
-            ->post($apiUrl);
+        // יצירת 3 וריאציות (Stability AI מחזיר תמונה אחת בכל קריאה)
+        // כל וריאציה מקבלת seed שונה + strength מעט שונה למגוון ויזואלי
+        $strengthVariations = [0.60, 0.70, 0.80]; // וריאציות: מתונה, רגילה, חזקה
+        
+        for ($i = 0; $i < 3; $i++) {
+            // 🎲 Seed רנדומלי - הפתרון לוריאציות זהות!
+            $seed = rand(1000000, 9999999);
+            
+            // 🎚️ Strength שונה לכל וריאציה (אופציונלי - מעניק טווח רחב)
+            $variationStrength = $strengthVariations[$i];
+            
+            // 🎯 CFG Scale - שליטה על עוצמת הפרומפט (7 = balanced)
+            $cfgScale = 7;
 
-        Log::info('📥 Stability AI Response', [
-            'status' => $response->status(),
-            'body_preview' => substr($response->body(), 0, 200),
-        ]);
+            Log::info("📤 Stability AI Request #{$i}", [
+                'prompt_preview' => substr($promptData['positive'], 0, 100),
+                'prompt_full' => $promptData['positive'],
+                'strength' => $variationStrength,
+                'seed' => $seed,
+                'cfg_scale' => $cfgScale,
+                'image_size' => strlen($imageContent),
+            ]);
 
-        if (!$response->successful()) {
-            throw new \Exception('Stability AI API error: ' . $response->body());
+            $response = Http::timeout(60)
+                ->withHeaders([
+                    'Authorization' => 'Bearer ' . $apiKey,
+                    'Accept' => 'application/json',
+                ])
+                ->asMultipart()
+                ->attach('image', $imageContent, 'original.jpg')
+                ->attach('prompt', $promptData['positive'])
+                ->attach('negative_prompt', $promptData['negative'])
+                ->attach('mode', 'image-to-image')
+                ->attach('strength', (string)$variationStrength)
+                ->attach('seed', (string)$seed)
+                ->attach('cfg_scale', (string)$cfgScale)
+                ->attach('output_format', 'jpeg')
+                ->post($apiUrl);
+
+            Log::info("📥 Stability AI Response #{$i}", [
+                'status' => $response->status(),
+                'body_preview' => substr($response->body(), 0, 200),
+            ]);
+
+            if (!$response->successful()) {
+                throw new \Exception('Stability AI API error: ' . $response->body());
+            }
+
+            $result = $response->json();
+
+            if (!isset($result['image'])) {
+                throw new \Exception('No image in Stability AI response');
+            }
+
+            // שמירת הוריאציה
+            $imageData = base64_decode($result['image']);
+            $filename = 'enhanced_' . time() . '_' . uniqid() . "_v{$i}.jpg";
+            $savePath = 'ai-images/variations/' . $filename;
+
+            Storage::disk('public')->put($savePath, $imageData);
+
+            Log::info("✅ Stability AI variation #{$i} saved", [
+                'path' => $savePath,
+                'size' => strlen($imageData),
+            ]);
+
+            $variations[] = [
+                'url' => asset("storage/{$savePath}"),
+                'path' => $savePath,
+            ];
+
+            // המתנה קצרה בין קריאות למניעת rate limiting
+            if ($i < 2) {
+                sleep(1);
+            }
         }
 
-        $result = $response->json();
-
-        // שמירת התמונה המשופרת
-        if (!isset($result['image'])) {
-            throw new \Exception('No image in Stability AI response');
-        }
-
-        $imageData = base64_decode($result['image']);
-        $filename = 'enhanced_' . time() . '_' . uniqid() . '.jpg';
-        $savePath = 'ai-images/variations/' . $filename;
-
-        Storage::disk('public')->put($savePath, $imageData);
-
-        Log::info('✅ Stability AI success', [
-            'path' => $savePath,
-            'size' => strlen($imageData),
-        ]);
-
-        return [[
-            'url' => asset("storage/{$savePath}"),
-            'path' => $savePath,
-        ]];
+        return $variations;
     }
 
     /**
-     * יצירת וריאציה Mock (לפיתוח)
+     * יצירת 3 וריאציות Mock (לפיתוח)
      */
     private function generateMockVariations(string $originalPath): array
     {
-        $filename = 'enhanced_mock_' . time() . '.jpg';
-        $path = "ai-images/variations/{$filename}";
+        $variations = [];
+        
+        for ($i = 0; $i < 3; $i++) {
+            $filename = 'enhanced_mock_' . time() . '_' . uniqid() . "_v{$i}.jpg";
+            $path = "ai-images/variations/{$filename}";
 
-        // העתקה פשוטה של המקור (mock)
-        Storage::disk('public')->copy($originalPath, $path);
+            // העתקה פשוטה של המקור (mock)
+            Storage::disk('public')->copy($originalPath, $path);
 
-        return [[
-            'url' => asset("storage/{$path}"),
-            'path' => $path,
-        ]];
+            $variations[] = [
+                'url' => asset("storage/{$path}"),
+                'path' => $path,
+            ];
+        }
+
+        return $variations;
     }
 
     /**

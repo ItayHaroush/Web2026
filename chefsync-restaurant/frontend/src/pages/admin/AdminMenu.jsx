@@ -533,7 +533,7 @@ export default function AdminMenu() {
                                             // ✅ Refresh the menu items to show the new image
                                             fetchData();
                                         }}
-                                        menuItemId={editItem?.id}
+                                        menuItem={editItem}
                                         buttonClassName="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all shadow-md text-xs font-bold"
                                     />
                                 </div>

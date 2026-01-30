@@ -12,9 +12,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('restaurants', function (Blueprint $table) {
-            $table->boolean('ai_description_enabled')->default(true)->after('verified');
-            $table->boolean('ai_price_enabled')->default(true)->after('ai_description_enabled');
-            $table->boolean('ai_image_enabled')->default(true)->after('ai_price_enabled');
+            $table->boolean('ai_description_enabled')->default(true);
+            $table->boolean('ai_price_enabled')->default(true);
+            $table->boolean('ai_image_enabled')->default(true);
         });
     }
 

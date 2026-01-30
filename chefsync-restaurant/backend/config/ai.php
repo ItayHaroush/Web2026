@@ -184,127 +184,284 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Prompt Rules (Rule-Based Closed System)
+    | Image Enhancement Presets (קטגוריה × סגנון הגשה)
     |--------------------------------------------------------------------------
-    | טבלת חוקים סגורה לבניית פרומפטים - אין אלתורים!
+    | מערכת Presets נקייה: כל קומבינציה = פרומפט ספציפי + strength מותאם
     */
-    'prompt_rules' => [
+    'image_presets' => [
 
-        // שלד קבוע (תמיד נוסף)
-        'base' => [
-            'positive' => 'professional food photography, realistic, high detail, natural lighting, 45 degree angle',
-            'negative' => 'cartoon, illustration, fake food, text, logo, watermark',
+        // 🍕 פיצה
+        'pizza_plate' => [
+            'strength' => 0.65,
+            'prompt' => 'whole pizza or pizza slices on white ceramic plate, restaurant presentation, melted cheese visible, tomato sauce, fresh toppings',
+            'negative' => 'sandwich, burger, pita, wrap, meat, shawarma, falafel, hands holding, street food paper',
+        ],
+        'pizza_street_slice' => [
+            'strength' => 0.70,
+            'prompt' => 'single pizza slice held in hand with greasy paper napkin, street food style, cheese stretching, triangular slice',
+            'negative' => 'whole pizza, plate, sandwich, burger, pita, box',
+        ],
+        'pizza_box' => [
+            'strength' => 0.65,
+            'prompt' => 'pizza in open cardboard delivery box, cheese stretching, casual presentation',
+            'negative' => 'plate, hands, sandwich, burger, pita, closed box',
         ],
 
-        // קטגוריה (drink vs food)
-        'categories' => [
-            'drink' => [
-                'add' => 'glass, cup, bottle',
-                'negative' => 'food, plate',
-            ],
-            'food' => [
-                'add' => 'dish, sandwich, bowl',
-                'negative' => 'drink, glass',
-            ],
+        // 🥙 שווארמה
+        'shawarma_pita' => [
+            'strength' => 0.80,
+            'prompt' => 'shawarma meat wrapped inside fresh pita bread, Israeli street food style, tahini dripping, visible grilled meat slices',
+            'negative' => 'pizza, burger, sandwich, baguette, plate with separate items, raw meat',
+        ],
+        'shawarma_baguette' => [
+            'strength' => 0.80,
+            'prompt' => 'shawarma meat stuffed in baguette bread, overflowing with toppings, street food style',
+            'negative' => 'pizza, burger, pita, plate, raw meat',
+        ],
+        'shawarma_plate' => [
+            'strength' => 0.75,
+            'prompt' => 'shawarma meat served on plate with side salads, tahini sauce, hummus, Israeli restaurant style',
+            'negative' => 'pizza, burger, sandwich wrap, pita wrap, raw meat',
         ],
 
-        // תת-סוג (SubType)
-        'subTypes' => [
-            'soda' => [
-                'add' => 'clear carbonated water, transparent liquid',
-                'negative' => 'cola, coke, pepsi, alcohol',
-                'strength' => 0.25,
-            ],
-            'cola' => [
-                'add' => 'dark carbonated drink',
-                'negative' => 'soda water, transparent liquid',
-                'strength' => 0.30,
-            ],
-            'beer' => [
-                'add' => 'golden beer, foam',
-                'negative' => 'soda, soft drink',
-                'strength' => 0.35,
-            ],
-            'shawarma' => [
-                'add' => 'grilled meat, sliced shawarma',
-                'negative' => 'burger, steak',
-                'strength' => 0.40,
-            ],
-            'pizza' => [
-                'add' => 'pizza slice or whole pizza',
-                'negative' => 'sandwich, pita',
-                'strength' => 0.40,
-            ],
-            'burger' => [
-                'add' => 'burger patty, bun, layers',
-                'negative' => 'pizza, sandwich wrap',
-                'strength' => 0.40,
-            ],
-            'falafel' => [
-                'add' => 'falafel balls, fried chickpea',
-                'negative' => 'meatballs, burger',
-                'strength' => 0.40,
-            ],
+        // 🍔 המבורגר
+        'burger_street' => [
+            'strength' => 0.70,
+            'prompt' => 'burger wrapped in paper, held in hands, street food style, visible layers of bun, patty, lettuce, tomato',
+            'negative' => 'pizza, shawarma, pita, plate, sandwich, raw meat',
+        ],
+        'burger_plate' => [
+            'strength' => 0.70,
+            'prompt' => 'burger on white plate with french fries side, restaurant presentation, visible bun and patty',
+            'negative' => 'pizza, shawarma, pita, wrap, hands holding, paper wrap',
+        ],
+        'burger_closeup' => [
+            'strength' => 0.75,
+            'prompt' => 'extreme closeup of burger with bite taken, visible layers, cheese melting, juicy patty',
+            'negative' => 'pizza, shawarma, whole burger, plate, hands, fries',
         ],
 
-        // צורת הגשה (Serving Style)
-        'serving' => [
-            'glass' => [
-                'add' => 'simple clear glass',
-                'negative' => 'mug, bottle',
-            ],
-            'bottle' => [
-                'add' => 'beverage bottle',
-                'negative' => 'glass',
-            ],
-            'pita' => [
-                'add' => 'pita bread',
-                'negative' => 'baguette, plate',
-            ],
-            'baguette' => [
-                'add' => 'baguette bread',
-                'negative' => 'pita',
-            ],
-            'plate' => [
-                'add' => 'served on plate',
-                'negative' => 'sandwich wrap',
-            ],
-            'bowl' => [
-                'add' => 'served in bowl',
-                'negative' => 'plate',
-            ],
+        // 🌯 פלאפל
+        'falafel_pita' => [
+            'strength' => 0.80,
+            'prompt' => 'falafel balls wrapped in pita bread with tahini, Israeli street food, fried chickpea balls visible',
+            'negative' => 'pizza, burger, shawarma meat, raw falafel, meatballs',
+        ],
+        'falafel_plate' => [
+            'strength' => 0.75,
+            'prompt' => 'falafel balls on plate with salads, tahini, hummus, Israeli style',
+            'negative' => 'pizza, burger, pita wrap, meatballs',
         ],
 
-        // רמת מסעדה (Restaurant Level)
-        'levels' => [
-            'street' => [
-                'add' => 'street food style, authentic, simple',
-            ],
-            'casual' => [
-                'add' => 'casual restaurant, clean look',
-            ],
-            'boutique' => [
-                'add' => 'fine dining, elegant plating',
-            ],
-            'premium' => [
-                'add' => 'high-end food photography, dramatic lighting',
-            ],
+        // 🥗 סלט
+        'salad_bowl' => [
+            'strength' => 0.60,
+            'prompt' => 'fresh salad in white bowl, colorful vegetables, healthy presentation, clean background',
+            'negative' => 'pizza, burger, meat, fried food, fast food',
+        ],
+        'salad_plate' => [
+            'strength' => 0.60,
+            'prompt' => 'fresh salad on white plate, restaurant presentation, colorful vegetables, garnish',
+            'negative' => 'pizza, burger, meat, fried food',
         ],
 
-        // רקע (Background)
-        'backgrounds' => [
-            'kitchen' => [
-                'add' => 'stainless kitchen background',
-            ],
-            'table' => [
-                'add' => 'wooden table',
-            ],
-            'dark' => [
-                'add' => 'dark restaurant background',
-            ],
-            'white' => [
-                'add' => 'clean white background',
-            ],
+        // 🍽️ ביסטרו
+        'bistro_chef_plate' => [
+            'strength' => 0.55,
+            'prompt' => 'elegant chef plating on white ceramic plate, minimalist presentation, fine dining style, artistic garnish',
+            'negative' => 'pizza, burger, street food, hands, paper, casual presentation',
+        ],
+        'bistro_rustic' => [
+            'strength' => 0.60,
+            'prompt' => 'rustic presentation on wooden table, warm ambient lighting, homestyle cooking, cozy atmosphere',
+            'negative' => 'pizza, burger, street food, white background, clinical presentation',
+        ],
+
+        // 🧑‍🍳 קייטרינג
+        'catering_tray' => [
+            'strength' => 0.60,
+            'prompt' => 'large serving tray with multiple portions, catering presentation, professional food service',
+            'negative' => 'single portion, pizza, burger, hands, street food, plate',
+        ],
+        'catering_buffet' => [
+            'strength' => 0.60,
+            'prompt' => 'buffet table setup with serving dishes, event catering style, multiple items visible',
+            'negative' => 'single portion, pizza, burger, hands, street food',
+        ],
+        'catering_portion_box' => [
+            'strength' => 0.65,
+            'prompt' => 'takeaway food container with divided portions, meal prep style, organized presentation',
+            'negative' => 'pizza box, burger wrap, loose items, plate',
+        ],
+
+        // 🍟 תוספות
+        'side_plate' => [
+            'strength' => 0.60,
+            'prompt' => 'side dish on small plate, restaurant presentation, garnish, clean background',
+            'negative' => 'main course, pizza, burger, large portion',
+        ],
+        'side_bowl' => [
+            'strength' => 0.60,
+            'prompt' => 'side dish in small bowl, salad or fries, casual presentation',
+            'negative' => 'main course, pizza, burger, plate',
+        ],
+
+        // 🥤 משקאות
+        'drink_glass' => [
+            'strength' => 0.50,
+            'prompt' => 'beverage in clear glass, condensation droplets, ice cubes visible, clean background',
+            'negative' => 'food, plate, pizza, burger, bottle, mug',
+        ],
+        'drink_bottle' => [
+            'strength' => 0.45,
+            'prompt' => 'beverage bottle with label visible, product photography style, clean background',
+            'negative' => 'food, plate, pizza, burger, glass',
+        ],
+
+        // ⚪ Generic / Fallback
+        'generic_food' => [
+            'strength' => 0.65,
+            'prompt' => 'professional food photography, dish on plate or in bowl, clean presentation, natural lighting',
+            'negative' => 'cartoon, illustration, text, watermark, logo',
         ],
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Base Negative Prompt (נוסף לכל preset)
+    |--------------------------------------------------------------------------
+    */
+    'base_negative' => 'blurry, low quality, amateur photo, text overlay, watermark, logo, cartoon, illustration, 3d render, artificial, plastic food',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Translation Dictionaries (מילונים לחילוץ אוטומטי)
+    |--------------------------------------------------------------------------
+    */
+    'dish_translations' => [
+        // פיצה
+        'מרגריטה' => 'margherita',
+        'פפרוני' => 'pepperoni',
+        'ארבע גבינות' => 'quattro formaggi',
+        'פטריות' => 'mushroom',
+        'זיתים' => 'olive',
+        'ביאנקה' => 'bianca',
+        'חריפה' => 'spicy',
+        
+        // שווארמה
+        'טלה' => 'lamb',
+        'עוף' => 'chicken',
+        'הודו' => 'turkey',
+        'בשר' => 'meat',
+        
+        // המבורגר
+        'בלאק אנגוס' => 'black angus',
+        'בקר' => 'beef',
+        'כבש' => 'lamb',
+        
+        // כללי
+        'טבעוני' => 'vegan',
+        'צמחוני' => 'vegetarian',
+        'אורגני' => 'organic',
+        'ביתי' => 'homemade',
+        'מעושן' => 'smoked',
+        'צלוי' => 'grilled',
+        'מטוגן' => 'fried',
+    ],
+
+    'ingredient_keywords' => [
+        // גבינות
+        'מוצרלה' => 'mozzarella',
+        'צ\'דר' => 'cheddar',
+        'פרמזן' => 'parmesan',
+        'גבינה כחולה' => 'blue cheese',
+        'פטה' => 'feta',
+        'גבינת עיזים' => 'goat cheese',
+        'גבינה' => 'cheese',
+        
+        // ירקות
+        'עגבניות' => 'tomatoes',
+        'עגבנייה' => 'tomato',
+        'בצל' => 'onions',
+        'שום' => 'garlic',
+        'זיתים' => 'olives',
+        'פטריות' => 'mushrooms',
+        'חסה' => 'lettuce',
+        'מלפפון' => 'cucumber',
+        'פלפל' => 'bell pepper',
+        'תרד' => 'spinach',
+        'בזיליקום' => 'basil',
+        'פטרוזיליה' => 'parsley',
+        'כוסברה' => 'cilantro',
+        'רוקט' => 'arugula',
+        
+        // רטבים
+        'טחינה' => 'tahini',
+        'חומוס' => 'hummus',
+        'מיונז' => 'mayonnaise',
+        'קטשופ' => 'ketchup',
+        'חרדל' => 'mustard',
+        'ברביקיו' => 'bbq sauce',
+        'רוטב עגבניות' => 'tomato sauce',
+        'רוטב שום' => 'garlic sauce',
+        'רוטב חריף' => 'hot sauce',
+        
+        // תוספות
+        'זיתים' => 'olives',
+        'מלפפון חמוץ' => 'pickles',
+        'בצל מקורמל' => 'caramelized onions',
+        'ביצה' => 'egg',
+        'חביתה' => 'omelette',
+        'אבוקדו' => 'avocado',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Image Enhancement Presets (Preset System)
+    |--------------------------------------------------------------------------
+    */
+    'image_presets' => [
+        'pizza_plate' => [
+            'strength' => 0.65,
+            'prompt' => 'whole pizza or pizza slices on white ceramic plate, restaurant presentation, melted cheese visible, tomato sauce, fresh toppings',
+            'negative' => 'sandwich, burger, pita, wrap, meat, shawarma, falafel, hands holding, street food paper',
+        ],
+        'pizza_street_slice' => [
+            'strength' => 0.70,
+            'prompt' => 'single pizza slice held in hand with greasy paper napkin, street food style, cheese stretching, triangular slice',
+            'negative' => 'whole pizza, plate, sandwich, burger, pita, box',
+        ],
+        'shawarma_pita' => [
+            'strength' => 0.80,
+            'prompt' => 'shawarma meat wrapped inside fresh pita bread, Israeli street food style, tahini dripping, visible grilled meat slices',
+            'negative' => 'pizza, burger, sandwich, baguette, plate with separate items, raw meat',
+        ],
+        'shawarma_plate' => [
+            'strength' => 0.75,
+            'prompt' => 'shawarma meat served on plate with side salads, tahini sauce, hummus, Israeli restaurant style',
+            'negative' => 'pizza, burger, sandwich wrap, pita wrap, raw meat',
+        ],
+        'burger_street' => [
+            'strength' => 0.70,
+            'prompt' => 'burger wrapped in paper, held in hands, street food style, visible layers of bun, patty, lettuce, tomato',
+            'negative' => 'pizza, shawarma, pita, plate, sandwich, raw meat',
+        ],
+        'burger_plate' => [
+            'strength' => 0.70,
+            'prompt' => 'burger on white plate with french fries side, restaurant presentation, visible bun and patty',
+            'negative' => 'pizza, shawarma, pita, wrap, hands holding, paper wrap',
+        ],
+        'drink_glass' => [
+            'strength' => 0.50,
+            'prompt' => 'beverage in clear glass, condensation droplets, ice cubes visible, clean background',
+            'negative' => 'food, plate, pizza, burger, bottle, mug',
+        ],
+        'generic_food' => [
+            'strength' => 0.65,
+            'prompt' => 'professional food photography, dish on plate or in bowl, clean presentation, natural lighting',
+            'negative' => 'cartoon, illustration, text, watermark, logo',
+        ],
+    ],
+
+    'base_negative' => 'blurry, low quality, amateur photo, text overlay, watermark, logo, cartoon, illustration, 3d render, artificial, plastic food',
 ];

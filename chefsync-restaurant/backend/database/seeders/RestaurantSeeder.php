@@ -65,6 +65,7 @@ class RestaurantSeeder extends Seeder
                 'latitude' => 32.0853,
                 'longitude' => 34.7818,
                 'is_open' => true,
+                'is_approved' => true,
             ]
         );
 
@@ -176,6 +177,7 @@ class RestaurantSeeder extends Seeder
                 'latitude' => 31.7683,
                 'longitude' => 35.2137,
                 'is_open' => true,
+                'is_approved' => true,
             ]
         );
 
@@ -286,6 +288,7 @@ class RestaurantSeeder extends Seeder
                 'latitude' => 32.7940,
                 'longitude' => 34.9896,
                 'is_open' => true,
+                'is_approved' => true,
             ]
         );
 
@@ -396,6 +399,7 @@ class RestaurantSeeder extends Seeder
                 'latitude' => 31.2530,
                 'longitude' => 34.7915,
                 'is_open' => true,
+                'is_approved' => true,
             ]
         );
 
@@ -497,6 +501,7 @@ class RestaurantSeeder extends Seeder
                 'latitude' => 32.3215,
                 'longitude' => 34.8532,
                 'is_open' => true,
+                'is_approved' => true,
             ]
         );
 

@@ -21,7 +21,7 @@ class AiSettingsController extends Controller
     {
         // אם יש restaurantId בנתיב (super admin), השתמש בו
         // אחרת, קח מהמשתמש המחובר (admin רגיל)
-        $restaurant = $restaurantId 
+        $restaurant = $restaurantId
             ? Restaurant::findOrFail($restaurantId)
             : Restaurant::findOrFail($request->user()->restaurant_id);
 
@@ -68,7 +68,7 @@ class AiSettingsController extends Controller
      */
     public function getStats(Request $request, $restaurantId = null)
     {
-        $restaurant = $restaurantId 
+        $restaurant = $restaurantId
             ? Restaurant::findOrFail($restaurantId)
             : Restaurant::findOrFail($request->user()->restaurant_id);
 
