@@ -32,7 +32,7 @@ class ImageEnhancementService {
 
         formData.append('category', detectedCategory);
         formData.append('presentation', detectedPresentation);
-        
+
         // 🎬 Scene: משתמש בבחירה ידנית אם יש, אחרת auto-detect
         const finalScene = userScene || detectedScene;
         if (finalScene) {
@@ -168,11 +168,11 @@ class ImageEnhancementService {
         // 🌍 מזרח תיכוני / מרוקאי
         const middleEasternKeywords = ['חומוס', 'טחינה', 'פלאפל', 'מסבחה', 'שקשוקה', 'סביח'];
         const moroccanKeywords = ['טאג\'ין', 'כוסכוס', 'חריימה', 'דפינה', 'מרוקאי', 'מרוקנית'];
-        
+
         if (moroccanKeywords.some(kw => name.includes(kw) || description.includes(kw) || categoryName.includes(kw))) {
             return 'moroccan';
         }
-        
+
         if (middleEasternKeywords.some(kw => name.includes(kw) || description.includes(kw) || categoryName.includes(kw))) {
             return 'middle_eastern';
         }
