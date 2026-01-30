@@ -226,7 +226,7 @@ class ImageEnhancementService
     private function generateVariations(string $originalPath, string $prompt): array
     {
         $apiKey = config('ai.openai.api_key');
-        
+
         // לוג לדיבאג
         Log::info('🎨 Image Enhancement - Starting', [
             'has_api_key' => !empty($apiKey),
@@ -267,7 +267,7 @@ class ImageEnhancementService
         for ($i = 0; $i < $count; $i++) {
             try {
                 Log::info("📤 Calling OpenAI API - variation #{$i}");
-                
+
                 $response = Http::timeout(60)->withHeaders([
                     'Authorization' => "Bearer {$apiKey}",
                     'Content-Type' => 'application/json',
@@ -283,10 +283,10 @@ class ImageEnhancementService
                 if ($response->successful()) {
                     $imageUrl = $response->json('data.0.url');
                     Log::info("✅ OpenAI returned image URL - variation #{$i}");
-                    
+
                     $savedPath = $this->downloadAndSaveImage($imageUrl, $originalPath, $i);
                     $variations[] = $savedPath;
-                    
+
                     Log::info("💾 Image saved - variation #{$i}", ['path' => $savedPath]);
                 } else {
                     Log::warning('OpenAI Image Generation Failed', [
@@ -301,7 +301,7 @@ class ImageEnhancementService
                     'error' => $e->getMessage()
                 ]);
             }
-            
+
             // Delay קטן בין קריאות (rate limiting)
             if ($i < $count - 1) {
                 sleep(1);
@@ -311,7 +311,7 @@ class ImageEnhancementService
         if (empty($variations)) {
             throw new \Exception('לא ניתן ליצור וריאציות. נסה שוב מאוחר יותר.');
         }
-        
+
         Log::info('✨ All variations created', ['total' => count($variations)]);
 
         return $variations;
@@ -325,7 +325,7 @@ class ImageEnhancementService
         $directory = dirname($originalPath);
         $filename = 'variation_' . time() . "_{$index}.jpg";
         $path = "{$directory}/{$filename}";
-        
+
         $contents = file_get_contents($url);
         Storage::disk('public')->put($path, $contents);
 
