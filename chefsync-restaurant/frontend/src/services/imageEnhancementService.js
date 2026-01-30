@@ -13,26 +13,48 @@ class ImageEnhancementService {
      * @returns {Promise<Object>} אובייקט עם 3 וריאציות
      */
     async enhance(imageFile, background, angle, menuItem = null) {
-        // Temporary mapping: old values → new backend values
-        const backgroundMap = {
-            'marble': 'white',
-            'wood': 'table',
-            'clean': 'white'
-        };
-
-        const mappedBackground = backgroundMap[background] || background;
-
         const formData = new FormData();
         formData.append('image', imageFile);
-        formData.append('background', mappedBackground);
-        formData.append('category', 'food'); // Default
-        formData.append('level', 'casual'); // Default
+        formData.append('background', background || 'white');
 
-        // 🎯 שליחת category_id ל-backend להפעלת strength overrides
+        // 🎯 זיהוי אוטומטי של category (משקה/אוכל)
+        const detectedCategory = this.detectCategory(menuItem);
+        const detectedPresentation = this.detectPresentation(menuItem, detectedCategory);
+        
+        console.log('🔍 זיהוי אוטומטי:', {
+            menuItemName: menuItem?.name,
+            categoryName: menuItem?.category?.name,
+            detectedCategory,
+            detectedPresentation
+        });
+        
+        formData.append('category', detectedCategory);
+        formData.append('presentation', detectedPresentation);
+
+        // 📝 פרטי המנה להעשרת הפרומפט
         if (menuItem) {
             formData.append('menu_item_id', menuItem.id);
+            
+            if (menuItem.name) {
+                formData.append('dish_name', menuItem.name);
+            }
+            if (menuItem.description) {
+                formData.append('description', menuItem.description);
+            }
+            if (menuItem.price) {
+                formData.append('price', menuItem.price);
+            }
             if (menuItem.category_id) {
                 formData.append('category_id', menuItem.category_id);
+            }
+            if (menuItem.category?.name) {
+                formData.append('category_name', menuItem.category.name);
+            }
+            if (menuItem.is_vegan) {
+                formData.append('is_vegan', '1');
+            }
+            if (menuItem.is_vegetarian) {
+                formData.append('is_vegetarian', '1');
             }
         }
 
@@ -44,6 +66,83 @@ class ImageEnhancementService {
         });
 
         return response.data;
+    }
+
+    /**
+     * זיהוי אוטומטי של קטגוריית המנה
+     */
+    detectCategory(menuItem) {
+        if (!menuItem) return 'generic';
+        
+        // ⚠️ לא משתמשים ב-toLowerCase() כי זה עברית!
+        const name = menuItem.name || '';
+        const categoryName = menuItem.category?.name || '';
+        const description = menuItem.description || '';
+        
+        // 🥤 משקאות
+        const drinkKeywords = ['משקה', 'שתייה', 'קולה', 'סודה', 'בירה', 'יין', 'מיץ', 'קפה', 'תה', 'לימונדה', 'קוקטייל', 'מים', 'water', 'drink'];
+        if (drinkKeywords.some(kw => categoryName.includes(kw) || name.includes(kw))) {
+            return 'drink';
+        }
+        
+        // 🍕 פיצה
+        if (name.includes('פיצה') || categoryName.includes('פיצ')) {
+            return 'pizza';
+        }
+        
+        // 🥙 שווארמה
+        if (name.includes('שווארמה') || name.includes('שוורמה')) {
+            return 'shawarma';
+        }
+        
+        // 🍔 המבורגר
+        if (name.includes('המבורגר') || name.includes('בורגר')) {
+            return 'burger';
+        }
+        
+        // 🥗 סלט
+        if (name.includes('סלט') || categoryName.includes('סלט')) {
+            return 'salad';
+        }
+        
+        return 'generic';
+    }
+
+    /**
+     * זיהוי אוטומטי של סגנון הגשה
+     */
+    detectPresentation(menuItem, category) {
+        if (!menuItem) return 'plate';
+        
+        // ⚠️ לא משתמשים ב-toLowerCase() כי זה עברית!
+        const name = menuItem.name || '';
+        const description = menuItem.description || '';
+        
+        // משקאות
+        if (category === 'drink') {
+            if (name.includes('בקבוק') || description.includes('בקבוק')) {
+                return 'bottle';
+            }
+            return 'glass';
+        }
+        
+        // בפיתה / לפה
+        if (name.includes('בפיתה') || name.includes('לפה') || description.includes('פיתה')) {
+            return 'pita';
+        }
+        
+        // באגט
+        if (name.includes('באגט') || description.includes('באגט')) {
+            return 'baguette';
+        }
+        
+        // Default לפי קטגוריה
+        if (category === 'pizza') return 'plate';
+        if (category === 'shawarma') return 'pita';
+        if (category === 'burger') return 'street';
+        if (category === 'salad') return 'bowl';
+        
+        return 'plate';
     }
 
     /**

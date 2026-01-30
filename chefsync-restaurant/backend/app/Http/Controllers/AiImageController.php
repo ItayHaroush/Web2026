@@ -68,6 +68,15 @@ class AiImageController extends Controller
             // Fallback: אם נשלחו פרמטרים ישנים (background), המר אותם
             $category = $validated['category'] ?? 'generic';
             $presentation = $validated['presentation'] ?? 'plate';
+            
+            // 🔍 לוג לבדיקה - מה התקבל מה-Frontend?
+            Log::info('📥 AI Image Enhancement Request', [
+                'menu_item_id' => $request->input('menu_item_id'),
+                'dish_name' => $request->input('dish_name'),
+                'category_name' => $request->input('category_name'),
+                'detected_category' => $category,
+                'detected_presentation' => $presentation,
+            ]);
 
             // אם background נשלח במקום presentation (מערכת ישנה)
             if (isset($validated['background']) && !isset($validated['presentation'])) {
