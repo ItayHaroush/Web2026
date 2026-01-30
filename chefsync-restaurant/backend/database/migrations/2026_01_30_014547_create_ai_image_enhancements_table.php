@@ -32,8 +32,8 @@ return new class extends Migration
 
             // מטא-דאטה
             $table->enum('status', ['processing', 'ready', 'failed'])->default('processing');
-            $table->string('ai_provider')->default('stability'); // stability/openai
-            $table->integer('cost_credits')->default(3);
+            $table->string('ai_provider')->default('stability'); // stability/mock
+            $table->integer('cost_credits')->default(1); // Changed from 3 to 1 (Stability AI)
             $table->text('error_message')->nullable();
 
             $table->timestamps();

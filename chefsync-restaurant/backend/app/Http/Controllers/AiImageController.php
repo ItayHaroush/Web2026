@@ -33,9 +33,14 @@ class AiImageController extends Controller
         // ולידציה
         $validated = $request->validate([
             'image' => 'required|image|mimes:jpeg,jpg,png,webp|max:5120', // 5MB
-            'background' => 'required|in:marble,wood,clean',
-            'angle' => 'required|in:top,side,hands',
             'menu_item_id' => 'nullable|exists:menu_items,id',
+            
+            // Rule-Based Options
+            'category' => 'nullable|in:drink,food',
+            'subType' => 'nullable|in:soda,cola,beer,shawarma,pizza,burger,falafel',
+            'serving' => 'nullable|in:glass,bottle,pita,baguette,plate,bowl',
+            'level' => 'nullable|in:street,casual,boutique,premium',
+            'background' => 'nullable|in:kitchen,table,dark,white',
         ]);
 
         try {
@@ -46,12 +51,20 @@ class AiImageController extends Controller
                     ->findOrFail($validated['menu_item_id']);
             }
 
+            // הכנת options
+            $options = [
+                'category' => $validated['category'] ?? 'food',
+                'subType' => $validated['subType'] ?? null,
+                'serving' => $validated['serving'] ?? null,
+                'level' => $validated['level'] ?? 'casual',
+                'background' => $validated['background'] ?? 'white',
+            ];
+
             // יצירת שיפור
             $service = new ImageEnhancementService($restaurant, $menuItem);
             $enhancement = $service->enhance(
                 $request->file('image'),
-                $validated['background'],
-                $validated['angle']
+                $options
             );
 
             return response()->json([
