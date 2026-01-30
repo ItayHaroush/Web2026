@@ -117,6 +117,16 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'tenant'])->group(function (
             // צ'אט אינטראקטיבי עם סוכן AI (מותאם למנהל מסעדה)
             Route::post('/chat', [ChatController::class, 'restaurantChat'])
                 ->name('admin.ai.chat');
+
+            // שיפור תמונות AI ⭐ חדש
+            Route::post('/enhance-image', [\App\Http\Controllers\AiImageController::class, 'enhance'])
+                ->name('admin.ai.enhance-image');
+            Route::post('/select-variation', [\App\Http\Controllers\AiImageController::class, 'selectVariation'])
+                ->name('admin.ai.select-variation');
+            Route::get('/enhancements', [\App\Http\Controllers\AiImageController::class, 'getEnhancements'])
+                ->name('admin.ai.enhancements');
+            Route::delete('/enhancements/{id}', [\App\Http\Controllers\AiImageController::class, 'delete'])
+                ->name('admin.ai.enhancements.delete');
         });
 
         // ניהול מסעדה

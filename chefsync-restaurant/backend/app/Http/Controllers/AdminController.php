@@ -994,6 +994,7 @@ class AdminController extends Controller
             'phone' => 'sometimes|string|max:20',
             'address' => 'sometimes|string|max:255',
             'city' => 'sometimes|string|max:255',
+            'restaurant_type' => 'nullable|string|in:pizza,shawarma,burger,bistro,catering,general',
             'share_incentive_text' => 'nullable|string|max:1000',
             'delivery_time_minutes' => 'nullable|integer|min:1|max:240',
             'delivery_time_note' => 'nullable|string|max:255',
@@ -1063,6 +1064,10 @@ class AdminController extends Controller
         }
         if ($request->has('address')) {
             $updateData['address'] = $request->input('address');
+        }
+
+        if ($request->has('restaurant_type')) {
+            $updateData['restaurant_type'] = $request->input('restaurant_type');
         }
 
         if ($request->has('share_incentive_text')) {
