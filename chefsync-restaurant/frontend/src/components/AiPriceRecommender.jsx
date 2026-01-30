@@ -163,7 +163,7 @@ const AiPriceRecommender = ({ itemData, onPriceRecommended }) => {
                             <button
                                 type="button"  // Prevent form submission
                                 onClick={(e) => {
-                                    e.preventDefault(); 
+                                    e.preventDefault();
                                     e.stopPropagation();
                                     setShowDetails(false);
                                 }}

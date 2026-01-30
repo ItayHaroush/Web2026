@@ -457,12 +457,12 @@ class OpenAiService extends BaseAiService
         try {
             // Build messages array
             $messages = [];
-            
+
             // Add system prompt if provided
             if ($systemPrompt) {
                 $messages[] = ['role' => 'system', 'content' => $systemPrompt];
             }
-            
+
             // Convert string to user message or use provided messages array
             if (is_string($input)) {
                 $messages[] = ['role' => 'user', 'content' => $input];
@@ -542,7 +542,7 @@ class OpenAiService extends BaseAiService
         if (!empty($context['restaurant'])) {
             $r = $context['restaurant'];
             $prompt .= "המסעדה: " . ($r['name'] ?? 'לא ידוע') . "\n";
-            
+
             // Check for active trial
             $subscriptionText = 'free';
             if (!empty($r['trial_ends_at'])) {
@@ -556,7 +556,7 @@ class OpenAiService extends BaseAiService
             } elseif (!empty($r['subscription_tier'])) {
                 $subscriptionText = $r['subscription_tier'];
             }
-            
+
             $prompt .= "מסלול מנוי: " . $subscriptionText . "\n\n";
         }
 
