@@ -186,7 +186,7 @@ class ImageEnhancementService
     private function buildPrompt(array $options = []): array
     {
         $rules = config('ai.prompt_rules');
-        
+
         // אתחול
         $positive = [];
         $negative = [];
@@ -319,7 +319,7 @@ class ImageEnhancementService
         }
 
         $result = $response->json();
-        
+
         // שמירת התמונה המשופרת
         if (!isset($result['image'])) {
             throw new \Exception('No image in Stability AI response');
@@ -328,7 +328,7 @@ class ImageEnhancementService
         $imageData = base64_decode($result['image']);
         $filename = 'enhanced_' . time() . '_' . uniqid() . '.jpg';
         $savePath = 'ai-images/variations/' . $filename;
-        
+
         Storage::disk('public')->put($savePath, $imageData);
 
         Log::info('✅ Stability AI success', [
