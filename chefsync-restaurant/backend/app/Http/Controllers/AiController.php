@@ -179,7 +179,7 @@ class AiController extends Controller
             $cacheKey = "ai:insights:tenant:{$tenantId}:" . now()->format('Y-m-d');
             $cached = Cache::get($cacheKey);
 
-            if ($cached) {
+            if ($cached && !$request->boolean('force_regenerate')) {
                 return response()->json([
                     'success' => true,
                     'data' => $cached, // ✅ Return cached data as-is
