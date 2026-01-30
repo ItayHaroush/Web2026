@@ -13,10 +13,20 @@ class ImageEnhancementService {
      * @returns {Promise<Object>} אובייקט עם 3 וריאציות
      */
     async enhance(imageFile, background, angle, menuItemId = null) {
+        // Temporary mapping: old values → new backend values
+        const backgroundMap = {
+            'marble': 'white',
+            'wood': 'table',
+            'clean': 'white'
+        };
+        
+        const mappedBackground = backgroundMap[background] || background;
+        
         const formData = new FormData();
         formData.append('image', imageFile);
-        formData.append('background', background);
-        formData.append('angle', angle);
+        formData.append('background', mappedBackground);
+        formData.append('category', 'food'); // Default
+        formData.append('level', 'casual'); // Default
         if (menuItemId) {
             formData.append('menu_item_id', menuItemId);
         }
