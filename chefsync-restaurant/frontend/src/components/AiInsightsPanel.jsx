@@ -15,8 +15,8 @@ const AiInsightsPanel = () => {
             setLoading(true);
             setError(null);
 
-            const url = force 
-                ? '/admin/ai/dashboard-insights?force_regenerate=1' 
+            const url = force
+                ? '/admin/ai/dashboard-insights?force_regenerate=1'
                 : '/admin/ai/dashboard-insights';
 
             const { data } = await apiClient.get(url);
