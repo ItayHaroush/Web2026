@@ -225,22 +225,38 @@ class ImageEnhancementService
      */
     private function generateVariations(string $originalPath, string $prompt): array
     {
-        $provider = config('ai.provider', 'openai');
+        $apiKey = config('ai.openai.api_key');
+        
+        // לוג לדיבאג
+        Log::info('🎨 Image Enhancement - Starting', [
+            'has_api_key' => !empty($apiKey),
+            'api_key_prefix' => $apiKey ? substr($apiKey, 0, 10) . '...' : 'MISSING',
+            'env' => config('app.env'),
+            'provider' => config('ai.provider'),
+        ]);
 
-        // בשרת פרודקשן - השתמש ב-Mock עד שנבנה Queue system
-        // OpenAI DALL-E 3 לוקח יותר מדי זמן (3 קריאות נפרדות) ו-Gateway מתפוג
-        if ($provider === 'openai' && config('app.env') !== 'production') {
-            return $this->generateWithOpenAI($prompt);
+        // בדיקה: אם אין API key → mock mode
+        if (empty($apiKey)) {
+            Log::warning('⚠️ Mock mode active - no OpenAI API key configured');
+            return $this->generateMockVariations($originalPath);
         }
 
-        // Default: mock variations (מחזיר את התמונה המקורית 3 פעמים)
-        return $this->generateMockVariations($originalPath);
+        // ✅ קריאה אמיתית ל-OpenAI
+        try {
+            Log::info('🚀 Calling OpenAI DALL-E 3 API');
+            return $this->generateWithOpenAI($prompt, $originalPath);
+        } catch (\Exception $e) {
+            Log::error('❌ OpenAI API failed, falling back to mock', [
+                'error' => $e->getMessage()
+            ]);
+            return $this->generateMockVariations($originalPath);
+        }
     }
 
     /**
      * יצירת וריאציות עם OpenAI DALL-E 3
      */
-    private function generateWithOpenAI(string $prompt): array
+    private function generateWithOpenAI(string $prompt, string $originalPath): array
     {
         $apiKey = config('ai.openai.api_key');
         $count = config('ai.image_enhancement.variations_count', 3);
@@ -250,7 +266,9 @@ class ImageEnhancementService
         // DALL-E 3 מחזיר רק 1 תמונה לקריאה, אז נבצע מספר קריאות
         for ($i = 0; $i < $count; $i++) {
             try {
-                $response = Http::withHeaders([
+                Log::info("📤 Calling OpenAI API - variation #{$i}");
+                
+                $response = Http::timeout(60)->withHeaders([
                     'Authorization' => "Bearer {$apiKey}",
                     'Content-Type' => 'application/json',
                 ])->post('https://api.openai.com/v1/images/generations', [
@@ -264,22 +282,37 @@ class ImageEnhancementService
 
                 if ($response->successful()) {
                     $imageUrl = $response->json('data.0.url');
-                    $savedPath = $this->downloadAndSaveImage($imageUrl, $i);
+                    Log::info("✅ OpenAI returned image URL - variation #{$i}");
+                    
+                    $savedPath = $this->downloadAndSaveImage($imageUrl, $originalPath, $i);
                     $variations[] = $savedPath;
+                    
+                    Log::info("💾 Image saved - variation #{$i}", ['path' => $savedPath]);
                 } else {
                     Log::warning('OpenAI Image Generation Failed', [
+                        'variation_index' => $i,
                         'response' => $response->json(),
                         'status' => $response->status(),
                     ]);
                 }
             } catch (\Exception $e) {
-                Log::error('OpenAI API Error', ['error' => $e->getMessage()]);
+                Log::error('OpenAI API Error', [
+                    'variation_index' => $i,
+                    'error' => $e->getMessage()
+                ]);
+            }
+            
+            // Delay קטן בין קריאות (rate limiting)
+            if ($i < $count - 1) {
+                sleep(1);
             }
         }
 
         if (empty($variations)) {
             throw new \Exception('לא ניתן ליצור וריאציות. נסה שוב מאוחר יותר.');
         }
+        
+        Log::info('✨ All variations created', ['total' => count($variations)]);
 
         return $variations;
     }
@@ -287,12 +320,13 @@ class ImageEnhancementService
     /**
      * הורדה ושמירה של תמונה מ-URL
      */
-    private function downloadAndSaveImage(string $url, int $index): string
+    private function downloadAndSaveImage(string $url, string $originalPath, int $index): string
     {
+        $directory = dirname($originalPath);
         $filename = 'variation_' . time() . "_{$index}.jpg";
+        $path = "{$directory}/{$filename}";
+        
         $contents = file_get_contents($url);
-        $path = "ai-images/variations/{$filename}";
-
         Storage::disk('public')->put($path, $contents);
 
         return $path;
