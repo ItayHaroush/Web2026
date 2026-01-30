@@ -27,7 +27,7 @@ class ImageEnhancementService {
         formData.append('background', mappedBackground);
         formData.append('category', 'food'); // Default
         formData.append('level', 'casual'); // Default
-        
+
         // 🎯 שליחת category_id ל-backend להפעלת strength overrides
         if (menuItem) {
             formData.append('menu_item_id', menuItem.id);
