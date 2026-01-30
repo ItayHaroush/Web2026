@@ -124,8 +124,8 @@ class ImageEnhancementService
 
         // Support both old format (string) and new format (object with 'path')
         $variationData = $enhancement->variations[$selectedIndex];
-        $selectedPath = is_array($variationData) && isset($variationData['path']) 
-            ? $variationData['path'] 
+        $selectedPath = is_array($variationData) && isset($variationData['path'])
+            ? $variationData['path']
             : $variationData;
 
         // עדכון הרשומה
