@@ -177,7 +177,7 @@ return [
             'api_key' => env('STABILITY_API_KEY', ''),
             'api_url' => env('STABILITY_API_URL', 'https://api.stability.ai/v2beta/stable-image/generate/sd3'),
             'model' => 'sd3-medium',
-            'strength' => 0.35, // 0-1: enhancement intensity (0.35 = preserve 65% original)
+            'strength' => 0.70, // 0-1: enhancement intensity (0.70 = 70% AI change, 30% preserve)
             'timeout' => 60,
         ],
     ],
