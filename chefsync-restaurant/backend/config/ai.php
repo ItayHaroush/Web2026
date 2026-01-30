@@ -189,7 +189,7 @@ return [
     | טבלת חוקים סגורה לבניית פרומפטים - אין אלתורים!
     */
     'prompt_rules' => [
-        
+
         // שלד קבוע (תמיד נוסף)
         'base' => [
             'positive' => 'professional food photography, realistic, high detail, natural lighting, 45 degree angle',

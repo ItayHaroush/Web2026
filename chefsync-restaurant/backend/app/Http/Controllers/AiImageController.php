@@ -34,7 +34,7 @@ class AiImageController extends Controller
         $validated = $request->validate([
             'image' => 'required|image|mimes:jpeg,jpg,png,webp|max:5120', // 5MB
             'menu_item_id' => 'nullable|exists:menu_items,id',
-            
+
             // Rule-Based Options
             'category' => 'nullable|in:drink,food',
             'subType' => 'nullable|in:soda,cola,beer,shawarma,pizza,burger,falafel',
