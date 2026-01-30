@@ -127,6 +127,14 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'tenant'])->group(function (
                 ->name('admin.ai.enhancements');
             Route::delete('/enhancements/{id}', [\App\Http\Controllers\AiImageController::class, 'delete'])
                 ->name('admin.ai.enhancements.delete');
+
+            // ניהול הגדרות AI ⭐ חדש
+            Route::get('/settings', [\App\Http\Controllers\AiSettingsController::class, 'getSettings'])
+                ->name('admin.ai.settings');
+            Route::post('/toggle-feature', [\App\Http\Controllers\AiSettingsController::class, 'toggleFeature'])
+                ->name('admin.ai.toggle-feature');
+            Route::get('/stats', [\App\Http\Controllers\AiSettingsController::class, 'getStats'])
+                ->name('admin.ai.stats');
         });
 
         // ניהול מסעדה

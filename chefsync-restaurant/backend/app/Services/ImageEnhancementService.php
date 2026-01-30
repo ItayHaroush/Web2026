@@ -321,6 +321,7 @@ class ImageEnhancementService
             ->attach('image', file_get_contents($fullPath), 'original.jpg')
             ->attach('prompt', $promptData['positive'])
             ->attach('negative_prompt', $promptData['negative'])
+            ->attach('mode', 'image-to-image')
             ->attach('strength', (string)$strength)
             ->attach('output_format', 'jpeg')
             ->post($apiUrl);

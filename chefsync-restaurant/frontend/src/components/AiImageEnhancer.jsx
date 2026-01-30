@@ -77,21 +77,9 @@ export default function AiImageEnhancer({ onComplete, menuItemId = null, buttonC
                 setVariations(variations);
                 setEnhancementId(result.data.enhancement_id);
                 
-                // ✅ אם יש רק וריאציה אחת, בחר אותה אוטומטית
-                if (variations.length === 1) {
-                    addToast('שיפור בוצע בהצלחה! שומר...', 'success');
-                    // בחירה אוטומטית של הווריאציה היחידה
-                    const selectResult = await imageEnhancementService.selectVariation(result.data.enhancement_id, 0);
-                    if (selectResult.success) {
-                        addToast('התמונה נשמרה בהצלחה!', 'success');
-                        onComplete?.(selectResult.data.selected_url);
-                        handleClose();
-                        return; // סיום מוקדם
-                    }
-                } else {
-                    setStep(4);
-                    addToast(`נוצרו ${variations.length} וריאציות! בחר את האהובה עליך`, 'success');
-                }
+                // תמיד הצג תצוגה מקדימה למשתמש
+                setStep(4);
+                addToast('שיפור הושלם! בדוק את התוצאה ולחץ לבחירה', 'success');
             } else {
                 throw new Error(result.message || 'שגיאה ביצירת וריאציות');
             }
