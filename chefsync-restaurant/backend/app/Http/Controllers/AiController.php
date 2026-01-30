@@ -203,6 +203,27 @@ class AiController extends Controller
                 'pending_orders' => $restaurant->orders()->where('status', 'received')->count(),
             ];
 
+            // ⚠️ Check if there's enough data for insights
+            if ($context['orders_month'] < 5) {
+                return response()->json([
+                    'success' => true,
+                    'data' => [
+                        'sales_trend' => '🚀 מסעדה חדשה - אין מספיק נתונים עדיין',
+                        'top_performers' => 'נדרשות לפחות 5 הזמנות לניתוח',
+                        'peak_times' => 'נאסוף נתונים בהמשך',
+                        'recommendations' => [
+                            'התחל לשווק את המסעדה - שתף קישור QR עם חברים',
+                            'וודא שהתפריט מושך ויש בו תמונות איכותיות',
+                            'הפעל מבצע פתיחה - "10% הנחה להזמנות ראשונות"'
+                        ],
+                        'alert' => '💡 מסעדה חדשה: אנחנו ממתינים לנתונים כדי לתת תובנות מדויקות',
+                        'provider' => 'system_fallback',
+                        'insufficient_data' => true
+                    ],
+                    'cached' => false,
+                ]);
+            }
+
             // Generate insights
             $insightsData = $ai->getDashboardInsights($context);
 
