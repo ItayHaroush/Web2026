@@ -227,11 +227,13 @@ class ImageEnhancementService
     {
         $provider = config('ai.provider', 'openai');
 
-        if ($provider === 'openai') {
+        // בשרת פרודקשן - השתמש ב-Mock עד שנבנה Queue system
+        // OpenAI DALL-E 3 לוקח יותר מדי זמן (3 קריאות נפרדות) ו-Gateway מתפוג
+        if ($provider === 'openai' && config('app.env') !== 'production') {
             return $this->generateWithOpenAI($prompt);
         }
 
-        // Default: mock variations for development
+        // Default: mock variations (מחזיר את התמונה המקורית 3 פעמים)
         return $this->generateMockVariations($originalPath);
     }
 
