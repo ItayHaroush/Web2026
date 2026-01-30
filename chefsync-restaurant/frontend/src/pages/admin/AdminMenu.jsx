@@ -6,6 +6,7 @@ import api from '../../services/apiClient';
 import { resolveAssetUrl } from '../../utils/assets';
 import AiDescriptionGenerator from '../../components/AiDescriptionGenerator';
 import AiPriceRecommender from '../../components/AiPriceRecommender';
+import AiImageEnhancer from '../../components/AiImageEnhancer';
 import {
     FaUtensils,
     FaPlus,
@@ -523,6 +524,20 @@ export default function AdminMenu() {
                                         </div>
                                     </div>
                                 </div>
+                                
+                                {/* שיפור תמונה עם AI */}
+                                <div className="space-y-1.5">
+                                    <AiImageEnhancer
+                                        onComplete={(imageUrl) => {
+                                            // כשה-AI מחזיר תמונה משופרת, נוכל להשתמש ב-URL
+                                            console.log('AI Enhanced Image:', imageUrl);
+                                            // TODO: לשמור את ה-URL במקום הקובץ
+                                        }}
+                                        menuItemId={editItem?.id}
+                                        buttonClassName="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all shadow-md text-xs font-bold"
+                                    />
+                                </div>
+
                             </div>
 
                             <div className="pt-6 border-t border-gray-100 space-y-6">

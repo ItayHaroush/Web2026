@@ -156,4 +156,75 @@ return [
             'keywords' => ['טרי', 'איכותי'],
         ],
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Image Enhancement Configuration
+    |--------------------------------------------------------------------------
+    | אופציות לשיפור תמונות AI - רקעים, זוויות, והגדרות
+    */
+    'image_enhancement' => [
+        'enabled' => true,
+        'cost_credits' => 3, // קרדיטים לכל שיפור (3 וריאציות)
+        'max_file_size' => 5120, // KB (5MB)
+        'allowed_formats' => ['jpg', 'jpeg', 'png', 'webp'],
+        'output_format' => 'jpeg',
+        'variations_count' => 3,
+
+        // רקעים זמינים
+        'backgrounds' => [
+            'marble' => [
+                'label_he' => 'שיש',
+                'label_en' => 'Marble',
+                'prompt_part' => 'on elegant white marble surface',
+            ],
+            'wood' => [
+                'label_he' => 'שולחן עץ',
+                'label_en' => 'Wooden table',
+                'prompt_part' => 'on rustic wooden table',
+            ],
+            'clean' => [
+                'label_he' => 'לבן נקי',
+                'label_en' => 'Clean white',
+                'prompt_part' => 'on clean white background',
+            ],
+        ],
+
+        // זוויות צילום
+        'angles' => [
+            'top' => [
+                'label_he' => 'מלמעלה',
+                'label_en' => 'Top view',
+                'prompt_part' => 'top-down view, flat lay composition',
+            ],
+            'side' => [
+                'label_he' => 'מהצד',
+                'label_en' => 'Side view',
+                'prompt_part' => '45-degree angle, side perspective',
+            ],
+            'hands' => [
+                'label_he' => 'עם ידיים מגישות',
+                'label_en' => 'With serving hands',
+                'prompt_part' => 'hands presenting the dish elegantly',
+            ],
+        ],
+
+        // תבנית Prompt קבועה
+        'prompt_template' => 'Professional food photography of {dish_name}, {angle}, {background}, restaurant lighting, high detail, vibrant colors, appetizing presentation, no text, no logos, no watermarks, realistic style, sharp focus, bokeh background',
+
+        // הגדרות Stability AI
+        'stability' => [
+            'model' => 'stable-diffusion-xl-1024-v1-0',
+            'steps' => 30,
+            'cfg_scale' => 7,
+            'seed' => 0, // random
+        ],
+
+        // בונוסים
+        'post_processing' => [
+            'sharpen' => true,
+            'auto_crop' => true,
+            'aspect_ratios' => ['1:1', '4:5'], // אינסטגרם
+        ],
+    ],
 ];
