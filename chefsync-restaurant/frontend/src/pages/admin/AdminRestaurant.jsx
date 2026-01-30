@@ -507,8 +507,8 @@ export default function AdminRestaurant() {
                                                     type="button"
                                                     onClick={() => handleChange('restaurant_type', type.value)}
                                                     className={`p-3 rounded-xl border-2 transition-all ${(restaurant.restaurant_type || 'general') === type.value
-                                                            ? 'border-brand-primary bg-brand-primary/10 shadow-md'
-                                                            : 'border-gray-200 hover:border-brand-primary/50'
+                                                        ? 'border-brand-primary bg-brand-primary/10 shadow-md'
+                                                        : 'border-gray-200 hover:border-brand-primary/50'
                                                         }`}
                                                 >
                                                     <Icon className={`text-2xl mb-1 mx-auto ${type.color}`} />

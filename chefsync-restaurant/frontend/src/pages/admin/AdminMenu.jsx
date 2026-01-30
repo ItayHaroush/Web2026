@@ -263,8 +263,8 @@ export default function AdminMenu() {
                     <button
                         onClick={() => setFilterCategory('')}
                         className={`px-4 py-2.5 rounded-2xl font-black text-[11px] uppercase tracking-wider transition-all flex items-center gap-2 group relative ${filterCategory === ''
-                                ? 'bg-gray-900 text-white shadow-lg'
-                                : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
+                            ? 'bg-gray-900 text-white shadow-lg'
+                            : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
                             }`}
                     >
                         <FaLayerGroup size={10} />
@@ -275,8 +275,8 @@ export default function AdminMenu() {
                             key={cat.id}
                             onClick={() => setFilterCategory(cat.id.toString())}
                             className={`px-4 py-2.5 rounded-2xl font-black text-[11px] uppercase tracking-wider transition-all flex items-center gap-2 group relative ${filterCategory === cat.id.toString()
-                                    ? 'bg-gray-900 text-white shadow-lg'
-                                    : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
+                                ? 'bg-gray-900 text-white shadow-lg'
+                                : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
                                 }`}
                         >
                             <span className="text-[14px]">{cat.icon}</span>
@@ -354,8 +354,8 @@ export default function AdminMenu() {
                                         onClick={() => toggleAvailability(item)}
                                         disabled={isLocked}
                                         className={`flex-1 flex items-center justify-center gap-2 h-10 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all disabled:opacity-50 ${item.is_available
-                                                ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'
-                                                : 'bg-red-50 text-red-600 hover:bg-red-100'
+                                            ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'
+                                            : 'bg-red-50 text-red-600 hover:bg-red-100'
                                             }`}
                                     >
                                         {item.is_available ? <FaToggleOn size={14} /> : <FaToggleOff size={14} />}
@@ -524,7 +524,7 @@ export default function AdminMenu() {
                                         </div>
                                     </div>
                                 </div>
-                                
+
                                 {/* שיפור תמונה עם AI */}
                                 <div className="space-y-1.5">
                                     <AiImageEnhancer
@@ -602,8 +602,8 @@ export default function AdminMenu() {
                                                     type="button"
                                                     onClick={() => setForm({ ...form, addons_group_scope: group.id })}
                                                     className={`px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-tight transition-all ${form.addons_group_scope === group.id
-                                                            ? 'bg-gray-900 text-white shadow-md'
-                                                            : 'bg-white text-gray-500 border border-gray-100'
+                                                        ? 'bg-gray-900 text-white shadow-md'
+                                                        : 'bg-white text-gray-500 border border-gray-100'
                                                         }`}
                                                 >
                                                     {group.label}

@@ -88,7 +88,6 @@ class ImageEnhancementService
             ]);
 
             return $enhancement->fresh();
-
         } catch (\Exception $e) {
             // עדכון כשלון
             if (isset($enhancement)) {
@@ -203,7 +202,7 @@ class ImageEnhancementService
     private function buildPrompt(string $background, string $angle): string
     {
         $template = config('ai.image_enhancement.prompt_template');
-        
+
         $dishName = $this->menuItem?->name ?? 'delicious dish';
         $backgroundPart = config("ai.image_enhancement.backgrounds.{$background}.prompt_part");
         $anglePart = config("ai.image_enhancement.angles.{$angle}.prompt_part");
@@ -291,9 +290,9 @@ class ImageEnhancementService
         $filename = 'variation_' . time() . "_{$index}.jpg";
         $contents = file_get_contents($url);
         $path = "ai-images/variations/{$filename}";
-        
+
         Storage::disk('public')->put($path, $contents);
-        
+
         return $path;
     }
 
@@ -308,7 +307,7 @@ class ImageEnhancementService
         for ($i = 0; $i < $count; $i++) {
             $filename = 'variation_mock_' . time() . "_{$i}.jpg";
             $path = "ai-images/variations/{$filename}";
-            
+
             // העתקה פשוטה של המקור (mock)
             Storage::disk('public')->copy($originalPath, $path);
             $variations[] = $path;
