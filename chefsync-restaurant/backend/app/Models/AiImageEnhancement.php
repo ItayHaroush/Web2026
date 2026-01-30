@@ -73,6 +73,12 @@ class AiImageEnhancement extends Model
             return [];
         }
 
+        // Check if variations already have 'url' and 'path' structure (new format)
+        if (isset($this->variations[0]['url'])) {
+            return $this->variations;
+        }
+
+        // Legacy format: variations are simple paths
         return array_map(function ($path) {
             return [
                 'url' => asset("storage/{$path}"),
