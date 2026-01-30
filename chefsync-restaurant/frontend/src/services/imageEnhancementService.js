@@ -9,10 +9,10 @@ class ImageEnhancementService {
      * @param {File} imageFile - קובץ התמונה
      * @param {string} background - סוג רקע: marble, wood, clean
      * @param {string} angle - זווית צילום: top, side, hands
-     * @param {number} menuItemId - (אופציונלי) ID של המנה
+     * @param {Object} menuItem - (אופציונלי) אובייקט המנה המלא (עם category_id, name)
      * @returns {Promise<Object>} אובייקט עם 3 וריאציות
      */
-    async enhance(imageFile, background, angle, menuItemId = null) {
+    async enhance(imageFile, background, angle, menuItem = null) {
         // Temporary mapping: old values → new backend values
         const backgroundMap = {
             'marble': 'white',
@@ -27,14 +27,20 @@ class ImageEnhancementService {
         formData.append('background', mappedBackground);
         formData.append('category', 'food'); // Default
         formData.append('level', 'casual'); // Default
-        if (menuItemId) {
-            formData.append('menu_item_id', menuItemId);
+        
+        // 🎯 שליחת category_id ל-backend להפעלת strength overrides
+        if (menuItem) {
+            formData.append('menu_item_id', menuItem.id);
+            if (menuItem.category_id) {
+                formData.append('category_id', menuItem.category_id);
+            }
         }
 
         const response = await apiClient.post('/admin/ai/enhance-image', formData, {
             headers: {
                 'Content-Type': 'multipart/form-data',
             },
+            timeout: 60000, // 60 seconds for 3 variations
         });
 
         return response.data;

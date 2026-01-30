@@ -27,6 +27,9 @@ class AiImageController extends Controller
      */
     public function enhance(Request $request)
     {
+        // הגדלת timeout ל-90 שניות (3 קריאות API × 30 שניות)
+        set_time_limit(90);
+        
         $user = $request->user();
         $restaurant = Restaurant::findOrFail($user->restaurant_id);
 
@@ -35,12 +38,22 @@ class AiImageController extends Controller
             'image' => 'required|image|mimes:jpeg,jpg,png,webp|max:5120', // 5MB
             'menu_item_id' => 'nullable|exists:menu_items,id',
 
-            // Rule-Based Options
-            'category' => 'nullable|in:drink,food',
-            'subType' => 'nullable|in:soda,cola,beer,shawarma,pizza,burger,falafel',
-            'serving' => 'nullable|in:glass,bottle,pita,baguette,plate,bowl',
-            'level' => 'nullable|in:street,casual,boutique,premium',
-            'background' => 'nullable|in:kitchen,table,dark,white',
+            // Preset System Parameters
+            'category' => 'nullable|string',           // pizza, shawarma, burger, etc.
+            'presentation' => 'nullable|string',       // plate, street_slice, pita, etc.
+            
+            // Old system params (for backward compatibility)
+            'background' => 'nullable|string',
+            'level' => 'nullable|string',
+            
+            // Dish Details (for enrichment)
+            'dish_name' => 'nullable|string',
+            'description' => 'nullable|string',
+            'price' => 'nullable|numeric',
+            'category_id' => 'nullable|integer',
+            'category_name' => 'nullable|string',
+            'is_vegan' => 'nullable|boolean',
+            'is_vegetarian' => 'nullable|boolean',
         ]);
 
         try {
@@ -51,13 +64,36 @@ class AiImageController extends Controller
                     ->findOrFail($validated['menu_item_id']);
             }
 
-            // הכנת options
+            // הכנת options לפי Preset System
+            // Fallback: אם נשלחו פרמטרים ישנים (background), המר אותם
+            $category = $validated['category'] ?? 'generic';
+            $presentation = $validated['presentation'] ?? 'plate';
+            
+            // אם background נשלח במקום presentation (מערכת ישנה)
+            if (isset($validated['background']) && !isset($validated['presentation'])) {
+                $backgroundMap = [
+                    'white' => 'plate',
+                    'table' => 'plate',
+                    'marble' => 'plate',
+                    'wood' => 'plate',
+                    'kitchen' => 'plate',
+                    'dark' => 'plate',
+                ];
+                $presentation = $backgroundMap[$validated['background']] ?? 'plate';
+            }
+            
             $options = [
-                'category' => $validated['category'] ?? 'food',
-                'subType' => $validated['subType'] ?? null,
-                'serving' => $validated['serving'] ?? null,
-                'level' => $validated['level'] ?? 'casual',
-                'background' => $validated['background'] ?? 'white',
+                'category' => $category,
+                'presentation' => $presentation,
+                
+                // Dish details for enrichment
+                'dish_name' => $validated['dish_name'] ?? null,
+                'description' => $validated['description'] ?? null,
+                'price' => $validated['price'] ?? null,
+                'category_id' => $validated['category_id'] ?? null,
+                'category_name' => $validated['category_name'] ?? null,
+                'is_vegan' => $validated['is_vegan'] ?? false,
+                'is_vegetarian' => $validated['is_vegetarian'] ?? false,
             ];
 
             // יצירת שיפור

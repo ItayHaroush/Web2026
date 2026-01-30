@@ -11,7 +11,7 @@ import { useToast } from '../context/ToastContext';
  * קומפוננטה לשיפור תמונות עם AI
  * תהליך 4 שלבים: העלאה → בחירת אופציות → יצירת וריאציות → בחירה סופית
  */
-export default function AiImageEnhancer({ onComplete, menuItemId = null, buttonClassName = '' }) {
+export default function AiImageEnhancer({ onComplete, menuItem = null, buttonClassName = '' }) {
     const [isOpen, setIsOpen] = useState(false);
     const [step, setStep] = useState(1); // 1=upload, 2=options, 3=generating, 4=select
     const [uploadedFile, setUploadedFile] = useState(null);
@@ -69,14 +69,14 @@ export default function AiImageEnhancer({ onComplete, menuItemId = null, buttonC
                 uploadedFile,
                 selectedBackground,
                 selectedAngle,
-                menuItemId
+                menuItem
             );
 
             if (result.success) {
                 const variations = result.data.variations;
                 setVariations(variations);
                 setEnhancementId(result.data.enhancement_id);
-                
+
                 // תמיד הצג תצוגה מקדימה למשתמש
                 setStep(4);
                 addToast('שיפור הושלם! בדוק את התוצאה ולחץ לבחירה', 'success');
@@ -211,8 +211,8 @@ export default function AiImageEnhancer({ onComplete, menuItemId = null, buttonC
                                                     type="button"
                                                     onClick={() => setSelectedBackground(option.value)}
                                                     className={`p-4 rounded-xl border-2 transition-all ${selectedBackground === option.value
-                                                            ? 'border-purple-600 bg-purple-50 shadow-lg'
-                                                            : 'border-gray-200 hover:border-purple-300'
+                                                        ? 'border-purple-600 bg-purple-50 shadow-lg'
+                                                        : 'border-gray-200 hover:border-purple-300'
                                                         }`}
                                                 >
                                                     <div className="text-purple-600 mb-2 flex justify-center">{option.icon}</div>
@@ -236,8 +236,8 @@ export default function AiImageEnhancer({ onComplete, menuItemId = null, buttonC
                                                     type="button"
                                                     onClick={() => setSelectedAngle(option.value)}
                                                     className={`p-4 rounded-xl border-2 transition-all ${selectedAngle === option.value
-                                                            ? 'border-pink-600 bg-pink-50 shadow-lg'
-                                                            : 'border-gray-200 hover:border-pink-300'
+                                                        ? 'border-pink-600 bg-pink-50 shadow-lg'
+                                                        : 'border-gray-200 hover:border-pink-300'
                                                         }`}
                                                 >
                                                     <div className="text-pink-600 mb-2 flex justify-center">{option.icon}</div>
@@ -296,8 +296,8 @@ export default function AiImageEnhancer({ onComplete, menuItemId = null, buttonC
                                                 onClick={() => handleSelectVariation(index)}
                                                 disabled={isProcessing}
                                                 className={`relative group rounded-xl overflow-hidden border-4 transition-all ${selectedIndex === index
-                                                        ? 'border-green-500 shadow-2xl scale-105'
-                                                        : 'border-gray-200 hover:border-purple-400 hover:shadow-xl'
+                                                    ? 'border-green-500 shadow-2xl scale-105'
+                                                    : 'border-gray-200 hover:border-purple-400 hover:shadow-xl'
                                                     } disabled:opacity-50`}
                                             >
                                                 <img

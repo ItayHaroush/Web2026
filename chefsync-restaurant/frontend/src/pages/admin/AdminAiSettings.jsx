@@ -54,7 +54,7 @@ export default function SuperAdminAiSettings() {
 
     const fetchData = async () => {
         if (!selectedRestaurant) return;
-        
+
         try {
             const [settingsRes, statsRes] = await Promise.all([
                 api.get(`/super-admin/ai/settings/${selectedRestaurant}`, { headers: getAuthHeaders() }),
@@ -254,16 +254,14 @@ export default function SuperAdminAiSettings() {
                                 {/* Toggle Button */}
                                 <button
                                     onClick={() => toggleFeature(feature.key)}
-                                    className={`relative inline-flex h-12 w-24 items-center rounded-full transition-colors ${
-                                        settings[feature.key]
+                                    className={`relative inline-flex h-12 w-24 items-center rounded-full transition-colors ${settings[feature.key]
                                             ? 'bg-green-500'
                                             : 'bg-gray-300'
-                                    }`}
+                                        }`}
                                 >
                                     <span
-                                        className={`inline-block h-10 w-10 transform rounded-full bg-white shadow-lg transition-transform ${
-                                            settings[feature.key] ? 'translate-x-12' : 'translate-x-1'
-                                        }`}
+                                        className={`inline-block h-10 w-10 transform rounded-full bg-white shadow-lg transition-transform ${settings[feature.key] ? 'translate-x-12' : 'translate-x-1'
+                                            }`}
                                     >
                                         {settings[feature.key] ? (
                                             <FaToggleOn className="h-10 w-10 text-green-500" />
