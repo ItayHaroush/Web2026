@@ -161,7 +161,12 @@ const AiPriceRecommender = ({ itemData, onPriceRecommended }) => {
                                 <p className="text-xs text-purple-200 opacity-90">מבוסס על שוק ומתחרים</p>
                             </div>
                             <button
-                                onClick={() => setShowDetails(false)}
+                                type="button"  // Prevent form submission
+                                onClick={(e) => {
+                                    e.preventDefault(); 
+                                    e.stopPropagation();
+                                    setShowDetails(false);
+                                }}
                                 className="p-1.5 hover:bg-white/20 rounded-lg transition-colors"
                             >
                                 <FaTimes />

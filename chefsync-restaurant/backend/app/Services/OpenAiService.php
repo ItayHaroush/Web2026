@@ -95,8 +95,9 @@ class OpenAiService extends BaseAiService
             // Build prompt
             $prompt = $this->buildDescriptionPrompt($menuItemData);
 
-            // Call OpenAI (or mock)
-            $response = $this->callOpenAi($prompt);
+            // Call OpenAI with clear system context
+            $systemPrompt = "אתה מחולל תיאורים מקצועיים למנות במסעדות. המשימה שלך היא לכתוב תיאורים קצרים, עובדתיים וממוקדים בלבד - ללא המלצות עסקיות, ללא ניתוחים, ללא שיווק מוגזם. רק תיאור המנה עצמה.";
+            $response = $this->callOpenAi($prompt, $systemPrompt);
             $responseTime = (int)((microtime(true) - $startTime) * 1000);
 
             $result = [
@@ -446,7 +447,7 @@ class OpenAiService extends BaseAiService
     /**
      * Call OpenAI API (or return mock response)
      */
-    private function callOpenAi($input): array
+    private function callOpenAi($input, $systemPrompt = null): array
     {
         // Mock mode: return sample responses
         if ($this->mockMode) {
@@ -454,13 +455,19 @@ class OpenAiService extends BaseAiService
         }
 
         try {
-            // Convert string to messages array
+            // Build messages array
+            $messages = [];
+            
+            // Add system prompt if provided
+            if ($systemPrompt) {
+                $messages[] = ['role' => 'system', 'content' => $systemPrompt];
+            }
+            
+            // Convert string to user message or use provided messages array
             if (is_string($input)) {
-                $messages = [
-                    ['role' => 'user', 'content' => $input]
-                ];
+                $messages[] = ['role' => 'user', 'content' => $input];
             } else {
-                $messages = $input;
+                $messages = array_merge($messages, $input);
             }
 
             $response = Http::withHeaders([
@@ -535,7 +542,22 @@ class OpenAiService extends BaseAiService
         if (!empty($context['restaurant'])) {
             $r = $context['restaurant'];
             $prompt .= "המסעדה: " . ($r['name'] ?? 'לא ידוע') . "\n";
-            $prompt .= "מסלול מנוי: " . ($r['subscription_tier'] ?? 'free') . "\n\n";
+            
+            // Check for active trial
+            $subscriptionText = 'free';
+            if (!empty($r['trial_ends_at'])) {
+                $trialEnd = \Carbon\Carbon::parse($r['trial_ends_at']);
+                if ($trialEnd->isFuture()) {
+                    $daysRemaining = now()->diffInDays($trialEnd);
+                    $subscriptionText = "Pro (תקופת ניסיון - נותרו {$daysRemaining} ימים)";
+                } else {
+                    $subscriptionText = $r['subscription_tier'] ?? 'free';
+                }
+            } elseif (!empty($r['subscription_tier'])) {
+                $subscriptionText = $r['subscription_tier'];
+            }
+            
+            $prompt .= "מסלול מנוי: " . $subscriptionText . "\n\n";
         }
 
         if (!empty($context['orders'])) {
@@ -620,10 +642,10 @@ class OpenAiService extends BaseAiService
             $dietText = "מתאים לצמחונים\n";
         }
 
-        // Replace placeholders
+        // Replace placeholders (price removed - not needed in description)
         return str_replace(
-            ['{name}', '{price}', '{category}', '{allergens}', '{dietary}'],
-            [$name, $price, $category, $allergensText, $dietText],
+            ['{name}', '{category}', '{allergens}', '{dietary}'],
+            [$name, $category, $allergensText, $dietText],
             $template
         );
     }
@@ -633,7 +655,7 @@ class OpenAiService extends BaseAiService
      */
     private function getFallbackPrompt(): string
     {
-        return "כתוב תיאור אפטיטי למנה (1-2 משפטים):\n\nשם: {name}\nמחיר: ₪{price}\nקטגוריה: {category}\n{allergens}{dietary}\n\nהחזר רק תיאור בעברית.";
+        return "כתוב תיאור קצר ומקצועי למנה (משפט אחד, עד 15 מילים):\n\nשם: {name}\nקטגוריה: {category}\n{allergens}{dietary}\n\nכללים: תיאור עובדתי, ללא שיווק מוגזם, פשוט וברור. אם זה משקה - תאר סוג וגודל בלבד.\n\nהחזר רק תיאור בעברית, ללא מחירים.";
     }
 
     /**

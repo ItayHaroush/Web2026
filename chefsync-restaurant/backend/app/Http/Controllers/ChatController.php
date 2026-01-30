@@ -378,6 +378,7 @@ class ChatController extends Controller
                 'name' => $restaurant->name,
                 'tenant_id' => $tenantId,
                 'subscription_tier' => config('app.dev_mode') ? 'pro' : ($subscription ? $subscription->tier : 'basic'),
+                'trial_ends_at' => $restaurant->trial_ends_at,
                 'is_approved' => $restaurant->is_approved,
                 'total_menu_items' => MenuItem::count()
             ],

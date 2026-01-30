@@ -38,7 +38,7 @@ const AiDescriptionGenerator = ({ menuItem, onDescriptionGenerated }) => {
             if (response.data.success) {
                 const description = response.data.data.description;
                 setGeneratedDescription(description);
-                setTempDescription(description);
+                setTempDescription(description); // ✅ Always update tempDescription
             } else {
                 setError(response.data.message || 'שגיאה ביצירת תיאור');
             }
@@ -140,21 +140,34 @@ const AiDescriptionGenerator = ({ menuItem, onDescriptionGenerated }) => {
                             </div>
                             <div className="flex gap-1">
                                 <button
-                                    onClick={() => setIsEditing(!isEditing)}
+                                    type="button" // Prevent form submission
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        setIsEditing(!isEditing);
+                                    }}
                                     className="p-1.5 hover:bg-white/20 rounded-lg transition-colors"
                                     title="ערוך לפני שמירה"
                                 >
                                     <FaEdit size={14} />
                                 </button>
                                 <button
-                                    onClick={() => handleGenerate(true)}
+                                    type="button" // Prevent form submission
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        handleGenerate(true);
+                                    }}
                                     className="p-1.5 hover:bg-white/20 rounded-lg transition-colors"
                                     title="נסה שוב"
                                 >
                                     <FaRedo size={14} />
                                 </button>
                                 <button
-                                    onClick={() => setGeneratedDescription(null)}
+                                    type="button" // Prevent form submission
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        setGeneratedDescription(null);
+                                    }}
                                     className="p-1.5 hover:bg-white/20 rounded-lg transition-colors"
                                     title="סגור"
                                 >
@@ -181,7 +194,11 @@ const AiDescriptionGenerator = ({ menuItem, onDescriptionGenerated }) => {
                         {/* Footer Actions */}
                         <div className="p-3 bg-gray-50 border-t border-gray-100 flex justify-end gap-2">
                             <button
-                                onClick={handleApply}
+                                type="button" // Prevent form submission
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    handleApply();
+                                }}
                                 className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg text-sm font-medium hover:shadow-lg active:scale-95 transition-all"
                             >
                                 <FaCheck size={12} />
