@@ -19,9 +19,9 @@ class ImageEnhancementService {
             'wood': 'table',
             'clean': 'white'
         };
-        
+
         const mappedBackground = backgroundMap[background] || background;
-        
+
         const formData = new FormData();
         formData.append('image', imageFile);
         formData.append('background', mappedBackground);
