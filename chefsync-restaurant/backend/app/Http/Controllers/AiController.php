@@ -20,6 +20,9 @@ class AiController extends Controller
      */
     public function generateDescription(Request $request)
     {
+        // Extend timeout for AI generation
+        set_time_limit(180); // 3 minutes
+
         try {
             // Validate request
             $validated = $request->validate([
