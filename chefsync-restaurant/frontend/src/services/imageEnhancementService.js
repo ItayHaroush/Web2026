@@ -20,21 +20,21 @@ class ImageEnhancementService {
         // 🎯 זיהוי אוטומטי של category (משקה/אוכל)
         const detectedCategory = this.detectCategory(menuItem);
         const detectedPresentation = this.detectPresentation(menuItem, detectedCategory);
-        
+
         console.log('🔍 זיהוי אוטומטי:', {
             menuItemName: menuItem?.name,
             categoryName: menuItem?.category?.name,
             detectedCategory,
             detectedPresentation
         });
-        
+
         formData.append('category', detectedCategory);
         formData.append('presentation', detectedPresentation);
 
         // 📝 פרטי המנה להעשרת הפרומפט
         if (menuItem) {
             formData.append('menu_item_id', menuItem.id);
-            
+
             if (menuItem.name) {
                 formData.append('dish_name', menuItem.name);
             }
@@ -73,38 +73,38 @@ class ImageEnhancementService {
      */
     detectCategory(menuItem) {
         if (!menuItem) return 'generic';
-        
+
         // ⚠️ לא משתמשים ב-toLowerCase() כי זה עברית!
         const name = menuItem.name || '';
         const categoryName = menuItem.category?.name || '';
         const description = menuItem.description || '';
-        
+
         // 🥤 משקאות
         const drinkKeywords = ['משקה', 'שתייה', 'קולה', 'סודה', 'בירה', 'יין', 'מיץ', 'קפה', 'תה', 'לימונדה', 'קוקטייל', 'מים', 'water', 'drink'];
         if (drinkKeywords.some(kw => categoryName.includes(kw) || name.includes(kw))) {
             return 'drink';
         }
-        
+
         // 🍕 פיצה
         if (name.includes('פיצה') || categoryName.includes('פיצ')) {
             return 'pizza';
         }
-        
+
         // 🥙 שווארמה
         if (name.includes('שווארמה') || name.includes('שוורמה')) {
             return 'shawarma';
         }
-        
+
         // 🍔 המבורגר
         if (name.includes('המבורגר') || name.includes('בורגר')) {
             return 'burger';
         }
-        
+
         // 🥗 סלט
         if (name.includes('סלט') || categoryName.includes('סלט')) {
             return 'salad';
         }
-        
+
         return 'generic';
     }
 
@@ -113,11 +113,11 @@ class ImageEnhancementService {
      */
     detectPresentation(menuItem, category) {
         if (!menuItem) return 'plate';
-        
+
         // ⚠️ לא משתמשים ב-toLowerCase() כי זה עברית!
         const name = menuItem.name || '';
         const description = menuItem.description || '';
-        
+
         // משקאות
         if (category === 'drink') {
             if (name.includes('בקבוק') || description.includes('בקבוק')) {
@@ -125,23 +125,23 @@ class ImageEnhancementService {
             }
             return 'glass';
         }
-        
+
         // בפיתה / לפה
         if (name.includes('בפיתה') || name.includes('לפה') || description.includes('פיתה')) {
             return 'pita';
         }
-        
+
         // באגט
         if (name.includes('באגט') || description.includes('באגט')) {
             return 'baguette';
         }
-        
+
         // Default לפי קטגוריה
         if (category === 'pizza') return 'plate';
         if (category === 'shawarma') return 'pita';
         if (category === 'burger') return 'street';
         if (category === 'salad') return 'bowl';
-        
+
         return 'plate';
     }
 
