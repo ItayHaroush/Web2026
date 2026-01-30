@@ -17,10 +17,13 @@ class AiSettingsController extends Controller
     /**
      * קבלת הגדרות AI הנוכחיות
      */
-    public function getSettings(Request $request)
+    public function getSettings(Request $request, $restaurantId = null)
     {
-        $user = $request->user();
-        $restaurant = Restaurant::findOrFail($user->restaurant_id);
+        // אם יש restaurantId בנתיב (super admin), השתמש בו
+        // אחרת, קח מהמשתמש המחובר (admin רגיל)
+        $restaurant = $restaurantId 
+            ? Restaurant::findOrFail($restaurantId)
+            : Restaurant::findOrFail($request->user()->restaurant_id);
 
         return response()->json([
             'success' => true,
@@ -38,12 +41,12 @@ class AiSettingsController extends Controller
     public function toggleFeature(Request $request)
     {
         $validated = $request->validate([
+            'restaurant_id' => 'required|exists:restaurants,id',
             'feature' => 'required|in:description_generator,price_suggestion,image_enhancement',
             'enabled' => 'required|boolean',
         ]);
 
-        $user = $request->user();
-        $restaurant = Restaurant::findOrFail($user->restaurant_id);
+        $restaurant = Restaurant::findOrFail($validated['restaurant_id']);
 
         $columnMap = [
             'description_generator' => 'ai_description_enabled',
@@ -63,10 +66,11 @@ class AiSettingsController extends Controller
     /**
      * סטטיסטיקות שימוש ב-AI
      */
-    public function getStats(Request $request)
+    public function getStats(Request $request, $restaurantId = null)
     {
-        $user = $request->user();
-        $restaurant = Restaurant::findOrFail($user->restaurant_id);
+        $restaurant = $restaurantId 
+            ? Restaurant::findOrFail($restaurantId)
+            : Restaurant::findOrFail($request->user()->restaurant_id);
 
         // קרדיטים
         $credits = AiCredit::where('restaurant_id', $restaurant->id)->first();
