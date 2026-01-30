@@ -139,8 +139,9 @@ class ImageEnhancementService
 
         // עדכון המנה (אם משויכת)
         if ($this->menuItem) {
+            // ✅ שמירה עם /storage/ prefix כדי ש-resolveAssetUrl() ב-frontend יעבוד
             $this->menuItem->update([
-                'image_url' => $selectedPath,
+                'image_url' => "/storage/{$selectedPath}",
             ]);
         }
 
