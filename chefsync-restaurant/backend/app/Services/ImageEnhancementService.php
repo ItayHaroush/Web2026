@@ -31,16 +31,14 @@ class ImageEnhancementService
      * יצירת שיפור תמונה חדש
      * 
      * @param UploadedFile $image התמונה המקורית
-     * @param string $background רקע נבחר (marble/wood/clean)
-     * @param string $angle זווית נבחרת (top/side/hands)
+     * @param array $options אופציות [category, subType, serving, level, background]
      * @return AiImageEnhancement
      * @throws \Exception
      */
-    public function enhance(UploadedFile $image, string $background, string $angle): AiImageEnhancement
+    public function enhance(UploadedFile $image, array $options = []): AiImageEnhancement
     {
         // ולידציה
         $this->validateImage($image);
-        $this->validateOptions($background, $angle);
 
         // בדיקת קרדיטים
         $credits = AiCredit::getOrCreateForRestaurant($this->restaurant);
@@ -59,18 +57,18 @@ class ImageEnhancementService
                 'restaurant_id' => $this->restaurant->id,
                 'menu_item_id' => $this->menuItem?->id,
                 'original_path' => $originalPath,
-                'background' => $background,
-                'angle' => $angle,
+                'background' => $options['background'] ?? 'white',
+                'angle' => $options['angle'] ?? 'side',
                 'status' => 'processing',
-                'ai_provider' => config('ai.provider', 'openai'),
+                'ai_provider' => 'stability',
                 'cost_credits' => $cost,
             ]);
 
-            // בניית Prompt
-            $prompt = $this->buildPrompt($background, $angle);
+            // בניית Prompt לפי חוקים
+            $promptData = $this->buildPrompt($options);
 
-            // קריאה ל-AI (asynchronous ideally)
-            $variations = $this->generateVariations($originalPath, $prompt);
+            // קריאה ל-AI (img2img enhancement)
+            $variations = $this->generateVariations($originalPath, $promptData);
 
             // שמירת וריאציות
             $enhancement->update([
@@ -170,23 +168,6 @@ class ImageEnhancementService
     }
 
     /**
-     * ולידציה של אופציות
-     */
-    private function validateOptions(string $background, string $angle): void
-    {
-        $validBackgrounds = array_keys(config('ai.image_enhancement.backgrounds', []));
-        $validAngles = array_keys(config('ai.image_enhancement.angles', []));
-
-        if (!in_array($background, $validBackgrounds)) {
-            throw new \Exception('רקע לא תקין');
-        }
-
-        if (!in_array($angle, $validAngles)) {
-            throw new \Exception('זווית לא תקינה');
-        }
-    }
-
-    /**
      * שמירת התמונה המקורית
      */
     private function saveOriginal(UploadedFile $image): string
@@ -197,56 +178,102 @@ class ImageEnhancementService
     }
 
     /**
-     * בניית Prompt מותאם אישית
+     * בניית Prompt לפי חוקים סגורים (Rule-Based System)
+     * 
+     * @param array $options [category, subType, serving, level, background]
+     * @return array ['positive' => string, 'negative' => string, 'strength' => float]
      */
-    private function buildPrompt(string $background, string $angle): string
+    private function buildPrompt(array $options = []): array
     {
-        $template = config('ai.image_enhancement.prompt_template');
+        $rules = config('ai.prompt_rules');
+        
+        // אתחול
+        $positive = [];
+        $negative = [];
+        $strength = 0.35; // ברירת מחדל
 
-        $dishName = $this->menuItem?->name ?? 'delicious dish';
-        $backgroundPart = config("ai.image_enhancement.backgrounds.{$background}.prompt_part");
-        $anglePart = config("ai.image_enhancement.angles.{$angle}.prompt_part");
+        // 1️⃣ שלד קבוע (BASE - תמיד)
+        $positive[] = $rules['base']['positive'];
+        $negative[] = $rules['base']['negative'];
 
-        $prompt = str_replace(
-            ['{dish_name}', '{angle}', '{background}'],
-            [$dishName, $anglePart, $backgroundPart],
-            $template
-        );
+        // 2️⃣ קטגוריה (drink vs food)
+        $category = $options['category'] ?? 'food';
+        if (isset($rules['categories'][$category])) {
+            $positive[] = $rules['categories'][$category]['add'];
+            $negative[] = $rules['categories'][$category]['negative'];
+        }
 
-        return $prompt;
+        // 3️⃣ תת-סוג (subType) - מעדכן גם strength
+        $subType = $options['subType'] ?? null;
+        if ($subType && isset($rules['subTypes'][$subType])) {
+            $positive[] = $rules['subTypes'][$subType]['add'];
+            if (isset($rules['subTypes'][$subType]['negative'])) {
+                $negative[] = $rules['subTypes'][$subType]['negative'];
+            }
+            // עדכון strength מהתת-סוג
+            if (isset($rules['subTypes'][$subType]['strength'])) {
+                $strength = $rules['subTypes'][$subType]['strength'];
+            }
+        }
+
+        // 4️⃣ צורת הגשה (serving)
+        $serving = $options['serving'] ?? null;
+        if ($serving && isset($rules['serving'][$serving])) {
+            $positive[] = $rules['serving'][$serving]['add'];
+            if (isset($rules['serving'][$serving]['negative'])) {
+                $negative[] = $rules['serving'][$serving]['negative'];
+            }
+        }
+
+        // 5️⃣ רמת מסעדה (level)
+        $level = $options['level'] ?? 'casual';
+        if (isset($rules['levels'][$level])) {
+            $positive[] = $rules['levels'][$level]['add'];
+        }
+
+        // 6️⃣ רקע (background)
+        $background = $options['background'] ?? 'white';
+        if (isset($rules['backgrounds'][$background])) {
+            $positive[] = $rules['backgrounds'][$background]['add'];
+        }
+
+        // הרכבה סופית
+        return [
+            'positive' => implode(', ', array_filter($positive)),
+            'negative' => implode(', ', array_filter($negative)),
+            'strength' => $strength,
+        ];
     }
 
     /**
-     * יצירת וריאציות באמצעות AI
+     * יצירת וריאציות באמצעות AI (Stability AI img2img)
      * 
      * @param string $originalPath
-     * @param string $prompt
+     * @param array $promptData ['positive' => string, 'negative' => string, 'strength' => float]
      * @return array מערך של paths
      */
-    private function generateVariations(string $originalPath, string $prompt): array
+    private function generateVariations(string $originalPath, array $promptData): array
     {
-        $apiKey = config('ai.openai.api_key');
+        $provider = config('ai.image_enhancement.provider', 'stability');
 
-        // לוג לדיבאג
         Log::info('🎨 Image Enhancement - Starting', [
-            'has_api_key' => !empty($apiKey),
-            'api_key_prefix' => $apiKey ? substr($apiKey, 0, 10) . '...' : 'MISSING',
-            'env' => config('app.env'),
-            'provider' => config('ai.provider'),
+            'provider' => $provider,
+            'prompt_positive' => substr($promptData['positive'], 0, 100) . '...',
+            'strength' => $promptData['strength'],
         ]);
 
-        // בדיקה: אם אין API key → mock mode
-        if (empty($apiKey)) {
-            Log::warning('⚠️ Mock mode active - no OpenAI API key configured');
+        // בדיקה: אם provider = mock
+        if ($provider === 'mock') {
+            Log::warning('⚠️ Mock mode active');
             return $this->generateMockVariations($originalPath);
         }
 
-        // ✅ קריאה אמיתית ל-OpenAI
+        // ✅ קריאה ל-Stability AI (img2img)
         try {
-            Log::info('🚀 Calling OpenAI DALL-E 3 API');
-            return $this->generateWithOpenAI($prompt, $originalPath);
+            Log::info('🚀 Calling Stability AI SD3 (img2img)');
+            return $this->generateWithStabilityAI($originalPath, $promptData);
         } catch (\Exception $e) {
-            Log::error('❌ OpenAI API failed, falling back to mock', [
+            Log::error('❌ Stability AI failed, falling back to mock', [
                 'error' => $e->getMessage()
             ]);
             return $this->generateMockVariations($originalPath);
@@ -254,102 +281,82 @@ class ImageEnhancementService
     }
 
     /**
-     * יצירת וריאציות עם OpenAI DALL-E 3
+     * קריאה אמיתית ל-Stability AI (Image-to-Image)
      */
-    private function generateWithOpenAI(string $prompt, string $originalPath): array
+    private function generateWithStabilityAI(string $originalPath, array $promptData): array
     {
-        $apiKey = config('ai.openai.api_key');
-        $count = config('ai.image_enhancement.variations_count', 3);
+        $apiKey = config('ai.image_enhancement.stability.api_key');
+        $apiUrl = config('ai.image_enhancement.stability.api_url');
+        $strength = $promptData['strength'];
 
-        $variations = [];
-
-        // DALL-E 3 מחזיר רק 1 תמונה לקריאה, אז נבצע מספר קריאות
-        for ($i = 0; $i < $count; $i++) {
-            try {
-                Log::info("📤 Calling OpenAI API - variation #{$i}");
-
-                $response = Http::timeout(60)->withHeaders([
-                    'Authorization' => "Bearer {$apiKey}",
-                    'Content-Type' => 'application/json',
-                ])->post('https://api.openai.com/v1/images/generations', [
-                    'model' => 'dall-e-3',
-                    'prompt' => $prompt,
-                    'n' => 1,
-                    'size' => '1024x1024',
-                    'quality' => 'hd',
-                    'response_format' => 'url',
-                ]);
-
-                if ($response->successful()) {
-                    $imageUrl = $response->json('data.0.url');
-                    Log::info("✅ OpenAI returned image URL - variation #{$i}");
-
-                    $savedPath = $this->downloadAndSaveImage($imageUrl, $originalPath, $i);
-                    $variations[] = $savedPath;
-
-                    Log::info("💾 Image saved - variation #{$i}", ['path' => $savedPath]);
-                } else {
-                    Log::warning('OpenAI Image Generation Failed', [
-                        'variation_index' => $i,
-                        'response' => $response->json(),
-                        'status' => $response->status(),
-                    ]);
-                }
-            } catch (\Exception $e) {
-                Log::error('OpenAI API Error', [
-                    'variation_index' => $i,
-                    'error' => $e->getMessage()
-                ]);
-            }
-
-            // Delay קטן בין קריאות (rate limiting)
-            if ($i < $count - 1) {
-                sleep(1);
-            }
+        if (empty($apiKey)) {
+            throw new \Exception('STABILITY_API_KEY not configured');
         }
 
-        if (empty($variations)) {
-            throw new \Exception('לא ניתן ליצור וריאציות. נסה שוב מאוחר יותר.');
+        // טעינת התמונה המקורית
+        $fullPath = Storage::disk('public')->path($originalPath);
+        if (!file_exists($fullPath)) {
+            throw new \Exception("Original image not found: {$fullPath}");
         }
 
-        Log::info('✨ All variations created', ['total' => count($variations)]);
+        // קריאה ל-API (img2img)
+        $response = Http::timeout(60)
+            ->withHeaders([
+                'Authorization' => 'Bearer ' . $apiKey,
+                'Accept' => 'application/json',
+            ])
+            ->attach('image', file_get_contents($fullPath), 'original.jpg')
+            ->post($apiUrl, [
+                'prompt' => $promptData['positive'],
+                'negative_prompt' => $promptData['negative'],
+                'mode' => 'image-to-image',
+                'strength' => $strength, // 0-1: כמה לשנות (0.35 = preserve 65%)
+                'output_format' => 'jpeg',
+            ]);
 
-        return $variations;
+        if (!$response->successful()) {
+            throw new \Exception('Stability AI API error: ' . $response->body());
+        }
+
+        $result = $response->json();
+        
+        // שמירת התמונה המשופרת
+        if (!isset($result['image'])) {
+            throw new \Exception('No image in Stability AI response');
+        }
+
+        $imageData = base64_decode($result['image']);
+        $filename = 'enhanced_' . time() . '_' . uniqid() . '.jpg';
+        $savePath = 'ai-images/variations/' . $filename;
+        
+        Storage::disk('public')->put($savePath, $imageData);
+
+        Log::info('✅ Stability AI success', [
+            'path' => $savePath,
+            'size' => strlen($imageData),
+        ]);
+
+        return [[
+            'url' => Storage::url($savePath),
+            'path' => $savePath,
+        ]];
     }
 
     /**
-     * הורדה ושמירה של תמונה מ-URL
-     */
-    private function downloadAndSaveImage(string $url, string $originalPath, int $index): string
-    {
-        $directory = dirname($originalPath);
-        $filename = 'variation_' . time() . "_{$index}.jpg";
-        $path = "{$directory}/{$filename}";
-
-        $contents = file_get_contents($url);
-        Storage::disk('public')->put($path, $contents);
-
-        return $path;
-    }
-
-    /**
-     * יצירת וריאציות Mock (לפיתוח)
+     * יצירת וריאציה Mock (לפיתוח)
      */
     private function generateMockVariations(string $originalPath): array
     {
-        $variations = [];
-        $count = config('ai.image_enhancement.variations_count', 3);
+        $filename = 'enhanced_mock_' . time() . '.jpg';
+        $path = "ai-images/variations/{$filename}";
 
-        for ($i = 0; $i < $count; $i++) {
-            $filename = 'variation_mock_' . time() . "_{$i}.jpg";
-            $path = "ai-images/variations/{$filename}";
+        // העתקה פשוטה של המקור (mock)
+        Storage::disk('public')->copy($originalPath, $path);
 
-            // העתקה פשוטה של המקור (mock)
-            Storage::disk('public')->copy($originalPath, $path);
-            $variations[] = $path;
-        }
-
-        return $variations;
+        return [[
+            'url' => Storage::url($path),
+            'path' => $path,
+        ]];
     }
 
     /**
@@ -361,10 +368,10 @@ class ImageEnhancementService
             return;
         }
 
-        foreach ($enhancement->variations as $index => $path) {
-            if ($index !== $keepIndex) {
-                Storage::disk('public')->delete($path);
-                Log::info('Deleted unselected variation', ['path' => $path]);
+        foreach ($enhancement->variations as $index => $variationData) {
+            if ($index !== $keepIndex && isset($variationData['path'])) {
+                Storage::disk('public')->delete($variationData['path']);
+                Log::info('Deleted unselected variation', ['path' => $variationData['path']]);
             }
         }
     }

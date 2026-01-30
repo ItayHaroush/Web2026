@@ -165,66 +165,146 @@ return [
     */
     'image_enhancement' => [
         'enabled' => true,
-        'cost_credits' => 3, // קרדיטים לכל שיפור (3 וריאציות)
+        'cost_credits' => 1, // קרדיט אחד לשיפור תמונה (Stability AI)
         'max_file_size' => 5120, // KB (5MB)
         'allowed_formats' => ['jpg', 'jpeg', 'png', 'webp'],
         'output_format' => 'jpeg',
-        'variations_count' => 3,
+        'variations_count' => 1, // וריאציה אחת (img2img enhancement)
+        'provider' => 'stability', // 'stability' or 'mock'
 
-        // רקעים זמינים
-        'backgrounds' => [
-            'marble' => [
-                'label_he' => 'שיש',
-                'label_en' => 'Marble',
-                'prompt_part' => 'on elegant white marble surface',
-            ],
-            'wood' => [
-                'label_he' => 'שולחן עץ',
-                'label_en' => 'Wooden table',
-                'prompt_part' => 'on rustic wooden table',
-            ],
-            'clean' => [
-                'label_he' => 'לבן נקי',
-                'label_en' => 'Clean white',
-                'prompt_part' => 'on clean white background',
-            ],
-        ],
-
-        // זוויות צילום
-        'angles' => [
-            'top' => [
-                'label_he' => 'מלמעלה',
-                'label_en' => 'Top view',
-                'prompt_part' => 'top-down view, flat lay composition',
-            ],
-            'side' => [
-                'label_he' => 'מהצד',
-                'label_en' => 'Side view',
-                'prompt_part' => '45-degree angle, side perspective',
-            ],
-            'hands' => [
-                'label_he' => 'עם ידיים מגישות',
-                'label_en' => 'With serving hands',
-                'prompt_part' => 'hands presenting the dish elegantly',
-            ],
-        ],
-
-        // תבנית Prompt קבועה
-        'prompt_template' => 'Professional food photography of {dish_name}, {angle}, {background}, restaurant lighting, high detail, vibrant colors, appetizing presentation, no text, no logos, no watermarks, realistic style, sharp focus, bokeh background',
-
-        // הגדרות Stability AI
+        // Stability AI Configuration
         'stability' => [
-            'model' => 'stable-diffusion-xl-1024-v1-0',
-            'steps' => 30,
-            'cfg_scale' => 7,
-            'seed' => 0, // random
+            'api_key' => env('STABILITY_API_KEY', ''),
+            'api_url' => env('STABILITY_API_URL', 'https://api.stability.ai/v2beta/stable-image/generate/sd3'),
+            'model' => 'sd3-medium',
+            'strength' => 0.35, // 0-1: enhancement intensity (0.35 = preserve 65% original)
+            'timeout' => 60,
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Prompt Rules (Rule-Based Closed System)
+    |--------------------------------------------------------------------------
+    | טבלת חוקים סגורה לבניית פרומפטים - אין אלתורים!
+    */
+    'prompt_rules' => [
+        
+        // שלד קבוע (תמיד נוסף)
+        'base' => [
+            'positive' => 'professional food photography, realistic, high detail, natural lighting, 45 degree angle',
+            'negative' => 'cartoon, illustration, fake food, text, logo, watermark',
         ],
 
-        // בונוסים
-        'post_processing' => [
-            'sharpen' => true,
-            'auto_crop' => true,
-            'aspect_ratios' => ['1:1', '4:5'], // אינסטגרם
+        // קטגוריה (drink vs food)
+        'categories' => [
+            'drink' => [
+                'add' => 'glass, cup, bottle',
+                'negative' => 'food, plate',
+            ],
+            'food' => [
+                'add' => 'dish, sandwich, bowl',
+                'negative' => 'drink, glass',
+            ],
+        ],
+
+        // תת-סוג (SubType)
+        'subTypes' => [
+            'soda' => [
+                'add' => 'clear carbonated water, transparent liquid',
+                'negative' => 'cola, coke, pepsi, alcohol',
+                'strength' => 0.25,
+            ],
+            'cola' => [
+                'add' => 'dark carbonated drink',
+                'negative' => 'soda water, transparent liquid',
+                'strength' => 0.30,
+            ],
+            'beer' => [
+                'add' => 'golden beer, foam',
+                'negative' => 'soda, soft drink',
+                'strength' => 0.35,
+            ],
+            'shawarma' => [
+                'add' => 'grilled meat, sliced shawarma',
+                'negative' => 'burger, steak',
+                'strength' => 0.40,
+            ],
+            'pizza' => [
+                'add' => 'pizza slice or whole pizza',
+                'negative' => 'sandwich, pita',
+                'strength' => 0.40,
+            ],
+            'burger' => [
+                'add' => 'burger patty, bun, layers',
+                'negative' => 'pizza, sandwich wrap',
+                'strength' => 0.40,
+            ],
+            'falafel' => [
+                'add' => 'falafel balls, fried chickpea',
+                'negative' => 'meatballs, burger',
+                'strength' => 0.40,
+            ],
+        ],
+
+        // צורת הגשה (Serving Style)
+        'serving' => [
+            'glass' => [
+                'add' => 'simple clear glass',
+                'negative' => 'mug, bottle',
+            ],
+            'bottle' => [
+                'add' => 'beverage bottle',
+                'negative' => 'glass',
+            ],
+            'pita' => [
+                'add' => 'pita bread',
+                'negative' => 'baguette, plate',
+            ],
+            'baguette' => [
+                'add' => 'baguette bread',
+                'negative' => 'pita',
+            ],
+            'plate' => [
+                'add' => 'served on plate',
+                'negative' => 'sandwich wrap',
+            ],
+            'bowl' => [
+                'add' => 'served in bowl',
+                'negative' => 'plate',
+            ],
+        ],
+
+        // רמת מסעדה (Restaurant Level)
+        'levels' => [
+            'street' => [
+                'add' => 'street food style, authentic, simple',
+            ],
+            'casual' => [
+                'add' => 'casual restaurant, clean look',
+            ],
+            'boutique' => [
+                'add' => 'fine dining, elegant plating',
+            ],
+            'premium' => [
+                'add' => 'high-end food photography, dramatic lighting',
+            ],
+        ],
+
+        // רקע (Background)
+        'backgrounds' => [
+            'kitchen' => [
+                'add' => 'stainless kitchen background',
+            ],
+            'table' => [
+                'add' => 'wooden table',
+            ],
+            'dark' => [
+                'add' => 'dark restaurant background',
+            ],
+            'white' => [
+                'add' => 'clean white background',
+            ],
         ],
     ],
 ];
