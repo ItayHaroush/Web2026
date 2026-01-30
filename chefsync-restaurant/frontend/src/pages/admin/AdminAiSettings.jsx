@@ -6,10 +6,12 @@ import api from '../../services/api';
 import { getAuthHeaders } from '../../utils/auth';
 
 /**
- * מסך ניהול פיצ'רים מתקדמים של AI
- * מאפשר למסעדה להפעיל/לכבות פיצ'רים ולראות סטטיסטיקות
+ * מסך ניהול פיצ'רים מתקדמים של AI - למנהל מערכת בלבד
+ * מאפשר לכבות/להפעיל פיצ'רים לכל מסעדה
  */
-export default function AdminAiSettings() {
+export default function SuperAdminAiSettings() {
+    const [restaurants, setRestaurants] = useState([]);
+    const [selectedRestaurant, setSelectedRestaurant] = useState(null);
     const [settings, setSettings] = useState({
         description_generator: true,
         price_suggestion: true,
@@ -26,14 +28,37 @@ export default function AdminAiSettings() {
     const { addToast } = useToast();
 
     useEffect(() => {
-        fetchData();
+        fetchRestaurants();
     }, []);
 
+    useEffect(() => {
+        if (selectedRestaurant) {
+            fetchData();
+        }
+    }, [selectedRestaurant]);
+
+    const fetchRestaurants = async () => {
+        try {
+            const response = await api.get('/super-admin/restaurants', { headers: getAuthHeaders() });
+            if (response.data.success) {
+                setRestaurants(response.data.restaurants);
+                if (response.data.restaurants.length > 0) {
+                    setSelectedRestaurant(response.data.restaurants[0].id);
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching restaurants:', error);
+            addToast('שגיאה בטעינת מסעדות', 'error');
+        }
+    };
+
     const fetchData = async () => {
+        if (!selectedRestaurant) return;
+        
         try {
             const [settingsRes, statsRes] = await Promise.all([
-                api.get('/admin/ai/settings', { headers: getAuthHeaders() }),
-                api.get('/admin/ai/stats', { headers: getAuthHeaders() })
+                api.get(`/super-admin/ai/settings/${selectedRestaurant}`, { headers: getAuthHeaders() }),
+                api.get(`/super-admin/ai/stats/${selectedRestaurant}`, { headers: getAuthHeaders() })
             ]);
 
             if (settingsRes.data.success) {
@@ -53,7 +78,8 @@ export default function AdminAiSettings() {
     const toggleFeature = async (feature) => {
         try {
             const newValue = !settings[feature];
-            const response = await api.post('/admin/ai/toggle-feature', {
+            const response = await api.post('/super-admin/ai/toggle-feature', {
+                restaurant_id: selectedRestaurant,
                 feature,
                 enabled: newValue
             }, { headers: getAuthHeaders() });
@@ -123,14 +149,34 @@ export default function AdminAiSettings() {
             <div className="max-w-6xl mx-auto space-y-6">
                 {/* Header */}
                 <div className="bg-white rounded-2xl shadow-lg p-6">
-                    <div className="flex items-center gap-4 mb-2">
-                        <div className="p-3 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl">
-                            <FaBrain className="text-3xl text-white" />
+                    <div className="flex items-center justify-between mb-6">
+                        <div className="flex items-center gap-4">
+                            <div className="p-3 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl">
+                                <FaBrain className="text-3xl text-white" />
+                            </div>
+                            <div>
+                                <h1 className="text-3xl font-bold text-gray-800">ניהול פיצ'רים מתקדמים</h1>
+                                <p className="text-gray-600">שלוט ביכולות AI של כל מסעדה</p>
+                            </div>
                         </div>
-                        <div>
-                            <h1 className="text-3xl font-bold text-gray-800">ניהול פיצ'רים מתקדמים</h1>
-                            <p className="text-gray-600">שלוט ביכולות AI של המסעדה</p>
-                        </div>
+                    </div>
+
+                    {/* Restaurant Selector */}
+                    <div className="mt-4">
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            בחר מסעדה:
+                        </label>
+                        <select
+                            value={selectedRestaurant || ''}
+                            onChange={(e) => setSelectedRestaurant(Number(e.target.value))}
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:outline-none"
+                        >
+                            {restaurants.map(restaurant => (
+                                <option key={restaurant.id} value={restaurant.id}>
+                                    {restaurant.name} - {restaurant.slug}
+                                </option>
+                            ))}
+                        </select>
                     </div>
                 </div>
 
