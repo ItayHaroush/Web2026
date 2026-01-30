@@ -73,10 +73,25 @@ export default function AiImageEnhancer({ onComplete, menuItemId = null, buttonC
             );
 
             if (result.success) {
-                setVariations(result.data.variations);
+                const variations = result.data.variations;
+                setVariations(variations);
                 setEnhancementId(result.data.enhancement_id);
-                setStep(4);
-                addToast('נוצרו 3 וריאציות! בחר את האהובה עליך', 'success');
+                
+                // ✅ אם יש רק וריאציה אחת, בחר אותה אוטומטית
+                if (variations.length === 1) {
+                    addToast('שיפור בוצע בהצלחה! שומר...', 'success');
+                    // בחירה אוטומטית של הווריאציה היחידה
+                    const selectResult = await imageEnhancementService.selectVariation(result.data.enhancement_id, 0);
+                    if (selectResult.success) {
+                        addToast('התמונה נשמרה בהצלחה!', 'success');
+                        onComplete?.(selectResult.data.selected_url);
+                        handleClose();
+                        return; // סיום מוקדם
+                    }
+                } else {
+                    setStep(4);
+                    addToast(`נוצרו ${variations.length} וריאציות! בחר את האהובה עליך`, 'success');
+                }
             } else {
                 throw new Error(result.message || 'שגיאה ביצירת וריאציות');
             }
