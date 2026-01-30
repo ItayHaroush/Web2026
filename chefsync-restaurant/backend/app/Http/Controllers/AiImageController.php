@@ -29,7 +29,7 @@ class AiImageController extends Controller
     {
         // הגדלת timeout ל-90 שניות (3 קריאות API × 30 שניות)
         set_time_limit(90);
-        
+
         $user = $request->user();
         $restaurant = Restaurant::findOrFail($user->restaurant_id);
 
@@ -41,11 +41,11 @@ class AiImageController extends Controller
             // Preset System Parameters
             'category' => 'nullable|string',           // pizza, shawarma, burger, etc.
             'presentation' => 'nullable|string',       // plate, street_slice, pita, etc.
-            
+
             // Old system params (for backward compatibility)
             'background' => 'nullable|string',
             'level' => 'nullable|string',
-            
+
             // Dish Details (for enrichment)
             'dish_name' => 'nullable|string',
             'description' => 'nullable|string',
@@ -68,7 +68,7 @@ class AiImageController extends Controller
             // Fallback: אם נשלחו פרמטרים ישנים (background), המר אותם
             $category = $validated['category'] ?? 'generic';
             $presentation = $validated['presentation'] ?? 'plate';
-            
+
             // אם background נשלח במקום presentation (מערכת ישנה)
             if (isset($validated['background']) && !isset($validated['presentation'])) {
                 $backgroundMap = [
@@ -81,11 +81,11 @@ class AiImageController extends Controller
                 ];
                 $presentation = $backgroundMap[$validated['background']] ?? 'plate';
             }
-            
+
             $options = [
                 'category' => $category,
                 'presentation' => $presentation,
-                
+
                 // Dish details for enrichment
                 'dish_name' => $validated['dish_name'] ?? null,
                 'description' => $validated['description'] ?? null,

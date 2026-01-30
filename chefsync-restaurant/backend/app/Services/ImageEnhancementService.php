@@ -192,12 +192,12 @@ class ImageEnhancementService
     {
         // נסיון לטעון Preset System (חדש)
         $presets = config('ai.image_presets');
-        
+
         if ($presets) {
             // ✅ Preset System זמין
             return $this->buildPromptFromPreset($options);
         }
-        
+
         // ⚠️ Fallback: Rule-Based System (ישן)
         Log::warning('⚠️ image_presets not found, falling back to old prompt_rules');
         return $this->buildPromptFromRules($options);
@@ -213,7 +213,7 @@ class ImageEnhancementService
 
         // 1️⃣ בחירת Preset
         $presetKey = $this->selectPreset($options);
-        
+
         if (!isset($presets[$presetKey])) {
             Log::warning('⚠️ Preset not found', ['key' => $presetKey]);
             $presetKey = 'generic_food';
@@ -236,7 +236,7 @@ class ImageEnhancementService
 
         // 3️⃣ Negative prompt
         $fullNegative = $preset['negative'] . ', ' . $baseNegative;
-        
+
         if (!empty($options['is_vegan'])) {
             $fullNegative .= ', meat, chicken, fish, seafood, dairy, eggs, cheese';
         } elseif (!empty($options['is_vegetarian'])) {
@@ -261,9 +261,9 @@ class ImageEnhancementService
 
         $category = $options['category'] ?? 'generic';
         $presentation = $options['presentation'] ?? 'plate';
-        
+
         $presetKey = $category . '_' . $presentation;
-        
+
         $presets = config('ai.image_presets');
         if (!isset($presets[$presetKey])) {
             if (isset($presets[$category . '_plate'])) {
@@ -271,7 +271,7 @@ class ImageEnhancementService
             }
             return 'generic_food';
         }
-        
+
         return $presetKey;
     }
 
@@ -318,13 +318,13 @@ class ImageEnhancementService
         $translations = config('ai.dish_translations', []);
         $nameLower = mb_strtolower($hebrewName);
         $result = [];
-        
+
         foreach ($translations as $he => $en) {
             if (mb_stripos($nameLower, $he) !== false) {
                 $result[] = $en;
             }
         }
-        
+
         return implode(' ', $result);
     }
 
@@ -336,13 +336,13 @@ class ImageEnhancementService
         $keywords = config('ai.ingredient_keywords', []);
         $ingredients = [];
         $descLower = mb_strtolower($description);
-        
+
         foreach ($keywords as $he => $en) {
             if (mb_stripos($descLower, $he) !== false) {
                 $ingredients[] = $en;
             }
         }
-        
+
         return array_slice(array_unique($ingredients), 0, 4);
     }
 
@@ -352,7 +352,7 @@ class ImageEnhancementService
     private function buildPromptFromRules(array $options): array
     {
         $rules = config('ai.prompt_rules');
-        
+
         // אם גם prompt_rules לא קיים
         if (!$rules || !isset($rules['base'])) {
             Log::error('❌ No prompt config found! Using emergency fallback');
@@ -483,14 +483,14 @@ class ImageEnhancementService
         // יצירת 3 וריאציות (Stability AI מחזיר תמונה אחת בכל קריאה)
         // כל וריאציה מקבלת seed שונה + strength מעט שונה למגוון ויזואלי
         $strengthVariations = [0.60, 0.70, 0.80]; // וריאציות: מתונה, רגילה, חזקה
-        
+
         for ($i = 0; $i < 3; $i++) {
             // 🎲 Seed רנדומלי - הפתרון לוריאציות זהות!
             $seed = rand(1000000, 9999999);
-            
+
             // 🎚️ Strength שונה לכל וריאציה (אופציונלי - מעניק טווח רחב)
             $variationStrength = $strengthVariations[$i];
-            
+
             // 🎯 CFG Scale - שליטה על עוצמת הפרומפט (7 = balanced)
             $cfgScale = 7;
 
@@ -566,7 +566,7 @@ class ImageEnhancementService
     private function generateMockVariations(string $originalPath): array
     {
         $variations = [];
-        
+
         for ($i = 0; $i < 3; $i++) {
             $filename = 'enhanced_mock_' . time() . '_' . uniqid() . "_v{$i}.jpg";
             $path = "ai-images/variations/{$filename}";

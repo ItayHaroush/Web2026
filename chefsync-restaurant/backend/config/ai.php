@@ -347,18 +347,18 @@ return [
         'זיתים' => 'olive',
         'ביאנקה' => 'bianca',
         'חריפה' => 'spicy',
-        
+
         // שווארמה
         'טלה' => 'lamb',
         'עוף' => 'chicken',
         'הודו' => 'turkey',
         'בשר' => 'meat',
-        
+
         // המבורגר
         'בלאק אנגוס' => 'black angus',
         'בקר' => 'beef',
         'כבש' => 'lamb',
-        
+
         // כללי
         'טבעוני' => 'vegan',
         'צמחוני' => 'vegetarian',
@@ -378,7 +378,7 @@ return [
         'פטה' => 'feta',
         'גבינת עיזים' => 'goat cheese',
         'גבינה' => 'cheese',
-        
+
         // ירקות
         'עגבניות' => 'tomatoes',
         'עגבנייה' => 'tomato',
@@ -394,7 +394,7 @@ return [
         'פטרוזיליה' => 'parsley',
         'כוסברה' => 'cilantro',
         'רוקט' => 'arugula',
-        
+
         // רטבים
         'טחינה' => 'tahini',
         'חומוס' => 'hummus',
@@ -405,7 +405,7 @@ return [
         'רוטב עגבניות' => 'tomato sauce',
         'רוטב שום' => 'garlic sauce',
         'רוטב חריף' => 'hot sauce',
-        
+
         // תוספות
         'זיתים' => 'olives',
         'מלפפון חמוץ' => 'pickles',
