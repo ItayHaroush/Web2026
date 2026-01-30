@@ -304,20 +304,20 @@ class ImageEnhancementService
             throw new \Exception("Original image not found: {$fullPath}");
         }
 
-        // קריאה ל-API (img2img)
+        // ✅ קריאה ל-API (img2img) - multipart/form-data
         $response = Http::timeout(60)
             ->withHeaders([
                 'Authorization' => 'Bearer ' . $apiKey,
                 'Accept' => 'application/json',
             ])
+            ->asMultipart()
             ->attach('image', file_get_contents($fullPath), 'original.jpg')
-            ->post($apiUrl, [
-                'prompt' => $promptData['positive'],
-                'negative_prompt' => $promptData['negative'],
-                'mode' => 'image-to-image',
-                'strength' => $strength, // 0-1: כמה לשנות (0.35 = preserve 65%)
-                'output_format' => 'jpeg',
-            ]);
+            ->attach('prompt', $promptData['positive'])
+            ->attach('negative_prompt', $promptData['negative'])
+            ->attach('mode', 'image-to-image')
+            ->attach('strength', (string)$strength)
+            ->attach('output_format', 'jpeg')
+            ->post($apiUrl);
 
         if (!$response->successful()) {
             throw new \Exception('Stability AI API error: ' . $response->body());
