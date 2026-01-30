@@ -341,7 +341,7 @@ class ImageEnhancementService
         ]);
 
         return [[
-            'url' => Storage::url($savePath),
+            'url' => asset("storage/{$savePath}"),
             'path' => $savePath,
         ]];
     }
@@ -358,7 +358,7 @@ class ImageEnhancementService
         Storage::disk('public')->copy($originalPath, $path);
 
         return [[
-            'url' => Storage::url($path),
+            'url' => asset("storage/{$path}"),
             'path' => $path,
         ]];
     }
