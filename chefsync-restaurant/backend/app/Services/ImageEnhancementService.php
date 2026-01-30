@@ -305,6 +305,13 @@ class ImageEnhancementService
         }
 
         // ✅ קריאה ל-API (img2img) - multipart/form-data
+        Log::info('📤 Stability AI Request', [
+            'prompt' => substr($promptData['positive'], 0, 100),
+            'negative_prompt' => substr($promptData['negative'], 0, 100),
+            'strength' => $strength,
+            'image_size' => filesize($fullPath),
+        ]);
+
         $response = Http::timeout(60)
             ->withHeaders([
                 'Authorization' => 'Bearer ' . $apiKey,
@@ -314,10 +321,14 @@ class ImageEnhancementService
             ->attach('image', file_get_contents($fullPath), 'original.jpg')
             ->attach('prompt', $promptData['positive'])
             ->attach('negative_prompt', $promptData['negative'])
-            ->attach('mode', 'image-to-image')
             ->attach('strength', (string)$strength)
             ->attach('output_format', 'jpeg')
             ->post($apiUrl);
+
+        Log::info('📥 Stability AI Response', [
+            'status' => $response->status(),
+            'body_preview' => substr($response->body(), 0, 200),
+        ]);
 
         if (!$response->successful()) {
             throw new \Exception('Stability AI API error: ' . $response->body());
