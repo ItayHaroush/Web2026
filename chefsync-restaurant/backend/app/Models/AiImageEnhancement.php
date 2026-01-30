@@ -89,4 +89,3 @@ class AiImageEnhancement extends Model
         return $this->selected_path ? asset("storage/{$this->selected_path}") : null;
     }
 }
-

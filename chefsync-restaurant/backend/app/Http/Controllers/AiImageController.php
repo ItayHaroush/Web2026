@@ -64,7 +64,6 @@ class AiImageController extends Controller
                     'status' => $enhancement->status,
                 ],
             ]);
-
         } catch (\Exception $e) {
             Log::error('Image Enhancement Error', [
                 'restaurant_id' => $restaurant->id,
@@ -119,7 +118,6 @@ class AiImageController extends Controller
                     'menu_item_updated' => $menuItem !== null,
                 ],
             ]);
-
         } catch (\Exception $e) {
             Log::error('Variation Selection Error', [
                 'restaurant_id' => $restaurant->id,
@@ -202,4 +200,3 @@ class AiImageController extends Controller
         ]);
     }
 }
-
