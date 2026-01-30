@@ -5,31 +5,39 @@ import apiClient from './apiClient';
  */
 class ImageEnhancementService {
     /**
-     * שיפור תמונה עם אפשרויות רקע וזווית
+     * שיפור תמונה עם בחירת סגנון הגשה
      * @param {File} imageFile - קובץ התמונה
-     * @param {string} background - סוג רקע: marble, wood, clean
-     * @param {string} angle - זווית צילום: top, side, hands
-     * @param {Object} menuItem - (אופציונלי) אובייקט המנה המלא (עם category_id, name)
+     * @param {string} userScene - סגנון הגשה שנבחר: plate, street, home (אופציונלי)
+     * @param {null} deprecated - פרמטר ישן, לא בשימוש
+     * @param {Object} menuItem - (אופציונלי) אובייקט המנה המלא
      * @returns {Promise<Object>} אובייקט עם 3 וריאציות
      */
-    async enhance(imageFile, background, angle, menuItem = null) {
+    async enhance(imageFile, userScene = null, deprecated = null, menuItem = null) {
         const formData = new FormData();
         formData.append('image', imageFile);
-        formData.append('background', background || 'white');
 
         // 🎯 זיהוי אוטומטי של category (משקה/אוכל)
         const detectedCategory = this.detectCategory(menuItem);
         const detectedPresentation = this.detectPresentation(menuItem, detectedCategory);
+        const detectedScene = this.detectScene(menuItem);
 
         console.log('🔍 זיהוי אוטומטי:', {
             menuItemName: menuItem?.name,
             categoryName: menuItem?.category?.name,
             detectedCategory,
-            detectedPresentation
+            detectedPresentation,
+            userScene,
+            detectedScene
         });
 
         formData.append('category', detectedCategory);
         formData.append('presentation', detectedPresentation);
+        
+        // 🎬 Scene: משתמש בבחירה ידנית אם יש, אחרת auto-detect
+        const finalScene = userScene || detectedScene;
+        if (finalScene) {
+            formData.append('scene', finalScene);
+        }
 
         // 📝 פרטי המנה להעשרת הפרומפט
         if (menuItem) {
@@ -143,6 +151,51 @@ class ImageEnhancementService {
         if (category === 'salad') return 'bowl';
 
         return 'plate';
+    }
+
+    /**
+     * זיהוי אוטומטי של סצנה/סגנון (scene)
+     * street, home, moroccan, middle_eastern, fine_dining
+     */
+    detectScene(menuItem) {
+        if (!menuItem) return null;
+
+        const name = menuItem.name || '';
+        const description = menuItem.description || '';
+        const categoryName = menuItem.category?.name || '';
+        const restaurantName = menuItem.restaurant?.name || '';
+
+        // 🌍 מזרח תיכוני / מרוקאי
+        const middleEasternKeywords = ['חומוס', 'טחינה', 'פלאפל', 'מסבחה', 'שקשוקה', 'סביח'];
+        const moroccanKeywords = ['טאג\'ין', 'כוסכוס', 'חריימה', 'דפינה', 'מרוקאי', 'מרוקנית'];
+        
+        if (moroccanKeywords.some(kw => name.includes(kw) || description.includes(kw) || categoryName.includes(kw))) {
+            return 'moroccan';
+        }
+        
+        if (middleEasternKeywords.some(kw => name.includes(kw) || description.includes(kw) || categoryName.includes(kw))) {
+            return 'middle_eastern';
+        }
+
+        // 🏠 אוכל ביתי
+        const homeKeywords = ['ביתי', 'של סבתא', 'מתכון אמא', 'מסורתי', 'כפרי'];
+        if (homeKeywords.some(kw => name.includes(kw) || description.includes(kw) || restaurantName.includes(kw))) {
+            return 'home';
+        }
+
+        // 🍽️ Fine Dining
+        const fineDiningKeywords = ['גורמה', 'שף', 'מיוחד', 'פרמיום', 'מעודן'];
+        if (fineDiningKeywords.some(kw => description.includes(kw) || restaurantName.includes(kw))) {
+            return 'fine_dining';
+        }
+
+        // 🌮 Street Food (default למנות רחוב)
+        const streetKeywords = ['ברחוב', 'דוכן', 'טייק אווי'];
+        if (streetKeywords.some(kw => name.includes(kw) || description.includes(kw))) {
+            return 'street';
+        }
+
+        return null; // אם לא זוהה scene ספציפי, הבקאנד יבחר default
     }
 
     /**

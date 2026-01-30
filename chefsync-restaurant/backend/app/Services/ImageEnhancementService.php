@@ -251,7 +251,13 @@ class ImageEnhancementService
     }
 
     /**
-     * בחירת Preset לפי category + presentation
+     * בחירת Preset לפי category + presentation + scene (אופציונלי)
+     * 
+     * אסטרטגיית Fallback:
+     * 1. category_scene (e.g., hummus_middle_eastern, tagine_moroccan)
+     * 2. category_presentation (e.g., pizza_plate, shawarma_pita)
+     * 3. category_plate (fallback לצלחת)
+     * 4. generic_food (fallback סופי)
      */
     private function selectPreset(array $options): string
     {
@@ -259,6 +265,7 @@ class ImageEnhancementService
         Log::info('🔍 selectPreset() called', [
             'category' => $options['category'] ?? 'not set',
             'presentation' => $options['presentation'] ?? 'not set',
+            'scene' => $options['scene'] ?? 'not set',
             'preset_override' => $options['preset'] ?? 'none',
         ]);
 
@@ -269,13 +276,24 @@ class ImageEnhancementService
 
         $category = $options['category'] ?? 'generic';
         $presentation = $options['presentation'] ?? 'plate';
-
-        $presetKey = $category . '_' . $presentation;
-
-        // 🔑 LOG: Constructed key
-        Log::info('🔑 Constructed preset key', ['presetKey' => $presetKey]);
+        $scene = $options['scene'] ?? null;
 
         $presets = config('ai.image_presets');
+
+        // אסטרטגיה 1: אם יש scene, נסה category_scene
+        if ($scene) {
+            $sceneKey = $category . '_' . $scene;
+            Log::info('🎬 Trying scene-based preset', ['key' => $sceneKey]);
+
+            if (isset($presets[$sceneKey])) {
+                Log::info('✅ Scene preset match found', ['key' => $sceneKey]);
+                return $sceneKey;
+            }
+        }
+
+        // אסטרטגיה 2: category_presentation (ברירת המחדל)
+        $presetKey = $category . '_' . $presentation;
+        Log::info('🔑 Constructed preset key', ['presetKey' => $presetKey]);
 
         // 📦 LOG: Available presets
         Log::info('📦 Available presets', ['keys' => array_keys($presets ?? [])]);
@@ -286,11 +304,13 @@ class ImageEnhancementService
                 'fallback_attempt' => $category . '_plate'
             ]);
 
+            // אסטרטגיה 3: category_plate
             if (isset($presets[$category . '_plate'])) {
                 Log::info('✅ Using fallback preset', ['key' => $category . '_plate']);
                 return $category . '_plate';
             }
 
+            // אסטרטגיה 4: generic_food
             Log::warning('⚠️ All fallbacks failed, using generic_food');
             return 'generic_food';
         }
@@ -319,6 +339,16 @@ class ImageEnhancementService
             $ingredients = $this->extractIngredients($options['description']);
             if (!empty($ingredients)) {
                 $enrichments[] = 'with ' . implode(', ', $ingredients);
+            }
+        }
+
+        // תוספות/קישוטים - רק אם מופיע בשם המנה! (לא בתיאור)
+        // מונע המצאת תוספות שלא באמת קיימות במנה
+        if (!empty($options['dish_name'])) {
+            $category = $options['category'] ?? 'generic';
+            $garnishes = $this->extractGarnishes($options['dish_name'], $category);
+            if (!empty($garnishes)) {
+                $enrichments[] = 'garnished with ' . implode(' and ', $garnishes);
             }
         }
 
@@ -368,6 +398,70 @@ class ImageEnhancementService
         }
 
         return array_slice(array_unique($ingredients), 0, 4);
+    }
+
+    /**
+     * חילוץ תוספות/קישוטים (משקאות, סלטים, קינוחים)
+     */
+    private function extractGarnishes(string $description, string $category = 'generic'): array
+    {
+        $garnishes = [];
+        $descLower = mb_strtolower($description);
+
+        // 🥤 תוספות למשקאות
+        $drinkGarnishes = [
+            'נענע' => 'fresh mint leaves',
+            'לימון' => 'lemon slice',
+            'ליים' => 'lime wedge',
+            'קרח' => 'ice cubes',
+            'דובדבן' => 'maraschino cherry',
+            'תפוז' => 'orange slice',
+            'קרם' => 'whipped cream',
+            'קצף' => 'foam topping',
+            'סוכר' => 'sugar rim',
+            'קינמון' => 'cinnamon stick',
+            'וניל' => 'vanilla garnish',
+        ];
+
+        // 🥗 תוספות לסלטים
+        $saladGarnishes = [
+            'שומשום' => 'sesame seeds',
+            'זרעונים' => 'microgreens',
+            'שקדים' => 'sliced almonds',
+            'אגוזים' => 'chopped nuts',
+            'גרעיני חמניה' => 'sunflower seeds',
+            'פטרוזיליה' => 'fresh parsley',
+            'כוסברה' => 'fresh cilantro',
+            'בצל ירוק' => 'green onion',
+        ];
+
+        // 🍰 תוספות לקינוחים
+        $dessertGarnishes = [
+            'אבקת סוכר' => 'powdered sugar dusting',
+            'שוקולד מגורד' => 'chocolate shavings',
+            'פירות יער' => 'fresh berries',
+            'תותים' => 'fresh strawberries',
+            'נענע' => 'mint sprig',
+        ];
+
+        // בחירת רשימת תוספות לפי קטגוריה
+        $relevantGarnishes = [];
+        if ($category === 'drink') {
+            $relevantGarnishes = $drinkGarnishes;
+        } elseif ($category === 'salad') {
+            $relevantGarnishes = array_merge($saladGarnishes, $drinkGarnishes);
+        } else {
+            // כללי - כל התוספות
+            $relevantGarnishes = array_merge($drinkGarnishes, $saladGarnishes, $dessertGarnishes);
+        }
+
+        foreach ($relevantGarnishes as $he => $en) {
+            if (mb_stripos($descLower, $he) !== false) {
+                $garnishes[] = $en;
+            }
+        }
+
+        return array_slice(array_unique($garnishes), 0, 3); // מקסימום 3 תוספות
     }
 
     /**
@@ -506,7 +600,8 @@ class ImageEnhancementService
 
         // יצירת 3 וריאציות (Stability AI מחזיר תמונה אחת בכל קריאה)
         // כל וריאציה מקבלת seed שונה + strength מעט שונה למגוון ויזואלי
-        $strengthVariations = [0.60, 0.70, 0.80]; // וריאציות: מתונה, רגילה, חזקה
+        // 🛡️ Safe Mode: strength נמוך למניעת שינויים דרמטיים
+        $strengthVariations = [0.40, 0.50, 0.55]; // וריאציות: עדינה, מתונה, רגילה
 
         for ($i = 0; $i < 3; $i++) {
             // 🎲 Seed רנדומלי - הפתרון לוריאציות זהות!

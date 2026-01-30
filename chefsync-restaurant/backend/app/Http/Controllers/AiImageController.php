@@ -41,6 +41,7 @@ class AiImageController extends Controller
             // Preset System Parameters
             'category' => 'nullable|string',           // pizza, shawarma, burger, etc.
             'presentation' => 'nullable|string',       // plate, street_slice, pita, etc.
+            'scene' => 'nullable|string',              // street, home, moroccan, middle_eastern, fine_dining
 
             // Old system params (for backward compatibility)
             'background' => 'nullable|string',
@@ -68,6 +69,7 @@ class AiImageController extends Controller
             // Fallback: אם נשלחו פרמטרים ישנים (background), המר אותם
             $category = $validated['category'] ?? 'generic';
             $presentation = $validated['presentation'] ?? 'plate';
+            $scene = $validated['scene'] ?? null;
 
             // 🔍 לוג לבדיקה - מה התקבל מה-Frontend?
             Log::info('📥 AI Image Enhancement Request', [
@@ -76,6 +78,7 @@ class AiImageController extends Controller
                 'category_name' => $request->input('category_name'),
                 'detected_category' => $category,
                 'detected_presentation' => $presentation,
+                'detected_scene' => $scene,
             ]);
 
             // אם background נשלח במקום presentation (מערכת ישנה)
@@ -94,6 +97,7 @@ class AiImageController extends Controller
             $options = [
                 'category' => $category,
                 'presentation' => $presentation,
+                'scene' => $scene,  // 🎬 Scene (אופציונלי)
 
                 // Dish details for enrichment
                 'dish_name' => $validated['dish_name'] ?? null,

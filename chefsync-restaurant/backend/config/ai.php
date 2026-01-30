@@ -318,6 +318,57 @@ return [
             'negative' => 'food, plate, pizza, burger, glass',
         ],
 
+        // 🌍 מזרח תיכוני / מרוקאי (scene-based)
+        'hummus_middle_eastern' => [
+            'strength' => 0.70,
+            'prompt' => 'creamy hummus in ceramic bowl, tahini drizzle on top, chickpeas, olive oil, paprika garnish, Middle Eastern restaurant style, pita bread on side',
+            'negative' => 'pizza, burger, sandwich, western food, plate',
+        ],
+        'falafel_middle_eastern' => [
+            'strength' => 0.75,
+            'prompt' => 'golden falafel balls in pita bread, tahini sauce, fresh vegetables, pickles, Israeli street food style',
+            'negative' => 'pizza, burger, meat, western food',
+        ],
+        'tagine_moroccan' => [
+            'strength' => 0.75,
+            'prompt' => 'traditional Moroccan tagine pot, colorful ceramic, aromatic stew with vegetables and meat, steam rising, rustic table setting with couscous on side',
+            'negative' => 'pizza, burger, sandwich, modern plate, western food',
+        ],
+        'couscous_moroccan' => [
+            'strength' => 0.70,
+            'prompt' => 'fluffy couscous with vegetables and chickpeas, Moroccan spices, served in traditional ceramic bowl, colorful presentation',
+            'negative' => 'pizza, burger, rice, pasta, western food',
+        ],
+        'shakshuka_home' => [
+            'strength' => 0.75,
+            'prompt' => 'shakshuka eggs in rich tomato sauce, cast iron skillet, rustic home cooking style, fresh herbs, warm lighting',
+            'negative' => 'pizza, burger, fine dining, modern plate',
+        ],
+
+        // 🏠 אוכל ביתי (home cooking)
+        'chicken_home' => [
+            'strength' => 0.70,
+            'prompt' => 'homemade roasted chicken, rustic presentation, wooden table, family-style serving, warm ambient lighting',
+            'negative' => 'pizza, burger, fine dining, modern plate, professional photography',
+        ],
+        'soup_home' => [
+            'strength' => 0.65,
+            'prompt' => 'homemade soup in ceramic bowl, steam rising, rustic table, comfort food style, homey atmosphere',
+            'negative' => 'pizza, burger, fine dining, modern presentation',
+        ],
+
+        // 🌮 Street Food (הכללה - עובד עם כל קטגוריה)
+        'shawarma_street' => [
+            'strength' => 0.80,
+            'prompt' => 'shawarma wrap held in hands with paper, street food style, tahini dripping, grilled meat visible, busy street background',
+            'negative' => 'plate, fine dining, restaurant table, fork and knife',
+        ],
+        'pizza_street' => [
+            'strength' => 0.75,
+            'prompt' => 'pizza slice folded in half, held in hand with napkin, New York street food style, cheese stretching',
+            'negative' => 'whole pizza, plate, fine dining, table setting',
+        ],
+
         // ⚪ Generic / Fallback
         'generic_food' => [
             'strength' => 0.65,
@@ -328,10 +379,11 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Base Negative Prompt (נוסף לכל preset)
+    | Base Negative Prompt (חסימת המצאות חזקה)
     |--------------------------------------------------------------------------
+    | מונע מה-AI להוסיף אלמנטים שלא היו בתמונה המקורית
     */
-    'base_negative' => 'blurry, low quality, amateur photo, text overlay, watermark, logo, cartoon, illustration, 3d render, artificial, plastic food',
+    'base_negative' => 'added ingredients, extra toppings, fictional elements, unrealistic garnish, food that was not in original image, new items, additional dishes, invented elements, blurry, low quality, amateur photo, text overlay, watermark, logo, cartoon, illustration, 3d render, artificial, plastic food',
 
     /*
     |--------------------------------------------------------------------------

@@ -16,8 +16,7 @@ export default function AiImageEnhancer({ onComplete, menuItem = null, buttonCla
     const [step, setStep] = useState(1); // 1=upload, 2=options, 3=generating, 4=select
     const [uploadedFile, setUploadedFile] = useState(null);
     const [previewUrl, setPreviewUrl] = useState(null);
-    const [selectedBackground, setSelectedBackground] = useState('marble');
-    const [selectedAngle, setSelectedAngle] = useState('top');
+    const [selectedScene, setSelectedScene] = useState('plate'); // 🎬 Scene פשוט: plate/street/home
     const [variations, setVariations] = useState([]);
     const [enhancementId, setEnhancementId] = useState(null);
     const [selectedIndex, setSelectedIndex] = useState(null);
@@ -83,16 +82,10 @@ export default function AiImageEnhancer({ onComplete, menuItem = null, buttonCla
         });
     };
 
-    const backgroundOptions = [
-        { value: 'marble', label: 'שיש מרשים', icon: <GiStoneBlock size={32} /> },
-        { value: 'wood', label: 'עץ חם', icon: <GiWoodBeam size={32} /> },
-        { value: 'clean', label: 'רקע נקי', icon: <GiPlainCircle size={32} /> },
-    ];
-
-    const angleOptions = [
-        { value: 'top', label: 'מלמעלה', icon: <BiDownArrow size={32} /> },
-        { value: 'side', label: 'מהצד', icon: <BiRightArrow size={32} /> },
-        { value: 'hands', label: 'עם ידיים', icon: <IoMdHand size={32} /> },
+    const sceneOptions = [
+        { value: 'plate', label: 'צלחת', icon: <GiPlainCircle size={32} />, description: 'מסעדה רגילה' },
+        { value: 'street', label: 'רחוב', icon: <IoMdHand size={32} />, description: 'אוכל מהיר' },
+        { value: 'home', label: 'בית', icon: <GiWoodBeam size={32} />, description: 'אוכל ביתי' },
     ];
 
     const handleFileChange = async (e) => {
@@ -147,8 +140,8 @@ export default function AiImageEnhancer({ onComplete, menuItem = null, buttonCla
         try {
             const result = await imageEnhancementService.enhance(
                 uploadedFile,
-                selectedBackground,
-                selectedAngle,
+                selectedScene,  // 🎬 Scene במקום background
+                null,           // angle לא בשימוש יותר
                 menuItem
             );
 
@@ -279,18 +272,18 @@ export default function AiImageEnhancer({ onComplete, menuItem = null, buttonCla
                                         />
                                     </div>
 
-                                    {/* בחירת רקע */}
+                                    {/* בחירת סגנון הגשה - פשוט! */}
                                     <div>
                                         <h3 className="text-lg font-semibold text-gray-800 mb-3">
-                                            בחר סוג רקע:
+                                            איך המנה מוגשת?
                                         </h3>
                                         <div className="grid grid-cols-3 gap-4">
-                                            {backgroundOptions.map((option) => (
+                                            {sceneOptions.map((option) => (
                                                 <button
                                                     key={option.value}
                                                     type="button"
-                                                    onClick={() => setSelectedBackground(option.value)}
-                                                    className={`p-4 rounded-xl border-2 transition-all ${selectedBackground === option.value
+                                                    onClick={() => setSelectedScene(option.value)}
+                                                    className={`p-4 rounded-xl border-2 transition-all ${selectedScene === option.value
                                                         ? 'border-purple-600 bg-purple-50 shadow-lg'
                                                         : 'border-gray-200 hover:border-purple-300'
                                                         }`}
@@ -299,30 +292,8 @@ export default function AiImageEnhancer({ onComplete, menuItem = null, buttonCla
                                                     <div className="font-semibold text-gray-800">
                                                         {option.label}
                                                     </div>
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    {/* בחירת זווית */}
-                                    <div>
-                                        <h3 className="text-lg font-semibold text-gray-800 mb-3">
-                                            בחר זווית צילום:
-                                        </h3>
-                                        <div className="grid grid-cols-3 gap-4">
-                                            {angleOptions.map((option) => (
-                                                <button
-                                                    key={option.value}
-                                                    type="button"
-                                                    onClick={() => setSelectedAngle(option.value)}
-                                                    className={`p-4 rounded-xl border-2 transition-all ${selectedAngle === option.value
-                                                        ? 'border-pink-600 bg-pink-50 shadow-lg'
-                                                        : 'border-gray-200 hover:border-pink-300'
-                                                        }`}
-                                                >
-                                                    <div className="text-pink-600 mb-2 flex justify-center">{option.icon}</div>
-                                                    <div className="font-semibold text-gray-800">
-                                                        {option.label}
+                                                    <div className="text-xs text-gray-500 mt-1">
+                                                        {option.description}
                                                     </div>
                                                 </button>
                                             ))}
