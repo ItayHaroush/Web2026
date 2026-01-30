@@ -255,7 +255,15 @@ class ImageEnhancementService
      */
     private function selectPreset(array $options): string
     {
+        // 🔍 LOG: Incoming options
+        Log::info('🔍 selectPreset() called', [
+            'category' => $options['category'] ?? 'not set',
+            'presentation' => $options['presentation'] ?? 'not set',
+            'preset_override' => $options['preset'] ?? 'none',
+        ]);
+
         if (isset($options['preset'])) {
+            Log::info('✅ Using preset override', ['preset' => $options['preset']]);
             return $options['preset'];
         }
 
@@ -264,14 +272,30 @@ class ImageEnhancementService
 
         $presetKey = $category . '_' . $presentation;
 
+        // 🔑 LOG: Constructed key
+        Log::info('🔑 Constructed preset key', ['presetKey' => $presetKey]);
+
         $presets = config('ai.image_presets');
+
+        // 📦 LOG: Available presets
+        Log::info('📦 Available presets', ['keys' => array_keys($presets ?? [])]);
+
         if (!isset($presets[$presetKey])) {
+            Log::warning('⚠️ Preset not found, trying fallback', [
+                'requested' => $presetKey,
+                'fallback_attempt' => $category . '_plate'
+            ]);
+
             if (isset($presets[$category . '_plate'])) {
+                Log::info('✅ Using fallback preset', ['key' => $category . '_plate']);
                 return $category . '_plate';
             }
+
+            Log::warning('⚠️ All fallbacks failed, using generic_food');
             return 'generic_food';
         }
 
+        Log::info('✅ Exact preset match found', ['key' => $presetKey]);
         return $presetKey;
     }
 
