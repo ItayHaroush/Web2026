@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { FaWhatsapp, FaPhoneAlt, FaMask } from 'react-icons/fa';
+import { FaWhatsapp, FaPhoneAlt, FaMask, FaShoppingBag } from 'react-icons/fa';
 import { SiWaze } from 'react-icons/si';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
@@ -22,7 +22,7 @@ export default function MenuPage() {
     const navigate = useNavigate();
     const params = useParams();
     const [searchParams] = useSearchParams();
-    const { addToCart, setCustomerInfo } = useCart();
+    const { addToCart, setCustomerInfo, getItemCount } = useCart();
     const { addToast } = useToast();
     const [menu, setMenu] = useState([]);
     const [restaurant, setRestaurant] = useState(null);
@@ -127,6 +127,7 @@ export default function MenuPage() {
 
     const wazeLink = getWazeLink();
     const phoneHref = getPhoneHref();
+    const totalCartItems = getItemCount();
 
     const isOpenNow = restaurant?.is_open_now ?? restaurant?.is_open;
     const canOrder = isOpenNow !== false;
@@ -317,32 +318,34 @@ export default function MenuPage() {
                 )}
             </div>
 
-            {/* ניווט קטגוריות - Sticky בסגנון Wolt */}
+            {/* ניווט קטגוריות - למטה במובייל, למעלה בדסקטופ */}
             {menu.length > 0 && (
-                <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-md -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 py-3 mb-6 border-b border-gray-100 shadow-sm">
-                    <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
-                        {menu.map((category) => (
-                            <button
-                                key={category.id}
-                                onClick={() => scrollToCategory(category.id)}
-                                className={`flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap transition-all duration-300 ${activeCategory === category.id
-                                    ? 'bg-brand-primary text-white shadow-lg scale-105'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                    }`}
-                            >
-                                {restaurant?.logo_url && activeCategory === category.id && (
-                                    <img src={resolveAssetUrl(restaurant.logo_url)} alt="" className="h-5 w-5 object-contain" />
-                                )}
-                                <span className="font-medium">{category.name}</span>
-                                <span className="text-xs opacity-70">({category.items?.length || 0})</span>
-                            </button>
-                        ))}
+                <div className="fixed md:sticky bottom-0 md:top-16 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t md:border-t-0 md:border-b border-gray-200 shadow-lg pb-safe md:-mx-4 lg:-mx-8 md:mb-6">
+                    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+                        <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+                            {menu.map((category) => (
+                                <button
+                                    key={category.id}
+                                    onClick={() => scrollToCategory(category.id)}
+                                    className={`flex items-center gap-2 px-3 py-2 rounded-full whitespace-nowrap text-sm font-medium transition-all duration-300 ${activeCategory === category.id
+                                        ? 'bg-brand-primary text-white shadow-md'
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                        }`}
+                                >
+                                    {restaurant?.logo_url && activeCategory === category.id && (
+                                        <img src={resolveAssetUrl(restaurant.logo_url)} alt="" className="h-4 w-4 object-contain opacity-90" />
+                                    )}
+                                    <span>{category.name}</span>
+                                    <span className="text-xs opacity-70">({category.items?.length || 0})</span>
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 </div>
             )}
 
             {/* תוכן התפריט */}
-            <div className="space-y-10">
+            <div className="space-y-10 pb-24 md:pb-0">
                 {menu.length === 0 ? (
                     <div className="bg-white rounded-2xl shadow-sm p-12 text-center">
                         {restaurant?.logo_url && (
@@ -355,7 +358,7 @@ export default function MenuPage() {
                         <div
                             key={category.id}
                             ref={el => categoryRefs.current[category.id] = el}
-                            className="scroll-mt-20"
+                            className="scroll-mt-32"
                         >
                             {/* כותרת קטגוריה - סגנון Wolt */}
                             <div className="flex items-center gap-4 mb-6">
@@ -391,7 +394,7 @@ export default function MenuPage() {
                                             className={`bg-white rounded-2xl shadow-sm transition-all duration-300 overflow-hidden group border border-gray-100 ${canOrder ? 'cursor-pointer hover:shadow-xl hover:border-brand-primary/30' : 'cursor-not-allowed opacity-80'}`}
                                         >
                                             {/* תמונה / לוגו placeholder */}
-                                            <div className="relative h-40 bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden">
+                                            <div className="relative h-44 bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden">
                                                 {item.image_url ? (
                                                     <img
                                                         src={resolveAssetUrl(item.image_url)}
@@ -399,11 +402,11 @@ export default function MenuPage() {
                                                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                                                     />
                                                 ) : restaurant?.logo_url ? (
-                                                    <div className="absolute inset-0 flex items-center justify-center">
+                                                    <div className="absolute inset-0 flex items-center justify-center p-6">
                                                         <img
                                                             src={resolveAssetUrl(restaurant.logo_url)}
                                                             alt=""
-                                                            className="h-24 w-24 object-contain opacity-10 group-hover:opacity-20 group-hover:scale-110 transition-all duration-500"
+                                                            className="w-full h-full object-contain opacity-20"
                                                         />
                                                     </div>
                                                 ) : null}
@@ -456,6 +459,19 @@ export default function MenuPage() {
                 onAdd={handleAddFromModal}
                 isOrderingEnabled={canOrder}
             />
+
+            {totalCartItems > 0 && (
+                <button
+                    onClick={() => navigate(`/${effectiveTenantId || tenantId || ''}/cart`)}
+                    className="fixed bottom-20 md:bottom-6 left-4 md:left-6 z-50 bg-brand-primary text-white p-4 rounded-full shadow-xl hover:bg-brand-secondary transition-transform active:scale-95"
+                    aria-label="מעבר לסל הקניות"
+                >
+                    <FaShoppingBag className="text-2xl" />
+                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold h-6 w-6 flex items-center justify-center rounded-full border-2 border-white">
+                        {totalCartItems}
+                    </span>
+                </button>
+            )}
         </CustomerLayout>
     );
 }
