@@ -107,8 +107,9 @@ class MenuController extends Controller
                                         $scope = $item->addons_group_scope;
                                         $groupIds = json_decode($scope, true);
                                         // אם זה array עם קבוצה אחת בלבד, או פורמט ישן שאינו 'both'
-                                        if ((is_array($groupIds) && count($groupIds) === 1) || 
-                                            (!is_array($groupIds) && $scope !== 'both')) {
+                                        if ((is_array($groupIds) && count($groupIds) === 1) ||
+                                            (!is_array($groupIds) && $scope !== 'both')
+                                        ) {
                                             $maxSelect = $item->max_addons;
                                         }
                                     }

@@ -275,8 +275,9 @@ class OrderController extends Controller
                         $scope = $menuItem->addons_group_scope;
                         $groupIds = json_decode($scope, true);
                         // אם זה array עם קבוצה אחת בלבד, או פורמט ישן שאינו 'both'
-                        if ((is_array($groupIds) && count($groupIds) === 1) || 
-                            (!is_array($groupIds) && $scope !== 'both')) {
+                        if ((is_array($groupIds) && count($groupIds) === 1) ||
+                            (!is_array($groupIds) && $scope !== 'both')
+                        ) {
                             $maxAllowed = $menuItem->max_addons;
                         }
                     }
@@ -811,10 +812,10 @@ class OrderController extends Controller
         }
 
         $scope = $item->addons_group_scope;
-        
+
         // ניסיון לפרסר כ-JSON (פורמט חדש - array של IDs)
         $groupIds = json_decode($scope, true);
-        
+
         if (is_array($groupIds) && !empty($groupIds)) {
             // פורמט חדש - array של IDs
             $filteredGroups = $groups->filter(function ($group) use ($groupIds) {
