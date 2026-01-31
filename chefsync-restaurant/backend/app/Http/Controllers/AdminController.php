@@ -223,7 +223,7 @@ class AdminController extends Controller
             'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
             'use_variants' => 'sometimes|boolean',
             'use_addons' => 'sometimes|boolean',
-            'addons_group_scope' => 'nullable|string|in:salads,hot,both',
+            'addons_group_scope' => 'nullable|string',  // משנה לקבל JSON string
             'max_addons' => 'nullable|integer|min:1|max:99',
         ]);
 
@@ -248,9 +248,15 @@ class AdminController extends Controller
         $maxAddons = $useAddons && $request->filled('max_addons')
             ? (int) $request->input('max_addons')
             : null;
-        $addonsGroupScope = $useAddons
-            ? ($request->input('addons_group_scope') ?: 'salads')
-            : null;
+        
+        // טיפול ב-addons_group_scope - תמיכה ב-JSON array או ערכים ישנים
+        $addonsGroupScope = null;
+        if ($useAddons && $request->filled('addons_group_scope')) {
+            $scopeInput = $request->input('addons_group_scope');
+            // אם זה JSON מתחיל ב-[ אז נשמור אותו כמו שהוא
+            // אם זה ערך ישן (salads/hot/both) נשמור אותו
+            $addonsGroupScope = $scopeInput;
+        }
 
         // ✅ וודא tenant_id + restaurant_id
         $item = MenuItem::create([
@@ -291,7 +297,7 @@ class AdminController extends Controller
             'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
             'use_variants' => 'sometimes|boolean',
             'use_addons' => 'sometimes|boolean',
-            'addons_group_scope' => 'nullable|string|in:salads,hot,both',
+            'addons_group_scope' => 'nullable|string',  // משנה לקבל JSON string
             'max_addons' => 'nullable|integer|min:1|max:99',
         ]);
 
@@ -315,15 +321,19 @@ class AdminController extends Controller
             $payload['max_addons'] = $useAddons
                 ? ($request->filled('max_addons') ? (int) $request->input('max_addons') : null)
                 : null;
-            $payload['addons_group_scope'] = $useAddons
-                ? ($request->input('addons_group_scope') ?: 'salads')
-                : null;
+            
+            // תמיכה ב-JSON array או ערכים ישנים
+            if ($useAddons && $request->filled('addons_group_scope')) {
+                $payload['addons_group_scope'] = $request->input('addons_group_scope');
+            } else {
+                $payload['addons_group_scope'] = null;
+            }
         } elseif ($request->has('max_addons')) {
             $payload['max_addons'] = $request->filled('max_addons')
                 ? (int) $request->input('max_addons')
                 : null;
         } elseif ($request->has('addons_group_scope')) {
-            $payload['addons_group_scope'] = $request->input('addons_group_scope') ?: 'salads';
+            $payload['addons_group_scope'] = $request->input('addons_group_scope') ?: null;
         }
 
         $item->update($payload);

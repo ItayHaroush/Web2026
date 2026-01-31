@@ -31,6 +31,7 @@ export default function AdminMenu() {
     const isLocked = restaurantStatus?.is_approved === false;
     const [items, setItems] = useState([]);
     const [categories, setCategories] = useState([]);
+    const [groups, setGroups] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [editItem, setEditItem] = useState(null);
@@ -44,7 +45,7 @@ export default function AdminMenu() {
         image: null,
         use_variants: false,
         use_addons: false,
-        addons_group_scope: 'salads',
+        addons_group_scope: [],
     });
 
     useEffect(() => {
@@ -53,10 +54,11 @@ export default function AdminMenu() {
 
     const fetchData = async () => {
         try {
-            console.log('Fetching menu items and categories...');
-            const [itemsRes, categoriesRes] = await Promise.all([
+            console.log('Fetching menu items, categories and groups...');
+            const [itemsRes, categoriesRes, saladsRes] = await Promise.all([
                 api.get('/admin/menu-items', { headers: getAuthHeaders() }),
-                api.get('/admin/categories', { headers: getAuthHeaders() })
+                api.get('/admin/categories', { headers: getAuthHeaders() }),
+                api.get('/admin/salads', { headers: getAuthHeaders() })
             ]);
 
             console.log('Items response:', itemsRes.data);
@@ -76,6 +78,11 @@ export default function AdminMenu() {
                 const catsData = categoriesRes.data.categories || [];
                 setCategories(catsData);
                 console.log('Set categories count:', catsData.length);
+            }
+            if (saladsRes.data.success) {
+                const groupsData = saladsRes.data.groups || [];
+                setGroups(groupsData);
+                console.log('Set groups count:', groupsData.length);
             }
         } catch (error) {
             console.error('Failed to fetch data:', error);
@@ -101,7 +108,12 @@ export default function AdminMenu() {
         if (form.image) formData.append('image', form.image);
         formData.append('use_variants', form.use_variants ? '1' : '0');
         formData.append('use_addons', form.use_addons ? '1' : '0');
-        formData.append('addons_group_scope', form.use_addons ? (form.addons_group_scope || 'salads') : '');
+        
+        // שליחת array של group IDs כ-JSON string
+        const scopeValue = form.use_addons && form.addons_group_scope?.length 
+            ? JSON.stringify(form.addons_group_scope)
+            : '';
+        formData.append('addons_group_scope', scopeValue);
 
         console.log('📤 Submitting menu item:', {
             name: form.name,
@@ -170,6 +182,27 @@ export default function AdminMenu() {
 
     const openEditModal = (item) => {
         setEditItem(item);
+        
+        // המרת addons_group_scope לפורמט הנכון
+        let groupScope = [];
+        if (item.addons_group_scope) {
+            try {
+                // אם זה JSON array
+                groupScope = JSON.parse(item.addons_group_scope);
+            } catch {
+                // תאימות לאחור - ערכים ישנים
+                if (item.addons_group_scope === 'both') {
+                    groupScope = groups.map(g => g.id);
+                } else if (item.addons_group_scope === 'salads') {
+                    const saladsGroup = groups.find(g => g.name === 'סלטים קבועים');
+                    if (saladsGroup) groupScope = [saladsGroup.id];
+                } else if (item.addons_group_scope === 'hot') {
+                    const hotGroup = groups.find(g => g.name === 'תוספות חמות');
+                    if (hotGroup) groupScope = [hotGroup.id];
+                }
+            }
+        }
+        
         setForm({
             name: item.name,
             description: item.description || '',
@@ -178,7 +211,7 @@ export default function AdminMenu() {
             image: null,
             use_variants: Boolean(item.use_variants),
             use_addons: Boolean(item.use_addons),
-            addons_group_scope: item.addons_group_scope || 'salads',
+            addons_group_scope: groupScope,
         });
         setShowModal(true);
     };
@@ -193,7 +226,7 @@ export default function AdminMenu() {
             image: null,
             use_variants: false,
             use_addons: false,
-            addons_group_scope: 'salads',
+            addons_group_scope: [],
         });
         setShowModal(true);
     };
@@ -209,7 +242,7 @@ export default function AdminMenu() {
             image: null,
             use_variants: false,
             use_addons: false,
-            addons_group_scope: 'salads',
+            addons_group_scope: [],
         });
     };
 
@@ -590,25 +623,31 @@ export default function AdminMenu() {
 
                                 {form.use_addons && (
                                     <div className="bg-slate-50 rounded-2xl p-5 space-y-4 animate-in slide-in-from-top-2 duration-300">
-                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest block text-right">קבוצת תוספות פעילה למנה זו</p>
+                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest block text-right">בחר קבוצות תוספות שיופיעו למנה זו</p>
                                         <div className="flex flex-wrap gap-2">
-                                            {[
-                                                { id: 'salads', label: 'סלטים קבועים' },
-                                                { id: 'hot', label: 'תוספות חמות' },
-                                                { id: 'both', label: 'גם וגם' }
-                                            ].map((group) => (
-                                                <button
-                                                    key={group.id}
-                                                    type="button"
-                                                    onClick={() => setForm({ ...form, addons_group_scope: group.id })}
-                                                    className={`px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-tight transition-all ${form.addons_group_scope === group.id
-                                                        ? 'bg-gray-900 text-white shadow-md'
-                                                        : 'bg-white text-gray-500 border border-gray-100'
+                                            {groups.map((group) => {
+                                                const isSelected = form.addons_group_scope?.includes(group.id);
+                                                return (
+                                                    <button
+                                                        key={group.id}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const currentScope = form.addons_group_scope || [];
+                                                            const newScope = isSelected
+                                                                ? currentScope.filter(id => id !== group.id)
+                                                                : [...currentScope, group.id];
+                                                            setForm({ ...form, addons_group_scope: newScope });
+                                                        }}
+                                                        className={`px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-tight transition-all ${
+                                                            isSelected
+                                                                ? 'bg-gray-900 text-white shadow-md'
+                                                                : 'bg-white text-gray-500 border border-gray-100'
                                                         }`}
-                                                >
-                                                    {group.label}
-                                                </button>
-                                            ))}
+                                                    >
+                                                        {group.name}
+                                                    </button>
+                                                );
+                                            })}
                                         </div>
                                     </div>
                                 )}
