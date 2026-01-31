@@ -206,7 +206,7 @@ class MenuController extends Controller
     private function filterAddonGroupsByScope($groups, MenuItem $item, ?int $categoryId)
     {
         $groups = $this->cloneAddonGroups($groups);
-        
+
         // תמיד נציג את כל הקבוצות הפעילות, נסנן רק לפי קטגוריות
         // הסרת הלוגיקה הישנה שסיננה לפי שמות מוגדרים קשיח
         return $this->filterAddonGroupsByCategory($groups, $categoryId);
