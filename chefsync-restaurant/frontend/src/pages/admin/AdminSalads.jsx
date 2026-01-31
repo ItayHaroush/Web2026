@@ -175,10 +175,10 @@ export default function AdminSalads() {
 
         setUpdatingGroup(groupId);
         try {
-            const maxVal = edit.max_selections === '' || edit.max_selections === '0' || Number(edit.max_selections) === 0 
-                ? null 
+            const maxVal = edit.max_selections === '' || edit.max_selections === '0' || Number(edit.max_selections) === 0
+                ? null
                 : Number(edit.max_selections);
-            
+
             await api.put(`/admin/addon-groups/${groupId}`,
                 {
                     name: edit.name || selectedGroup?.name,
@@ -245,8 +245,8 @@ export default function AdminSalads() {
         event.preventDefault();
         if (!isManager()) return;
 
-        const maxVal = groupForm.max_selections === '' || groupForm.max_selections === '0' || Number(groupForm.max_selections) === 0 
-            ? null 
+        const maxVal = groupForm.max_selections === '' || groupForm.max_selections === '0' || Number(groupForm.max_selections) === 0
+            ? null
             : Number(groupForm.max_selections);
 
         const payload = {
@@ -276,7 +276,7 @@ export default function AdminSalads() {
     const deleteGroup = async (groupId) => {
         const group = groups.find(g => g.id === groupId);
         const itemsCount = salads.filter(s => String(s.addon_group_id) === String(groupId)).length;
-        
+
         if (itemsCount > 0) {
             alert(`לא ניתן למחוק קבוצה שיש בה ${itemsCount} פריטים.\nנא למחוק תחילה את הפריטים או להעביר אותם לקבוצה אחרת.`);
             return;
@@ -492,82 +492,82 @@ export default function AdminSalads() {
                                     </div>
 
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                                    <div className="space-y-3">
-                                        <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest mr-2 flex items-center gap-2">
-                                            <FaMagic className="text-blue-400" /> מינימום בחירה
-                                        </label>
-                                        <input
-                                            type="number"
-                                            value={groupEdits[selectedGroup.id]?.min_selections ?? '0'}
-                                            onChange={(e) => setGroupEdits((prev) => ({
-                                                ...prev,
-                                                [selectedGroup.id]: { ...prev[selectedGroup.id], min_selections: e.target.value },
-                                            }))}
-                                            className="w-full px-6 py-4 bg-gray-50 border-none rounded-[1.5rem] focus:ring-4 focus:ring-brand-primary/10 text-gray-900 font-extrabold text-center text-xl"
-                                        />
-                                        <p className="text-[10px] text-gray-400 text-center font-bold">למשל: 1 מחייב בחירה אחת</p>
-                                    </div>
-
-                                    <div className="space-y-3">
-                                        <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest mr-2 flex items-center gap-2">
-                                            <FaMagic className="text-blue-400" /> מקסימום בחירה
-                                        </label>
-                                        <input
-                                            type="number"
-                                            value={groupEdits[selectedGroup.id]?.max_selections ?? ''}
-                                            onChange={(e) => setGroupEdits((prev) => ({
-                                                ...prev,
-                                                [selectedGroup.id]: { ...prev[selectedGroup.id], max_selections: e.target.value },
-                                            }))}
-                                            className="w-full px-6 py-4 bg-gray-50 border-none rounded-[1.5rem] focus:ring-4 focus:ring-brand-primary/10 text-gray-900 font-extrabold text-center text-xl"
-                                            placeholder="∞"
-                                        />
-                                        <p className="text-[10px] text-gray-400 text-center font-bold">ריק או 0 = ללא הגבלה</p>
-                                    </div>
-
-                                    <div className="space-y-4">
-                                        <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] mr-2 flex items-center gap-2">
-                                            סדר תצוגה בתפריט
-                                        </label>
-                                        <div className="flex items-center gap-3 bg-gray-50 p-2 rounded-[2rem] border border-gray-100 shadow-inner">
-                                            <button
-                                                onClick={() => {
-                                                    const current = Number(groupEdits[selectedGroup.id]?.sort_order || 0);
-                                                    setGroupEdits(prev => ({ ...prev, [selectedGroup.id]: { ...prev[selectedGroup.id], sort_order: Math.max(0, current - 1) } }));
-                                                }}
-                                                className="w-14 h-14 bg-white text-gray-900 rounded-[1.5rem] flex items-center justify-center hover:bg-brand-primary hover:text-white transition-all shadow-sm group/btn active:scale-90"
-                                            >
-                                                <FaChevronRight size={14} className="group-hover/btn:scale-125 transition-transform" />
-                                            </button>
-
-                                            <div className="flex-1 text-center py-2">
-                                                <div className="text-[10px] font-black text-brand-primary/50 uppercase tracking-widest mb-0.5">
-                                                    {selectedGroup.name}
-                                                </div>
-                                                <div className="flex items-center justify-center gap-2">
-                                                    <span className="text-gray-400 font-bold text-xs italic">מיקום</span>
-                                                    <input
-                                                        type="text"
-                                                        inputMode="numeric"
-                                                        value={groupEdits[selectedGroup.id]?.sort_order ?? '0'}
-                                                        readOnly
-                                                        className="w-12 bg-transparent border-none text-center font-black text-2xl text-gray-900 focus:ring-0 p-0"
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            <button
-                                                onClick={() => {
-                                                    const current = Number(groupEdits[selectedGroup.id]?.sort_order || 0);
-                                                    setGroupEdits(prev => ({ ...prev, [selectedGroup.id]: { ...prev[selectedGroup.id], sort_order: current + 1 } }));
-                                                }}
-                                                className="w-14 h-14 bg-white text-gray-900 rounded-[1.5rem] flex items-center justify-center hover:bg-brand-primary hover:text-white transition-all shadow-sm group/btn active:scale-90"
-                                            >
-                                                <FaChevronLeft size={14} className="group-hover/btn:scale-125 transition-transform" />
-                                            </button>
+                                        <div className="space-y-3">
+                                            <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest mr-2 flex items-center gap-2">
+                                                <FaMagic className="text-blue-400" /> מינימום בחירה
+                                            </label>
+                                            <input
+                                                type="number"
+                                                value={groupEdits[selectedGroup.id]?.min_selections ?? '0'}
+                                                onChange={(e) => setGroupEdits((prev) => ({
+                                                    ...prev,
+                                                    [selectedGroup.id]: { ...prev[selectedGroup.id], min_selections: e.target.value },
+                                                }))}
+                                                className="w-full px-6 py-4 bg-gray-50 border-none rounded-[1.5rem] focus:ring-4 focus:ring-brand-primary/10 text-gray-900 font-extrabold text-center text-xl"
+                                            />
+                                            <p className="text-[10px] text-gray-400 text-center font-bold">למשל: 1 מחייב בחירה אחת</p>
                                         </div>
-                                        <p className="text-[10px] text-gray-400 text-center font-bold">החצים משנים את סדר הופעת הקבוצה ללקוח</p>
-                                    </div>
+
+                                        <div className="space-y-3">
+                                            <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest mr-2 flex items-center gap-2">
+                                                <FaMagic className="text-blue-400" /> מקסימום בחירה
+                                            </label>
+                                            <input
+                                                type="number"
+                                                value={groupEdits[selectedGroup.id]?.max_selections ?? ''}
+                                                onChange={(e) => setGroupEdits((prev) => ({
+                                                    ...prev,
+                                                    [selectedGroup.id]: { ...prev[selectedGroup.id], max_selections: e.target.value },
+                                                }))}
+                                                className="w-full px-6 py-4 bg-gray-50 border-none rounded-[1.5rem] focus:ring-4 focus:ring-brand-primary/10 text-gray-900 font-extrabold text-center text-xl"
+                                                placeholder="∞"
+                                            />
+                                            <p className="text-[10px] text-gray-400 text-center font-bold">ריק או 0 = ללא הגבלה</p>
+                                        </div>
+
+                                        <div className="space-y-4">
+                                            <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] mr-2 flex items-center gap-2">
+                                                סדר תצוגה בתפריט
+                                            </label>
+                                            <div className="flex items-center gap-3 bg-gray-50 p-2 rounded-[2rem] border border-gray-100 shadow-inner">
+                                                <button
+                                                    onClick={() => {
+                                                        const current = Number(groupEdits[selectedGroup.id]?.sort_order || 0);
+                                                        setGroupEdits(prev => ({ ...prev, [selectedGroup.id]: { ...prev[selectedGroup.id], sort_order: Math.max(0, current - 1) } }));
+                                                    }}
+                                                    className="w-14 h-14 bg-white text-gray-900 rounded-[1.5rem] flex items-center justify-center hover:bg-brand-primary hover:text-white transition-all shadow-sm group/btn active:scale-90"
+                                                >
+                                                    <FaChevronRight size={14} className="group-hover/btn:scale-125 transition-transform" />
+                                                </button>
+
+                                                <div className="flex-1 text-center py-2">
+                                                    <div className="text-[10px] font-black text-brand-primary/50 uppercase tracking-widest mb-0.5">
+                                                        {selectedGroup.name}
+                                                    </div>
+                                                    <div className="flex items-center justify-center gap-2">
+                                                        <span className="text-gray-400 font-bold text-xs italic">מיקום</span>
+                                                        <input
+                                                            type="text"
+                                                            inputMode="numeric"
+                                                            value={groupEdits[selectedGroup.id]?.sort_order ?? '0'}
+                                                            readOnly
+                                                            className="w-12 bg-transparent border-none text-center font-black text-2xl text-gray-900 focus:ring-0 p-0"
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                <button
+                                                    onClick={() => {
+                                                        const current = Number(groupEdits[selectedGroup.id]?.sort_order || 0);
+                                                        setGroupEdits(prev => ({ ...prev, [selectedGroup.id]: { ...prev[selectedGroup.id], sort_order: current + 1 } }));
+                                                    }}
+                                                    className="w-14 h-14 bg-white text-gray-900 rounded-[1.5rem] flex items-center justify-center hover:bg-brand-primary hover:text-white transition-all shadow-sm group/btn active:scale-90"
+                                                >
+                                                    <FaChevronLeft size={14} className="group-hover/btn:scale-125 transition-transform" />
+                                                </button>
+                                            </div>
+                                            <p className="text-[10px] text-gray-400 text-center font-bold">החצים משנים את סדר הופעת הקבוצה ללקוח</p>
+                                        </div>
                                     </div>
                                 </div>
 

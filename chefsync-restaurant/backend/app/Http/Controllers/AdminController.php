@@ -989,13 +989,13 @@ class AdminController extends Controller
             ->findOrFail($id);
 
         $payload = $request->only(['name', 'sort_order', 'is_active', 'min_selections', 'max_selections']);
-        
+
         // טיפול ב-max_selections = 0 (ללא הגבלה - יהפך ל-null)
         if ($request->has('max_selections')) {
             $maxValue = $request->input('max_selections');
             $payload['max_selections'] = ($maxValue === 0 || $maxValue === '0' || $maxValue === null || $maxValue === '') ? null : (int) $maxValue;
         }
-        
+
         // וולידציה: אם max_selections מוגדר (לא null), min_selections חייב להיות <= max_selections
         if (isset($payload['max_selections']) && $payload['max_selections'] !== null) {
             $minVal = $payload['min_selections'] ?? $group->min_selections ?? 0;
@@ -1006,11 +1006,11 @@ class AdminController extends Controller
                 ], 422);
             }
         }
-        
+
         if ($request->has('min_selections')) {
             $payload['is_required'] = (int) $request->input('min_selections') > 0;
         }
-        
+
         $group->update($payload);
 
         return response()->json([
