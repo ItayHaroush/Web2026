@@ -270,8 +270,15 @@ class OrderController extends Controller
                     }
 
                     $maxAllowed = $group->max_selections;
-                    if ($maxAllowed === null && $menuItem->use_addons && $menuItem->max_addons && $menuItem->addons_group_scope !== 'both') {
-                        $maxAllowed = $menuItem->max_addons;
+                    // אם אין הגבלה בקבוצה, נשתמש במקסימום מהמנה (רק אם לא בחרו כמה קבוצות)
+                    if ($maxAllowed === null && $menuItem->use_addons && $menuItem->max_addons) {
+                        $scope = $menuItem->addons_group_scope;
+                        $groupIds = json_decode($scope, true);
+                        // אם זה array עם קבוצה אחת בלבד, או פורמט ישן שאינו 'both'
+                        if ((is_array($groupIds) && count($groupIds) === 1) || 
+                            (!is_array($groupIds) && $scope !== 'both')) {
+                            $maxAllowed = $menuItem->max_addons;
+                        }
                     }
                     if ($maxAllowed !== null && $count > $maxAllowed) {
                         throw ValidationException::withMessages([
@@ -797,17 +804,37 @@ class OrderController extends Controller
     private function filterAddonGroupsByScope($groups, MenuItem $item, ?int $categoryId)
     {
         $groups = $this->cloneAddonGroups($groups);
-        $scope = $item->addons_group_scope ?: 'salads';
 
-        if ($scope === 'both') {
+        // אם אין הגדרת scope - נציג את כל הקבוצות
+        if (empty($item->addons_group_scope)) {
             return $this->filterAddonGroupsByCategory($groups, $categoryId);
         }
 
-        $allowedName = $scope === 'hot'
-            ? self::DEFAULT_HOT_GROUP_NAME
-            : self::DEFAULT_SALAD_GROUP_NAME;
+        $scope = $item->addons_group_scope;
+        
+        // ניסיון לפרסר כ-JSON (פורמט חדש - array של IDs)
+        $groupIds = json_decode($scope, true);
+        
+        if (is_array($groupIds) && !empty($groupIds)) {
+            // פורמט חדש - array של IDs
+            $filteredGroups = $groups->filter(function ($group) use ($groupIds) {
+                return in_array($group->id, $groupIds, true);
+            })->values();
+        } else {
+            // תאימות לאחור - ערכים ישנים: 'salads', 'hot', 'both'
+            if ($scope === 'both') {
+                $filteredGroups = $groups;
+            } elseif ($scope === 'salads') {
+                $filteredGroups = $groups->filter(fn($g) => $g->name === self::DEFAULT_SALAD_GROUP_NAME)->values();
+            } elseif ($scope === 'hot') {
+                $filteredGroups = $groups->filter(fn($g) => $g->name === self::DEFAULT_HOT_GROUP_NAME)->values();
+            } else {
+                // אם זה לא ערך מוכר, נציג הכל
+                $filteredGroups = $groups;
+            }
+        }
 
-        $filteredGroups = $groups->filter(fn($group) => $group->name === $allowedName)->values();
+        // עכשיו נסנן גם לפי קטגוריות
         return $this->filterAddonGroupsByCategory($filteredGroups, $categoryId);
     }
 
