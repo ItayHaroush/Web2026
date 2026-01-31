@@ -17,7 +17,8 @@ import {
     FaChevronLeft,
     FaChevronRight,
     FaMagic,
-    FaListUl
+    FaListUl,
+    FaCopy
 } from 'react-icons/fa';
 
 export default function AdminSalads() {
@@ -296,6 +297,37 @@ export default function AdminSalads() {
         }
     };
 
+    const duplicateGroup = async (groupId) => {
+        const group = groups.find(g => g.id === groupId);
+        const itemsCount = salads.filter(s => String(s.addon_group_id) === String(groupId)).length;
+
+        const confirmMsg = itemsCount > 0
+            ? `האם להעתיק את הקבוצה "${group?.name}" כולל ${itemsCount} פריטים?`
+            : `האם להעתיק את הקבוצה "${group?.name}"?`;
+
+        if (!confirm(confirmMsg)) return;
+
+        try {
+            const response = await api.post(
+                `/admin/addon-groups/${groupId}/duplicate`,
+                {},
+                { headers: getAuthHeaders() }
+            );
+            
+            if (response.data.success) {
+                await fetchSalads();
+                // בחר בקבוצה החדשה
+                if (response.data.group?.id) {
+                    setSelectedGroupId(String(response.data.group.id));
+                }
+                alert(`הקבוצה "${response.data.group?.name}" הועתקה בהצלחה!`);
+            }
+        } catch (error) {
+            console.error('Failed to duplicate group', error);
+            alert(error.response?.data?.message || 'נכשל בהעתקת הקבוצה');
+        }
+    };
+
     const visibleSalads = selectedGroupId
         ? salads.filter((salad) => String(salad.addon_group_id) === String(selectedGroupId))
         : salads;
@@ -412,6 +444,16 @@ export default function AdminSalads() {
                                                 title="ערוך קבוצה"
                                             >
                                                 <FaEdit size={12} />
+                                            </button>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    duplicateGroup(group.id);
+                                                }}
+                                                className="p-2 bg-green-500 text-white rounded-xl hover:bg-green-600 transition-all active:scale-95 shadow-lg"
+                                                title="העתק קבוצה"
+                                            >
+                                                <FaCopy size={12} />
                                             </button>
                                             <button
                                                 onClick={(e) => {
