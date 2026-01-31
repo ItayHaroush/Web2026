@@ -1069,6 +1069,67 @@ class AdminController extends Controller
         ]);
     }
 
+    public function duplicateAddonGroup(Request $request, $id)
+    {
+        $user = $request->user();
+
+        if (!$user->isManager()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'אין לך הרשאה להעתיק קבוצות תוספות',
+            ], 403);
+        }
+
+        $restaurant = $user->restaurant;
+        if (!$restaurant) {
+            return response()->json([
+                'success' => false,
+                'message' => 'לא נמצאה מסעדה למשתמש',
+            ], 404);
+        }
+
+        $originalGroup = RestaurantAddonGroup::where('restaurant_id', $restaurant->id)
+            ->findOrFail($id);
+
+        // מצא sort_order מקסימלי
+        $maxSortOrder = RestaurantAddonGroup::where('restaurant_id', $restaurant->id)->max('sort_order') ?? 0;
+
+        // צור קבוצה חדשה
+        $newGroup = RestaurantAddonGroup::create([
+            'restaurant_id' => $restaurant->id,
+            'tenant_id' => $restaurant->tenant_id,
+            'name' => $originalGroup->name . ' (עותק)',
+            'selection_type' => $originalGroup->selection_type,
+            'min_selections' => $originalGroup->min_selections,
+            'max_selections' => $originalGroup->max_selections,
+            'is_required' => $originalGroup->is_required,
+            'is_active' => $originalGroup->is_active,
+            'sort_order' => $maxSortOrder + 1,
+        ]);
+
+        // העתק את כל הפריטים
+        $originalAddons = RestaurantAddon::where('addon_group_id', $id)->get();
+        
+        foreach ($originalAddons as $addon) {
+            RestaurantAddon::create([
+                'restaurant_id' => $restaurant->id,
+                'tenant_id' => $restaurant->tenant_id,
+                'addon_group_id' => $newGroup->id,
+                'name' => $addon->name,
+                'price' => $addon->price,
+                'category_ids' => $addon->category_ids,
+                'is_active' => $addon->is_active,
+                'sort_order' => $addon->sort_order,
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'הקבוצה הועתקה בהצלחה!',
+            'group' => $newGroup,
+        ], 201);
+    }
+
     // =============================================
     // ניהול מסעדה
     // =============================================
