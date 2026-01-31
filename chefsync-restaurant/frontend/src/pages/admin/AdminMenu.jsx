@@ -108,9 +108,9 @@ export default function AdminMenu() {
         if (form.image) formData.append('image', form.image);
         formData.append('use_variants', form.use_variants ? '1' : '0');
         formData.append('use_addons', form.use_addons ? '1' : '0');
-        
+
         // שליחת array של group IDs כ-JSON string
-        const scopeValue = form.use_addons && form.addons_group_scope?.length 
+        const scopeValue = form.use_addons && form.addons_group_scope?.length
             ? JSON.stringify(form.addons_group_scope)
             : '';
         formData.append('addons_group_scope', scopeValue);
@@ -182,7 +182,7 @@ export default function AdminMenu() {
 
     const openEditModal = (item) => {
         setEditItem(item);
-        
+
         // המרת addons_group_scope לפורמט הנכון
         let groupScope = [];
         if (item.addons_group_scope) {
@@ -202,7 +202,7 @@ export default function AdminMenu() {
                 }
             }
         }
-        
+
         setForm({
             name: item.name,
             description: item.description || '',
@@ -638,11 +638,10 @@ export default function AdminMenu() {
                                                                 : [...currentScope, group.id];
                                                             setForm({ ...form, addons_group_scope: newScope });
                                                         }}
-                                                        className={`px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-tight transition-all ${
-                                                            isSelected
+                                                        className={`px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-tight transition-all ${isSelected
                                                                 ? 'bg-gray-900 text-white shadow-md'
                                                                 : 'bg-white text-gray-500 border border-gray-100'
-                                                        }`}
+                                                            }`}
                                                     >
                                                         {group.name}
                                                     </button>

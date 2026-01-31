@@ -213,10 +213,10 @@ class MenuController extends Controller
         }
 
         $scope = $item->addons_group_scope;
-        
+
         // ניסיון לפרסר כ-JSON (פורמט חדש - array של IDs)
         $groupIds = json_decode($scope, true);
-        
+
         if (is_array($groupIds) && !empty($groupIds)) {
             // פורמט חדש - array של IDs
             $filteredGroups = $groups->filter(function ($group) use ($groupIds) {

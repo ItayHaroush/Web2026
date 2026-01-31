@@ -248,7 +248,7 @@ class AdminController extends Controller
         $maxAddons = $useAddons && $request->filled('max_addons')
             ? (int) $request->input('max_addons')
             : null;
-        
+
         // טיפול ב-addons_group_scope - תמיכה ב-JSON array או ערכים ישנים
         $addonsGroupScope = null;
         if ($useAddons && $request->filled('addons_group_scope')) {
@@ -321,7 +321,7 @@ class AdminController extends Controller
             $payload['max_addons'] = $useAddons
                 ? ($request->filled('max_addons') ? (int) $request->input('max_addons') : null)
                 : null;
-            
+
             // תמיכה ב-JSON array או ערכים ישנים
             if ($useAddons && $request->filled('addons_group_scope')) {
                 $payload['addons_group_scope'] = $request->input('addons_group_scope');
