@@ -302,7 +302,7 @@ class OpenAiService extends BaseAiService
                         ]);
                     }
                 } catch (\Exception $e) {
-                    \Log::warning('Failed to parse dashboard insights JSON', ['error' => $e->getMessage()]);
+                    Log::warning('Failed to parse dashboard insights JSON', ['error' => $e->getMessage()]);
                 }
             }
 
@@ -394,7 +394,7 @@ class OpenAiService extends BaseAiService
                         ];
                     }
                 } catch (\Exception $e) {
-                    \Log::warning('Failed to parse price recommendation JSON', ['error' => $e->getMessage()]);
+                    Log::warning('Failed to parse price recommendation JSON', ['error' => $e->getMessage()]);
                 }
             }
 
