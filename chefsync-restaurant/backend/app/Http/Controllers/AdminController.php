@@ -1109,7 +1109,7 @@ class AdminController extends Controller
 
         // העתק את כל הפריטים
         $originalAddons = RestaurantAddon::where('addon_group_id', $id)->get();
-        
+
         foreach ($originalAddons as $addon) {
             RestaurantAddon::create([
                 'restaurant_id' => $restaurant->id,

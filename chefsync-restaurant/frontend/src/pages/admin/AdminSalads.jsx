@@ -313,7 +313,7 @@ export default function AdminSalads() {
                 {},
                 { headers: getAuthHeaders() }
             );
-            
+
             if (response.data.success) {
                 await fetchSalads();
                 // בחר בקבוצה החדשה
