@@ -207,9 +207,37 @@ class MenuController extends Controller
     {
         $groups = $this->cloneAddonGroups($groups);
 
-        // תמיד נציג את כל הקבוצות הפעילות, נסנן רק לפי קטגוריות
-        // הסרת הלוגיקה הישנה שסיננה לפי שמות מוגדרים קשיח
-        return $this->filterAddonGroupsByCategory($groups, $categoryId);
+        // אם אין הגדרת scope - נציג את כל הקבוצות
+        if (empty($item->addons_group_scope)) {
+            return $this->filterAddonGroupsByCategory($groups, $categoryId);
+        }
+
+        $scope = $item->addons_group_scope;
+        
+        // ניסיון לפרסר כ-JSON (פורמט חדש - array של IDs)
+        $groupIds = json_decode($scope, true);
+        
+        if (is_array($groupIds) && !empty($groupIds)) {
+            // פורמט חדש - array של IDs
+            $filteredGroups = $groups->filter(function ($group) use ($groupIds) {
+                return in_array($group->id, $groupIds, true);
+            });
+        } else {
+            // תאימות לאחור - ערכים ישנים: 'salads', 'hot', 'both'
+            if ($scope === 'both') {
+                $filteredGroups = $groups;
+            } elseif ($scope === 'salads') {
+                $filteredGroups = $groups->filter(fn($g) => $g->name === 'סלטים קבועים');
+            } elseif ($scope === 'hot') {
+                $filteredGroups = $groups->filter(fn($g) => $g->name === 'תוספות חמות');
+            } else {
+                // אם זה לא ערך מוכר, נציג הכל
+                $filteredGroups = $groups;
+            }
+        }
+
+        // עכשיו נסנן גם לפי קטגוריות
+        return $this->filterAddonGroupsByCategory($filteredGroups, $categoryId);
     }
 
     private function filterAddonGroupsByCategory($groups, ?int $categoryId)
