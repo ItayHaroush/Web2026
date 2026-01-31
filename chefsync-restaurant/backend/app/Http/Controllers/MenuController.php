@@ -102,8 +102,15 @@ class MenuController extends Controller
                                 ? $this->filterAddonGroupsByScope($restaurantAddonGroups, $item, $item->category_id)
                                 ->map(function ($group) use ($item) {
                                     $maxSelect = $group->max_selections;
-                                    if ($maxSelect === null && $item->max_addons && $item->addons_group_scope !== 'both') {
-                                        $maxSelect = $item->max_addons;
+                                    // אם אין הגבלה בקבוצה, נשתמש במקסימום מהמנה (רק אם לא בחרו כמה קבוצות)
+                                    if ($maxSelect === null && $item->max_addons) {
+                                        $scope = $item->addons_group_scope;
+                                        $groupIds = json_decode($scope, true);
+                                        // אם זה array עם קבוצה אחת בלבד, או פורמט ישן שאינו 'both'
+                                        if ((is_array($groupIds) && count($groupIds) === 1) || 
+                                            (!is_array($groupIds) && $scope !== 'both')) {
+                                            $maxSelect = $item->max_addons;
+                                        }
                                     }
                                     return [
                                         'id' => $group->id,
