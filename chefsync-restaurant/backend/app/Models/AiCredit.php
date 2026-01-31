@@ -124,8 +124,14 @@ class AiCredit extends Model
      */
     public function resetMonthlyCredits(): void
     {
-        $tier = $this->tier;
-        $monthlyLimit = config("copilot.credits.{$tier}_tier", 20);
+        // שמור את המגבלה החודשית הקיימת - לא לקחת מ-config!
+        $monthlyLimit = $this->monthly_limit;
+
+        // אם monthly_limit לא הוגדר, אז ננסה מהמסעדה או מה-config
+        if ($monthlyLimit === null || $monthlyLimit <= 0) {
+            $tier = $this->tier ?? 'free';
+            $monthlyLimit = config("copilot.credits.{$tier}_tier", 20);
+        }
 
         $this->update([
             'credits_used' => 0,
@@ -200,21 +206,32 @@ class AiCredit extends Model
             $tier = $normalizedTier;
         }
 
-        return self::firstOrCreate(
-            [
-                'tenant_id' => $restaurant->tenant_id,
-                'restaurant_id' => $restaurant->id,
-            ],
-            [
+        // בדוק אם כבר קיים
+        $existing = self::where('tenant_id', $restaurant->tenant_id)
+            ->where('restaurant_id', $restaurant->id)
+            ->first();
+
+        if ($existing) {
+            // עדכן רק tier ו-monthly_limit, אבל שמור את credits_remaining הנוכחי
+            $existing->update([
                 'tier' => $tier,
                 'monthly_limit' => $monthlyLimit,
-                'credits_used' => 0,
-                'credits_remaining' => $monthlyLimit,
-                'billing_cycle_start' => now()->startOfMonth(),
-                'billing_cycle_end' => now()->endOfMonth(),
-                'total_credits_used' => 0,
-                'total_requests' => 0,
-            ]
-        );
+            ]);
+            return $existing;
+        }
+
+        // אם לא קיים - צור חדש
+        return self::create([
+            'tenant_id' => $restaurant->tenant_id,
+            'restaurant_id' => $restaurant->id,
+            'tier' => $tier,
+            'monthly_limit' => $monthlyLimit,
+            'credits_used' => 0,
+            'credits_remaining' => $monthlyLimit,
+            'billing_cycle_start' => now()->startOfMonth(),
+            'billing_cycle_end' => now()->endOfMonth(),
+            'total_credits_used' => 0,
+            'total_requests' => 0,
+        ]);
     }
 }

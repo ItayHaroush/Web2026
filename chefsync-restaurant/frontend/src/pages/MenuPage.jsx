@@ -31,6 +31,7 @@ export default function MenuPage() {
     const [activeCategory, setActiveCategory] = useState(null);
     const [activeOrderId, setActiveOrderId] = useState(null);
     const [selectedMenuItem, setSelectedMenuItem] = useState(null);
+    const [isPWA, setIsPWA] = useState(false);
     const categoryRefs = useRef({});
 
     const effectiveTenantId = useMemo(() => {
@@ -55,6 +56,33 @@ export default function MenuPage() {
         const sanitized = restaurant.phone.replace(/[^\d+]/g, '');
         return sanitized ? `tel:${sanitized}` : '';
     };
+
+    // זיהוי PWA mode
+    useEffect(() => {
+        const checkPWA = window.matchMedia('(display-mode: standalone)').matches;
+        setIsPWA(checkPWA);
+    }, []);
+
+    // מעקב אחר גלילה לעדכון קטגוריה פעילה
+    useEffect(() => {
+        const handleScroll = () => {
+            const scrollPosition = window.scrollY + 200; // offset for header
+
+            for (const category of menu) {
+                const element = categoryRefs.current[category.id];
+                if (!element) continue;
+
+                const { offsetTop, offsetHeight } = element;
+                if (scrollPosition >= offsetTop && scrollPosition < offsetTop + offsetHeight) {
+                    setActiveCategory(category.id);
+                    break;
+                }
+            }
+        };
+
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, [menu]);
 
 
 
@@ -327,10 +355,20 @@ export default function MenuPage() {
                                 <button
                                     key={category.id}
                                     onClick={() => scrollToCategory(category.id)}
-                                    className={`flex items-center gap-2 px-3 py-2 rounded-full whitespace-nowrap text-sm font-medium transition-all duration-300 ${activeCategory === category.id
-                                        ? 'bg-brand-primary text-white shadow-md'
-                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                        }`}
+                                    className={`
+                                        flex items-center gap-2 px-3 py-2 rounded-full whitespace-nowrap text-sm font-medium transition-all duration-300
+                                        ${activeCategory === category.id
+                                            ? 'bg-brand-primary text-white shadow-md'
+                                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                        }
+                                        ${isPWA ? 'pwa:px-5 pwa:py-3.5 pwa:text-base pwa:font-bold pwa:shadow-lg' : ''}
+                                        ${isPWA && activeCategory === category.id ? 'pwa:bg-orange-600' : ''}
+                                    `}
+                                    style={isPWA ? {
+                                        padding: activeCategory === category.id ? '0.875rem 1.25rem' : '0.75rem 1.25rem',
+                                        fontSize: '1rem',
+                                        fontWeight: '700'
+                                    } : {}}
                                 >
                                     {restaurant?.logo_url && activeCategory === category.id && (
                                         <img src={resolveAssetUrl(restaurant.logo_url)} alt="" className="h-4 w-4 object-contain opacity-90" />
