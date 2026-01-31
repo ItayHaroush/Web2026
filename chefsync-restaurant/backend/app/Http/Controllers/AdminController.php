@@ -898,6 +898,64 @@ class AdminController extends Controller
     // ניהול קבוצות תוספות (Add-on Groups)
     // =============================================
 
+    public function storeAddonGroup(Request $request)
+    {
+        $user = $request->user();
+
+        if (!$user->isManager()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'אין לך הרשאה ליצור קבוצות תוספות',
+            ], 403);
+        }
+
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'min_selections' => 'sometimes|integer|min:0|max:99',
+            'max_selections' => 'nullable|integer|min:0|max:99',
+            'is_active' => 'sometimes|boolean',
+        ]);
+
+        $restaurant = $user->restaurant;
+        if (!$restaurant) {
+            return response()->json([
+                'success' => false,
+                'message' => 'לא נמצאה מסעדה למשתמש',
+            ], 404);
+        }
+
+        $maxSortOrder = RestaurantAddonGroup::where('restaurant_id', $restaurant->id)->max('sort_order') ?? 0;
+
+        $maxValue = $request->input('max_selections');
+        $maxSelections = ($maxValue === 0 || $maxValue === '0' || $maxValue === null || $maxValue === '') ? null : (int) $maxValue;
+        $minSelections = (int) ($request->input('min_selections', 0));
+
+        if ($maxSelections !== null && $minSelections > $maxSelections) {
+            return response()->json([
+                'success' => false,
+                'message' => 'מינימום בחירות לא יכול להיות גדול ממקסימום בחירות',
+            ], 422);
+        }
+
+        $group = RestaurantAddonGroup::create([
+            'restaurant_id' => $restaurant->id,
+            'tenant_id' => $restaurant->tenant_id,
+            'name' => $request->input('name'),
+            'selection_type' => 'multiple',
+            'min_selections' => $minSelections,
+            'max_selections' => $maxSelections,
+            'is_required' => $minSelections > 0,
+            'is_active' => $request->boolean('is_active', true),
+            'sort_order' => $maxSortOrder + 1,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'הקבוצה נוצרה בהצלחה!',
+            'group' => $group,
+        ], 201);
+    }
+
     public function updateAddonGroup(Request $request, $id)
     {
         $user = $request->user();
@@ -910,10 +968,11 @@ class AdminController extends Controller
         }
 
         $request->validate([
+            'name' => 'sometimes|string|max:255',
             'sort_order' => 'sometimes|integer|min:0',
             'is_active' => 'sometimes|boolean',
             'min_selections' => 'sometimes|integer|min:0|max:99',
-            'max_selections' => 'nullable|integer|min:1|max:99|gte:min_selections',
+            'max_selections' => 'nullable|integer|min:0|max:99',
         ]);
 
         $restaurant = $user->restaurant;
@@ -929,16 +988,74 @@ class AdminController extends Controller
         $group = RestaurantAddonGroup::where('restaurant_id', $restaurant->id)
             ->findOrFail($id);
 
-        $payload = $request->only(['sort_order', 'is_active', 'min_selections', 'max_selections']);
+        $payload = $request->only(['name', 'sort_order', 'is_active', 'min_selections', 'max_selections']);
+        
+        // טיפול ב-max_selections = 0 (ללא הגבלה - יהפך ל-null)
+        if ($request->has('max_selections')) {
+            $maxValue = $request->input('max_selections');
+            $payload['max_selections'] = ($maxValue === 0 || $maxValue === '0' || $maxValue === null || $maxValue === '') ? null : (int) $maxValue;
+        }
+        
+        // וולידציה: אם max_selections מוגדר (לא null), min_selections חייב להיות <= max_selections
+        if (isset($payload['max_selections']) && $payload['max_selections'] !== null) {
+            $minVal = $payload['min_selections'] ?? $group->min_selections ?? 0;
+            if ($minVal > $payload['max_selections']) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'מינימום בחירות לא יכול להיות גדול ממקסימום בחירות',
+                ], 422);
+            }
+        }
+        
         if ($request->has('min_selections')) {
             $payload['is_required'] = (int) $request->input('min_selections') > 0;
         }
+        
         $group->update($payload);
 
         return response()->json([
             'success' => true,
             'message' => 'הקבוצה עודכנה בהצלחה!',
             'group' => $group,
+        ]);
+    }
+
+    public function deleteAddonGroup(Request $request, $id)
+    {
+        $user = $request->user();
+
+        if (!$user->isManager()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'אין לך הרשאה למחוק קבוצות תוספות',
+            ], 403);
+        }
+
+        $restaurant = $user->restaurant;
+        if (!$restaurant) {
+            return response()->json([
+                'success' => false,
+                'message' => 'לא נמצאה מסעדה למשתמש',
+            ], 404);
+        }
+
+        $group = RestaurantAddonGroup::where('restaurant_id', $restaurant->id)
+            ->findOrFail($id);
+
+        // בדוק אם יש פריטים בקבוצה
+        $itemsCount = RestaurantAddon::where('addon_group_id', $id)->count();
+        if ($itemsCount > 0) {
+            return response()->json([
+                'success' => false,
+                'message' => "לא ניתן למחוק קבוצה שיש בה {$itemsCount} פריטים. נא למחוק תחילה את הפריטים.",
+            ], 400);
+        }
+
+        $group->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'הקבוצה נמחקה בהצלחה!',
         ]);
     }
 

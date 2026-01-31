@@ -160,7 +160,9 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'tenant'])->group(function (
         Route::put('/salads/{id}', [AdminController::class, 'updateSalad'])->name('admin.salads.update');
 
         // ניהול קבוצות תוספות
+        Route::post('/addon-groups', [AdminController::class, 'storeAddonGroup'])->name('admin.addon-groups.store');
         Route::put('/addon-groups/{id}', [AdminController::class, 'updateAddonGroup'])->name('admin.addon-groups.update');
+        Route::delete('/addon-groups/{id}', [AdminController::class, 'deleteAddonGroup'])->name('admin.addon-groups.delete');
 
         // ניהול אזורי משלוח
         Route::get('/delivery-zones', [AdminController::class, 'getDeliveryZones'])->name('admin.delivery-zones.index');

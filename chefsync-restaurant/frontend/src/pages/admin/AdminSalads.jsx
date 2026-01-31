@@ -39,6 +39,14 @@ export default function AdminSalads() {
     });
     const [saving, setSaving] = useState(false);
     const [updatingGroup, setUpdatingGroup] = useState(null);
+    const [groupModalOpen, setGroupModalOpen] = useState(false);
+    const [editingGroup, setEditingGroup] = useState(null);
+    const [groupForm, setGroupForm] = useState({
+        name: '',
+        min_selections: '0',
+        max_selections: '',
+        is_active: true,
+    });
 
     useEffect(() => {
         fetchSalads();
@@ -60,10 +68,11 @@ export default function AdminSalads() {
                 }
                 const groupState = fetchedGroups.reduce((acc, group) => {
                     acc[group.id] = {
+                        name: group.name || '',
                         sort_order: group.sort_order ?? 0,
                         is_active: Boolean(group.is_active),
                         min_selections: typeof group.min_selections === 'number' ? String(group.min_selections) : '0',
-                        max_selections: group.max_selections === null || group.max_selections === undefined
+                        max_selections: group.max_selections === null || group.max_selections === undefined || group.max_selections === 0
                             ? ''
                             : String(group.max_selections),
                     };
@@ -166,12 +175,17 @@ export default function AdminSalads() {
 
         setUpdatingGroup(groupId);
         try {
+            const maxVal = edit.max_selections === '' || edit.max_selections === '0' || Number(edit.max_selections) === 0 
+                ? null 
+                : Number(edit.max_selections);
+            
             await api.put(`/admin/addon-groups/${groupId}`,
                 {
+                    name: edit.name || selectedGroup?.name,
                     sort_order: Number(edit.sort_order) || 0,
                     is_active: Boolean(edit.is_active),
                     min_selections: Number(edit.min_selections) || 0,
-                    max_selections: edit.max_selections === '' ? null : Number(edit.max_selections),
+                    max_selections: maxVal,
                 },
                 { headers: getAuthHeaders() }
             );
@@ -190,6 +204,95 @@ export default function AdminSalads() {
             fetchSalads();
         } catch (error) {
             console.error('Failed to delete salad', error);
+            alert(error.response?.data?.message || 'נכשל במחיקת הפריט');
+        }
+    };
+
+    // פונקציות לניהול קבוצות
+    const openGroupModal = (group = null) => {
+        if (group) {
+            setEditingGroup(group);
+            setGroupForm({
+                name: group.name,
+                min_selections: String(group.min_selections ?? 0),
+                max_selections: group.max_selections === null || group.max_selections === 0 ? '' : String(group.max_selections),
+                is_active: Boolean(group.is_active),
+            });
+        } else {
+            setEditingGroup(null);
+            setGroupForm({
+                name: '',
+                min_selections: '0',
+                max_selections: '',
+                is_active: true,
+            });
+        }
+        setGroupModalOpen(true);
+    };
+
+    const closeGroupModal = () => {
+        setGroupModalOpen(false);
+        setEditingGroup(null);
+        setGroupForm({
+            name: '',
+            min_selections: '0',
+            max_selections: '',
+            is_active: true,
+        });
+    };
+
+    const handleGroupSubmit = async (event) => {
+        event.preventDefault();
+        if (!isManager()) return;
+
+        const maxVal = groupForm.max_selections === '' || groupForm.max_selections === '0' || Number(groupForm.max_selections) === 0 
+            ? null 
+            : Number(groupForm.max_selections);
+
+        const payload = {
+            name: groupForm.name.trim(),
+            min_selections: Number(groupForm.min_selections) || 0,
+            max_selections: maxVal,
+            is_active: groupForm.is_active,
+        };
+
+        setSaving(true);
+        try {
+            if (editingGroup) {
+                await api.put(`/admin/addon-groups/${editingGroup.id}`, payload, { headers: getAuthHeaders() });
+            } else {
+                await api.post('/admin/addon-groups', payload, { headers: getAuthHeaders() });
+            }
+            closeGroupModal();
+            fetchSalads();
+        } catch (error) {
+            console.error('Failed to save group', error.response?.data || error.message);
+            alert(error.response?.data?.message || 'נכשל בשמירת הקבוצה');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const deleteGroup = async (groupId) => {
+        const group = groups.find(g => g.id === groupId);
+        const itemsCount = salads.filter(s => String(s.addon_group_id) === String(groupId)).length;
+        
+        if (itemsCount > 0) {
+            alert(`לא ניתן למחוק קבוצה שיש בה ${itemsCount} פריטים.\nנא למחוק תחילה את הפריטים או להעביר אותם לקבוצה אחרת.`);
+            return;
+        }
+
+        if (!confirm(`האם אתה בטוח שברצונך למחוק את הקבוצה "${group?.name}"?`)) return;
+
+        try {
+            await api.delete(`/admin/addon-groups/${groupId}`, { headers: getAuthHeaders() });
+            if (String(selectedGroupId) === String(groupId)) {
+                setSelectedGroupId('');
+            }
+            fetchSalads();
+        } catch (error) {
+            console.error('Failed to delete group', error);
+            alert(error.response?.data?.message || 'נכשל במחיקת הקבוצה');
         }
     };
 
@@ -258,35 +361,71 @@ export default function AdminSalads() {
 
                     {/* Sidebar: Group Selector (3 Columns) */}
                     <div className="lg:col-span-4 space-y-6">
-                        <div className="flex items-center gap-3 px-2">
-                            <FaLayerGroup className="text-brand-primary" />
-                            <h3 className="text-lg font-black text-gray-900 uppercase tracking-wider">קבוצות תוספות</h3>
+                        <div className="flex items-center justify-between px-2">
+                            <div className="flex items-center gap-3">
+                                <FaLayerGroup className="text-brand-primary" />
+                                <h3 className="text-lg font-black text-gray-900 uppercase tracking-wider">קבוצות תוספות</h3>
+                            </div>
+                            {isManager() && (
+                                <button
+                                    onClick={() => openGroupModal()}
+                                    className="p-2 bg-brand-primary text-white rounded-xl hover:bg-brand-dark transition-all active:scale-95"
+                                    title="הוסף קבוצה חדשה"
+                                >
+                                    <FaPlus size={14} />
+                                </button>
+                            )}
                         </div>
 
                         <div className="flex flex-col gap-3">
                             {groups.map((group) => (
-                                <button
-                                    key={group.id}
-                                    onClick={() => setSelectedGroupId(String(group.id))}
-                                    className={`relative flex items-center justify-between p-6 rounded-[2rem] border-2 transition-all duration-300 text-right group ${selectedGroupId === String(group.id) ? 'border-brand-primary bg-brand-primary/[0.04] shadow-xl shadow-brand-primary/5 -translate-x-2' : 'border-gray-50 bg-white hover:border-gray-200 hover:bg-gray-50'}`}
-                                >
-                                    <div className="flex items-center gap-4">
-                                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-lg font-black transition-all ${selectedGroupId === String(group.id) ? 'bg-brand-primary text-white shadow-lg' : 'bg-gray-100 text-gray-400'}`}>
-                                            {group.sort_order}
+                                <div key={group.id} className="relative group/item">
+                                    <button
+                                        onClick={() => setSelectedGroupId(String(group.id))}
+                                        className={`w-full relative flex items-center justify-between p-6 rounded-[2rem] border-2 transition-all duration-300 text-right ${selectedGroupId === String(group.id) ? 'border-brand-primary bg-brand-primary/[0.04] shadow-xl shadow-brand-primary/5 -translate-x-2' : 'border-gray-50 bg-white hover:border-gray-200 hover:bg-gray-50'}`}
+                                    >
+                                        <div className="flex items-center gap-4">
+                                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-lg font-black transition-all ${selectedGroupId === String(group.id) ? 'bg-brand-primary text-white shadow-lg' : 'bg-gray-100 text-gray-400'}`}>
+                                                {group.sort_order}
+                                            </div>
+                                            <div>
+                                                <span className={`block font-black text-lg transition-colors ${selectedGroupId === String(group.id) ? 'text-brand-primary' : 'text-gray-700'}`}>
+                                                    {group.name}
+                                                </span>
+                                                <span className="text-xs font-bold text-gray-400">
+                                                    {salads.filter(s => String(s.addon_group_id) === String(group.id)).length} פריטים
+                                                </span>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <span className={`block font-black text-lg transition-colors ${selectedGroupId === String(group.id) ? 'text-brand-primary' : 'text-gray-700'}`}>
-                                                {group.name}
-                                            </span>
-                                            <span className="text-xs font-bold text-gray-400">
-                                                {salads.filter(s => String(s.addon_group_id) === String(group.id)).length} פריטים
-                                            </span>
+                                        <div className={`transition-all ${selectedGroupId === String(group.id) ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4'}`}>
+                                            <FaChevronLeft className="text-brand-primary" />
                                         </div>
-                                    </div>
-                                    <div className={`transition-all ${selectedGroupId === String(group.id) ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4'}`}>
-                                        <FaChevronLeft className="text-brand-primary" />
-                                    </div>
-                                </button>
+                                    </button>
+                                    {isManager() && (
+                                        <div className="absolute left-2 top-1/2 -translate-y-1/2 opacity-0 group-hover/item:opacity-100 transition-opacity flex gap-1">
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    openGroupModal(group);
+                                                }}
+                                                className="p-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-all active:scale-95 shadow-lg"
+                                                title="ערוך קבוצה"
+                                            >
+                                                <FaEdit size={12} />
+                                            </button>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    deleteGroup(group.id);
+                                                }}
+                                                className="p-2 bg-rose-500 text-white rounded-xl hover:bg-rose-600 transition-all active:scale-95 shadow-lg"
+                                                title="מחק קבוצה"
+                                            >
+                                                <FaTrash size={12} />
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
                             ))}
                         </div>
 
@@ -333,7 +472,26 @@ export default function AdminSalads() {
                                     </button>
                                 </div>
 
-                                <div className="p-10 grid grid-cols-1 md:grid-cols-3 gap-8">
+                                <div className="p-10 space-y-8">
+                                    {/* שם קבוצה */}
+                                    <div className="space-y-3">
+                                        <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest mr-2 flex items-center gap-2">
+                                            <FaLayerGroup className="text-purple-400" /> שם הקבוצה (יוצג ללקוח)
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={groupEdits[selectedGroup.id]?.name ?? ''}
+                                            onChange={(e) => setGroupEdits((prev) => ({
+                                                ...prev,
+                                                [selectedGroup.id]: { ...prev[selectedGroup.id], name: e.target.value },
+                                            }))}
+                                            className="w-full px-6 py-4 bg-gray-50 border-none rounded-[1.5rem] focus:ring-4 focus:ring-brand-primary/10 text-gray-900 font-extrabold text-center text-xl"
+                                            placeholder="למשל: סלטים, ממרחים, תוספות חמות"
+                                        />
+                                        <p className="text-[10px] text-gray-400 text-center font-bold">השם יופיע בתפריט של הלקוח</p>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                                     <div className="space-y-3">
                                         <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest mr-2 flex items-center gap-2">
                                             <FaMagic className="text-blue-400" /> מינימום בחירה
@@ -364,7 +522,7 @@ export default function AdminSalads() {
                                             className="w-full px-6 py-4 bg-gray-50 border-none rounded-[1.5rem] focus:ring-4 focus:ring-brand-primary/10 text-gray-900 font-extrabold text-center text-xl"
                                             placeholder="∞"
                                         />
-                                        <p className="text-[10px] text-gray-400 text-center font-bold">ריק = ללא הגבלה</p>
+                                        <p className="text-[10px] text-gray-400 text-center font-bold">ריק או 0 = ללא הגבלה</p>
                                     </div>
 
                                     <div className="space-y-4">
@@ -409,6 +567,7 @@ export default function AdminSalads() {
                                             </button>
                                         </div>
                                         <p className="text-[10px] text-gray-400 text-center font-bold">החצים משנים את סדר הופעת הקבוצה ללקוח</p>
+                                    </div>
                                     </div>
                                 </div>
 
@@ -671,6 +830,113 @@ export default function AdminSalads() {
                                     <button
                                         type="button"
                                         onClick={closeModal}
+                                        className="flex-1 px-10 py-6 bg-gray-100 text-gray-600 rounded-[2rem] font-black hover:bg-gray-200 transition-all active:scale-95"
+                                    >
+                                        ביטול
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )}
+
+                {/* Group Modal */}
+                {groupModalOpen && (
+                    <div className="fixed inset-0 bg-gray-900/70 backdrop-blur-md z-[100] flex items-center justify-center p-4 animate-in fade-in duration-500">
+                        <div className="bg-white rounded-[4rem] shadow-2xl max-w-xl w-full overflow-hidden border border-white/20 animate-in zoom-in-95 duration-400">
+                            <div className="px-12 py-10 bg-gray-50/50 border-b border-gray-100 flex items-center justify-between">
+                                <div className="flex items-center gap-6">
+                                    <div className="p-4 bg-brand-primary text-white rounded-[2rem] shadow-xl shadow-brand-primary/20">
+                                        <FaLayerGroup size={24} />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-3xl font-black text-gray-900 tracking-tight">
+                                            {editingGroup ? 'עריכת קבוצה' : 'הוספת קבוצה חדשה'}
+                                        </h2>
+                                        <p className="text-gray-500 font-bold text-sm mt-0.5">ניהול קבוצות תוספות וסלטים</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={closeGroupModal}
+                                    className="p-4 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-[1.5rem] transition-all"
+                                >
+                                    <FaTimes size={24} />
+                                </button>
+                            </div>
+
+                            <form onSubmit={handleGroupSubmit} className="p-12 space-y-10">
+                                <div className="space-y-4">
+                                    <label className="text-xs font-black text-gray-500 mr-2 uppercase tracking-[0.2em]">שם הקבוצה</label>
+                                    <input
+                                        type="text"
+                                        value={groupForm.name}
+                                        onChange={(e) => setGroupForm({ ...groupForm, name: e.target.value })}
+                                        required
+                                        className="w-full px-8 py-5 bg-gray-50 border-none rounded-[1.5rem] focus:ring-4 focus:ring-brand-primary/10 text-gray-900 font-black transition-all text-lg"
+                                        placeholder="למשל: סלטים, ממרחים, תוספות חמות"
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-6">
+                                    <div className="space-y-4">
+                                        <label className="text-xs font-black text-gray-500 mr-2 uppercase tracking-[0.2em]">מינימום בחירה</label>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            value={groupForm.min_selections}
+                                            onChange={(e) => setGroupForm({ ...groupForm, min_selections: e.target.value })}
+                                            className="w-full px-6 py-4 bg-gray-50 border-none rounded-[1.5rem] focus:ring-4 focus:ring-brand-primary/10 text-gray-900 font-extrabold text-center text-xl"
+                                        />
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        <label className="text-xs font-black text-gray-500 mr-2 uppercase tracking-[0.2em]">מקסימום בחירה</label>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            value={groupForm.max_selections}
+                                            onChange={(e) => setGroupForm({ ...groupForm, max_selections: e.target.value })}
+                                            className="w-full px-6 py-4 bg-gray-50 border-none rounded-[1.5rem] focus:ring-4 focus:ring-brand-primary/10 text-gray-900 font-extrabold text-center text-xl"
+                                            placeholder="∞"
+                                        />
+                                        <p className="text-[10px] text-gray-400 text-center font-bold">ריק או 0 = ללא הגבלה</p>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <label className="text-xs font-black text-gray-500 mr-2 uppercase tracking-[0.2em]">סטטוס</label>
+                                    <label className="flex items-center gap-5 p-5 bg-emerald-50 rounded-[1.5rem] cursor-pointer hover:bg-emerald-100 transition-all border border-emerald-100">
+                                        <div className={`w-12 h-7 flex items-center rounded-full p-1 transition-colors ${groupForm.is_active ? 'bg-emerald-500' : 'bg-gray-300'}`}>
+                                            <div className={`bg-white w-5 h-5 rounded-full shadow transform transition-transform ${groupForm.is_active ? '-translate-x-5' : 'translate-x-0'}`}></div>
+                                        </div>
+                                        <input
+                                            type="checkbox"
+                                            className="hidden"
+                                            checked={groupForm.is_active}
+                                            onChange={(e) => setGroupForm({ ...groupForm, is_active: e.target.checked })}
+                                        />
+                                        <span className="text-sm font-black text-emerald-900">פעיל</span>
+                                    </label>
+                                </div>
+
+                                <div className="flex gap-6 pt-6">
+                                    <button
+                                        type="submit"
+                                        disabled={saving}
+                                        className="flex-[2] bg-gray-900 text-white py-6 rounded-[2rem] font-black text-xl hover:shadow-2xl hover:shadow-gray-200 hover:bg-black transition-all active:scale-95 flex items-center justify-center gap-4 disabled:opacity-50"
+                                    >
+                                        {saving ? (
+                                            <div className="w-6 h-6 border-3 border-white/30 border-t-white rounded-full animate-spin"></div>
+                                        ) : (
+                                            <>
+                                                <FaSave />
+                                                שמור קבוצה
+                                            </>
+                                        )}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={closeGroupModal}
                                         className="flex-1 px-10 py-6 bg-gray-100 text-gray-600 rounded-[2rem] font-black hover:bg-gray-200 transition-all active:scale-95"
                                     >
                                         ביטול

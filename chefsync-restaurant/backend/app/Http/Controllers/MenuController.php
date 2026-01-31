@@ -206,18 +206,10 @@ class MenuController extends Controller
     private function filterAddonGroupsByScope($groups, MenuItem $item, ?int $categoryId)
     {
         $groups = $this->cloneAddonGroups($groups);
-        $scope = $item->addons_group_scope ?: 'salads';
-
-        if ($scope === 'both') {
-            return $this->filterAddonGroupsByCategory($groups, $categoryId);
-        }
-
-        $allowedName = $scope === 'hot'
-            ? self::DEFAULT_HOT_GROUP_NAME
-            : self::DEFAULT_SALAD_GROUP_NAME;
-
-        $filteredGroups = $groups->filter(fn($group) => $group->name === $allowedName)->values();
-        return $this->filterAddonGroupsByCategory($filteredGroups, $categoryId);
+        
+        // תמיד נציג את כל הקבוצות הפעילות, נסנן רק לפי קטגוריות
+        // הסרת הלוגיקה הישנה שסיננה לפי שמות מוגדרים קשיח
+        return $this->filterAddonGroupsByCategory($groups, $categoryId);
     }
 
     private function filterAddonGroupsByCategory($groups, ?int $categoryId)
