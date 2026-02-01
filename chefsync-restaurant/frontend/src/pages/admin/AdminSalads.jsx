@@ -977,8 +977,8 @@ export default function AdminSalads() {
                                             type="button"
                                             onClick={() => setGroupForm({ ...groupForm, placement: 'inside' })}
                                             className={`p-4 sm:p-6 rounded-2xl sm:rounded-[1.5rem] font-black text-base sm:text-lg transition-all flex flex-col items-center gap-2 sm:gap-3 ${groupForm.placement === 'inside'
-                                                    ? 'bg-brand-primary text-white shadow-lg ring-2 ring-brand-primary ring-offset-2'
-                                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                                ? 'bg-brand-primary text-white shadow-lg ring-2 ring-brand-primary ring-offset-2'
+                                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                                 }`}
                                         >
                                             <FaUtensils className="text-2xl sm:text-3xl" />
@@ -988,8 +988,8 @@ export default function AdminSalads() {
                                             type="button"
                                             onClick={() => setGroupForm({ ...groupForm, placement: 'side' })}
                                             className={`p-4 sm:p-6 rounded-2xl sm:rounded-[1.5rem] font-black text-base sm:text-lg transition-all flex flex-col items-center gap-2 sm:gap-3 ${groupForm.placement === 'side'
-                                                    ? 'bg-brand-primary text-white shadow-lg ring-2 ring-brand-primary ring-offset-2'
-                                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                                ? 'bg-brand-primary text-white shadow-lg ring-2 ring-brand-primary ring-offset-2'
+                                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                                 }`}
                                         >
                                             <FaBoxOpen className="text-2xl sm:text-3xl" />
