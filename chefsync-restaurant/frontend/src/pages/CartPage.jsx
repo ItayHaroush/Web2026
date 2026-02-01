@@ -395,7 +395,7 @@ export default function CartPage() {
                     </div>
 
                     {/* כפתור הערות צף */}
-                    <div className="relative mt-2 z-10">
+                    <div className="relative mt-4 z-10 w-full">
                         <button
                             type="button"
                             onClick={() => {
@@ -403,11 +403,11 @@ export default function CartPage() {
                                 setTempNotes(initialNotes);
                                 setShowNotesModal(true);
                             }}
-                            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 py-3 px-5 bg-gradient-to-r from-amber-400 to-yellow-400 text-white font-bold rounded-full shadow-md hover:shadow-xl hover:from-amber-500 hover:to-yellow-500 transition-all duration-300 group active:scale-95"
+                            className="w-full inline-flex items-center justify-center gap-2 py-4 px-6 bg-gradient-to-r from-amber-400 to-yellow-400 text-white font-bold rounded-xl shadow-lg hover:shadow-xl hover:from-amber-500 hover:to-yellow-500 transition-all duration-300 group active:scale-95"
                         >
                             <FaStickyNote className="text-xl group-hover:rotate-12 transition-transform" />
                             <span className="text-base text-shadow-sm">
-                                {customerInfo?.delivery_notes ? 'ערוך הערה להזמנה' : 'הוסף הערה למטבח'}
+                                {customerInfo?.delivery_notes ? 'ערוך הערה להזמנה' : '📝 הוסף הערה למטבח'}
                             </span>
                             {customerInfo?.delivery_notes && (
                                 <span className="bg-white/90 text-amber-600 text-xs px-2 py-0.5 rounded-full font-extrabold shadow-sm">
