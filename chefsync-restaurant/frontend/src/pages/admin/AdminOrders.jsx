@@ -945,9 +945,14 @@ export default function AdminOrders() {
                                         if (nextStatus) {
                                             const nextBadge = getStatusBadge(nextStatus, selectedOrder.delivery_method);
                                             const isDeliveryOrder = selectedOrder.delivery_method === 'delivery';
+                                            const isPickupOrder = selectedOrder.delivery_method === 'pickup';
                                             const buttonConfigs = {
                                                 'preparing': { text: 'אישור והתחלת הכנה', icon: <FaCheckCircle />, color: 'from-brand-primary to-brand-secondary' },
-                                                'ready': { text: 'סיום הכנה - מוכן!', icon: <FaCheckCircle />, color: 'from-emerald-500 to-emerald-600' },
+                                                'ready': { 
+                                                    text: isPickupOrder ? 'סיום הכנה - מוכן לאיסוף!' : 'סיום הכנה - מוכן!', 
+                                                    icon: <FaCheckCircle />, 
+                                                    color: 'from-emerald-500 to-emerald-600' 
+                                                },
                                                 'delivering': { text: 'יצא למשלוח', icon: <FaMotorcycle />, color: 'from-purple-500 to-purple-600' },
                                                 'delivered': {
                                                     text: isDeliveryOrder ? 'מסירה ללקוח' : 'נמסר ללקוח',
