@@ -969,7 +969,7 @@ class OrderController extends Controller
             $order->reviewed_at = now();
             $saved = $order->save();
 
-            \Log::info('Rating saved', [
+            Log::info('Rating saved', [
                 'order_id' => $order->id,
                 'rating' => $order->rating,
                 'review_text' => $order->review_text,
@@ -992,6 +992,12 @@ class OrderController extends Controller
                 'errors' => $e->errors(),
             ], 422);
         } catch (\Exception $e) {
+            Log::error('Error submitting review', [
+                'order_id' => $id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'שגיאה בשליחת הדירוג',

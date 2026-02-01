@@ -76,7 +76,9 @@ export function CartProvider({ children }) {
         const savedInfo = localStorage.getItem(`customer_info_${tenantId}`);
         if (savedInfo) {
             try {
-                return JSON.parse(savedInfo);
+                const parsed = JSON.parse(savedInfo);
+                // Merge with default to ensure all fields exist (like delivery_notes)
+                return { ...createEmptyCustomerInfo(), ...parsed };
             } catch (e) {
                 console.error('Failed to parse saved customer info:', e);
             }

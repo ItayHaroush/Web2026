@@ -272,6 +272,8 @@ class OpenAiService extends BaseAiService
             $menuItems = $context['total_menu_items'] ?? 0;
             $categories = $context['active_categories'] ?? 0;
             $pendingOrders = $context['pending_orders'] ?? 0;
+            $isOpen = $context['is_open'] ?? true;
+            $statusText = $isOpen ? '🟢 פתוח כעת' : '🔴 סגור כעת';
 
             // CRITICAL: Add actual menu data
             $menuItemsList = $context['menu_items'] ?? [];
@@ -300,6 +302,7 @@ class OpenAiService extends BaseAiService
 
             $prompt = "נתח את נתוני הדשבורד של מסעדה '{$restaurantName}' (tenant: {$tenantId}):\n\n"
                 . "📊 סטטיסטיקות הזמנות:\n"
+                . "- סטטוס: {$statusText}\n"
                 . "- היום: {$ordersToday} הזמנות\n"
                 . "- שבוע אחרון: {$ordersWeek} הזמנות\n"
                 . "- חודש אחרון: {$ordersMonth} הזמנות\n\n"
@@ -326,14 +329,15 @@ class OpenAiService extends BaseAiService
                 try {
                     $parsed = json_decode($matches[0], true);
                     if (json_last_error() === JSON_ERROR_NONE) {
-                        $result = array_merge([
-                            'sales_trend' => $parsed['sales_trend'] ?? 'אין נתונים',
-                            'top_performers' => $parsed['top_performers'] ?? 'אין נתונים',
-                            'peak_times' => $parsed['peak_times'] ?? 'אין נתונים',
+                        $sanitize = fn($val) => ($val === 'null' || $val === null) ? 'אין נתונים' : $val;
+                        $result = [
+                            'sales_trend' => $sanitize($parsed['sales_trend'] ?? 'אין נתונים'),
+                            'top_performers' => $sanitize($parsed['top_performers'] ?? 'אין נתונים'),
+                            'peak_times' => $sanitize($parsed['peak_times'] ?? 'אין נתונים'),
                             'recommendations' => $parsed['recommendations'] ?? [],
                             'alert' => $parsed['alert'] ?? null,
                             'provider' => 'openai'
-                        ]);
+                        ];
                     }
                 } catch (\Exception $e) {
                     Log::warning('Failed to parse dashboard insights JSON', ['error' => $e->getMessage()]);

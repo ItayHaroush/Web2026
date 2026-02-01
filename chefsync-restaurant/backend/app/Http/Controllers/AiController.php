@@ -7,6 +7,8 @@ use App\Models\Restaurant;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+
 
 class AiController extends Controller
 {
@@ -200,12 +202,12 @@ class AiController extends Controller
             $categoriesList = $restaurant->categories()->pluck('name')->toArray();
 
             // Get top selling items from order_items (with real data)
-            $topSellers = \DB::table('order_items')
+            $topSellers = DB::table('order_items')
                 ->join('orders', 'order_items.order_id', '=', 'orders.id')
                 ->join('menu_items', 'order_items.menu_item_id', '=', 'menu_items.id')
                 ->where('orders.tenant_id', $tenantId)
                 ->where('orders.created_at', '>=', now()->subDays(30))
-                ->select('menu_items.name', \DB::raw('SUM(order_items.quantity) as total_sold'))
+                ->select('menu_items.name', DB::raw('SUM(order_items.quantity) as total_sold'))
                 ->groupBy('menu_items.id', 'menu_items.name')
                 ->orderByDesc('total_sold')
                 ->limit(5)
