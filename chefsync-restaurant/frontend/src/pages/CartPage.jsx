@@ -389,31 +389,32 @@ export default function CartPage() {
                         </div>
                     )}
 
+                    <div className="flex justify-between items-center text-2xl font-bold border-t pt-2">
+                        <span>סה"כ לתשלום:</span>
+                        <span className="text-brand-accent">₪{totalWithDelivery.toFixed(2)}</span>
+                    </div>
+
                     {/* כפתור הערות צף */}
-                    <div className="relative">
+                    <div className="relative mt-2 z-10">
                         <button
                             type="button"
                             onClick={() => {
-                                setTempNotes(customerInfo.delivery_notes || '');
+                                const initialNotes = customerInfo?.delivery_notes || '';
+                                setTempNotes(initialNotes);
                                 setShowNotesModal(true);
                             }}
-                            className="inline-flex items-center gap-2 py-2.5 px-4 bg-gradient-to-r from-amber-400 to-yellow-400 text-white font-semibold rounded-full shadow-lg hover:shadow-xl hover:from-amber-500 hover:to-yellow-500 transition-all duration-300 group transform hover:scale-105"
+                            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 py-3 px-5 bg-gradient-to-r from-amber-400 to-yellow-400 text-white font-bold rounded-full shadow-md hover:shadow-xl hover:from-amber-500 hover:to-yellow-500 transition-all duration-300 group active:scale-95"
                         >
-                            <FaStickyNote className="text-lg group-hover:rotate-12 transition-transform" />
-                            <span className="text-sm md:text-base">
-                                {customerInfo.delivery_notes ? 'ערוך הערה' : 'הוסף הערה'}
+                            <FaStickyNote className="text-xl group-hover:rotate-12 transition-transform" />
+                            <span className="text-base text-shadow-sm">
+                                {customerInfo?.delivery_notes ? 'ערוך הערה להזמנה' : 'הוסף הערה למטבח'}
                             </span>
-                            {customerInfo.delivery_notes && (
-                                <span className="bg-white text-amber-600 text-xs px-2 py-0.5 rounded-full font-bold">
+                            {customerInfo?.delivery_notes && (
+                                <span className="bg-white/90 text-amber-600 text-xs px-2 py-0.5 rounded-full font-extrabold shadow-sm">
                                     ✓
                                 </span>
                             )}
                         </button>
-                    </div>
-
-                    <div className="flex justify-between items-center text-2xl font-bold border-t pt-2">
-                        <span>סה"כ לתשלום:</span>
-                        <span className="text-brand-accent">₪{totalWithDelivery.toFixed(2)}</span>
                     </div>
 
                     {deliveryLocation && customerInfo.delivery_method === 'delivery' && (

@@ -893,70 +893,70 @@ export default function AdminSalads() {
 
                 {/* Group Modal */}
                 {groupModalOpen && (
-                    <div className="fixed inset-0 bg-gray-900/70 backdrop-blur-md z-[100] flex items-center justify-center p-4 animate-in fade-in duration-500">
-                        <div className="bg-white rounded-[4rem] shadow-2xl max-w-xl w-full overflow-hidden border border-white/20 animate-in zoom-in-95 duration-400">
-                            <div className="px-12 py-10 bg-gray-50/50 border-b border-gray-100 flex items-center justify-between">
-                                <div className="flex items-center gap-6">
-                                    <div className="p-4 bg-brand-primary text-white rounded-[2rem] shadow-xl shadow-brand-primary/20">
-                                        <FaLayerGroup size={24} />
+                    <div className="fixed inset-0 bg-gray-900/70 backdrop-blur-md z-[100] flex items-center justify-center p-4 animate-in fade-in duration-500 overflow-y-auto">
+                        <div className="bg-white rounded-3xl sm:rounded-[4rem] shadow-2xl max-w-xl w-full border border-white/20 animate-in zoom-in-95 duration-400 my-4 sm:my-0 h-auto sm:max-h-[90vh] overflow-y-auto">
+                            <div className="px-6 py-6 sm:px-12 sm:py-10 bg-gray-50/50 border-b border-gray-100 flex items-center justify-between sticky top-0 backdrop-blur-sm z-10">
+                                <div className="flex items-center gap-4 sm:gap-6">
+                                    <div className="p-3 sm:p-4 bg-brand-primary text-white rounded-2xl sm:rounded-[2rem] shadow-xl shadow-brand-primary/20 bg-gradient-to-br from-brand-primary to-orange-600">
+                                        <FaLayerGroup size={20} className="sm:w-6 sm:h-6" />
                                     </div>
                                     <div>
-                                        <h2 className="text-3xl font-black text-gray-900 tracking-tight">
-                                            {editingGroup ? 'עריכת קבוצה' : 'הוספת קבוצה חדשה'}
+                                        <h2 className="text-xl sm:text-3xl font-black text-gray-900 tracking-tight">
+                                            {editingGroup ? 'עריכת קבוצה' : 'הוספת קבוצה'}
                                         </h2>
-                                        <p className="text-gray-500 font-bold text-sm mt-0.5">ניהול קבוצות תוספות וסלטים</p>
+                                        <p className="text-gray-500 font-bold text-xs sm:text-sm mt-0.5">ניהול קבוצת תוספות</p>
                                     </div>
                                 </div>
                                 <button
                                     onClick={closeGroupModal}
-                                    className="p-4 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-[1.5rem] transition-all"
+                                    className="p-3 sm:p-4 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-[1.5rem] transition-all"
                                 >
-                                    <FaTimes size={24} />
+                                    <FaTimes size={20} className="sm:w-6 sm:h-6" />
                                 </button>
                             </div>
 
-                            <form onSubmit={handleGroupSubmit} className="p-12 space-y-10">
-                                <div className="space-y-4">
+                            <form onSubmit={handleGroupSubmit} className="p-6 sm:p-12 space-y-6 sm:space-y-10">
+                                <div className="space-y-3 sm:space-y-4">
                                     <label className="text-xs font-black text-gray-500 mr-2 uppercase tracking-[0.2em]">שם הקבוצה</label>
                                     <input
                                         type="text"
                                         value={groupForm.name}
                                         onChange={(e) => setGroupForm({ ...groupForm, name: e.target.value })}
                                         required
-                                        className="w-full px-8 py-5 bg-gray-50 border-none rounded-[1.5rem] focus:ring-4 focus:ring-brand-primary/10 text-gray-900 font-black transition-all text-lg"
-                                        placeholder="למשל: סלטים, ממרחים, תוספות חמות"
+                                        className="w-full px-5 py-4 sm:px-8 sm:py-5 bg-gray-50 border-none rounded-2xl sm:rounded-[1.5rem] focus:ring-4 focus:ring-brand-primary/10 text-gray-900 font-black transition-all text-base sm:text-lg shadow-inner"
+                                        placeholder="למשל: סלטים, ממרחים"
                                     />
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-6">
-                                    <div className="space-y-4">
-                                        <label className="text-xs font-black text-gray-500 mr-2 uppercase tracking-[0.2em]">מינימום בחירה</label>
+                                <div className="grid grid-cols-2 gap-4 sm:gap-6">
+                                    <div className="space-y-3 sm:space-y-4">
+                                        <label className="text-[10px] sm:text-xs font-black text-gray-500 mr-2 uppercase tracking-wide sm:tracking-[0.2em]">מינימום לבחירה</label>
                                         <input
                                             type="number"
                                             min="0"
                                             value={groupForm.min_selections}
                                             onChange={(e) => setGroupForm({ ...groupForm, min_selections: e.target.value })}
-                                            className="w-full px-6 py-4 bg-gray-50 border-none rounded-[1.5rem] focus:ring-4 focus:ring-brand-primary/10 text-gray-900 font-extrabold text-center text-xl"
+                                            className="w-full px-4 py-3 sm:px-6 sm:py-4 bg-gray-50 border-none rounded-2xl sm:rounded-[1.5rem] focus:ring-4 focus:ring-brand-primary/10 text-gray-900 font-extrabold text-center text-lg sm:text-xl shadow-inner"
                                         />
                                     </div>
 
-                                    <div className="space-y-4">
-                                        <label className="text-xs font-black text-gray-500 mr-2 uppercase tracking-[0.2em]">מקסימום בחירה</label>
+                                    <div className="space-y-3 sm:space-y-4">
+                                        <label className="text-[10px] sm:text-xs font-black text-gray-500 mr-2 uppercase tracking-wide sm:tracking-[0.2em]">מקסימום לבחירה</label>
                                         <input
                                             type="number"
                                             min="0"
                                             value={groupForm.max_selections}
                                             onChange={(e) => setGroupForm({ ...groupForm, max_selections: e.target.value })}
-                                            className="w-full px-6 py-4 bg-gray-50 border-none rounded-[1.5rem] focus:ring-4 focus:ring-brand-primary/10 text-gray-900 font-extrabold text-center text-xl"
+                                            className="w-full px-4 py-3 sm:px-6 sm:py-4 bg-gray-50 border-none rounded-2xl sm:rounded-[1.5rem] focus:ring-4 focus:ring-brand-primary/10 text-gray-900 font-extrabold text-center text-lg sm:text-xl shadow-inner"
                                             placeholder="∞"
                                         />
-                                        <p className="text-[10px] text-gray-400 text-center font-bold">ריק או 0 = ללא הגבלה</p>
+                                        <p className="text-[10px] text-gray-400 text-center font-bold">ריק = ללא הגבלה</p>
                                     </div>
                                 </div>
 
-                                <div className="space-y-4">
-                                    <label className="text-xs font-black text-gray-500 mr-2 uppercase tracking-[0.2em]">סטטוס</label>
-                                    <label className="flex items-center gap-5 p-5 bg-emerald-50 rounded-[1.5rem] cursor-pointer hover:bg-emerald-100 transition-all border border-emerald-100">
+                                <div className="space-y-3 sm:space-y-4">
+                                    <label className="text-xs font-black text-gray-500 mr-2 uppercase tracking-[0.2em]">סטטוס פעילות</label>
+                                    <label className="flex items-center gap-4 p-4 sm:p-5 bg-emerald-50 rounded-2xl sm:rounded-[1.5rem] cursor-pointer hover:bg-emerald-100 transition-all border border-emerald-100 active:scale-98">
                                         <div className={`w-12 h-7 flex items-center rounded-full p-1 transition-colors ${groupForm.is_active ? 'bg-emerald-500' : 'bg-gray-300'}`}>
                                             <div className={`bg-white w-5 h-5 rounded-full shadow transform transition-transform ${groupForm.is_active ? '-translate-x-5' : 'translate-x-0'}`}></div>
                                         </div>
@@ -966,63 +966,59 @@ export default function AdminSalads() {
                                             checked={groupForm.is_active}
                                             onChange={(e) => setGroupForm({ ...groupForm, is_active: e.target.checked })}
                                         />
-                                        <span className="text-sm font-black text-emerald-900">פעיל</span>
+                                        <span className="text-sm font-black text-emerald-900">קבוצה פעילה</span>
                                     </label>
                                 </div>
 
-                                <div className="space-y-4">
-                                    <label className="text-xs font-black text-gray-500 mr-2 uppercase tracking-[0.2em]">מיקום הגשה</label>
-                                    <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-3 sm:space-y-4">
+                                    <label className="text-xs font-black text-gray-500 mr-2 uppercase tracking-[0.2em]">אפשרויות הגשה</label>
+                                    <div className="grid grid-cols-2 gap-3 sm:gap-4">
                                         <button
                                             type="button"
                                             onClick={() => setGroupForm({ ...groupForm, placement: 'inside' })}
-                                            className={`p-6 rounded-[1.5rem] font-black text-lg transition-all flex flex-col items-center gap-3 ${groupForm.placement === 'inside'
-                                                    ? 'bg-brand-primary text-white shadow-lg'
+                                            className={`p-4 sm:p-6 rounded-2xl sm:rounded-[1.5rem] font-black text-base sm:text-lg transition-all flex flex-col items-center gap-2 sm:gap-3 ${groupForm.placement === 'inside'
+                                                    ? 'bg-brand-primary text-white shadow-lg ring-2 ring-brand-primary ring-offset-2'
                                                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                                 }`}
                                         >
-                                            <FaUtensils className="text-3xl" />
-                                            <span>בפיתה</span>
+                                            <FaUtensils className="text-2xl sm:text-3xl" />
+                                            <span>בתוך המנה</span>
                                         </button>
                                         <button
                                             type="button"
                                             onClick={() => setGroupForm({ ...groupForm, placement: 'side' })}
-                                            className={`p-6 rounded-[1.5rem] font-black text-lg transition-all flex flex-col items-center gap-3 ${groupForm.placement === 'side'
-                                                    ? 'bg-brand-primary text-white shadow-lg'
+                                            className={`p-4 sm:p-6 rounded-2xl sm:rounded-[1.5rem] font-black text-base sm:text-lg transition-all flex flex-col items-center gap-2 sm:gap-3 ${groupForm.placement === 'side'
+                                                    ? 'bg-brand-primary text-white shadow-lg ring-2 ring-brand-primary ring-offset-2'
                                                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                                 }`}
                                         >
-                                            <FaBoxOpen className="text-3xl" />
-                                            <span>בצד</span>
+                                            <FaBoxOpen className="text-2xl sm:text-3xl" />
+                                            <span>בצד המנה</span>
                                         </button>
                                     </div>
-                                    <p className="text-xs text-gray-500 text-center font-bold flex items-center justify-center gap-1">
-                                        <FaBoxOpen className="text-orange-600" />
-                                        <span>"בצד" מאפשר ללקוחות לבחור להגיש את התוספת בנפרד</span>
-                                    </p>
                                 </div>
 
-                                <div className="flex gap-6 pt-6">
+                                <div className="flex flex-col-reverse sm:flex-row gap-3 sm:gap-6 pt-2 sm:pt-6 sticky bottom-0 bg-white/95 sm:relative sm:bg-transparent pb-2 sm:pb-0 backdrop-blur-sm">
+                                    <button
+                                        type="button"
+                                        onClick={closeGroupModal}
+                                        className="w-full sm:flex-1 py-4 sm:py-6 bg-gray-100 text-gray-600 rounded-2xl sm:rounded-[2rem] font-black hover:bg-gray-200 transition-all active:scale-95"
+                                    >
+                                        ביטול
+                                    </button>
                                     <button
                                         type="submit"
                                         disabled={saving}
-                                        className="flex-[2] bg-gray-900 text-white py-6 rounded-[2rem] font-black text-xl hover:shadow-2xl hover:shadow-gray-200 hover:bg-black transition-all active:scale-95 flex items-center justify-center gap-4 disabled:opacity-50"
+                                        className="w-full sm:flex-[2] bg-gray-900 text-white py-4 sm:py-6 rounded-2xl sm:rounded-[2rem] font-black text-lg sm:text-xl hover:shadow-2xl hover:shadow-gray-200 hover:bg-black transition-all active:scale-95 flex items-center justify-center gap-3 sm:gap-4 disabled:opacity-50"
                                     >
                                         {saving ? (
                                             <div className="w-6 h-6 border-3 border-white/30 border-t-white rounded-full animate-spin"></div>
                                         ) : (
                                             <>
                                                 <FaSave />
-                                                שמור קבוצה
+                                                {editingGroup ? 'שמור שינויים' : 'צור קבוצה'}
                                             </>
                                         )}
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={closeGroupModal}
-                                        className="flex-1 px-10 py-6 bg-gray-100 text-gray-600 rounded-[2rem] font-black hover:bg-gray-200 transition-all active:scale-95"
-                                    >
-                                        ביטול
                                     </button>
                                 </div>
                             </form>
