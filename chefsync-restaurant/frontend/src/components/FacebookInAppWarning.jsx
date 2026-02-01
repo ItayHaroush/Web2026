@@ -12,7 +12,7 @@ export default function FacebookInAppWarning() {
     useEffect(() => {
         // בדיקה אם המשתמש בתוך אפליקציית פייסבוק או אינסטגרם
         const isFacebookInApp = /FBAN|FBAV|Instagram/i.test(navigator.userAgent);
-        
+
         // בדיקה אם המשתמש כבר סגר את ההודעה בעבר (שמור ב-sessionStorage)
         const wasDissmissed = sessionStorage.getItem('fb-warning-dismissed');
 
