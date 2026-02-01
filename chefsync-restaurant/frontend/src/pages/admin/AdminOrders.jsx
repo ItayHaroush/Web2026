@@ -277,49 +277,66 @@ export default function AdminOrders() {
         { value: 'cancelled', label: 'בוטל', icon: <FaTimes /> },
     ];
 
-    const getStatusBadge = (status) => {
+    const getStatusBadge = (status, deliveryMethod = 'delivery') => {
+        // פונקציה עזר לחישוב הסטטוס הבא לפי סוג המשלוח
+        const getNextStatus = (currentStatus, isDelivery) => {
+            const transitions = {
+                pending: 'preparing',
+                received: 'preparing',
+                preparing: 'ready',
+                ready: isDelivery ? 'delivering' : 'delivered', // 🔑 ההבדל המרכזי!
+                delivering: 'delivered',
+                delivered: null,
+                cancelled: null,
+            };
+            return transitions[currentStatus] ?? null;
+        };
+
+        const isDelivery = deliveryMethod === 'delivery';
+        const nextStatus = getNextStatus(status, isDelivery);
+
         const statuses = {
             pending: {
                 text: 'ממתין',
                 color: 'bg-amber-50 text-amber-600 border-amber-100',
                 icon: <FaClock />,
-                nextStatus: 'preparing'
+                nextStatus
             },
             received: {
                 text: 'התקבל',
                 color: 'bg-amber-50 text-amber-600 border-amber-100',
                 icon: <FaBell />,
-                nextStatus: 'preparing'
+                nextStatus
             },
             preparing: {
                 text: 'בהכנה',
                 color: 'bg-blue-50 text-blue-600 border-blue-100',
                 icon: <FaSpinner className="animate-spin" />,
-                nextStatus: 'ready'
+                nextStatus
             },
             ready: {
-                text: 'מוכן',
+                text: isDelivery ? 'מוכן למשלוח' : 'מוכן לאיסוף',
                 color: 'bg-emerald-50 text-emerald-600 border-emerald-100',
                 icon: <FaCheckCircle />,
-                nextStatus: 'delivering'
+                nextStatus
             },
             delivering: {
                 text: 'במשלוח',
                 color: 'bg-purple-50 text-purple-600 border-purple-100',
                 icon: <FaMotorcycle />,
-                nextStatus: 'delivered'
+                nextStatus
             },
             delivered: {
                 text: 'נמסר',
                 color: 'bg-slate-50 text-slate-600 border-slate-100',
                 icon: <FaBoxOpen />,
-                nextStatus: null
+                nextStatus
             },
             cancelled: {
                 text: 'בוטל',
                 color: 'bg-red-50 text-red-600 border-red-100',
                 icon: <FaTimes />,
-                nextStatus: null
+                nextStatus
             },
         };
         return statuses[status] || {
@@ -445,11 +462,9 @@ export default function AdminOrders() {
                                 </div>
                             ) : (
                                 orders.map((order) => {
-                                    const statusBadge = getStatusBadge(order.status);
-                                    const isPending = ['pending', 'received'].includes(order.status);
-                                    const isDelivery = order.delivery_method === 'delivery' || (!!order.delivery_address);
-                                    const isSelected = selectedOrder?.id === order.id;
-
+                                const isDelivery = order.delivery_method === 'delivery' || (!!order.delivery_address);
+                                const statusBadge = getStatusBadge(order.status, order.delivery_method);
+                                const isPending = ['pending', 'received'].includes(order.status);
                                     return (
                                         <div
                                             key={order.id}
@@ -554,14 +569,14 @@ export default function AdminOrders() {
 
                             <div className="p-6 space-y-6 max-h-[calc(100vh-250px)] overflow-y-auto custom-scrollbar">
                                 {/* סטטוס נוכחי - כרטיס בולט */}
-                                <div className={`rounded-3xl p-5 border-2 relative overflow-hidden group ${getStatusBadge(selectedOrder.status).color}`}>
+                                <div className={`rounded-3xl p-5 border-2 relative overflow-hidden group ${getStatusBadge(selectedOrder.status, selectedOrder.delivery_method).color}`}>
                                     <div className="absolute -right-4 -bottom-4 opacity-5 group-hover:scale-110 transition-transform">
-                                        {getStatusBadge(selectedOrder.status).icon && React.cloneElement(getStatusBadge(selectedOrder.status).icon, { size: 80 })}
+                                        {getStatusBadge(selectedOrder.status, selectedOrder.delivery_method).icon && React.cloneElement(getStatusBadge(selectedOrder.status, selectedOrder.delivery_method).icon, { size: 80 })}
                                     </div>
                                     <div className="relative z-10">
                                         <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60 mb-1">סטטוס הזמנה</p>
                                         <div className="flex items-center gap-3">
-                                            <div className="text-2xl font-black">{getStatusBadge(selectedOrder.status).text}</div>
+                                            <div className="text-2xl font-black">{getStatusBadge(selectedOrder.status, selectedOrder.delivery_method).text}</div>
                                             {selectedOrder.status === 'preparing' && (
                                                 <div className="flex gap-1">
                                                     <span className="w-1.5 h-1.5 bg-current rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
@@ -845,16 +860,21 @@ export default function AdminOrders() {
                                 {/* כפתורי פעולה - מודרניים */}
                                 <div className="space-y-4 pt-2 pb-6">
                                     {(() => {
-                                        const currentBadge = getStatusBadge(selectedOrder.status);
+                                        const currentBadge = getStatusBadge(selectedOrder.status, selectedOrder.delivery_method);
                                         const nextStatus = currentBadge.nextStatus;
 
                                         if (nextStatus) {
-                                            const nextBadge = getStatusBadge(nextStatus);
+                                            const nextBadge = getStatusBadge(nextStatus, selectedOrder.delivery_method);
+                                            const isDeliveryOrder = selectedOrder.delivery_method === 'delivery';
                                             const buttonConfigs = {
                                                 'preparing': { text: 'אישור והתחלת הכנה', icon: <FaCheckCircle />, color: 'from-brand-primary to-brand-secondary' },
                                                 'ready': { text: 'סיום הכנה - מוכן!', icon: <FaCheckCircle />, color: 'from-emerald-500 to-emerald-600' },
                                                 'delivering': { text: 'יצא למשלוח', icon: <FaMotorcycle />, color: 'from-purple-500 to-purple-600' },
-                                                'delivered': { text: 'מסירה ללקוח', icon: <FaBoxOpen />, color: 'from-slate-700 to-slate-800' }
+                                                'delivered': { 
+                                                    text: isDeliveryOrder ? 'מסירה ללקוח' : 'נמסר ללקוח', 
+                                                    icon: <FaBoxOpen />, 
+                                                    color: 'from-slate-700 to-slate-800' 
+                                                }
                                             };
 
                                             const config = buttonConfigs[nextStatus] || { text: `העבר ל${nextBadge.text}`, icon: nextBadge.icon, color: 'from-gray-700 to-gray-800' };

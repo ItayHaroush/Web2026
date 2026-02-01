@@ -81,6 +81,75 @@ class Order extends Model
     }
 
     /**
+     * מפת מעברי סטטוס מותרים לפי סוג משלוח
+     * 
+     * @param string $currentStatus
+     * @param string $deliveryMethod 'delivery' או 'pickup'
+     * @return array רשימת סטטוסים מותרים למעבר
+     */
+    public static function getAllowedNextStatuses(string $currentStatus, string $deliveryMethod): array
+    {
+        // מעברים משותפים לכל סוג משלוח
+        $commonTransitions = [
+            self::STATUS_PENDING => [self::STATUS_RECEIVED, self::STATUS_PREPARING, self::STATUS_CANCELLED],
+            self::STATUS_RECEIVED => [self::STATUS_PREPARING, self::STATUS_CANCELLED],
+            self::STATUS_PREPARING => [self::STATUS_READY, self::STATUS_CANCELLED],
+            self::STATUS_CANCELLED => [], // סטטוס סופי
+        ];
+
+        // מעברים ספציפיים למשלוח
+        $deliveryTransitions = [
+            self::STATUS_READY => [self::STATUS_DELIVERING, self::STATUS_CANCELLED],
+            self::STATUS_DELIVERING => [self::STATUS_DELIVERED, self::STATUS_CANCELLED],
+            self::STATUS_DELIVERED => [], // סטטוס סופי
+        ];
+
+        // מעברים ספציפיים לאיסוף עצמי (דילוג על delivering)
+        $pickupTransitions = [
+            self::STATUS_READY => [self::STATUS_DELIVERED, self::STATUS_CANCELLED],
+            self::STATUS_DELIVERED => [], // סטטוס סופי
+        ];
+
+        $transitions = $commonTransitions;
+        
+        if ($deliveryMethod === 'delivery') {
+            $transitions = array_merge($transitions, $deliveryTransitions);
+        } else {
+            $transitions = array_merge($transitions, $pickupTransitions);
+        }
+
+        return $transitions[$currentStatus] ?? [];
+    }
+
+    /**
+     * בדיקה אם מעבר סטטוס מותר
+     * 
+     * @param string $newStatus
+     * @return bool
+     */
+    public function canTransitionTo(string $newStatus): bool
+    {
+        $allowedStatuses = self::getAllowedNextStatuses($this->status, $this->delivery_method);
+        return in_array($newStatus, $allowedStatuses);
+    }
+
+    /**
+     * קבלת הסטטוס הבא המומלץ לפי סוג משלוח
+     * 
+     * @return string|null
+     */
+    public function getNextStatus(): ?string
+    {
+        $allowed = self::getAllowedNextStatuses($this->status, $this->delivery_method);
+        
+        // החזר את הסטטוס הראשון ברשימה (הכי הגיוני להמשך)
+        // למעט cancelled שהוא תמיד אופציה אחרונה
+        $allowed = array_filter($allowed, fn($status) => $status !== self::STATUS_CANCELLED);
+        
+        return $allowed[0] ?? null;
+    }
+
+    /**
      * המסעדה של ההזמנה
      */
     public function restaurant(): BelongsTo

@@ -272,17 +272,23 @@ export default function OrderStatusPage() {
         );
     }
 
-    const statusSteps = [
-        { value: ORDER_STATUS.RECEIVED, label: ORDER_STATUS_LABELS.received },
-        { value: ORDER_STATUS.PREPARING, label: ORDER_STATUS_LABELS.preparing },
-        { value: ORDER_STATUS.READY, label: ORDER_STATUS_LABELS.ready },
-        { value: ORDER_STATUS.DELIVERED, label: ORDER_STATUS_LABELS.delivered },
-    ];
-
-    const currentStepIndex = statusSteps.findIndex((s) => s.value === order.status);
-    const isCancelled = order.status === 'cancelled';
-    const statusLabel = ORDER_STATUS_LABELS[order.status] ?? 'בוטל';
-    const statusColor = ORDER_STATUS_COLORS[order.status] ?? 'bg-red-100 text-red-700';
+    // בניית שלבי סטטוס דינמי לפי סוג משלוח
+    const isDeliveryOrder = order.delivery_method === 'delivery';
+    
+    const statusSteps = isDeliveryOrder 
+        ? [
+            { value: ORDER_STATUS.RECEIVED, label: ORDER_STATUS_LABELS.received },
+            { value: ORDER_STATUS.PREPARING, label: ORDER_STATUS_LABELS.preparing },
+            { value: ORDER_STATUS.READY, label: ORDER_STATUS_LABELS.ready },
+            { value: ORDER_STATUS.DELIVERING, label: ORDER_STATUS_LABELS.delivering },
+            { value: ORDER_STATUS.DELIVERED, label: ORDER_STATUS_LABELS.delivered },
+          ]
+        : [
+            { value: ORDER_STATUS.RECEIVED, label: ORDER_STATUS_LABELS.received },
+            { value: ORDER_STATUS.PREPARING, label: ORDER_STATUS_LABELS.preparing },
+            { value: ORDER_STATUS.READY, label: 'מוכן לאיסוף' }, // תווית מותאמת לאיסוף
+            { value: ORDER_STATUS.DELIVERED, label: 'נמסר' },
+          ];
 
     return (
         <CustomerLayout>

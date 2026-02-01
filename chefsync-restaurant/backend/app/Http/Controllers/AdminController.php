@@ -1642,6 +1642,20 @@ class AdminController extends Controller
             'status' => 'required|in:pending,received,preparing,ready,delivering,delivered,cancelled',
         ]);
 
+        // ולידציה: בדיקה שהמעבר מותר לפי transition map
+        if (!$order->canTransitionTo($request->status)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'מעבר סטטוס לא מותר. ' . 
+                    ($order->delivery_method === 'pickup' && $request->status === 'delivering' 
+                        ? 'הזמנות איסוף עצמי אינן דורשות סטטוס "במשלוח"' 
+                        : 'מעבר זה אינו אפשרי במצב הנוכחי'),
+                'current_status' => $order->status,
+                'attempted_status' => $request->status,
+                'allowed_statuses' => Order::getAllowedNextStatuses($order->status, $order->delivery_method),
+            ], 422);
+        }
+
         $order->status = $request->status;
         $order->updated_by_name = $user->name;
         $order->updated_by_user_id = $user->id;
