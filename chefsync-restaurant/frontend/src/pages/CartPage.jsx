@@ -5,7 +5,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { CustomerLayout } from '../layouts/CustomerLayout';
-import { FaMask } from 'react-icons/fa';
+import { FaMask, FaBoxOpen } from 'react-icons/fa';
 import orderService from '../services/orderService';
 import { UI_TEXT } from '../constants/ui';
 import DeliveryDetailsModal from '../components/DeliveryDetailsModal';
@@ -164,7 +164,10 @@ export default function CartPage() {
                 items: cartItems.map((item) => ({
                     menu_item_id: item.menuItemId,
                     variant_id: item.variant?.id ?? null,
-                    addons: (item.addons || []).map((addon) => ({ addon_id: addon.id })),
+                    addons: (item.addons || []).map((addon) => ({
+                        addon_id: addon.id,
+                        on_side: addon.on_side || false
+                    })),
                     qty: item.qty,
                 })),
             };
@@ -302,7 +305,9 @@ export default function CartPage() {
                 {/* פריטים בסל */}
                 <div className="space-y-2">
                     {cartItems.map((item) => {
-                        const addonNames = (item.addons || []).map((addon) => addon.name).join(' · ');
+                        const addonsInside = (item.addons || []).filter(a => !a.on_side).map(a => a.name);
+                        const addonsOnSide = (item.addons || []).filter(a => a.on_side).map(a => a.name);
+
                         return (
                             <div
                                 key={item.cartKey}
@@ -313,8 +318,14 @@ export default function CartPage() {
                                     {item.variant?.name && (
                                         <p className="text-sm text-brand-primary">סוג לחם: {item.variant.name}</p>
                                     )}
-                                    {addonNames && (
-                                        <p className="text-xs text-gray-500">תוספות: {addonNames}</p>
+                                    {addonsInside.length > 0 && (
+                                        <p className="text-xs text-gray-500">תוספות: {addonsInside.join(' · ')}</p>
+                                    )}
+                                    {addonsOnSide.length > 0 && (
+                                        <p className="text-xs text-orange-600 font-medium flex items-center gap-1">
+                                            <FaBoxOpen />
+                                            <span>בצד: {addonsOnSide.join(' · ')}</span>
+                                        </p>
                                     )}
                                     <p className="text-xs text-gray-400">₪{item.unitPrice.toFixed(2)} ליחידה</p>
                                 </div>

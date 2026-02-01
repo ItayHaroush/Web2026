@@ -120,6 +120,7 @@ class MenuController extends Controller
                                         'min_select' => $group->min_selections,
                                         'max_select' => $maxSelect,
                                         'is_required' => (bool) $group->is_required,
+                                        'placement' => $group->placement ?? 'inside',
                                         'addons' => $group->addons->map(function ($addon) {
                                             return [
                                                 'id' => $addon->id,
@@ -138,6 +139,7 @@ class MenuController extends Controller
                                         'min_select' => $group->min_selections,
                                         'max_select' => $group->max_selections,
                                         'is_required' => (bool) $group->is_required,
+                                        'placement' => $group->placement ?? 'inside',
                                         'addons' => $group->addons->map(function ($addon) {
                                             return [
                                                 'id' => $addon->id,

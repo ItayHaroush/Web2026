@@ -55,6 +55,7 @@ class OrderController extends Controller
                 'items.*.variant_id' => 'nullable|integer',
                 'items.*.addons' => 'nullable|array',
                 'items.*.addons.*.addon_id' => 'required|integer',
+                'items.*.addons.*.on_side' => 'nullable|boolean',
                 'items.*.qty' => 'nullable|integer|min:1',
                 'items.*.quantity' => 'nullable|integer|min:1',
             ]);
@@ -249,6 +250,7 @@ class OrderController extends Controller
                     $selectedAddonsByGroup[$matchedGroup->id][] = [
                         'addon' => $matchedAddon,
                         'group' => $matchedGroup,
+                        'on_side' => $addonEntry['on_side'] ?? false,
                     ];
                 }
 
@@ -302,6 +304,7 @@ class OrderController extends Controller
                             'price_delta' => $addonPrice,
                             'group_id' => $group->id,
                             'group_name' => $group->name,
+                            'on_side' => $selection['on_side'] ?? false,
                         ];
                         $addonsTotal += $addonPrice;
                     });
@@ -370,11 +373,17 @@ class OrderController extends Controller
             }
 
             // שליחת פוש לטאבלטים של המסעדה
+            $notificationBody = "הזמנה מאת {$order->customer_name} בסך ₪{$order->total_amount}";
+
             $this->sendOrderNotification(
                 tenantId: $tenantId,
-                title: config('push.messages.order_new.title'),
-                body: config('push.messages.order_new.body'),
-                data: ['orderId' => (string) $order->id]
+                title: "הזמנה חדשה #{$order->id}",
+                body: $notificationBody,
+                data: [
+                    'orderId' => (string) $order->id,
+                    'type' => 'new_order',
+                    'url' => '/admin/orders'
+                ]
             );
 
             return response()->json([

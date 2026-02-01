@@ -47,6 +47,7 @@ export default function AdminLayout({ children }) {
                         is_open: restaurant.is_open_now ?? restaurant.is_open,
                         is_override: restaurant.is_override_status || false,
                         is_approved: restaurant.is_approved ?? false,
+                        active_orders_count: restaurant.active_orders_count || 0, // ✅ הוספת מונה הזמנות
                     });
                     // שמור נתוני subscription לתצוגת Trial Banner
                     setSubscriptionData({
@@ -202,6 +203,7 @@ export default function AdminLayout({ children }) {
                     title={menuItems.find(item => item.path === location.pathname)?.label || 'ניהול מסעדה'}
                     isCollapsed={isCollapsed}
                     endContent={statusBadge}
+                    notificationCount={restaurantStatus.active_orders_count || 0} // ✅ העברת המונה להדר
                 />
 
                 <main className="flex-1 p-4 lg:p-8 mt-20 overflow-x-hidden">

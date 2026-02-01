@@ -9,7 +9,8 @@ import {
     FaCheckCircle,
     FaRoute,
     FaPrint,
-    FaTimes
+    FaTimes,
+    FaBoxOpen
 } from 'react-icons/fa';
 
 // מסוף סניף לעובדים/שליחים: מציג הזמנות פתוחות ומאפשר עדכון סטטוס מהיר
@@ -25,14 +26,27 @@ export default function AdminTerminal() {
     }, []);
 
     const formatAddons = (addons) => {
-        if (!Array.isArray(addons) || addons.length === 0) return '';
-        return addons
-            .map((addon) => {
-                if (typeof addon === 'string') return addon;
-                return addon?.name ?? addon?.addon_name ?? null;
+        if (!Array.isArray(addons) || addons.length === 0) return { inside: '', onSide: '' };
+
+        const inside = addons
+            .filter(addon => {
+                const onSide = typeof addon === 'object' ? addon?.on_side : false;
+                return !onSide;
             })
+            .map(addon => typeof addon === 'string' ? addon : (addon?.name ?? addon?.addon_name))
             .filter(Boolean)
             .join(' · ');
+
+        const onSide = addons
+            .filter(addon => {
+                const onSide = typeof addon === 'object' ? addon?.on_side : false;
+                return onSide;
+            })
+            .map(addon => typeof addon === 'string' ? addon : (addon?.name ?? addon?.addon_name))
+            .filter(Boolean)
+            .join(' · ');
+
+        return { inside, onSide };
     };
 
     const getItemCategoryLabel = (item) => (
@@ -173,14 +187,14 @@ export default function AdminTerminal() {
                                 <div
                                     key={order.id}
                                     className={`group flex flex-col bg-white rounded-[3.5rem] shadow-sm border-2 transition-all duration-500 hover:shadow-2xl hover:-translate-y-2 overflow-hidden ${order.status === 'ready' ? 'border-amber-200' :
-                                            order.status === 'preparing' ? 'border-brand-primary/20' :
-                                                'border-gray-50'
+                                        order.status === 'preparing' ? 'border-brand-primary/20' :
+                                            'border-gray-50'
                                         }`}
                                 >
                                     {/* Order Header Card */}
                                     <div className={`p-8 pb-6 border-b border-gray-50 transition-colors ${order.status === 'ready' ? 'bg-amber-50/50' :
-                                            order.status === 'preparing' ? 'bg-brand-primary/[0.03]' :
-                                                'bg-gray-50/30'
+                                        order.status === 'preparing' ? 'bg-brand-primary/[0.03]' :
+                                            'bg-gray-50/30'
                                         }`}>
                                         <div className="flex justify-between items-start mb-4">
                                             <div>
@@ -191,8 +205,8 @@ export default function AdminTerminal() {
                                                 </p>
                                             </div>
                                             <div className={`px-5 py-2 rounded-2xl text-xs font-black uppercase tracking-widest shadow-sm ${order.status === 'ready' ? 'bg-amber-500 text-white animate-bounce' :
-                                                    order.status === 'preparing' ? 'bg-brand-primary text-white' :
-                                                        'bg-indigo-500 text-white'
+                                                order.status === 'preparing' ? 'bg-brand-primary text-white' :
+                                                    'bg-indigo-500 text-white'
                                                 }`}>
                                                 {statusLabel[order.status]}
                                             </div>
@@ -229,11 +243,23 @@ export default function AdminTerminal() {
                                                             </div>
                                                             <div className="text-right text-gray-900 font-bold text-xs">₪{(Number(item.price_at_order || item.price || 0) * Number(item.quantity || 1)).toFixed(2)}</div>
                                                         </div>
-                                                        {formatAddons(item.addons) && (
-                                                            <p className="mt-2 text-[11px] text-gray-500 font-medium leading-relaxed mr-10 bg-white/60 p-2 rounded-xl border border-gray-100/50">
-                                                                {formatAddons(item.addons)}
-                                                            </p>
-                                                        )}
+                                                        {(() => {
+                                                            const { inside, onSide } = formatAddons(item.addons);
+                                                            return (
+                                                                <div className="mt-2 mr-10 space-y-1">
+                                                                    {inside && (
+                                                                        <p className="text-[11px] text-gray-500 font-medium leading-relaxed bg-white/60 p-2 rounded-xl border border-gray-100/50">
+                                                                            תוספות: {inside}
+                                                                        </p>
+                                                                    )}
+                                                                    {onSide && (
+                                                                        <p className="text-[11px] text-orange-600 font-medium leading-relaxed bg-orange-50/60 p-2 rounded-xl border border-orange-100/50 flex items-center gap-1">
+                                                                            <FaBoxOpen /> בצד: {onSide}
+                                                                        </p>
+                                                                    )}
+                                                                </div>
+                                                            );
+                                                        })()}
                                                         {item.variant_name && (
                                                             <p className="mt-1 text-[10px] text-gray-400 font-black mr-10 italic">
                                                                 סוג: {item.variant_name}
@@ -262,8 +288,8 @@ export default function AdminTerminal() {
                                             <button
                                                 onClick={() => updateStatus(order.id, next)}
                                                 className={`w-full py-5 rounded-[2rem] font-black text-lg transition-all active:scale-95 shadow-xl flex items-center justify-center gap-4 hover:-translate-y-1 ${order.status === 'ready' ? 'bg-emerald-500 text-white shadow-emerald-500/20 hover:bg-emerald-600' :
-                                                        order.status === 'preparing' ? 'bg-amber-500 text-white shadow-amber-500/20 hover:bg-amber-600' :
-                                                            'bg-brand-primary text-white shadow-brand-primary/20 hover:bg-brand-dark'
+                                                    order.status === 'preparing' ? 'bg-amber-500 text-white shadow-amber-500/20 hover:bg-amber-600' :
+                                                        'bg-brand-primary text-white shadow-brand-primary/20 hover:bg-brand-dark'
                                                     }`}
                                             >
                                                 {order.status === 'ready' ? (

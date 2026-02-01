@@ -18,7 +18,9 @@ import {
     FaChevronRight,
     FaMagic,
     FaListUl,
-    FaCopy
+    FaCopy,
+    FaBoxOpen,
+    FaUtensils
 } from 'react-icons/fa';
 
 export default function AdminSalads() {
@@ -47,6 +49,7 @@ export default function AdminSalads() {
         min_selections: '0',
         max_selections: '',
         is_active: true,
+        placement: 'inside',
     });
 
     useEffect(() => {
@@ -76,6 +79,7 @@ export default function AdminSalads() {
                         max_selections: group.max_selections === null || group.max_selections === undefined || group.max_selections === 0
                             ? ''
                             : String(group.max_selections),
+                        placement: group.placement || 'inside',
                     };
                     return acc;
                 }, {});
@@ -187,6 +191,7 @@ export default function AdminSalads() {
                     is_active: Boolean(edit.is_active),
                     min_selections: Number(edit.min_selections) || 0,
                     max_selections: maxVal,
+                    placement: edit.placement || 'inside',
                 },
                 { headers: getAuthHeaders() }
             );
@@ -218,6 +223,7 @@ export default function AdminSalads() {
                 min_selections: String(group.min_selections ?? 0),
                 max_selections: group.max_selections === null || group.max_selections === 0 ? '' : String(group.max_selections),
                 is_active: Boolean(group.is_active),
+                placement: group.placement || 'inside',
             });
         } else {
             setEditingGroup(null);
@@ -226,6 +232,7 @@ export default function AdminSalads() {
                 min_selections: '0',
                 max_selections: '',
                 is_active: true,
+                placement: 'inside',
             });
         }
         setGroupModalOpen(true);
@@ -239,6 +246,7 @@ export default function AdminSalads() {
             min_selections: '0',
             max_selections: '',
             is_active: true,
+            placement: 'inside',
         });
     };
 
@@ -255,6 +263,7 @@ export default function AdminSalads() {
             min_selections: Number(groupForm.min_selections) || 0,
             max_selections: maxVal,
             is_active: groupForm.is_active,
+            placement: groupForm.placement || 'inside',
         };
 
         setSaving(true);
@@ -959,6 +968,38 @@ export default function AdminSalads() {
                                         />
                                         <span className="text-sm font-black text-emerald-900">פעיל</span>
                                     </label>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <label className="text-xs font-black text-gray-500 mr-2 uppercase tracking-[0.2em]">מיקום הגשה</label>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <button
+                                            type="button"
+                                            onClick={() => setGroupForm({ ...groupForm, placement: 'inside' })}
+                                            className={`p-6 rounded-[1.5rem] font-black text-lg transition-all flex flex-col items-center gap-3 ${groupForm.placement === 'inside'
+                                                    ? 'bg-brand-primary text-white shadow-lg'
+                                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                                }`}
+                                        >
+                                            <FaUtensils className="text-3xl" />
+                                            <span>בפיתה</span>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setGroupForm({ ...groupForm, placement: 'side' })}
+                                            className={`p-6 rounded-[1.5rem] font-black text-lg transition-all flex flex-col items-center gap-3 ${groupForm.placement === 'side'
+                                                    ? 'bg-brand-primary text-white shadow-lg'
+                                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                                }`}
+                                        >
+                                            <FaBoxOpen className="text-3xl" />
+                                            <span>בצד</span>
+                                        </button>
+                                    </div>
+                                    <p className="text-xs text-gray-500 text-center font-bold flex items-center justify-center gap-1">
+                                        <FaBoxOpen className="text-orange-600" />
+                                        <span>"בצד" מאפשר ללקוחות לבחור להגיש את התוספת בנפרד</span>
+                                    </p>
                                 </div>
 
                                 <div className="flex gap-6 pt-6">

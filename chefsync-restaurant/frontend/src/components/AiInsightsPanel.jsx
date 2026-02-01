@@ -15,11 +15,12 @@ const AiInsightsPanel = () => {
             setLoading(true);
             setError(null);
 
-            const url = force
-                ? '/admin/ai/dashboard-insights?force_regenerate=1'
-                : '/admin/ai/dashboard-insights';
-
-            const { data } = await apiClient.get(url);
+            const { data } = await apiClient.get('/admin/ai/dashboard-insights', {
+                params: {
+                    ...(force ? { force_regenerate: '1' } : {}),
+                    _t: Date.now() // Prevent browser caching
+                }
+            });
 
             if (data.success) {
                 // Handle graceful degradation where backend sends success:true but includes inner error
@@ -111,8 +112,8 @@ const AiInsightsPanel = () => {
 
             {/* Content Area - Collapsible */}
             <div className={`
-                transition-all duration-500 ease-in-out overflow-hidden
-                ${isOpen ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0'}
+                transition-all duration-500 ease-in-out
+                ${isOpen ? 'max-h-[600px] opacity-100 overflow-y-auto' : 'max-h-0 opacity-0 overflow-hidden'}
             `}>
                 <div className="p-6 bg-gradient-to-b from-white to-purple-50/30">
 

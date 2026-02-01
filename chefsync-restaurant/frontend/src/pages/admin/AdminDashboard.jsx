@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import AdminLayout from '../../layouts/AdminLayout';
 import api from '../../services/apiClient';
@@ -23,6 +24,7 @@ import {
 } from 'react-icons/fa';
 
 export default function AdminDashboard() {
+    const navigate = useNavigate();
     const { getAuthHeaders, isOwner, isManager } = useAdminAuth();
     const [stats, setStats] = useState(null);
     const [recentOrders, setRecentOrders] = useState([]);
@@ -59,8 +61,14 @@ export default function AdminDashboard() {
 
             if (Notification?.permission === 'granted') {
                 try {
-                    // eslint-disable-next-line no-new
-                    new Notification(title, { body, icon: '/icon-192.png' });
+                    const n = new Notification(title, { body, icon: '/icon-192.png' });
+                    n.onclick = () => {
+                        n.close();
+                        window.focus();
+                        if (payload?.data?.orderId) {
+                            navigate('/admin/orders');
+                        }
+                    };
                 } catch (e) {
                     // Some browsers block Notification() in certain contexts; fallback to console.
                     console.warn('[FCM] Notification() failed', e);
@@ -230,8 +238,8 @@ export default function AdminDashboard() {
                             onClick={enablePush}
                             disabled={pushState.status === 'loading' || permission === 'denied' || isPushEnabled}
                             className={`flex-1 lg:flex-none px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-sm flex items-center justify-center gap-2 ${isPushEnabled
-                                    ? 'bg-green-50 text-green-700 border border-green-100 cursor-default'
-                                    : 'bg-brand-primary text-white hover:shadow-brand-primary/20 hover:shadow-lg disabled:opacity-50'
+                                ? 'bg-green-50 text-green-700 border border-green-100 cursor-default'
+                                : 'bg-brand-primary text-white hover:shadow-brand-primary/20 hover:shadow-lg disabled:opacity-50'
                                 }`}
                         >
                             {pushState.status === 'loading' ? (
@@ -348,7 +356,11 @@ export default function AdminDashboard() {
                             const statusBadge = getStatusBadge(order.status);
                             const isDelivery = order.delivery_method === 'delivery' || (!!order.delivery_address);
                             return (
-                                <div key={order.id} className="p-4 hover:bg-gray-50 transition-all cursor-pointer group">
+                                <div
+                                    key={order.id}
+                                    className="p-4 hover:bg-gray-50 transition-all cursor-pointer group"
+                                    onClick={() => navigate(`/admin/orders?orderId=${order.id}`)}
+                                >
                                     <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                                         <div className="flex items-center gap-4">
                                             <div className="w-12 h-12 bg-white border border-gray-100 rounded-2xl flex items-center justify-center shadow-sm group-hover:border-brand-primary/20 group-hover:shadow-md transition-all">
