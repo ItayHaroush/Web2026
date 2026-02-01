@@ -33,6 +33,9 @@ class Order extends Model
         'notes',
         'updated_by_name',
         'updated_by_user_id',
+        'rating',
+        'review_text',
+        'reviewed_at',
     ];
 
     protected $appends = ['total'];
@@ -46,6 +49,7 @@ class Order extends Model
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'eta_updated_at' => 'datetime',
+        'reviewed_at' => 'datetime',
     ];
 
     /**
@@ -111,7 +115,7 @@ class Order extends Model
         ];
 
         $transitions = $commonTransitions;
-        
+
         if ($deliveryMethod === 'delivery') {
             $transitions = array_merge($transitions, $deliveryTransitions);
         } else {
@@ -141,11 +145,11 @@ class Order extends Model
     public function getNextStatus(): ?string
     {
         $allowed = self::getAllowedNextStatuses($this->status, $this->delivery_method);
-        
+
         // החזר את הסטטוס הראשון ברשימה (הכי הגיוני להמשך)
         // למעט cancelled שהוא תמיד אופציה אחרונה
         $allowed = array_filter($allowed, fn($status) => $status !== self::STATUS_CANCELLED);
-        
+
         return $allowed[0] ?? null;
     }
 

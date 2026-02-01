@@ -214,6 +214,7 @@ Route::middleware(['api', 'tenant'])->group(function () {
     // ============================================
     Route::get('/restaurant/orders', [OrderController::class, 'restaurantIndex'])->name('orders.restaurant');
     Route::patch('/orders/{id}/status', [OrderController::class, 'updateStatus'])->name('orders.status');
+    Route::post('/orders/{id}/review', [OrderController::class, 'submitReview'])->name('orders.review');
 
     // ============================================
     // ממשק מסעדה - דרוש אימות

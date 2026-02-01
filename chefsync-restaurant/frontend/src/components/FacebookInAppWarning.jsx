@@ -12,7 +12,7 @@ export default function FacebookInAppWarning() {
     useEffect(() => {
         // הדפסת User Agent לדיבוג
         console.log('🔍 User Agent:', navigator.userAgent);
-        
+
         // בדיקה אם המשתמש בתוך אפליקציית פייסבוק או אינסטגרם
         const isFacebookInApp = /FBAN|FBAV|Instagram/i.test(navigator.userAgent);
         console.log('📱 Is Facebook/Instagram in-app?', isFacebookInApp);

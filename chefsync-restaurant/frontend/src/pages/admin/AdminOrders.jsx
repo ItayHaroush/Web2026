@@ -4,6 +4,7 @@ import { useAdminAuth } from '../../context/AdminAuthContext';
 import { useRestaurantStatus } from '../../context/RestaurantStatusContext';
 import AdminLayout from '../../layouts/AdminLayout';
 import api from '../../services/apiClient';
+import RatingWidget from '../../components/RatingWidget';
 import {
     FaReceipt,
     FaClock,
@@ -22,7 +23,8 @@ import {
     FaArrowLeft,
     FaMotorcycle,
     FaShoppingBag,
-    FaHistory
+    FaHistory,
+    FaStickyNote
 } from 'react-icons/fa';
 
 export default function AdminOrders() {
@@ -104,6 +106,12 @@ export default function AdminOrders() {
             const orderId = parseInt(orderIdParam);
             const order = orders.find(o => o.id === orderId);
             if (order) {
+                console.log('🔍 Selected order data:', {
+                    id: order.id,
+                    rating: order.rating,
+                    review_text: order.review_text,
+                    reviewed_at: order.reviewed_at
+                });
                 setSelectedOrder(order);
                 // נקה את ה-URL אחרי פתיחה
                 setSearchParams({});
@@ -133,6 +141,18 @@ export default function AdminOrders() {
             });
             if (response.data.success) {
                 const newOrders = response.data.orders.data || response.data.orders;
+
+                // Debug: בדוק את הנתונים שמגיעים
+                console.log('📦 Fetched orders:', newOrders.length);
+                const order9 = newOrders.find(o => o.id === 9);
+                if (order9) {
+                    console.log('🔍 Order #9 from API:', {
+                        id: order9.id,
+                        rating: order9.rating,
+                        review_text: order9.review_text,
+                        reviewed_at: order9.reviewed_at
+                    });
+                }
 
                 // בדיקה אם יש הזמנות חדשות (רק כשמציגים הכל או הזמנות ממתינות)
                 if (!filterStatus && previousOrdersCount.current > 0 && newOrders.length > previousOrdersCount.current) {
@@ -462,13 +482,23 @@ export default function AdminOrders() {
                                 </div>
                             ) : (
                                 orders.map((order) => {
-                                const isDelivery = order.delivery_method === 'delivery' || (!!order.delivery_address);
-                                const statusBadge = getStatusBadge(order.status, order.delivery_method);
-                                const isPending = ['pending', 'received'].includes(order.status);
+                                    const isDelivery = order.delivery_method === 'delivery' || (!!order.delivery_address);
+                                    const statusBadge = getStatusBadge(order.status, order.delivery_method);
+                                    const isPending = ['pending', 'received'].includes(order.status);
+                                    const isSelected = selectedOrder?.id === order.id;
                                     return (
                                         <div
                                             key={order.id}
-                                            onClick={() => setSelectedOrder(order)}
+                                            onClick={() => {
+                                                console.log('🔍 Clicked order data:', {
+                                                    id: order.id,
+                                                    rating: order.rating,
+                                                    review_text: order.review_text,
+                                                    reviewed_at: order.reviewed_at
+                                                });
+                                                setSelectedOrder(order);
+                                                console.log('✅ Selected order set to:', order.id);
+                                            }}
                                             className={`p-4 sm:p-5 cursor-pointer transition-all relative group ${isSelected
                                                 ? 'bg-brand-primary/5'
                                                 : 'hover:bg-gray-50/80 active:bg-gray-100'
@@ -670,16 +700,6 @@ export default function AdminOrders() {
                                                             </p>
                                                         </div>
                                                     </div>
-
-                                                    {selectedOrder.delivery_notes && (
-                                                        <div className="bg-amber-50 rounded-2xl p-3 border border-amber-100 flex items-start gap-3">
-                                                            <FaInfoCircle className="text-amber-500 mt-1 shrink-0" size={14} />
-                                                            <p className="text-xs font-bold text-amber-700 leading-normal">
-                                                                <span className="block uppercase tracking-widest text-[9px] mb-0.5 opacity-70">הערות לקוח:</span>
-                                                                {selectedOrder.delivery_notes}
-                                                            </p>
-                                                        </div>
-                                                    )}
                                                 </div>
                                             </div>
                                         )}
@@ -841,6 +861,65 @@ export default function AdminOrders() {
                                     </div>
                                 </div>
 
+                                {/* ביקורת לקוח - רק אם קיים דירוג */}
+                                {selectedOrder.rating && (
+                                    <div className="bg-gradient-to-br from-amber-50 via-yellow-50 to-amber-100 border-2 border-amber-200 rounded-3xl overflow-hidden shadow-lg">
+                                        <div className="p-5">
+                                            <h4 className="font-black text-gray-900 text-xs uppercase tracking-widest mb-4">
+                                                ביקורת לקוח
+                                            </h4>
+
+                                            {/* וידג'ט הדירוג */}
+                                            <div className="flex justify-center mb-4">
+                                                <RatingWidget
+                                                    value={selectedOrder.rating}
+                                                    readOnly={true}
+                                                    size="lg"
+                                                />
+                                            </div>
+
+                                            {/* טקסט הביקורת - אם קיים */}
+                                            {selectedOrder.review_text && (
+                                                <div className="bg-white/80 backdrop-blur rounded-2xl p-4 border border-amber-200">
+                                                    <p className="text-sm font-bold text-gray-800 leading-relaxed text-center">
+                                                        "{selectedOrder.review_text}"
+                                                    </p>
+                                                </div>
+                                            )}
+
+                                            {/* תאריך הביקורת */}
+                                            {selectedOrder.reviewed_at && (
+                                                <p className="text-[10px] font-black text-gray-400 text-center mt-3 uppercase tracking-wider">
+                                                    נכתב ב-{new Date(selectedOrder.reviewed_at).toLocaleDateString('he-IL', {
+                                                        year: 'numeric',
+                                                        month: 'long',
+                                                        day: 'numeric',
+                                                        hour: '2-digit',
+                                                        minute: '2-digit'
+                                                    })}
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* הערת לקוח להזמנה - כרטיס בולט */}
+                                {selectedOrder.delivery_notes && (
+                                    <div className="bg-gradient-to-r from-yellow-50 to-amber-50 border-2 border-amber-200 rounded-3xl p-5 shadow-sm transform rotate-1 transition-transform hover:rotate-0 relative overflow-hidden group">
+                                        {/* רקע דקורטיבי */}
+                                        <div className="absolute top-0 right-0 w-24 h-24 bg-amber-100 rounded-full -mr-12 -mt-12 opacity-50" />
+
+                                        <div className="relative z-10">
+                                            <h4 className="font-black text-amber-900 text-xs uppercase tracking-widest mb-1 flex items-center gap-2">
+                                                הערה להזמנה
+                                            </h4>
+                                            <p className="text-base font-bold text-gray-800 leading-relaxed">
+                                                "{selectedOrder.delivery_notes}"
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+
                                 {/* סיכום - כרטיס בולט */}
                                 <div className="bg-gray-900 rounded-3xl p-6 text-white shadow-xl relative overflow-hidden">
                                     <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16" />
@@ -870,10 +949,10 @@ export default function AdminOrders() {
                                                 'preparing': { text: 'אישור והתחלת הכנה', icon: <FaCheckCircle />, color: 'from-brand-primary to-brand-secondary' },
                                                 'ready': { text: 'סיום הכנה - מוכן!', icon: <FaCheckCircle />, color: 'from-emerald-500 to-emerald-600' },
                                                 'delivering': { text: 'יצא למשלוח', icon: <FaMotorcycle />, color: 'from-purple-500 to-purple-600' },
-                                                'delivered': { 
-                                                    text: isDeliveryOrder ? 'מסירה ללקוח' : 'נמסר ללקוח', 
-                                                    icon: <FaBoxOpen />, 
-                                                    color: 'from-slate-700 to-slate-800' 
+                                                'delivered': {
+                                                    text: isDeliveryOrder ? 'מסירה ללקוח' : 'נמסר ללקוח',
+                                                    icon: <FaBoxOpen />,
+                                                    color: 'from-slate-700 to-slate-800'
                                                 }
                                             };
 

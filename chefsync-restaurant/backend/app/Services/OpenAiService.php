@@ -263,6 +263,7 @@ class OpenAiService extends BaseAiService
             $this->validateAccess($feature, $this->restaurant, $this->user);
 
             $restaurantName = $context['restaurant_name'] ?? 'המסעדה';
+            $tenantId = $context['tenant_id'] ?? 'unknown';
             $ordersToday = $context['orders_today'] ?? 0;
             $ordersWeek = $context['orders_week'] ?? 0;
             $ordersMonth = $context['orders_month'] ?? 0;
@@ -272,16 +273,48 @@ class OpenAiService extends BaseAiService
             $categories = $context['active_categories'] ?? 0;
             $pendingOrders = $context['pending_orders'] ?? 0;
 
-            $prompt = "נתח נתוני דשבורד \"{$restaurantName}\". החזר JSON בפורמט הבא בלבד:\n\n"
-                . "הזמנות: יום={$ordersToday}, שבוע={$ordersWeek}, חודש={$ordersMonth}\n"
-                . "הכנסות: יום=₪{$revenueToday}, שבוע=₪{$revenueWeek}\n"
-                . "תפריט: {$menuItems} מנות, {$categories} קטגוריות\n"
-                . "ממתינות: {$pendingOrders}\n\n"
-                . "דוגמה לתשובה רצויה:\n"
-                . '{"sales_trend": "נרשמת עלייה עקבית בהזמנות השבוע", "top_performers": "הפיצות והסלטים מובילים את המכירות", '
-                . '"peak_times": "עומס משמעותי נרשם בשעות הערב", "recommendations": ["מומלץ להוסיף מבצעי צהריים", "כדאי לרענן את תמונות המנות"], "alert": null}';
+            // CRITICAL: Add actual menu data
+            $menuItemsList = $context['menu_items'] ?? [];
+            $categoriesList = $context['categories'] ?? [];
+            $topSellers = $context['top_sellers'] ?? [];
 
-            $response = $this->callOpenAi($prompt);
+            $menuSummary = "תפריט המסעדה:\n";
+            if (!empty($menuItemsList)) {
+                foreach ($menuItemsList as $item) {
+                    $menuSummary .= "- {$item['name']} ({$item['category']}) - ₪{$item['price']}\n";
+                }
+            } else {
+                $menuSummary .= "אין מנות בתפריט\n";
+            }
+
+            $topSellersSummary = "\nהמנות הנמכרות ביותר (30 יום אחרונים):\n";
+            if (!empty($topSellers)) {
+                foreach ($topSellers as $seller) {
+                    $topSellersSummary .= "- {$seller->name}: {$seller->total_sold} יחידות\n";
+                }
+            } else {
+                $topSellersSummary .= "אין נתוני מכירות זמינים\n";
+            }
+
+            $systemPrompt = "אתה אנליסט עסקי למסעדה '{$restaurantName}' (tenant_id: {$tenantId}). אתה חייב לענות רק על סמך הנתונים האמיתיים של המסעדה הזו. אסור לך להמציא מנות או מידע שלא קיים. אם אין נתונים - אמור זאת במפורש. הנתח את הנתונים בעברית ובצורה ממוקדת.";
+
+            $prompt = "נתח את נתוני הדשבורד של מסעדה '{$restaurantName}' (tenant: {$tenantId}):\n\n"
+                . "📊 סטטיסטיקות הזמנות:\n"
+                . "- היום: {$ordersToday} הזמנות\n"
+                . "- שבוע אחרון: {$ordersWeek} הזמנות\n"
+                . "- חודש אחרון: {$ordersMonth} הזמנות\n\n"
+                . "💰 הכנסות:\n"
+                . "- היום: ₪{$revenueToday}\n"
+                . "- שבוע אחרון: ₪{$revenueWeek}\n\n"
+                . "🍽️ {$menuSummary}\n"
+                . "🏆 {$topSellersSummary}\n"
+                . "⏳ הזמנות ממתינות: {$pendingOrders}\n\n"
+                . "**חשוב: השתמש רק במידע האמיתי שסיפקתי. אל תמציא מנות או נתונים!**\n\n"
+                . "החזר JSON בפורמט הזה בלבד (תוכן בעברית):\n"
+                . '{"sales_trend": "ניתוח מגמת מכירות", "top_performers": "המנות המובילות בפועל", '
+                . '"peak_times": "זמני שיא (אם יש נתונים)", "recommendations": ["המלצה 1", "המלצה 2"], "alert": "התראה או null"}';
+
+            $response = $this->callOpenAi($prompt, $systemPrompt);
             $responseTime = (int)((microtime(true) - $startTime) * 1000);
 
             // Parse JSON response
@@ -309,13 +342,38 @@ class OpenAiService extends BaseAiService
 
             // Fallback: return default structure
             if (!$result) {
+                // Fallback: Smart Mock based on REAL DATA from context
+                $menuItemsList = $context['menu_items'] ?? [];
+                $topSellers = $context['top_sellers'] ?? [];
+
+                // Generate "Smart" text based on real top sellers
+                if (!empty($topSellers)) {
+                    $topNames = [];
+                    foreach (array_slice($topSellers, 0, 2) as $seller) {
+                        $topNames[] = is_object($seller) ? $seller->name : ($seller['name'] ?? 'מנה');
+                    }
+                    $topPerformersText = implode(' ו-', $topNames) . " מובילות את המכירות השבוע.";
+                } else {
+                    $topPerformersText = "עדיין אין מספיק נתונים לזיהוי מנות מובילות.";
+                }
+
+                // Generate "Smart" recommendations based on real menu
+                $recommendations = [];
+                if (!empty($menuItemsList)) {
+                    $randomItem = $menuItemsList[array_rand($menuItemsList)]['name'];
+                    $recommendations[] = "שקול לקדם את מנת ה-{$randomItem} בספיישלים";
+                } else {
+                    $recommendations[] = "הוסף מנות לתפריט כדי להתחיל למכור";
+                }
+                $recommendations[] = "בדוק את דוח המכירות המלא לקבלת תמונה רחבה יותר";
+
                 $result = [
-                    'sales_trend' => 'לא ניתן לנתח את הנתונים כרגע',
-                    'top_performers' => 'אין מספיק נתונים',
-                    'peak_times' => 'אין מספיק נתונים',
-                    'recommendations' => [],
+                    'sales_trend' => $ordersWeek > 0 ? "נרשמת פעילות עסקית עם {$ordersWeek} הזמנות השבוע" : "אין מספיק נתונים לזיהוי מגמה",
+                    'top_performers' => $topPerformersText,
+                    'peak_times' => $ordersToday > 5 ? "נראה שיש פעילות ערה היום, המשך לעקוב" : "טרם זוהו שעות עומס מובהקות",
+                    'recommendations' => $recommendations,
                     'alert' => null,
-                    'provider' => 'openai'
+                    'provider' => 'openai_smart_fallback'
                 ];
             }
 

@@ -550,9 +550,9 @@ class OrderController extends Controller
             if (!$order->canTransitionTo($validated['status'])) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'מעבר סטטוס לא מותר. ' . 
-                        ($order->delivery_method === 'pickup' && $validated['status'] === 'delivering' 
-                            ? 'הזמנות איסוף עצמי אינן דורשות סטטוס "במשלוח"' 
+                    'message' => 'מעבר סטטוס לא מותר. ' .
+                        ($order->delivery_method === 'pickup' && $validated['status'] === 'delivering'
+                            ? 'הזמנות איסוף עצמי אינן דורשות סטטוס "במשלוח"'
                             : 'מעבר זה אינו אפשרי במצב הנוכחי'),
                     'current_status' => $order->status,
                     'attempted_status' => $validated['status'],
@@ -591,18 +591,18 @@ class OrderController extends Controller
     private function sendStatusNotification(Order $order, string $status): void
     {
         $statusMessages = config('push.messages.status');
-        
+
         // התאמת הודעה לסוג משלוח
         $messageKey = $status;
         if ($status === 'ready' || $status === 'delivered') {
-            $messageKey = $order->delivery_method === 'pickup' 
-                ? $status . '_pickup' 
+            $messageKey = $order->delivery_method === 'pickup'
+                ? $status . '_pickup'
                 : $status . '_delivery';
         }
 
         // אם יש הודעה ספציפית - השתמש בה, אחרת נסה הודעה כללית
         $message = $statusMessages[$messageKey] ?? $statusMessages[$status] ?? null;
-        
+
         if ($message) {
             $this->sendOrderNotification(
                 tenantId: $order->tenant_id,
@@ -927,5 +927,76 @@ class OrderController extends Controller
             $clone->setRelation('addons', $addons);
             return $clone;
         });
+    }
+
+    /**
+     * שליחת דירוג וביקורת על הזמנה
+     * 
+     * @param Request $request
+     * @param int $id - מזהה הזמנה
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function submitReview(Request $request, $id)
+    {
+        try {
+            $validated = $request->validate([
+                'rating' => 'required|integer|between:1,5',
+                'review_text' => 'nullable|string|max:500',
+            ]);
+
+            $tenantId = app('tenant_id');
+            $order = Order::where('tenant_id', $tenantId)->findOrFail($id);
+
+            // בדיקה שההזמנה הושלמה
+            if ($order->status !== Order::STATUS_DELIVERED) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'ניתן לדרג רק הזמנות שנמסרו',
+                ], 422);
+            }
+
+            // בדיקה שעוד לא דורגה
+            if ($order->rating !== null) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'הזמנה זו כבר קיבלה דירוג',
+                ], 422);
+            }
+
+            // עדכון ישיר עם save()
+            $order->rating = $validated['rating'];
+            $order->review_text = $validated['review_text'] ?? null;
+            $order->reviewed_at = now();
+            $saved = $order->save();
+
+            \Log::info('Rating saved', [
+                'order_id' => $order->id,
+                'rating' => $order->rating,
+                'review_text' => $order->review_text,
+                'saved' => $saved,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'תודה על הדירוג! בתאבון 🍕',
+                'data' => [
+                    'rating' => $order->rating,
+                    'review_text' => $order->review_text,
+                    'reviewed_at' => $order->reviewed_at,
+                ],
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'נתונים לא תקינים',
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'שגיאה בשליחת הדירוג',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 }

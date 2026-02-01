@@ -5,8 +5,9 @@ import { CustomerLayout } from '../layouts/CustomerLayout';
 import { FaMask, FaBoxOpen } from 'react-icons/fa';
 import orderService from '../services/orderService';
 import { ORDER_STATUS, ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from '../constants/api';
+import RatingWidget from '../components/RatingWidget';
+import api from '../services/apiClient';
 import CountdownTimer from '../components/CountdownTimer';
-import apiClient from '../services/apiClient';
 
 /**
  * פורמט מספר טלפון ישראלי
@@ -47,6 +48,12 @@ export default function OrderStatusPage() {
     const statusRef = useRef(null);
     const initialLoadRef = useRef(true);
 
+    // מצב דירוג
+    const [selectedRating, setSelectedRating] = useState(null);
+    const [reviewText, setReviewText] = useState('');
+    const [submittingReview, setSubmittingReview] = useState(false);
+    const [reviewSuccess, setReviewSuccess] = useState(false);
+
     // הבטחת כתובת קאנונית עם tenant בסלאג
     useEffect(() => {
         if (!urlTenantId) {
@@ -85,7 +92,7 @@ export default function OrderStatusPage() {
     // Fetch restaurant info
     useEffect(() => {
         if (urlTenantId) {
-            apiClient.get(`/restaurants/by-tenant/${encodeURIComponent(urlTenantId)}`)
+            api.get(`/restaurants/by-tenant/${encodeURIComponent(urlTenantId)}`)
                 .then(response => setRestaurant(response.data?.data))
                 .catch(err => console.error('Failed to load restaurant:', err));
         }
@@ -272,23 +279,69 @@ export default function OrderStatusPage() {
         );
     }
 
+    // פונקציה לשליחת דירוג
+    const handleSubmitReview = async () => {
+        if (!selectedRating) {
+            alert('אנא בחר דירוג');
+            return;
+        }
+
+        console.log('📤 Submitting review:', {
+            orderId,
+            rating: selectedRating,
+            review_text: reviewText.trim() || null
+        });
+
+        setSubmittingReview(true);
+        try {
+            const response = await api.post(`/orders/${orderId}/review`, {
+                rating: selectedRating,
+                review_text: reviewText.trim() || null,
+            });
+
+            console.log('✅ Review submitted successfully:', response.data);
+
+            if (response.data.success) {
+                setReviewSuccess(true);
+                // עדכון ההזמנה במצב
+                setOrder(prev => ({
+                    ...prev,
+                    rating: selectedRating,
+                    review_text: reviewText.trim() || null,
+                    reviewed_at: new Date().toISOString(),
+                }));
+            }
+        } catch (error) {
+            console.error('❌ שגיאה בשליחת דירוג:', error);
+            console.error('Error response:', error.response?.data);
+            alert('שגיאה בשליחת הדירוג. אנא נסה שוב.');
+        } finally {
+            setSubmittingReview(false);
+        }
+    };
+
     // בניית שלבי סטטוס דינמי לפי סוג משלוח
     const isDeliveryOrder = order.delivery_method === 'delivery';
-    
-    const statusSteps = isDeliveryOrder 
+
+    const statusSteps = isDeliveryOrder
         ? [
             { value: ORDER_STATUS.RECEIVED, label: ORDER_STATUS_LABELS.received },
             { value: ORDER_STATUS.PREPARING, label: ORDER_STATUS_LABELS.preparing },
             { value: ORDER_STATUS.READY, label: ORDER_STATUS_LABELS.ready },
             { value: ORDER_STATUS.DELIVERING, label: ORDER_STATUS_LABELS.delivering },
             { value: ORDER_STATUS.DELIVERED, label: ORDER_STATUS_LABELS.delivered },
-          ]
+        ]
         : [
             { value: ORDER_STATUS.RECEIVED, label: ORDER_STATUS_LABELS.received },
             { value: ORDER_STATUS.PREPARING, label: ORDER_STATUS_LABELS.preparing },
             { value: ORDER_STATUS.READY, label: 'מוכן לאיסוף' }, // תווית מותאמת לאיסוף
             { value: ORDER_STATUS.DELIVERED, label: 'נמסר' },
-          ];
+        ];
+
+    const currentStepIndex = statusSteps.findIndex((s) => s.value === order.status);
+    const isCancelled = order.status === 'cancelled';
+    const statusLabel = ORDER_STATUS_LABELS[order.status] ?? 'בוטל';
+    const statusColor = ORDER_STATUS_COLORS[order.status] ?? 'bg-red-100 text-red-700';
 
     return (
         <CustomerLayout>
@@ -520,6 +573,82 @@ export default function OrderStatusPage() {
                                 <span>₪{Number(order.total_amount || 0).toFixed(2)}</span>
                             </div>
                         </div>
+                    </div>
+                )}
+
+                {/* טופס דירוג - אחרי delivered */}
+                {order.status === ORDER_STATUS.DELIVERED && !order.rating && !reviewSuccess && (
+                    <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-3xl p-8 border-2 border-purple-200 shadow-lg">
+                        <div className="text-center space-y-6">
+                            {/* כותרת */}
+                            <div>
+                                <h3 className="text-2xl font-black text-gray-900 mb-2">
+                                    איך הייתה החוויה?
+                                </h3>
+                                <p className="text-sm text-gray-600">
+                                    הדירוג שלך עוזר לנו להשתפר
+                                </p>
+                            </div>
+
+                            {/* ווידג'ט דירוג */}
+                            <div className="py-4">
+                                <RatingWidget
+                                    value={selectedRating}
+                                    onChange={setSelectedRating}
+                                    size="lg"
+                                />
+                            </div>
+
+                            {/* שדה טקסט */}
+                            <div className="max-w-md mx-auto">
+                                <textarea
+                                    value={reviewText}
+                                    onChange={(e) => setReviewText(e.target.value)}
+                                    placeholder="ספר לנו על החוויה שלך (אופציונלי)"
+                                    className="w-full p-4 border-2 border-gray-200 rounded-2xl resize-none focus:border-purple-400 focus:ring-4 focus:ring-purple-100 outline-none transition-all"
+                                    rows={3}
+                                    maxLength={500}
+                                />
+                                <p className="text-xs text-gray-500 mt-2 text-right">
+                                    {reviewText.length}/500 תווים
+                                </p>
+                            </div>
+
+                            {/* כפתור שליחה */}
+                            <button
+                                onClick={handleSubmitReview}
+                                disabled={!selectedRating || submittingReview}
+                                className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-8 py-4 rounded-2xl font-black text-lg hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:scale-105 active:scale-95 shadow-lg"
+                            >
+                                {submittingReview ? 'שולח...' : 'שלח ביקורת'}
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* הצגת תודה אחרי שליחת דירוג */}
+                {(order.rating || reviewSuccess) && order.status === ORDER_STATUS.DELIVERED && (
+                    <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-3xl p-8 border-2 border-green-200 shadow-lg text-center space-y-4">
+                        <h3 className="text-2xl font-black text-gray-900">
+                            תודה על הדירוג
+                        </h3>
+                        <p className="text-lg text-gray-700 font-bold">
+                            בתאבון והנאה
+                        </p>
+                        {order.rating && (
+                            <div className="pt-4">
+                                <RatingWidget
+                                    value={order.rating}
+                                    readOnly
+                                    size="md"
+                                />
+                                {order.review_text && (
+                                    <div className="mt-4 bg-white/50 rounded-2xl p-4 text-sm text-gray-700 italic">
+                                        "{order.review_text}"
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
                 )}
 

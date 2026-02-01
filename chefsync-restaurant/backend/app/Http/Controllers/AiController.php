@@ -190,11 +190,36 @@ class AiController extends Controller
             // Initialize AI Service
             $ai = new AiService($tenantId, $restaurant, $user);
 
-            // Build dashboard context
+            // Build dashboard context with REAL DATA
+            $menuItemsList = $restaurant->menuItems()->with('category')->get()->map(fn($item) => [
+                'name' => $item->name,
+                'category' => $item->category?->name ?? 'ללא קטגוריה',
+                'price' => $item->price
+            ])->toArray();
+
+            $categoriesList = $restaurant->categories()->pluck('name')->toArray();
+
+            // Get top selling items from order_items (with real data)
+            $topSellers = \DB::table('order_items')
+                ->join('orders', 'order_items.order_id', '=', 'orders.id')
+                ->join('menu_items', 'order_items.menu_item_id', '=', 'menu_items.id')
+                ->where('orders.tenant_id', $tenantId)
+                ->where('orders.created_at', '>=', now()->subDays(30))
+                ->select('menu_items.name', \DB::raw('SUM(order_items.quantity) as total_sold'))
+                ->groupBy('menu_items.id', 'menu_items.name')
+                ->orderByDesc('total_sold')
+                ->limit(5)
+                ->get()
+                ->toArray();
+
             $context = [
                 'restaurant_name' => $restaurant->name,
-                'total_menu_items' => $restaurant->menuItems()->count(),
-                'active_categories' => $restaurant->categories()->count(),
+                'tenant_id' => $tenantId,
+                'menu_items' => $menuItemsList,
+                'categories' => $categoriesList,
+                'top_sellers' => $topSellers,
+                'total_menu_items' => count($menuItemsList),
+                'active_categories' => count($categoriesList),
                 'orders_today' => $restaurant->orders()->whereDate('created_at', today())->count(),
                 'orders_week' => $restaurant->orders()->where('created_at', '>=', now()->subDays(7))->count(),
                 'orders_month' => $restaurant->orders()->where('created_at', '>=', now()->subDays(30))->count(),

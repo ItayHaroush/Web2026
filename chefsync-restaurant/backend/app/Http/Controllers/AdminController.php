@@ -1646,9 +1646,9 @@ class AdminController extends Controller
         if (!$order->canTransitionTo($request->status)) {
             return response()->json([
                 'success' => false,
-                'message' => 'מעבר סטטוס לא מותר. ' . 
-                    ($order->delivery_method === 'pickup' && $request->status === 'delivering' 
-                        ? 'הזמנות איסוף עצמי אינן דורשות סטטוס "במשלוח"' 
+                'message' => 'מעבר סטטוס לא מותר. ' .
+                    ($order->delivery_method === 'pickup' && $request->status === 'delivering'
+                        ? 'הזמנות איסוף עצמי אינן דורשות סטטוס "במשלוח"'
                         : 'מעבר זה אינו אפשרי במצב הנוכחי'),
                 'current_status' => $order->status,
                 'attempted_status' => $request->status,
