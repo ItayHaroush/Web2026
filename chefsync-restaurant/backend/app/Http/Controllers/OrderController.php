@@ -647,7 +647,7 @@ class OrderController extends Controller
                 $cityRadius = $zone->city_radius ?? 10; // ברירת מחדל 10 ק"מ אם לא מוגדר
                 $distanceToCity = $this->calculateDistanceKm($lat, $lng, $cityLat, $cityLng);
 
-                \Log::info('City zone check', [
+                Log::info('City zone check', [
                     'zone_id' => $zone->id,
                     'zone_name' => $zone->name,
                     'city_radius' => $cityRadius,
