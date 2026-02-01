@@ -6,6 +6,7 @@ import { CartProvider } from './context/CartContext';
 import { ToastProvider } from './context/ToastContext';
 import DevModeBanner from './components/DevModeBanner';
 import CookieConsent from './components/CookieConsent';
+import FacebookInAppWarning from './components/FacebookInAppWarning';
 import HomePage from './pages/HomePage';
 import MenuPage from './pages/MenuPage';
 import CartPage from './pages/CartPage';
@@ -338,6 +339,7 @@ export default function App() {
               <CartProvider>
                 <AppRoutes />
                 <Toaster position="bottom-right" />
+                <FacebookInAppWarning />
                 <DevModeBanner />
                 <CookieConsent />
               </CartProvider>
