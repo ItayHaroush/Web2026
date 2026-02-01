@@ -5,7 +5,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { CustomerLayout } from '../layouts/CustomerLayout';
-import { FaMask, FaBoxOpen } from 'react-icons/fa';
+import { FaMask, FaBoxOpen, FaStickyNote, FaTimes } from 'react-icons/fa';
 import orderService from '../services/orderService';
 import { UI_TEXT } from '../constants/ui';
 import DeliveryDetailsModal from '../components/DeliveryDetailsModal';
@@ -31,6 +31,8 @@ export default function CartPage() {
     const [deliveryZoneAvailable, setDeliveryZoneAvailable] = useState(true);
     const [checkingZone, setCheckingZone] = useState(false);
     const [restaurant, setRestaurant] = useState(null);
+    const [showNotesModal, setShowNotesModal] = useState(false);
+    const [tempNotes, setTempNotes] = useState('');
 
     // Fetch restaurant info
     React.useEffect(() => {
@@ -387,6 +389,28 @@ export default function CartPage() {
                         </div>
                     )}
 
+                    {/* כפתור הערות צף */}
+                    <div className="relative">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setTempNotes(customerInfo.delivery_notes || '');
+                                setShowNotesModal(true);
+                            }}
+                            className="inline-flex items-center gap-2 py-2.5 px-4 bg-gradient-to-r from-amber-400 to-yellow-400 text-white font-semibold rounded-full shadow-lg hover:shadow-xl hover:from-amber-500 hover:to-yellow-500 transition-all duration-300 group transform hover:scale-105"
+                        >
+                            <FaStickyNote className="text-lg group-hover:rotate-12 transition-transform" />
+                            <span className="text-sm md:text-base">
+                                {customerInfo.delivery_notes ? 'ערוך הערה' : 'הוסף הערה'}
+                            </span>
+                            {customerInfo.delivery_notes && (
+                                <span className="bg-white text-amber-600 text-xs px-2 py-0.5 rounded-full font-bold">
+                                    ✓
+                                </span>
+                            )}
+                        </button>
+                    </div>
+
                     <div className="flex justify-between items-center text-2xl font-bold border-t pt-2">
                         <span>סה"כ לתשלום:</span>
                         <span className="text-brand-accent">₪{totalWithDelivery.toFixed(2)}</span>
@@ -538,6 +562,75 @@ export default function CartPage() {
                         .
                     </div>
                 </form>
+
+                {/* מודל הערות למנה */}
+                {showNotesModal && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                        <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full animate-fade-in">
+                            {/* כותרת המודל */}
+                            <div className="bg-gradient-to-r from-amber-500 to-yellow-500 p-6 rounded-t-2xl relative">
+                                <button
+                                    onClick={() => setShowNotesModal(false)}
+                                    className="absolute top-4 left-4 text-white hover:bg-white hover:bg-opacity-20 rounded-full p-2 transition-all"
+                                >
+                                    <FaTimes className="text-xl" />
+                                </button>
+                                <div className="flex items-center gap-3 justify-center">
+                                    <FaStickyNote className="text-white text-3xl" />
+                                    <h3 className="text-2xl font-bold text-white">הערה להזמנה</h3>
+                                </div>
+                                <p className="text-white text-opacity-90 text-sm text-center mt-2">
+                                    הוסף הוראות מיוחדות, העדפות או בקשות להזמנה שלך
+                                </p>
+                            </div>
+
+                            {/* תוכן המודל */}
+                            <div className="p-6 space-y-4">
+                                <textarea
+                                    value={tempNotes}
+                                    onChange={(e) => setTempNotes(e.target.value)}
+                                    placeholder="הוסף כאן את ההערות שלך..."
+                                    className="w-full px-4 py-3 border-2 border-amber-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent resize-none text-gray-700 placeholder-gray-400"
+                                    rows={3}
+                                    maxLength={30}
+                                    autoFocus
+                                />
+                                <div className="flex justify-between items-center text-xs">
+                                    <span className={`font-medium ${tempNotes.length >= 25 ? 'text-orange-600' : 'text-gray-500'}`}>
+                                        {tempNotes.length}/30 תווים
+                                    </span>
+                                    {tempNotes.length > 0 && (
+                                        <button
+                                            onClick={() => setTempNotes('')}
+                                            className="text-red-500 hover:text-red-700 font-medium"
+                                        >
+                                            נקה הכל
+                                        </button>
+                                    )}
+                                </div>
+
+                                {/* כפתורים */}
+                                <div className="flex gap-3 pt-2">
+                                    <button
+                                        onClick={() => setShowNotesModal(false)}
+                                        className="flex-1 py-3 px-4 bg-gray-100 text-gray-700 font-semibold rounded-lg hover:bg-gray-200 transition-colors"
+                                    >
+                                        ביטול
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setCustomerInfo({ ...customerInfo, delivery_notes: tempNotes });
+                                            setShowNotesModal(false);
+                                        }}
+                                        className="flex-1 py-3 px-4 bg-gradient-to-r from-amber-500 to-yellow-500 text-white font-bold rounded-lg hover:from-amber-600 hover:to-yellow-600 transition-all shadow-md hover:shadow-lg"
+                                    >
+                                        שמור הערה
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </CustomerLayout>
     );
