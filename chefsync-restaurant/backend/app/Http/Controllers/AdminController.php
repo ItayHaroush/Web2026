@@ -957,6 +957,7 @@ class AdminController extends Controller
             'is_required' => $minSelections > 0,
             'is_active' => $request->boolean('is_active', true),
             'sort_order' => $maxSortOrder + 1,
+            'placement' => $request->input('placement', 'inside'),
         ]);
 
         return response()->json([
@@ -983,6 +984,7 @@ class AdminController extends Controller
             'is_active' => 'sometimes|boolean',
             'min_selections' => 'sometimes|integer|min:0|max:99',
             'max_selections' => 'nullable|integer|min:0|max:99',
+            'placement' => 'sometimes|in:inside,side',
         ]);
 
         $restaurant = $user->restaurant;
@@ -998,7 +1000,7 @@ class AdminController extends Controller
         $group = RestaurantAddonGroup::where('restaurant_id', $restaurant->id)
             ->findOrFail($id);
 
-        $payload = $request->only(['name', 'sort_order', 'is_active', 'min_selections', 'max_selections']);
+        $payload = $request->only(['name', 'sort_order', 'is_active', 'min_selections', 'max_selections', 'placement']);
 
         // טיפול ב-max_selections = 0 (ללא הגבלה - יהפך ל-null)
         if ($request->has('max_selections')) {
@@ -1138,6 +1140,19 @@ class AdminController extends Controller
     {
         $user = $request->user();
         $restaurant = Restaurant::findOrFail($user->restaurant_id);
+
+        // ספירת הזמנות פעילות לצורך חיווי בפעמון
+        $activeOrdersCount = \App\Models\Order::where('restaurant_id', $restaurant->id)
+            ->whereIn('status', [
+                \App\Models\Order::STATUS_PENDING,
+                \App\Models\Order::STATUS_RECEIVED,
+                \App\Models\Order::STATUS_PREPARING,
+                \App\Models\Order::STATUS_READY,
+                \App\Models\Order::STATUS_DELIVERING
+            ])
+            ->count();
+
+        $restaurant->active_orders_count = $activeOrdersCount;
 
         return response()->json([
             'success' => true,

@@ -1,13 +1,17 @@
 import React from 'react';
 import { FaBars, FaBell, FaUserCircle } from 'react-icons/fa';
+import { useNavigate } from 'react-router-dom';
 
 const DashboardHeader = ({
     toggleSidebar,
     user,
     title,
     isCollapsed,
-    endContent
+    endContent,
+    notificationCount = 0
 }) => {
+    const navigate = useNavigate();
+
     return (
         <header
             className={`
@@ -40,10 +44,18 @@ const DashboardHeader = ({
                         </div>
                     )}
 
-                    {/* Notifications (Demo) */}
-                    <button className="p-2 text-gray-400 hover:text-orange-600 transition-colors relative">
+                    {/* Notifications */}
+                    <button
+                        onClick={() => navigate('/admin/orders')}
+                        className={`p-2 transition-colors relative ${notificationCount > 0 ? 'text-orange-600 animate-pulse-slow' : 'text-gray-400 hover:text-orange-600'}`}
+                        title={notificationCount > 0 ? `${notificationCount} הזמנות פעילות` : 'אין התראות חדשות'}
+                    >
                         <FaBell size={20} />
-                        <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
+                        {notificationCount > 0 && (
+                            <span className="absolute top-1 right-1 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full border-2 border-white flex items-center justify-center">
+                                {notificationCount > 9 ? '9+' : notificationCount}
+                            </span>
+                        )}
                     </button>
 
                     {/* User Profile */}

@@ -36,6 +36,7 @@ export const normalizeAddon = (addon) => {
         id,
         name: addon.name ?? '',
         price_delta: sanitizeNumber(addon.price_delta ?? addon.priceDelta ?? addon.price ?? 0),
+        on_side: addon.on_side ?? false,
     };
 };
 
@@ -43,8 +44,8 @@ export const buildCartKey = (menuItemId, variant, addons = []) => {
     const variantKey = variant?.id ?? 'base';
     const addonsKey = addons.length
         ? addons
-            .map((addon) => addon?.id)
-            .filter((id) => id || id === 0)
+            .map((addon) => `${addon?.id}${addon?.on_side ? '-side' : ''}`)
+            .filter((key) => key)
             .sort()
             .join('|')
         : 'none';

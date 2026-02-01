@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { FaBoxOpen } from 'react-icons/fa';
 import { calculateUnitPrice, normalizeVariant, normalizeAddon } from '../utils/cart';
 import { resolveAssetUrl } from '../utils/assets';
 
@@ -35,11 +36,13 @@ export default function MenuItemModal({
 
     const [selectedVariantId, setSelectedVariantId] = useState(defaultVariantId);
     const [selectedAddons, setSelectedAddons] = useState(defaultAddonState);
+    const [addonOnSide, setAddonOnSide] = useState({}); // { addonId: true/false }
     const [qty, setQty] = useState(1);
 
     useEffect(() => {
         setSelectedVariantId(defaultVariantId);
         setSelectedAddons(defaultAddonState);
+        setAddonOnSide({});
         setQty(1);
     }, [defaultVariantId, defaultAddonState, item?.id]);
 
@@ -54,7 +57,10 @@ export default function MenuItemModal({
         const selectedIds = selectedAddons[group.id] || [];
         return (group.addons || []).filter((addon) => selectedIds.includes(addon.id));
     });
-    const normalizedAddons = selectedAddonObjects.map(normalizeAddon);
+    const normalizedAddons = selectedAddonObjects.map(addon => ({
+        ...normalizeAddon(addon),
+        on_side: addonOnSide[addon.id] || false,
+    }));
 
     const unitPrice = calculateUnitPrice(basePrice, normalizedVariant, normalizedAddons);
 
@@ -263,29 +269,51 @@ export default function MenuItemModal({
                                         </div>
                                         <div className="space-y-2">
                                             {(group.addons || []).map((addon) => (
-                                                <label
-                                                    key={addon.id}
-                                                    className={`flex items-center justify-between border rounded-xl px-3 py-2 cursor-pointer transition ${selection.includes(addon.id) ? 'border-brand-primary bg-brand-primary/5' : 'border-gray-200 hover:border-brand-primary/40'}`}
-                                                >
-                                                    <div className="flex items-center gap-3">
-                                                        <input
-                                                            type={group.selection_type === 'single' ? 'radio' : 'checkbox'}
-                                                            name={`addon-group-${group.id}`}
-                                                            checked={selection.includes(addon.id)}
-                                                            onChange={() => toggleAddon(group, addon.id)}
-                                                            disabled={isAddonDisabled(group, addon.id)}
-                                                        />
-                                                        <div>
-                                                            <p className="font-medium text-brand-dark">{addon.name}</p>
-                                                            {addon.price_delta !== 0 && (
-                                                                <p className="text-sm text-gray-500">{addon.price_delta > 0 ? `+₪${addon.price_delta}` : `₪${addon.price_delta}`}</p>
-                                                            )}
+                                                <div key={addon.id} className="space-y-1">
+                                                    <label
+                                                        className={`flex items-center justify-between border rounded-xl px-3 py-2 cursor-pointer transition ${selection.includes(addon.id) ? 'border-brand-primary bg-brand-primary/5' : 'border-gray-200 hover:border-brand-primary/40'}`}
+                                                    >
+                                                        <div className="flex items-center gap-3">
+                                                            <input
+                                                                type={group.selection_type === 'single' ? 'radio' : 'checkbox'}
+                                                                name={`addon-group-${group.id}`}
+                                                                checked={selection.includes(addon.id)}
+                                                                onChange={() => toggleAddon(group, addon.id)}
+                                                                disabled={isAddonDisabled(group, addon.id)}
+                                                            />
+                                                            <div>
+                                                                <p className="font-medium text-brand-dark">{addon.name}</p>
+                                                                {addon.price_delta !== 0 && (
+                                                                    <p className="text-sm text-gray-500">{addon.price_delta > 0 ? `+₪${addon.price_delta}` : `₪${addon.price_delta}`}</p>
+                                                                )}
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                    {isAddonDisabled(group, addon.id) && !selection.includes(addon.id) && (
-                                                        <span className="text-xs text-gray-400">מקסימום הושג</span>
+                                                        {isAddonDisabled(group, addon.id) && !selection.includes(addon.id) && (
+                                                            <span className="text-xs text-gray-400">מקסימום הושג</span>
+                                                        )}
+                                                    </label>
+                                                    {group.placement === 'side' && selection.includes(addon.id) && (
+                                                        <label
+                                                            className="flex items-center gap-2 px-4 py-1.5 mr-8 cursor-pointer text-sm"
+                                                            onClick={(e) => e.stopPropagation()}
+                                                        >
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={addonOnSide[addon.id] || false}
+                                                                onChange={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setAddonOnSide(prev => ({
+                                                                        ...prev,
+                                                                        [addon.id]: !prev[addon.id]
+                                                                    }));
+                                                                }}
+                                                                className="w-4 h-4"
+                                                            />
+                                                            <FaBoxOpen className="text-orange-600" />
+                                                            <span className="text-gray-600 font-medium">בצד</span>
+                                                        </label>
                                                     )}
-                                                </label>
+                                                </div>
                                             ))}
                                         </div>
                                         {groupError && (

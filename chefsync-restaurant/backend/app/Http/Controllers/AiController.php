@@ -204,6 +204,8 @@ class AiController extends Controller
             ];
 
             // ⚠️ Check if there's enough data for insights
+            Log::info('Dashboard Context Debug:', $context);
+
             if ($context['orders_month'] < 5) {
                 return response()->json([
                     'success' => true,

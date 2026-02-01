@@ -18,6 +18,7 @@ class RestaurantAddonGroup extends Model
         'is_required',
         'is_active',
         'sort_order',
+        'placement',
     ];
 
     protected $casts = [

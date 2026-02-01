@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { CustomerLayout } from '../layouts/CustomerLayout';
-import { FaMask } from 'react-icons/fa';
+import { FaMask, FaBoxOpen } from 'react-icons/fa';
 import orderService from '../services/orderService';
 import { ORDER_STATUS, ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from '../constants/api';
 import CountdownTimer from '../components/CountdownTimer';
@@ -457,9 +457,19 @@ export default function OrderStatusPage() {
                                             <div className="text-sm text-gray-700">סוג לחם: {item.variant_name}</div>
                                         )}
                                         {addons.length > 0 && (
-                                            <div className="text-sm text-gray-700">
-                                                תוספות: {addons.map((addon) => addon.name).join(' · ')}
-                                            </div>
+                                            <>
+                                                {addons.filter(a => !a.on_side).length > 0 && (
+                                                    <div className="text-sm text-gray-700">
+                                                        תוספות: {addons.filter(a => !a.on_side).map(a => a.name).join(' · ')}
+                                                    </div>
+                                                )}
+                                                {addons.filter(a => a.on_side).length > 0 && (
+                                                    <div className="text-sm text-orange-600 font-medium flex items-center gap-1">
+                                                        <FaBoxOpen />
+                                                        <span>בצד: {addons.filter(a => a.on_side).map(a => a.name).join(' · ')}</span>
+                                                    </div>
+                                                )}
+                                            </>
                                         )}
                                     </div>
                                     {hasCustomizations && (

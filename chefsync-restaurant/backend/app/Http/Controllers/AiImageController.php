@@ -8,6 +8,7 @@ use App\Models\MenuItem;
 use App\Services\ImageEnhancementService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Controller לניהול שיפורי תמונות AI
@@ -245,12 +246,12 @@ class AiImageController extends Controller
 
         // מחיקת קבצים
         if ($enhancement->original_path) {
-            \Storage::disk('public')->delete($enhancement->original_path);
+            Storage::disk('public')->delete($enhancement->original_path);
         }
 
         if ($enhancement->variations) {
             foreach ($enhancement->variations as $path) {
-                \Storage::disk('public')->delete($path);
+                Storage::disk('public')->delete($path);
             }
         }
 

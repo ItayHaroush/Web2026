@@ -272,13 +272,14 @@ class OpenAiService extends BaseAiService
             $categories = $context['active_categories'] ?? 0;
             $pendingOrders = $context['pending_orders'] ?? 0;
 
-            $prompt = "נתח נתוני דשבורד \"{$restaurantName}\". החזר JSON:\n\n"
+            $prompt = "נתח נתוני דשבורד \"{$restaurantName}\". החזר JSON בפורמט הבא בלבד:\n\n"
                 . "הזמנות: יום={$ordersToday}, שבוע={$ordersWeek}, חודש={$ordersMonth}\n"
                 . "הכנסות: יום=₪{$revenueToday}, שבוע=₪{$revenueWeek}\n"
                 . "תפריט: {$menuItems} מנות, {$categories} קטגוריות\n"
                 . "ממתינות: {$pendingOrders}\n\n"
-                . '{"sales_trend": "עולות/יורדות/יציבות", "top_performers": "מה מוביל", '
-                . '"peak_times": "זמני עומס", "recommendations": ["המלצה1", "המלצה2"], "alert": null}';
+                . "דוגמה לתשובה רצויה:\n"
+                . '{"sales_trend": "נרשמת עלייה עקבית בהזמנות השבוע", "top_performers": "הפיצות והסלטים מובילים את המכירות", '
+                . '"peak_times": "עומס משמעותי נרשם בשעות הערב", "recommendations": ["מומלץ להוסיף מבצעי צהריים", "כדאי לרענן את תמונות המנות"], "alert": null}';
 
             $response = $this->callOpenAi($prompt);
             $responseTime = (int)((microtime(true) - $startTime) * 1000);

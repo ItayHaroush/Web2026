@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { useRestaurantStatus } from '../../context/RestaurantStatusContext';
 import AdminLayout from '../../layouts/AdminLayout';
@@ -27,6 +28,7 @@ import {
 export default function AdminOrders() {
     const { getAuthHeaders } = useAdminAuth();
     const { restaurantStatus } = useRestaurantStatus();
+    const [searchParams, setSearchParams] = useSearchParams();
     const [orders, setOrders] = useState([]);
     const [allOrders, setAllOrders] = useState([]); // כל ההזמנות ללא סינון
     const [loading, setLoading] = useState(true);
@@ -36,18 +38,34 @@ export default function AdminOrders() {
     const [etaExtraMinutes, setEtaExtraMinutes] = useState('');
     const [etaNote, setEtaNote] = useState('');
     const [etaUpdating, setEtaUpdating] = useState(false);
+    const [etaSectionOpen, setEtaSectionOpen] = useState(false);
+    const [customerSectionOpen, setCustomerSectionOpen] = useState(false);
     const previousOrdersCount = useRef(0);
+    const orderPanelRef = useRef(null);
     const isLocked = restaurantStatus?.is_approved === false;
 
     const formatAddons = (addons) => {
-        if (!Array.isArray(addons) || addons.length === 0) return '';
-        return addons
-            .map((addon) => {
-                if (typeof addon === 'string') return addon;
-                return addon?.name ?? addon?.addon_name ?? null;
+        if (!Array.isArray(addons) || addons.length === 0) return { inside: '', onSide: '' };
+
+        const inside = addons
+            .filter(addon => {
+                const onSide = typeof addon === 'object' ? addon?.on_side : false;
+                return !onSide;
             })
+            .map(addon => typeof addon === 'string' ? addon : (addon?.name ?? addon?.addon_name))
             .filter(Boolean)
             .join(' · ');
+
+        const onSide = addons
+            .filter(addon => {
+                const onSide = typeof addon === 'object' ? addon?.on_side : false;
+                return onSide;
+            })
+            .map(addon => typeof addon === 'string' ? addon : (addon?.name ?? addon?.addon_name))
+            .filter(Boolean)
+            .join(' · ');
+
+        return { inside, onSide };
     };
 
     const getItemCategoryLabel = (item) => (
@@ -79,10 +97,31 @@ export default function AdminOrders() {
         return () => clearInterval(interval);
     }, [filterStatus]);
 
+    // פתיחת הזמנה אוטומטית מ-URL query params
+    useEffect(() => {
+        const orderIdParam = searchParams.get('orderId');
+        if (orderIdParam && orders.length > 0) {
+            const orderId = parseInt(orderIdParam);
+            const order = orders.find(o => o.id === orderId);
+            if (order) {
+                setSelectedOrder(order);
+                // נקה את ה-URL אחרי פתיחה
+                setSearchParams({});
+            }
+        }
+    }, [orders, searchParams, setSearchParams]);
+
     useEffect(() => {
         if (!selectedOrder) return;
         setEtaExtraMinutes('');
         setEtaNote(selectedOrder.eta_note || '');
+        setEtaSectionOpen(false);
+        setCustomerSectionOpen(false);
+
+        // גלילה לפאנל ההזמנה
+        setTimeout(() => {
+            orderPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
     }, [selectedOrder]);
 
     const fetchOrders = async () => {
@@ -483,7 +522,7 @@ export default function AdminOrders() {
                 </div>
 
                 {/* פרטי הזמנה - פאנל צדדי מודרני */}
-                <div className="lg:col-span-12 xl:col-span-5">
+                <div className="lg:col-span-12 xl:col-span-5" ref={orderPanelRef}>
                     {selectedOrder ? (
                         <div className="bg-white rounded-[2rem] border border-gray-200 shadow-xl overflow-hidden sticky top-24 animate-in fade-in slide-in-from-left-4 duration-300">
                             {/* כותרת הפרטים */}
@@ -540,110 +579,170 @@ export default function AdminOrders() {
                                     </div>
                                 </div>
 
-                                {/* פרטי לקוח - גריד */}
-                                <div className="bg-slate-50 rounded-3xl p-5 border border-gray-100">
-                                    <h4 className="font-black text-gray-900 text-xs uppercase tracking-widest mb-4 flex items-center gap-2">
-                                        <FaUser className="text-gray-400" />
-                                        מידע לקוח
-                                    </h4>
-                                    <div className="space-y-4">
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 bg-white rounded-xl shadow-sm border border-gray-100 flex items-center justify-center text-brand-primary">
-                                                    <FaUser size={16} />
-                                                </div>
-                                                <div>
-                                                    <p className="text-xs font-black text-gray-400 uppercase tracking-tighter">שם מלא</p>
-                                                    <p className="text-sm font-black text-gray-900">{selectedOrder.customer_name}</p>
-                                                </div>
-                                            </div>
+                                {/* מידע לקוח וזמן משוער - גריד 2 עמודות */}
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                    {/* פרטי לקוח - קולפסיבל */}
+                                    <div className="bg-slate-50 border-2 border-slate-100 rounded-3xl overflow-hidden shadow-sm group hover:border-brand-primary/20 transition-all">
+                                        <button
+                                            onClick={() => setCustomerSectionOpen(!customerSectionOpen)}
+                                            className="w-full p-5 flex items-center justify-between hover:bg-slate-100 transition-all"
+                                        >
+                                            <h4 className="font-black text-gray-900 text-xs uppercase tracking-widest flex items-center gap-2">
+                                                <FaUser className="text-gray-400" />
+                                                מידע לקוח
+                                            </h4>
                                             <div className="flex items-center gap-2">
+                                                {/* אינדיקטור משלוח/איסוף */}
+                                                <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase flex items-center gap-1 ${selectedOrder.delivery_method === 'delivery'
+                                                    ? 'bg-purple-50 text-purple-600 border border-purple-100'
+                                                    : 'bg-orange-50 text-orange-600 border border-orange-100'
+                                                    }`}>
+                                                    {selectedOrder.delivery_method === 'delivery' ? (
+                                                        <>
+                                                            <FaTruck size={9} />
+                                                            משלוח
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <FaShoppingBag size={9} />
+                                                            איסוף
+                                                        </>
+                                                    )}
+                                                </span>
+                                                {/* כפתור התקשרות */}
                                                 <a
                                                     href={`tel:${selectedOrder.customer_phone}`}
-                                                    className="w-10 h-10 bg-white rounded-xl shadow-sm border border-gray-100 flex items-center justify-center text-emerald-500 hover:bg-emerald-50 hover:border-emerald-200 transition-all"
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    className="w-8 h-8 bg-white rounded-xl shadow-sm border border-gray-200 flex items-center justify-center text-emerald-500 hover:bg-emerald-50 hover:border-emerald-200 transition-all"
                                                 >
-                                                    <FaPhone size={14} />
+                                                    <FaPhone size={12} />
                                                 </a>
+                                                {/* איקון פתיחה/סגירה */}
+                                                <div className={`transform transition-transform ${customerSectionOpen ? 'rotate-180' : ''}`}>
+                                                    <FaInfoCircle className="text-gray-400" />
+                                                </div>
                                             </div>
-                                        </div>
+                                        </button>
 
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 bg-white rounded-xl shadow-sm border border-gray-100 flex items-center justify-center text-brand-primary">
-                                                <FaMapMarkerAlt size={16} />
-                                            </div>
-                                            <div className="min-w-0">
-                                                <p className="text-xs font-black text-gray-400 uppercase tracking-tighter">
-                                                    {selectedOrder.delivery_method === 'delivery' ? 'כתובת משלוח' : 'אופן קבלת הזמנה'}
-                                                </p>
-                                                <p className="text-sm font-black text-gray-900 truncate">
-                                                    {selectedOrder.delivery_method === 'delivery'
-                                                        ? (selectedOrder.delivery_address || 'לא צוינה כתובת')
-                                                        : 'איסוף עצמי מהמסעדה'
-                                                    }
-                                                </p>
-                                            </div>
-                                        </div>
+                                        {customerSectionOpen && (
+                                            <div className="px-5 pb-5 pt-2 border-t border-slate-200 animate-in slide-in-from-top-2 duration-200">
+                                                <div className="space-y-4">
+                                                    <div className="flex items-center justify-between">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-10 h-10 bg-white rounded-xl shadow-sm border border-gray-100 flex items-center justify-center text-brand-primary">
+                                                                <FaUser size={16} />
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-xs font-black text-gray-400 uppercase tracking-tighter">שם מלא</p>
+                                                                <p className="text-sm font-black text-gray-900">{selectedOrder.customer_name}</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
 
-                                        {selectedOrder.delivery_notes && (
-                                            <div className="bg-amber-50 rounded-2xl p-3 border border-amber-100 flex items-start gap-3">
-                                                <FaInfoCircle className="text-amber-500 mt-1 shrink-0" size={14} />
-                                                <p className="text-xs font-bold text-amber-700 leading-normal">
-                                                    <span className="block uppercase tracking-widest text-[9px] mb-0.5 opacity-70">הערות לקוח:</span>
-                                                    {selectedOrder.delivery_notes}
-                                                </p>
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-10 h-10 bg-white rounded-xl shadow-sm border border-gray-100 flex items-center justify-center text-brand-primary">
+                                                            <FaMapMarkerAlt size={16} />
+                                                        </div>
+                                                        <div className="min-w-0">
+                                                            <p className="text-xs font-black text-gray-400 uppercase tracking-tighter">
+                                                                {selectedOrder.delivery_method === 'delivery' ? 'כתובת משלוח' : 'אופן קבלת החמנה'}
+                                                            </p>
+                                                            <p className="text-sm font-black text-gray-900 truncate">
+                                                                {selectedOrder.delivery_method === 'delivery'
+                                                                    ? (selectedOrder.delivery_address || 'לא צוינה כתובת')
+                                                                    : 'איסוף עצמי מהמסעדה'
+                                                                }
+                                                            </p>
+                                                        </div>
+                                                    </div>
+
+                                                    {selectedOrder.delivery_notes && (
+                                                        <div className="bg-amber-50 rounded-2xl p-3 border border-amber-100 flex items-start gap-3">
+                                                            <FaInfoCircle className="text-amber-500 mt-1 shrink-0" size={14} />
+                                                            <p className="text-xs font-bold text-amber-700 leading-normal">
+                                                                <span className="block uppercase tracking-widest text-[9px] mb-0.5 opacity-70">הערות לקוח:</span>
+                                                                {selectedOrder.delivery_notes}
+                                                            </p>
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
                                         )}
                                     </div>
-                                </div>
 
-                                {/* ניהול זמן (ETA) - עיצוב חדש */}
-                                <div className="bg-white border-2 border-slate-100 rounded-3xl p-5 shadow-sm group hover:border-brand-primary/20 transition-all">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <h4 className="font-black text-gray-900 text-xs uppercase tracking-widest flex items-center gap-2">
-                                            <FaClock className="text-brand-primary" />
-                                            זמן משוער (ETA)
-                                        </h4>
-                                        {selectedOrder.eta_minutes && (
-                                            <span className="px-3 py-1 bg-brand-primary/10 text-brand-primary rounded-full text-[10px] font-black">
-                                                {selectedOrder.eta_minutes} דק'
-                                            </span>
+                                    {/* ניהול זמן (ETA) - עיצוב חדש */}
+                                    <div className="bg-white border-2 border-slate-100 rounded-3xl overflow-hidden shadow-sm group hover:border-brand-primary/20 transition-all">
+                                        <button
+                                            onClick={() => setEtaSectionOpen(!etaSectionOpen)}
+                                            className="w-full p-5 flex items-center justify-between hover:bg-slate-50 transition-all"
+                                        >
+                                            <h4 className="font-black text-gray-900 text-xs uppercase tracking-widest flex items-center gap-2">
+                                                <FaClock className="text-brand-primary" />
+                                                זמן משוער (ETA)
+                                            </h4>
+                                            <div className="flex items-center gap-2">
+                                                {selectedOrder.eta_minutes && (
+                                                    <span className="px-3 py-1 bg-brand-primary/10 text-brand-primary rounded-full text-[10px] font-black">
+                                                        {selectedOrder.eta_minutes} דק'
+                                                    </span>
+                                                )}
+                                                <div className={`transform transition-transform ${etaSectionOpen ? 'rotate-180' : ''}`}>
+                                                    <FaInfoCircle className="text-gray-400" />
+                                                </div>
+                                            </div>
+                                        </button>
+
+                                        {etaSectionOpen && (
+                                            <div className="px-5 pb-5 pt-2 border-t border-slate-100 animate-in slide-in-from-top-2 duration-200">
+                                                <div className="grid grid-cols-2 gap-3 mb-4">
+                                                    <div className="space-y-1.5 text-right">
+                                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-tight mr-1">הארכה (דק')</label>
+                                                        <div className="relative">
+                                                            <select
+                                                                value={etaExtraMinutes}
+                                                                onChange={(e) => setEtaExtraMinutes(e.target.value)}
+                                                                className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 text-sm font-black focus:ring-2 focus:ring-brand-primary group-hover:bg-slate-100 appearance-none cursor-pointer"
+                                                            >
+                                                                <option value="">בחר זמן</option>
+                                                                <option value="5">5 דקות</option>
+                                                                <option value="10">10 דקות</option>
+                                                                <option value="15">15 דקות</option>
+                                                                <option value="20">20 דקות</option>
+                                                                <option value="25">25 דקות</option>
+                                                                <option value="30">30 דקות</option>
+                                                                <option value="35">35 דקות</option>
+                                                                <option value="40">40 דקות</option>
+                                                                <option value="45">45 דקות</option>
+                                                                <option value="50">50 דקות</option>
+                                                                <option value="55">55 דקות</option>
+                                                                <option value="60">60 דקות</option>
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                    <div className="space-y-1.5 text-right">
+                                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-tight mr-1">הערה ללקוח</label>
+                                                        <input
+                                                            type="text"
+                                                            value={etaNote}
+                                                            onChange={(e) => setEtaNote(e.target.value)}
+                                                            className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 text-sm font-black focus:ring-2 focus:ring-brand-primary group-hover:bg-slate-100"
+                                                            placeholder="עיכוב אפשרי"
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                <button
+                                                    onClick={updateEta}
+                                                    disabled={etaUpdating || !etaExtraMinutes || isLocked}
+                                                    className="w-full bg-slate-900 text-white p-3.5 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] shadow-lg hover:shadow-slate-200 transition-all active:scale-95 disabled:opacity-50"
+                                                >
+                                                    {etaUpdating ? (
+                                                        <FaSpinner className="animate-spin mx-auto" />
+                                                    ) : 'עדכן זמן ושלח SMS'}
+                                                </button>
+                                            </div>
                                         )}
                                     </div>
-
-                                    <div className="grid grid-cols-2 gap-3 mb-4">
-                                        <div className="space-y-1.5 text-right">
-                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-tight mr-1">הארכה (דק')</label>
-                                            <div className="relative">
-                                                <input
-                                                    type="number"
-                                                    value={etaExtraMinutes}
-                                                    onChange={(e) => setEtaExtraMinutes(e.target.value)}
-                                                    className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 text-sm font-black focus:ring-2 focus:ring-brand-primary group-hover:bg-slate-100"
-                                                    placeholder="0"
-                                                />
-                                            </div>
-                                        </div>
-                                        <div className="space-y-1.5 text-right">
-                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-tight mr-1">הערה ללקוח</label>
-                                            <input
-                                                type="text"
-                                                value={etaNote}
-                                                onChange={(e) => setEtaNote(e.target.value)}
-                                                className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 text-sm font-black focus:ring-2 focus:ring-brand-primary group-hover:bg-slate-100"
-                                                placeholder="עיכוב אפשרי"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <button
-                                        onClick={updateEta}
-                                        disabled={etaUpdating || !etaExtraMinutes || isLocked}
-                                        className="w-full bg-slate-900 text-white p-3.5 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] shadow-lg hover:shadow-slate-200 transition-all active:scale-95 disabled:opacity-50"
-                                    >
-                                        {etaUpdating ? (
-                                            <FaSpinner className="animate-spin mx-auto" />
-                                        ) : 'עדכן זמן ושלח SMS'}
-                                    </button>
                                 </div>
 
                                 {/* פריטי הזמנה */}
@@ -685,12 +784,26 @@ export default function AdminOrders() {
                                                                                 {item.variant_name}
                                                                             </div>
                                                                         )}
-                                                                        {addons.length > 0 && (
-                                                                            <div className="text-[11px] font-medium text-gray-500 bg-emerald-50/50 p-2 rounded-xl border border-emerald-100/50">
-                                                                                <span className="font-black text-emerald-700 uppercase tracking-tighter text-[9px] block mb-0.5">תוספות:</span>
-                                                                                {formatAddons(addons)}
-                                                                            </div>
-                                                                        )}
+                                                                        {addons.length > 0 && (() => {
+                                                                            const { inside, onSide } = formatAddons(addons);
+                                                                            return (
+                                                                                <div className="text-[11px] font-medium text-gray-600 bg-slate-50/50 p-2 rounded-xl border border-slate-100/50">
+                                                                                    {inside && (
+                                                                                        <>
+                                                                                            <span className="font-black text-emerald-700 uppercase tracking-tighter text-[9px] ml-1">תוספות:</span>
+                                                                                            <span className="text-gray-500">{inside}</span>
+                                                                                        </>
+                                                                                    )}
+                                                                                    {inside && onSide && <span className="mx-2 text-gray-300">|</span>}
+                                                                                    {onSide && (
+                                                                                        <>
+                                                                                            <span className="font-black text-orange-700 uppercase tracking-tighter text-[9px] ml-1">בצד:</span>
+                                                                                            <span className="text-orange-600">{onSide}</span>
+                                                                                        </>
+                                                                                    )}
+                                                                                </div>
+                                                                            );
+                                                                        })()}
                                                                     </div>
                                                                     <div className="text-left">
                                                                         <div className="font-black text-gray-900 text-lg leading-none">₪{lineTotal}</div>
