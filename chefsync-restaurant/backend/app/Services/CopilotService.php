@@ -1527,6 +1527,8 @@ PROMPT;
         $menuItems = $context['total_menu_items'] ?? 0;
         $categories = $context['active_categories'] ?? 0;
         $pendingOrders = $context['pending_orders'] ?? 0;
+        $isOpen = $context['is_open'] ?? true;
+        $statusText = $isOpen ? '🟢 פתוח כעת' : '🔴 סגור כעת';
 
         // CRITICAL: Add actual menu data
         $menuItemsList = $context['menu_items'] ?? [];
@@ -1554,6 +1556,7 @@ PROMPT;
         $prompt = "אתה אנליסט עסקי למסעדה '{$restaurantName}' (tenant_id: {$tenantId}). אתה חייב לענות רק על סמך הנתונים האמיתיים של המסעדה הזו. אסור לך להמציא מנות או מידע שלא קיים. אם אין נתונים - אמור זאת במפורש.\n\n"
             . "נתח את הנתונים והחזר JSON בלבד:\n\n"
             . "📊 סטטיסטיקות הזמנות:\n"
+            . "- סטטוס: {$statusText}\n"
             . "- היום: {$ordersToday} הזמנות\n"
             . "- שבוע אחרון: {$ordersWeek} הזמנות\n"
             . "- חודש אחרון: {$ordersMonth} הזמנות\n\n"
@@ -1585,14 +1588,15 @@ PROMPT;
         if (preg_match('/\{[\s\S]*\}/', $content, $matches)) {
             $parsed = json_decode($matches[0], true);
             if ($parsed) {
-                $result = array_merge([
-                    'sales_trend' => 'אין נתונים',
-                    'top_performers' => 'אין נתונים',
-                    'peak_times' => 'אין נתונים',
-                    'recommendations' => [],
-                    'alert' => null,
+                $sanitize = fn($val) => ($val === 'null' || $val === null) ? 'אין נתונים' : $val;
+                $result = [
+                    'sales_trend' => $sanitize($parsed['sales_trend'] ?? 'אין נתונים'),
+                    'top_performers' => $sanitize($parsed['top_performers'] ?? 'אין נתונים'),
+                    'peak_times' => $sanitize($parsed['peak_times'] ?? 'אין נתונים'),
+                    'recommendations' => $parsed['recommendations'] ?? [],
+                    'alert' => $parsed['alert'] ?? null,
                     'provider' => 'copilot_cli'
-                ], $parsed);
+                ];
             }
         }
 
