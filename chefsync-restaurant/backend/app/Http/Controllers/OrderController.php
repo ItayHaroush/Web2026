@@ -546,18 +546,24 @@ class OrderController extends Controller
             $tenantId = app('tenant_id');
             $order = Order::where('tenant_id', $tenantId)->findOrFail($id);
 
+            // ולידציה: בדיקה שהמעבר מותר לפי transition map
+            if (!$order->canTransitionTo($validated['status'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'מעבר סטטוס לא מותר. ' . 
+                        ($order->delivery_method === 'pickup' && $validated['status'] === 'delivering' 
+                            ? 'הזמנות איסוף עצמי אינן דורשות סטטוס "במשלוח"' 
+                            : 'מעבר זה אינו אפשרי במצב הנוכחי'),
+                    'current_status' => $order->status,
+                    'attempted_status' => $validated['status'],
+                    'allowed_statuses' => Order::getAllowedNextStatuses($order->status, $order->delivery_method),
+                ], 422);
+            }
+
             $order->update(['status' => $validated['status']]);
 
-            $statusMessages = config('push.messages.status');
-            if (isset($statusMessages[$validated['status']])) {
-                $message = $statusMessages[$validated['status']];
-                $this->sendOrderNotification(
-                    tenantId: $tenantId,
-                    title: $message['title'],
-                    body: $message['body'],
-                    data: ['orderId' => (string) $order->id, 'status' => $validated['status']]
-                );
-            }
+            // שליחת התראת Push מותאמת לסוג המשלוח
+            $this->sendStatusNotification($order, $validated['status']);
 
             return response()->json([
                 'success' => true,
@@ -576,6 +582,34 @@ class OrderController extends Controller
                 'message' => 'שגיאה בעדכון הסטטוס',
                 'error' => $e->getMessage(),
             ], 500);
+        }
+    }
+
+    /**
+     * שליחת התראה מותאמת לפי סוג משלוח וסטטוס
+     */
+    private function sendStatusNotification(Order $order, string $status): void
+    {
+        $statusMessages = config('push.messages.status');
+        
+        // התאמת הודעה לסוג משלוח
+        $messageKey = $status;
+        if ($status === 'ready' || $status === 'delivered') {
+            $messageKey = $order->delivery_method === 'pickup' 
+                ? $status . '_pickup' 
+                : $status . '_delivery';
+        }
+
+        // אם יש הודעה ספציפית - השתמש בה, אחרת נסה הודעה כללית
+        $message = $statusMessages[$messageKey] ?? $statusMessages[$status] ?? null;
+        
+        if ($message) {
+            $this->sendOrderNotification(
+                tenantId: $order->tenant_id,
+                title: $message['title'],
+                body: $message['body'],
+                data: ['orderId' => (string) $order->id, 'status' => $status]
+            );
         }
     }
 

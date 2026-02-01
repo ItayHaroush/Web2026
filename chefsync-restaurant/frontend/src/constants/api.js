@@ -41,22 +41,31 @@ export const API_ENDPOINTS = {
 
 // סטטוסי הזמנה
 export const ORDER_STATUS = {
+    PENDING: 'pending',        // ממתין
     RECEIVED: 'received',      // התקבלה
     PREPARING: 'preparing',    // בהכנה
     READY: 'ready',           // מוכנה
+    DELIVERING: 'delivering',  // במשלוח
     DELIVERED: 'delivered',   // נמסרה
+    CANCELLED: 'cancelled',   // בוטלה
 };
 
 export const ORDER_STATUS_LABELS = {
+    pending: 'ממתין',
     received: 'התקבלה',
     preparing: 'בהכנה',
     ready: 'מוכנה',
+    delivering: 'במשלוח',
     delivered: 'נמסרה',
+    cancelled: 'בוטלה',
 };
 
 export const ORDER_STATUS_COLORS = {
+    pending: 'bg-gray-100 text-gray-700',
     received: 'bg-blue-100 text-blue-900',
     preparing: 'bg-yellow-100 text-yellow-900',
     ready: 'bg-green-100 text-green-900',
+    delivering: 'bg-purple-100 text-purple-900',
     delivered: 'bg-gray-100 text-gray-900',
+    cancelled: 'bg-red-100 text-red-900',
 };
