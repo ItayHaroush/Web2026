@@ -55,6 +55,36 @@
     <link rel="apple-touch-icon" href="/icons/chefsync-logo-v2-180.png" />
     <link rel="manifest" href="/manifest.json" />
     <title>TakeEat - הזמנות למסעדה</title>
+    
+    <!-- Facebook/Instagram In-App Browser Detection & Redirect -->
+    <script>
+      (function() {
+        // בדיקה אם אנחנו כבר בדף open.html
+        if (window.location.pathname === '/open.html') {
+          return; // אל תעשה כלום אם כבר בדף המעבר
+        }
+
+        // זיהוי דפדפן פנימי של פייסבוק/אינסטגרם
+        const ua = navigator.userAgent || navigator.vendor || window.opera;
+        const isFacebookInApp = /FBAN|FBAV|Instagram/i.test(ua);
+        
+        // זיהוי מכשיר (אייפון/אנדרואיד)
+        const isIOS = /iPhone|iPad|iPod/i.test(ua);
+        const isAndroid = /Android/i.test(ua);
+        
+        // בדיקה אם המשתמש כבר ראה את הדף (למניעת לופ)
+        const hasSeenWarning = sessionStorage.getItem('fb-redirect-shown');
+
+        // אם זה FB/IG in-app browser ועדיין לא הראינו את הדף
+        if ((isFacebookInApp || (isIOS && /Safari/i.test(ua) === false)) && !hasSeenWarning) {
+          // סימון שכבר הצגנו (למניעת לופ)
+          sessionStorage.setItem('fb-redirect-shown', 'true');
+          
+          // ריידרקט לדף המעבר הסטטי
+          window.location.href = '/open.html';
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
