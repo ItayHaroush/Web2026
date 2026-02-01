@@ -44,15 +44,15 @@ export default function RatingWidget({ value, onChange, readOnly = false, size =
                     const Icon = option.icon;
                     const isSelected = value === option.value;
                     const isHovered = hoveredValue === option.value;
-                    
+
                     // במצב readOnly - הצג רק את הפרצוף שנבחר
                     if (readOnly && !isSelected) {
                         return null;
                     }
-                    
+
                     // במצב עריכה - הפרצוף המרחף או שנבחר צבוע
-                    const isActive = readOnly 
-                        ? isSelected 
+                    const isActive = readOnly
+                        ? isSelected
                         : (hoveredValue ? isHovered : isSelected);
 
                     return (
