@@ -111,6 +111,15 @@ export default function LandingPage() {
                     <div className="absolute bottom-0 left-0 translate-y-12 -translate-x-12 w-64 h-64 bg-brand-primary/20 rounded-full blur-3xl" />
 
                     <div className="relative max-w-5xl mx-auto text-center space-y-10">
+                        {/* Logo */}
+                        <div className="flex justify-center mb-8">
+                            <img 
+                                src="/icons/chefsync-logo-v2-512.png" 
+                                alt="TakeEat Logo" 
+                                className="w-32 h-32 sm:w-40 sm:h-40 drop-shadow-2xl hover:scale-105 transition-transform duration-300"
+                            />
+                        </div>
+
                         {/* Pill Badge */}
                         <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md border border-white/20 text-white px-5 py-2 rounded-full text-sm font-semibold shadow-lg hover:bg-white/15 transition-colors cursor-default">
                             <FaWandMagicSparkles className="text-yellow-300" />
