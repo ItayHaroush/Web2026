@@ -64,6 +64,14 @@
           return; // אל תעשה כלום אם כבר בדף המעבר
         }
 
+        // ✅ בדיקה אם זה דף שיתוף מסעדה (/r/tenant-name)
+        const isRestaurantSharePage = /^\/r\/[^\/]+\/?$/.test(window.location.pathname);
+        
+        // אם זה דף שיתוף - תן ל-React לטעון (הוא יציג את InAppRestrictedView)
+        if (isRestaurantSharePage) {
+          return; // React ינהל את זה דרך RestaurantSharePage component
+        }
+
         // זיהוי דפדפן פנימי של פייסבוק/אינסטגרם
         const ua = navigator.userAgent || navigator.vendor || window.opera;
         const isFacebookInApp = /FBAN|FBAV|Instagram/i.test(ua);
@@ -80,8 +88,9 @@
           // סימון שכבר הצגנו (למניעת לופ)
           sessionStorage.setItem('fb-redirect-shown', 'true');
           
-          // ריידרקט לדף המעבר הסטטי
-          window.location.href = '/open.html';
+          // ריידרקט לדף המעבר הסטטי עם הכתובת המקורית
+          const targetUrl = encodeURIComponent(window.location.href);
+          window.location.href = '/open.html?target=' + targetUrl;
         }
       })();
     </script>
