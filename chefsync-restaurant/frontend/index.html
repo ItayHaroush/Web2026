@@ -59,17 +59,9 @@
     <!-- Facebook/Instagram In-App Browser Detection & Redirect -->
     <script>
       (function() {
-        // בדיקה אם אנחנו כבר בדף open.html
-        if (window.location.pathname === '/open.html') {
+        // בדיקה אם אנחנו כבר בדף open.html או r-share.html
+        if (window.location.pathname === '/open.html' || window.location.pathname === '/r-share.html') {
           return; // אל תעשה כלום אם כבר בדף המעבר
-        }
-
-        // ✅ בדיקה אם זה דף שיתוף מסעדה (/r/tenant-name)
-        const isRestaurantSharePage = /^\/r\/[^\/]+\/?$/.test(window.location.pathname);
-        
-        // אם זה דף שיתוף - תן ל-React לטעון (הוא יציג את InAppRestrictedView)
-        if (isRestaurantSharePage) {
-          return; // React ינהל את זה דרך RestaurantSharePage component
         }
 
         // זיהוי דפדפן פנימי של פייסבוק/אינסטגרם
@@ -88,9 +80,18 @@
           // סימון שכבר הצגנו (למניעת לופ)
           sessionStorage.setItem('fb-redirect-shown', 'true');
           
-          // ריידרקט לדף המעבר הסטטי עם הכתובת המקורית
-          const targetUrl = encodeURIComponent(window.location.href);
-          window.location.href = '/open.html?target=' + targetUrl;
+          // ✅ בדיקה מיוחדת לדפי שיתוף מסעדה (/r/tenant-name)
+          const restaurantShareMatch = window.location.pathname.match(/^\/r\/([^\/]+)\/?$/);
+          
+          if (restaurantShareMatch) {
+            // דף שיתוף מסעדה - הפנה לדף HTML סטטי עם ה-slug
+            const slug = restaurantShareMatch[1];
+            window.location.href = '/r-share.html?slug=' + encodeURIComponent(slug);
+          } else {
+            // כל דף אחר - הפנה לדף המעבר הגנרי
+            const targetUrl = encodeURIComponent(window.location.href);
+            window.location.href = '/open.html?target=' + targetUrl;
+          }
         }
       })();
     </script>
