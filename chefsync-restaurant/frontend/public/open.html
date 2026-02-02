@@ -3,240 +3,188 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>פתח בדפדפן - TakeEat</title>
+    <title>TakeEat - מעבר לדפדפן</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;600;800&display=swap" rel="stylesheet">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-            color: #333;
+            font-family: 'Rubik', sans-serif;
+            background-color: #f3f4f6;
+            background-image: 
+                radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), 
+                radial-gradient(at 50% 0%, hsla(225,39%,30%,1) 0, transparent 50%), 
+                radial-gradient(at 100% 0%, hsla(339,49%,30%,1) 0, transparent 50%);
+            background-size: cover;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+        }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
         }
 
-        .container {
-            background: white;
-            border-radius: 24px;
-            padding: 40px 30px;
-            max-width: 500px;
-            width: 100%;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            text-align: center;
+        .animate-breath {
+            animation: breath 3s ease-in-out infinite;
         }
 
-        .icon {
-            font-size: 64px;
-            margin-bottom: 20px;
+        @keyframes breath {
+            0%, 100% { transform: scale(1); filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1)); }
+            50% { transform: scale(1.05); filter: drop-shadow(0 8px 12px rgba(0,0,0,0.2)); }
         }
 
-        h1 {
-            font-size: 28px;
-            font-weight: 900;
-            color: #667eea;
-            margin-bottom: 16px;
-            line-height: 1.3;
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 3px solid #ff6b6b;
+            width: 20px;
+            height: 20px;
+            -webkit-animation: spin 1s linear infinite; /* Safari */
+            animation: spin 1s linear infinite;
         }
 
-        .subtitle {
-            font-size: 18px;
-            color: #666;
-            margin-bottom: 32px;
-            line-height: 1.6;
-        }
-
-        .button {
-            display: inline-block;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            text-decoration: none;
-            padding: 18px 40px;
-            border-radius: 16px;
-            font-size: 20px;
-            font-weight: 900;
-            margin-bottom: 24px;
-            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
-            transition: all 0.3s ease;
-            cursor: pointer;
-            border: none;
-        }
-
-        .button:active {
-            transform: scale(0.95);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-        }
-
-        .instructions {
-            background: #f8f9fa;
-            border-radius: 16px;
-            padding: 20px;
-            margin-top: 24px;
-        }
-
-        .instructions h3 {
-            font-size: 16px;
-            font-weight: 700;
-            color: #333;
-            margin-bottom: 12px;
-        }
-
-        .steps {
-            text-align: right;
-            color: #666;
-            font-size: 15px;
-            line-height: 1.8;
-        }
-
-        .steps li {
-            margin-bottom: 8px;
-            padding-right: 20px;
-            position: relative;
-        }
-
-        .steps li::before {
-            content: "•";
-            position: absolute;
-            right: 0;
-            color: #667eea;
-            font-weight: bold;
-            font-size: 20px;
-        }
-
-        .logo {
-            max-width: 140px;
-            margin-bottom: 24px;
-            filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15));
-        }
-
-        @media (max-width: 480px) {
-            .container {
-                padding: 30px 20px;
-            }
-
-            h1 {
-                font-size: 24px;
-            }
-
-            .subtitle {
-                font-size: 16px;
-            }
-
-            .button {
-                font-size: 18px;
-                padding: 16px 32px;
-            }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
     </style>
 </head>
-<body>
-    <div class="container">
-        <img src="/icons/chefsync-logo-v2-512.png" alt="TakeEat" class="logo">
-        
-        <h1>כמעט שם!</h1>
-        
-        <p class="subtitle">
-            כדי להזמין אוכל, צריך לפתוח את האתר בדפדפן חיצוני.<br>
-            זה לוקח רק שנייה
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <!-- Decorative Elements -->
+    <div class="fixed top-0 left-0 w-full h-full overflow-hidden -z-10 pointer-events-none">
+        <div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
+        <div class="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-orange-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
+        <div class="absolute bottom-[-10%] left-[20%] w-[40%] h-[40%] bg-pink-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000"></div>
+    </div>
+
+    <div class="glass-card w-full max-w-md rounded-3xl p-8 relative overflow-hidden text-center mx-auto">
+        <!-- Logo Section -->
+        <div class="mb-8 relative z-10">
+            <div class="w-32 h-32 mx-auto bg-white rounded-full flex items-center justify-center shadow-lg mb-2 p-2">
+                <img src="/icons/chefsync-logo-v2-512.png" alt="TakeEat Logo" class="w-full h-full object-contain animate-breath">
+            </div>
+            <div class="inline-flex items-center justify-center gap-2 bg-gray-100 rounded-full px-4 py-1.5 mt-4">
+                <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                <span class="text-xs font-semibold text-gray-600">Secure Redirect</span>
+            </div>
+        </div>
+
+        <!-- Text Content -->
+        <h1 class="text-3xl font-black text-gray-900 mb-3 tracking-tight">נפתח בחלון חדש</h1>
+        <p class="text-gray-500 text-lg leading-relaxed mb-8">
+            לחווית הזמנה חלקה ומאובטחת,<br>אנחנו מעבירים אותך לדפדפן הראשי.
         </p>
 
-        <a href="https://www.takeeat.co.il" class="button" id="openBtn">
-            ⎋ פתח ב-Safari
+        <!-- Primary Action -->
+        <a id="openBtn" href="https://www.takeeat.co.il" 
+           class="group relative w-full flex items-center justify-center gap-3 bg-gradient-to-r from-orange-500 to-rose-600 text-white font-bold text-lg py-4 px-8 rounded-2xl shadow-xl hover:shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 overflow-hidden cursor-pointer">
+            <span class="relative z-10 flex items-center gap-2">
+                <span id="btnText">פתח ב-Browser</span>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 00-2 2h10a2 2 0 00-2-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+            </span>
+            <div class="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
         </a>
 
-        <div class="instructions">
-            <h3>הוראות מהירות:</h3>
-            <ul class="steps">
-                <li>לחץ על שלוש הנקודות (⋯) בפינה</li>
-                <li>בחר "פתח בדפדפן" או "Open in Browser"</li>
-                <li>האתר ייפתח ב-Safari/Chrome</li>
-                <li>הזמן בקלית!</li>
-            </ul>
+        <!-- Helper Instructions -->
+        <div class="mt-8 pt-8 border-t border-gray-100">
+            <p class="text-sm font-semibold text-gray-400 mb-4 tracking-wide uppercase">לא נפתח אוטומטית?</p>
+            <div class="flex justify-center gap-2 text-sm text-gray-600 bg-gray-50 rounded-xl p-4 text-right">
+                <div class="flex-1">
+                    <span class="font-bold text-gray-900 block mb-1">1. לחץ על ה-⋯ למעלה</span>
+                    <span class="text-xs text-gray-500">בפינה העליונה של המסך</span>
+                </div>
+                <!-- Divider -->
+                <div class="w-px bg-gray-200"></div>
+                <div class="flex-1 pr-2">
+                    <span class="font-bold text-gray-900 block mb-1">2. בחר "Open in Browser"</span>
+                    <span class="text-xs text-gray-500">או "פתח בדפדפן"</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mt-6 text-xs text-gray-400 font-mono">
+            Powered by TakeEat &copy; 2026
         </div>
     </div>
 
+    <!-- JavaScript Logic (Preserved & Enhanced) -->
     <script>
-        // URL היעד
         const targetUrl = 'https://www.takeeat.co.il';
         
-        // זיהוי מערכת הפעלה
+        // OS Detection
         const ua = navigator.userAgent;
         const isIOS = /iPhone|iPad|iPod/i.test(ua);
         const isAndroid = /Android/i.test(ua);
-        const isFacebookApp = /FBAN|FBAV/i.test(ua);
-        const isInstagramApp = /Instagram/i.test(ua);
         
         const btn = document.getElementById('openBtn');
+        const btnText = document.getElementById('btnText');
         
-        // עדכון טקסט כפתור לפי מערכת הפעלה
-        if (isIOS) {
-            btn.textContent = '⎋ פתח ב-Safari';
-        } else if (isAndroid) {
-            btn.textContent = '⎋ פתח ב-Chrome';
-        } else {
-            btn.textContent = '⎋ פתח בדפדפן';
-        }
-
-        // אירוע לחיצה על הכפתור
-        btn.addEventListener('click', function(e) {
-            e.preventDefault();
-            
-            // הצגת אינדיקטור טעינה
-            btn.textContent = '✓ פותח...';
-            btn.style.opacity = '0.7';
-            btn.disabled = true;
-            
+        // Initial Button Text Logic
+        function updateButtonText() {
             if (isIOS) {
-                // iOS: ניסיון עם Google Chrome scheme
-                // אם Chrome מותקן - ייפתח שם, אחרת fallback ל-Safari
-                const chromeUrl = 'googlechrome://' + targetUrl.replace('https://', '');
-                window.location.href = chromeUrl;
-                
-                // Fallback: אם Chrome לא מותקן, פתח בדפדפן ברירת מחדל אחרי 1.5 שניות
-                setTimeout(() => {
-                    window.location.href = targetUrl;
-                }, 1500);
-                
+                btnText.textContent = 'פתח ב-Safari';
             } else if (isAndroid) {
-                // Android: שימוש ב-Intent URL לפתיחה ב-Chrome/דפדפן ברירת מחדל
-                const intent = 'intent://' + targetUrl.replace('https://', '') + 
-                               '#Intent;scheme=https;package=com.android.chrome;end';
-                window.location.href = intent;
-                
-                // Fallback: אם Intent נכשל, פתח בדפדפן רגיל
-                setTimeout(() => {
-                    window.location.href = targetUrl;
-                }, 1500);
-                
+                btnText.textContent = 'פתח ב-Chrome';
             } else {
-                // Desktop או מערכת לא מזוהה - פתח בטאב חדש
-                window.open(targetUrl, '_blank') || (window.location.href = targetUrl);
+                btnText.textContent = 'מעבר לאתר';
             }
-            
-            // הודעת עזרה אם לא קרה כלום אחרי 3 שניות
-            setTimeout(() => {
-                if (btn.disabled) {
-                    btn.textContent = '⚠️ השתמש בתפריט (⋯) למעלה';
-                    btn.style.opacity = '1';
-                    btn.style.background = 'linear-gradient(135deg, #f59e0b 0%, #f97316 100%)';
-                }
-            }, 3000);
-        });
+        }
+        
+        // Run initial update
+        if(btnText) updateButtonText();
 
-        // לוג למעקב (רק בדפדפן עם console)
-        console.log('🔍 Browser Detection:', {
-            iOS: isIOS,
-            Android: isAndroid,
-            Facebook: isFacebookApp,
-            Instagram: isInstagramApp,
-            UserAgent: ua
-        });
+        // Click Handler
+        if(btn) {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // Loading State
+                btnText.innerHTML = `
+                    <div class="loader inline-block align-middle ml-2"></div>
+                    <span>פותח...</span>
+                `;
+                btn.style.pointerEvents = 'none';
+                btn.classList.add('opacity-90');
+                
+                if (isIOS) {
+                    // iOS Scheme Logic
+                    const chromeUrl = 'googlechrome://' + targetUrl.replace('https://', '');
+                    window.location.href = chromeUrl;
+                    
+                    setTimeout(() => {
+                        window.location.href = targetUrl;
+                    }, 1500);
+                    
+                } else if (isAndroid) {
+                    // Android Intent Logic
+                    const intent = 'intent://' + targetUrl.replace('https://', '') + 
+                                   '#Intent;scheme=https;package=com.android.chrome;end';
+                    window.location.href = intent;
+                    
+                    setTimeout(() => {
+                        window.location.href = targetUrl;
+                    }, 1500);
+                    
+                } else {
+                    // Desktop / Fallback
+                    window.open(targetUrl, '_blank') || (window.location.href = targetUrl);
+                }
+                
+                // Timeout Feedback
+                setTimeout(() => {
+                    btnText.textContent = '⚠️ השתמש בתפריט למעלה ↗';
+                    btn.classList.remove('from-orange-500', 'to-rose-600');
+                    btn.classList.add('from-gray-700', 'to-gray-900');
+                    btn.style.pointerEvents = 'auto'; // allow retry
+                }, 3500);
+            });
+        }
     </script>
 </body>
 </html>
