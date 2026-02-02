@@ -352,7 +352,7 @@ class OrderController extends Controller
                 'eta_minutes' => $etaMinutes,
                 'eta_note' => $etaNote,
                 'eta_updated_at' => now(),
-                'status' => Order::STATUS_RECEIVED,
+                'status' => Order::STATUS_PENDING,
                 'total_amount' => $totalAmount + $deliveryFee,
             ]);
 

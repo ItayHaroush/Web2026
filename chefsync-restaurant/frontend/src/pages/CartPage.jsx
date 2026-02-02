@@ -5,7 +5,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { CustomerLayout } from '../layouts/CustomerLayout';
-import { FaMask, FaBoxOpen, FaStickyNote, FaTimes } from 'react-icons/fa';
+import { FaMask, FaBoxOpen, FaStickyNote, FaTimes, FaShoppingCart, FaUser, FaPhone, FaMapMarkerAlt, FaMoneyBillWave, FaCreditCard, FaTruck, FaStore } from 'react-icons/fa';
 import orderService from '../services/orderService';
 import { UI_TEXT } from '../constants/ui';
 import DeliveryDetailsModal from '../components/DeliveryDetailsModal';
@@ -241,7 +241,12 @@ export default function CartPage() {
                         }
                     }}
                 />
-                <h1 className="text-3xl font-bold text-brand-primary">סל קניות</h1>
+                <div className="flex items-center gap-3">
+                    <div className="p-3 bg-blue-100 rounded-2xl">
+                        <FaShoppingCart className="text-2xl text-blue-600" />
+                    </div>
+                    <h1 className="text-3xl font-black text-gray-900">סל קניות</h1>
+                </div>
 
                 {/* באנר דמו */}
                 {restaurant?.is_demo && (
@@ -313,57 +318,59 @@ export default function CartPage() {
                         return (
                             <div
                                 key={item.cartKey}
-                                className="bg-white border border-gray-200 rounded-lg p-4 flex justify-between items-center"
+                                className="bg-white border-2 border-gray-200 rounded-2xl p-5 hover:shadow-lg transition-shadow"
                             >
-                                <div className="flex-1 space-y-1">
-                                    <h3 className="font-semibold text-gray-900">{item.name}</h3>
-                                    {item.variant?.name && (
-                                        <p className="text-sm text-brand-primary">סוג לחם: {item.variant.name}</p>
-                                    )}
-                                    {addonsInside.length > 0 && (
-                                        <p className="text-xs text-gray-500">תוספות: {addonsInside.join(' · ')}</p>
-                                    )}
-                                    {addonsOnSide.length > 0 && (
-                                        <p className="text-xs text-orange-600 font-medium flex items-center gap-1">
-                                            <FaBoxOpen />
-                                            <span>בצד: {addonsOnSide.join(' · ')}</span>
-                                        </p>
-                                    )}
-                                    <p className="text-xs text-gray-400">₪{item.unitPrice.toFixed(2)} ליחידה</p>
-                                </div>
-
-                                <div className="flex items-center gap-4">
-                                    {/* כמות */}
-                                    <div className="flex items-center gap-2 border border-gray-300 rounded">
-                                        <button
-                                            onClick={() => handleQuantityChange(item.cartKey, item.qty - 1)}
-                                            className="px-3 py-1 text-gray-600 hover:bg-gray-100"
-                                        >
-                                            −
-                                        </button>
-                                        <span className="px-3 py-1 min-w-[40px] text-center">{item.qty}</span>
-                                        <button
-                                            onClick={() => handleQuantityChange(item.cartKey, item.qty + 1)}
-                                            className="px-3 py-1 text-gray-600 hover:bg-gray-100"
-                                        >
-                                            +
-                                        </button>
+                                <div className="flex justify-between items-start gap-4">
+                                    <div className="flex-1 space-y-2">
+                                        <h3 className="font-bold text-gray-900 text-lg">{item.name}</h3>
+                                        {item.variant?.name && (
+                                            <p className="text-sm text-blue-600 font-medium">סוג לחם: {item.variant.name}</p>
+                                        )}
+                                        {addonsInside.length > 0 && (
+                                            <p className="text-sm text-gray-600">תוספות: {addonsInside.join(' · ')}</p>
+                                        )}
+                                        {addonsOnSide.length > 0 && (
+                                            <p className="text-sm text-orange-600 font-medium flex items-center gap-1">
+                                                <FaBoxOpen />
+                                                <span>בצד: {addonsOnSide.join(' · ')}</span>
+                                            </p>
+                                        )}
+                                        <p className="text-xs text-gray-500">₪{item.unitPrice.toFixed(2)} ליחידה</p>
                                     </div>
 
-                                    {/* מחיר כולל לפריט */}
-                                    <div className="min-w-[80px] text-right">
-                                        <p className="font-semibold text-brand-accent">
-                                            ₪{item.totalPrice.toFixed(2)}
-                                        </p>
-                                    </div>
+                                    <div className="flex flex-col items-end gap-3">
+                                        {/* מחיר כולל */}
+                                        <div className="text-right">
+                                            <p className="font-black text-xl text-gray-900">
+                                                ₪{item.totalPrice.toFixed(2)}
+                                            </p>
+                                        </div>
 
-                                    {/* הסרה */}
-                                    <button
-                                        onClick={() => removeFromCart(item.cartKey)}
-                                        className="text-red-600 hover:text-red-800 font-semibold"
-                                    >
-                                        ×
-                                    </button>
+                                        {/* קוביית כמות משופרת */}
+                                        <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-1">
+                                            <button
+                                                onClick={() => handleQuantityChange(item.cartKey, item.qty - 1)}
+                                                className="w-8 h-8 flex items-center justify-center rounded-lg bg-white hover:bg-red-50 hover:text-red-600 text-gray-600 font-bold transition-all shadow-sm"
+                                            >
+                                                −
+                                            </button>
+                                            <span className="w-10 text-center font-bold text-gray-900">{item.qty}</span>
+                                            <button
+                                                onClick={() => handleQuantityChange(item.cartKey, item.qty + 1)}
+                                                className="w-8 h-8 flex items-center justify-center rounded-lg bg-white hover:bg-green-50 hover:text-green-600 text-gray-600 font-bold transition-all shadow-sm"
+                                            >
+                                                +
+                                            </button>
+                                        </div>
+
+                                        {/* הסרה */}
+                                        <button
+                                            onClick={() => removeFromCart(item.cartKey)}
+                                            className="text-red-500 hover:text-red-700 font-bold text-xl transition-colors"
+                                        >
+                                            ×
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         );
@@ -371,31 +378,31 @@ export default function CartPage() {
                 </div>
 
                 {/* סכום ביניים */}
-                <div className="border-t-2 border-gray-300 pt-4 space-y-2">
+                <div className="bg-gradient-to-br from-gray-50 to-blue-50 border-2 border-gray-200 rounded-2xl p-6 space-y-3">
                     <div className="flex justify-between items-center text-lg">
-                        <span>סכום ביניים:</span>
-                        <span className="text-gray-700">₪{total.toFixed(2)}</span>
+                        <span className="font-medium text-gray-700">סכום ביניים:</span>
+                        <span className="font-bold text-gray-900">₪{total.toFixed(2)}</span>
                     </div>
 
                     {customerInfo.delivery_method === 'delivery' && (
                         <div className="flex justify-between items-center text-lg">
                             <div className="flex items-center gap-2">
-                                <span>דמי משלוח:</span>
+                                <span className="font-medium text-gray-700">דמי משלוח:</span>
                                 {checkingZone && <span className="text-xs text-gray-500">⏳ בודק...</span>}
                             </div>
-                            <span className="text-gray-700">
+                            <span className="font-bold text-gray-900">
                                 {deliveryFee > 0 ? `₪${deliveryFee.toFixed(2)}` : checkingZone ? '...' : '₪0.00'}
                             </span>
                         </div>
                     )}
 
-                    <div className="flex justify-between items-center text-2xl font-bold border-t pt-2">
-                        <span>סה"כ לתשלום:</span>
-                        <span className="text-brand-accent">₪{totalWithDelivery.toFixed(2)}</span>
+                    <div className="flex justify-between items-center text-2xl font-black border-t-2 border-gray-300 pt-3">
+                        <span className="text-gray-900">סה"כ לתשלום:</span>
+                        <span className="text-blue-600">₪{totalWithDelivery.toFixed(2)}</span>
                     </div>
 
-                    {/* כפתור הערות צף */}
-                    <div className="relative mt-4 z-10 w-full">
+                    {/* כפתור הערות קטן וחמוד */}
+                    <div className="flex justify-center mt-4">
                         <button
                             type="button"
                             onClick={() => {
@@ -403,14 +410,12 @@ export default function CartPage() {
                                 setTempNotes(initialNotes);
                                 setShowNotesModal(true);
                             }}
-                            className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 bg-gradient-to-r from-amber-400 to-yellow-400 text-white font-semibold rounded-lg shadow-md hover:shadow-lg hover:from-amber-500 hover:to-yellow-500 transition-all duration-200 group active:scale-95"
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-amber-100 hover:bg-amber-200 text-amber-800 font-medium text-sm rounded-full transition-all shadow-sm hover:shadow-md active:scale-95"
                         >
-                            <FaStickyNote className="text-base group-hover:rotate-6 transition-transform" />
-                            <span className="text-sm">
-                                {customerInfo?.delivery_notes ? 'ערוך הערה' : 'הוסף הערה למטבח'}
-                            </span>
+                            <FaStickyNote className="text-amber-600" />
+                            <span>{customerInfo?.delivery_notes ? 'ערוך הערה' : 'הוסף הערה'}</span>
                             {customerInfo?.delivery_notes && (
-                                <span className="bg-white/90 text-amber-600 text-xs px-1.5 py-0.5 rounded-full font-bold shadow-sm">
+                                <span className="bg-amber-600 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-bold">
                                     ✓
                                 </span>
                             )}
@@ -439,67 +444,86 @@ export default function CartPage() {
                 </div>
 
                 {/* טופס פרטים אישיים */}
-                <form id="cart-order-form" onSubmit={handleSubmitOrder} className="space-y-4 bg-gray-50 p-6 rounded-lg">
-                    <h2 className="text-xl font-bold text-gray-900">פרטים אישיים</h2>
-
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            שם מלא*
-                        </label>
-                        <input
-                            type="text"
-                            value={customerInfo.name}
-                            onChange={(e) => setCustomerInfo({ ...customerInfo, name: e.target.value })}
-                            placeholder="הקלד את שמך המלא"
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary"
-                            required
-                        />
+                <form id="cart-order-form" onSubmit={handleSubmitOrder} className="space-y-6 bg-white border border-gray-200 p-6 sm:p-8 rounded-2xl shadow-sm">
+                    <div className="flex items-center gap-2 pb-4 border-b border-gray-200">
+                        <FaUser className="text-blue-600" />
+                        <h2 className="text-xl font-black text-gray-900">פרטים אישיים</h2>
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-2">
+                            שם מלא*
+                        </label>
+                        <div className="relative">
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                                <FaUser />
+                            </div>
+                            <input
+                                type="text"
+                                value={customerInfo.name}
+                                onChange={(e) => setCustomerInfo({ ...customerInfo, name: e.target.value })}
+                                placeholder="הקלד את שמך המלא"
+                                className="w-full pr-10 pl-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                required
+                            />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-2">
                             טלפון*
                         </label>
-                        <input
-                            type="tel"
-                            value={customerInfo.phone}
-                            onChange={(e) => setCustomerInfo({ ...customerInfo, phone: e.target.value })}
-                            placeholder="050-1234567"
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary"
-                            required
-                        />
+                        <div className="relative">
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                                <FaPhone />
+                            </div>
+                            <input
+                                type="tel"
+                                value={customerInfo.phone}
+                                onChange={(e) => setCustomerInfo({ ...customerInfo, phone: e.target.value })}
+                                placeholder="050-1234567"
+                                className="w-full pr-10 pl-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all dir-ltr text-right"
+                                required
+                            />
+                        </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <p className="block text-sm font-medium text-gray-700 mb-2">שיטת קבלה</p>
-                            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-                                <label className={`w-full sm:flex-1 border rounded-lg p-3 cursor-pointer text-sm sm:text-base ${customerInfo.delivery_method === 'pickup' ? 'border-brand-primary bg-brand-primary/5' : 'border-gray-300'}`}>
-                                    <input
-                                        type="radio"
-                                        name="delivery_method"
-                                        value="pickup"
-                                        checked={customerInfo.delivery_method === 'pickup'}
-                                        onChange={(e) => setCustomerInfo({ ...customerInfo, delivery_method: e.target.value })}
-                                        className="mr-2"
-                                    />
-                                    איסוף עצמי
+                            <p className="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-3">שיטת קבלה</p>
+                            <div className="flex flex-col sm:flex-row gap-3">
+                                <label className={`w-full sm:flex-1 border-2 rounded-xl p-4 cursor-pointer transition-all ${customerInfo.delivery_method === 'pickup' ? 'border-blue-500 bg-blue-50 shadow-md' : 'border-gray-200 hover:border-gray-300'}`}>
+                                    <div className="flex items-center gap-3">
+                                        <input
+                                            type="radio"
+                                            name="delivery_method"
+                                            value="pickup"
+                                            checked={customerInfo.delivery_method === 'pickup'}
+                                            onChange={(e) => setCustomerInfo({ ...customerInfo, delivery_method: e.target.value })}
+                                            className="w-4 h-4"
+                                        />
+                                        <FaStore className={customerInfo.delivery_method === 'pickup' ? 'text-blue-600' : 'text-gray-400'} />
+                                        <span className="font-semibold text-gray-900">איסוף עצמי</span>
+                                    </div>
                                 </label>
-                                <label className={`w-full sm:flex-1 border rounded-lg p-3 cursor-pointer text-sm sm:text-base ${customerInfo.delivery_method === 'delivery' ? 'border-brand-primary bg-brand-primary/5' : 'border-gray-300'}`}>
-                                    <input
-                                        type="radio"
-                                        name="delivery_method"
-                                        value="delivery"
-                                        checked={customerInfo.delivery_method === 'delivery'}
-                                        onChange={(e) => {
-                                            setCustomerInfo({ ...customerInfo, delivery_method: e.target.value });
-                                            if (!deliveryLocation) {
-                                                setShowLocationModal(true);
-                                            }
-                                        }}
-                                        className="mr-2"
-                                    />
-                                    משלוח
+                                <label className={`w-full sm:flex-1 border-2 rounded-xl p-4 cursor-pointer transition-all ${customerInfo.delivery_method === 'delivery' ? 'border-blue-500 bg-blue-50 shadow-md' : 'border-gray-200 hover:border-gray-300'}`}>
+                                    <div className="flex items-center gap-3">
+                                        <input
+                                            type="radio"
+                                            name="delivery_method"
+                                            value="delivery"
+                                            checked={customerInfo.delivery_method === 'delivery'}
+                                            onChange={(e) => {
+                                                setCustomerInfo({ ...customerInfo, delivery_method: e.target.value });
+                                                if (!deliveryLocation) {
+                                                    setShowLocationModal(true);
+                                                }
+                                            }}
+                                            className="w-4 h-4"
+                                        />
+                                        <FaTruck className={customerInfo.delivery_method === 'delivery' ? 'text-blue-600' : 'text-gray-400'} />
+                                        <span className="font-semibold text-gray-900">משלוח</span>
+                                    </div>
                                 </label>
                             </div>
                             {customerInfo.delivery_method === 'delivery' && (
@@ -524,18 +548,25 @@ export default function CartPage() {
                             )}
                         </div>
 
-                        <div className="border rounded-lg p-3 bg-white">
-                            <p className="text-sm font-medium text-gray-700">תשלום</p>
-                            <p className="text-gray-800 font-semibold">מזומן בלבד בעת איסוף/משלוח</p>
+                        <div className="border-2 border-gray-200 rounded-xl p-4 bg-gradient-to-br from-green-50 to-emerald-50">
+                            <div className="flex items-center gap-2 mb-2">
+                                <FaMoneyBillWave className="text-green-600" />
+                                <p className="text-xs font-bold text-gray-600 uppercase tracking-wide">תשלום</p>
+                            </div>
+                            <p className="text-gray-900 font-bold flex items-center gap-2">
+                                <FaCreditCard className="text-green-600" />
+                                מזומן בלבד
+                            </p>
+                            <p className="text-xs text-gray-600 mt-1">תשלום בעת איסוף/משלוח</p>
                         </div>
                     </div>
 
                     {/* כפתורים */}
-                    <div className="flex gap-3 mt-6">
+                    <div className="flex flex-col sm:flex-row gap-3 mt-6">
                         <button
                             type="submit"
                             disabled={submitting}
-                            className="flex-1 bg-brand-primary text-white font-bold py-4 rounded-lg hover:bg-gray-800 transition disabled:opacity-50"
+                            className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-black py-4 rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed"
                         >
                             {submitting
                                 ? 'שולח...'
@@ -545,7 +576,7 @@ export default function CartPage() {
                         </button>
                         <a
                             href={tenantId ? `/${tenantId}/menu` : '/'}
-                            className="flex-1 bg-gray-300 text-gray-800 font-bold py-4 rounded-lg text-center hover:bg-gray-400 transition"
+                            className="flex-1 bg-gray-200 text-gray-800 font-bold py-4 rounded-xl text-center hover:bg-gray-300 transition-all"
                         >
                             {UI_TEXT.BTN_CANCEL}
                         </a>
