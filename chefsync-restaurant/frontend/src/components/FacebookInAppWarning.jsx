@@ -51,7 +51,7 @@ export default function FacebookInAppWarning() {
     }
 
     return (
-        <div className="fixed top-0 left-0 right-0 z-[9999] bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-2xl animate-in slide-in-from-top-5 duration-500">
+        <div className="fixed top-0 left-0 right-0 z-[9999] bg-gradient-to-r from-red-600 to-rose-700 text-white shadow-2xl animate-in slide-in-from-top-5 duration-500">
             <div className="max-w-4xl mx-auto px-4 py-4">
                 <div className="flex items-start gap-4">
                     {/* אייקון */}
@@ -64,7 +64,7 @@ export default function FacebookInAppWarning() {
                         <h3 className="font-black text-base mb-1 tracking-tight">
                             לחוויה מיטבית - פתח בדפדפן
                         </h3>
-                        <p className="text-sm text-blue-50 leading-relaxed font-medium">
+                        <p className="text-sm text-red-50 leading-relaxed font-medium">
                             נראה שפתחת את האתר בתוך אפליקציית פייסבוק/אינסטגרם. לחוויית הזמנה מלאה וחלקה, מומלץ לפתוח את האתר בדפדפן Chrome, Safari או Firefox.
                         </p>
 
@@ -72,7 +72,7 @@ export default function FacebookInAppWarning() {
                         <div className="flex flex-wrap gap-2 mt-3">
                             <button
                                 onClick={handleOpenInBrowser}
-                                className="px-4 py-2 bg-white text-blue-600 rounded-xl font-black text-xs uppercase tracking-wider hover:bg-blue-50 transition-all active:scale-95 flex items-center gap-2 shadow-md"
+                                className="px-4 py-2 bg-white text-red-600 rounded-xl font-black text-xs uppercase tracking-wider hover:bg-red-50 transition-all active:scale-95 flex items-center gap-2 shadow-md"
                             >
                                 <FaExternalLinkAlt size={12} />
                                 איך לפתוח בדפדפן?
