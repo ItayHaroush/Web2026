@@ -162,12 +162,19 @@
     </div>
 
     <script>
-        // זיהוי מערכת הפעלה לטקסט מותאם
-        const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-        const isAndroid = /Android/i.test(navigator.userAgent);
+        // URL היעד
+        const targetUrl = 'https://www.takeeat.co.il';
+        
+        // זיהוי מערכת הפעלה
+        const ua = navigator.userAgent;
+        const isIOS = /iPhone|iPad|iPod/i.test(ua);
+        const isAndroid = /Android/i.test(ua);
+        const isFacebookApp = /FBAN|FBAV/i.test(ua);
+        const isInstagramApp = /Instagram/i.test(ua);
         
         const btn = document.getElementById('openBtn');
         
+        // עדכון טקסט כפתור לפי מערכת הפעלה
         if (isIOS) {
             btn.textContent = '⎋ פתח ב-Safari';
         } else if (isAndroid) {
@@ -176,25 +183,59 @@
             btn.textContent = '⎋ פתח בדפדפן';
         }
 
-        // ניסיון לפתיחה ישירה בדפדפן חיצוני
+        // אירוע לחיצה על הכפתור
         btn.addEventListener('click', function(e) {
-            // עבור iOS - ניסיון לפתוח ב-Safari
+            e.preventDefault();
+            
+            // הצגת אינדיקטור טעינה
+            btn.textContent = '✓ פותח...';
+            btn.style.opacity = '0.7';
+            btn.disabled = true;
+            
             if (isIOS) {
-                // iOS יכול לפתוח ישירות ב-Safari אם יש intent מיוחד
-                window.location.href = 'https://www.takeeat.co.il';
+                // iOS: ניסיון עם Google Chrome scheme
+                // אם Chrome מותקן - ייפתח שם, אחרת fallback ל-Safari
+                const chromeUrl = 'googlechrome://' + targetUrl.replace('https://', '');
+                window.location.href = chromeUrl;
+                
+                // Fallback: אם Chrome לא מותקן, פתח בדפדפן ברירת מחדל אחרי 1.5 שניות
+                setTimeout(() => {
+                    window.location.href = targetUrl;
+                }, 1500);
+                
+            } else if (isAndroid) {
+                // Android: שימוש ב-Intent URL לפתיחה ב-Chrome/דפדפן ברירת מחדל
+                const intent = 'intent://' + targetUrl.replace('https://', '') + 
+                               '#Intent;scheme=https;package=com.android.chrome;end';
+                window.location.href = intent;
+                
+                // Fallback: אם Intent נכשל, פתח בדפדפן רגיל
+                setTimeout(() => {
+                    window.location.href = targetUrl;
+                }, 1500);
+                
+            } else {
+                // Desktop או מערכת לא מזוהה - פתח בטאב חדש
+                window.open(targetUrl, '_blank') || (window.location.href = targetUrl);
             }
+            
+            // הודעת עזרה אם לא קרה כלום אחרי 3 שניות
+            setTimeout(() => {
+                if (btn.disabled) {
+                    btn.textContent = '⚠️ השתמש בתפריט (⋯) למעלה';
+                    btn.style.opacity = '1';
+                    btn.style.background = 'linear-gradient(135deg, #f59e0b 0%, #f97316 100%)';
+                }
+            }, 3000);
         });
 
-        // הצגת מסך טעינה אם הכפתור נלחץ
-        let clicked = false;
-        btn.addEventListener('click', function() {
-            if (!clicked) {
-                clicked = true;
-                setTimeout(() => {
-                    btn.textContent = '✓ נפתח בדפדפן...';
-                    btn.style.opacity = '0.7';
-                }, 100);
-            }
+        // לוג למעקב (רק בדפדפן עם console)
+        console.log('🔍 Browser Detection:', {
+            iOS: isIOS,
+            Android: isAndroid,
+            Facebook: isFacebookApp,
+            Instagram: isInstagramApp,
+            UserAgent: ua
         });
     </script>
 </body>
