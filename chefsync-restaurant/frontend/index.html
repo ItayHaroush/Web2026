@@ -58,7 +58,11 @@
     
     <!-- Facebook/Instagram In-App Browser Detection & Redirect -->
     <script>
+      // 🔥 STEP 1: Basic JS test
+      alert('INDEX HTML JS LOADED');
+      
       (function() {
+        alert('GUARD FUNCTION START');
         // בדיקה אם אנחנו כבר בדף open.html או r-share.html
         if (window.location.pathname === '/open.html' || window.location.pathname === '/r-share.html') {
           return; // אל תעשה כלום אם כבר בדף המעבר
@@ -97,7 +101,18 @@
     </script>
   </head>
   <body>
+    <!-- 🔥 STEP 2: Before bundle test -->
+    <script>
+      console.log('BEFORE BUNDLE');
+      alert('BEFORE BUNDLE');
+    </script>
+    
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+    
+    <!-- 🔥 STEP 3: nomodule fallback test -->
+    <script nomodule>
+      alert('NO MODULE FALLBACK - FB doesnt support ES modules');
+    </script>
   </body>
 </html>
