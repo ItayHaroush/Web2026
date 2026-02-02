@@ -1,3 +1,7 @@
+// 🔥 STEP 2: main.jsx entry test
+alert('MAIN.JSX START');
+console.log('MAIN.JSX START');
+
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
