@@ -435,7 +435,75 @@ export default function OrderStatusPage() {
                                     etaMinutes={order.eta_minutes}
                                     etaNote={order.eta_note}
                                     deliveryMethod={order.delivery_method}
-                                />
+                                    orderStatus={order.status}
+                                >
+                                    {/* ביקורת מוטמעת בתוך המודל */}
+                                    {order.status === ORDER_STATUS.DELIVERED && !order.rating && !reviewSuccess && (
+                                        <div className="w-full space-y-4">
+                                            <div className="border-t border-green-200 pt-4">
+                                                <h3 className="text-lg sm:text-xl font-black text-gray-900 mb-3 text-center">
+                                                    איך הייתה החוויה?
+                                                </h3>
+                                                
+                                                {/* ווידג'ט דירוג */}
+                                                <div className="py-2">
+                                                    <RatingWidget
+                                                        value={selectedRating}
+                                                        onChange={setSelectedRating}
+                                                        size="md"
+                                                    />
+                                                </div>
+
+                                                {/* שדה טקסט */}
+                                                <div className="max-w-md mx-auto mt-3">
+                                                    <textarea
+                                                        value={reviewText}
+                                                        onChange={(e) => setReviewText(e.target.value)}
+                                                        placeholder="ספר לנו על החוויה שלך (אופציונלי)"
+                                                        className="w-full p-3 border-2 border-gray-200 rounded-xl resize-none focus:border-green-400 focus:ring-2 focus:ring-green-100 outline-none transition-all text-sm"
+                                                        rows={2}
+                                                        maxLength={500}
+                                                    />
+                                                    <p className="text-xs text-gray-500 mt-1 text-right">
+                                                        {reviewText.length}/500 תווים
+                                                    </p>
+                                                </div>
+
+                                                {/* כפתור שליחה */}
+                                                <button
+                                                    onClick={handleSubmitReview}
+                                                    disabled={!selectedRating || submittingReview}
+                                                    className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-3 rounded-xl font-bold text-base hover:from-green-700 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:scale-105 active:scale-95 shadow-md mt-3"
+                                                >
+                                                    {submittingReview ? 'שולח...' : 'שלח ביקורת'}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* הצגת תודה אחרי שליחת דירוג */}
+                                    {(order.rating || reviewSuccess) && order.status === ORDER_STATUS.DELIVERED && (
+                                        <div className="w-full border-t border-green-200 pt-4 text-center space-y-3">
+                                            <h3 className="text-xl font-black text-gray-900">
+                                                תודה על הדירוג! 💚
+                                            </h3>
+                                            {order.rating && (
+                                                <div className="pt-2">
+                                                    <RatingWidget
+                                                        value={order.rating}
+                                                        readOnly
+                                                        size="sm"
+                                                    />
+                                                    {order.review_text && (
+                                                        <div className="mt-3 bg-white/60 rounded-xl p-3 text-xs sm:text-sm text-gray-700 italic">
+                                                            "{order.review_text}"
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </CountdownTimer>
                             </div>
                         )}
 
@@ -573,82 +641,6 @@ export default function OrderStatusPage() {
                                 <span>₪{Number(order.total_amount || 0).toFixed(2)}</span>
                             </div>
                         </div>
-                    </div>
-                )}
-
-                {/* טופס דירוג - אחרי delivered */}
-                {order.status === ORDER_STATUS.DELIVERED && !order.rating && !reviewSuccess && (
-                    <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-3xl p-8 border-2 border-purple-200 shadow-lg">
-                        <div className="text-center space-y-6">
-                            {/* כותרת */}
-                            <div>
-                                <h3 className="text-2xl font-black text-gray-900 mb-2">
-                                    איך הייתה החוויה?
-                                </h3>
-                                <p className="text-sm text-gray-600">
-                                    הדירוג שלך עוזר לנו להשתפר
-                                </p>
-                            </div>
-
-                            {/* ווידג'ט דירוג */}
-                            <div className="py-4">
-                                <RatingWidget
-                                    value={selectedRating}
-                                    onChange={setSelectedRating}
-                                    size="lg"
-                                />
-                            </div>
-
-                            {/* שדה טקסט */}
-                            <div className="max-w-md mx-auto">
-                                <textarea
-                                    value={reviewText}
-                                    onChange={(e) => setReviewText(e.target.value)}
-                                    placeholder="ספר לנו על החוויה שלך (אופציונלי)"
-                                    className="w-full p-4 border-2 border-gray-200 rounded-2xl resize-none focus:border-purple-400 focus:ring-4 focus:ring-purple-100 outline-none transition-all"
-                                    rows={3}
-                                    maxLength={500}
-                                />
-                                <p className="text-xs text-gray-500 mt-2 text-right">
-                                    {reviewText.length}/500 תווים
-                                </p>
-                            </div>
-
-                            {/* כפתור שליחה */}
-                            <button
-                                onClick={handleSubmitReview}
-                                disabled={!selectedRating || submittingReview}
-                                className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-8 py-4 rounded-2xl font-black text-lg hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:scale-105 active:scale-95 shadow-lg"
-                            >
-                                {submittingReview ? 'שולח...' : 'שלח ביקורת'}
-                            </button>
-                        </div>
-                    </div>
-                )}
-
-                {/* הצגת תודה אחרי שליחת דירוג */}
-                {(order.rating || reviewSuccess) && order.status === ORDER_STATUS.DELIVERED && (
-                    <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-3xl p-8 border-2 border-green-200 shadow-lg text-center space-y-4">
-                        <h3 className="text-2xl font-black text-gray-900">
-                            תודה על הדירוג
-                        </h3>
-                        <p className="text-lg text-gray-700 font-bold">
-                            בתאבון והנאה
-                        </p>
-                        {order.rating && (
-                            <div className="pt-4">
-                                <RatingWidget
-                                    value={order.rating}
-                                    readOnly
-                                    size="md"
-                                />
-                                {order.review_text && (
-                                    <div className="mt-4 bg-white/50 rounded-2xl p-4 text-sm text-gray-700 italic">
-                                        "{order.review_text}"
-                                    </div>
-                                )}
-                            </div>
-                        )}
                     </div>
                 )}
 

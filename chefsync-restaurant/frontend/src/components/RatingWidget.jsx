@@ -21,9 +21,9 @@ export default function RatingWidget({ value, onChange, readOnly = false, size =
     ];
 
     const sizeClasses = {
-        sm: 'text-3xl',
-        md: 'text-5xl',
-        lg: 'text-7xl',
+        sm: 'text-2xl sm:text-3xl',
+        md: 'text-3xl sm:text-5xl',
+        lg: 'text-4xl sm:text-7xl',
     };
 
     const iconSize = sizeClasses[size] || sizeClasses.md;
@@ -39,7 +39,7 @@ export default function RatingWidget({ value, onChange, readOnly = false, size =
     return (
         <div className="flex flex-col items-center gap-4">
             {/* שורת אייקונים */}
-            <div className="flex items-center gap-3 sm:gap-6">
+            <div className="flex items-center gap-2 sm:gap-3 md:gap-6 flex-wrap justify-center">
                 {ratingOptions.map((option) => {
                     const Icon = option.icon;
                     const isSelected = value === option.value;
