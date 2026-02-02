@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { CustomerLayout } from '../layouts/CustomerLayout';
-import { FaMask, FaBoxOpen } from 'react-icons/fa';
+import { FaMask, FaBoxOpen, FaUser, FaPhone, FaClock, FaInfoCircle, FaUtensils, FaShoppingBag, FaCheckCircle, FaExclamationTriangle } from 'react-icons/fa';
 import orderService from '../services/orderService';
 import { ORDER_STATUS, ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from '../constants/api';
 import RatingWidget from '../components/RatingWidget';
@@ -384,46 +384,66 @@ export default function OrderStatusPage() {
 
                 {/* כרטיס הזמנה */}
                 {showStatusCard && (
-                    <div className="bg-white border-2 border-brand-primary rounded-lg p-4 sm:p-6 max-w-2xl mx-auto">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
-                            <div>
-                                <p className="text-sm text-gray-600 mb-1">שם</p>
-                                <p className="font-semibold text-gray-900">{order.customer_name}</p>
+                    <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 sm:p-8 max-w-3xl mx-auto">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-6">
+                            <div className="flex items-start gap-3">
+                                <div className="mt-1 text-blue-600">
+                                    <FaUser className="text-lg" />
+                                </div>
+                                <div>
+                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">שם לקוח</p>
+                                    <p className="font-bold text-gray-900">{order.customer_name}</p>
+                                </div>
                             </div>
-                            <div>
-                                <p className="text-sm text-gray-600 mb-1">טלפון</p>
-                                <p className="font-semibold text-gray-900">{formatIsraeliPhone(order.customer_phone)}</p>
+                            <div className="flex items-start gap-3">
+                                <div className="mt-1 text-green-600">
+                                    <FaPhone className="text-lg" />
+                                </div>
+                                <div>
+                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">טלפון</p>
+                                    <p className="font-bold text-gray-900 dir-ltr text-right">{formatIsraeliPhone(order.customer_phone)}</p>
+                                </div>
                             </div>
 
-                            <div>
-                                <p className="text-sm text-gray-600 mb-1">זמן הזמנה</p>
-                                <p className="font-semibold text-gray-900">
-                                    {new Date(order.created_at).toLocaleString('he-IL')}
-                                </p>
+                            <div className="flex items-start gap-3">
+                                <div className="mt-1 text-purple-600">
+                                    <FaClock className="text-lg" />
+                                </div>
+                                <div>
+                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">זמן הזמנה</p>
+                                    <p className="font-bold text-gray-900">
+                                        {new Date(order.created_at).toLocaleString('he-IL', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })}
+                                    </p>
+                                </div>
                             </div>
-                            <div className="col-2">
-                                <p className="text-sm text-gray-600 mb-1">זמן משוער</p>
-                                {order.eta_minutes ? (
-                                    <div className="flex items-center gap-2">
-                                        <p className="font-semibold text-gray-900">{order.eta_minutes} דקות</p>
-                                        {order.eta_note && (
-                                            <div className="relative group">
-                                                <button
-                                                    type="button"
-                                                    className="w-5 h-5 rounded-full bg-amber-100 text-amber-700 text-xs font-bold flex items-center justify-center"
-                                                    aria-label="מידע נוסף על זמן משוער"
-                                                >
-                                                    !
-                                                </button>
-                                                <div className="absolute z-10 hidden group-hover:block group-focus-within:block top-7 right-0 bg-gray-900 text-white text-xs px-3 py-2 rounded-lg shadow-lg max-w-xs whitespace-pre-wrap">
-                                                    {order.eta_note}
+                            <div className="flex items-start gap-3">
+                                <div className="mt-1 text-orange-600">
+                                    <FaInfoCircle className="text-lg" />
+                                </div>
+                                <div className="flex-1">
+                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">זמן הכנה משוער</p>
+                                    {order.eta_minutes ? (
+                                        <div className="flex items-center gap-2">
+                                            <p className="font-bold text-gray-900">{order.eta_minutes} דקות</p>
+                                            {order.eta_note && (
+                                                <div className="relative group">
+                                                    <button
+                                                        type="button"
+                                                        className="w-5 h-5 rounded-full bg-orange-100 text-orange-600 text-xs font-bold flex items-center justify-center hover:bg-orange-200 transition"
+                                                        aria-label="מידע נוסף על זמן משוער"
+                                                    >
+                                                        <FaInfoCircle />
+                                                    </button>
+                                                    <div className="absolute z-10 hidden group-hover:block group-focus-within:block top-7 right-0 bg-gray-900 text-white text-xs px-3 py-2 rounded-lg shadow-lg max-w-xs whitespace-pre-wrap">
+                                                        {order.eta_note}
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                ) : (
-                                    <p className="text-sm text-gray-500">טרם עודכן זמן משוער</p>
-                                )}
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <p className="text-sm text-gray-500">ממתין לאישור המסעדה</p>
+                                    )}
+                                </div>
                             </div>
                         </div>
 
@@ -444,7 +464,7 @@ export default function OrderStatusPage() {
                                                 <h3 className="text-lg sm:text-xl font-black text-gray-900 mb-3 text-center">
                                                     איך הייתה החוויה?
                                                 </h3>
-                                                
+
                                                 {/* ווידג'ט דירוג */}
                                                 <div className="py-2">
                                                     <RatingWidget
@@ -510,36 +530,44 @@ export default function OrderStatusPage() {
                         {!isCancelled && (
                             <>
                                 {/* סטטוס סרגל */}
-                                <div className="space-y-4">
-                                    <p className="text-sm font-semibold text-gray-700">התקדמות:</p>
+                                <div className="bg-gray-50 rounded-xl p-6 space-y-4">
+                                    <div className="flex items-center gap-2 mb-4">
+                                        <FaCheckCircle className="text-blue-600" />
+                                        <p className="text-sm font-bold text-gray-700">מעקב התקדמות</p>
+                                    </div>
 
-                                    <div className="flex justify-between items-center">
+                                    <div className="relative flex justify-between items-start">
+                                        {/* קו רקע */}
+                                        <div className="absolute top-5 right-5 left-5 h-1 bg-gray-300 rounded-full" style={{ zIndex: 0 }}></div>
+                                        {/* קו מלא */}
+                                        <div
+                                            className="absolute top-5 right-5 h-1 bg-gradient-to-l from-green-500 to-blue-500 rounded-full transition-all duration-500"
+                                            style={{
+                                                width: `calc(${(currentStepIndex / (statusSteps.length - 1)) * 100}% - 2.5rem)`,
+                                                zIndex: 1
+                                            }}
+                                        ></div>
+
                                         {statusSteps.map((step, index) => (
-                                            <div key={step.value} className="flex flex-col items-center flex-1">
+                                            <div key={step.value} className="flex flex-col items-center flex-1 relative" style={{ zIndex: 2 }}>
                                                 <div
-                                                    className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white mb-2 ${index <= currentStepIndex ? 'bg-brand-accent' : 'bg-gray-300'
+                                                    className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm mb-2 border-2 transition-all ${index <= currentStepIndex
+                                                            ? 'bg-gradient-to-br from-blue-500 to-green-500 text-white border-transparent shadow-lg'
+                                                            : 'bg-white text-gray-400 border-gray-300'
                                                         }`}
                                                 >
-                                                    {index < currentStepIndex ? '✓' : index + 1}
+                                                    {index < currentStepIndex ? <FaCheckCircle /> : index + 1}
                                                 </div>
-                                                <p className="text-xs text-center text-gray-700">{step.label}</p>
-
-                                                {/* קו ביניים */}
-                                                {index < statusSteps.length - 1 && (
-                                                    <div
-                                                        className={`h-1 flex-1 mx-1 mt-3 ${index < currentStepIndex ? 'bg-brand-accent' : 'bg-gray-300'
-                                                            }`}
-                                                        style={{ width: '100%' }}
-                                                    ></div>
-                                                )}
+                                                <p className={`text-xs text-center font-medium ${index <= currentStepIndex ? 'text-gray-900' : 'text-gray-500'
+                                                    }`}>{step.label}</p>
                                             </div>
                                         ))}
                                     </div>
                                 </div>
 
                                 {/* סטטוס נוכחי */}
-                                <div className={`mt-6 p-4 rounded-lg text-center ${statusColor}`}>
-                                    <p className="text-2xl font-bold">
+                                <div className={`mt-6 p-5 rounded-xl text-center ${statusColor} border-2`}>
+                                    <p className="text-xl sm:text-2xl font-black">
                                         {statusLabel}
                                     </p>
                                 </div>
@@ -547,9 +575,16 @@ export default function OrderStatusPage() {
                         )}
 
                         {isCancelled && (
-                            <div className={`mt-6 p-4 rounded-lg text-center ${statusColor}`}>
-                                <p className="text-2xl font-bold">{statusLabel}</p>
-                                <p className="text-sm mt-1">ההזמנה לא תטופל. אפשר לבצע הזמנה חדשה.</p>
+                            <div className="mt-6 p-6 rounded-xl text-center bg-red-50 border-2 border-red-300">
+                                <div className="flex flex-col items-center gap-3">
+                                    <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center">
+                                        <FaExclamationTriangle className="text-3xl text-red-600" />
+                                    </div>
+                                    <div>
+                                        <p className="text-2xl font-black text-red-900">{statusLabel}</p>
+                                        <p className="text-sm mt-2 text-red-700">ההזמנה לא תטופל. אפשר לבצע הזמנה חדשה.</p>
+                                    </div>
+                                </div>
                             </div>
                         )}
                     </div>
@@ -557,8 +592,11 @@ export default function OrderStatusPage() {
 
                 {/* פרטי פריטים */}
                 {order.items && order.items.length > 0 && (
-                    <div className="space-y-3">
-                        <h2 className="text-xl font-bold text-gray-900">🍽️ פריטים</h2>
+                    <div className="space-y-4 max-w-3xl mx-auto">
+                        <div className="flex items-center gap-2">
+                            <FaUtensils className="text-xl text-blue-600" />
+                            <h2 className="text-xl font-black text-gray-900">פריטי ההזמנה</h2>
+                        </div>
                         {order.items.map((item) => {
                             const quantity = item.quantity ?? item.qty ?? 1;
                             const unitPrice = Number(item.price_at_order) || 0;
@@ -570,7 +608,7 @@ export default function OrderStatusPage() {
                             const hasCustomizations = Boolean(item.variant_name) || addonsTotal > 0 || variantDelta > 0;
 
                             return (
-                                <div key={item.id} className="bg-gray-50 border border-gray-200 rounded p-4 space-y-2">
+                                <div key={item.id} className="bg-white border border-gray-200 rounded-xl p-4 sm:p-5 space-y-2 hover:shadow-md transition-shadow">
                                     <div className="space-y-1">
                                         <div className="flex items-center justify-between gap-3">
                                             <div className="font-semibold text-gray-900">
@@ -620,7 +658,7 @@ export default function OrderStatusPage() {
                         })}
 
                         {/* פירוט מחיר */}
-                        <div className="bg-gray-100 rounded-lg p-4 space-y-2">
+                        <div className="bg-gradient-to-br from-gray-50 to-blue-50 rounded-xl p-5 space-y-3 border border-gray-200 shadow-sm">
                             <div className="flex items-center justify-between text-gray-700">
                                 <span>סכום ביניים</span>
                                 <span>₪{(Number(order.total_amount || 0) - Number(order.delivery_fee || 0)).toFixed(2)}</span>
@@ -648,9 +686,10 @@ export default function OrderStatusPage() {
                 <div className="text-center">
                     <button
                         onClick={() => navigate('/menu')}
-                        className="bg-brand-primary text-white px-6 py-3 rounded-lg hover:bg-gray-800 transition inline-block"
+                        className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-8 py-4 rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 inline-flex items-center gap-3 font-bold"
                     >
-                        חזור לתפריט
+                        <FaShoppingBag className="text-lg" />
+                        <span>חזור לתפריט</span>
                     </button>
                 </div>
             </div>

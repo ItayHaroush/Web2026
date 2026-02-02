@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FaClock } from 'react-icons/fa';
+import { FaClock, FaCheckCircle, FaUtensils } from 'react-icons/fa';
 
 /**
  * קומפוננט שעון ספירה לאחור עם עיצוב אטרקטיבי
@@ -17,6 +17,12 @@ export default function CountdownTimer({ startTime, etaMinutes, etaNote, deliver
     useEffect(() => {
         // אם ההזמנה נמסרה - אל תעדכן
         if (orderStatus === 'delivered') {
+            return;
+        }
+
+        // אם ההזמנה עדיין ממתינה לאישור - הצג מצב המתנה
+        if (orderStatus === 'pending') {
+            setTimeLeft(null);
             return;
         }
 
@@ -67,23 +73,60 @@ export default function CountdownTimer({ startTime, etaMinutes, etaNote, deliver
             <div className="bg-gradient-to-br from-green-50 to-emerald-100 rounded-xl sm:rounded-2xl p-6 sm:p-8 shadow-lg border-2 border-green-300">
                 <div className="flex flex-col items-center gap-4">
                     <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-xl">
-                        <span className="text-4xl sm:text-5xl">🎉</span>
+                        <FaCheckCircle className="text-4xl sm:text-5xl text-white" />
                     </div>
                     <div className="text-center space-y-2">
                         <p className="text-xl sm:text-2xl font-black text-gray-800">
                             {deliveryMethod === 'pickup' ? 'ההזמנה נאספה' : 'השליח כבר בדלת!'}
                         </p>
-                        <p className="text-base sm:text-lg font-bold text-green-700">
-                            בתאבון! 🍽️
+                        <p className="text-base sm:text-lg font-bold text-green-700 flex items-center justify-center gap-2">
+                            <FaUtensils />
+                            בתאבון!
                         </p>
                     </div>
-                    
+
                     {/* תוכן נוסף - ביקורת */}
                     {children && (
                         <div className="w-full mt-4">
                             {children}
                         </div>
                     )}
+                </div>
+            </div>
+        );
+    }
+
+    // אם ההזמנה עדיין ממתינה לאישור - הצג מצב המתנה
+    if (orderStatus === 'pending') {
+        return (
+            <div className="bg-gradient-to-br from-brand-light to-blue-50 rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-lg border-2 border-brand-primary/30">
+                <div className="flex flex-col items-center gap-3 sm:gap-4">
+                    {/* אנימציית טעינה מעגלית */}
+                    <div className="relative w-20 h-20 sm:w-24 sm:h-24">
+                        <svg className="animate-spin" viewBox="0 0 100 100">
+                            <circle
+                                cx="50"
+                                cy="50"
+                                r="40"
+                                fill="none"
+                                stroke="#009DE0"
+                                strokeWidth="8"
+                                strokeDasharray="63 189"
+                                strokeLinecap="round"
+                            />
+                        </svg>
+                        <div className="absolute inset-0 flex items-center justify-center">
+                            <FaClock className="text-2xl sm:text-3xl text-brand-primary" />
+                        </div>
+                    </div>
+                    <div className="text-center">
+                        <p className="text-lg sm:text-xl font-black text-gray-900">
+                            ממתין לאישור המסעדה
+                        </p>
+                        <p className="text-sm sm:text-base text-gray-600 mt-2 font-medium">
+                            {etaMinutes ? `זמן הכנה משוער: ${etaMinutes} דקות` : 'הזמן המשוער יעודכן לאחר האישור'}
+                        </p>
+                    </div>
                 </div>
             </div>
         );
