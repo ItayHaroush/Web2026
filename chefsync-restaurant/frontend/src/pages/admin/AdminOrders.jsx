@@ -950,7 +950,7 @@ export default function AdminOrders() {
                                             const buttonConfigs = {
                                                 'preparing': { text: 'אישור והתחלת הכנה', icon: <FaCheckCircle />, color: 'from-brand-primary to-brand-secondary' },
                                                 'ready': {
-                                                    text: isPickupOrder ? 'סיום הכנה - מוכן לאיסוף!' : 'סיום הכנה - מוכן!',
+                                                    text: isPickupOrder ? 'סיום הכנה - מוכן לאיסוף! 🎉' : 'סיום הכנה - מוכן!',
                                                     icon: <FaCheckCircle />,
                                                     color: 'from-emerald-500 to-emerald-600'
                                                 },
