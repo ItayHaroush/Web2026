@@ -60,42 +60,52 @@
     <!-- 🔥 FB/IG Guard - MUST run before ANY module loading -->
     <script>
       (function() {
-        // בדיקה אם אנחנו כבר בדף open.html או r-share.html
-        if (window.location.pathname === '/open.html' || window.location.pathname === '/r-share.html') {
-          return; // אל תעשה כלום אם כבר בדף המעבר
-        }
+        try {
+          // בדיקה אם אנחנו כבר בדף open.html או r-share.html
+          if (window.location.pathname === '/open.html' || window.location.pathname === '/r-share.html') {
+            console.log('[GUARD] Already on redirect page, skipping');
+            return;
+          }
 
-        // זיהוי דפדפן פנימי של פייסבוק/אינסטגרם
-        const ua = navigator.userAgent || navigator.vendor || window.opera;
-        const isFacebookInApp = /FBAN|FBAV|Instagram/i.test(ua);
-        
-        // זיהוי מכשיר (אייפון/אנדרואיד)
-        const isIOS = /iPhone|iPad|iPod/i.test(ua);
-        const isAndroid = /Android/i.test(ua);
-        
-        // בדיקה אם המשתמש כבר ראה את הדף (למניעת לופ)
-        const hasSeenWarning = sessionStorage.getItem('fb-redirect-shown');
-
-        // אם זה FB/IG in-app browser ועדיין לא הראינו את הדף
-        if ((isFacebookInApp || (isIOS && /Safari/i.test(ua) === false)) && !hasSeenWarning) {
-          // סימון שכבר הצגנו (למניעת לופ)
-          sessionStorage.setItem('fb-redirect-shown', 'true');
+          // זיהוי דפדפן פנימי של פייסבוק/אינסטגרם
+          const ua = navigator.userAgent || navigator.vendor || window.opera;
+          const isFacebookInApp = /FBAN|FBAV|Instagram/i.test(ua);
           
-          // ✅ בדיקה מיוחדת לדפי שיתוף מסעדה (/r/tenant-name)
-          const restaurantShareMatch = window.location.pathname.match(/^\/r\/([^\/]+)\/?$/);
+          console.log('[GUARD] UA:', ua);
+          console.log('[GUARD] isFacebookInApp:', isFacebookInApp);
           
-          if (restaurantShareMatch) {
-            // דף שיתוף מסעדה - הפנה לדף HTML סטטי עם ה-slug
-            const slug = restaurantShareMatch[1];
-            window.location.replace('/r-share.html?slug=' + encodeURIComponent(slug));
-          } else {
-            // כל דף אחר - הפנה לדף המעבר הגנרי
-            const targetUrl = encodeURIComponent(window.location.href);
-            window.location.replace('/open.html?target=' + targetUrl);
+          // אם זה FB/IG - הפנה מיידית ללא sessionStorage
+          if (isFacebookInApp) {
+            console.log('[GUARD] FB detected, redirecting NOW');
+            
+            // ✅ בדיקה מיוחדת לדפי שיתוף מסעדה (/r/tenant-name)
+            const restaurantShareMatch = window.location.pathname.match(/^\/r\/([^\/]+)\/?$/);
+            
+            if (restaurantShareMatch) {
+              const slug = restaurantShareMatch[1];
+              const target = '/r-share.html?slug=' + encodeURIComponent(slug);
+              console.log('[GUARD] Redirecting to:', target);
+              document.write('<meta http-equiv="refresh" content="0; url=' + target + '">');
+              window.location.replace(target);
+            } else {
+              const targetUrl = encodeURIComponent(window.location.href);
+              const target = '/open.html?target=' + targetUrl;
+              console.log('[GUARD] Redirecting to:', target);
+              document.write('<meta http-equiv="refresh" content="0; url=' + target + '">');
+              window.location.replace(target);
+            }
+            
+            // Stop everything
+            throw new Error('[GUARD] Redirecting to static page');
           }
           
-          // 🔥 CRITICAL: Stop all script execution immediately
-          throw new Error('Redirecting to static page');
+          console.log('[GUARD] Not FB browser, continuing to React');
+        } catch (e) {
+          console.error('[GUARD] Error:', e);
+          // If redirect, this is expected
+          if (e.message && e.message.includes('Redirecting')) {
+            throw e;
+          }
         }
       })();
     </script>
