@@ -188,13 +188,15 @@
                 btn.classList.add('opacity-90');
                 
                 if (isIOS) {
-                    // iOS Scheme Logic
+                    // iOS Scheme Logic - Try Chrome first
                     const chromeUrl = 'googlechrome://' + targetUrl.replace('https://', '');
                     window.location.href = chromeUrl;
                     
+                    // Fallback to internal view + Set Flag to prevent loop
                     setTimeout(() => {
+                        sessionStorage.setItem('fb-redirect-attempted', 'true');
                         window.location.href = targetUrl;
-                    }, 1500);
+                    }, 2500);
                     
                 } else if (isAndroid) {
                     // Android Intent Logic
@@ -203,11 +205,13 @@
                     window.location.href = intent;
                     
                     setTimeout(() => {
+                        sessionStorage.setItem('fb-redirect-attempted', 'true');
                         window.location.href = targetUrl;
-                    }, 1500);
+                    }, 2500);
                     
                 } else {
                     // Desktop / Fallback
+                    sessionStorage.setItem('fb-redirect-attempted', 'true');
                     window.open(targetUrl, '_blank') || (window.location.href = targetUrl);
                 }
                 
