@@ -33,20 +33,20 @@ const InAppRestrictedView = () => {
         setLoading(true);
 
         const targetUrl = window.location.href;
-        
+
         if (os === 'ios') {
             // iOS: Force Chrome scheme or fallback
             // We use 'googlechrome://' scheme
             const chromeUrl = 'googlechrome://' + targetUrl.replace(/^https?:\/\//, '');
             window.location.href = chromeUrl;
-            
+
             // Fallback to normal navigation if Chrome is not installed (Safari will handle http)
             setTimeout(() => { window.location.href = targetUrl; }, 1500);
         } else if (os === 'android') {
             // Android: Intent scheme
             const intent = 'intent://' + targetUrl.replace(/^https?:\/\//, '') + '#Intent;scheme=https;package=com.android.chrome;end';
             window.location.href = intent;
-            
+
             setTimeout(() => { window.location.href = targetUrl; }, 1500);
         } else {
             // Desktop/Other
@@ -88,7 +88,7 @@ const InAppRestrictedView = () => {
                     לחווית הזמנה חלקה ומאובטחת,<br />אנחנו מעבירים אותך לדפדפן הראשי.
                 </p>
 
-                <button 
+                <button
                     onClick={handleOpenBrowser}
                     disabled={loading}
                     className={`group relative w-full flex items-center justify-center gap-3 bg-gradient-to-r from-orange-500 to-rose-600 text-white font-bold text-lg py-4 px-8 rounded-2xl shadow-xl hover:shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 overflow-hidden cursor-pointer ${loading ? 'opacity-90 cursor-wait' : ''}`}
@@ -119,7 +119,7 @@ const InAppRestrictedView = () => {
                         </div>
                     </div>
                 </div>
-                
+
                 <div className="mt-6 text-xs text-gray-400 font-mono">
                     Powered by TakeEat &copy; 2026
                 </div>
