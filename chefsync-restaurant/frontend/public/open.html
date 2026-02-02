@@ -91,6 +91,15 @@
             <div class="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
         </a>
 
+        <!-- Continue Anyway Button -->
+        <button id="continueBtn"
+           class="group relative w-full flex items-center justify-center gap-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold text-base py-3 px-6 rounded-xl shadow-md hover:shadow-lg active:scale-[0.98] transition-all duration-200 mt-4">
+            <span>המשך בדפדפן הנוכחי</span>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+            </svg>
+        </button>
+
         <!-- Helper Instructions -->
         <div class="mt-8 pt-8 border-t border-gray-100">
             <p class="text-sm font-semibold text-gray-400 mb-4 tracking-wide uppercase">לא נפתח אוטומטית?</p>
@@ -115,7 +124,9 @@
 
     <!-- JavaScript Logic (Preserved & Enhanced) -->
     <script>
-        const targetUrl = 'https://www.takeeat.co.il';
+        // קריאת target מה-URL או fallback לדף הבית
+        const params = new URLSearchParams(window.location.search);
+        const targetUrl = decodeURIComponent(params.get('target') || '') || 'https://www.takeeat.co.il';
         
         // OS Detection
         const ua = navigator.userAgent;
@@ -124,6 +135,30 @@
         
         const btn = document.getElementById('openBtn');
         const btnText = document.getElementById('btnText');
+        const continueBtn = document.getElementById('continueBtn');
+        
+        // Continue Button Handler
+        if(continueBtn) {
+            continueBtn.addEventListener('click', function() {
+                // סימן שהמשתמש ביקש להמשיך בדפדפן הפנימי
+                sessionStorage.setItem('fb-redirect-attempted', 'true');
+                
+                // בדיקה איזה fallback mode
+                const params = new URLSearchParams(window.location.search);
+                const fallbackMode = params.get('fallback');
+                const targetFromUrl = decodeURIComponent(params.get('target') || '');
+                
+                if (fallbackMode === 'same' && targetFromUrl) {
+                    // דף מסעדה - חזור לאותו דף
+                    console.log('[CONTINUE] Returning to restaurant page:', targetFromUrl);
+                    window.location.href = targetFromUrl;
+                } else {
+                    // דפים אחרים - חזור לדף הבית
+                    console.log('[CONTINUE] Returning to home page');
+                    window.location.href = window.location.origin + '/';
+                }
+            });
+        }
         
         // Initial Button Text Logic
         function updateButtonText() {

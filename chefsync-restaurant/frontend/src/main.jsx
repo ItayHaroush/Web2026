@@ -3,6 +3,8 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
 
+alert('🟢 STEP 4: main.jsx loaded');
+
 // Pre-register the Firebase messaging service worker on the frontend domain
 // ⚠️ CRITICAL: Skip Service Worker in Facebook/Instagram in-app browsers
 const isFacebookBrowser = () => {
@@ -14,7 +16,11 @@ const isFacebookBrowser = () => {
   }
 };
 
-if ('serviceWorker' in navigator && !isFacebookBrowser()) {
+const isFB = isFacebookBrowser();
+alert('🟢 STEP 5: SW check - isFB=' + isFB + ', hasSW=' + ('serviceWorker' in navigator));
+
+if ('serviceWorker' in navigator && !isFB) {
+  alert('🟢 STEP 6: Registering Service Worker');
   window.addEventListener('load', () => {
     navigator.serviceWorker
       .register('/firebase-messaging-sw.js')
@@ -28,8 +34,12 @@ if ('serviceWorker' in navigator && !isFacebookBrowser()) {
   });
 }
 
+alert('🟢 STEP 7: Creating React root');
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <App />
   </StrictMode>,
 )
+
+alert('🟢 STEP 8: React rendered successfully!');
