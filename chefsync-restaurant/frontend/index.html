@@ -57,55 +57,48 @@
     <title>TakeEat - הזמנות למסעדה</title>
   </head>
   <body>
-    <!-- 🔥 FB/IG Warning Banner (Hidden by default) -->
+    <!-- 🔥 Global Error Handler for Mobile Debugging -->
+    <script>
+      window.onerror = function(msg, url, line, col, error) {
+        // התעלם משגיאות לא קריטיות (ResizeObserver וכו')
+        if (msg.includes('ResizeObserver') || msg.includes('Script error')) return;
+
+        // הצג שגיאות קריטיות רק בדפדפן פייסבוק כדי שנבין למה הוא קורס
+        const isFB = /FBAN|FBAV|Instagram/i.test(navigator.userAgent);
+        if (isFB) {
+          alert('🚨 Error: ' + msg + '\nLine: ' + line);
+        }
+      };
+    </script>
+
+    <!-- ⚠️ Warning Banner (Hidden by default, shown if React fails) -->
     <div id="fb-warning" style="display:none; position:fixed; top:0; left:0; right:0; z-index:99999; background:linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%); color:white; padding:16px; text-align:center; font-family:system-ui,-apple-system,sans-serif; box-shadow:0 4px 12px rgba(0,0,0,0.3); direction:rtl;">
       <div style="max-width:600px; margin:0 auto;">
-        <div style="font-weight:700; font-size:16px; margin-bottom:6px;">⚠️ שימו לב - דפדפן פנימי</div>
-        <div style="font-size:15px; opacity:0.95;">המערכת זיהתה בעיה בטעינת האפליקציה.</div>
-        <div style="font-size:13px; opacity:0.9; margin-top:8px;">אנא לחצו על <strong>⋯</strong> למעלה ובחרו <strong>"פתח בדפדפן"</strong></div>
+          <div style="font-weight:700; font-size:16px; margin-bottom:6px;">⚠️ שימו לב - בעיית טעינה</div>
+          <div style="font-size:14px; opacity:0.95; margin-bottom:8px;">האתר לא נטען כראוי בדפדפן זה.</div>
+          <div style="font-size:13px; opacity:0.9; margin-top:8px;">לחצו על <strong>⋯</strong> למעלה ובחרו <strong>"פתח בדפדפן"</strong></div>
       </div>
     </div>
     
-    <!-- 🧪 DIAGNOSTIC SCRIPT -->
     <script>
       (function() {
-        // 1. Basic JS check
-        const step1 = document.createElement('div');
-        step1.innerText = 'STEP 1: Inline JS OK';
-        step1.style.position = 'fixed';
-        step1.style.bottom = '10px';
-        step1.style.left = '10px';
-        step1.style.zIndex = '99999';
-        step1.style.background = 'rgba(0,0,0,0.7)';
-        step1.style.color = 'white';
-        step1.style.padding = '5px';
-        step1.style.fontSize = '12px';
-        document.body.appendChild(step1);
-        
-        // 2. Dynamic Module Loading Test
-        const s = document.createElement('script');
-        s.type = 'module';
-        s.src = '/test-module.js?t=' + Date.now();
-        
-        s.onload = () => {
-          alert('✅ MODULE LOADED SUCCESSFULLY');
-          step1.innerText += ' | MODULE: OK';
-          step1.style.background = 'green';
-        };
-        
-        s.onerror = (e) => {
-          alert('❌ MODULE FAILED TO LOAD');
-          step1.innerText += ' | MODULE: FAIL';
-          step1.style.background = 'red';
-          
-          // Show warning banner if module fails
-          document.getElementById('fb-warning').style.display = 'block';
-          document.body.style.paddingTop = '100px';
-        };
-        
-        document.head.appendChild(s);
+         // Auto-show warning if React doesn't load within 3 seconds in FB browser
+         const isFB = /FBAN|FBAV|Instagram/i.test(navigator.userAgent);
+         if (isFB) {
+            setTimeout(() => {
+                if (!window.REACT_LOADED) {
+                    document.getElementById('fb-warning').style.display = 'block';
+                    document.body.style.paddingTop = '120px';
+                }
+            }, 3000);
+         }
       })();
     </script>
+    
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
     
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
