@@ -10,19 +10,15 @@ export default function FacebookInAppWarning() {
     const [dismissed, setDismissed] = useState(false);
 
     useEffect(() => {
-        // הדפסת User Agent לדיבוג
-        console.log('🔍 User Agent:', navigator.userAgent);
-
         // בדיקה אם המשתמש בתוך אפליקציית פייסבוק או אינסטגרם
         const isFacebookInApp = /FBAN|FBAV|Instagram/i.test(navigator.userAgent);
-        console.log('📱 Is Facebook/Instagram in-app?', isFacebookInApp);
 
         let wasDissmissed = false;
         try {
             // בדיקה אם המשתמש כבר סגר את ההודעה בעבר (שמור ב-sessionStorage)
             wasDissmissed = sessionStorage.getItem('fb-warning-dismissed');
         } catch (e) {
-            console.warn('SessionStorage not available:', e);
+            // SessionStorage לא זמין - המשך רגיל
         }
 
         if (isFacebookInApp && !wasDissmissed) {
@@ -36,7 +32,7 @@ export default function FacebookInAppWarning() {
         try {
             sessionStorage.setItem('fb-warning-dismissed', 'true');
         } catch (e) {
-            console.warn('Failed to save dismissal to SessionStorage:', e);
+            // שמירה נכשלה - המשך רגיל
         }
     };
 

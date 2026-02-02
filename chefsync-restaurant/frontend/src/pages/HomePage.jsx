@@ -200,11 +200,9 @@ export default function HomePage() {
     };
 
     const handleRestaurantClick = (restaurant) => {
-        console.log('Selecting restaurant:', restaurant.tenant_id);
         loginAsCustomer(restaurant.tenant_id);
         // חכה רגע קצר כדי לוודא שה-localStorage התעדכן
         setTimeout(() => {
-            console.log('Tenant ID saved:', localStorage.getItem('tenantId'));
             navigate(`/${restaurant.tenant_id}/menu`);
         }, 100);
     };

@@ -23,8 +23,6 @@ export default function AdminLogin() {
         if (result.success) {
             // בדיקה אם זה Super Admin
             const user = JSON.parse(localStorage.getItem('user') || '{}');
-            console.log('User after login:', user);
-            console.log('is_super_admin:', user.is_super_admin);
 
             if (user.is_super_admin) {
                 toast.success('ברוכים הבאים, מנהל מערכת! 👋');

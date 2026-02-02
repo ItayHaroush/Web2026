@@ -128,7 +128,6 @@ export default function MenuPage() {
         try {
             const response = await apiClient.get(`/restaurants/by-tenant/${encodeURIComponent(effectiveTenantId)}`);
             const currentRestaurant = response.data?.data || null;
-            console.log('🏪 Restaurant loaded:', currentRestaurant?.name, 'Logo:', currentRestaurant?.logo_url);
             setRestaurant(currentRestaurant);
             // שמור את שם המסעדה ל-localStorage לשימוש בסל
             if (currentRestaurant?.name) {

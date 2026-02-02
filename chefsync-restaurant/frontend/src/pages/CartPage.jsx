@@ -174,7 +174,7 @@ export default function CartPage() {
                 })),
             };
             console.log('📦 Sending order data:', orderData);
-            console.log('🛒 Customer info:', customerInfo);
+            console.log('📞 Customer info for SMS:', customerInfo);
             const response = await orderService.createOrder(orderData);
             const resolvedTenantSlug = tenantId || localStorage.getItem('tenantId');
             if (resolvedTenantSlug) {

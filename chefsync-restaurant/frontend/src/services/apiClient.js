@@ -79,16 +79,6 @@ apiClient.interceptors.request.use((config) => {
     const urlPath = (config.url || '').toString();
     const isSuperAdminCall = urlPath.startsWith('/super-admin/');
 
-    // 🔥 DEBUG - הדפס כל בקשה
-    const fullUrl = (config.baseURL || '') + config.url;
-    console.group(`🚀 API Request: ${config.method?.toUpperCase()} ${config.url}`);
-    console.log('🌐 Full URL:', fullUrl);
-    console.log('🔑 Token:', token ? `${token.substring(0, 30)}...` : '❌ MISSING');
-    console.log('🏪 Tenant ID:', tenantId || '❌ MISSING', urlTenantId ? `(from URL: ${urlTenantId})` : '');
-    console.log('📦 Data:', config.data);
-    console.log('🎯 Params:', config.params);
-    console.groupEnd();
-
     // Don't clobber an explicit header; skip tenant header for super-admin routes
     if (!isSuperAdminCall && tenantId && !config.headers?.[TENANT_HEADER]) {
         config.headers[TENANT_HEADER] = tenantId;
@@ -103,30 +93,14 @@ apiClient.interceptors.request.use((config) => {
 
 // Interceptor לטיפול בשגיאות תגובה
 apiClient.interceptors.response.use(
-    (response) => {
-        // 🔥 DEBUG - הדפס תגובות מוצלחות
-        console.log(`✅ Response ${response.status}:`, response.config.url, response.data);
-        return response;
-    },
+    (response) => response,
     async (error) => {
-        // 🔥 DEBUG - הדפס שגיאות מפורטות
-        console.group(`❌ API Error: ${error.config?.url}`);
-        console.log('📤 Request Headers:', error.config?.headers);
-        console.log('📥 Response Headers:', error.response?.headers);
-        console.log('Status:', error.response?.status);
-        console.log('Message:', error.response?.data?.message || error.message);
-        console.log('Errors:', error.response?.data?.errors);
-        console.log('Full Response:', error.response?.data);
-        console.log('Raw Response Text:', typeof error.response?.data === 'string' ? error.response.data.substring(0, 500) : 'N/A');
-        console.groupEnd();
-
         // אם השרת המקומי לא זמין (Network Error), עבור לפרודקשן ונסה שוב פעם אחת
         const isNetworkError = error.code === 'ERR_NETWORK' || (!error.response && error.message?.toLowerCase().includes('network'));
         const isOnLocal = (apiClient.defaults.baseURL || '').startsWith(LOCAL_API);
         const alreadyRetried = !!error.config?._retryWithProduction;
 
         if (isNetworkError && isOnLocal && !alreadyRetried) {
-            console.warn('🔄 Local API unreachable. Switching to production:', PROD_API);
             apiClient.defaults.baseURL = PROD_API;
             try { localStorage.setItem('api_base_url', PROD_API); } catch { }
             const newConfig = { ...error.config, _retryWithProduction: true, baseURL: PROD_API };
