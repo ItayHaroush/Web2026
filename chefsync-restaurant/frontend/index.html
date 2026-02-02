@@ -60,13 +60,15 @@
     <!-- 🔥 Global Error Handler for Mobile Debugging -->
     <script>
       window.onerror = function(msg, url, line, col, error) {
-        // התעלם משגיאות לא קריטיות (ResizeObserver וכו')
         if (msg.includes('ResizeObserver') || msg.includes('Script error')) return;
-
-        // הצג שגיאות קריטיות רק בדפדפן פייסבוק כדי שנבין למה הוא קורס
+        
+        // If React is loaded, let the ErrorBoundary handle UI.
+        // But for startup crashes...
         const isFB = /FBAN|FBAV|Instagram/i.test(navigator.userAgent);
-        if (isFB) {
-          alert('🚨 Error: ' + msg + '\nLine: ' + line);
+        if (isFB && !window.REACT_LOADED) {
+           document.getElementById('fb-warning').style.display = 'block';
+           console.error('Crash before React:', msg);
+           // Optional: alert('Init Error: ' + msg);
         }
       };
     </script>
@@ -88,7 +90,6 @@
             setTimeout(() => {
                 if (!window.REACT_LOADED) {
                     document.getElementById('fb-warning').style.display = 'block';
-                    document.body.style.paddingTop = '120px';
                 }
             }, 3000);
          }

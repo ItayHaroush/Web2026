@@ -6,5 +6,6 @@ export default defineConfig({
   plugins: [react()],
   build: {
     target: 'es2020', // ⚠️ Safer target for wider compatibility (In-App Browsers)
+    sourcemap: true,   // ✅ Enable source maps for debugging production errors
   }
 })

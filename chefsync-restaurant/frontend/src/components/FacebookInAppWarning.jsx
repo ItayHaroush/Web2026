@@ -16,8 +16,14 @@ export default function FacebookInAppWarning() {
         // בדיקה אם המשתמש בתוך אפליקציית פייסבוק או אינסטגרם
         const isFacebookInApp = /FBAN|FBAV|Instagram/i.test(navigator.userAgent);
         console.log('📱 Is Facebook/Instagram in-app?', isFacebookInApp);
-        // בדיקה אם המשתמש כבר סגר את ההודעה בעבר (שמור ב-sessionStorage)
-        const wasDissmissed = sessionStorage.getItem('fb-warning-dismissed');
+        
+        let wasDissmissed = false;
+        try {
+            // בדיקה אם המשתמש כבר סגר את ההודעה בעבר (שמור ב-sessionStorage)
+            wasDissmissed = sessionStorage.getItem('fb-warning-dismissed');
+        } catch (e) {
+            console.warn('SessionStorage not available:', e);
+        }
 
         if (isFacebookInApp && !wasDissmissed) {
             setShowWarning(true);
@@ -27,7 +33,11 @@ export default function FacebookInAppWarning() {
     const handleDismiss = () => {
         setDismissed(true);
         setShowWarning(false);
-        sessionStorage.setItem('fb-warning-dismissed', 'true');
+        try {
+            sessionStorage.setItem('fb-warning-dismissed', 'true');
+        } catch (e) {
+            console.warn('Failed to save dismissal to SessionStorage:', e);
+        }
     };
 
     const handleOpenInBrowser = () => {
