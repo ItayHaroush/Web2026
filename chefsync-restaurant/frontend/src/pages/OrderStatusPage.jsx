@@ -286,20 +286,12 @@ export default function OrderStatusPage() {
             return;
         }
 
-        console.log('📤 Submitting review:', {
-            orderId,
-            rating: selectedRating,
-            review_text: reviewText.trim() || null
-        });
-
         setSubmittingReview(true);
         try {
             const response = await api.post(`/orders/${orderId}/review`, {
                 rating: selectedRating,
                 review_text: reviewText.trim() || null,
             });
-
-            console.log('✅ Review submitted successfully:', response.data);
 
             if (response.data.success) {
                 setReviewSuccess(true);

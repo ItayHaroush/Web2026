@@ -53,20 +53,16 @@ export function clearStoredFcmToken() {
 export async function requestFcmToken() {
     // ⚠️ Block Firebase operations in Facebook/Instagram browsers
     if (isFacebookBrowser()) {
-        console.warn('[FCM] Skipping in Facebook/Instagram browser');
         return null;
     }
 
     // Check if notifications are supported
     if (!('Notification' in window) || !('serviceWorker' in navigator)) {
-        console.warn('[FCM] Notifications or Service Workers not supported');
         return null;
     }
 
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') return null;
-
-    console.log('VAPID', VAPID_KEY, VAPID_KEY.length);
 
     // Register and wait until the SW is active to avoid "no active Service Worker" errors
     let swReg;
@@ -78,8 +74,6 @@ export async function requestFcmToken() {
     }
 
     const readyReg = await navigator.serviceWorker.ready;
-    const swUrl = readyReg?.active?.scriptURL || swReg?.active?.scriptURL;
-    console.log('[FCM] using SW', swUrl || '(no scriptURL yet)');
 
     const token = await getToken(messaging, {
         vapidKey: VAPID_KEY,

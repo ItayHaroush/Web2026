@@ -11,7 +11,7 @@ class GlobalErrorBoundary extends React.Component {
     }
 
     componentDidCatch(error, errorInfo) {
-        console.error("Uncaught error:", error, errorInfo);
+        // שמירת פרטי השגיאה למצב הקומפוננטה בלבד
         this.setState({ errorInfo });
     }
 

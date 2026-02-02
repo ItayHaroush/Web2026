@@ -198,7 +198,6 @@ export default function RestaurantSharePage() {
 
                 setRestaurant(data);
             } catch (e) {
-                console.error('Failed to load restaurant share page:', e);
                 setError('לא הצלחנו לטעון את עמוד המסעדה.');
             } finally {
                 setLoading(false);
