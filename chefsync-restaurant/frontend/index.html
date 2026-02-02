@@ -57,87 +57,53 @@
     <title>TakeEat - הזמנות למסעדה</title>
   </head>
   <body>
-    <!-- 🔥 FB/IG Warning Banner (shown after failed redirect attempt) -->
+    <!-- 🔥 FB/IG Warning Banner (Hidden by default) -->
     <div id="fb-warning" style="display:none; position:fixed; top:0; left:0; right:0; z-index:99999; background:linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%); color:white; padding:16px; text-align:center; font-family:system-ui,-apple-system,sans-serif; box-shadow:0 4px 12px rgba(0,0,0,0.3); direction:rtl;">
       <div style="max-width:600px; margin:0 auto;">
         <div style="font-weight:700; font-size:16px; margin-bottom:6px;">⚠️ שימו לב - דפדפן פנימי</div>
-        <div style="font-size:14px; opacity:0.95; margin-bottom:8px;">לחוויה מיטבית, פתחו את הקישור בדפדפן חיצוני</div>
-        <div style="font-size:12px; opacity:0.9; background:rgba(0,0,0,0.2); padding:8px 12px; border-radius:8px; text-align:right; line-height:1.6;">
-          <div style="font-weight:600; margin-bottom:4px;">📱 איך לפתוח בדפדפן חיצוני:</div>
-          <div>1. לחצו על <strong>⋯</strong> (שלוש נקודות) בפינה העליונה ←</div>
-          <div>2. בחרו <strong>"פתח בדפדפן"</strong> או <strong>"Open in Browser"</strong></div>
-        </div>
+        <div style="font-size:15px; opacity:0.95;">המערכת זיהתה בעיה בטעינת האפליקציה.</div>
+        <div style="font-size:13px; opacity:0.9; margin-top:8px;">אנא לחצו על <strong>⋯</strong> למעלה ובחרו <strong>"פתח בדפדפן"</strong></div>
       </div>
     </div>
     
+    <!-- 🧪 DIAGNOSTIC SCRIPT -->
     <script>
       (function() {
-        try {
-          alert('🔵 STEP 1: index.html loaded');
+        // 1. Basic JS check
+        const step1 = document.createElement('div');
+        step1.innerText = 'STEP 1: Inline JS OK';
+        step1.style.position = 'fixed';
+        step1.style.bottom = '10px';
+        step1.style.left = '10px';
+        step1.style.zIndex = '99999';
+        step1.style.background = 'rgba(0,0,0,0.7)';
+        step1.style.color = 'white';
+        step1.style.padding = '5px';
+        step1.style.fontSize = '12px';
+        document.body.appendChild(step1);
+        
+        // 2. Dynamic Module Loading Test
+        const s = document.createElement('script');
+        s.type = 'module';
+        s.src = '/test-module.js?t=' + Date.now();
+        
+        s.onload = () => {
+          alert('✅ MODULE LOADED SUCCESSFULLY');
+          step1.innerText += ' | MODULE: OK';
+          step1.style.background = 'green';
+        };
+        
+        s.onerror = (e) => {
+          alert('❌ MODULE FAILED TO LOAD');
+          step1.innerText += ' | MODULE: FAIL';
+          step1.style.background = 'red';
           
-          // בדיקה אם כבר בדפי redirect
-          if (window.location.pathname === '/open.html' || window.location.pathname === '/r-share.html') {
-            console.log('[GUARD] Already on redirect page, skipping');
-            return;
-          }
-
-          // זיהוי דפדפן פנימי של פייסבוק/אינסטגרם
-          const ua = navigator.userAgent || navigator.vendor || window.opera;
-          const isFacebookInApp = /FBAN|FBAV|Instagram/i.test(ua);
-          
-          alert('🔵 STEP 2: FB detected = ' + isFacebookInApp);
-          
-          console.log('[GUARD] UA:', ua);
-          console.log('[GUARD] isFacebookInApp:', isFacebookInApp);
-          
-          if (!isFacebookInApp) {
-            console.log('[GUARD] Not FB browser, no action needed');
-            return;
-          }
-
-          // 🧪 TEST MODE: Skip redirect, just show warning banner
-          alert('🔵 STEP 3: Showing warning banner (no redirect)');
-          console.log('[GUARD] FB detected - SHOWING WARNING BANNER (no redirect)');
-          const banner = document.getElementById('fb-warning');
-          if (banner) {
-            banner.style.display = 'block';
-            document.body.style.paddingTop = '140px';
-          }
-          
-          /* REDIRECT LOGIC - DISABLED FOR TESTING
-          const hasAttemptedRedirect = sessionStorage.getItem('fb-redirect-attempted');
-          
-          if (!hasAttemptedRedirect) {
-            console.log('[GUARD] First attempt, redirecting to external browser');
-            
-            const restaurantShareMatch = window.location.pathname.match(/^\/r\/([^\/]+)\/?$/);
-            
-            if (restaurantShareMatch) {
-              const slug = restaurantShareMatch[1];
-              const targetUrl = encodeURIComponent(window.location.href);
-              const target = '/open.html?target=' + targetUrl + '&fallback=same';
-              console.log('[GUARD] Redirecting restaurant page to:', target);
-              window.location.replace(target);
-            } else {
-              const homeUrl = encodeURIComponent(window.location.origin);
-              const target = '/open.html?target=' + homeUrl + '&fallback=home';
-              console.log('[GUARD] Redirecting to:', target);
-              window.location.replace(target);
-            }
-            
-            return;
-          } else {
-            console.log('[GUARD] User returned from redirect attempt, showing warning banner');
-            const banner = document.getElementById('fb-warning');
-            if (banner) {
-              banner.style.display = 'block';
-              document.body.style.paddingTop = '140px';
-            }
-          }
-          */
-        } catch (e) {
-          console.error('[GUARD] Error:', e);
-        }
+          // Show warning banner if module fails
+          document.getElementById('fb-warning').style.display = 'block';
+          document.body.style.paddingTop = '100px';
+        };
+        
+        document.head.appendChild(s);
       })();
     </script>
     
