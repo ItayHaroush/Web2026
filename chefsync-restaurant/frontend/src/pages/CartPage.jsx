@@ -403,14 +403,14 @@ export default function CartPage() {
                                 setTempNotes(initialNotes);
                                 setShowNotesModal(true);
                             }}
-                            className="w-full inline-flex items-center justify-center gap-2 py-4 px-6 bg-gradient-to-r from-amber-400 to-yellow-400 text-white font-bold rounded-xl shadow-lg hover:shadow-xl hover:from-amber-500 hover:to-yellow-500 transition-all duration-300 group active:scale-95"
+                            className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 bg-gradient-to-r from-amber-400 to-yellow-400 text-white font-semibold rounded-lg shadow-md hover:shadow-lg hover:from-amber-500 hover:to-yellow-500 transition-all duration-200 group active:scale-95"
                         >
-                            <FaStickyNote className="text-xl group-hover:rotate-12 transition-transform" />
-                            <span className="text-base text-shadow-sm">
-                                {customerInfo?.delivery_notes ? 'ערוך הערה להזמנה' : '📝 הוסף הערה למטבח'}
+                            <FaStickyNote className="text-base group-hover:rotate-6 transition-transform" />
+                            <span className="text-sm">
+                                {customerInfo?.delivery_notes ? 'ערוך הערה' : 'הוסף הערה למטבח'}
                             </span>
                             {customerInfo?.delivery_notes && (
-                                <span className="bg-white/90 text-amber-600 text-xs px-2 py-0.5 rounded-full font-extrabold shadow-sm">
+                                <span className="bg-white/90 text-amber-600 text-xs px-1.5 py-0.5 rounded-full font-bold shadow-sm">
                                     ✓
                                 </span>
                             )}
