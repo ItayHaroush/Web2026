@@ -3,6 +3,9 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
 
+// ✅ Signal Init
+window.REACT_LOADED = true;
+
 // Pre-register the Firebase messaging service worker on the frontend domain
 // ⚠️ CRITICAL: Skip Service Worker in Facebook/Instagram in-app browsers
 const isFacebookBrowser = () => {
