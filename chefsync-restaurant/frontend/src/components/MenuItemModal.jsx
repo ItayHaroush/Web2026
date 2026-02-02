@@ -92,20 +92,37 @@ export default function MenuItemModal({
 
     const getGroupSelectionLabel = (group, selectionCount) => {
         const maxAllowed = group.max_select || (group.selection_type === 'single' ? 1 : null);
+        
+        // Calculate weighted selection count
+        const selected = getGroupSelection(group.id);
+        const weightedCount = selected.reduce((sum, addonId) => {
+            const addon = group.addons?.find(a => a.id === addonId);
+            const weight = addon?.selection_weight || 1;
+            return sum + weight;
+        }, 0);
+        
         if (maxAllowed) {
-            return `נבחרו ${selectionCount} מתוך ${maxAllowed}`;
+            return `נבחרו ${weightedCount} מתוך ${maxAllowed}`;
         }
-        return `נבחרו ${selectionCount}`;
+        return `נבחרו ${weightedCount}`;
     };
 
     const computeGroupError = (group) => {
         const selected = getGroupSelection(group.id);
         const minRequired = group.min_select ?? (group.is_required ? 1 : 0);
-        if (minRequired && selected.length < minRequired) {
+        
+        // Calculate weighted selection count
+        const weightedCount = selected.reduce((sum, addonId) => {
+            const addon = group.addons?.find(a => a.id === addonId);
+            const weight = addon?.selection_weight || 1;
+            return sum + weight;
+        }, 0);
+        
+        if (minRequired && weightedCount < minRequired) {
             return `בחר לפחות ${minRequired}`;
         }
         const maxAllowed = group.max_select || (group.selection_type === 'single' ? 1 : null);
-        if (maxAllowed && selected.length > maxAllowed) {
+        if (maxAllowed && weightedCount > maxAllowed) {
             return `ניתן לבחור עד ${maxAllowed}`;
         }
         return '';
@@ -121,7 +138,19 @@ export default function MenuItemModal({
                 nextSelection = current.filter((id) => id !== addonId);
             } else {
                 const maxAllowed = group.max_select || (group.selection_type === 'single' ? 1 : null);
-                if (maxAllowed && current.length >= maxAllowed) {
+                
+                // Calculate current weighted count
+                const currentWeightedCount = current.reduce((sum, id) => {
+                    const addon = group.addons?.find(a => a.id === id);
+                    const weight = addon?.selection_weight || 1;
+                    return sum + weight;
+                }, 0);
+                
+                // Get weight of addon being added
+                const addonToAdd = group.addons?.find(a => a.id === addonId);
+                const addonWeight = addonToAdd?.selection_weight || 1;
+                
+                if (maxAllowed && (currentWeightedCount + addonWeight) > maxAllowed) {
                     nextSelection = maxAllowed === 1 ? [addonId] : current;
                 } else {
                     nextSelection = [...current, addonId];
@@ -145,7 +174,19 @@ export default function MenuItemModal({
         if (!maxAllowed) {
             return false;
         }
-        return current.length >= maxAllowed;
+        
+        // Calculate current weighted count
+        const currentWeightedCount = current.reduce((sum, id) => {
+            const addon = group.addons?.find(a => a.id === id);
+            const weight = addon?.selection_weight || 1;
+            return sum + weight;
+        }, 0);
+        
+        // Get weight of addon being checked
+        const addonToCheck = group.addons?.find(a => a.id === addonId);
+        const addonWeight = addonToCheck?.selection_weight || 1;
+        
+        return (currentWeightedCount + addonWeight) > maxAllowed;
     };
 
     const hasGroupViolations = addonGroups.some((group) => computeGroupError(group));

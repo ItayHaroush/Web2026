@@ -416,6 +416,7 @@ class AdminController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'price_delta' => 'nullable|numeric|min:0|max:999.99',
+            'selection_weight' => 'nullable|integer|min:1|max:10',
             'is_active' => 'sometimes|boolean',
             'category_ids' => 'nullable|array',
             'category_ids.*' => 'integer',
@@ -456,6 +457,7 @@ class AdminController extends Controller
             'tenant_id' => $restaurant->tenant_id,
             'name' => $request->input('name'),
             'price_delta' => $request->input('price_delta', 0),
+            'selection_weight' => $request->input('selection_weight', 1),
             'is_active' => $request->boolean('is_active', true),
             'category_ids' => $categoryIds->isEmpty() ? null : $categoryIds->toArray(),
             'sort_order' => $maxOrder + 1,
@@ -482,6 +484,7 @@ class AdminController extends Controller
         $request->validate([
             'name' => 'sometimes|string|max:255',
             'price_delta' => 'sometimes|numeric|min:0|max:999.99',
+            'selection_weight' => 'sometimes|integer|min:1|max:10',
             'is_active' => 'sometimes|boolean',
             'sort_order' => 'sometimes|integer|min:0',
             'category_ids' => 'nullable|array',
@@ -501,7 +504,7 @@ class AdminController extends Controller
         $salad = RestaurantAddon::where('restaurant_id', $restaurant->id)
             ->findOrFail($id);
 
-        $payload = $request->only(['name', 'price_delta', 'is_active', 'sort_order']);
+        $payload = $request->only(['name', 'price_delta', 'selection_weight', 'is_active', 'sort_order']);
         if ($request->has('category_ids')) {
             $categoryIds = collect($request->input('category_ids', []))
                 ->filter(fn($id) => is_numeric($id))
