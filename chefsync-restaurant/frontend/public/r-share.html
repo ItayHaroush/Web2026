@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>טוען...</title>
+    <style>
+        body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #111827; height: 100vh; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .bg-modern-gradient { position: absolute; inset: 0; background-image: radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), radial-gradient(at 50% 0%, hsla(225,39%,30%,1) 0, transparent 50%), radial-gradient(at 100% 0%, hsla(339,49%,30%,1) 0, transparent 50%); background-size: cover; z-index: 0; }
+        .glass-card { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.5); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); width: 100%; max-width: 400px; margin: 20px; border-radius: 24px; padding: 32px; text-align: center; position: relative; z-index: 10; box-sizing: border-box; }
+        .animate-breath { animation: breath 3s ease-in-out infinite; }
+        @keyframes breath { 0%, 100% { transform: scale(1); filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1)); } 50% { transform: scale(1.05); filter: drop-shadow(0 8px 12px rgba(0,0,0,0.2)); } }
+        .loader { display: inline-block; border: 3px solid #f3f3f3; border-radius: 50%; border-top: 3px solid #ffffff; width: 18px; height: 18px; animation: spin 1s linear infinite; vertical-align: middle; margin-left: 8px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .btn { width: 100%; display: flex; align-items: center; justify-content: center; background: linear-gradient(to right, #f97316, #e11d48); color: white; font-weight: bold; font-size: 18px; padding: 16px; border-radius: 16px; border: none; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); cursor: pointer; transition: transform 0.2s; text-decoration: none; box-sizing: border-box; }
+        .btn:active { transform: scale(0.98); }
+        .btn:disabled { opacity: 0.7; cursor: not-allowed; }
+        h1 { margin: 12px 0; font-size: 28px; font-weight: 900; color: #111827; }
+        p { color: #6b7280; font-size: 16px; line-height: 1.5; margin-bottom: 24px; margin-top: 0; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div class="bg-modern-gradient"></div>
+
+    <div class="glass-card">
+        <div style="margin-bottom: 24px;">
+            <div style="width: 100px; height: 100px; margin: 0 auto; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); padding: 8px;">
+                <img src="/icons/chefsync-logo-v2-512.png" alt="Logo" class="animate-breath" style="width: 100%; height: 100%; object-fit: contain;">
+            </div>
+            <div style="display: inline-flex; align-items: center; gap: 6px; background: #f3f4f6; border-radius: 9999px; padding: 4px 12px; margin-top: 16px;">
+                <span style="width: 8px; height: 8px; background: #22c55e; border-radius: 50%;"></span>
+                <span style="font-size: 12px; font-weight: 600; color: #4b5563;">Secure Redirect</span>
+            </div>
+        </div>
+
+        <h1>נפתח בחלון חדש</h1>
+        <p>לחווית הזמנה חלקה ומאובטחת,<br>אנחנו מעבירים אותך לדפדפן הראשי.</p>
+
+        <button id="openBtn" class="btn">
+            <span id="btnText">טוען...</span>
+        </button>
+
+        <div style="margin-top: 32px; padding-top: 32px; border-top: 1px solid #f3f4f6;">
+            <p style="font-size: 12px; font-weight: 600; color: #9ca3af; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.05em;">לא נפתח אוטומטית?</p>
+            <div style="background: #f9fafb; border-radius: 12px; padding: 12px; font-size: 14px; text-align: right; color: #4b5563;">
+                <div><span style="font-weight: bold; color: #111827;">1. לחץ על ה-⋯ למעלה</span> <span style="font-size: 11px; opacity: 0.7;">בפינה</span></div>
+                <div style="height: 1px; background: #e5e7eb; margin: 8px 0;"></div>
+                <div><span style="font-weight: bold; color: #111827;">2. בחר "Open in Browser"</span></div>
+            </div>
+        </div>
+        
+        <div style="margin-top: 24px; font-size: 10px; color: #9ca3af; font-family: monospace;">Powered by TakeEat &copy; 2026</div>
+    </div>
+
+    <script>
+        // קבלת slug מה-URL
+        const params = new URLSearchParams(window.location.search);
+        const slug = params.get('slug');
+        
+        if (!slug) {
+            // אם אין slug, חזור לדף הבית
+            window.location.href = '/';
+        }
+
+        // בניית כתובת היעד (דף המסעדה האמיתי)
+        const targetUrl = window.location.origin + '/r/' + slug;
+
+        const btn = document.getElementById('openBtn');
+        const btnText = document.getElementById('btnText');
+        const ua = navigator.userAgent || navigator.vendor || window.opera;
+        const isIOS = /iPhone|iPad|iPod/i.test(ua);
+        const isAndroid = /Android/i.test(ua);
+
+        // הגדרת כפתור בהתאם למכשיר
+        if (isIOS) {
+            btnText.textContent = 'פתח ב-Safari';
+        } else if (isAndroid) {
+            btnText.textContent = 'פתח ב-Chrome';
+        } else {
+            btnText.textContent = 'מעבר לאתר';
+        }
+
+        function openBrowser() {
+            // אנימציית טעינה
+            btnText.innerHTML = '<div class="loader"></div> פותח...';
+            btn.disabled = true;
+
+            if (isIOS) {
+                // iOS: Google Chrome Scheme
+                const cleanTarget = targetUrl.replace(/^https?:\/\//, '');
+                window.location.href = 'googlechrome://' + cleanTarget;
+                
+                // Fallback ל-Safari
+                setTimeout(function() {
+                    window.location.href = targetUrl;
+                }, 1500);
+            } 
+            else if (isAndroid) {
+                // Android: Intent Scheme
+                const cleanTarget = targetUrl.replace(/^https?:\/\//, '');
+                const intentUrl = 'intent://' + cleanTarget + '#Intent;scheme=https;package=com.android.chrome;end';
+                window.location.href = intentUrl;
+                
+                // Fallback
+                setTimeout(function() {
+                    window.location.href = targetUrl;
+                }, 1500);
+            } 
+            else {
+                // Desktop / Other
+                window.open(targetUrl, '_blank');
+                setTimeout(function() {
+                    window.location.href = targetUrl;
+                }, 500);
+            }
+
+            // החזרת הכפתור למצב רגיל אם המשתמש חוזר
+            setTimeout(function() {
+                 btnText.textContent = '⚠️ השתמש בתפריט למעלה ↗';
+                 btn.style.background = '#4b5563';
+                 btn.disabled = false;
+            }, 3500);
+        }
+
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            openBrowser();
+        });
+
+        // ניסיון פתיחה אוטומטי מייד (אגרסיבי)
+        setTimeout(openBrowser, 300);
+    </script>
+</body>
+</html>
