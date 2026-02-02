@@ -544,8 +544,8 @@ export default function OrderStatusPage() {
                                             <div key={step.value} className="flex flex-col items-center flex-1 relative" style={{ zIndex: 2 }}>
                                                 <div
                                                     className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm mb-2 border-2 transition-all ${index <= currentStepIndex
-                                                            ? 'bg-gradient-to-br from-blue-500 to-green-500 text-white border-transparent shadow-lg'
-                                                            : 'bg-white text-gray-400 border-gray-300'
+                                                        ? 'bg-gradient-to-br from-blue-500 to-green-500 text-white border-transparent shadow-lg'
+                                                        : 'bg-white text-gray-400 border-gray-300'
                                                         }`}
                                                 >
                                                     {index < currentStepIndex ? <FaCheckCircle /> : index + 1}
