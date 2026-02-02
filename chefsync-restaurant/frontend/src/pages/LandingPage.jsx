@@ -197,33 +197,30 @@ export default function LandingPage() {
                                 <div className="flex justify-center gap-3 mb-8">
                                     <button
                                         onClick={() => setActiveDevice('mobile')}
-                                        className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all duration-300 ${
-                                            activeDevice === 'mobile'
+                                        className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all duration-300 ${activeDevice === 'mobile'
                                                 ? 'bg-gradient-to-r from-brand-primary to-brand-secondary text-white shadow-lg scale-105'
                                                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                        }`}
+                                            }`}
                                     >
                                         <FaMobileScreen className="text-lg" />
                                         <span className="hidden sm:inline">מובייל</span>
                                     </button>
                                     <button
                                         onClick={() => setActiveDevice('tablet')}
-                                        className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all duration-300 ${
-                                            activeDevice === 'tablet'
+                                        className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all duration-300 ${activeDevice === 'tablet'
                                                 ? 'bg-gradient-to-r from-brand-primary to-brand-secondary text-white shadow-lg scale-105'
                                                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                        }`}
+                                            }`}
                                     >
                                         <FaTabletScreenButton className="text-lg" />
                                         <span className="hidden sm:inline">טאבלט</span>
                                     </button>
                                     <button
                                         onClick={() => setActiveDevice('desktop')}
-                                        className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all duration-300 ${
-                                            activeDevice === 'desktop'
+                                        className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all duration-300 ${activeDevice === 'desktop'
                                                 ? 'bg-gradient-to-r from-brand-primary to-brand-secondary text-white shadow-lg scale-105'
                                                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                        }`}
+                                            }`}
                                     >
                                         <FaDesktop className="text-lg" />
                                         <span className="hidden sm:inline">מחשב</span>
