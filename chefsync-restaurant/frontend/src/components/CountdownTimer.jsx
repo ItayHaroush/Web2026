@@ -7,12 +7,19 @@ import { FaClock } from 'react-icons/fa';
  * @param {number} etaMinutes - זמן הכנה משוער בדקות
  * @param {string} etaNote - הערה נוספת על הזמן
  * @param {string} deliveryMethod - סוג ההזמנה: 'delivery' או 'pickup'
+ * @param {string} orderStatus - סטטוס ההזמנה
+ * @param {React.ReactNode} children - תוכן נוסף להצגה (כמו ביקורת)
  */
-export default function CountdownTimer({ startTime, etaMinutes, etaNote, deliveryMethod = 'delivery' }) {
+export default function CountdownTimer({ startTime, etaMinutes, etaNote, deliveryMethod = 'delivery', orderStatus, children }) {
     const [timeLeft, setTimeLeft] = useState(null);
     const [hasChanged, setHasChanged] = useState(false);
 
     useEffect(() => {
+        // אם ההזמנה נמסרה - אל תעדכן
+        if (orderStatus === 'delivered') {
+            return;
+        }
+
         // אם אין eta_minutes - הצג מצב המתנה
         if (!etaMinutes) {
             setTimeLeft(null);
@@ -45,7 +52,7 @@ export default function CountdownTimer({ startTime, etaMinutes, etaNote, deliver
         }, 1000);
 
         return () => clearInterval(interval);
-    }, [startTime, etaMinutes]);
+    }, [startTime, etaMinutes, orderStatus]);
 
     // אנימציית מעבר כשהזמן משתנה
     useEffect(() => {
@@ -53,6 +60,34 @@ export default function CountdownTimer({ startTime, etaMinutes, etaNote, deliver
         const timer = setTimeout(() => setHasChanged(false), 500);
         return () => clearTimeout(timer);
     }, [etaMinutes]);
+
+    // אם ההזמנה נמסרה - הצג הודעת סיום
+    if (orderStatus === 'delivered') {
+        return (
+            <div className="bg-gradient-to-br from-green-50 to-emerald-100 rounded-xl sm:rounded-2xl p-6 sm:p-8 shadow-lg border-2 border-green-300">
+                <div className="flex flex-col items-center gap-4">
+                    <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-xl">
+                        <span className="text-4xl sm:text-5xl">🎉</span>
+                    </div>
+                    <div className="text-center space-y-2">
+                        <p className="text-xl sm:text-2xl font-black text-gray-800">
+                            {deliveryMethod === 'pickup' ? 'ההזמנה נאספה' : 'השליח כבר בדלת!'}
+                        </p>
+                        <p className="text-base sm:text-lg font-bold text-green-700">
+                            בתאבון! 🍽️
+                        </p>
+                    </div>
+                    
+                    {/* תוכן נוסף - ביקורת */}
+                    {children && (
+                        <div className="w-full mt-4">
+                            {children}
+                        </div>
+                    )}
+                </div>
+            </div>
+        );
+    }
 
     // אם אין זמן משוער - הצג מצב המתנה
     if (!etaMinutes) {
