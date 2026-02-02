@@ -1,3 +1,4 @@
+// Force rebuild - pickup fix applied
 import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAdminAuth } from '../../context/AdminAuthContext';
