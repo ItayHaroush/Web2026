@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CustomerLayout } from '../layouts/CustomerLayout';
 import {
@@ -16,11 +16,15 @@ import {
     FaCircleCheck,
     FaChartLine,
     FaWhatsapp,
-    FaUtensils
+    FaUtensils,
+    FaDesktop,
+    FaTabletScreenButton
 } from "react-icons/fa6";
 import { PRODUCT_BYLINE_HE, PRODUCT_NAME } from '../constants/brand';
 
 export default function LandingPage() {
+    const [activeDevice, setActiveDevice] = useState('mobile'); // mobile, tablet, desktop
+
     const benefits = [
         {
             title: 'ללא עמלות – 0%',
@@ -113,9 +117,9 @@ export default function LandingPage() {
                     <div className="relative max-w-5xl mx-auto text-center space-y-10">
                         {/* Logo */}
                         <div className="flex justify-center mb-8">
-                            <img 
-                                src="/icons/chefsync-logo-v2-512.png" 
-                                alt="TakeEat Logo" 
+                            <img
+                                src="/icons/chefsync-logo-v2-512.png"
+                                alt="TakeEat Logo"
                                 className="w-32 h-32 sm:w-40 sm:h-40 drop-shadow-2xl hover:scale-105 transition-transform duration-300"
                             />
                         </div>
@@ -187,34 +191,108 @@ export default function LandingPage() {
                         <div className="absolute top-0 right-0 w-full h-full bg-grid-slate-50 [mask-image:linear-gradient(to_bottom,white,transparent)] pointer-events-none" />
 
                         <div className="flex flex-col lg:grid lg:grid-cols-2 gap-12 lg:gap-20 items-center relative z-10">
-                            {/* iPhone Mockup */}
-                            <div className="relative mx-auto w-full max-w-[300px] lg:order-last">
-                                <div className="relative w-full aspect-[9/19] mx-auto transition-transform hover:scale-[1.02] duration-500 group">
-                                    {/* iPhone Frame */}
-                                    <div className="absolute inset-0 bg-gray-900 rounded-[50px] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.3)] p-3 ring-4 ring-gray-100 z-20">
-                                        <div className="w-full h-full bg-white rounded-[40px] overflow-hidden relative">
-                                            {/* Notch */}
-                                            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-28 h-7 bg-gray-900 rounded-b-2xl z-20"></div>
-                                            {/* Screen Content */}
-                                            <div className="w-full h-full overflow-hidden bg-white">
-                                                <iframe
-                                                    src="https://chefsync.vercel.app/"
-                                                    className="w-full h-full border-0"
-                                                    title="TakeEat Demo"
-                                                    loading="lazy"
-                                                />
+                            {/* Device Mockups with Tabs */}
+                            <div className="relative mx-auto w-full max-w-[700px] lg:order-last">
+                                {/* Device Tabs */}
+                                <div className="flex justify-center gap-3 mb-8">
+                                    <button
+                                        onClick={() => setActiveDevice('mobile')}
+                                        className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all duration-300 ${
+                                            activeDevice === 'mobile'
+                                                ? 'bg-gradient-to-r from-brand-primary to-brand-secondary text-white shadow-lg scale-105'
+                                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                        }`}
+                                    >
+                                        <FaMobileScreen className="text-lg" />
+                                        <span className="hidden sm:inline">מובייל</span>
+                                    </button>
+                                    <button
+                                        onClick={() => setActiveDevice('tablet')}
+                                        className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all duration-300 ${
+                                            activeDevice === 'tablet'
+                                                ? 'bg-gradient-to-r from-brand-primary to-brand-secondary text-white shadow-lg scale-105'
+                                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                        }`}
+                                    >
+                                        <FaTabletScreenButton className="text-lg" />
+                                        <span className="hidden sm:inline">טאבלט</span>
+                                    </button>
+                                    <button
+                                        onClick={() => setActiveDevice('desktop')}
+                                        className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all duration-300 ${
+                                            activeDevice === 'desktop'
+                                                ? 'bg-gradient-to-r from-brand-primary to-brand-secondary text-white shadow-lg scale-105'
+                                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                        }`}
+                                    >
+                                        <FaDesktop className="text-lg" />
+                                        <span className="hidden sm:inline">מחשב</span>
+                                    </button>
+                                </div>
+
+                                {/* Device Mockups */}
+                                <div className="relative">
+                                    {/* Mobile Mockup */}
+                                    {activeDevice === 'mobile' && (
+                                        <div className="relative w-full max-w-[300px] mx-auto aspect-[9/19] transition-all duration-500 animate-fadeIn">
+                                            <div className="absolute inset-0 bg-gray-900 rounded-[50px] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.3)] p-3 ring-4 ring-gray-100">
+                                                <div className="w-full h-full bg-white rounded-[40px] overflow-hidden relative">
+                                                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-28 h-7 bg-gray-900 rounded-b-2xl z-20"></div>
+                                                    <iframe
+                                                        src="https://chefsync.vercel.app/"
+                                                        className="w-full h-full border-0"
+                                                        title="Mobile Demo"
+                                                    />
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
+                                    )}
 
-                                    {/* Floating Badges */}
-                                    <div className="hidden sm:flex absolute -right-8 top-20 bg-emerald-500 text-white text-xs font-bold px-4 py-2 rounded-full shadow-lg animate-bounce z-30 items-center gap-2">
+                                    {/* Tablet Mockup */}
+                                    {activeDevice === 'tablet' && (
+                                        <div className="relative w-full max-w-[500px] mx-auto aspect-[3/4] transition-all duration-500 animate-fadeIn">
+                                            <div className="absolute inset-0 bg-gray-900 rounded-[40px] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.3)] p-4 ring-4 ring-gray-100">
+                                                <div className="w-full h-full bg-white rounded-[32px] overflow-hidden relative">
+                                                    <iframe
+                                                        src="https://chefsync.vercel.app/"
+                                                        className="w-full h-full border-0"
+                                                        title="Tablet Demo"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Desktop Mockup */}
+                                    {activeDevice === 'desktop' && (
+                                        <div className="relative w-full transition-all duration-500 animate-fadeIn">
+                                            <div className="bg-gray-900 rounded-t-2xl p-2 shadow-2xl">
+                                                <div className="flex items-center gap-2 mb-2 px-2">
+                                                    <div className="flex gap-1.5">
+                                                        <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                                                        <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                                                        <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                                                    </div>
+                                                    <div className="flex-1 bg-gray-800 rounded-lg px-4 py-1.5 text-xs text-gray-400">
+                                                        chefsync.vercel.app
+                                                    </div>
+                                                </div>
+                                                <div className="bg-white rounded-lg overflow-hidden aspect-[16/10]">
+                                                    <iframe
+                                                        src="https://chefsync.vercel.app/"
+                                                        className="w-full h-full border-0"
+                                                        title="Desktop Demo"
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="h-4 bg-gray-800 rounded-b-2xl shadow-2xl"></div>
+                                        </div>
+                                    )}
+
+                                    {/* LIVE Badge */}
+                                    <div className="absolute -top-4 -right-4 bg-emerald-500 text-white text-xs font-bold px-4 py-2 rounded-full shadow-lg z-30 flex items-center gap-2">
                                         <span className="w-2 h-2 bg-white rounded-full animate-pulse"></span>
                                         LIVE
-                                    </div>
-                                    <div className="hidden sm:flex absolute -left-8 bottom-32 bg-blue-600 text-white text-xs font-bold px-4 py-2 rounded-full shadow-lg z-30 items-center gap-2">
-                                        <FaMobileScreen />
-                                        PWA
                                     </div>
                                 </div>
                             </div>
@@ -434,6 +512,95 @@ export default function LandingPage() {
                                 </Link>
                             </div>
                         ))}
+                    </div>
+                </section>
+
+                {/* Trusted By - Infinite Logo Carousel */}
+                <section className="py-20 overflow-hidden bg-white">
+                    <div className="text-center mb-12">
+                        <p className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">מסעדות שסומכות עלינו</p>
+                        <h3 className="text-2xl font-bold text-gray-900">המותגים שכבר איתנו</h3>
+                    </div>
+
+                    <div className="relative">
+                        {/* Gradient Masks */}
+                        <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-white to-transparent z-10 pointer-events-none"></div>
+                        <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-white to-transparent z-10 pointer-events-none"></div>
+
+                        {/* Infinite Scroll Container */}
+                        <div className="flex gap-16 animate-ticker">
+                            {/* Logo 1: TakeEat */}
+                            <div className="flex items-center justify-center min-w-[240px] h-32 grayscale hover:grayscale-0 transition-all duration-300">
+                                <img
+                                    src="/icons/chefsync-logo-v2-512.png"
+                                    alt="TakeEat"
+                                    className="h-24 w-auto object-contain opacity-60 hover:opacity-100 transition-opacity"
+                                />
+                            </div>
+
+                            {/* Logo 2: חלבוד */}
+                            <div className="flex items-center justify-center min-w-[240px] h-32 grayscale hover:grayscale-0 transition-all duration-300">
+                                <img
+                                    src="/logos/halabud.png"
+                                    alt="חלבוד"
+                                    className="h-24 w-auto object-contain opacity-60 hover:opacity-100 transition-opacity"
+                                />
+                            </div>
+
+                            {/* Logo 3: חלבוד */}
+                            <div className="flex items-center justify-center min-w-[240px] h-32 grayscale hover:grayscale-0 transition-all duration-300">
+                                <img
+                                    src="/logos/halabud.png"
+                                    alt="חלבוד"
+                                    className="h-24 w-auto object-contain opacity-60 hover:opacity-100 transition-opacity"
+                                />
+                            </div>
+
+                            {/* Logo 4: חלבוד */}
+                            <div className="flex items-center justify-center min-w-[240px] h-32 grayscale hover:grayscale-0 transition-all duration-300">
+                                <img
+                                    src="/logos/halabud.png"
+                                    alt="חלבוד"
+                                    className="h-24 w-auto object-contain opacity-60 hover:opacity-100 transition-opacity"
+                                />
+                            </div>
+
+                            {/* Duplicate for infinite loop - Logo 1 */}
+                            <div className="flex items-center justify-center min-w-[240px] h-32 grayscale hover:grayscale-0 transition-all duration-300">
+                                <img
+                                    src="/icons/chefsync-logo-v2-512.png"
+                                    alt="TakeEat"
+                                    className="h-24 w-auto object-contain opacity-60 hover:opacity-100 transition-opacity"
+                                />
+                            </div>
+
+                            {/* Duplicate - Logo 2 */}
+                            <div className="flex items-center justify-center min-w-[240px] h-32 grayscale hover:grayscale-0 transition-all duration-300">
+                                <img
+                                    src="/logos/halabud.png"
+                                    alt="חלבוד"
+                                    className="h-24 w-auto object-contain opacity-60 hover:opacity-100 transition-opacity"
+                                />
+                            </div>
+
+                            {/* Duplicate - Logo 3 */}
+                            <div className="flex items-center justify-center min-w-[240px] h-32 grayscale hover:grayscale-0 transition-all duration-300">
+                                <img
+                                    src="/logos/halabud.png"
+                                    alt="חלבוד"
+                                    className="h-24 w-auto object-contain opacity-60 hover:opacity-100 transition-opacity"
+                                />
+                            </div>
+
+                            {/* Duplicate - Logo 4 */}
+                            <div className="flex items-center justify-center min-w-[240px] h-32 grayscale hover:grayscale-0 transition-all duration-300">
+                                <img
+                                    src="/logos/halabud.png"
+                                    alt="חלבוד"
+                                    className="h-24 w-auto object-contain opacity-60 hover:opacity-100 transition-opacity"
+                                />
+                            </div>
+                        </div>
                     </div>
                 </section>
 
