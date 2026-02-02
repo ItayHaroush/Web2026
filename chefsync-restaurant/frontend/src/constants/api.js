@@ -1,16 +1,21 @@
 // מידע API ועירובים
 
 const resolveApiBaseUrl = () => {
-    const envValue = import.meta.env.VITE_API_URL?.trim();
+    try {
+        const envValue = import.meta?.env?.VITE_API_URL?.trim();
 
-    if (envValue) return envValue;
+        if (envValue) return envValue;
 
-    if (import.meta.env.DEV) {
-        console.warn('VITE_API_URL missing; using dev fallback http://localhost:8000/api');
-        return 'http://localhost:8000/api';
+        if (import.meta?.env?.DEV) {
+            console.warn('VITE_API_URL missing; using dev fallback http://localhost:8000/api');
+            return 'http://localhost:8000/api';
+        }
+    } catch (e) {
+        console.error('Error accessing import.meta.env:', e);
     }
 
-    throw new Error('VITE_API_URL is not set. Define it in the environment for production builds.');
+    // Fallback for environments where import.meta is not available
+    return 'https://api.chefsync.co.il/api';
 };
 
 export const API_BASE_URL = resolveApiBaseUrl();

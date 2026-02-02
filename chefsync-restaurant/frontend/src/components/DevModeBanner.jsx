@@ -6,7 +6,13 @@ import { FaExclamationTriangle } from 'react-icons/fa';
  */
 export default function DevModeBanner() {
     // מוצג רק בסביבת פיתוח של Vite
-    const isDev = import.meta.env.DEV;
+    let isDev = false;
+    try {
+        isDev = import.meta?.env?.DEV || false;
+    } catch (e) {
+        // import.meta not available in some environments
+        isDev = false;
+    }
 
     if (!isDev) return null;
 

@@ -59,8 +59,13 @@ export default function MenuPage() {
 
     // זיהוי PWA mode
     useEffect(() => {
-        const checkPWA = window.matchMedia('(display-mode: standalone)').matches;
-        setIsPWA(checkPWA);
+        try {
+            const checkPWA = window.matchMedia && window.matchMedia('(display-mode: standalone)').matches;
+            setIsPWA(checkPWA || false);
+        } catch (e) {
+            // Fallback if matchMedia not supported
+            setIsPWA(false);
+        }
     }, []);
 
     // מעקב אחר גלילה לעדכון קטגוריה פעילה

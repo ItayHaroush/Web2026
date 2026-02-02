@@ -2,11 +2,20 @@ import axios from 'axios';
 import { TENANT_HEADER } from '../constants/api';
 
 // Base URLs: prefer local, fall back to production on network errors
-const LOCAL_API = (import.meta.env.VITE_API_URL_LOCAL || 'http://localhost:8000/api').trim();
-const PROD_API = (import.meta.env.VITE_API_URL_PRODUCTION || 'https://api.chefsync.co.il/api').trim();
+// ⚠️ Safe access to import.meta.env with fallbacks
+const getEnv = (key, fallback) => {
+    try {
+        return import.meta?.env?.[key] || fallback;
+    } catch {
+        return fallback;
+    }
+};
+
+const LOCAL_API = (getEnv('VITE_API_URL_LOCAL', 'http://localhost:8000/api')).trim();
+const PROD_API = (getEnv('VITE_API_URL_PRODUCTION', 'https://api.chefsync.co.il/api')).trim();
 
 // In production (Vercel), default straight to production API to avoid a first request to localhost.
-const DEFAULT_API = import.meta.env.PROD ? PROD_API : LOCAL_API;
+const DEFAULT_API = getEnv('PROD', false) ? PROD_API : LOCAL_API;
 
 /**
  * אתחול כלי HTTP עם תמיכה מלאה ב-Multi-Tenant
