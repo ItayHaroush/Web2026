@@ -57,16 +57,17 @@
     <title>TakeEat - הזמנות למסעדה</title>
   </head>
   <body>
-    <!-- 🔥 FB/IG Guard - MUST run before ANY module loading -->
+    <!-- 🔥 FB/IG Warning Banner (NO redirect, just warn) -->
+    <div id="fb-warning" style="display:none; position:fixed; top:0; left:0; right:0; z-index:99999; background:linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%); color:white; padding:12px 16px; text-align:center; font-family:system-ui,-apple-system,sans-serif; box-shadow:0 4px 12px rgba(0,0,0,0.3); direction:rtl;">
+      <div style="max-width:600px; margin:0 auto;">
+        <div style="font-weight:700; font-size:16px; margin-bottom:4px;">⚠️ שימו לב - דפדפן פנימי</div>
+        <div style="font-size:13px; opacity:0.95;">לחוויה מיטבית, פתחו את הקישור בדפדפן חיצוני (Safari/Chrome)</div>
+      </div>
+    </div>
+    
     <script>
       (function() {
         try {
-          // בדיקה אם אנחנו כבר בדף open.html או r-share.html
-          if (window.location.pathname === '/open.html' || window.location.pathname === '/r-share.html') {
-            console.log('[GUARD] Already on redirect page, skipping');
-            return;
-          }
-
           // זיהוי דפדפן פנימי של פייסבוק/אינסטגרם
           const ua = navigator.userAgent || navigator.vendor || window.opera;
           const isFacebookInApp = /FBAN|FBAV|Instagram/i.test(ua);
@@ -74,38 +75,20 @@
           console.log('[GUARD] UA:', ua);
           console.log('[GUARD] isFacebookInApp:', isFacebookInApp);
           
-          // אם זה FB/IG - הפנה מיידית ללא sessionStorage
+          // אם זה FB/IG - הצג warning banner אבל תן להמשיך
           if (isFacebookInApp) {
-            console.log('[GUARD] FB detected, redirecting NOW');
-            
-            // ✅ בדיקה מיוחדת לדפי שיתוף מסעדה (/r/tenant-name)
-            const restaurantShareMatch = window.location.pathname.match(/^\/r\/([^\/]+)\/?$/);
-            
-            if (restaurantShareMatch) {
-              const slug = restaurantShareMatch[1];
-              const target = '/r-share.html?slug=' + encodeURIComponent(slug);
-              console.log('[GUARD] Redirecting to:', target);
-              document.write('<meta http-equiv="refresh" content="0; url=' + target + '">');
-              window.location.replace(target);
-            } else {
-              const targetUrl = encodeURIComponent(window.location.href);
-              const target = '/open.html?target=' + targetUrl;
-              console.log('[GUARD] Redirecting to:', target);
-              document.write('<meta http-equiv="refresh" content="0; url=' + target + '">');
-              window.location.replace(target);
+            console.log('[GUARD] FB detected, showing warning banner');
+            const banner = document.getElementById('fb-warning');
+            if (banner) {
+              banner.style.display = 'block';
+              // הוסף padding למעלה כדי שהתוכן לא יהיה מתחת ל-banner
+              document.body.style.paddingTop = '80px';
             }
-            
-            // Stop everything
-            throw new Error('[GUARD] Redirecting to static page');
+          } else {
+            console.log('[GUARD] Not FB browser, no warning needed');
           }
-          
-          console.log('[GUARD] Not FB browser, continuing to React');
         } catch (e) {
           console.error('[GUARD] Error:', e);
-          // If redirect, this is expected
-          if (e.message && e.message.includes('Redirecting')) {
-            throw e;
-          }
         }
       })();
     </script>
