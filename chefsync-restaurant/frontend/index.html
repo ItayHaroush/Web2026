@@ -1,6 +1,25 @@
 <!doctype html>
 <html lang="he" dir="rtl">
   <head>
+    <!-- 🚨 FACEBOOK/INSTAGRAM BROWSER REDIRECT 🚨 -->
+    <script>
+      (function() {
+        // Prevent infinite loop if user came back from open.html
+        try {
+            if (sessionStorage.getItem('fb-redirect-attempted')) return;
+        } catch(e) {}
+
+        var isFacebookApp = /FBAN|FBAV|Instagram/i.test(navigator.userAgent);
+        var isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        
+        // If in FB/Insta app, redirect to open.html immediately
+        if (isFacebookApp) {
+           var currentUrl = encodeURIComponent(window.location.href);
+           window.location.replace('/open.html?target=' + currentUrl);
+        }
+      })();
+    </script>
+
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-LDRG3SC1VE"></script>
     <script>
