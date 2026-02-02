@@ -16,9 +16,14 @@ export function AuthProvider({ children }) {
      * אתחול משתמש מ-localStorage בעת טעינת האפליקציה
      */
     useEffect(() => {
-        const savedToken = localStorage.getItem('authToken');
-        const savedTenant = localStorage.getItem('tenantId');
-        const savedRole = localStorage.getItem('role');
+        let savedToken, savedTenant, savedRole;
+        try {
+             savedToken = localStorage.getItem('authToken');
+             savedTenant = localStorage.getItem('tenantId');
+             savedRole = localStorage.getItem('role');
+        } catch (e) {
+            console.error('LocalStorage access denied:', e);
+        }
 
         // בדיקה אם יש tenant בURL
         const urlPath = window.location.pathname;
@@ -30,8 +35,10 @@ export function AuthProvider({ children }) {
             setTenantId(urlTenant);
             setRole('customer');
             setUser({ token: null });
-            localStorage.setItem('tenantId', urlTenant);
-            localStorage.setItem('role', 'customer');
+            try {
+                localStorage.setItem('tenantId', urlTenant);
+                localStorage.setItem('role', 'customer');
+            } catch (e) { console.error('LocalStorage write failed:', e); }
         } else if (savedToken && savedTenant) {
             setUser({ token: savedToken });
             setTenantId(savedTenant);
