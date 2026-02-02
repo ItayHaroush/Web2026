@@ -16,7 +16,7 @@ export default function FacebookInAppWarning() {
         // בדיקה אם המשתמש בתוך אפליקציית פייסבוק או אינסטגרם
         const isFacebookInApp = /FBAN|FBAV|Instagram/i.test(navigator.userAgent);
         console.log('📱 Is Facebook/Instagram in-app?', isFacebookInApp);
-        
+
         let wasDissmissed = false;
         try {
             // בדיקה אם המשתמש כבר סגר את ההודעה בעבר (שמור ב-sessionStorage)

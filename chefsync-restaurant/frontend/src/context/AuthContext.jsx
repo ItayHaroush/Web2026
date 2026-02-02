@@ -18,9 +18,9 @@ export function AuthProvider({ children }) {
     useEffect(() => {
         let savedToken, savedTenant, savedRole;
         try {
-             savedToken = localStorage.getItem('authToken');
-             savedTenant = localStorage.getItem('tenantId');
-             savedRole = localStorage.getItem('role');
+            savedToken = localStorage.getItem('authToken');
+            savedTenant = localStorage.getItem('tenantId');
+            savedRole = localStorage.getItem('role');
         } catch (e) {
             console.error('LocalStorage access denied:', e);
         }
