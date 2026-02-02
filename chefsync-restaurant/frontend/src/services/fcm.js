@@ -1,6 +1,16 @@
 import { initializeApp } from 'firebase/app';
 import { deleteToken, getMessaging, getToken, onMessage } from 'firebase/messaging';
 
+// ⚠️ CRITICAL: Detect Facebook/Instagram browsers that don't support Firebase
+const isFacebookBrowser = () => {
+    try {
+        const ua = navigator.userAgent || navigator.vendor || window.opera || '';
+        return /FBAN|FBAV|Instagram/i.test(ua);
+    } catch {
+        return false;
+    }
+};
+
 const firebaseConfig = {
     apiKey: 'AIzaSyAdhvtnnmHu8u294TeLUz2Vl7tTdg64bSw',
     authDomain: 'chefsync-takeeat.firebaseapp.com',
@@ -41,6 +51,18 @@ export function clearStoredFcmToken() {
 }
 
 export async function requestFcmToken() {
+    // ⚠️ Block Firebase operations in Facebook/Instagram browsers
+    if (isFacebookBrowser()) {
+        console.warn('[FCM] Skipping in Facebook/Instagram browser');
+        return null;
+    }
+
+    // Check if notifications are supported
+    if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+        console.warn('[FCM] Notifications or Service Workers not supported');
+        return null;
+    }
+
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') return null;
 

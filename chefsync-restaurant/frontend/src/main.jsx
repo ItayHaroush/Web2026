@@ -4,7 +4,17 @@ import './index.css'
 import App from './App.jsx'
 
 // Pre-register the Firebase messaging service worker on the frontend domain
-if ('serviceWorker' in navigator) {
+// ⚠️ CRITICAL: Skip Service Worker in Facebook/Instagram in-app browsers
+const isFacebookBrowser = () => {
+  try {
+    const ua = navigator.userAgent || navigator.vendor || window.opera || '';
+    return /FBAN|FBAV|Instagram/i.test(ua);
+  } catch {
+    return false;
+  }
+};
+
+if ('serviceWorker' in navigator && !isFacebookBrowser()) {
   window.addEventListener('load', () => {
     navigator.serviceWorker
       .register('/firebase-messaging-sw.js')
