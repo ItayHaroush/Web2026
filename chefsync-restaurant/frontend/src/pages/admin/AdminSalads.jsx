@@ -36,6 +36,7 @@ export default function AdminSalads() {
     const [form, setForm] = useState({
         name: '',
         price_delta: '0',
+        selection_weight: '1',
         is_active: true,
         group_id: '',
         category_ids: [],
@@ -102,6 +103,7 @@ export default function AdminSalads() {
             setForm({
                 name: salad.name,
                 price_delta: typeof salad.price_delta === 'number' ? salad.price_delta.toString() : salad.price_delta || '0',
+                selection_weight: typeof salad.selection_weight === 'number' ? salad.selection_weight.toString() : salad.selection_weight || '1',
                 is_active: Boolean(salad.is_active),
                 group_id: String(salad.addon_group_id || selectedGroupId || ''),
                 category_ids: Array.isArray(salad.category_ids) ? salad.category_ids.map(String) : [],
@@ -111,6 +113,7 @@ export default function AdminSalads() {
             setForm({
                 name: '',
                 price_delta: '0',
+                selection_weight: '1',
                 is_active: true,
                 group_id: String(selectedGroupId || ''),
                 category_ids: [],
@@ -125,6 +128,7 @@ export default function AdminSalads() {
         setForm({
             name: '',
             price_delta: '0',
+            selection_weight: '1',
             is_active: true,
             group_id: String(selectedGroupId || ''),
             category_ids: [],
@@ -138,6 +142,7 @@ export default function AdminSalads() {
         const payload = {
             name: form.name.trim(),
             price_delta: Number(form.price_delta) || 0,
+            selection_weight: Number(form.selection_weight) || 1,
             is_active: form.is_active,
             group_id: form.group_id || null,
             category_ids: form.category_ids?.length ? form.category_ids.map(Number) : [],
@@ -810,20 +815,37 @@ export default function AdminSalads() {
                                         </div>
 
                                         <div className="space-y-4">
-                                            <label className="text-xs font-black text-gray-500 mr-2 uppercase tracking-[0.2em]">סטטוס תצוגה</label>
-                                            <label className="flex items-center gap-5 p-5 bg-emerald-50 rounded-[1.5rem] cursor-pointer hover:bg-emerald-100 transition-all border border-emerald-100 group h-full max-h-[68px]">
-                                                <div className={`w-12 h-7 flex items-center rounded-full p-1 transition-colors ${form.is_active ? 'bg-emerald-500' : 'bg-gray-300'}`}>
-                                                    <div className={`bg-white w-5 h-5 rounded-full shadow transform transition-transform ${form.is_active ? '-translate-x-5' : 'translate-x-0'}`}></div>
-                                                </div>
+                                            <label className="text-xs font-black text-gray-500 mr-2 uppercase tracking-[0.2em]">משקל בחירה</label>
+                                            <div className="relative">
                                                 <input
-                                                    type="checkbox"
-                                                    className="hidden"
-                                                    checked={form.is_active}
-                                                    onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
+                                                    type="number"
+                                                    min="1"
+                                                    max="10"
+                                                    step="1"
+                                                    value={form.selection_weight || 1}
+                                                    onChange={(e) => setForm({ ...form, selection_weight: e.target.value })}
+                                                    className="w-full px-8 py-5 bg-gray-50 border-none rounded-[1.5rem] focus:ring-4 focus:ring-brand-primary/10 text-gray-900 font-black text-xl"
                                                 />
-                                                <span className="text-sm font-black text-emerald-900">זמין לבחירה</span>
-                                            </label>
+                                            </div>
+                                            <p className="text-[10px] text-gray-400 mr-2 font-bold italic">כמה בחירות נספרות? (ברירת מחדל: 1)</p>
                                         </div>
+                                    </div>
+
+                                    {/* Visibility Status */}
+                                    <div className="space-y-4">
+                                        <label className="text-xs font-black text-gray-500 mr-2 uppercase tracking-[0.2em]">סטטוס תצוגה</label>
+                                        <label className="flex items-center gap-5 p-5 bg-emerald-50 rounded-[1.5rem] cursor-pointer hover:bg-emerald-100 transition-all border border-emerald-100 group h-full max-h-[68px]">
+                                            <div className={`w-12 h-7 flex items-center rounded-full p-1 transition-colors ${form.is_active ? 'bg-emerald-500' : 'bg-gray-300'}`}>
+                                                <div className={`bg-white w-5 h-5 rounded-full shadow transform transition-transform ${form.is_active ? '-translate-x-5' : 'translate-x-0'}`}></div>
+                                            </div>
+                                            <input
+                                                type="checkbox"
+                                                className="hidden"
+                                                checked={form.is_active}
+                                                onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
+                                            />
+                                            <span className="text-sm font-black text-emerald-900">זמין לבחירה</span>
+                                        </label>
                                     </div>
 
                                     {/* Category Mapping */}
