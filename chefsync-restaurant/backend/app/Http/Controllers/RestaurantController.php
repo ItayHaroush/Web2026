@@ -42,7 +42,9 @@ class RestaurantController extends Controller
             'tenant_id' => $restaurant->tenant_id,
             'slug' => $restaurant->slug,
             'name' => $restaurant->name,
+            'description' => $restaurant->description ?? null,
             'cuisine_type' => $restaurant->cuisine_type ?? null,
+            'restaurant_type' => $restaurant->restaurant_type ?? null,
             'logo_url' => $restaurant->logo_url,
             'phone' => $restaurant->phone,
             'address' => $restaurant->address,
@@ -56,7 +58,7 @@ class RestaurantController extends Controller
             'is_open_now' => (bool) ($restaurant->is_open_now ?? false),
             'operating_days' => $restaurant->operating_days ?? [],
             'operating_hours' => $restaurant->operating_hours ?? [],
-            'has_delivery' => $restaurant->has_delivery ?? true,
+            'has_delivery' => $restaurant->relationLoaded('deliveryZones') ? $restaurant->deliveryZones->isNotEmpty() : false,
             'has_pickup' => $restaurant->has_pickup ?? true,
             'share_incentive_text' => $restaurant->share_incentive_text,
             'delivery_time_minutes' => $restaurant->delivery_time_minutes,
@@ -72,7 +74,7 @@ class RestaurantController extends Controller
     public function index(Request $request)
     {
         try {
-            $query = Restaurant::query()->where('is_approved', true);
+            $query = Restaurant::query()->where('is_approved', true)->with('deliveryZones');
 
             // סינון לפי עיר
             if ($request->has('city')) {
@@ -131,6 +133,7 @@ class RestaurantController extends Controller
             $restaurant = Restaurant::query()
                 ->where('tenant_id', $tenantId)
                 ->orWhere('slug', $tenantId)
+                ->with('deliveryZones')
                 ->firstOrFail();
 
             if (!$restaurant->is_approved) {

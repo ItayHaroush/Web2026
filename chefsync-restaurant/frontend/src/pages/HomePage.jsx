@@ -18,7 +18,9 @@ import {
     FaArrowLeft,
     FaStore,
     FaClock,
-    FaCircle
+    FaCircle,
+    FaTruck,
+    FaShoppingBag
 } from 'react-icons/fa';
 import { HiGlobeAlt, HiLocationMarker } from 'react-icons/hi';
 
@@ -474,9 +476,16 @@ export default function HomePage() {
                                         <h3 className="text-xl font-bold text-brand-dark group-hover:text-brand-primary transition-colors line-clamp-1 tracking-tight">
                                             {restaurant.name}
                                         </h3>
-                                        {restaurant.cuisine_type && (
+                                        {(restaurant.cuisine_type || restaurant.restaurant_type) && (
                                             <span className="bg-gray-100 text-gray-600 text-[10px] font-black px-2 py-1 rounded-md uppercase tracking-wider">
-                                                {restaurant.cuisine_type}
+                                                {restaurant.cuisine_type || (restaurant.restaurant_type ? ({
+                                                    pizza: 'פיצה',
+                                                    shawarma: 'שווארמה',
+                                                    burger: 'המבורגר',
+                                                    bistro: 'ביסטרו',
+                                                    catering: 'קייטרינג',
+                                                    general: 'כללי'
+                                                }[restaurant.restaurant_type] || restaurant.restaurant_type) : '')}
                                             </span>
                                         )}
                                     </div>
@@ -490,12 +499,25 @@ export default function HomePage() {
                                             <HiLocationMarker className="w-3.5 h-3.5 text-gray-300" />
                                             <span>{restaurant.city}</span>
                                         </div>
-                                        {restaurant.phone && (
+                                        {(restaurant.has_delivery || restaurant.has_pickup) && (
                                             <>
                                                 <span className="mx-2 text-gray-200">|</span>
-                                                <div className="flex items-center gap-1">
-                                                    <FaClock className="w-3 h-3 text-gray-300" />
-                                                    <span>במשלוחים</span>
+                                                <div className="flex items-center gap-1.5">
+                                                    {restaurant.has_delivery && (
+                                                        <span className="flex items-center gap-1">
+                                                            <FaTruck className="w-3 h-3 text-gray-300" />
+                                                            משלוחים
+                                                        </span>
+                                                    )}
+                                                    {restaurant.has_delivery && restaurant.has_pickup && (
+                                                        <span className="text-gray-200">|</span>
+                                                    )}
+                                                    {restaurant.has_pickup && (
+                                                        <span className="flex items-center gap-1">
+                                                            <FaShoppingBag className="w-3 h-3 text-gray-300" />
+                                                            איסוף עצמי
+                                                        </span>
+                                                    )}
                                                 </div>
                                             </>
                                         )}

@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
+import { FaCheckCircle, FaTimesCircle, FaShoppingBag } from 'react-icons/fa';
 
 /**
  * Context להצגת הודעות Toast
@@ -24,27 +25,32 @@ export function ToastProvider({ children }) {
             {children}
 
             {/* Toast Container */}
-            <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-50 space-y-2">
+            <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-[9999] space-y-3 pointer-events-none">
                 {toasts.map((toast) => (
                     <div
                         key={toast.id}
                         className={`
-              px-6 py-3 rounded-lg shadow-lg text-white font-medium
-              animate-[slideDown_0.3s_ease-out]
-              ${toast.type === 'success' ? 'bg-orange-500' : 'bg-red-500'}
+              px-5 py-4 rounded-2xl shadow-2xl backdrop-blur-sm font-medium
+              animate-[slideDown_0.4s_ease-out] border-2
+              transition-all duration-300
+              ${toast.type === 'success' 
+                ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white border-blue-300' 
+                : 'bg-gradient-to-r from-red-400 to-pink-400 text-white border-red-200'}
             `}
                     >
-                        <div className="flex items-center gap-2">
-                            {toast.type === 'success' ? (
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                </svg>
-                            ) : (
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                            )}
-                            <span>{toast.message}</span>
+                        <div className="flex items-center gap-3">
+                            <div className="flex-shrink-0">
+                                {toast.type === 'success' ? (
+                                    <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                                        <FaShoppingBag className="w-4 h-4" />
+                                    </div>
+                                ) : (
+                                    <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                                        <FaTimesCircle className="w-4 h-4" />
+                                    </div>
+                                )}
+                            </div>
+                            <span className="text-sm font-bold">{toast.message}</span>
                         </div>
                     </div>
                 ))}
