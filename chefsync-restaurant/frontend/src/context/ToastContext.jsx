@@ -33,9 +33,9 @@ export function ToastProvider({ children }) {
               px-5 py-4 rounded-2xl shadow-2xl backdrop-blur-sm font-medium
               animate-[slideDown_0.4s_ease-out] border-2
               transition-all duration-300
-              ${toast.type === 'success' 
-                ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white border-blue-300' 
-                : 'bg-gradient-to-r from-red-400 to-pink-400 text-white border-red-200'}
+              ${toast.type === 'success'
+                                ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white border-blue-300'
+                                : 'bg-gradient-to-r from-red-400 to-pink-400 text-white border-red-200'}
             `}
                     >
                         <div className="flex items-center gap-3">

@@ -332,7 +332,7 @@ export default function MenuPage() {
                                             <SiWaze className="h-4 w-4" />
                                         </a>
                                     </div>
-                                    
+
                                     {/* טלפון + חיוג */}
                                     {restaurant.phone && (
                                         <div className="flex items-center gap-2 text-sm text-brand-primary font-semibold flex-shrink-0">
@@ -653,7 +653,7 @@ export default function MenuPage() {
                             {/* שעות שבועיות */}
                             {(() => {
                                 // בדיקה אם יש שעות תקינות בכלל
-                                const hasAnyValidHours = restaurant.operating_hours && 
+                                const hasAnyValidHours = restaurant.operating_hours &&
                                     (restaurant.operating_hours.days || restaurant.operating_hours.default) &&
                                     ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'].some(day => {
                                         const dayHours = restaurant.operating_hours?.days?.[day] || restaurant.operating_hours?.default;
@@ -677,10 +677,10 @@ export default function MenuPage() {
                                                 const dayHours = restaurant.operating_hours?.days?.[day] || restaurant.operating_hours?.default;
                                                 const isClosed = dayHours?.closed;
                                                 const isToday = new Date().getDay() === index;
-                                                
+
                                                 // בדיקה אם יש שעות תקינות
                                                 const hasValidHours = dayHours && dayHours.open && dayHours.close;
-                                                
+
                                                 return (
                                                     <p key={day} className={`${isToday ? 'font-bold text-blue-700' : 'text-gray-700'}`}>
                                                         <span className="inline-block w-16">{day}:</span>
