@@ -5,7 +5,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { CustomerLayout } from '../layouts/CustomerLayout';
-import { FaMask, FaBoxOpen, FaStickyNote, FaTimes, FaShoppingCart, FaUser, FaPhone, FaMapMarkerAlt, FaMoneyBillWave, FaCreditCard, FaTruck, FaStore } from 'react-icons/fa';
+import { FaMask, FaBoxOpen, FaStickyNote, FaTimes, FaShoppingCart, FaUser, FaPhone, FaMapMarkerAlt, FaMoneyBillWave, FaCreditCard, FaTruck, FaStore, FaHome, FaEdit, FaComment, FaExclamationTriangle } from 'react-icons/fa';
 import orderService from '../services/orderService';
 import { UI_TEXT } from '../constants/ui';
 import DeliveryDetailsModal from '../components/DeliveryDetailsModal';
@@ -115,7 +115,7 @@ export default function CartPage() {
             return;
         }
 
-        // בדיקת מיקום למשלוח
+        // בדיקת מיקום ופרטי משלוח
         if (customerInfo.delivery_method === 'delivery') {
             if (!deliveryLocation?.lat || !deliveryLocation?.lng) {
                 setShowLocationModal(true);
@@ -129,10 +129,17 @@ export default function CartPage() {
                 return;
             }
 
-            if (!customerInfo.delivery_address) {
+            // ולידציה קפדנית של כתובת מלאה
+            const address = customerInfo.delivery_address || '';
+            const hasStreet = address && !address.match(/^[^,]+$/); // יש פסיק = יש יותר מחלק אחד
+            const parts = address.split(',').map(p => p.trim());
+            const hasMultipleParts = parts.length >= 2;
+            const hasNumber = /\d/.test(address); // בדיקה שיש מספר בכתובת
+
+            // בדיקה שיש רחוב + מספר בית + עיר (לא רק עיר או רחוב בלי מספר)
+            if (!address || !hasStreet || !hasMultipleParts || !hasNumber) {
                 setShowDeliveryModal(true);
-                setError('');
-                setSubmitStep('payment');
+                setError('נא להשלים כתובת משלוח מלאה (רחוב, מספר בית ועיר)');
                 return;
             }
         }
@@ -235,9 +242,20 @@ export default function CartPage() {
                     onLocationSelected={(location) => {
                         setDeliveryLocation(location);
                         setShowLocationModal(false);
+
+                        // בדיקה אם המיקום חסר פרטים (רק עיר ללא רחוב)
+                        const needsCompletion = !location.street || location.needsCompletion;
+
                         // Update delivery address automatically from location
                         if (location.fullAddress) {
                             setCustomerInfo({ ...customerInfo, delivery_address: location.fullAddress });
+                        }
+
+                        // אם חסרים פרטים, פתח מיד את מודל פרטי המשלוח
+                        if (needsCompletion) {
+                            setTimeout(() => {
+                                setShowDeliveryModal(true);
+                            }, 300); // המתנה קצרה לסגירת המודל הקודם
                         }
                     }}
                 />
@@ -302,8 +320,7 @@ export default function CartPage() {
                         setShowDeliveryModal(false);
                     }}
                     customerInfo={customerInfo}
-                    setCustomerInfo={setCustomerInfo}
-                    onSaved={() => {
+                    setCustomerInfo={setCustomerInfo} deliveryLocation={deliveryLocation} onSaved={() => {
                         // אחרי שמירת פרטי משלוח אפשר להתקדם לשלב אישור
                         setSubmitStep('confirm');
                     }}
@@ -532,18 +549,65 @@ export default function CartPage() {
                                         <button
                                             type="button"
                                             onClick={() => setShowLocationModal(true)}
-                                            className="w-full text-sm bg-blue-50 text-blue-700 px-3 py-2 rounded-lg hover:bg-blue-100"
+                                            className="w-full text-sm bg-blue-50 text-blue-700 px-3 py-2 rounded-lg hover:bg-blue-100 flex items-center justify-center gap-2"
                                         >
-                                            📍 בחר מיקום למשלוח
+                                            <FaMapMarkerAlt /> בחר מיקום למשלוח
                                         </button>
                                     )}
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowDeliveryModal(true)}
-                                        className="text-sm text-brand-primary underline"
-                                    >
-                                        עריכת פרטי משלוח
-                                    </button>
+
+                                    {/* תצוגת כתובת קיימת או כפתור הוספה */}
+                                    {customerInfo.delivery_address ? (
+                                        <>
+                                            {(() => {
+                                                const address = customerInfo.delivery_address;
+                                                const parts = address.split(',').map(p => p.trim());
+                                                const isIncomplete = parts.length < 2 || !address.includes(',');
+
+                                                return (
+                                                    <div className={`border-2 rounded-xl p-3 ${isIncomplete ? 'bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-300' : 'bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200'}`}>
+                                                        <div className="flex items-start justify-between gap-2">
+                                                            <div className="flex-1">
+                                                                <p className="text-xs font-bold uppercase tracking-wide mb-1 flex items-center gap-1" style={{ color: isIncomplete ? '#b45309' : '#2563eb' }}>
+                                                                    <FaMapMarkerAlt /> כתובת משלוח
+                                                                </p>
+                                                                <p className="text-sm font-bold text-gray-900">
+                                                                    {customerInfo.delivery_address}
+                                                                </p>
+                                                                {isIncomplete && (
+                                                                    <div className="mt-2 flex items-start gap-1 text-xs text-orange-700 bg-orange-100 p-2 rounded-lg">
+                                                                        <FaExclamationTriangle className="mt-0.5" />
+                                                                        <span>
+                                                                            <strong>כתובת לא מלאה!</strong> נדרש רחוב + מספר בית + עיר
+                                                                        </span>
+                                                                    </div>
+                                                                )}
+                                                                {customerInfo.delivery_notes && (
+                                                                    <p className="text-xs text-gray-600 mt-1 flex items-center gap-1">
+                                                                        <FaComment /> {customerInfo.delivery_notes}
+                                                                    </p>
+                                                                )}
+                                                            </div>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setShowDeliveryModal(true)}
+                                                                className="px-3 py-1.5 bg-white hover:bg-blue-50 text-blue-600 text-xs font-bold rounded-lg border-2 border-blue-200 hover:border-blue-300 transition-all whitespace-nowrap flex items-center gap-1"
+                                                            >
+                                                                <FaEdit /> ערוך
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })()}
+                                        </>
+                                    ) : (
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowDeliveryModal(true)}
+                                            className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white px-4 py-3 rounded-xl font-bold transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+                                        >
+                                            <FaHome /> הוסף פרטי משלוח
+                                        </button>
+                                    )}
                                 </div>
                             )}
                         </div>

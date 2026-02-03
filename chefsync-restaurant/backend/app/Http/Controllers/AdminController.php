@@ -49,8 +49,17 @@ class AdminController extends Controller
                 ->whereDate('created_at', today())
                 ->where('status', '!=', 'cancelled')
                 ->sum('total_amount');
+            
+            // חישוב שבוע מיום ראשון בשעה 08:00 עד יום ראשון הבא
+            $weekStart = now()->startOfWeek(\Carbon\Carbon::SUNDAY)->setTime(8, 0, 0);
+            // אם עדיין לא הגענו לשעה 8 ביום ראשון, קח שבוע קודם
+            if (now()->dayOfWeek === \Carbon\Carbon::SUNDAY && now()->hour < 8) {
+                $weekStart->subWeek();
+            }
+            $weekEnd = $weekStart->copy()->addWeek();
+            
             $stats['revenue_week'] = Order::where('restaurant_id', $restaurantId)
-                ->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()])
+                ->whereBetween('created_at', [$weekStart, $weekEnd])
                 ->where('status', '!=', 'cancelled')
                 ->sum('total_amount');
         }

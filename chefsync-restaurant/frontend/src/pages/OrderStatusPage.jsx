@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { CustomerLayout } from '../layouts/CustomerLayout';
-import { FaMask, FaBoxOpen, FaUser, FaPhone, FaClock, FaInfoCircle, FaUtensils, FaShoppingBag, FaCheckCircle, FaExclamationTriangle } from 'react-icons/fa';
+import { FaMask, FaBoxOpen, FaUser, FaPhone, FaClock, FaInfoCircle, FaUtensils, FaShoppingBag, FaCheckCircle, FaExclamationTriangle, FaMapMarkerAlt } from 'react-icons/fa';
 import orderService from '../services/orderService';
 import { ORDER_STATUS, ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from '../constants/api';
 import RatingWidget from '../components/RatingWidget';
@@ -585,6 +585,23 @@ export default function OrderStatusPage() {
                 {/* פרטי פריטים */}
                 {order.items && order.items.length > 0 && (
                     <div className="space-y-4 max-w-3xl mx-auto">
+                        {/* פרטי כתובת משלוח - רק במשלוח */}
+                        {order.delivery_method === 'delivery' && order.delivery_address && (
+                            <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-5 border-2 border-blue-200 space-y-3">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <FaMapMarkerAlt className="text-xl text-blue-600" />
+                                    <h2 className="text-lg font-black text-gray-900">כתובת משלוח</h2>
+                                </div>
+                                <p className="text-base font-bold text-gray-800">{order.delivery_address}</p>
+                                {order.delivery_notes && (
+                                    <div className="bg-white/60 rounded-lg p-3 border border-blue-100">
+                                        <p className="text-xs font-semibold text-gray-500 mb-1">הערות לשליח:</p>
+                                        <p className="text-sm text-gray-700">{order.delivery_notes}</p>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
                         <div className="flex items-center gap-2">
                             <FaUtensils className="text-xl text-blue-600" />
                             <h2 className="text-xl font-black text-gray-900">פריטי ההזמנה</h2>
