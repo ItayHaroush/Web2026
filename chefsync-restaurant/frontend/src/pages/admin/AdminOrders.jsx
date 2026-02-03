@@ -98,7 +98,7 @@ export default function AdminOrders() {
     const getTodayOrders = (ordersList) => {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        
+
         return ordersList.filter(order => {
             const orderDate = new Date(order.created_at);
             orderDate.setHours(0, 0, 0, 0);
