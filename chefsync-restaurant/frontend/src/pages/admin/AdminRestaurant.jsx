@@ -517,7 +517,7 @@ export default function AdminRestaurant() {
                                             );
                                         })}
                                     </div>
-                                    {(! restaurant.restaurant_type || restaurant.restaurant_type === 'general') && (
+                                    {(!restaurant.restaurant_type || restaurant.restaurant_type === 'general') && (
                                         <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded-lg text-xs text-yellow-800">
                                             💡 בחר סוג ספציפי לשיפור תיאורי AI
                                         </div>
