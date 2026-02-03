@@ -62,14 +62,34 @@ export default function LocationPickerModal({ open, onClose, onLocationSelected 
     // Get address details from coordinates
     const getAddressFromCoordinates = async (lat, lng) => {
         try {
+            // ניסיון 1: Nominatim
             const response = await fetch(
-                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=he`
+                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=he&addressdetails=1&zoom=18`
             );
             const data = await response.json();
 
-            const city = data.address?.city || data.address?.town || data.address?.village || '';
-            const road = data.address?.road || '';
-            const houseNumber = data.address?.house_number || '';
+            let city = data.address?.city || data.address?.town || data.address?.village || '';
+            let road = data.address?.road || '';
+            let houseNumber = data.address?.house_number || '';
+
+            // אם לא מצאנו מספר בית, נסה Photon
+            if (!houseNumber) {
+                try {
+                    const photonResponse = await fetch(
+                        `https://photon.komoot.io/reverse?lon=${lng}&lat=${lat}&lang=he`
+                    );
+                    const photonData = await photonResponse.json();
+
+                    if (photonData.features?.[0]) {
+                        const props = photonData.features[0].properties;
+                        road = road || props.street || '';
+                        houseNumber = houseNumber || props.housenumber || '';
+                        city = city || props.city || '';
+                    }
+                } catch (photonErr) {
+                    console.warn('Photon reverse geocoding failed:', photonErr);
+                }
+            }
 
             // Build full address
             let addressParts = [];
@@ -95,7 +115,7 @@ export default function LocationPickerModal({ open, onClose, onLocationSelected 
             clearTimeout(searchTimeoutRef.current);
         }
 
-        if (!query || query.length < 3) {
+        if (!query || query.length < 2) {
             setSearchResults([]);
             setSearching(false);
             return;
@@ -103,21 +123,92 @@ export default function LocationPickerModal({ open, onClose, onLocationSelected 
 
         setSearching(true);
 
-        // Debounce search for 500ms
+        // Debounce search for 300ms (מהיר יותר)
         searchTimeoutRef.current = setTimeout(async () => {
             try {
-                const response = await fetch(
-                    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}, Israel&accept-language=he&limit=5&addressdetails=1`
+                let allResults = [];
+
+                // בדיקה אם יש מספר בשאילתה
+                const hasNumber = /\d/.test(query);
+
+                // ניסיון 1: Nominatim - חיפוש structured אם יש מספר
+                if (hasNumber) {
+                    try {
+                        const response = await fetch(
+                            `https://nominatim.openstreetmap.org/search?format=json&street=${encodeURIComponent(query)}&country=Israel&countrycodes=il&accept-language=he&limit=15&addressdetails=1`
+                        );
+                        const data = await response.json();
+                        allResults = [...allResults, ...data];
+                    } catch (e) {
+                        console.warn('Structured search failed:', e);
+                    }
+                }
+
+                // ניסיון 2: Nominatim - חיפוש חופשי (תמיד)
+                try {
+                    const response = await fetch(
+                        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}, Israel&countrycodes=il&accept-language=he&limit=15&addressdetails=1`
+                    );
+                    const data = await response.json();
+                    allResults = [...allResults, ...data];
+                } catch (e) {
+                    console.warn('Free search failed:', e);
+                }
+
+                // ניסיון 3: Photon (גיבוי וחיפוש נוסף)
+                try {
+                    const photonResponse = await fetch(
+                        `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&lang=he&limit=15`
+                    );
+                    const photonData = await photonResponse.json();
+
+                    // המר פורמט Photon לפורמט Nominatim
+                    const photonConverted = photonData.features?.map(f => ({
+                        lat: f.geometry.coordinates[1],
+                        lon: f.geometry.coordinates[0],
+                        display_name: [
+                            f.properties.name,
+                            f.properties.street,
+                            f.properties.housenumber,
+                            f.properties.city
+                        ].filter(Boolean).join(', '),
+                        address: {
+                            road: f.properties.street,
+                            house_number: f.properties.housenumber,
+                            city: f.properties.city,
+                            town: f.properties.city,
+                        }
+                    })) || [];
+
+                    allResults = [...allResults, ...photonConverted];
+                } catch (e) {
+                    console.warn('Photon search failed:', e);
+                }
+
+                // הסרת כפילויות (לפי lat/lon)
+                const uniqueResults = allResults.filter((result, index, self) =>
+                    index === self.findIndex(r =>
+                        Math.abs(parseFloat(r.lat) - parseFloat(result.lat)) < 0.0001 &&
+                        Math.abs(parseFloat(r.lon) - parseFloat(result.lon)) < 0.0001
+                    )
                 );
-                const data = await response.json();
-                setSearchResults(data);
+
+                // מיון: תוצאות עם מספר בית קודם
+                uniqueResults.sort((a, b) => {
+                    const aHasNumber = a.address?.house_number ? 1 : 0;
+                    const bHasNumber = b.address?.house_number ? 1 : 0;
+                    return bHasNumber - aHasNumber;
+                });
+
+                // הגבלה ל-20 תוצאות מובילות
+                setSearchResults(uniqueResults.slice(0, 20));
             } catch (error) {
                 console.error('Search error:', error);
                 setSearchResults([]);
             } finally {
                 setSearching(false);
             }
-        }, 500);
+        }, 300);
     };
 
     const selectSearchResult = (result) => {
@@ -125,20 +216,25 @@ export default function LocationPickerModal({ open, onClose, onLocationSelected 
         const lng = parseFloat(result.lon);
         setPosition([lat, lng]);
 
+        // חילוץ נתונים מדויקים
         const city = result.address?.city || result.address?.town || result.address?.village || '';
         const road = result.address?.road || '';
         const houseNumber = result.address?.house_number || '';
 
+        // וידוא שלא נכנס עיר למקום רחוב
+        // אם display_name זה רק עיר (ללא רחוב), לא נשים את העיר כרחוב
+        const finalRoad = road || '';
+
         let addressParts = [];
-        if (road) {
-            addressParts.push(houseNumber ? `${road} ${houseNumber}` : road);
+        if (finalRoad) {
+            addressParts.push(houseNumber ? `${finalRoad} ${houseNumber}` : finalRoad);
         }
         if (city) {
             addressParts.push(city);
         }
 
         setCityName(city);
-        setStreet(road);
+        setStreet(finalRoad); // רק רחוב, לא עיר
         setFullAddress(addressParts.join(', '));
         setSearchQuery('');
         setSearchResults([]);
@@ -201,12 +297,16 @@ export default function LocationPickerModal({ open, onClose, onLocationSelected 
     };
 
     const handleConfirm = () => {
+        // בדיקה אם יש מספר בית בכתובת
+        const hasHouseNumber = /\d/.test(fullAddress);
+
         const locationData = {
             lat: position[0],
             lng: position[1],
             cityName: cityName || '',
             street: street || '',
             fullAddress: fullAddress || '',
+            needsCompletion: !street || !cityName || !hasHouseNumber, // דגל שמסמן שצריך להשלים פרטים
         };
 
         // Save to localStorage
@@ -279,36 +379,45 @@ export default function LocationPickerModal({ open, onClose, onLocationSelected 
 
                         {/* תוצאות חיפוש */}
                         {searchResults.length > 0 && (
-                            <div className="absolute top-full mt-2 w-full bg-white rounded-xl shadow-2xl z-[9999] max-h-64 overflow-y-auto border-2 border-gray-100">
-                                {searchResults.map((result, index) => (
-                                    <div
-                                        key={index}
-                                        onClick={() => selectSearchResult(result)}
-                                        className="px-4 py-3 hover:bg-blue-50 cursor-pointer border-b last:border-b-0 text-right transition-all group"
-                                    >
-                                        <div className="flex items-start gap-3">
-                                            <span className="text-xl mt-0.5 group-hover:scale-110 transition-transform">📍</span>
-                                            <div className="flex-1">
-                                                <div className="text-sm font-bold text-gray-900 group-hover:text-brand-primary transition-colors">
-                                                    {result.address?.road && result.address?.house_number
-                                                        ? `${result.address.road} ${result.address.house_number}`
-                                                        : result.address?.road || result.address?.neighbourhood || 'כתובת'}
-                                                </div>
-                                                <div className="text-xs text-gray-600 mt-1 flex items-center gap-1">
-                                                    <span>📌</span>
-                                                    <span>
-                                                        {result.address?.city || result.address?.town || result.address?.village || ''}
-                                                        {result.address?.state ? `, ${result.address.state}` : ''}
-                                                    </span>
+                            <div className="absolute top-full mt-2 w-full bg-white rounded-xl shadow-2xl z-[9999] max-h-80 overflow-y-auto border-2 border-blue-200">
+                                <div className="sticky top-0 bg-gradient-to-r from-blue-50 to-purple-50 px-4 py-2 border-b-2 border-blue-200 font-bold text-sm text-gray-700">
+                                    נמצאו {searchResults.length} תוצאות
+                                </div>
+                                {searchResults.map((result, index) => {
+                                    const hasHouseNumber = result.address?.house_number;
+
+                                    return (
+                                        <div
+                                            key={index}
+                                            onClick={() => selectSearchResult(result)}
+                                            className="px-4 py-3 hover:bg-blue-50 cursor-pointer border-b last:border-b-0 text-right transition-all group"
+                                        >
+                                            <div className="flex items-start gap-3">
+                                                <span className={`text-xl mt-0.5 group-hover:scale-110 transition-transform ${hasHouseNumber ? 'text-green-600' : 'text-gray-400'}`}>
+                                                    {hasHouseNumber ? '📍' : '📌'}
+                                                </span>
+                                                <div className="flex-1">
+                                                    <div className="text-sm font-bold text-gray-900 group-hover:text-brand-primary transition-colors">
+                                                        {result.address?.road && result.address?.house_number
+                                                            ? `${result.address.road} ${result.address.house_number}`
+                                                            : result.address?.road || result.address?.neighbourhood || result.display_name || 'כתובת'}
+                                                    </div>
+                                                    <div className="text-xs text-gray-600 mt-1 flex items-center gap-1">
+                                                        <span>📌</span>
+                                                        <span>
+                                                            {result.address?.city || result.address?.town || result.address?.village || ''}
+                                                            {result.address?.state ? `, ${result.address.state}` : ''}
+                                                        </span>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         )}
 
-                        {searchQuery.length >= 3 && searchResults.length === 0 && !searching && (
+                        {searchQuery.length >= 2 && searchResults.length === 0 && !searching && (
                             <div className="absolute top-full mt-2 w-full bg-white rounded-xl shadow-lg p-4 text-center text-gray-500 text-sm border border-gray-200 z-[9999]">
                                 ❌ לא נמצאו תוצאות עבור "{searchQuery}"
                             </div>
@@ -316,9 +425,17 @@ export default function LocationPickerModal({ open, onClose, onLocationSelected 
                     </div>
 
                     {fullAddress && (
-                        <div className="bg-blue-50 border border-blue-200 p-3 sm:p-4 rounded-xl">
+                        <div className={`border p-3 sm:p-4 rounded-xl ${!street || !cityName ? 'bg-yellow-50 border-yellow-300' : 'bg-blue-50 border-blue-200'}`}>
                             <div className="text-xs sm:text-sm font-medium text-gray-700 mb-1">כתובת שזוהתה:</div>
                             <div className="text-base sm:text-lg font-bold text-gray-900 break-words">{fullAddress}</div>
+                            {(!street || !cityName) && (
+                                <div className="mt-2 flex items-start gap-2 text-sm text-yellow-800 bg-yellow-100 p-2 rounded-lg">
+                                    <span className="text-lg">⚠️</span>
+                                    <span>
+                                        <strong>כתובת חלקית!</strong> נדרשת כתובת מלאה עם רחוב ומספר בית. תתבקש להשלים את הפרטים בשלב הבא.
+                                    </span>
+                                </div>
+                            )}
                         </div>
                     )}
 

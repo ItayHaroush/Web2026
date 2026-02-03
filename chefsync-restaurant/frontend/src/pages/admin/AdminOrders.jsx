@@ -27,6 +27,7 @@ import {
     FaHistory,
     FaStickyNote
 } from 'react-icons/fa';
+import { SiWaze, SiGooglemaps } from 'react-icons/si';
 
 export default function AdminOrders() {
     const { getAuthHeaders } = useAdminAuth();
@@ -91,6 +92,18 @@ export default function AdminOrders() {
             map.get(label).items.push(item);
         });
         return groups;
+    };
+
+    // פילטר הזמנות מהיום הנוכחי בלבד
+    const getTodayOrders = (ordersList) => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        return ordersList.filter(order => {
+            const orderDate = new Date(order.created_at);
+            orderDate.setHours(0, 0, 0, 0);
+            return orderDate.getTime() === today.getTime();
+        });
     };
 
     useEffect(() => {
@@ -420,7 +433,7 @@ export default function AdminOrders() {
                         <div className="text-center px-4">
                             <p className="text-[10px] font-black text-gray-400 uppercase tracking-tight">סה"כ היום</p>
                             <p className="text-2xl font-black text-brand-primary leading-none mt-1">
-                                {allOrders.length || orders.length}
+                                {getTodayOrders(allOrders.length ? allOrders : orders).length}
                             </p>
                         </div>
                     </div>
@@ -540,9 +553,21 @@ export default function AdminOrders() {
                                                                 {isDelivery ? 'משלוח' : 'איסוף עצמי'}
                                                             </div>
                                                             {isDelivery && order.delivery_address && (
-                                                                <div className="flex items-center gap-1.5 text-xs font-bold text-gray-400 truncate max-w-[200px]">
-                                                                    <FaMapMarkerAlt size={10} />
-                                                                    {order.delivery_address}
+                                                                <div className="flex items-center gap-1.5">
+                                                                    <span className="text-xs font-bold text-gray-400 truncate max-w-[140px]">
+                                                                        <FaMapMarkerAlt size={10} className="inline ml-1" />
+                                                                        {order.delivery_address}
+                                                                    </span>
+                                                                    <a
+                                                                        href={`https://waze.com/ul?q=${encodeURIComponent(order.delivery_address)}&navigate=yes`}
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                        onClick={(e) => e.stopPropagation()}
+                                                                        className="text-[#33CCFF] hover:text-[#00BFFF] transition-colors"
+                                                                        title="פתח ב-Waze"
+                                                                    >
+                                                                        <SiWaze size={16} />
+                                                                    </a>
                                                                 </div>
                                                             )}
                                                         </div>
@@ -689,7 +714,7 @@ export default function AdminOrders() {
                                                         <div className="w-10 h-10 bg-white rounded-xl shadow-sm border border-gray-100 flex items-center justify-center text-brand-primary">
                                                             <FaMapMarkerAlt size={16} />
                                                         </div>
-                                                        <div className="min-w-0">
+                                                        <div className="min-w-0 flex-1">
                                                             <p className="text-xs font-black text-gray-400 uppercase tracking-tighter">
                                                                 {selectedOrder.delivery_method === 'delivery' ? 'כתובת משלוח' : 'אופן קבלת החמנה'}
                                                             </p>
@@ -699,6 +724,28 @@ export default function AdminOrders() {
                                                                     : 'איסוף עצמי מהמסעדה'
                                                                 }
                                                             </p>
+                                                            {selectedOrder.delivery_method === 'delivery' && selectedOrder.delivery_address && (
+                                                                <div className="flex gap-2 mt-2">
+                                                                    <a
+                                                                        href={`https://waze.com/ul?q=${encodeURIComponent(selectedOrder.delivery_address)}&navigate=yes`}
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                        className="text-[#33CCFF] hover:text-[#00BFFF] transition-colors"
+                                                                        title="פתח ב-Waze"
+                                                                    >
+                                                                        <SiWaze size={20} />
+                                                                    </a>
+                                                                    <a
+                                                                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedOrder.delivery_address)}`}
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                        className="text-[#4285F4] hover:text-[#3367D6] transition-colors"
+                                                                        title="פתח ב-Google Maps"
+                                                                    >
+                                                                        <SiGooglemaps size={20} />
+                                                                    </a>
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 </div>
