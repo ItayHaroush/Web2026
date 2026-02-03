@@ -113,16 +113,16 @@ export default function DeliveryDetailsModal({ open, onClose, customerInfo, setC
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4 animate-in fade-in duration-200">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-2 sm:mx-4 max-h-[95vh] overflow-y-auto animate-in zoom-in-95 duration-200">
                 {/* כותרת עם גרדיאנט */}
-                <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-t-2xl p-6">
+                <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-t-2xl p-4 sm:p-6">
                     <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center text-white">
-                                <FaHome size={20} />
+                        <div className="flex items-center gap-2 sm:gap-3">
+                            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center text-white">
+                                <FaHome size={16} className="sm:w-5 sm:h-5" />
                             </div>
-                            <h3 className="text-xl font-bold text-white">פרטי משלוח</h3>
+                            <h3 className="text-lg sm:text-xl font-bold text-white">פרטי משלוח</h3>
                         </div>
                         <button
                             onClick={handleClose}
@@ -134,8 +134,8 @@ export default function DeliveryDetailsModal({ open, onClose, customerInfo, setC
                     </div>
                 </div>
 
-                <div className="p-6">
-                    <div className="mb-4 p-3 bg-blue-50 border-r-4 border-blue-500 rounded-lg">
+                <div className="p-4 sm:p-6">
+                    <div className="mb-4 p-2.5 sm:p-3 bg-blue-50 border-r-4 border-blue-500 rounded-lg">
                         <p className="text-sm text-blue-800 font-medium flex items-center gap-2">
                             <FaLightbulb className="text-blue-600" /> נא למלא כתובת מלאה לצורך משלוח מדויק
                         </p>
@@ -233,17 +233,17 @@ export default function DeliveryDetailsModal({ open, onClose, customerInfo, setC
                             />
                         </div>
 
-                        <div className="flex gap-3 pt-2">
+                        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-2">
                             <button
                                 type="button"
                                 onClick={handleClose}
-                                className="flex-1 px-4 py-3 rounded-xl border-2 border-gray-300 text-gray-700 font-bold hover:bg-gray-50 transition-colors"
+                                className="w-full sm:flex-1 px-4 py-3 rounded-xl border-2 border-gray-300 text-gray-700 font-bold hover:bg-gray-50 transition-colors text-sm sm:text-base"
                             >
                                 ביטול
                             </button>
                             <button
                                 type="submit"
-                                className="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
+                                className="w-full sm:flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 text-sm sm:text-base"
                             >
                                 <FaSave /> שמירה
                             </button>
