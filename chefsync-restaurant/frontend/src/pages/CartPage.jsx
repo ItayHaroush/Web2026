@@ -561,7 +561,8 @@ export default function CartPage() {
                                             {(() => {
                                                 const address = customerInfo.delivery_address;
                                                 const parts = address.split(',').map(p => p.trim());
-                                                const isIncomplete = parts.length < 2 || !address.includes(',');
+                                                const hasNumber = /\d/.test(address);
+                                                const isIncomplete = parts.length < 2 || !address.includes(',') || !hasNumber;
 
                                                 return (
                                                     <div className={`border-2 rounded-xl p-3 ${isIncomplete ? 'bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-300' : 'bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200'}`}>

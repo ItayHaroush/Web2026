@@ -517,11 +517,23 @@ export default function AdminRestaurant() {
                                             );
                                         })}
                                     </div>
-                                    {(!restaurant.restaurant_type || restaurant.restaurant_type === 'general') && (
+                                    {(! restaurant.restaurant_type || restaurant.restaurant_type === 'general') && (
                                         <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded-lg text-xs text-yellow-800">
                                             💡 בחר סוג ספציפי לשיפור תיאורי AI
                                         </div>
                                     )}
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-sm font-black text-gray-700 mr-1">תיאור סוג מטבח (טקסט חופשי)</label>
+                                    <input
+                                        type="text"
+                                        value={restaurant.cuisine_type || ''}
+                                        onChange={(e) => handleChange('cuisine_type', e.target.value)}
+                                        className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-brand-primary text-gray-900 font-bold transition-all"
+                                        placeholder="לדוגמה: מטבח יפני, מטבח תימני, ווגן..."
+                                    />
+                                    <p className="text-xs text-gray-500 mr-1">מוצג ליד שם המסעדה (אופציונלי)</p>
                                 </div>
 
                                 <div className="space-y-2">
