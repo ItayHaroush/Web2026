@@ -194,32 +194,15 @@ export default function AdminOrders() {
     };
 
     const playNotificationSound = () => {
-        // צליל התראה באמצעות Audio API
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
-
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
-
-        oscillator.frequency.value = 800;
-        oscillator.type = 'sine';
-        gainNode.gain.value = 0.3;
-
-        oscillator.start();
-        setTimeout(() => oscillator.stop(), 200);
-
-        setTimeout(() => {
-            const osc2 = audioContext.createOscillator();
-            const gain2 = audioContext.createGain();
-            osc2.connect(gain2);
-            gain2.connect(audioContext.destination);
-            osc2.frequency.value = 1000;
-            osc2.type = 'sine';
-            gain2.gain.value = 0.3;
-            osc2.start();
-            setTimeout(() => osc2.stop(), 200);
-        }, 250);
+        try {
+            const audio = new Audio('/sounds/Order-up-bell-sound.mp3');
+            audio.volume = 0.6;
+            audio.play().catch(err => {
+                console.log('לא ניתן להשמיע התראה:', err);
+            });
+        } catch (e) {
+            console.log('שגיאה בהשמעת התראה:', e);
+        }
     };
 
     const updateStatus = async (orderId, newStatus) => {
