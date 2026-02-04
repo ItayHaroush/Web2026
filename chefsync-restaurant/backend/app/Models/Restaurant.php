@@ -28,6 +28,13 @@ class Restaurant extends Model
         'slug',
         'restaurant_type',
         'cuisine_type',
+        'kosher_type',         // סוג כשרות
+        'kosher_certificate',  // תעודת כשרות/רבנות
+        'kosher_notes',        // הערות כשרות
+        'allergen_notes',      // הערות אלרגנים
+        'kashrut_level',        // רמת כשרות
+        'kashrut_text',         // פרטי כשרות נוספים
+        'common_allergens',     // אלרגנים נפוצים במטבח
         'phone',
         'address',
         'city',
@@ -78,6 +85,7 @@ class Restaurant extends Model
         'has_pickup' => 'boolean',
         'is_override_status' => 'boolean',
         'operating_days' => 'array',
+        'common_allergens' => 'array',  // JSON array של אלרגנים
         'operating_hours' => 'array',
         'trial_ends_at' => 'datetime',
         'subscription_ends_at' => 'datetime',

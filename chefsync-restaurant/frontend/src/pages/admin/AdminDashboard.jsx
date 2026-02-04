@@ -89,9 +89,11 @@ export default function AdminDashboard() {
             console.log('Dashboard response:', response.data);
             if (response.data.success) {
                 setStats(response.data.stats);
-                setRecentOrders(response.data.recent_orders);
+                // ✅ סינון הזמנות דוגמה מהדשבורד
+                const realOrders = (response.data.recent_orders || []).filter(order => !order.is_test);
+                setRecentOrders(realOrders);
                 console.log('Stats:', response.data.stats);
-                console.log('Recent orders:', response.data.recent_orders);
+                console.log('Recent orders (excluding test):', realOrders);
             }
         } catch (error) {
             console.error('Failed to fetch dashboard:', error);

@@ -1,8 +1,8 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { requestPhoneCode, verifyPhoneCode } from '../services/phoneAuthService';
 import { isValidIsraeliMobile } from '../utils/phone';
 
-export default function PhoneVerificationModal({ phone, onVerified, onClose }) {
+export default function PhoneVerificationModal({ phone, onVerified, onClose, isPreviewMode = false }) {
     const [step, setStep] = useState('input'); // input | sent | verifying | verified
     const [inputPhone, setInputPhone] = useState(phone || '');
     const [code, setCode] = useState('');
@@ -10,6 +10,59 @@ export default function PhoneVerificationModal({ phone, onVerified, onClose }) {
     const [timer, setTimer] = useState(0);
     const [resendDisabled, setResendDisabled] = useState(false);
     const timerRef = useRef();
+
+    // במצב preview - דלג אוטומטית על האימות
+    useEffect(() => {
+        if (isPreviewMode && inputPhone) {
+            // המתן רגע קטן כדי שהמשתמש יראה את ה-modal
+            const timeout = setTimeout(() => {
+                onVerified(inputPhone);
+            }, 1500);
+            return () => clearTimeout(timeout);
+        }
+    }, [isPreviewMode, inputPhone, onVerified]);
+
+    // במצב preview - הצג modal מיוחד
+    if (isPreviewMode) {
+        return (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 relative">
+                    <button
+                        onClick={onClose}
+                        className="absolute top-4 left-4 text-gray-400 hover:text-gray-600 text-2xl font-bold"
+                    >
+                        ×
+                    </button>
+
+                    <div className="text-center">
+                        <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg className="w-8 h-8 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+
+                        <h3 className="text-xl font-bold text-gray-900 mb-2">מצב תצוגה מקדימה</h3>
+                        <p className="text-gray-600 mb-4">
+                            במצב תצוגה מקדימה, אימות טלפון מדולג אוטומטית
+                        </p>
+                        <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-4">
+                            <p className="text-sm text-purple-700 font-semibold">
+                                מספר טלפון: {inputPhone || phone}
+                            </p>
+                            <p className="text-xs text-purple-600 mt-1">
+                                ✓ אושר אוטומטית (לא נשלח SMS אמיתי)
+                            </p>
+                        </div>
+
+                        <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600"></div>
+                            <span>ממשיך לשלב הבא...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     // שליחת קוד
     const handleSend = async () => {

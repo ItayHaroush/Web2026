@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { FaWhatsapp, FaPhoneAlt, FaMask, FaShoppingBag, FaTruck, FaClock } from 'react-icons/fa';
+import { FaWhatsapp, FaPhoneAlt, FaMask, FaShoppingBag, FaTruck, FaClock, FaShieldAlt, FaExclamationTriangle, FaInfoCircle } from 'react-icons/fa';
 import { SiWaze } from 'react-icons/si';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
@@ -15,9 +15,10 @@ import MenuItemModal from '../components/MenuItemModal';
 
 /**
  * עמוד תפריט - עיצוב בסגנון Wolt
+ * @param {boolean} isPreviewMode - האם זה מצב תצוגה מקדימה (admin)
  */
 
-export default function MenuPage() {
+export default function MenuPage({ isPreviewMode = false }) {
     const { tenantId, loginAsCustomer } = useAuth();
     const navigate = useNavigate();
     const params = useParams();
@@ -32,7 +33,7 @@ export default function MenuPage() {
     const [activeOrderId, setActiveOrderId] = useState(null);
     const [selectedMenuItem, setSelectedMenuItem] = useState(null);
     const [isPWA, setIsPWA] = useState(false);
-    const [showHoursModal, setShowHoursModal] = useState(false);
+    const [showInfoModal, setShowInfoModal] = useState(false);
     const categoryRefs = useRef({});
 
     const effectiveTenantId = useMemo(() => {
@@ -90,7 +91,24 @@ export default function MenuPage() {
         return () => window.removeEventListener('scroll', handleScroll);
     }, [menu]);
 
-
+    // שמירת מצב preview ב-localStorage כדי שעמוד Cart יוכל לגשת אליו
+    useEffect(() => {
+        if (isPreviewMode) {
+            localStorage.setItem('isPreviewMode', 'true');
+            // הוספת header מיוחד ל-apiClient כדי שה-backend יזהה מצב preview
+            apiClient.defaults.headers.common['X-Preview-Mode'] = 'true';
+        } else {
+            localStorage.removeItem('isPreviewMode');
+            delete apiClient.defaults.headers.common['X-Preview-Mode'];
+        }
+        return () => {
+            // ניקוי כשיוצאים מהעמוד
+            if (isPreviewMode) {
+                localStorage.removeItem('isPreviewMode');
+                delete apiClient.defaults.headers.common['X-Preview-Mode'];
+            }
+        };
+    }, [isPreviewMode]);
 
     useEffect(() => {
         if (!effectiveTenantId) return;
@@ -162,8 +180,24 @@ export default function MenuPage() {
     const phoneHref = getPhoneHref();
     const totalCartItems = getItemCount();
 
+    const allergensList = useMemo(() => {
+        const raw = restaurant?.common_allergens;
+        if (!raw) return [];
+        if (Array.isArray(raw)) return raw;
+        if (typeof raw === 'string') {
+            try {
+                const parsed = JSON.parse(raw);
+                if (Array.isArray(parsed)) return parsed;
+            } catch {
+                return raw.split(',').map((item) => item.trim()).filter(Boolean);
+            }
+        }
+        return [];
+    }, [restaurant?.common_allergens]);
+
     const isOpenNow = restaurant?.is_open_now ?? restaurant?.is_open;
-    const canOrder = isOpenNow !== false;
+    // במצב פריוויו - תמיד לאפשר הזמנה (להתעלם מסטטוס פתיחה)
+    const canOrder = isPreviewMode ? true : (isOpenNow !== false);
 
     const handleOpenItemModal = (menuItem) => {
         if (!canOrder) {
@@ -216,7 +250,7 @@ export default function MenuPage() {
             {/* כרטיסייה של הזמנה פעילה */}
             {activeOrderId && (
                 <div className="mb-6 p-4 bg-gradient-to-r from-brand-primary to-brand-secondary rounded-2xl shadow-lg text-white cursor-pointer hover:shadow-xl transition-shadow"
-                    onClick={() => navigate(`/${effectiveTenantId || tenantId || ''}/order-status/${activeOrderId}`)}>
+                    onClick={() => navigate(isPreviewMode ? `/admin/preview-order-status/${activeOrderId}` : `/${effectiveTenantId || tenantId || ''}/order-status/${activeOrderId}`)}>
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="font-semibold mb-1">📍 הזמנה בעיצומה</p>
@@ -348,15 +382,15 @@ export default function MenuPage() {
                                     )}
                                 </div>
 
-                                {/* שורה שנייה: שעות פתיחה + סטטוס + משלוחים/איסוף */}
-                                <div className="flex flex-wrap items-center gap-2">
-                                    {/* כפתור שעות פתיחה */}
+                                {/* שורה שנייה: מידע נוסף + סטטוס + משלוחים/איסוף */}
+                                <div className="flex items-center gap-2 text-xs flex-wrap">
+                                    {/* כפתור מידע נוסף */}
                                     <button
-                                        onClick={() => setShowHoursModal(true)}
-                                        className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full text-xs font-bold transition-colors"
+                                        onClick={() => setShowInfoModal(true)}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 rounded-lg text-blue-700 transition-colors font-medium"
                                     >
-                                        <FaClock className="w-3 h-3" />
-                                        <span>שעות פתיחה</span>
+                                        <FaInfoCircle className="w-3 h-3" />
+                                        <span>מידע נוסף</span>
                                     </button>
 
                                     {/* סטטוס פתיחה */}
@@ -446,13 +480,13 @@ export default function MenuPage() {
                                         </div>
                                     )}
 
-                                    {/* כפתור שעות פתיחה */}
+                                    {/* כפתור מידע נוסף */}
                                     <button
-                                        onClick={() => setShowHoursModal(true)}
-                                        className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full text-sm font-bold transition-colors"
+                                        onClick={() => setShowInfoModal(true)}
+                                        className="flex items-center gap-2 px-4 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-full text-sm font-bold transition-colors"
                                     >
-                                        <FaClock className="w-3 h-3" />
-                                        <span>שעות פתיחה</span>
+                                        <FaInfoCircle className="w-3 h-3" />
+                                        <span>מידע נוסף</span>
                                     </button>
                                 </div>
                             </div>
@@ -613,22 +647,22 @@ export default function MenuPage() {
                 isOrderingEnabled={canOrder}
             />
 
-            {/* מודל שעות פתיחה */}
-            {showHoursModal && restaurant && (
-                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={() => setShowHoursModal(false)}>
+            {/* מודל מידע נוסף */}
+            {showInfoModal && restaurant && (
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={() => setShowInfoModal(false)}>
                     <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
                         {/* כותרת */}
-                        <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-6 rounded-t-2xl">
+                        <div className="bg-white p-5 border-b border-gray-100 rounded-t-2xl sticky top-0 z-10">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
-                                        <FaClock className="text-white" size={20} />
+                                    <div className="w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center">
+                                        <FaInfoCircle className="text-gray-900" size={18} />
                                     </div>
-                                    <h3 className="text-xl font-bold text-white">שעות פתיחה</h3>
+                                    <h3 className="text-lg font-bold text-gray-900">מידע נוסף</h3>
                                 </div>
                                 <button
-                                    onClick={() => setShowHoursModal(false)}
-                                    className="w-8 h-8 rounded-lg bg-white/20 hover:bg-white/30 text-white flex items-center justify-center transition-colors text-xl"
+                                    onClick={() => setShowInfoModal(false)}
+                                    className="w-8 h-8 rounded-full bg-gray-50 hover:bg-gray-100 text-gray-500 flex items-center justify-center transition-colors"
                                 >
                                     ×
                                 </button>
@@ -636,78 +670,143 @@ export default function MenuPage() {
                         </div>
 
                         {/* תוכן */}
-                        <div className="p-6 space-y-4">
-                            {/* סטטוס נוכחי */}
-                            <div className={`p-4 rounded-xl flex items-center gap-3 ${isOpenNow ? 'bg-green-50 border-2 border-green-200' : 'bg-red-50 border-2 border-red-200'}`}>
-                                <span className={`w-3 h-3 rounded-full ${isOpenNow ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
-                                <div>
-                                    <p className={`text-sm font-bold ${isOpenNow ? 'text-green-700' : 'text-red-700'}`}>
-                                        {isOpenNow ? 'המסעדה פתוחה כעת' : 'המסעדה סגורה כעת'}
-                                    </p>
-                                    <p className="text-xs text-gray-600 mt-0.5">
-                                        {new Date().toLocaleDateString('he-IL', { weekday: 'long', hour: '2-digit', minute: '2-digit' })}
-                                    </p>
-                                </div>
-                            </div>
-
-                            {/* שעות שבועיות */}
-                            {(() => {
-                                // בדיקה אם יש שעות תקינות בכלל
-                                const hasAnyValidHours = restaurant.operating_hours &&
-                                    (restaurant.operating_hours.days || restaurant.operating_hours.default) &&
-                                    ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'].some(day => {
-                                        const dayHours = restaurant.operating_hours?.days?.[day] || restaurant.operating_hours?.default;
-                                        return dayHours && (dayHours.open || dayHours.close || dayHours.closed);
-                                    });
-
-                                if (!hasAnyValidHours) {
-                                    return (
-                                        <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg text-center">
-                                            <p className="text-sm text-gray-600">שעות הפעילות לא הוגדרו עדיין</p>
-                                            <p className="text-xs text-gray-500 mt-1">ניתן ליצור קשר עם המסעדה לפרטים</p>
-                                        </div>
-                                    );
-                                }
-
-                                return (
-                                    <div className="space-y-1">
-                                        <h4 className="text-sm font-bold text-gray-700 mb-3">שעות פעילות</h4>
-                                        <div className="space-y-1.5 text-sm leading-relaxed">
-                                            {['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'].map((day, index) => {
-                                                const dayHours = restaurant.operating_hours?.days?.[day] || restaurant.operating_hours?.default;
-                                                const isClosed = dayHours?.closed;
-                                                const isToday = new Date().getDay() === index;
-
-                                                // בדיקה אם יש שעות תקינות
-                                                const hasValidHours = dayHours && dayHours.open && dayHours.close;
-
-                                                return (
-                                                    <p key={day} className={`${isToday ? 'font-bold text-blue-700' : 'text-gray-700'}`}>
-                                                        <span className="inline-block w-16">{day}:</span>
-                                                        <span className={isClosed ? 'text-red-600 font-semibold' : ''}>
-                                                            {isClosed ? 'סגור' : (hasValidHours ? `${dayHours.open} - ${dayHours.close}` : 'לא הוגדר')}
-                                                        </span>
-                                                    </p>
-                                                );
-                                            })}
-                                        </div>
+                        <div className="p-6 space-y-6">
+                            {/* כשרות */}
+                            {(restaurant.kosher_type || restaurant.kosher_certificate || restaurant.kosher_notes) && (
+                                <div className="space-y-3">
+                                    <div className="flex items-center gap-2">
+                                        <FaShieldAlt className="text-gray-400" size={14} />
+                                        <h4 className="text-sm font-bold text-gray-900">כשרות</h4>
                                     </div>
-                                );
-                            })()}
-
-                            {/* הערות נוספות */}
-                            {restaurant.operating_hours?.special_days && Object.keys(restaurant.operating_hours.special_days).length > 0 && (
-                                <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                                    <p className="text-xs font-bold text-yellow-800">💡 ימים מיוחדים עם שעות שונות מוגדרים</p>
+                                    <div className="pl-6 space-y-2">
+                                        {restaurant.kosher_type && (
+                                            <div className="flex items-start">
+                                                <span className="text-xs font-medium text-gray-700 bg-gray-100 px-2.5 py-1 rounded-md border border-gray-200">
+                                                    {restaurant.kosher_type === 'kosher' && 'כשר'}
+                                                    {restaurant.kosher_type === 'mehadrin' && 'כשר למהדרין'}
+                                                    {restaurant.kosher_type === 'non-kosher' && 'לא כשר'}
+                                                </span>
+                                            </div>
+                                        )}
+                                        {restaurant.kosher_certificate && (
+                                            <p className="text-xs text-gray-600">
+                                                <span className="font-semibold text-gray-900">תעודה:</span> {restaurant.kosher_certificate}
+                                            </p>
+                                        )}
+                                        {restaurant.kosher_notes && (
+                                            <p className="text-xs text-gray-500 leading-relaxed">
+                                                {restaurant.kosher_notes}
+                                            </p>
+                                        )}
+                                    </div>
                                 </div>
                             )}
+
+                            {/* אלרגנים נפוצים */}
+                            {(allergensList.length > 0 || restaurant.allergen_notes) && (
+                                <div className="space-y-3">
+                                    <div className="flex items-center gap-2">
+                                        <FaExclamationTriangle className="text-gray-400" size={14} />
+                                        <h4 className="text-sm font-bold text-gray-900">אלרגנים נפוצים</h4>
+                                    </div>
+                                    <div className="pl-6 space-y-3">
+                                        {allergensList.length > 0 && (
+                                            <div className="flex flex-wrap gap-2">
+                                                {allergensList.map((allergen, idx) => (
+                                                    <span key={idx} className="text-xs text-gray-600 bg-gray-50 border border-gray-100 px-2.5 py-1 rounded-md">
+                                                        {allergen === 'gluten' && 'גלוטן'}
+                                                        {allergen === 'dairy' && 'חלב'}
+                                                        {allergen === 'eggs' && 'ביצים'}
+                                                        {allergen === 'nuts' && 'אגוזים'}
+                                                        {allergen === 'peanuts' && 'בוטנים'}
+                                                        {allergen === 'soy' && 'סויה'}
+                                                        {allergen === 'fish' && 'דגים'}
+                                                        {allergen === 'shellfish' && 'פירות ים'}
+                                                        {allergen === 'sesame' && 'שומשום'}
+                                                        {!['gluten', 'dairy', 'eggs', 'nuts', 'peanuts', 'soy', 'fish', 'shellfish', 'sesame'].includes(allergen) && allergen}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )}
+                                        {restaurant.allergen_notes && (
+                                            <p className="text-xs text-gray-500 leading-relaxed">
+                                                {restaurant.allergen_notes}
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* מפריד */}
+                            {(restaurant.kosher_type || restaurant.kosher_certificate || restaurant.kosher_notes || allergensList.length > 0 || restaurant.allergen_notes) && (
+                                <div className="border-t border-gray-100 my-2"></div>
+                            )}
+
+                            {/* שעות פתיחה */}
+                            <div className="space-y-3">
+                                <div className="flex items-center gap-2">
+                                    <FaClock className="text-gray-400" size={14} />
+                                    <h4 className="text-sm font-bold text-gray-900">שעות פתיחה</h4>
+                                </div>
+
+                                <div className="pl-6 space-y-4">
+                                    {/* סטטוס נוכחי */}
+                                    <div className="flex items-center gap-2">
+                                        <span className={`w-2 h-2 rounded-full ${isOpenNow ? 'bg-green-500' : 'bg-red-500'}`} />
+                                        <p className={`text-sm font-medium ${isOpenNow ? 'text-green-600' : 'text-red-500'}`}>
+                                            {isOpenNow ? 'פתוח עכשיו' : 'סגור עכשיו'}
+                                        </p>
+                                    </div>
+
+                                    {/* שעות שבועיות */}
+                                    {(() => {
+                                        const hasAnyValidHours = restaurant.operating_hours &&
+                                            (restaurant.operating_hours.days || restaurant.operating_hours.default) &&
+                                            ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'].some(day => {
+                                                const dayHours = restaurant.operating_hours?.days?.[day] || restaurant.operating_hours?.default;
+                                                return dayHours && (dayHours.open || dayHours.close || dayHours.closed);
+                                            });
+
+                                        if (!hasAnyValidHours) {
+                                            return <p className="text-xs text-gray-400 italic">לא עודכנו שעות פעילות</p>;
+                                        }
+
+                                        return (
+                                            <div className="space-y-1.5 text-sm">
+                                                {['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'].map((day, index) => {
+                                                    const dayHours = restaurant.operating_hours?.days?.[day] || restaurant.operating_hours?.default;
+                                                    const isClosed = dayHours?.closed;
+                                                    const isToday = new Date().getDay() === index;
+                                                    const hasValidHours = dayHours && dayHours.open && dayHours.close;
+
+                                                    return (
+                                                        <div key={day} className={`flex justify-between ${isToday ? 'font-bold text-gray-900' : 'text-gray-500'}`}>
+                                                            <span>{day}</span>
+                                                            <span className={isClosed ? 'text-gray-400' : ''}>
+                                                                {isClosed ? 'סגור' : (hasValidHours ? `${dayHours.open} - ${dayHours.close}` : '-')}
+                                                            </span>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        );
+                                    })()}
+
+                                    {/* הערות שעות */}
+                                    {restaurant.operating_hours?.special_days && Object.keys(restaurant.operating_hours.special_days).length > 0 && (
+                                        <p className="text-xs text-gray-400 mt-2">
+                                            * ייתכנו שינויים בימים מיוחדים
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
                         </div>
 
                         {/* כפתור סגירה */}
-                        <div className="p-4 border-t">
+                        <div className="p-4 border-t border-gray-100">
                             <button
-                                onClick={() => setShowHoursModal(false)}
-                                className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all"
+                                onClick={() => setShowInfoModal(false)}
+                                className="w-full py-3 bg-gray-900 text-white font-bold rounded-xl hover:bg-black transition-all text-sm"
                             >
                                 סגור
                             </button>
@@ -719,9 +818,10 @@ export default function MenuPage() {
             {totalCartItems > 0 && (
                 <button
                     onClick={() => navigate(`/${effectiveTenantId || tenantId || ''}/cart`)}
-                    className="fixed bottom-20 md:bottom-6 left-4 md:left-6 z-50 bg-brand-primary text-white p-4 rounded-full shadow-xl hover:bg-brand-secondary transition-transform active:scale-95"
+                    className="fixed bottom-20 md:bottom-6 left-4 md:left-6 z-[60] bg-brand-primary text-white p-4 rounded-full shadow-xl hover:bg-brand-secondary transition-transform active:scale-95"
                     aria-label="מעבר לסל הקניות"
                 >
+
                     <FaShoppingBag className="text-2xl" />
                     <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold h-6 w-6 flex items-center justify-center rounded-full border-2 border-white">
                         {totalCartItems}

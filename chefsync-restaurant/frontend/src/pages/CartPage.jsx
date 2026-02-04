@@ -14,9 +14,10 @@ import apiClient from '../services/apiClient';
 
 /**
  * עמוד סל קניות
+ * @param {boolean} isPreviewMode - האם זה מצב תצוגה מקדימה (admin)
  */
 
-export default function CartPage() {
+export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
     const navigate = useNavigate();
     const { tenantId } = useAuth();
     const { cartItems, removeFromCart, updateQuantity, getTotal, clearCart, customerInfo, setCustomerInfo, phoneVerified, setPhoneVerified } = useCart();
@@ -28,6 +29,9 @@ export default function CartPage() {
     const [submitStep, setSubmitStep] = useState('payment'); // payment -> confirm
     const [deliveryLocation, setDeliveryLocation] = useState(null);
     const [deliveryFee, setDeliveryFee] = useState(0);
+
+    // בדיקה אם אנחנו במצב preview (מ-prop או מ-localStorage)
+    const isPreviewMode = propIsPreviewMode || localStorage.getItem('isPreviewMode') === 'true';
     const [deliveryZoneAvailable, setDeliveryZoneAvailable] = useState(true);
     const [checkingZone, setCheckingZone] = useState(false);
     const [restaurant, setRestaurant] = useState(null);
@@ -159,6 +163,10 @@ export default function CartPage() {
 
         try {
             setSubmitting(true);
+
+            // בדיקה אם זה מצב preview (מסעדן שמתנסה)
+            const isPreviewMode = localStorage.getItem('isPreviewMode') === 'true';
+
             const orderData = {
                 customer_name: customerInfo.name,
                 customer_phone: customerInfo.phone,
@@ -179,6 +187,9 @@ export default function CartPage() {
                     })),
                     qty: item.qty,
                 })),
+                // הוספת שדות test אם זה מצב preview
+                is_test: isPreviewMode || false,
+                test_note: isPreviewMode ? 'הזמנה מתצוגה מקדימה - Admin' : undefined,
             };
             console.log('📦 Sending order data:', orderData);
             console.log('📞 Customer info for SMS:', customerInfo);
@@ -190,7 +201,13 @@ export default function CartPage() {
             }
             clearCart();
             setSubmitStep('payment');
-            navigate(`/${resolvedTenantSlug || ''}/order-status/${response.data.id}`);
+
+            // ניווט שונה בהתאם למצב
+            if (isPreviewMode) {
+                navigate(`/admin/preview-order-status/${response.data.id}`);
+            } else {
+                navigate(`/${resolvedTenantSlug || ''}/order-status/${response.data.id}`);
+            }
         } catch (err) {
             console.error('שגיאה בהגשת הזמנה:', err);
             setError(err.response?.data?.message || 'שגיאה בהגשת ההזמנה');
@@ -204,6 +221,23 @@ export default function CartPage() {
             <CustomerLayout>
                 <div className="space-y-6">
                     <h1 className="text-3xl font-bold text-brand-primary">סל קניות</h1>
+
+                    {/* באנר מצב תצוגה מקדימה */}
+                    {isPreviewMode && (
+                        <div className="bg-gradient-to-r from-purple-50 via-indigo-50 to-purple-50 border-2 border-purple-400 rounded-2xl p-4 shadow-lg">
+                            <div className="flex items-center gap-3">
+                                <div className="bg-purple-500 rounded-full p-3">
+                                    <FaShoppingCart className="text-2xl text-white" />
+                                </div>
+                                <div className="flex-1">
+                                    <h3 className="font-bold text-purple-900 text-lg mb-1">🔍 מצב תצוגה מקדימה</h3>
+                                    <p className="text-sm text-purple-800">
+                                        אתה צופה בסל כמנהל מסעדה. חזור לתפריט והוסף פריטים לסל.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     <div className="bg-blue-50 border border-blue-200 text-blue-900 px-6 py-8 rounded-lg text-center">
                         <p className="text-lg mb-4">{UI_TEXT.MSG_EMPTY_CART}</p>
@@ -233,6 +267,7 @@ export default function CartPage() {
                             setShowPhoneModal(false);
                         }}
                         onClose={() => setShowPhoneModal(false)}
+                        isPreviewMode={isPreviewMode}
                     />
                 )}
 
@@ -266,8 +301,25 @@ export default function CartPage() {
                     <h1 className="text-3xl font-black text-gray-900">סל קניות</h1>
                 </div>
 
+                {/* באנר מצב תצוגה מקדימה */}
+                {isPreviewMode && (
+                    <div className="bg-gradient-to-r from-purple-50 via-indigo-50 to-purple-50 border-2 border-purple-400 rounded-2xl p-4 shadow-lg">
+                        <div className="flex items-center gap-3">
+                            <div className="bg-purple-500 rounded-full p-3">
+                                <FaShoppingCart className="text-2xl text-white" />
+                            </div>
+                            <div className="flex-1">
+                                <h3 className="font-bold text-purple-900 text-lg mb-1">🔍 מצב תצוגה מקדימה</h3>
+                                <p className="text-sm text-purple-800">
+                                    אתה צופה בסל כמנהל מסעדה. ההזמנה תסומן כ-<strong>הזמנת דוגמה</strong> ולא תשפיע על מונים ודוחות.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* באנר דמו */}
-                {restaurant?.is_demo && (
+                {restaurant?.is_demo && !isPreviewMode && (
                     <div className="bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 border-2 border-amber-400 rounded-2xl p-4 shadow-lg">
                         <div className="flex items-center gap-3">
                             <div className="bg-amber-500 rounded-full p-3 animate-pulse">
@@ -604,7 +656,7 @@ export default function CartPage() {
                                         <button
                                             type="button"
                                             onClick={() => setShowDeliveryModal(true)}
-                                            className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white px-4 py-3 rounded-xl font-bold transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+                                            className="w-full bg-gray-900 hover:bg-black text-white px-4 py-3 rounded-xl font-bold transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
                                         >
                                             <FaHome /> הוסף פרטי משלוח
                                         </button>

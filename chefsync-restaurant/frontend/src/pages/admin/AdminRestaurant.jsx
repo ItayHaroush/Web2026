@@ -28,7 +28,8 @@ import {
     FaPizzaSlice,
     FaHamburger,
     FaUtensils,
-    FaConciergeBell
+    FaConciergeBell,
+    FaShieldAlt
 } from 'react-icons/fa';
 import { GiKebabSpit, GiChefToque } from 'react-icons/gi';
 
@@ -280,6 +281,11 @@ export default function AdminRestaurant() {
                 'delivery_time_note',
                 'pickup_time_minutes',
                 'pickup_time_note',
+                'kosher_type',
+                'kosher_certificate',
+                'kosher_notes',
+                'common_allergens',
+                'allergen_notes',
             ];
             fieldsToSend.forEach((field) => {
                 const value = restaurant[field];
@@ -875,99 +881,126 @@ export default function AdminRestaurant() {
                             </div>
                         </section>
 
-                        {/* Direct Menu Link */}
-                        <section className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 p-8">
+                        {/* Kosher & Allergens Section */}
+                        <section className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 p-8 space-y-8">
                             <div className="flex items-center gap-3 mb-6">
-                                <div className="p-2 bg-sky-50 text-sky-600 rounded-xl">
-                                    <FaShareAlt size={20} />
+                                <div className="w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center">
+                                    <FaShieldAlt className="text-gray-900" size={18} />
                                 </div>
-                                <h3 className="text-xl font-black text-gray-900">קישורים ושיתוף</h3>
+                                <h3 className="text-xl font-black text-gray-900">כשרות ואלרגנים</h3>
                             </div>
 
-                            <div className="space-y-8">
+                            {/* Kosher Section */}
+                            <div className="space-y-6">
+                                <h4 className="text-lg font-black text-gray-800">כשרות</h4>
+
                                 <div className="space-y-3">
-                                    <label className="text-sm font-black text-gray-700 mr-1 flex items-center gap-2">
-                                        🔗 לינק ישיר להזמנות (Menu Only)
-                                    </label>
-                                    <div className="flex gap-3">
-                                        <div className="flex-1 relative group">
-                                            <input
-                                                type="text"
-                                                readOnly
-                                                value={`${window.location.origin}/${restaurant.tenant_id}/menu`}
-                                                className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl text-gray-600 font-bold ltr text-sm"
-                                            />
-                                            <div className="absolute inset-0 rounded-2xl bg-black/5 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity" />
-                                        </div>
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                const link = `${window.location.origin}/${restaurant.tenant_id}/menu`;
-                                                navigator.clipboard.writeText(link);
-                                            }}
-                                            className="px-6 py-4 bg-brand-primary text-white rounded-2xl font-black hover:bg-brand-dark transition-all flex items-center gap-2 active:scale-95 whitespace-nowrap"
-                                        >
-                                            <FaClipboard /> העתק קישור
-                                        </button>
-                                    </div>
-                                    <p className="text-xs text-gray-400 font-medium mr-1 uppercase tracking-wider">
-                                        לגישה ישירה לתפריט ההזמנות ללא עמוד נחיתה
-                                    </p>
+                                    <label className="text-sm font-black text-gray-700 mr-1">סוג כשרות</label>
+                                    <select
+                                        value={restaurant.kosher_type || 'none'}
+                                        onChange={(e) => setRestaurant({ ...restaurant, kosher_type: e.target.value })}
+                                        className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl font-bold text-gray-700 focus:ring-2 focus:ring-brand-primary/20"
+                                    >
+                                        <option value="none">ללא כשרות</option>
+                                        <option value="kosher">כשר</option>
+                                        <option value="mehadrin">כשר למהדרין</option>
+                                        <option value="badatz">בד"ץ</option>
+                                    </select>
                                 </div>
 
-                                <div className="pt-8 border-t border-gray-100 flex flex-col xl:flex-row gap-8">
-                                    <div className="flex-1 space-y-6">
+                                {restaurant.kosher_type && restaurant.kosher_type !== 'none' && (
+                                    <>
                                         <div className="space-y-3">
-                                            <label className="text-sm font-black text-gray-700 mr-1 flex items-center gap-2">
-                                                📱 עמוד שיתוף ו-QR
-                                            </label>
-                                            <div className="flex gap-3">
-                                                <input
-                                                    type="text"
-                                                    readOnly
-                                                    value={getShareLink()}
-                                                    className="flex-1 px-5 py-4 bg-gray-50 border-none rounded-2xl text-gray-600 font-bold ltr text-sm"
-                                                />
-                                                <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                        const link = getShareLink();
-                                                        if (link) navigator.clipboard.writeText(link);
-                                                    }}
-                                                    className="px-6 py-4 bg-gray-900 text-white rounded-2xl font-black hover:bg-black transition-all flex items-center gap-2 active:scale-95 whitespace-nowrap"
-                                                >
-                                                    <FaClipboard /> העתק קישור
-                                                </button>
-                                            </div>
+                                            <label className="text-sm font-black text-gray-700 mr-1">גוף הכשרות / רבנות</label>
+                                            <input
+                                                type="text"
+                                                value={restaurant.kosher_certificate || ''}
+                                                onChange={(e) => setRestaurant({ ...restaurant, kosher_certificate: e.target.value })}
+                                                placeholder="לדוגמה: רבנות ירושלים, בד&quot;ץ העדה החרדית"
+                                                className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl font-bold text-gray-700 placeholder:text-gray-400 focus:ring-2 focus:ring-brand-primary/20"
+                                            />
                                         </div>
 
-                                        <div className="flex flex-wrap gap-3">
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    const link = getShareLink();
-                                                    if (link) window.open(link, '_blank');
-                                                }}
-                                                className="px-6 py-4 bg-blue-600 text-white rounded-2xl font-black hover:bg-blue-700 transition-all flex items-center gap-2"
-                                            >
-                                                <FaEye /> תצוגה מקדימה
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={downloadShareQrPng}
-                                                className="px-6 py-4 bg-white border-2 border-gray-100 text-gray-700 rounded-2xl font-black hover:bg-gray-50 transition-all flex items-center gap-2"
-                                            >
-                                                <FaQrcode /> הורדת QR
-                                            </button>
+                                        <div className="space-y-3">
+                                            <label className="text-sm font-black text-gray-700 mr-1">הערות נוספות לגבי כשרות</label>
+                                            <textarea
+                                                value={restaurant.kosher_notes || ''}
+                                                onChange={(e) => setRestaurant({ ...restaurant, kosher_notes: e.target.value })}
+                                                placeholder="לדוגמה: פרווה, חלבי, בשרי, פת ישראל, בד&quot;ץ לפסח"
+                                                rows={3}
+                                                className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl font-bold text-gray-700 placeholder:text-gray-400 focus:ring-2 focus:ring-brand-primary/20 resize-none"
+                                            />
                                         </div>
-                                    </div>
+                                    </>
+                                )}
+                            </div>
 
-                                    <div className="flex flex-col items-center justify-center p-8 bg-gray-50 rounded-[2.5rem] border border-gray-100 min-w-[240px]">
-                                        <div className="p-4 bg-white rounded-3xl shadow-sm mb-4">
-                                            <QRCodeCanvas value={getShareLink()} size={140} includeMargin ref={shareQrRef} />
-                                        </div>
-                                        <span className="text-[10px] uppercase font-black tracking-[0.2em] text-gray-400">Scan to preview</span>
+                            {/* Allergens Section */}
+                            <div className="space-y-6 pt-8 border-t border-gray-100">
+                                <h4 className="text-lg font-black text-gray-800">אלרגנים נפוצים</h4>
+
+                                <div className="space-y-3">
+                                    <label className="text-sm font-black text-gray-700 mr-1">בחר אלרגנים נפוצים במסעדה</label>
+                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                        {[
+                                            { value: 'gluten', label: 'גלוטן' },
+                                            { value: 'dairy', label: 'חלב' },
+                                            { value: 'eggs', label: 'ביצים' },
+                                            { value: 'fish', label: 'דגים' },
+                                            { value: 'shellfish', label: 'פירות ים' },
+                                            { value: 'nuts', label: 'אגוזים' },
+                                            { value: 'peanuts', label: 'בוטנים' },
+                                            { value: 'soy', label: 'סויה' },
+                                            { value: 'sesame', label: 'שומשום' },
+                                        ].map((allergen) => {
+                                            let allergens = [];
+                                            const rawAllergens = restaurant.common_allergens;
+                                            if (Array.isArray(rawAllergens)) {
+                                                allergens = rawAllergens;
+                                            } else if (typeof rawAllergens === 'string' && rawAllergens.trim()) {
+                                                try {
+                                                    const parsed = JSON.parse(rawAllergens);
+                                                    allergens = Array.isArray(parsed) ? parsed : [];
+                                                } catch {
+                                                    allergens = rawAllergens.split(',').map((item) => item.trim()).filter(Boolean);
+                                                }
+                                            }
+                                            const isChecked = allergens.includes(allergen.value);
+
+                                            return (
+                                                <label key={allergen.value} className={`flex items-center gap-2.5 p-3 rounded-xl cursor-pointer transition-all border ${isChecked ? 'bg-gray-900 border-gray-900' : 'bg-white border-gray-200 hover:border-gray-300'
+                                                    }`}>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={isChecked}
+                                                        onChange={(e) => {
+                                                            let updatedAllergens = [...allergens];
+                                                            if (e.target.checked) {
+                                                                updatedAllergens.push(allergen.value);
+                                                            } else {
+                                                                updatedAllergens = updatedAllergens.filter(a => a !== allergen.value);
+                                                            }
+                                                            setRestaurant({ ...restaurant, common_allergens: JSON.stringify(updatedAllergens) });
+                                                        }}
+                                                        className="w-4 h-4 rounded border-gray-300 text-gray-900 focus:ring-gray-900"
+                                                    />
+                                                    <span className={`text-sm font-bold ${isChecked ? 'text-white' : 'text-gray-700'
+                                                        }`}>{allergen.label}</span>
+                                                </label>
+                                            );
+                                        })}
                                     </div>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <label className="text-sm font-black text-gray-700 mr-1">הערות נוספות לגבי אלרגנים</label>
+                                    <textarea
+                                        value={restaurant.allergen_notes || ''}
+                                        onChange={(e) => setRestaurant({ ...restaurant, allergen_notes: e.target.value })}
+                                        placeholder="לדוגמה: ניתן להכין מנות ללא גלוטן בהזמנה מראש, השף רגיש לטיפול באלרגנים"
+                                        rows={3}
+                                        className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl font-bold text-gray-700 placeholder:text-gray-400 focus:ring-2 focus:ring-brand-primary/20 resize-none"
+                                    />
                                 </div>
                             </div>
                         </section>
@@ -975,7 +1008,7 @@ export default function AdminRestaurant() {
                 </form>
 
                 {/* Floating Action Bar */}
-                <div className="fixed bottom-8 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-4xl z-50">
+                <div className="fixed bottom-8 left-4 sm:left-8 lg:left-1/2 lg:-translate-x-1/2 w-[calc(100%-2rem)] sm:w-auto lg:w-full lg:max-w-4xl z-30">
                     <div className="bg-white/80 backdrop-blur-xl border border-white/20 shadow-[0_20px_50px_-15px_rgba(0,0,0,0.15)] rounded-[2rem] p-4 flex gap-4">
                         <button
                             type="button"

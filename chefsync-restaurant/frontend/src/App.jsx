@@ -21,6 +21,9 @@ import AdminSalads from './pages/admin/AdminSalads';
 import AdminCategories from './pages/admin/AdminCategories';
 import AdminEmployees from './pages/admin/AdminEmployees';
 import AdminRestaurant from './pages/admin/AdminRestaurant';
+import AdminMenuPreview from './pages/admin/AdminMenuPreview';
+import AdminCartPreview from './pages/admin/AdminCartPreview';
+import AdminOrderStatusPreview from './pages/admin/AdminOrderStatusPreview';
 import AdminTerminal from './pages/admin/AdminTerminal';
 import AdminPaywall from './pages/admin/AdminPaywall';
 import PaymentDemo from './pages/admin/PaymentDemo';
@@ -188,6 +191,30 @@ function AppRoutes() {
         element={
           <AdminRoute>
             <AdminRestaurant />
+          </AdminRoute>
+        }
+      />
+      <Route
+        path="/admin/preview-menu"
+        element={
+          <AdminRoute>
+            <AdminMenuPreview />
+          </AdminRoute>
+        }
+      />
+      <Route
+        path="/admin/preview-cart"
+        element={
+          <AdminRoute>
+            <AdminCartPreview />
+          </AdminRoute>
+        }
+      />
+      <Route
+        path="/admin/preview-order-status/:orderId"
+        element={
+          <AdminRoute>
+            <AdminOrderStatusPreview />
           </AdminRoute>
         }
       />

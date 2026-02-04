@@ -115,19 +115,19 @@ export default function DeliveryDetailsModal({ open, onClose, customerInfo, setC
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4 animate-in fade-in duration-200">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-2 sm:mx-4 max-h-[95vh] overflow-y-auto animate-in zoom-in-95 duration-200">
-                {/* כותרת עם גרדיאנט */}
-                <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-t-2xl p-4 sm:p-6">
+                {/* כותרת */}
+                <div className="bg-white border-b border-gray-100 rounded-t-2xl p-4 sm:p-6">
                     <div className="flex justify-between items-center">
                         <div className="flex items-center gap-2 sm:gap-3">
-                            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center text-white">
-                                <FaHome size={16} className="sm:w-5 sm:h-5" />
+                            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-50 rounded-full flex items-center justify-center">
+                                <FaHome size={16} className="sm:w-5 sm:h-5 text-gray-900" />
                             </div>
-                            <h3 className="text-lg sm:text-xl font-bold text-white">פרטי משלוח</h3>
+                            <h3 className="text-lg sm:text-xl font-bold text-gray-900">פרטי משלוח</h3>
                         </div>
                         <button
                             onClick={handleClose}
                             type="button"
-                            className="w-8 h-8 rounded-lg bg-white/20 hover:bg-white/30 text-white flex items-center justify-center transition-colors text-xl"
+                            className="w-8 h-8 rounded-full bg-gray-50 hover:bg-gray-100 text-gray-500 flex items-center justify-center transition-colors text-xl"
                         >
                             ×
                         </button>
@@ -135,9 +135,9 @@ export default function DeliveryDetailsModal({ open, onClose, customerInfo, setC
                 </div>
 
                 <div className="p-4 sm:p-6">
-                    <div className="mb-4 p-2.5 sm:p-3 bg-blue-50 border-r-4 border-blue-500 rounded-lg">
-                        <p className="text-sm text-blue-800 font-medium flex items-center gap-2">
-                            <FaLightbulb className="text-blue-600" /> נא למלא כתובת מלאה לצורך משלוח מדויק
+                    <div className="mb-4 p-2.5 sm:p-3 bg-gray-50 border-r-4 border-gray-900 rounded-lg">
+                        <p className="text-sm text-gray-700 font-medium flex items-center gap-2">
+                            <FaLightbulb className="text-gray-900" /> נא למלא כתובת מלאה לצורך משלוח מדויק
                         </p>
                     </div>
 
@@ -207,11 +207,13 @@ export default function DeliveryDetailsModal({ open, onClose, customerInfo, setC
 
                         {/* תצוגה מקדימה של הכתובת המלאה */}
                         {street && houseNumber && city && (
-                            <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-xl">
+                            <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl">
                                 <div className="flex items-start gap-2">
-                                    <FaCheck className="text-green-600 text-xl mt-1" />
+                                    <div className="w-6 h-6 bg-gray-900 rounded-full flex items-center justify-center mt-0.5">
+                                        <FaCheck className="text-white text-xs" />
+                                    </div>
                                     <div>
-                                        <p className="text-xs font-bold text-green-700 uppercase tracking-wide mb-1">כתובת מלאה</p>
+                                        <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">כתובת מלאה</p>
                                         <p className="text-base font-bold text-gray-900">
                                             {street} {houseNumber}, {city}
                                         </p>
@@ -243,7 +245,7 @@ export default function DeliveryDetailsModal({ open, onClose, customerInfo, setC
                             </button>
                             <button
                                 type="submit"
-                                className="w-full sm:flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 text-sm sm:text-base"
+                                className="w-full sm:flex-1 px-4 py-3 rounded-xl bg-gray-900 text-white font-bold hover:bg-black transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 text-sm sm:text-base"
                             >
                                 <FaSave /> שמירה
                             </button>

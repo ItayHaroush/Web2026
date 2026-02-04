@@ -29,6 +29,8 @@ class Order extends Model
         'eta_note',
         'eta_updated_at',
         'status',
+        'is_test',              // הזמנת בדיקה
+        'test_note',            // הערה להזמנת בדיקה
         'total_amount',
         'notes',
         'updated_by_name',
@@ -46,6 +48,7 @@ class Order extends Model
         'delivery_distance_km' => 'decimal:2',
         'delivery_lat' => 'decimal:7',
         'delivery_lng' => 'decimal:7',
+        'is_test' => 'boolean',          // הזמנת בדיקה
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'eta_updated_at' => 'datetime',

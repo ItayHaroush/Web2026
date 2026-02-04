@@ -46,7 +46,7 @@ const QUICK_ACTIONS = [
     }
 ];
 
-export default function FloatingRestaurantAssistant() {
+export default function FloatingRestaurantAssistant({ isSidebarOpen = false }) {
     const { getAuthHeaders } = useAdminAuth();
     const navigate = useNavigate();
     const [isOpen, setIsOpen] = useState(false);
@@ -195,7 +195,8 @@ export default function FloatingRestaurantAssistant() {
         return (
             <button
                 onClick={() => setIsOpen(true)}
-                className="fixed bottom-4 left-4 sm:bottom-6 sm:left-6 z-50 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-full p-4 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 group"
+                className={`fixed bottom-24 sm:bottom-28 left-4 sm:left-8 lg:bottom-6 lg:left-6 z-30 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-full p-4 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 group ${isSidebarOpen ? 'lg:opacity-100 opacity-0 pointer-events-none lg:pointer-events-auto' : 'opacity-100'
+                    }`}
                 aria-label="פתח עוזר AI"
             >
                 <FaRobot className="text-2xl" />
@@ -207,7 +208,8 @@ export default function FloatingRestaurantAssistant() {
     }
 
     return (
-        <div className="fixed bottom-4 sm:bottom-6 left-4 sm:left-6 z-50 w-[calc(100vw-2rem)] sm:w-96 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl flex flex-col overflow-hidden transition-all duration-300" style={{ height: 'min(600px, 80vh)' }}>
+        <div className={`fixed bottom-24 sm:bottom-28 left-4 sm:left-8 lg:bottom-6 lg:left-6 z-30 w-[calc(100vw-2rem)] sm:w-96 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl flex flex-col overflow-hidden transition-all duration-300 ${isSidebarOpen ? 'lg:opacity-100 opacity-0 pointer-events-none lg:pointer-events-auto' : 'opacity-100'
+            }`} style={{ height: 'min(600px, 80vh)' }}>
             {/* Header */}
             <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white p-4 rounded-t-2xl flex items-center justify-between shrink-0">
                 <div className="flex items-center gap-3">

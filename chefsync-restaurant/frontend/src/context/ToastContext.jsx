@@ -31,18 +31,20 @@ export function ToastProvider({ children }) {
                         key={toast.id}
                         className={`
               px-5 py-4 rounded-2xl shadow-2xl backdrop-blur-sm font-medium
-              animate-[slideDown_0.4s_ease-out] border-2
+              animate-[slideDown_0.4s_ease-out] border
               transition-all duration-300
               ${toast.type === 'success'
-                                ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white border-blue-300'
-                                : 'bg-gradient-to-r from-red-400 to-pink-400 text-white border-red-200'}
+                                ? 'bg-white text-gray-900 border-gray-200'
+                                : 'bg-gray-900 text-white border-gray-800'}
             `}
                     >
                         <div className="flex items-center gap-3">
                             <div className="flex-shrink-0">
                                 {toast.type === 'success' ? (
-                                    <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-                                        <FaShoppingBag className="w-4 h-4" />
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${toast.type === 'success' ? 'bg-gray-900' : 'bg-white/20'
+                                        }`}>
+                                        <FaCheckCircle className={`w-4 h-4 ${toast.type === 'success' ? 'text-white' : 'text-white'
+                                            }`} />
                                     </div>
                                 ) : (
                                     <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
