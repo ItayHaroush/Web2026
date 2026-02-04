@@ -182,19 +182,11 @@ export default function OrderStatusPage() {
 
     const playNotificationSound = () => {
         try {
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            const oscillator = audioContext.createOscillator();
-            const gainNode = audioContext.createGain();
-
-            oscillator.connect(gainNode);
-            gainNode.connect(audioContext.destination);
-
-            oscillator.frequency.value = 900;
-            oscillator.type = 'sine';
-            gainNode.gain.value = 0.25;
-
-            oscillator.start();
-            setTimeout(() => oscillator.stop(), 180);
+            const audio = new Audio('/sounds/Order-up-bell-sound.mp3');
+            audio.volume = 0.5;
+            audio.play().catch(err => {
+                console.log('לא ניתן להשמיע התראה:', err);
+            });
         } catch (e) {
             // ignore audio errors
         }
