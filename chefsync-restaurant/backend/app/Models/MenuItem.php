@@ -19,6 +19,7 @@ class MenuItem extends Model
         'tenant_id',
         'name',
         'description',
+        'allergen_tags',        // אלרגנים במנה
         'price',
         'image_url',
         'is_available',
@@ -34,6 +35,7 @@ class MenuItem extends Model
         'use_variants' => 'boolean',
         'use_addons' => 'boolean',
         'max_addons' => 'integer',
+        'allergen_tags' => 'array',  // JSON array של אלרגנים
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];

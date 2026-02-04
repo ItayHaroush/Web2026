@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { useRestaurantStatus } from '../../context/RestaurantStatusContext';
 import AdminLayout from '../../layouts/AdminLayout';
@@ -22,7 +23,8 @@ import {
     FaLayerGroup,
     FaCheck,
     FaTimes,
-    FaSync
+    FaSync,
+    FaEye
 } from 'react-icons/fa';
 
 export default function AdminMenu() {
@@ -278,14 +280,23 @@ export default function AdminMenu() {
                         </p>
                     </div>
                     {isManager() && (
-                        <button
-                            onClick={openNewModal}
-                            disabled={isLocked}
-                            className="w-full sm:w-auto px-6 py-3.5 bg-gray-900 text-white rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] shadow-xl hover:shadow-slate-200 transition-all active:scale-95 flex items-center justify-center gap-2.5 disabled:opacity-50"
-                        >
-                            <FaPlus size={10} />
-                            הוסף פריט חדש
-                        </button>
+                        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                            <button
+                                onClick={() => window.open('/admin/preview-menu', '_blank')}
+                                className="px-5 py-3 bg-purple-600 text-white rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] shadow-lg hover:shadow-purple-200 transition-all active:scale-95 flex items-center justify-center gap-2.5"
+                            >
+                                <FaEye size={12} />
+                                תצוגה כלקוח
+                            </button>
+                            <button
+                                onClick={openNewModal}
+                                disabled={isLocked}
+                                className="px-6 py-3.5 bg-gray-900 text-white rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] shadow-xl hover:shadow-slate-200 transition-all active:scale-95 flex items-center justify-center gap-2.5 disabled:opacity-50"
+                            >
+                                <FaPlus size={10} />
+                                הוסף פריט חדש
+                            </button>
+                        </div>
                     )}
                 </div>
             </div>
@@ -639,8 +650,8 @@ export default function AdminMenu() {
                                                             setForm({ ...form, addons_group_scope: newScope });
                                                         }}
                                                         className={`px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-tight transition-all ${isSelected
-                                                                ? 'bg-gray-900 text-white shadow-md'
-                                                                : 'bg-white text-gray-500 border border-gray-100'
+                                                            ? 'bg-gray-900 text-white shadow-md'
+                                                            : 'bg-white text-gray-500 border border-gray-100'
                                                             }`}
                                                     >
                                                         {group.name}

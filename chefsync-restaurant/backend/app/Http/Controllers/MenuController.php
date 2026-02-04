@@ -36,7 +36,10 @@ class MenuController extends Controller
                 },
             ])->where('tenant_id', $tenantId)->first();
 
-            if (!$restaurant || !$restaurant->is_approved) {
+            // בדיקת אישור - אבל לא במצב preview (מסעדן מתנסה)
+            $isPreviewMode = $request->header('X-Preview-Mode') === 'true';
+
+            if (!$restaurant || (!$restaurant->is_approved && !$isPreviewMode)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'המסעדה ממתינה לאישור מנהל מערכת ואינה זמינה עדיין להזמנות',

@@ -224,7 +224,7 @@ export default function AdminLayout({ children }) {
             </div>
 
             {/* סוכן AI ספציפי למסעדה - עם מכסת קרדיטים */}
-            <FloatingRestaurantAssistant />
+            <FloatingRestaurantAssistant isSidebarOpen={sidebarOpen} />
         </div>
     );
 }

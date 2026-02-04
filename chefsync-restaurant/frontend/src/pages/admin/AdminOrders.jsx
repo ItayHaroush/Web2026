@@ -25,7 +25,8 @@ import {
     FaMotorcycle,
     FaShoppingBag,
     FaHistory,
-    FaStickyNote
+    FaStickyNote,
+    FaEye
 } from 'react-icons/fa';
 import { SiWaze, SiGooglemaps } from 'react-icons/si';
 
@@ -517,12 +518,18 @@ export default function AdminOrders() {
                                                     </div>
 
                                                     <div className="min-w-0">
-                                                        <div className="flex items-center gap-3 mb-1.5">
+                                                        <div className="flex items-center gap-3 mb-1.5 flex-wrap">
                                                             <p className="font-black text-gray-900 text-base truncate">{order.customer_name}</p>
                                                             <div className={`px-2.5 py-0.5 rounded-lg text-[9px] font-black uppercase border flex items-center gap-1.5 ${statusBadge.color}`}>
                                                                 <span className="w-1 h-1 rounded-full bg-current animate-pulse" />
                                                                 {statusBadge.text}
                                                             </div>
+                                                            {order.is_test && (
+                                                                <div className="px-2.5 py-0.5 rounded-lg text-[9px] font-black uppercase border bg-purple-50 text-purple-700 border-purple-200 flex items-center gap-1.5">
+                                                                    <FaEye size={10} />
+                                                                    הזמנת דוגמה
+                                                                </div>
+                                                            )}
                                                         </div>
 
                                                         <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">

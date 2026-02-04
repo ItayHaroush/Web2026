@@ -58,6 +58,8 @@ class OrderController extends Controller
                 'items.*.addons.*.on_side' => 'nullable|boolean',
                 'items.*.qty' => 'nullable|integer|min:1',
                 'items.*.quantity' => 'nullable|integer|min:1',
+                'is_test' => 'nullable|boolean',        // הזמנת בדיקה (מצב preview)
+                'test_note' => 'nullable|string|max:255', // הערה להזמנת בדיקה
             ]);
 
             Log::info('Order request received', [
@@ -106,7 +108,11 @@ class OrderController extends Controller
                 throw new \Exception('Restaurant not found for tenant');
             }
 
-            if (!$restaurant->is_approved) {
+            // בדיקת אישור - אבל לא במצב preview
+            $isPreviewMode = $request->header('X-Preview-Mode') === 'true';
+            $isTestOrder = $validated['is_test'] ?? false;
+
+            if (!$restaurant->is_approved && !$isPreviewMode && !$isTestOrder) {
                 return response()->json([
                     'success' => false,
                     'message' => 'המסעדה ממתינה לאישור מנהל מערכת ולא ניתן לבצע הזמנה',
@@ -353,6 +359,8 @@ class OrderController extends Controller
                 'eta_note' => $etaNote,
                 'eta_updated_at' => now(),
                 'status' => Order::STATUS_PENDING,
+                'is_test' => $validated['is_test'] ?? false,           // הזמנת בדיקה
+                'test_note' => $validated['test_note'] ?? null,         // הערה להזמנת בדיקה
                 'total_amount' => $totalAmount + $deliveryFee,
             ]);
 
@@ -372,19 +380,21 @@ class OrderController extends Controller
                 ]);
             }
 
-            // שליחת פוש לטאבלטים של המסעדה
-            $notificationBody = "הזמנה מאת {$order->customer_name} בסך ₪{$order->total_amount}";
+            // שליחת פוש לטאבלטים של המסעדה (רק אם לא הזמנת test)
+            if (!($validated['is_test'] ?? false)) {
+                $notificationBody = "הזמנה מאת {$order->customer_name} בסך ₪{$order->total_amount}";
 
-            $this->sendOrderNotification(
-                tenantId: $tenantId,
-                title: "הזמנה חדשה #{$order->id}",
-                body: $notificationBody,
-                data: [
-                    'orderId' => (string) $order->id,
-                    'type' => 'new_order',
-                    'url' => '/admin/orders'
-                ]
-            );
+                $this->sendOrderNotification(
+                    tenantId: $tenantId,
+                    title: "הזמנה חדשה #{$order->id}",
+                    body: $notificationBody,
+                    data: [
+                        'orderId' => (string) $order->id,
+                        'type' => 'new_order',
+                        'url' => '/admin/orders'
+                    ]
+                );
+            }
 
             return response()->json([
                 'success' => true,

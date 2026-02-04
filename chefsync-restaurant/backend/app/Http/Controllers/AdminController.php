@@ -33,9 +33,11 @@ class AdminController extends Controller
 
         $stats = [
             'orders_today' => Order::where('restaurant_id', $restaurantId)
+                ->where('is_test', false)  // ← מתעלם מהזמנות test
                 ->whereDate('created_at', today())
                 ->count(),
             'orders_pending' => Order::where('restaurant_id', $restaurantId)
+                ->where('is_test', false)  // ← מתעלם מהזמנות test
                 ->whereIn('status', ['pending', 'received', 'preparing'])
                 ->count(),
             'menu_items' => MenuItem::where('restaurant_id', $restaurantId)->count(),
@@ -46,6 +48,7 @@ class AdminController extends Controller
         // רק בעלים ומנהלים רואים הכנסות
         if ($user->isOwner() || $user->isManager()) {
             $stats['revenue_today'] = Order::where('restaurant_id', $restaurantId)
+                ->where('is_test', false)  // ← מתעלם מהזמנות test
                 ->whereDate('created_at', today())
                 ->where('status', '!=', 'cancelled')
                 ->sum('total_amount');
@@ -59,6 +62,7 @@ class AdminController extends Controller
             $weekEnd = $weekStart->copy()->addWeek();
 
             $stats['revenue_week'] = Order::where('restaurant_id', $restaurantId)
+                ->where('is_test', false)  // ← מתעלם מהזמנות test
                 ->whereBetween('created_at', [$weekStart, $weekEnd])
                 ->where('status', '!=', 'cancelled')
                 ->sum('total_amount');
@@ -66,6 +70,7 @@ class AdminController extends Controller
 
         // הזמנות אחרונות
         $recentOrders = Order::where('restaurant_id', $restaurantId)
+            ->where('is_test', false)  // ← מתעלם מהזמנות test
             ->with('items.menuItem.category')
             ->orderBy('created_at', 'desc')
             ->take(10)
@@ -1216,6 +1221,11 @@ class AdminController extends Controller
             'delivery_time_note' => 'nullable|string|max:255',
             'pickup_time_minutes' => 'nullable|integer|min:1|max:240',
             'pickup_time_note' => 'nullable|string|max:255',
+            'kosher_type' => 'nullable|string|in:none,kosher,mehadrin,badatz',
+            'kosher_certificate' => 'nullable|string|max:255',
+            'kosher_notes' => 'nullable|string|max:1000',
+            'common_allergens' => 'nullable|string',
+            'allergen_notes' => 'nullable|string|max:1000',
             'is_open' => 'sometimes',
             'is_override_status' => 'sometimes',
             'operating_days' => 'nullable|string',
@@ -1310,6 +1320,32 @@ class AdminController extends Controller
 
         if ($request->has('pickup_time_note')) {
             $updateData['pickup_time_note'] = $request->input('pickup_time_note');
+        }
+
+        if ($request->has('kosher_type')) {
+            $updateData['kosher_type'] = $request->input('kosher_type');
+        }
+
+        if ($request->has('kosher_certificate')) {
+            $updateData['kosher_certificate'] = $request->input('kosher_certificate');
+        }
+
+        if ($request->has('kosher_notes')) {
+            $updateData['kosher_notes'] = $request->input('kosher_notes');
+        }
+
+        if ($request->has('allergen_notes')) {
+            $updateData['allergen_notes'] = $request->input('allergen_notes');
+        }
+
+        if ($request->has('common_allergens')) {
+            $rawAllergens = $request->input('common_allergens');
+            if ($rawAllergens === '' || $rawAllergens === null) {
+                $updateData['common_allergens'] = null;
+            } else {
+                $decoded = json_decode($rawAllergens, true);
+                $updateData['common_allergens'] = is_array($decoded) ? $decoded : $rawAllergens;
+            }
         }
 
         if ($request->filled('city')) {
@@ -1451,6 +1487,11 @@ class AdminController extends Controller
                 'delivery_time_note',
                 'pickup_time_minutes',
                 'pickup_time_note',
+                'kosher_type',
+                'kosher_certificate',
+                'kosher_notes',
+                'common_allergens',
+                'allergen_notes',
             ];
             if (in_array($key, $nullableFields)) {
                 return true; // שמור גם null

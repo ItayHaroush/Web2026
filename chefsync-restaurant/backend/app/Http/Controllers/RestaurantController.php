@@ -65,6 +65,11 @@ class RestaurantController extends Controller
             'delivery_time_note' => $restaurant->delivery_time_note,
             'pickup_time_minutes' => $restaurant->pickup_time_minutes,
             'pickup_time_note' => $restaurant->pickup_time_note,
+            'kosher_type' => $restaurant->kosher_type ?? null,
+            'kosher_certificate' => $restaurant->kosher_certificate ?? null,
+            'kosher_notes' => $restaurant->kosher_notes ?? null,
+            'common_allergens' => $restaurant->common_allergens ?? [],
+            'allergen_notes' => $restaurant->allergen_notes ?? null,
         ];
     }
 
@@ -136,7 +141,11 @@ class RestaurantController extends Controller
                 ->with('deliveryZones')
                 ->firstOrFail();
 
-            if (!$restaurant->is_approved) {
+            // במצב פריוויו - תמיד להציג את המסעדה (גם אם לא מאושרת)
+            $isPreviewMode = $request->header('X-Preview-Mode') === 'true';
+
+            // אם לא במצב פריוויו והמסעדה לא מאושרת - חסימה
+            if (!$isPreviewMode && !$restaurant->is_approved) {
                 return response()->json([
                     'success' => false,
                     'message' => 'המסעדה ממתינה לאישור מנהל מערכת',

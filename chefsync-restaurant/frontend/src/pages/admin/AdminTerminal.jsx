@@ -198,7 +198,14 @@ export default function AdminTerminal() {
                                         }`}>
                                         <div className="flex justify-between items-start mb-4">
                                             <div>
-                                                <h3 className="text-3xl font-black text-gray-900">#{order.id.toString().slice(-4)}</h3>
+                                                <div className="flex items-center gap-2">
+                                                    <h3 className="text-3xl font-black text-gray-900">#{order.id.toString().slice(-4)}</h3>
+                                                    {order.is_test && (
+                                                        <span className="px-3 py-1 rounded-full text-xs font-black uppercase bg-purple-100 text-purple-700 border-2 border-purple-300 animate-pulse">
+                                                            🧪 דוגמה
+                                                        </span>
+                                                    )}
+                                                </div>
                                                 <p className="text-gray-400 font-bold text-xs mt-1 uppercase tracking-widest flex items-center gap-2">
                                                     <FaClock size={10} />
                                                     {new Date(order.created_at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}
