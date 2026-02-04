@@ -27,6 +27,7 @@ class Restaurant extends Model
         'name',
         'slug',
         'restaurant_type',
+        'cuisine_type',
         'phone',
         'address',
         'city',
