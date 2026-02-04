@@ -1206,6 +1206,7 @@ class AdminController extends Controller
         $validated = $request->validate([
             'name' => 'sometimes|required|string|max:255',
             'description' => 'nullable|string',
+            'cuisine_type' => 'nullable|string|max:255',
             'phone' => 'sometimes|string|max:20',
             'address' => 'sometimes|string|max:255',
             'city' => 'sometimes|string|max:255',
@@ -1283,6 +1284,10 @@ class AdminController extends Controller
 
         if ($request->has('restaurant_type')) {
             $updateData['restaurant_type'] = $request->input('restaurant_type');
+        }
+
+        if ($request->has('cuisine_type')) {
+            $updateData['cuisine_type'] = $request->input('cuisine_type');
         }
 
         if ($request->has('share_incentive_text')) {
@@ -1438,6 +1443,7 @@ class AdminController extends Controller
             // אפשר null רק לשדות שיכולים להיות ריקים
             $nullableFields = [
                 'description',
+                'cuisine_type',
                 'address',
                 'logo_url',
                 'share_incentive_text',

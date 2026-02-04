@@ -274,6 +274,7 @@ export default function AdminRestaurant() {
                 'phone',
                 'address',
                 'restaurant_type',
+                'cuisine_type',
                 'share_incentive_text',
                 'delivery_time_minutes',
                 'delivery_time_note',
