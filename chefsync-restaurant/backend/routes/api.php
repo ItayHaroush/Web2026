@@ -160,6 +160,7 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'tenant'])->group(function (
         Route::get('/salads', [AdminController::class, 'getSalads'])->name('admin.salads.index');
         Route::post('/salads', [AdminController::class, 'storeSalad'])->name('admin.salads.store');
         Route::put('/salads/{id}', [AdminController::class, 'updateSalad'])->name('admin.salads.update');
+        Route::delete('/salads/{id}', [AdminController::class, 'deleteSalad'])->name('admin.salads.delete');
 
         // ניהול קבוצות תוספות
         Route::post('/addon-groups', [AdminController::class, 'storeAddonGroup'])->name('admin.addon-groups.store');
