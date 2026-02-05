@@ -254,7 +254,7 @@ export default function AdminMenu() {
     };
 
     // ===== פונקציות ניהול קטגוריות =====
-    
+
     const handleCategoryDragStart = (e, category) => {
         setDraggedCategory(category);
         e.dataTransfer.effectAllowed = 'move';
@@ -263,14 +263,14 @@ export default function AdminMenu() {
     const handleCategoryDragOver = (e, targetCategory) => {
         e.preventDefault();
         if (!draggedCategory || draggedCategory.id === targetCategory.id) return;
-        
+
         const sortedCats = [...categories];
         const draggedIndex = sortedCats.findIndex(c => c.id === draggedCategory.id);
         const targetIndex = sortedCats.findIndex(c => c.id === targetCategory.id);
-        
+
         sortedCats.splice(draggedIndex, 1);
         sortedCats.splice(targetIndex, 0, draggedCategory);
-        
+
         setCategoryBeingSorted(sortedCats);
     };
 
@@ -303,11 +303,11 @@ export default function AdminMenu() {
             const res = await api.patch(`/admin/categories/${categoryId}/toggle-active`, {}, {
                 headers: getAuthHeaders()
             });
-            
+
             if (res.data.success) {
-                setCategories(prevCats => 
-                    prevCats.map(cat => 
-                        cat.id === categoryId 
+                setCategories(prevCats =>
+                    prevCats.map(cat =>
+                        cat.id === categoryId
                             ? { ...cat, is_active: res.data.category.is_active }
                             : cat
                     )
@@ -425,112 +425,112 @@ export default function AdminMenu() {
                     {/* רשימת פריטים - גריד מודרני */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                         {filteredItems.map((item) => (
-                    <div
-                        key={item.id}
-                        className={`bg-white rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 group overflow-hidden flex flex-col ${!item.is_available ? 'opacity-80' : ''
-                            }`}
-                    >
-                        {/* תמונה מודרנית */}
-                        <div className="aspect-[4/3] bg-slate-50 relative overflow-hidden">
-                            {item.image_url ? (
-                                <img
-                                    src={resolveAssetUrl(item.image_url)}
-                                    alt={item.name}
-                                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                                />
-                            ) : (
-                                <div className="w-full h-full flex flex-col items-center justify-center text-gray-200 gap-2">
-                                    <FaImage size={40} className="opacity-20" />
-                                    <span className="text-[10px] font-black uppercase tracking-widest">אין תמונה</span>
-                                </div>
-                            )}
+                            <div
+                                key={item.id}
+                                className={`bg-white rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 group overflow-hidden flex flex-col ${!item.is_available ? 'opacity-80' : ''
+                                    }`}
+                            >
+                                {/* תמונה מודרנית */}
+                                <div className="aspect-[4/3] bg-slate-50 relative overflow-hidden">
+                                    {item.image_url ? (
+                                        <img
+                                            src={resolveAssetUrl(item.image_url)}
+                                            alt={item.name}
+                                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                                        />
+                                    ) : (
+                                        <div className="w-full h-full flex flex-col items-center justify-center text-gray-200 gap-2">
+                                            <FaImage size={40} className="opacity-20" />
+                                            <span className="text-[10px] font-black uppercase tracking-widest">אין תמונה</span>
+                                        </div>
+                                    )}
 
-                            {/* באג' קטגוריה וזמינות */}
-                            <div className="absolute top-4 left-4 right-4 flex justify-between items-start pointer-events-none">
-                                <div className="bg-white/90 backdrop-blur px-2.5 py-1 rounded-lg shadow-sm">
-                                    <p className="text-[10px] font-black text-gray-900 uppercase tracking-tight flex items-center gap-1.5">
-                                        <span className="text-xs">{item.category?.icon}</span>
-                                        {item.category?.name}
-                                    </p>
-                                </div>
-                                {!item.is_available && (
-                                    <div className="bg-red-500/90 backdrop-blur text-white px-3 py-1 rounded-lg shadow-lg">
-                                        <p className="text-[10px] font-black uppercase tracking-widest">לא זמין</p>
+                                    {/* באג' קטגוריה וזמינות */}
+                                    <div className="absolute top-4 left-4 right-4 flex justify-between items-start pointer-events-none">
+                                        <div className="bg-white/90 backdrop-blur px-2.5 py-1 rounded-lg shadow-sm">
+                                            <p className="text-[10px] font-black text-gray-900 uppercase tracking-tight flex items-center gap-1.5">
+                                                <span className="text-xs">{item.category?.icon}</span>
+                                                {item.category?.name}
+                                            </p>
+                                        </div>
+                                        {!item.is_available && (
+                                            <div className="bg-red-500/90 backdrop-blur text-white px-3 py-1 rounded-lg shadow-lg">
+                                                <p className="text-[10px] font-black uppercase tracking-widest">לא זמין</p>
+                                            </div>
+                                        )}
                                     </div>
-                                )}
+                                </div>
+
+                                {/* תוכן הפריט */}
+                                <div className="p-5 flex-1 flex flex-col">
+                                    <div className="flex items-start justify-between gap-3 mb-2">
+                                        <div className="min-w-0">
+                                            <h3 className="font-black text-gray-900 text-sm leading-tight truncate group-hover:text-brand-primary transition-colors">
+                                                {item.name}
+                                            </h3>
+                                            <p className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-tight">
+                                                ID: #{item.id}
+                                            </p>
+                                        </div>
+                                        <div className="px-3 py-1 bg-brand-primary/10 text-brand-primary rounded-xl shrink-0">
+                                            <span className="text-sm font-black">₪{item.price}</span>
+                                        </div>
+                                    </div>
+
+                                    {item.description && (
+                                        <p className="text-[11px] font-medium text-gray-500 line-clamp-2 mb-5 leading-relaxed">
+                                            {item.description}
+                                        </p>
+                                    )}
+
+                                    {/* כפתורי פעולה מודרניים */}
+                                    {isManager() && (
+                                        <div className="mt-auto flex gap-2">
+                                            <button
+                                                onClick={() => toggleAvailability(item)}
+                                                disabled={isLocked}
+                                                className={`flex-1 flex items-center justify-center gap-2 h-10 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all disabled:opacity-50 ${item.is_available
+                                                    ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'
+                                                    : 'bg-red-50 text-red-600 hover:bg-red-100'
+                                                    }`}
+                                            >
+                                                {item.is_available ? <FaToggleOn size={14} /> : <FaToggleOff size={14} />}
+                                                {item.is_available ? 'זמין' : 'כבוי'}
+                                            </button>
+                                            <button
+                                                onClick={() => openEditModal(item)}
+                                                disabled={isLocked}
+                                                className="w-10 h-10 bg-slate-50 text-slate-500 rounded-xl flex items-center justify-center hover:bg-slate-100 hover:text-gray-900 transition-all disabled:opacity-50"
+                                                title="ערוך פריט"
+                                            >
+                                                <FaEdit size={14} />
+                                            </button>
+                                            <button
+                                                onClick={() => deleteItem(item.id)}
+                                                disabled={isLocked}
+                                                className="w-10 h-10 bg-red-50 text-red-400 rounded-xl flex items-center justify-center hover:bg-red-500 hover:text-white transition-all disabled:opacity-50"
+                                                title="מחק פריט"
+                                            >
+                                                <FaTrash size={12} />
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
-                        </div>
+                        ))}
+                    </div>
 
-                        {/* תוכן הפריט */}
-                        <div className="p-5 flex-1 flex flex-col">
-                            <div className="flex items-start justify-between gap-3 mb-2">
-                                <div className="min-w-0">
-                                    <h3 className="font-black text-gray-900 text-sm leading-tight truncate group-hover:text-brand-primary transition-colors">
-                                        {item.name}
-                                    </h3>
-                                    <p className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-tight">
-                                        ID: #{item.id}
-                                    </p>
-                                </div>
-                                <div className="px-3 py-1 bg-brand-primary/10 text-brand-primary rounded-xl shrink-0">
-                                    <span className="text-sm font-black">₪{item.price}</span>
-                                </div>
+                    {filteredItems.length === 0 && (
+                        <div className="bg-white rounded-[2rem] border border-gray-100 shadow-sm p-20 text-center">
+                            <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6 border border-dashed border-gray-200">
+                                <FaUtensils size={32} className="text-gray-300" />
                             </div>
-
-                            {item.description && (
-                                <p className="text-[11px] font-medium text-gray-500 line-clamp-2 mb-5 leading-relaxed">
-                                    {item.description}
-                                </p>
-                            )}
-
-                            {/* כפתורי פעולה מודרניים */}
-                            {isManager() && (
-                                <div className="mt-auto flex gap-2">
-                                    <button
-                                        onClick={() => toggleAvailability(item)}
-                                        disabled={isLocked}
-                                        className={`flex-1 flex items-center justify-center gap-2 h-10 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all disabled:opacity-50 ${item.is_available
-                                            ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'
-                                            : 'bg-red-50 text-red-600 hover:bg-red-100'
-                                            }`}
-                                    >
-                                        {item.is_available ? <FaToggleOn size={14} /> : <FaToggleOff size={14} />}
-                                        {item.is_available ? 'זמין' : 'כבוי'}
-                                    </button>
-                                    <button
-                                        onClick={() => openEditModal(item)}
-                                        disabled={isLocked}
-                                        className="w-10 h-10 bg-slate-50 text-slate-500 rounded-xl flex items-center justify-center hover:bg-slate-100 hover:text-gray-900 transition-all disabled:opacity-50"
-                                        title="ערוך פריט"
-                                    >
-                                        <FaEdit size={14} />
-                                    </button>
-                                    <button
-                                        onClick={() => deleteItem(item.id)}
-                                        disabled={isLocked}
-                                        className="w-10 h-10 bg-red-50 text-red-400 rounded-xl flex items-center justify-center hover:bg-red-500 hover:text-white transition-all disabled:opacity-50"
-                                        title="מחק פריט"
-                                    >
-                                        <FaTrash size={12} />
-                                    </button>
-                                </div>
-                            )}
+                            <h3 className="text-lg font-black text-gray-900 mb-2 uppercase tracking-tight">אין פריטים להצגה</h3>
+                            <p className="text-xs font-bold text-gray-400 leading-relaxed max-w-[200px] mx-auto uppercase tracking-widest mt-4">
+                                {items.length > 0 ? `יש ${items.length} פריטים בסך הכל, אך הפילטר לא תואם את הבחירה שלך` : 'לא נמצאו פריטים בתפריט. לחץ על הכפתור "הוסף פריט חדש" כדי להתחיל.'}
+                            </p>
                         </div>
-                    </div>
-                ))}
-            </div>
-
-            {filteredItems.length === 0 && (
-                <div className="bg-white rounded-[2rem] border border-gray-100 shadow-sm p-20 text-center">
-                    <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6 border border-dashed border-gray-200">
-                        <FaUtensils size={32} className="text-gray-300" />
-                    </div>
-                    <h3 className="text-lg font-black text-gray-900 mb-2 uppercase tracking-tight">אין פריטים להצגה</h3>
-                    <p className="text-xs font-bold text-gray-400 leading-relaxed max-w-[200px] mx-auto uppercase tracking-widest mt-4">
-                        {items.length > 0 ? `יש ${items.length} פריטים בסך הכל, אך הפילטר לא תואם את הבחירה שלך` : 'לא נמצאו פריטים בתפריט. לחץ על הכפתור "הוסף פריט חדש" כדי להתחיל.'}
-                    </p>
-                </div>
-            )}
+                    )}
                 </>
             ) : (
                 /* טאב ניהול קטגוריות */
