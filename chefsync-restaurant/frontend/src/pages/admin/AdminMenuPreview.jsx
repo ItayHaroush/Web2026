@@ -24,22 +24,22 @@ export default function AdminMenuPreview() {
         // ✅ וידוא: רק המשתמש המחובר יכול לראות את המסעדה שלו
         if (user?.restaurant?.tenant_id) {
             const userTenantId = user.restaurant.tenant_id;
-            
+
             // ✅ כפה את ה-tenantId של המשתמש המחובר - לא מה-localStorage!
             setTenantId(userTenantId);
             localStorage.setItem('tenantId', userTenantId);
             localStorage.setItem('isPreviewMode', 'true');
-            
+
             // הוספת header למצב preview
             apiClient.defaults.headers.common['X-Preview-Mode'] = 'true';
-            
+
             console.log('✅ AdminMenuPreview: Setting tenantId =', userTenantId);
         } else {
             // ❌ אין משתמש מחובר או אין מסעדה - חזור לדף ניהול
             console.error('❌ No user or restaurant found in preview mode');
             navigate('/admin/restaurant');
         }
-        
+
         // ניקוי כשיוצאים מהקומפוננט
         return () => {
             delete apiClient.defaults.headers.common['X-Preview-Mode'];
