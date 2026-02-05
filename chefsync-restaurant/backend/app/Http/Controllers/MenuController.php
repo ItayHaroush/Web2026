@@ -50,8 +50,9 @@ class MenuController extends Controller
             $restaurantVariants = $restaurant?->variants ?? collect();
             $restaurantAddonGroups = $restaurant?->addonGroups ?? collect();
 
-            // קבל קטגוריות עם פריטים זמינים בלבד
+            // קבל קטגוריות פעילות בלבד עם פריטים זמינים
             $categories = Category::where('tenant_id', $tenantId)
+                ->where('is_active', true)
                 ->orderBy('sort_order')
                 ->with([
                     'items' => function ($query) {

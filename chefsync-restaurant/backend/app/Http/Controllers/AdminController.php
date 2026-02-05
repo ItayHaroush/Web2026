@@ -187,6 +187,59 @@ class AdminController extends Controller
         ]);
     }
 
+    /**
+     * עדכון סדר הצגת קטגוריות
+     */
+    public function reorderCategories(Request $request)
+    {
+        $request->validate([
+            'categories' => 'required|array',
+            'categories.*.id' => 'required|integer|exists:categories,id',
+            'categories.*.sort_order' => 'required|integer',
+        ]);
+
+        $user = $request->user();
+        $restaurantId = $user->restaurant_id;
+
+        try {
+            foreach ($request->categories as $categoryData) {
+                Category::where('id', $categoryData['id'])
+                    ->where('restaurant_id', $restaurantId)
+                    ->update(['sort_order' => $categoryData['sort_order']]);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'סדר הקטגוריות עודכן בהצלחה!',
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'שגיאה בעדכון סדר הקטגוריות',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * החלפת מצב פעיל/לא פעיל של קטגוריה
+     */
+    public function toggleCategoryActive(Request $request, $id)
+    {
+        $user = $request->user();
+        $category = Category::where('restaurant_id', $user->restaurant_id)
+            ->findOrFail($id);
+
+        $category->is_active = !$category->is_active;
+        $category->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => $category->is_active ? 'הקטגוריה הופעלה!' : 'הקטגוריה הוסתרה מהתפריט',
+            'category' => $category,
+        ]);
+    }
+
     // =============================================
     // ניהול פריטי תפריט
     // =============================================
