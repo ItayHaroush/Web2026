@@ -22,7 +22,7 @@ class MenuController extends Controller
     {
         try {
             $tenantId = app('tenant_id');
-            
+
             // בדיקת אישור - אבל לא במצב preview (מסעדן מתנסה)
             $isPreviewMode = $request->header('X-Preview-Mode') === 'true';
 
@@ -69,11 +69,11 @@ class MenuController extends Controller
 
             // קבל קטגוריות - במצב preview הצג הכל, אחרת רק פעילות
             $categoriesQuery = Category::where('tenant_id', $tenantId);
-            
+
             if (!$isPreviewMode) {
                 $categoriesQuery->where('is_active', true);
             }
-            
+
             $categories = $categoriesQuery
                 ->orderBy('sort_order')
                 ->with([
