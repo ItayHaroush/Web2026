@@ -97,17 +97,9 @@ export default function MenuPage({ isPreviewMode = false }) {
             localStorage.setItem('isPreviewMode', 'true');
             // הוספת header מיוחד ל-apiClient כדי שה-backend יזהה מצב preview
             apiClient.defaults.headers.common['X-Preview-Mode'] = 'true';
-        } else {
-            localStorage.removeItem('isPreviewMode');
-            delete apiClient.defaults.headers.common['X-Preview-Mode'];
         }
-        return () => {
-            // ניקוי כשיוצאים מהעמוד
-            if (isPreviewMode) {
-                localStorage.removeItem('isPreviewMode');
-                delete apiClient.defaults.headers.common['X-Preview-Mode'];
-            }
-        };
+        // הסרה רק אם המצב הוא לא preview mode
+        // (לא נוסיף cleanup שימחק את זה כי AdminMenuPreview צריך לשלוט על זה)
     }, [isPreviewMode]);
 
     useEffect(() => {

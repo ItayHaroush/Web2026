@@ -603,6 +603,36 @@ class AdminController extends Controller
         ]);
     }
 
+    public function deleteSalad(Request $request, $id)
+    {
+        $user = $request->user();
+
+        if (!$user->isManager()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'אין לך הרשאה למחוק סלטים',
+            ], 403);
+        }
+
+        $restaurant = $user->restaurant;
+        if (!$restaurant) {
+            return response()->json([
+                'success' => false,
+                'message' => 'לא נמצאה מסעדה למשתמש',
+            ], 404);
+        }
+
+        $salad = RestaurantAddon::where('restaurant_id', $restaurant->id)
+            ->findOrFail($id);
+
+        $salad->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'הסלט נמחק בהצלחה!',
+        ]);
+    }
+
     // =============================================
     // ניהול אזורי משלוח
     // =============================================

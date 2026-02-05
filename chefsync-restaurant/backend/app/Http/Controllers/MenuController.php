@@ -22,6 +22,26 @@ class MenuController extends Controller
     {
         try {
             $tenantId = app('tenant_id');
+            
+            // בדיקת אישור - אבל לא במצב preview (מסעדן מתנסה)
+            $isPreviewMode = $request->header('X-Preview-Mode') === 'true';
+
+            // ✅ אימות אבטחה: במצב preview, וודא שהמשתמש הוא הבעלים של המסעדה
+            if ($isPreviewMode) {
+                $user = $request->user('sanctum');
+                if (!$user || !$user->restaurant || $user->restaurant->tenant_id !== $tenantId) {
+                    \Log::warning('Preview mode security violation', [
+                        'requested_tenant' => $tenantId,
+                        'user_tenant' => $user?->restaurant?->tenant_id ?? 'none',
+                        'user_id' => $user?->id ?? 'none',
+                    ]);
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'אין לך הרשאה לצפות בתפריט של מסעדה זו',
+                        'error' => 'unauthorized_preview',
+                    ], 403);
+                }
+            }
 
             $restaurant = Restaurant::with([
                 'variants' => function ($variantQuery) {
@@ -36,9 +56,6 @@ class MenuController extends Controller
                 },
             ])->where('tenant_id', $tenantId)->first();
 
-            // בדיקת אישור - אבל לא במצב preview (מסעדן מתנסה)
-            $isPreviewMode = $request->header('X-Preview-Mode') === 'true';
-
             if (!$restaurant || (!$restaurant->is_approved && !$isPreviewMode)) {
                 return response()->json([
                     'success' => false,
@@ -50,26 +67,39 @@ class MenuController extends Controller
             $restaurantVariants = $restaurant?->variants ?? collect();
             $restaurantAddonGroups = $restaurant?->addonGroups ?? collect();
 
-            // קבל קטגוריות פעילות בלבד עם פריטים זמינים
-            $categories = Category::where('tenant_id', $tenantId)
-                ->where('is_active', true)
+            // קבל קטגוריות - במצב preview הצג הכל, אחרת רק פעילות
+            $categoriesQuery = Category::where('tenant_id', $tenantId);
+            
+            if (!$isPreviewMode) {
+                $categoriesQuery->where('is_active', true);
+            }
+            
+            $categories = $categoriesQuery
                 ->orderBy('sort_order')
                 ->with([
-                    'items' => function ($query) {
-                        $query->where('is_available', true)
-                            ->orderBy('name')
+                    'items' => function ($query) use ($isPreviewMode) {
+                        if (!$isPreviewMode) {
+                            $query->where('is_available', true);
+                        }
+                        $query->orderBy('name')
                             ->with([
-                                'variants' => function ($variantQuery) {
-                                    $variantQuery->where('is_active', true)
-                                        ->orderBy('sort_order');
+                                'variants' => function ($variantQuery) use ($isPreviewMode) {
+                                    if (!$isPreviewMode) {
+                                        $variantQuery->where('is_active', true);
+                                    }
+                                    $variantQuery->orderBy('sort_order');
                                 },
-                                'addonGroups' => function ($groupQuery) {
-                                    $groupQuery->where('is_active', true)
-                                        ->orderBy('sort_order')
+                                'addonGroups' => function ($groupQuery) use ($isPreviewMode) {
+                                    if (!$isPreviewMode) {
+                                        $groupQuery->where('is_active', true);
+                                    }
+                                    $groupQuery->orderBy('sort_order')
                                         ->with([
-                                            'addons' => function ($addonQuery) {
-                                                $addonQuery->where('is_active', true)
-                                                    ->orderBy('sort_order');
+                                            'addons' => function ($addonQuery) use ($isPreviewMode) {
+                                                if (!$isPreviewMode) {
+                                                    $addonQuery->where('is_active', true);
+                                                }
+                                                $addonQuery->orderBy('sort_order');
                                             }
                                         ]);
                                 }
