@@ -147,6 +147,8 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'tenant'])->group(function (
         Route::post('/categories', [AdminController::class, 'storeCategory'])->name('admin.categories.store');
         Route::put('/categories/{id}', [AdminController::class, 'updateCategory'])->name('admin.categories.update');
         Route::delete('/categories/{id}', [AdminController::class, 'deleteCategory'])->name('admin.categories.delete');
+        Route::post('/categories/reorder', [AdminController::class, 'reorderCategories'])->name('admin.categories.reorder');
+        Route::patch('/categories/{id}/toggle-active', [AdminController::class, 'toggleCategoryActive'])->name('admin.categories.toggle');
 
         // ניהול פריטי תפריט
         Route::get('/menu-items', [AdminController::class, 'getMenuItems'])->name('admin.menu.index');

@@ -24,7 +24,9 @@ import {
     FaCheck,
     FaTimes,
     FaSync,
-    FaEye
+    FaEye,
+    FaGripVertical,
+    FaEyeSlash
 } from 'react-icons/fa';
 
 export default function AdminMenu() {
@@ -38,6 +40,9 @@ export default function AdminMenu() {
     const [showModal, setShowModal] = useState(false);
     const [editItem, setEditItem] = useState(null);
     const [filterCategory, setFilterCategory] = useState('');
+    const [activeTab, setActiveTab] = useState('items'); // 'items' או 'categories'
+    const [draggedCategory, setDraggedCategory] = useState(null);
+    const [categoryBeingSorted, setCategoryBeingSorted] = useState([]);
 
     const [form, setForm] = useState({
         name: '',
@@ -248,6 +253,72 @@ export default function AdminMenu() {
         });
     };
 
+    // ===== פונקציות ניהול קטגוריות =====
+    
+    const handleCategoryDragStart = (e, category) => {
+        setDraggedCategory(category);
+        e.dataTransfer.effectAllowed = 'move';
+    };
+
+    const handleCategoryDragOver = (e, targetCategory) => {
+        e.preventDefault();
+        if (!draggedCategory || draggedCategory.id === targetCategory.id) return;
+        
+        const sortedCats = [...categories];
+        const draggedIndex = sortedCats.findIndex(c => c.id === draggedCategory.id);
+        const targetIndex = sortedCats.findIndex(c => c.id === targetCategory.id);
+        
+        sortedCats.splice(draggedIndex, 1);
+        sortedCats.splice(targetIndex, 0, draggedCategory);
+        
+        setCategoryBeingSorted(sortedCats);
+    };
+
+    const handleCategoryDrop = async (e) => {
+        e.preventDefault();
+        if (!draggedCategory || categoryBeingSorted.length === 0) return;
+
+        const reorderedCategories = categoryBeingSorted.map((cat, index) => ({
+            id: cat.id,
+            sort_order: index
+        }));
+
+        try {
+            await api.post('/admin/categories/reorder', {
+                categories: reorderedCategories
+            }, { headers: getAuthHeaders() });
+
+            setCategories(categoryBeingSorted);
+            setCategoryBeingSorted([]);
+            setDraggedCategory(null);
+        } catch (error) {
+            console.error('Failed to reorder categories:', error);
+            alert('שגיאה בעדכון סדר הקטגוריות');
+            setCategoryBeingSorted([]);
+        }
+    };
+
+    const toggleCategoryActive = async (categoryId) => {
+        try {
+            const res = await api.patch(`/admin/categories/${categoryId}/toggle-active`, {}, {
+                headers: getAuthHeaders()
+            });
+            
+            if (res.data.success) {
+                setCategories(prevCats => 
+                    prevCats.map(cat => 
+                        cat.id === categoryId 
+                            ? { ...cat, is_active: res.data.category.is_active }
+                            : cat
+                    )
+                );
+            }
+        } catch (error) {
+            console.error('Failed to toggle category:', error);
+            alert('שגיאה בעדכון סטטוס הקטגוריה');
+        }
+    };
+
     const filteredItems = filterCategory
         ? items.filter(item => item.category_id === parseInt(filterCategory))
         : items;
@@ -276,63 +347,84 @@ export default function AdminMenu() {
                             ניהול תפריט
                         </h1>
                         <p className="text-xs font-black text-gray-400 uppercase tracking-widest mt-2 flex items-center gap-2">
-                            {items.length} פריטים במערכת
+                            {items.length} פריטים במערכת • {categories.length} קטגוריות
                         </p>
                     </div>
-                    {isManager() && (
-                        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-                            <button
-                                onClick={() => window.open('/admin/preview-menu', '_blank')}
-                                className="px-5 py-3 bg-purple-600 text-white rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] shadow-lg hover:shadow-purple-200 transition-all active:scale-95 flex items-center justify-center gap-2.5"
-                            >
-                                <FaEye size={12} />
-                                תצוגה כלקוח
-                            </button>
-                            <button
-                                onClick={openNewModal}
-                                disabled={isLocked}
-                                className="px-6 py-3.5 bg-gray-900 text-white rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] shadow-xl hover:shadow-slate-200 transition-all active:scale-95 flex items-center justify-center gap-2.5 disabled:opacity-50"
-                            >
-                                <FaPlus size={10} />
-                                הוסף פריט חדש
-                            </button>
-                        </div>
+                    {activeTab === 'items' && (
+                        <button
+                            onClick={() => setShowModal(true)}
+                            disabled={isLocked}
+                            className={`bg-brand-primary hover:bg-brand-primary/90 text-white px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-wider shadow-lg shadow-brand-primary/20 flex items-center gap-2 transition-all ${isLocked ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105'
+                                }`}
+                        >
+                            <FaPlus />
+                            הוסף פריט
+                        </button>
                     )}
                 </div>
             </div>
 
-            {/* פילטר קטגוריות - טאבים מודרניים */}
-            <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-2 mb-6 overflow-x-auto no-scrollbar">
-                <div className="flex items-center gap-1 min-w-max">
+            {/* טאבים - פריטים / קטגוריות */}
+            <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-2 mb-6">
+                <div className="flex gap-2">
                     <button
-                        onClick={() => setFilterCategory('')}
-                        className={`px-4 py-2.5 rounded-2xl font-black text-[11px] uppercase tracking-wider transition-all flex items-center gap-2 group relative ${filterCategory === ''
+                        onClick={() => setActiveTab('items')}
+                        className={`flex-1 px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-wider transition-all ${activeTab === 'items'
                             ? 'bg-gray-900 text-white shadow-lg'
                             : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
                             }`}
                     >
-                        <FaLayerGroup size={10} />
-                        הכל
+                        <FaUtensils className="inline mr-2" size={12} />
+                        פריטי תפריט
                     </button>
-                    {categories.map((cat) => (
-                        <button
-                            key={cat.id}
-                            onClick={() => setFilterCategory(cat.id.toString())}
-                            className={`px-4 py-2.5 rounded-2xl font-black text-[11px] uppercase tracking-wider transition-all flex items-center gap-2 group relative ${filterCategory === cat.id.toString()
-                                ? 'bg-gray-900 text-white shadow-lg'
-                                : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
-                                }`}
-                        >
-                            <span className="text-[14px]">{cat.icon}</span>
-                            {cat.name}
-                        </button>
-                    ))}
+                    <button
+                        onClick={() => setActiveTab('categories')}
+                        className={`flex-1 px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-wider transition-all ${activeTab === 'categories'
+                            ? 'bg-gray-900 text-white shadow-lg'
+                            : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
+                            }`}
+                    >
+                        <FaLayerGroup className="inline mr-2" size={12} />
+                        ניהול קטגוריות
+                    </button>
                 </div>
             </div>
 
-            {/* רשימת פריטים - גריד מודרני */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {filteredItems.map((item) => (
+            {/* תוכן לפי טאב */}
+            {activeTab === 'items' ? (
+                <>
+                    {/* פילטר קטגוריות - טאבים מודרניים */}
+                    <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-2 mb-6 overflow-x-auto no-scrollbar">
+                        <div className="flex items-center gap-1 min-w-max">
+                            <button
+                                onClick={() => setFilterCategory('')}
+                                className={`px-4 py-2.5 rounded-2xl font-black text-[11px] uppercase tracking-wider transition-all flex items-center gap-2 group relative ${filterCategory === ''
+                                    ? 'bg-gray-900 text-white shadow-lg'
+                                    : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
+                                    }`}
+                            >
+                                <FaLayerGroup size={10} />
+                                הכל
+                            </button>
+                            {categories.filter(c => c.is_active).map((cat) => (
+                                <button
+                                    key={cat.id}
+                                    onClick={() => setFilterCategory(cat.id.toString())}
+                                    className={`px-4 py-2.5 rounded-2xl font-black text-[11px] uppercase tracking-wider transition-all flex items-center gap-2 group relative ${filterCategory === cat.id.toString()
+                                        ? 'bg-gray-900 text-white shadow-lg'
+                                        : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
+                                        }`}
+                                >
+                                    <span className="text-[14px]">{cat.icon}</span>
+                                    {cat.name}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* רשימת פריטים - גריד מודרני */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        {filteredItems.map((item) => (
                     <div
                         key={item.id}
                         className={`bg-white rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 group overflow-hidden flex flex-col ${!item.is_available ? 'opacity-80' : ''
@@ -439,8 +531,71 @@ export default function AdminMenu() {
                     </p>
                 </div>
             )}
+                </>
+            ) : (
+                /* טאב ניהול קטגוריות */
+                <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
+                    <h3 className="text-lg font-black text-gray-900 mb-4 flex items-center gap-2">
+                        <FaLayerGroup />
+                        סידור וניהול קטגוריות
+                    </h3>
+                    <p className="text-sm text-gray-500 mb-6">
+                        גרור את הקטגוריות לסידור מחדש. הקטגוריות יופיעו ללקוחות לפי הסדר הזה.
+                    </p>
 
-            {/* Modal - מודרני ומרווח */}
+                    <div className="space-y-3">
+                        {(categoryBeingSorted.length > 0 ? categoryBeingSorted : categories).map((cat) => (
+                            <div
+                                key={cat.id}
+                                draggable
+                                onDragStart={(e) => handleCategoryDragStart(e, cat)}
+                                onDragOver={(e) => handleCategoryDragOver(e, cat)}
+                                onDrop={handleCategoryDrop}
+                                className={`bg-gray-50 rounded-2xl p-4 flex items-center justify-between gap-4 cursor-move hover:bg-gray-100 transition-all border ${draggedCategory?.id === cat.id ? 'border-brand-primary shadow-lg' : 'border-transparent'
+                                    }`}
+                            >
+                                <div className="flex items-center gap-3">
+                                    <FaGripVertical className="text-gray-400" size={16} />
+                                    <span className="text-2xl">{cat.icon}</span>
+                                    <div>
+                                        <h4 className="font-bold text-gray-900">{cat.name}</h4>
+                                        <p className="text-xs text-gray-500">{cat.items_count || 0} פריטים</p>
+                                    </div>
+                                </div>
+
+                                <button
+                                    onClick={() => toggleCategoryActive(cat.id)}
+                                    className={`px-4 py-2 rounded-xl font-bold text-xs transition-all flex items-center gap-2 ${cat.is_active
+                                        ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                                        : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                                        }`}
+                                >
+                                    {cat.is_active ? (
+                                        <>
+                                            <FaEye size={12} />
+                                            פעיל
+                                        </>
+                                    ) : (
+                                        <>
+                                            <FaEyeSlash size={12} />
+                                            מוסתר
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+
+                    {categoryBeingSorted.length > 0 && (
+                        <div className="mt-4 p-3 bg-blue-50 rounded-xl text-sm text-blue-700 flex items-center gap-2">
+                            <FaSync className="animate-spin" size={12} />
+                            שומר את הסדר החדש...
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Modal הוספת/עריכת פריט */}
             {showModal && (
                 <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-300">
                     <div className="bg-white rounded-[2.5rem] max-w-lg w-full max-h-[90vh] overflow-hidden shadow-2xl flex flex-col">
