@@ -51,9 +51,8 @@ export default function ScreenFormWidgets({ form, setForm, tier }) {
                 return (
                     <div
                         key={widgetDef.type}
-                        className={`rounded-[2rem] p-6 border transition-all ${
-                            isEnabled ? 'bg-amber-50/50 border-amber-200' : 'bg-gray-50/50 border-gray-100'
-                        }`}
+                        className={`rounded-[2rem] p-6 border transition-all ${isEnabled ? 'bg-amber-50/50 border-amber-200' : 'bg-gray-50/50 border-gray-100'
+                            }`}
                     >
                         <div className="flex items-center justify-between">
                             <label className="text-sm font-black text-gray-700 uppercase tracking-widest flex items-center gap-2">
@@ -63,9 +62,8 @@ export default function ScreenFormWidgets({ form, setForm, tier }) {
                             <button
                                 type="button"
                                 onClick={() => toggleWidget(widgetDef.type)}
-                                className={`p-2 rounded-xl transition-all ${
-                                    isEnabled ? 'text-amber-600 bg-amber-100' : 'text-gray-400 bg-gray-100'
-                                }`}
+                                className={`p-2 rounded-xl transition-all ${isEnabled ? 'text-amber-600 bg-amber-100' : 'text-gray-400 bg-gray-100'
+                                    }`}
                             >
                                 {isEnabled ? <FaToggleOn size={24} /> : <FaToggleOff size={24} />}
                             </button>
@@ -92,11 +90,10 @@ export default function ScreenFormWidgets({ form, setForm, tier }) {
                                                         key={icon}
                                                         type="button"
                                                         onClick={() => updateWidgetConfig('promotion', { icon })}
-                                                        className={`w-10 h-10 rounded-xl text-xl flex items-center justify-center transition-all ${
-                                                            widget?.config?.icon === icon
+                                                        className={`w-10 h-10 rounded-xl text-xl flex items-center justify-center transition-all ${widget?.config?.icon === icon
                                                                 ? 'bg-amber-200 border-2 border-amber-400 scale-110'
                                                                 : 'bg-white border border-gray-200 hover:bg-gray-50'
-                                                        }`}
+                                                            }`}
                                                     >
                                                         {icon}
                                                     </button>
@@ -112,11 +109,10 @@ export default function ScreenFormWidgets({ form, setForm, tier }) {
                                                     key={mode.id}
                                                     type="button"
                                                     onClick={() => updateWidgetConfig('promotion', { display_mode: mode.id })}
-                                                    className={`p-3 rounded-xl border-2 text-sm font-black transition-all ${
-                                                        widget?.config?.display_mode === mode.id
+                                                    className={`p-3 rounded-xl border-2 text-sm font-black transition-all ${widget?.config?.display_mode === mode.id
                                                             ? 'bg-amber-50 border-amber-400 text-amber-600'
                                                             : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'
-                                                    }`}
+                                                        }`}
                                                 >
                                                     {mode.label}
                                                 </button>
@@ -144,11 +140,10 @@ export default function ScreenFormWidgets({ form, setForm, tier }) {
                                                         key={icon}
                                                         type="button"
                                                         onClick={() => updateWidgetConfig('announcement', { icon })}
-                                                        className={`w-10 h-10 rounded-xl text-xl flex items-center justify-center transition-all ${
-                                                            widget?.config?.icon === icon
+                                                        className={`w-10 h-10 rounded-xl text-xl flex items-center justify-center transition-all ${widget?.config?.icon === icon
                                                                 ? 'bg-blue-200 border-2 border-blue-400 scale-110'
                                                                 : 'bg-white border border-gray-200 hover:bg-gray-50'
-                                                        }`}
+                                                            }`}
                                                     >
                                                         {icon}
                                                     </button>
@@ -199,16 +194,15 @@ export default function ScreenFormWidgets({ form, setForm, tier }) {
                                                     key={pos}
                                                     type="button"
                                                     onClick={() => updateWidget(widgetDef.type, { position: pos })}
-                                                    className={`p-2 rounded-lg border-2 text-xs font-black transition-all ${
-                                                        (widget?.position || widgetDef.defaultPosition) === pos
+                                                    className={`p-2 rounded-lg border-2 text-xs font-black transition-all ${(widget?.position || widgetDef.defaultPosition) === pos
                                                             ? 'bg-amber-50 border-amber-300 text-amber-600'
                                                             : 'bg-white border-gray-100 text-gray-400 hover:bg-gray-50'
-                                                    }`}
+                                                        }`}
                                                 >
                                                     {pos === 'top-bar' ? 'בר עליון' :
-                                                     pos === 'bottom-bar' ? 'בר תחתון' :
-                                                     pos === 'bottom-right-badge' ? 'תג ימין' :
-                                                     pos === 'bottom-left-badge' ? 'תג שמאל' : pos}
+                                                        pos === 'bottom-bar' ? 'בר תחתון' :
+                                                            pos === 'bottom-right-badge' ? 'תג ימין' :
+                                                                pos === 'bottom-left-badge' ? 'תג שמאל' : pos}
                                                 </button>
                                             ))}
                                         </div>

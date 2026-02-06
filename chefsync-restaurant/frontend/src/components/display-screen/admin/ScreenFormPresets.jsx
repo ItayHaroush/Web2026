@@ -17,13 +17,12 @@ export default function ScreenFormPresets({ form, setForm, tier }) {
                                 type="button"
                                 disabled={disabled}
                                 onClick={() => !disabled && setForm({ ...form, design_preset: preset.id })}
-                                className={`flex items-center gap-3 p-4 rounded-2xl border-2 transition-all text-right ${
-                                    form.design_preset === preset.id
+                                className={`flex items-center gap-3 p-4 rounded-2xl border-2 transition-all text-right ${form.design_preset === preset.id
                                         ? 'bg-indigo-50 border-indigo-500'
                                         : disabled
                                             ? 'bg-gray-50 border-transparent opacity-40 cursor-not-allowed'
                                             : 'bg-gray-50 border-transparent hover:bg-gray-100'
-                                }`}
+                                    }`}
                             >
                                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black ${preset.color}`}>
                                     {preset.label.charAt(0)}
@@ -62,11 +61,10 @@ export default function ScreenFormPresets({ form, setForm, tier }) {
                                             menuboard_theme: theme.id,
                                         },
                                     })}
-                                    className={`flex items-center gap-3 p-4 rounded-2xl border-2 transition-all text-right ${
-                                        currentTheme === theme.id
+                                    className={`flex items-center gap-3 p-4 rounded-2xl border-2 transition-all text-right ${currentTheme === theme.id
                                             ? 'bg-indigo-50 border-indigo-500'
                                             : 'bg-gray-50 border-transparent hover:bg-gray-100'
-                                    }`}
+                                        }`}
                                 >
                                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black ${theme.colorBox}`}>
                                         {theme.label.charAt(0)}

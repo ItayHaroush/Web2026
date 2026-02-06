@@ -57,15 +57,13 @@ export default function ScreenItemsModal({
                                                 key={item.id}
                                                 type="button"
                                                 onClick={() => onToggleItem(item)}
-                                                className={`w-full flex items-center gap-3 p-3 rounded-2xl transition-all text-right ${
-                                                    isSelected
+                                                className={`w-full flex items-center gap-3 p-3 rounded-2xl transition-all text-right ${isSelected
                                                         ? 'bg-amber-50 border-2 border-amber-300'
                                                         : 'bg-gray-50 border-2 border-transparent hover:bg-gray-100'
-                                                }`}
+                                                    }`}
                                             >
-                                                <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${
-                                                    isSelected ? 'bg-amber-500 text-white' : 'bg-gray-200'
-                                                }`}>
+                                                <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${isSelected ? 'bg-amber-500 text-white' : 'bg-gray-200'
+                                                    }`}>
                                                     {isSelected && <FaCheck size={10} />}
                                                 </div>
                                                 {item.image_url && (
@@ -140,11 +138,10 @@ export default function ScreenItemsModal({
                                                                 key={badge.id}
                                                                 type="button"
                                                                 onClick={() => onToggleBadge(item.menu_item_id, badge.id)}
-                                                                className={`px-2 py-1 rounded-lg text-[10px] font-black transition-all ${
-                                                                    active
+                                                                className={`px-2 py-1 rounded-lg text-[10px] font-black transition-all ${active
                                                                         ? 'bg-amber-100 border border-amber-300 text-amber-700'
                                                                         : 'bg-gray-100 border border-transparent text-gray-400 hover:bg-gray-200'
-                                                                }`}
+                                                                    }`}
                                                                 title={badge.label}
                                                             >
                                                                 {badge.emoji}

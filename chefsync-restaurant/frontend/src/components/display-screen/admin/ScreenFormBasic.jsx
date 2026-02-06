@@ -33,13 +33,12 @@ export default function ScreenFormBasic({ form, setForm, tier }) {
                             type="button"
                             disabled={type.disabled}
                             onClick={() => !type.disabled && setForm({ ...form, display_type: type.id })}
-                            className={`group flex flex-col items-center justify-center gap-3 p-6 rounded-[2rem] border-2 transition-all duration-300 relative ${
-                                form.display_type === type.id
+                            className={`group flex flex-col items-center justify-center gap-3 p-6 rounded-[2rem] border-2 transition-all duration-300 relative ${form.display_type === type.id
                                     ? 'bg-indigo-50 border-indigo-500 text-indigo-600 shadow-lg shadow-indigo-500/5'
                                     : type.disabled
                                         ? 'bg-gray-50 border-transparent text-gray-300 cursor-not-allowed'
                                         : 'bg-gray-50 border-transparent text-gray-400 hover:bg-gray-100'
-                            }`}
+                                }`}
                         >
                             <span className="text-4xl">{type.icon}</span>
                             <div className="text-center">
@@ -73,11 +72,10 @@ export default function ScreenFormBasic({ form, setForm, tier }) {
                             key={mode.id}
                             type="button"
                             onClick={() => setForm({ ...form, content_mode: mode.id })}
-                            className={`p-5 rounded-2xl border-2 transition-all text-center ${
-                                form.content_mode === mode.id
+                            className={`p-5 rounded-2xl border-2 transition-all text-center ${form.content_mode === mode.id
                                     ? 'bg-indigo-50 border-indigo-500 text-indigo-600'
                                     : 'bg-gray-50 border-transparent text-gray-400 hover:bg-gray-100'
-                            }`}
+                                }`}
                         >
                             <div className="font-black text-sm">{mode.label}</div>
                             <div className="text-[10px] opacity-60 font-medium mt-1">{mode.desc}</div>

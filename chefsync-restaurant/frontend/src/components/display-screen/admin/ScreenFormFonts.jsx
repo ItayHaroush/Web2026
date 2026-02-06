@@ -14,7 +14,7 @@ export default function ScreenFormFonts({ form, setForm }) {
         link.href = url;
         link.rel = 'stylesheet';
         document.head.appendChild(link);
-        return () => { try { document.head.removeChild(link); } catch(e) {} };
+        return () => { try { document.head.removeChild(link); } catch (e) { } };
     }, [fonts.title, fonts.price, fonts.body]);
 
     const updateFont = (key, fontId) => {
@@ -62,11 +62,10 @@ export default function ScreenFormFonts({ form, setForm }) {
                                     key={font.id}
                                     type="button"
                                     onClick={() => updateFont(slot.key, font.id)}
-                                    className={`p-3 rounded-xl border-2 transition-all text-center ${
-                                        currentId === font.id
+                                    className={`p-3 rounded-xl border-2 transition-all text-center ${currentId === font.id
                                             ? 'bg-violet-50 border-violet-400 text-violet-700'
                                             : 'bg-white border-gray-100 text-gray-500 hover:bg-gray-50'
-                                    }`}
+                                        }`}
                                 >
                                     <span
                                         className="block text-sm font-bold"
