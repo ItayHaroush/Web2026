@@ -25,6 +25,7 @@ class DisplayScreen extends Model
         'rotation_speed',
         'is_active',
         'show_branding',
+        'aspect_ratio',
         'last_seen_at',
     ];
 
