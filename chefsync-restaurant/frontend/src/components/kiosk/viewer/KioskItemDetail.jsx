@@ -74,11 +74,10 @@ export default function KioskItemDetail({ item, onAddToCart, onClose }) {
                                     <button
                                         key={v.id}
                                         onClick={() => setSelectedVariant(selectedVariant?.id === v.id ? null : v)}
-                                        className={`p-3 rounded-xl border-2 text-sm font-bold transition-all ${
-                                            selectedVariant?.id === v.id
+                                        className={`p-3 rounded-xl border-2 text-sm font-bold transition-all ${selectedVariant?.id === v.id
                                                 ? 'bg-amber-50 border-amber-400 text-amber-700'
                                                 : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
-                                        }`}
+                                            }`}
                                     >
                                         <span>{v.name}</span>
                                         {v.price_delta !== 0 && (
@@ -113,11 +112,10 @@ export default function KioskItemDetail({ item, onAddToCart, onClose }) {
                                         <div key={addon.id} className="flex items-center gap-2">
                                             <button
                                                 onClick={() => toggleAddon(addon)}
-                                                className={`flex-1 flex items-center justify-between p-3 rounded-xl border-2 transition-all ${
-                                                    isSelected
+                                                className={`flex-1 flex items-center justify-between p-3 rounded-xl border-2 transition-all ${isSelected
                                                         ? 'bg-amber-50 border-amber-300 text-amber-700'
                                                         : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
-                                                }`}
+                                                    }`}
                                             >
                                                 <span className="font-bold text-sm">{addon.name}</span>
                                                 {addon.price_delta > 0 && (
@@ -127,11 +125,10 @@ export default function KioskItemDetail({ item, onAddToCart, onClose }) {
                                             {isSelected && (
                                                 <button
                                                     onClick={() => toggleAddonOnSide(addon.id)}
-                                                    className={`px-3 py-3 rounded-xl text-xs font-bold border-2 transition-all whitespace-nowrap ${
-                                                        selectedAddons.find(a => a.id === addon.id)?.on_side
+                                                    className={`px-3 py-3 rounded-xl text-xs font-bold border-2 transition-all whitespace-nowrap ${selectedAddons.find(a => a.id === addon.id)?.on_side
                                                             ? 'bg-blue-50 border-blue-300 text-blue-600'
                                                             : 'bg-gray-50 border-gray-200 text-gray-400'
-                                                    }`}
+                                                        }`}
                                                 >
                                                     בצד
                                                 </button>

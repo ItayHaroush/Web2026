@@ -42,13 +42,11 @@ export default function KioskFormModal({ form, setForm, editKiosk, onSubmit, onC
                         <button
                             type="button"
                             onClick={() => setForm({ ...form, require_name: !form.require_name })}
-                            className={`relative w-14 h-8 rounded-full transition-all ${
-                                form.require_name ? 'bg-amber-500' : 'bg-gray-300'
-                            }`}
+                            className={`relative w-14 h-8 rounded-full transition-all ${form.require_name ? 'bg-amber-500' : 'bg-gray-300'
+                                }`}
                         >
-                            <span className={`absolute top-1 w-6 h-6 bg-white rounded-full shadow-md transition-all ${
-                                form.require_name ? 'right-1' : 'right-7'
-                            }`}></span>
+                            <span className={`absolute top-1 w-6 h-6 bg-white rounded-full shadow-md transition-all ${form.require_name ? 'right-1' : 'right-7'
+                                }`}></span>
                         </button>
                     </div>
 

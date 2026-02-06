@@ -139,11 +139,10 @@ export default function AdminKiosks() {
                         <button
                             onClick={canCreateMore ? openNew : undefined}
                             disabled={!canCreateMore}
-                            className={`w-full md:w-auto px-10 py-5 rounded-[2rem] font-black transition-all flex items-center justify-center gap-3 shadow-xl active:scale-95 group ${
-                                canCreateMore
+                            className={`w-full md:w-auto px-10 py-5 rounded-[2rem] font-black transition-all flex items-center justify-center gap-3 shadow-xl active:scale-95 group ${canCreateMore
                                     ? 'bg-brand-primary text-white hover:bg-brand-dark shadow-brand-primary/20'
                                     : 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-none'
-                            }`}
+                                }`}
                         >
                             <FaPlus className="group-hover:rotate-90 transition-transform" />
                             {canCreateMore ? 'קיוסק חדש' : 'הגעתם למגבלה'}

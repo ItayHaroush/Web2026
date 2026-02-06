@@ -14,11 +14,10 @@ export default function KioskMenu({ categories, items, onSelectItem }) {
                 <div className="bg-gray-50 border-b border-gray-100 px-4 py-3 overflow-x-auto flex gap-2 shrink-0">
                     <button
                         onClick={() => setActiveCategory(null)}
-                        className={`px-5 py-2.5 rounded-xl font-bold text-sm whitespace-nowrap transition-all ${
-                            activeCategory === null
+                        className={`px-5 py-2.5 rounded-xl font-bold text-sm whitespace-nowrap transition-all ${activeCategory === null
                                 ? 'bg-amber-500 text-white shadow-lg'
                                 : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
-                        }`}
+                            }`}
                     >
                         הכל
                     </button>
@@ -26,11 +25,10 @@ export default function KioskMenu({ categories, items, onSelectItem }) {
                         <button
                             key={cat.id}
                             onClick={() => setActiveCategory(cat.id)}
-                            className={`px-5 py-2.5 rounded-xl font-bold text-sm whitespace-nowrap transition-all ${
-                                activeCategory === cat.id
+                            className={`px-5 py-2.5 rounded-xl font-bold text-sm whitespace-nowrap transition-all ${activeCategory === cat.id
                                     ? 'bg-amber-500 text-white shadow-lg'
                                     : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
-                            }`}
+                                }`}
                         >
                             {cat.name}
                         </button>
