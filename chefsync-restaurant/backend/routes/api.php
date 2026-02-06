@@ -14,6 +14,7 @@ use App\Http\Controllers\RegisterRestaurantController;
 use App\Http\Controllers\FcmTokenController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\DisplayScreenController;
+use App\Http\Controllers\KioskController;
 
 /**
  * API Routes
@@ -199,6 +200,14 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'tenant'])->group(function (
         Route::post('/display-screens/{id}/regenerate-token', [DisplayScreenController::class, 'regenerateToken'])->name('admin.display-screens.regenerate');
         Route::get('/display-screens/{id}/items', [DisplayScreenController::class, 'getItems'])->name('admin.display-screens.items.get');
         Route::post('/display-screens/{id}/items', [DisplayScreenController::class, 'updateItems'])->name('admin.display-screens.items.update');
+
+        // ניהול קיוסקים
+        Route::get('/kiosks', [KioskController::class, 'index'])->name('admin.kiosks.index');
+        Route::post('/kiosks', [KioskController::class, 'store'])->name('admin.kiosks.store');
+        Route::put('/kiosks/{id}', [KioskController::class, 'update'])->name('admin.kiosks.update');
+        Route::delete('/kiosks/{id}', [KioskController::class, 'destroy'])->name('admin.kiosks.delete');
+        Route::post('/kiosks/{id}/toggle', [KioskController::class, 'toggle'])->name('admin.kiosks.toggle');
+        Route::post('/kiosks/{id}/regenerate-token', [KioskController::class, 'regenerateToken'])->name('admin.kiosks.regenerate');
     });
 });
 
@@ -247,6 +256,10 @@ Route::get('/health', function () {
 
 // מסך תצוגה ציבורי - ללא אימות
 Route::get('/screen/{token}', [DisplayScreenController::class, 'viewerContent'])->name('screen.view');
+
+// קיוסק ציבורי - ללא אימות
+Route::get('/kiosk/{token}/menu', [KioskController::class, 'menu'])->name('kiosk.menu');
+Route::post('/kiosk/{token}/order', [KioskController::class, 'placeOrder'])->name('kiosk.order');
 
 // רשימת מסעדות - ללא צורך ב-tenant
 Route::get('/restaurants', [RestaurantController::class, 'index'])->name('restaurants.index');
