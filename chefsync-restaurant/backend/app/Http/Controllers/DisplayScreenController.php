@@ -53,6 +53,10 @@ class DisplayScreenController extends Controller
                     'promotions_allowed' => $tier === 'pro',
                     'badges_allowed' => $tier === 'pro',
                     'logo_overlay_allowed' => $tier === 'pro',
+                    'fonts_allowed' => $tier === 'pro',
+                    'custom_background_allowed' => $tier === 'pro',
+                    'widgets_allowed' => $tier === 'pro',
+                    'layout_controls_allowed' => $tier === 'pro',
                 ],
             ],
         ]);
@@ -81,6 +85,42 @@ class DisplayScreenController extends Controller
             'design_options.promotion.text' => 'nullable|string|max:100',
             'design_options.promotion.icon' => 'nullable|string|max:10',
             'design_options.promotion.display_mode' => 'nullable|in:tag,bar',
+            'aspect_ratio' => 'nullable|in:16:9,9:16,21:9,4:3',
+
+            // Fonts
+            'design_options.fonts' => 'nullable|array',
+            'design_options.fonts.title' => 'nullable|string|in:Rubik,Heebo,Assistant,SecularOne,Karantina,AmaticSC',
+            'design_options.fonts.price' => 'nullable|string|in:Rubik,Heebo,Assistant,SecularOne,Karantina,AmaticSC',
+            'design_options.fonts.body' => 'nullable|string|in:Rubik,Heebo,Assistant,SecularOne,Karantina,AmaticSC',
+
+            // Background
+            'design_options.background' => 'nullable|array',
+            'design_options.background.mode' => 'nullable|in:preset,solid,gradient,image',
+            'design_options.background.solid_color' => 'nullable|string|max:20',
+            'design_options.background.gradient' => 'nullable|array',
+            'design_options.background.gradient.from' => 'nullable|string|max:20',
+            'design_options.background.gradient.to' => 'nullable|string|max:20',
+            'design_options.background.gradient.direction' => 'nullable|string|max:10',
+            'design_options.background.image_url' => 'nullable|string|max:500',
+            'design_options.background.image_opacity' => 'nullable|numeric|min:0.1|max:1',
+
+            // Logo overlay extended
+            'design_options.logo_overlay.size' => 'nullable|in:sm,md,lg',
+
+            // Widgets
+            'design_options.widgets' => 'nullable|array|max:10',
+            'design_options.widgets.*.type' => 'required_with:design_options.widgets|in:promotion,announcement,business_hours,delivery_info',
+            'design_options.widgets.*.enabled' => 'required_with:design_options.widgets|boolean',
+            'design_options.widgets.*.position' => 'nullable|string|max:30',
+            'design_options.widgets.*.config' => 'nullable|array',
+
+            // Layout
+            'design_options.layout' => 'nullable|array',
+            'design_options.layout.font_scale' => 'nullable|numeric|min:0.5|max:2.0',
+            'design_options.layout.show_descriptions' => 'nullable|boolean',
+            'design_options.layout.show_images' => 'nullable|boolean',
+            'design_options.layout.show_categories' => 'nullable|boolean',
+            'design_options.layout.card_style' => 'nullable|in:rounded,sharp,minimal',
         ]);
 
         $user = $request->user();
@@ -116,6 +156,17 @@ class DisplayScreenController extends Controller
         $designOptions = $request->input('design_options', null);
         if ($tier === 'basic' && $designOptions) {
             unset($designOptions['logo_overlay'], $designOptions['promotion']);
+            unset($designOptions['fonts']);
+            unset($designOptions['layout']);
+            if (isset($designOptions['background']) && ($designOptions['background']['mode'] ?? 'preset') !== 'preset') {
+                unset($designOptions['background']);
+            }
+            if (isset($designOptions['widgets'])) {
+                $designOptions['widgets'] = array_values(array_filter(
+                    $designOptions['widgets'],
+                    fn($w) => ($w['type'] ?? '') === 'promotion'
+                ));
+            }
             $designOptions = empty($designOptions) ? null : $designOptions;
         }
 
@@ -124,6 +175,7 @@ class DisplayScreenController extends Controller
             'restaurant_id' => $restaurant->id,
             'name' => $request->name,
             'display_type' => $request->display_type,
+            'aspect_ratio' => $request->input('aspect_ratio', '16:9'),
             'design_preset' => $preset,
             'design_options' => $designOptions,
             'content_mode' => $request->input('content_mode', 'auto_available'),
@@ -166,6 +218,42 @@ class DisplayScreenController extends Controller
             'design_options.promotion.text' => 'nullable|string|max:100',
             'design_options.promotion.icon' => 'nullable|string|max:10',
             'design_options.promotion.display_mode' => 'nullable|in:tag,bar',
+            'aspect_ratio' => 'nullable|in:16:9,9:16,21:9,4:3',
+
+            // Fonts
+            'design_options.fonts' => 'nullable|array',
+            'design_options.fonts.title' => 'nullable|string|in:Rubik,Heebo,Assistant,SecularOne,Karantina,AmaticSC',
+            'design_options.fonts.price' => 'nullable|string|in:Rubik,Heebo,Assistant,SecularOne,Karantina,AmaticSC',
+            'design_options.fonts.body' => 'nullable|string|in:Rubik,Heebo,Assistant,SecularOne,Karantina,AmaticSC',
+
+            // Background
+            'design_options.background' => 'nullable|array',
+            'design_options.background.mode' => 'nullable|in:preset,solid,gradient,image',
+            'design_options.background.solid_color' => 'nullable|string|max:20',
+            'design_options.background.gradient' => 'nullable|array',
+            'design_options.background.gradient.from' => 'nullable|string|max:20',
+            'design_options.background.gradient.to' => 'nullable|string|max:20',
+            'design_options.background.gradient.direction' => 'nullable|string|max:10',
+            'design_options.background.image_url' => 'nullable|string|max:500',
+            'design_options.background.image_opacity' => 'nullable|numeric|min:0.1|max:1',
+
+            // Logo overlay extended
+            'design_options.logo_overlay.size' => 'nullable|in:sm,md,lg',
+
+            // Widgets
+            'design_options.widgets' => 'nullable|array|max:10',
+            'design_options.widgets.*.type' => 'required_with:design_options.widgets|in:promotion,announcement,business_hours,delivery_info',
+            'design_options.widgets.*.enabled' => 'required_with:design_options.widgets|boolean',
+            'design_options.widgets.*.position' => 'nullable|string|max:30',
+            'design_options.widgets.*.config' => 'nullable|array',
+
+            // Layout
+            'design_options.layout' => 'nullable|array',
+            'design_options.layout.font_scale' => 'nullable|numeric|min:0.5|max:2.0',
+            'design_options.layout.show_descriptions' => 'nullable|boolean',
+            'design_options.layout.show_images' => 'nullable|boolean',
+            'design_options.layout.show_categories' => 'nullable|boolean',
+            'design_options.layout.card_style' => 'nullable|in:rounded,sharp,minimal',
         ]);
 
         $user = $request->user();
@@ -197,11 +285,23 @@ class DisplayScreenController extends Controller
             'refresh_interval',
             'rotation_speed',
             'design_options',
+            'aspect_ratio',
         ]);
 
         // design_options - הסר פיצ'רי Pro מבייסיק
         if ($tier === 'basic' && isset($updateData['design_options'])) {
             unset($updateData['design_options']['logo_overlay'], $updateData['design_options']['promotion']);
+            unset($updateData['design_options']['fonts']);
+            unset($updateData['design_options']['layout']);
+            if (isset($updateData['design_options']['background']) && ($updateData['design_options']['background']['mode'] ?? 'preset') !== 'preset') {
+                unset($updateData['design_options']['background']);
+            }
+            if (isset($updateData['design_options']['widgets'])) {
+                $updateData['design_options']['widgets'] = array_values(array_filter(
+                    $updateData['design_options']['widgets'],
+                    fn($w) => ($w['type'] ?? '') === 'promotion'
+                ));
+            }
             if (empty($updateData['design_options'])) {
                 $updateData['design_options'] = null;
             }
@@ -394,6 +494,7 @@ class DisplayScreenController extends Controller
                 'screen' => [
                     'name' => $screen->name,
                     'display_type' => $screen->display_type,
+                    'aspect_ratio' => $screen->aspect_ratio ?? '16:9',
                     'design_preset' => $screen->design_preset,
                     'design_options' => $screen->design_options,
                     'refresh_interval' => $screen->refresh_interval,
@@ -403,6 +504,13 @@ class DisplayScreenController extends Controller
                 'restaurant' => [
                     'name' => $restaurant->name ?? '',
                     'logo_url' => $restaurant->logo_url ?? null,
+                    'operating_days' => $restaurant->operating_days ?? [],
+                    'operating_hours' => $restaurant->operating_hours ?? [],
+                    'has_delivery' => $restaurant->has_delivery ?? false,
+                    'has_pickup' => $restaurant->has_pickup ?? false,
+                    'delivery_time_minutes' => $restaurant->delivery_time_minutes ?? null,
+                    'pickup_time_minutes' => $restaurant->pickup_time_minutes ?? null,
+                    'is_open_now' => $restaurant->is_open_now ?? false,
                 ],
                 'items' => $items,
             ],
