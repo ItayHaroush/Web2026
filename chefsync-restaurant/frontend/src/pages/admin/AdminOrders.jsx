@@ -26,7 +26,8 @@ import {
     FaShoppingBag,
     FaHistory,
     FaStickyNote,
-    FaEye
+    FaEye,
+    FaTabletAlt
 } from 'react-icons/fa';
 import { SiWaze, SiGooglemaps } from 'react-icons/si';
 
@@ -537,11 +538,27 @@ export default function AdminOrders() {
                                                                 <FaClock size={10} className="text-gray-400" />
                                                                 {new Date(order.created_at).toLocaleString('he-IL', { hour: '2-digit', minute: '2-digit' })}
                                                             </div>
-                                                            <div className={`flex items-center gap-1.5 text-[10px] font-black uppercase tracking-tight py-0.5 px-2 rounded-full border ${isDelivery ? 'bg-purple-50 text-purple-600 border-purple-100' : 'bg-orange-50 text-orange-600 border-orange-100'
-                                                                }`}>
-                                                                {isDelivery ? <FaMotorcycle size={10} /> : <FaShoppingBag size={10} />}
-                                                                {isDelivery ? 'משלוח' : 'איסוף עצמי'}
-                                                            </div>
+                                                            {order.source === 'kiosk' ? (
+                                                                <>
+                                                                    <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-tight py-0.5 px-2 rounded-full border bg-amber-50 text-amber-700 border-amber-200">
+                                                                        <FaTabletAlt size={10} />
+                                                                        קיוסק
+                                                                    </div>
+                                                                    <div className={`flex items-center gap-1.5 text-[10px] font-black uppercase tracking-tight py-0.5 px-2 rounded-full border ${order.order_type === 'dine_in' ? 'bg-green-50 text-green-600 border-green-100' : 'bg-orange-50 text-orange-600 border-orange-100'}`}>
+                                                                        {order.order_type === 'dine_in' ? 'לשבת' : 'לקחת'}
+                                                                    </div>
+                                                                    {order.table_number && (
+                                                                        <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-tight py-0.5 px-2 rounded-full border bg-indigo-50 text-indigo-600 border-indigo-100">
+                                                                            שולחן {order.table_number}
+                                                                        </div>
+                                                                    )}
+                                                                </>
+                                                            ) : (
+                                                                <div className={`flex items-center gap-1.5 text-[10px] font-black uppercase tracking-tight py-0.5 px-2 rounded-full border ${isDelivery ? 'bg-purple-50 text-purple-600 border-purple-100' : 'bg-orange-50 text-orange-600 border-orange-100'}`}>
+                                                                    {isDelivery ? <FaMotorcycle size={10} /> : <FaShoppingBag size={10} />}
+                                                                    {isDelivery ? 'משלוח' : 'איסוף עצמי'}
+                                                                </div>
+                                                            )}
                                                             {isDelivery && order.delivery_address && (
                                                                 <div className="flex items-center gap-1.5">
                                                                     <span className="text-xs font-bold text-gray-400 truncate max-w-[140px]">
@@ -653,23 +670,40 @@ export default function AdminOrders() {
                                                 מידע לקוח
                                             </h4>
                                             <div className="flex items-center gap-2">
-                                                {/* אינדיקטור משלוח/איסוף */}
-                                                <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase flex items-center gap-1 ${selectedOrder.delivery_method === 'delivery'
-                                                    ? 'bg-purple-50 text-purple-600 border border-purple-100'
-                                                    : 'bg-orange-50 text-orange-600 border border-orange-100'
-                                                    }`}>
-                                                    {selectedOrder.delivery_method === 'delivery' ? (
-                                                        <>
-                                                            <FaTruck size={9} />
-                                                            משלוח
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <FaShoppingBag size={9} />
-                                                            איסוף
-                                                        </>
-                                                    )}
-                                                </span>
+                                                {/* אינדיקטור מקור הזמנה */}
+                                                {selectedOrder.source === 'kiosk' ? (
+                                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                                        <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase flex items-center gap-1 bg-amber-50 text-amber-700 border border-amber-200">
+                                                            <FaTabletAlt size={9} />
+                                                            קיוסק
+                                                        </span>
+                                                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase flex items-center gap-1 border ${selectedOrder.order_type === 'dine_in' ? 'bg-green-50 text-green-600 border-green-100' : 'bg-orange-50 text-orange-600 border-orange-100'}`}>
+                                                            {selectedOrder.order_type === 'dine_in' ? 'לשבת' : 'לקחת'}
+                                                        </span>
+                                                        {selectedOrder.table_number && (
+                                                            <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase flex items-center gap-1 bg-indigo-50 text-indigo-600 border border-indigo-100">
+                                                                שולחן {selectedOrder.table_number}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                ) : (
+                                                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase flex items-center gap-1 ${selectedOrder.delivery_method === 'delivery'
+                                                        ? 'bg-purple-50 text-purple-600 border border-purple-100'
+                                                        : 'bg-orange-50 text-orange-600 border border-orange-100'
+                                                        }`}>
+                                                        {selectedOrder.delivery_method === 'delivery' ? (
+                                                            <>
+                                                                <FaTruck size={9} />
+                                                                משלוח
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <FaShoppingBag size={9} />
+                                                                איסוף
+                                                            </>
+                                                        )}
+                                                    </span>
+                                                )}
                                                 {/* כפתור התקשרות */}
                                                 <a
                                                     href={`tel:${selectedOrder.customer_phone}`}
@@ -706,12 +740,14 @@ export default function AdminOrders() {
                                                         </div>
                                                         <div className="min-w-0 flex-1">
                                                             <p className="text-xs font-black text-gray-400 uppercase tracking-tighter">
-                                                                {selectedOrder.delivery_method === 'delivery' ? 'כתובת משלוח' : 'אופן קבלת החמנה'}
+                                                                {selectedOrder.delivery_method === 'delivery' ? 'כתובת משלוח' : selectedOrder.source === 'kiosk' ? 'פרטי קיוסק' : 'אופן קבלת החמנה'}
                                                             </p>
                                                             <p className="text-sm font-black text-gray-900 truncate">
                                                                 {selectedOrder.delivery_method === 'delivery'
                                                                     ? (selectedOrder.delivery_address || 'לא צוינה כתובת')
-                                                                    : 'איסוף עצמי מהמסעדה'
+                                                                    : selectedOrder.source === 'kiosk'
+                                                                        ? (selectedOrder.table_number ? `שולחן ${selectedOrder.table_number} · ${selectedOrder.order_type === 'dine_in' ? 'לשבת' : 'לקחת'}` : (selectedOrder.order_type === 'dine_in' ? 'לשבת' : 'איסוף עצמי'))
+                                                                        : 'איסוף עצמי מהמסעדה'
                                                                 }
                                                             </p>
                                                             {selectedOrder.delivery_method === 'delivery' && selectedOrder.delivery_address && (

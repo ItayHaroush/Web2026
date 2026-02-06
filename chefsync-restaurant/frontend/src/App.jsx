@@ -34,6 +34,8 @@ import AdminSimulator from './pages/admin/AdminSimulator';
 import AdminQrCode from './pages/admin/AdminQrCode';
 import AdminDisplayScreens from './pages/admin/AdminDisplayScreens';
 import ScreenViewer from './pages/ScreenViewer';
+import KioskViewer from './pages/KioskViewer';
+import AdminKiosks from './pages/admin/AdminKiosks';
 import AdminReports from './pages/admin/AdminReports';
 import AdminAuthDebug from './pages/admin/AdminAuthDebug';
 import SuperAdminDashboard from './pages/super-admin/SuperAdminDashboard';
@@ -131,6 +133,9 @@ function AppRoutes() {
 
       {/* מסך תצוגה ציבורי */}
       <Route path="/screen/:token" element={<ScreenViewer />} />
+
+      {/* קיוסק ציבורי */}
+      <Route path="/kiosk/:token" element={<KioskViewer />} />
 
       {/* אדמין */}
       <Route path="/admin/login" element={isAdmin ? <Navigate to="/admin/dashboard" replace /> : <AdminLogin />} />
@@ -292,6 +297,14 @@ function AppRoutes() {
         element={
           <AdminRoute>
             <AdminDisplayScreens />
+          </AdminRoute>
+        }
+      />
+      <Route
+        path="/admin/kiosks"
+        element={
+          <AdminRoute>
+            <AdminKiosks />
           </AdminRoute>
         }
       />

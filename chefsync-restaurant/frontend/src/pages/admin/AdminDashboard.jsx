@@ -20,7 +20,8 @@ import {
     FaReceipt,
     FaCheck,
     FaMapMarkerAlt,
-    FaArrowLeft
+    FaArrowLeft,
+    FaTabletAlt
 } from 'react-icons/fa';
 
 export default function AdminDashboard() {
@@ -387,10 +388,29 @@ export default function AdminDashboard() {
                                                         <FaBox size={8} />
                                                         {order.items?.length || 0} פריטים
                                                     </p>
-                                                    <p className={`text-[10px] font-black uppercase flex items-center gap-1 ${isDelivery ? 'text-purple-500' : 'text-orange-500'}`}>
-                                                        <span className="w-1 h-1 rounded-full bg-current" />
-                                                        {isDelivery ? 'משלוח' : 'איסוף'}
-                                                    </p>
+                                                    {order.source === 'kiosk' ? (
+                                                        <>
+                                                            <p className="text-[10px] font-black uppercase flex items-center gap-1 text-amber-700">
+                                                                <FaTabletAlt size={8} />
+                                                                קיוסק
+                                                            </p>
+                                                            <p className={`text-[10px] font-black uppercase flex items-center gap-1 ${order.order_type === 'dine_in' ? 'text-green-600' : 'text-orange-500'}`}>
+                                                                <span className="w-1 h-1 rounded-full bg-current" />
+                                                                {order.order_type === 'dine_in' ? 'לשבת' : 'לקחת'}
+                                                            </p>
+                                                            {order.table_number && (
+                                                                <p className="text-[10px] font-black uppercase flex items-center gap-1 text-indigo-600">
+                                                                    <span className="w-1 h-1 rounded-full bg-current" />
+                                                                    שולחן {order.table_number}
+                                                                </p>
+                                                            )}
+                                                        </>
+                                                    ) : (
+                                                        <p className={`text-[10px] font-black uppercase flex items-center gap-1 ${isDelivery ? 'text-purple-500' : 'text-orange-500'}`}>
+                                                            <span className="w-1 h-1 rounded-full bg-current" />
+                                                            {isDelivery ? 'משלוח' : 'איסוף'}
+                                                        </p>
+                                                    )}
                                                 </div>
                                                 {isDelivery && order.delivery_address && (
                                                     <p className="text-[10px] text-gray-400 font-medium flex items-center gap-1 mt-1 truncate max-w-[200px]">

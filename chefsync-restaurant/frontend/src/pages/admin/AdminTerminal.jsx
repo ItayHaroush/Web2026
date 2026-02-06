@@ -205,6 +205,26 @@ export default function AdminTerminal() {
                                                             🧪 דוגמה
                                                         </span>
                                                     )}
+                                                    {order.source === 'kiosk' && (
+                                                        <span className="px-3 py-1 rounded-full text-xs font-black uppercase bg-amber-100 text-amber-700 border-2 border-amber-300">
+                                                            קיוסק
+                                                        </span>
+                                                    )}
+                                                    {order.order_type === 'dine_in' && (
+                                                        <span className="px-3 py-1 rounded-full text-xs font-black uppercase bg-green-100 text-green-700 border-2 border-green-300">
+                                                            לשבת
+                                                        </span>
+                                                    )}
+                                                    {order.order_type === 'takeaway' && (
+                                                        <span className="px-3 py-1 rounded-full text-xs font-black uppercase bg-orange-100 text-orange-700 border-2 border-orange-300">
+                                                            לקחת
+                                                        </span>
+                                                    )}
+                                                    {order.table_number && (
+                                                        <span className="px-3 py-1 rounded-full text-xs font-black bg-indigo-100 text-indigo-700 border-2 border-indigo-300">
+                                                            שולחן {order.table_number}
+                                                        </span>
+                                                    )}
                                                 </div>
                                                 <p className="text-gray-400 font-bold text-xs mt-1 uppercase tracking-widest flex items-center gap-2">
                                                     <FaClock size={10} />

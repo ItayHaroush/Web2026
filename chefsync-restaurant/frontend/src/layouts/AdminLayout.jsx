@@ -25,7 +25,8 @@ import {
     FaChartBar,
     FaShieldAlt,
     FaClock,
-    FaTv
+    FaTv,
+    FaTabletAlt
 } from 'react-icons/fa';
 
 export default function AdminLayout({ children }) {
@@ -165,6 +166,12 @@ export default function AdminLayout({ children }) {
             path: '/admin/display-screens',
             icon: <FaTv />,
             label: 'מסכי תצוגה',
+            show: isManager()
+        },
+        {
+            path: '/admin/kiosks',
+            icon: <FaTabletAlt />,
+            label: 'קיוסקים',
             show: isManager()
         }
     ].filter(item => item.show);
