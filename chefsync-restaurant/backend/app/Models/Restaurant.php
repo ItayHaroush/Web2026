@@ -148,6 +148,14 @@ class Restaurant extends Model
     }
 
     /**
+     * מסכי תצוגה של המסעדה
+     */
+    public function displayScreens(): HasMany
+    {
+        return $this->hasMany(DisplayScreen::class, 'restaurant_id');
+    }
+
+    /**
      * טענת מחדש - סנן לפי Tenant ID הנוכחי
      */
     protected static function booted()

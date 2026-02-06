@@ -32,6 +32,8 @@ import AdminCoupons from './pages/admin/AdminCoupons';
 import AdminPrinters from './pages/admin/AdminPrinters';
 import AdminSimulator from './pages/admin/AdminSimulator';
 import AdminQrCode from './pages/admin/AdminQrCode';
+import AdminDisplayScreens from './pages/admin/AdminDisplayScreens';
+import ScreenViewer from './pages/ScreenViewer';
 import AdminReports from './pages/admin/AdminReports';
 import AdminAuthDebug from './pages/admin/AdminAuthDebug';
 import SuperAdminDashboard from './pages/super-admin/SuperAdminDashboard';
@@ -126,6 +128,9 @@ function AppRoutes() {
 
       {/* עמוד שיתוף למסעדה */}
       <Route path="/r/:slug" element={<RestaurantSharePage />} />
+
+      {/* מסך תצוגה ציבורי */}
+      <Route path="/screen/:token" element={<ScreenViewer />} />
 
       {/* אדמין */}
       <Route path="/admin/login" element={isAdmin ? <Navigate to="/admin/dashboard" replace /> : <AdminLogin />} />
@@ -279,6 +284,14 @@ function AppRoutes() {
         element={
           <AdminRoute>
             <AdminQrCode />
+          </AdminRoute>
+        }
+      />
+      <Route
+        path="/admin/display-screens"
+        element={
+          <AdminRoute>
+            <AdminDisplayScreens />
           </AdminRoute>
         }
       />

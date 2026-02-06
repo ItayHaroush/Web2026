@@ -24,7 +24,8 @@ import {
     FaDesktop,
     FaChartBar,
     FaShieldAlt,
-    FaClock
+    FaClock,
+    FaTv
 } from 'react-icons/fa';
 
 export default function AdminLayout({ children }) {
@@ -158,6 +159,12 @@ export default function AdminLayout({ children }) {
             path: '/admin/qr-code',
             icon: <FaQrcode />,
             label: 'QR Code',
+            show: isManager()
+        },
+        {
+            path: '/admin/display-screens',
+            icon: <FaTv />,
+            label: 'מסכי תצוגה',
             show: isManager()
         }
     ].filter(item => item.show);
