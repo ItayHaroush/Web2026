@@ -198,6 +198,9 @@ class KioskController extends Controller
         $items = MenuItem::withoutGlobalScopes()
             ->where('restaurant_id', $kiosk->restaurant_id)
             ->where('is_available', true)
+            ->whereHas('category', function ($q) {
+                $q->where('is_active', true);
+            })
             ->with([
                 'category:id,name,sort_order',
                 'variants' => function ($q) {
