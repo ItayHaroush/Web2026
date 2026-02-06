@@ -31,11 +31,10 @@ export default function KioskCard({
                             {kiosk.name}
                         </h3>
                         <div className="flex items-center gap-2 mt-1.5">
-                            <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border ${
-                                kiosk.require_name
+                            <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border ${kiosk.require_name
                                     ? 'bg-blue-50 text-blue-600 border-blue-100'
                                     : 'bg-gray-100 text-gray-500 border-gray-100'
-                            }`}>
+                                }`}>
                                 {kiosk.require_name ? 'דורש שם' : 'ללא שם'}
                             </span>
                         </div>
@@ -90,7 +89,7 @@ export default function KioskCard({
                         className={`flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all text-sm font-black ${kiosk.is_active
                             ? 'bg-orange-50 text-orange-600 hover:bg-orange-600 hover:text-white'
                             : 'bg-green-50 text-green-600 hover:bg-green-600 hover:text-white'
-                        }`}
+                            }`}
                     >
                         {kiosk.is_active ? <FaToggleOff size={14} /> : <FaToggleOn size={14} />}
                         {kiosk.is_active ? 'השבת' : 'הפעל'}
