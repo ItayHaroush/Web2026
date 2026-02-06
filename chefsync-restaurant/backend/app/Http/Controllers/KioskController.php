@@ -214,9 +214,10 @@ class KioskController extends Controller
                         }]);
                 },
             ])
-            ->orderBy('category_id')
-            ->orderBy('name')
             ->get()
+            ->sortBy('name')
+            ->sortBy(fn($item) => $item->category?->sort_order ?? 0)
+            ->values()
             ->map(function ($item) use ($restaurant) {
                 $useVariants = $item->use_variants;
                 $variants = [];
@@ -295,6 +296,7 @@ class KioskController extends Controller
                     'image_url' => $item->image_url,
                     'category_id' => $item->category_id,
                     'category_name' => $item->category?->name,
+                    'category_sort_order' => $item->category?->sort_order ?? 0,
                     'use_variants' => (bool) $item->use_variants,
                     'use_addons' => (bool) $item->use_addons,
                     'max_addons' => $item->max_addons,
@@ -309,8 +311,10 @@ class KioskController extends Controller
                 return [
                     'id' => $categoryId,
                     'name' => $first['category_name'] ?? '',
+                    'sort_order' => $first['category_sort_order'] ?? 0,
                 ];
             })
+            ->sortBy('sort_order')
             ->values();
 
         return response()->json([

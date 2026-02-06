@@ -137,6 +137,11 @@ class Restaurant extends Model
         return $this->hasMany(Order::class, 'restaurant_id');
     }
 
+    public function printers(): HasMany
+    {
+        return $this->hasMany(Printer::class, 'restaurant_id');
+    }
+
     public function subscription(): HasOne
     {
         return $this->hasOne(RestaurantSubscription::class);

@@ -572,6 +572,15 @@ class OrderController extends Controller
 
             $order->update(['status' => $validated['status']]);
 
+            // הפעלת הדפסה למטבח כשהזמנה מאושרת
+            if ($validated['status'] === 'preparing') {
+                try {
+                    app(\App\Services\PrintService::class)->printOrder($order);
+                } catch (\Exception $e) {
+                    Log::error('Print failed: ' . $e->getMessage());
+                }
+            }
+
             // שליחת התראת Push מותאמת לסוג המשלוח
             $this->sendStatusNotification($order, $validated['status']);
 

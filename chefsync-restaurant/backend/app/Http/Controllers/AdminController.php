@@ -1803,6 +1803,15 @@ class AdminController extends Controller
         $order->updated_by_user_id = $user->id;
         $order->save();
 
+        // הפעלת הדפסה למטבח כשהזמנה מאושרת
+        if ($request->status === 'preparing') {
+            try {
+                app(\App\Services\PrintService::class)->printOrder($order);
+            } catch (\Exception $e) {
+                Log::error('Print failed: ' . $e->getMessage());
+            }
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'סטטוס ההזמנה עודכן!',
