@@ -190,8 +190,13 @@ class DisplayScreenController extends Controller
         }
 
         $updateData = $request->only([
-            'name', 'display_type', 'design_preset', 'content_mode',
-            'refresh_interval', 'rotation_speed', 'design_options',
+            'name',
+            'display_type',
+            'design_preset',
+            'content_mode',
+            'refresh_interval',
+            'rotation_speed',
+            'design_options',
         ]);
 
         // design_options - הסר פיצ'רי Pro מבייסיק
