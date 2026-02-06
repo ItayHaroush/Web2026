@@ -15,6 +15,7 @@ use App\Http\Controllers\FcmTokenController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\DisplayScreenController;
 use App\Http\Controllers\KioskController;
+use App\Http\Controllers\PrinterController;
 
 /**
  * API Routes
@@ -208,6 +209,15 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'tenant'])->group(function (
         Route::delete('/kiosks/{id}', [KioskController::class, 'destroy'])->name('admin.kiosks.delete');
         Route::post('/kiosks/{id}/toggle', [KioskController::class, 'toggle'])->name('admin.kiosks.toggle');
         Route::post('/kiosks/{id}/regenerate-token', [KioskController::class, 'regenerateToken'])->name('admin.kiosks.regenerate');
+
+        // ניהול מדפסות מטבח
+        Route::get('/printers', [PrinterController::class, 'index'])->name('admin.printers.index');
+        Route::post('/printers', [PrinterController::class, 'store'])->name('admin.printers.store');
+        Route::put('/printers/{id}', [PrinterController::class, 'update'])->name('admin.printers.update');
+        Route::delete('/printers/{id}', [PrinterController::class, 'destroy'])->name('admin.printers.delete');
+        Route::patch('/printers/{id}/toggle', [PrinterController::class, 'toggle'])->name('admin.printers.toggle');
+        Route::post('/printers/{id}/test', [PrinterController::class, 'testPrint'])->name('admin.printers.test');
+        Route::post('/orders/{id}/reprint', [PrinterController::class, 'reprint'])->name('admin.orders.reprint');
     });
 });
 

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import AdminLayout from '../../layouts/AdminLayout';
 import api from '../../services/apiClient';
+import { reprintOrder } from '../../services/printerService';
 import {
     FaDesktop,
     FaClock,
@@ -10,14 +11,25 @@ import {
     FaRoute,
     FaPrint,
     FaTimes,
-    FaBoxOpen
+    FaBoxOpen,
+    FaRedoAlt
 } from 'react-icons/fa';
 
 // מסוף סניף לעובדים/שליחים: מציג הזמנות פתוחות ומאפשר עדכון סטטוס מהיר
 export default function AdminTerminal() {
-    const { getAuthHeaders } = useAdminAuth();
+    const { getAuthHeaders, user } = useAdminAuth();
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [reprintingId, setReprintingId] = useState(null);
+
+    const formatPhone = (phone) => {
+        if (!phone) return '';
+        let p = phone.replace(/\s+/g, '');
+        if (p.startsWith('+972')) p = '0' + p.slice(4);
+        else if (p.startsWith('972')) p = '0' + p.slice(3);
+        if (/^0\d{9}$/.test(p)) return p.slice(0, 3) + '-' + p.slice(3);
+        return p;
+    };
 
     useEffect(() => {
         fetchOrders();
@@ -101,12 +113,113 @@ export default function AdminTerminal() {
         }
     };
 
-    const nextStatus = (status) => {
+    const handleReprint = async (orderId) => {
+        setReprintingId(orderId);
+        try {
+            const res = await reprintOrder(orderId);
+            alert(res.message || 'ההדפסה נשלחה בהצלחה');
+        } catch (error) {
+            console.error('Failed to reprint:', error);
+            alert(error.response?.data?.message || 'שגיאה בהדפסה חוזרת');
+        } finally {
+            setReprintingId(null);
+        }
+    };
+
+    const printSingleOrder = (order) => {
+        const items = order.items || [];
+        const time = new Date(order.created_at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
+        const date = new Date(order.created_at).toLocaleDateString('he-IL');
+
+        let sourceLabel = '';
+        if (order.source === 'kiosk') {
+            sourceLabel = order.order_type === 'dine_in' ? 'קיוסק - לשבת' : 'קיוסק - לקחת';
+            if (order.table_number) sourceLabel += ` | שולחן ${order.table_number}`;
+        } else if (order.delivery_method === 'delivery') {
+            sourceLabel = 'משלוח';
+        } else {
+            sourceLabel = 'איסוף עצמי';
+        }
+
+        const itemsHtml = items.map(item => {
+            const name = item.menu_item?.name || item.name || 'פריט';
+            const qty = item.quantity || 1;
+            const price = (Number(item.price_at_order || item.price || 0) * qty).toFixed(2);
+            const addons = Array.isArray(item.addons) ? item.addons : [];
+            const insideAddons = addons
+                .filter(a => !(typeof a === 'object' && a?.on_side))
+                .map(a => typeof a === 'string' ? a : (a?.name ?? a?.addon_name))
+                .filter(Boolean);
+            const sideAddons = addons
+                .filter(a => typeof a === 'object' && a?.on_side)
+                .map(a => a?.name ?? a?.addon_name)
+                .filter(Boolean);
+
+            let html = `<tr><td style="padding:6px 0;font-weight:bold">${qty}x ${name}</td><td style="padding:6px 0;text-align:left;white-space:nowrap">₪${price}</td></tr>`;
+            if (item.variant_name) {
+                html += `<tr><td colspan="2" style="padding:0 0 4px 0;color:#666;font-size:12px;padding-right:20px">סוג: ${item.variant_name}</td></tr>`;
+            }
+            if (insideAddons.length > 0) {
+                html += `<tr><td colspan="2" style="padding:0 0 4px 0;color:#666;font-size:12px;padding-right:20px">+ ${insideAddons.join(', ')}</td></tr>`;
+            }
+            if (sideAddons.length > 0) {
+                html += `<tr><td colspan="2" style="padding:0 0 4px 0;color:#e67e22;font-size:12px;padding-right:20px">בצד: ${sideAddons.join(', ')}</td></tr>`;
+            }
+            if (item.notes) {
+                html += `<tr><td colspan="2" style="padding:0 0 4px 0;color:#e74c3c;font-size:12px;padding-right:20px">הערה: ${item.notes}</td></tr>`;
+            }
+            return html;
+        }).join('');
+
+        const printWindow = window.open('', '_blank', 'width=400,height=600');
+        printWindow.document.write(`<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+<meta charset="utf-8">
+<title>הזמנה #${order.id}</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: Arial, sans-serif; padding: 20px; max-width: 350px; margin: 0 auto; font-size: 14px; }
+  .header { text-align: center; border-bottom: 2px dashed #333; padding-bottom: 12px; margin-bottom: 12px; }
+  .header h1 { font-size: 22px; margin-bottom: 4px; }
+  .header .meta { font-size: 12px; color: #555; }
+  .info { border-bottom: 1px dashed #ccc; padding-bottom: 10px; margin-bottom: 10px; }
+  .info p { margin: 3px 0; font-size: 13px; }
+  .items { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+  .items td { vertical-align: top; font-size: 13px; }
+  .total { border-top: 2px dashed #333; padding-top: 10px; text-align: center; font-size: 18px; font-weight: bold; margin-top: 8px; }
+  .footer { text-align: center; margin-top: 16px; font-size: 11px; color: #999; border-top: 1px dashed #ccc; padding-top: 10px; }
+  @media print { body { padding: 0; } }
+</style>
+</head>
+<body>
+  <div class="header">
+    <h1>הזמנה #${order.id}</h1>
+    <div class="meta">${date} | ${time}</div>
+    <div class="meta" style="margin-top:4px;font-weight:bold">${sourceLabel}</div>
+  </div>
+  <div class="info">
+    <p><strong>${order.customer_name}</strong></p>
+    <p dir="ltr" style="text-align:right">${formatPhone(order.customer_phone)}</p>
+    ${order.delivery_address ? `<p>כתובת: ${order.delivery_address}</p>` : ''}
+    ${order.delivery_notes ? `<p>הערות: ${order.delivery_notes}</p>` : ''}
+  </div>
+  <table class="items">${itemsHtml}</table>
+  ${order.delivery_fee > 0 ? `<div style="font-size:13px;text-align:left;padding:4px 0;border-top:1px dashed #eee">דמי משלוח: ₪${Number(order.delivery_fee).toFixed(2)}</div>` : ''}
+  <div class="total">סה"כ: ₪${Number(order.total_amount || order.total || 0).toFixed(2)}</div>
+  <div class="footer">${user?.restaurant?.name || 'ChefSync'}</div>
+  <script>window.onload=function(){window.print();window.onafterprint=function(){window.close();}}<\/script>
+</body>
+</html>`);
+        printWindow.document.close();
+    };
+
+    const nextStatus = (status, deliveryMethod) => {
         const flow = {
             pending: 'preparing',
             received: 'preparing',
             preparing: 'ready',
-            ready: 'delivering',
+            ready: deliveryMethod === 'delivery' ? 'delivering' : 'delivered',
             delivering: 'delivered',
         };
         return flow[status] || null;
@@ -179,7 +292,7 @@ export default function AdminTerminal() {
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 px-4">
                         {orders.map((order) => {
-                            const next = nextStatus(order.status);
+                            const next = nextStatus(order.status, order.delivery_method);
                             const items = order.items || [];
                             const categoryGroups = groupItemsByCategory(items);
 
@@ -245,7 +358,7 @@ export default function AdminTerminal() {
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <p className="text-lg font-black text-gray-900 truncate tracking-tight">{order.customer_name}</p>
-                                                <p className="text-gray-400 text-sm font-bold ltr text-right">{order.customer_phone}</p>
+                                                <p className="text-gray-400 text-sm font-bold ltr text-right">{formatPhone(order.customer_phone)}</p>
                                             </div>
                                         </div>
                                     </div>
@@ -319,7 +432,11 @@ export default function AdminTerminal() {
                                                         'bg-brand-primary text-white shadow-brand-primary/20 hover:bg-brand-dark'
                                                     }`}
                                             >
-                                                {order.status === 'ready' ? (
+                                                {order.status === 'ready' && order.delivery_method !== 'delivery' ? (
+                                                    <><FaCheckCircle /> הכר כנמסר</>
+                                                ) : order.status === 'ready' && order.delivery_method === 'delivery' ? (
+                                                    <><FaRoute /> שלח למשלוח</>
+                                                ) : order.status === 'delivering' ? (
                                                     <><FaCheckCircle /> הכר כנמסר</>
                                                 ) : (
                                                     <><FaRoute /> {statusLabel[next]}</>
@@ -331,13 +448,22 @@ export default function AdminTerminal() {
                                             </div>
                                         )}
 
-                                        <div className="grid grid-cols-2 gap-3 mt-4">
+                                        <div className={`grid gap-3 mt-4 ${['preparing', 'ready', 'delivering'].includes(order.status) ? 'grid-cols-3' : 'grid-cols-2'}`}>
                                             <button
                                                 className="py-3 bg-white text-gray-600 rounded-2xl text-xs font-black shadow-sm border border-gray-100 hover:bg-gray-50 transition-all active:scale-95 flex items-center justify-center gap-2"
-                                                onClick={() => window.print()}
+                                                onClick={() => printSingleOrder(order)}
                                             >
                                                 <FaPrint size={12} /> הדפס
                                             </button>
+                                            {['preparing', 'ready', 'delivering'].includes(order.status) && (
+                                                <button
+                                                    onClick={() => handleReprint(order.id)}
+                                                    disabled={reprintingId === order.id}
+                                                    className="py-3 bg-white text-blue-600 rounded-2xl text-xs font-black shadow-sm border border-gray-100 hover:bg-blue-50 transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50"
+                                                >
+                                                    <FaRedoAlt size={12} /> {reprintingId === order.id ? 'שולח...' : 'הדפס למטבח'}
+                                                </button>
+                                            )}
                                             <button
                                                 onClick={() => updateStatus(order.id, 'cancelled')}
                                                 className="py-3 bg-white text-rose-500 rounded-2xl text-xs font-black shadow-sm border border-gray-100 hover:bg-rose-50 transition-all active:scale-95 flex items-center justify-center gap-2"

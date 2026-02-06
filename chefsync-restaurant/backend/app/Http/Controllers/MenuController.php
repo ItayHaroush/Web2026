@@ -6,6 +6,7 @@ use App\Models\MenuItem;
 use App\Models\Category;
 use App\Models\Restaurant;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 /**
  * MenuController - ניהול תפריט המסעדה
@@ -30,7 +31,7 @@ class MenuController extends Controller
             if ($isPreviewMode) {
                 $user = $request->user('sanctum');
                 if (!$user || !$user->restaurant || $user->restaurant->tenant_id !== $tenantId) {
-                    \Log::warning('Preview mode security violation', [
+                    Log::warning('Preview mode security violation', [
                         'requested_tenant' => $tenantId,
                         'user_tenant' => $user?->restaurant?->tenant_id ?? 'none',
                         'user_id' => $user?->id ?? 'none',
@@ -67,38 +68,27 @@ class MenuController extends Controller
             $restaurantVariants = $restaurant?->variants ?? collect();
             $restaurantAddonGroups = $restaurant?->addonGroups ?? collect();
 
-            // קבל קטגוריות - במצב preview הצג הכל, אחרת רק פעילות
-            $categoriesQuery = Category::where('tenant_id', $tenantId);
-
-            if (!$isPreviewMode) {
-                $categoriesQuery->where('is_active', true);
-            }
+            // קבל קטגוריות - רק פעילות (גם במצב preview, כדי שהמנהל יראה בדיוק מה הלקוח רואה)
+            $categoriesQuery = Category::where('tenant_id', $tenantId)
+                ->where('is_active', true);
 
             $categories = $categoriesQuery
                 ->orderBy('sort_order')
                 ->with([
-                    'items' => function ($query) use ($isPreviewMode) {
-                        if (!$isPreviewMode) {
-                            $query->where('is_available', true);
-                        }
+                    'items' => function ($query) {
+                        $query->where('is_available', true);
                         $query->orderBy('name')
                             ->with([
-                                'variants' => function ($variantQuery) use ($isPreviewMode) {
-                                    if (!$isPreviewMode) {
-                                        $variantQuery->where('is_active', true);
-                                    }
+                                'variants' => function ($variantQuery) {
+                                    $variantQuery->where('is_active', true);
                                     $variantQuery->orderBy('sort_order');
                                 },
-                                'addonGroups' => function ($groupQuery) use ($isPreviewMode) {
-                                    if (!$isPreviewMode) {
-                                        $groupQuery->where('is_active', true);
-                                    }
+                                'addonGroups' => function ($groupQuery) {
+                                    $groupQuery->where('is_active', true);
                                     $groupQuery->orderBy('sort_order')
                                         ->with([
-                                            'addons' => function ($addonQuery) use ($isPreviewMode) {
-                                                if (!$isPreviewMode) {
-                                                    $addonQuery->where('is_active', true);
-                                                }
+                                            'addons' => function ($addonQuery) {
+                                                $addonQuery->where('is_active', true);
                                                 $addonQuery->orderBy('sort_order');
                                             }
                                         ]);
