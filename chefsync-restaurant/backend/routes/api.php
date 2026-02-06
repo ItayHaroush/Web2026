@@ -13,6 +13,7 @@ use App\Http\Controllers\SuperAdminNotificationController;
 use App\Http\Controllers\RegisterRestaurantController;
 use App\Http\Controllers\FcmTokenController;
 use App\Http\Controllers\ChatController;
+use App\Http\Controllers\DisplayScreenController;
 
 /**
  * API Routes
@@ -188,6 +189,16 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'tenant'])->group(function (
         Route::get('/employees', [AdminController::class, 'getEmployees'])->name('admin.employees.index');
         Route::put('/employees/{id}', [AdminController::class, 'updateEmployee'])->name('admin.employees.update');
         Route::delete('/employees/{id}', [AdminController::class, 'deleteEmployee'])->name('admin.employees.delete');
+
+        // ניהול מסכי תצוגה
+        Route::get('/display-screens', [DisplayScreenController::class, 'index'])->name('admin.display-screens.index');
+        Route::post('/display-screens', [DisplayScreenController::class, 'store'])->name('admin.display-screens.store');
+        Route::put('/display-screens/{id}', [DisplayScreenController::class, 'update'])->name('admin.display-screens.update');
+        Route::delete('/display-screens/{id}', [DisplayScreenController::class, 'destroy'])->name('admin.display-screens.delete');
+        Route::post('/display-screens/{id}/toggle', [DisplayScreenController::class, 'toggle'])->name('admin.display-screens.toggle');
+        Route::post('/display-screens/{id}/regenerate-token', [DisplayScreenController::class, 'regenerateToken'])->name('admin.display-screens.regenerate');
+        Route::get('/display-screens/{id}/items', [DisplayScreenController::class, 'getItems'])->name('admin.display-screens.items.get');
+        Route::post('/display-screens/{id}/items', [DisplayScreenController::class, 'updateItems'])->name('admin.display-screens.items.update');
     });
 });
 
@@ -233,6 +244,9 @@ Route::middleware(['api', 'tenant'])->group(function () {
 Route::get('/health', function () {
     return response()->json(['status' => 'ok']);
 });
+
+// מסך תצוגה ציבורי - ללא אימות
+Route::get('/screen/{token}', [DisplayScreenController::class, 'viewerContent'])->name('screen.view');
 
 // רשימת מסעדות - ללא צורך ב-tenant
 Route::get('/restaurants', [RestaurantController::class, 'index'])->name('restaurants.index');
