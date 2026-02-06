@@ -12,11 +12,10 @@ export default function AspectRatioSelector({ value, onChange }) {
                         key={ratio.id}
                         type="button"
                         onClick={() => onChange(ratio.id)}
-                        className={`flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all ${
-                            value === ratio.id
+                        className={`flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all ${value === ratio.id
                                 ? 'bg-indigo-50 border-indigo-500 text-indigo-600'
                                 : 'bg-gray-50 border-transparent text-gray-400 hover:bg-gray-100'
-                        }`}
+                            }`}
                     >
                         <span className="text-2xl">{ratio.icon}</span>
                         <div className="text-center">

@@ -77,11 +77,10 @@ export default function ScreenFormLayout({ form, setForm }) {
                             key={style.id}
                             type="button"
                             onClick={() => updateLayout({ card_style: style.id })}
-                            className={`p-3 rounded-xl border-2 text-sm font-black transition-all ${
-                                (layout.card_style || 'rounded') === style.id
+                            className={`p-3 rounded-xl border-2 text-sm font-black transition-all ${(layout.card_style || 'rounded') === style.id
                                     ? 'bg-sky-50 border-sky-400 text-sky-600'
                                     : 'bg-white border-gray-100 text-gray-400 hover:bg-gray-50'
-                            }`}
+                                }`}
                         >
                             {style.label}
                         </button>

@@ -36,13 +36,13 @@ export default function ScreenCard({
                             <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border ${screen.display_type === 'rotating'
                                 ? 'bg-purple-50 text-purple-600 border-purple-100'
                                 : 'bg-gray-100 text-gray-500 border-gray-100'
-                            }`}>
+                                }`}>
                                 {screen.display_type === 'rotating' ? 'קרוסלה' : 'סטטי'}
                             </span>
                             <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border ${screen.content_mode === 'manual'
                                 ? 'bg-amber-50 text-amber-600 border-amber-100'
                                 : 'bg-teal-50 text-teal-600 border-teal-100'
-                            }`}>
+                                }`}>
                                 {screen.content_mode === 'manual' ? 'ידני' : 'אוטומטי'}
                             </span>
                             {screen.aspect_ratio && screen.aspect_ratio !== '16:9' && (
@@ -123,7 +123,7 @@ export default function ScreenCard({
                         className={`flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all text-sm font-black ${screen.is_active
                             ? 'bg-orange-50 text-orange-600 hover:bg-orange-600 hover:text-white'
                             : 'bg-green-50 text-green-600 hover:bg-green-600 hover:text-white'
-                        }`}
+                            }`}
                     >
                         {screen.is_active ? <FaToggleOff size={14} /> : <FaToggleOn size={14} />}
                         {screen.is_active ? 'השבת' : 'הפעל'}

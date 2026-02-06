@@ -28,11 +28,10 @@ export default function ViewerHeader({ screen, restaurant, preset, designOptions
                     {Array.from({ length: totalSlides }).map((_, i) => (
                         <div
                             key={i}
-                            className={`w-3 h-3 rounded-full transition-all duration-500 ${
-                                i === currentSlide
+                            className={`w-3 h-3 rounded-full transition-all duration-500 ${i === currentSlide
                                     ? `scale-125 ${preset.dark ? 'bg-white' : 'bg-gray-800'}`
                                     : `${preset.dark ? 'bg-white/30' : 'bg-gray-300'}`
-                            }`}
+                                }`}
                         />
                     ))}
                 </div>

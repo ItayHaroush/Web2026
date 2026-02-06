@@ -41,11 +41,10 @@ export default function ScreenFormBackground({ form, setForm }) {
                         key={mode.id}
                         type="button"
                         onClick={() => updateBg({ mode: mode.id })}
-                        className={`flex flex-col items-center gap-1 p-3 rounded-xl border-2 transition-all ${
-                            bg.mode === mode.id
+                        className={`flex flex-col items-center gap-1 p-3 rounded-xl border-2 transition-all ${bg.mode === mode.id
                                 ? 'bg-emerald-50 border-emerald-400 text-emerald-700'
                                 : 'bg-white border-gray-100 text-gray-400 hover:bg-gray-50'
-                        }`}
+                            }`}
                     >
                         <span className="text-xl">{mode.icon}</span>
                         <span className="text-[10px] font-black">{mode.label}</span>
@@ -120,9 +119,8 @@ export default function ScreenFormBackground({ form, setForm }) {
                     <div
                         className="w-full h-14 rounded-2xl border border-gray-200"
                         style={{
-                            background: `linear-gradient(${
-                                { 'to-b': '180deg', 'to-r': '90deg', 'to-br': '135deg', 'to-bl': '225deg' }[bg.gradient?.direction || 'to-br']
-                            }, ${bg.gradient?.from || '#1a1a2e'}, ${bg.gradient?.to || '#16213e'})`,
+                            background: `linear-gradient(${{ 'to-b': '180deg', 'to-r': '90deg', 'to-br': '135deg', 'to-bl': '225deg' }[bg.gradient?.direction || 'to-br']
+                                }, ${bg.gradient?.from || '#1a1a2e'}, ${bg.gradient?.to || '#16213e'})`,
                         }}
                     />
                     <div className="flex gap-2">
@@ -131,11 +129,10 @@ export default function ScreenFormBackground({ form, setForm }) {
                                 key={dir.id}
                                 type="button"
                                 onClick={() => updateBg({ gradient: { ...bg.gradient, direction: dir.id } })}
-                                className={`flex-1 p-2 rounded-lg border-2 text-center transition-all ${
-                                    (bg.gradient?.direction || 'to-br') === dir.id
+                                className={`flex-1 p-2 rounded-lg border-2 text-center transition-all ${(bg.gradient?.direction || 'to-br') === dir.id
                                         ? 'bg-emerald-50 border-emerald-400 text-emerald-700'
                                         : 'bg-white border-gray-100 text-gray-400 hover:bg-gray-50'
-                                }`}
+                                    }`}
                             >
                                 <span className="text-lg">{dir.icon}</span>
                                 <span className="block text-[9px] font-bold mt-0.5">{dir.label}</span>

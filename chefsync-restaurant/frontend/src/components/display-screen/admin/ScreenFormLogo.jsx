@@ -50,11 +50,10 @@ export default function ScreenFormLogo({ form, setForm, tier }) {
                 <button
                     type="button"
                     onClick={toggleEnabled}
-                    className={`p-2 rounded-xl transition-all ${
-                        overlay.enabled
+                    className={`p-2 rounded-xl transition-all ${overlay.enabled
                             ? 'text-indigo-600 bg-indigo-100'
                             : 'text-gray-400 bg-gray-100'
-                    }`}
+                        }`}
                 >
                     {overlay.enabled ? <FaToggleOn size={24} /> : <FaToggleOff size={24} />}
                 </button>
@@ -71,11 +70,10 @@ export default function ScreenFormLogo({ form, setForm, tier }) {
                                     key={pos.id}
                                     type="button"
                                     onClick={() => updateOverlay({ position: pos.id })}
-                                    className={`p-3 rounded-xl border-2 text-sm font-black transition-all ${
-                                        overlay.position === pos.id
+                                    className={`p-3 rounded-xl border-2 text-sm font-black transition-all ${overlay.position === pos.id
                                             ? 'bg-indigo-50 border-indigo-400 text-indigo-600'
                                             : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'
-                                    }`}
+                                        }`}
                                 >
                                     {pos.label}
                                 </button>
@@ -93,11 +91,10 @@ export default function ScreenFormLogo({ form, setForm, tier }) {
                                         key={size.id}
                                         type="button"
                                         onClick={() => updateOverlay({ size: size.id })}
-                                        className={`p-3 rounded-xl border-2 text-sm font-black transition-all ${
-                                            (overlay.size || 'md') === size.id
+                                        className={`p-3 rounded-xl border-2 text-sm font-black transition-all ${(overlay.size || 'md') === size.id
                                                 ? 'bg-indigo-50 border-indigo-400 text-indigo-600'
                                                 : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'
-                                        }`}
+                                            }`}
                                     >
                                         {size.label}
                                     </button>

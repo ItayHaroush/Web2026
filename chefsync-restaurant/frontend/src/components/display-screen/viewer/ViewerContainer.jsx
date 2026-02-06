@@ -31,7 +31,7 @@ export default function ViewerContainer({ designOptions, preset, children }) {
         link.href = url;
         link.rel = 'stylesheet';
         document.head.appendChild(link);
-        return () => { try { document.head.removeChild(link); } catch(e) {} };
+        return () => { try { document.head.removeChild(link); } catch (e) { } };
     }, [designOptions?.fonts]);
 
     // Fullscreen on click
