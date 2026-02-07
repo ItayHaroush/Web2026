@@ -198,8 +198,8 @@ export default function LandingPage() {
                                     <button
                                         onClick={() => setActiveDevice('mobile')}
                                         className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all duration-300 ${activeDevice === 'mobile'
-                                                ? 'bg-gradient-to-r from-brand-primary to-brand-secondary text-white shadow-lg scale-105'
-                                                : 'bg-gray-100 dark:bg-brand-dark-bg text-gray-600 dark:text-brand-dark-muted hover:bg-gray-200 dark:hover:bg-brand-dark-border'
+                                            ? 'bg-gradient-to-r from-brand-primary to-brand-secondary text-white shadow-lg scale-105'
+                                            : 'bg-gray-100 dark:bg-brand-dark-bg text-gray-600 dark:text-brand-dark-muted hover:bg-gray-200 dark:hover:bg-brand-dark-border'
                                             }`}
                                     >
                                         <FaMobileScreen className="text-lg" />
@@ -208,8 +208,8 @@ export default function LandingPage() {
                                     <button
                                         onClick={() => setActiveDevice('tablet')}
                                         className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all duration-300 ${activeDevice === 'tablet'
-                                                ? 'bg-gradient-to-r from-brand-primary to-brand-secondary text-white shadow-lg scale-105'
-                                                : 'bg-gray-100 dark:bg-brand-dark-bg text-gray-600 dark:text-brand-dark-muted hover:bg-gray-200 dark:hover:bg-brand-dark-border'
+                                            ? 'bg-gradient-to-r from-brand-primary to-brand-secondary text-white shadow-lg scale-105'
+                                            : 'bg-gray-100 dark:bg-brand-dark-bg text-gray-600 dark:text-brand-dark-muted hover:bg-gray-200 dark:hover:bg-brand-dark-border'
                                             }`}
                                     >
                                         <FaTabletScreenButton className="text-lg" />
@@ -218,8 +218,8 @@ export default function LandingPage() {
                                     <button
                                         onClick={() => setActiveDevice('desktop')}
                                         className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all duration-300 ${activeDevice === 'desktop'
-                                                ? 'bg-gradient-to-r from-brand-primary to-brand-secondary text-white shadow-lg scale-105'
-                                                : 'bg-gray-100 dark:bg-brand-dark-bg text-gray-600 dark:text-brand-dark-muted hover:bg-gray-200 dark:hover:bg-brand-dark-border'
+                                            ? 'bg-gradient-to-r from-brand-primary to-brand-secondary text-white shadow-lg scale-105'
+                                            : 'bg-gray-100 dark:bg-brand-dark-bg text-gray-600 dark:text-brand-dark-muted hover:bg-gray-200 dark:hover:bg-brand-dark-border'
                                             }`}
                                     >
                                         <FaDesktop className="text-lg" />
