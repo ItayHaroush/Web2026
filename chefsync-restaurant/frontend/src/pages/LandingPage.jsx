@@ -39,7 +39,7 @@ export default function LandingPage() {
         {
             title: 'שליטה מלאה במשלוחים',
             desc: 'ניהול אזורי חלוקה, זמנים ושליחים ללא תלות באחרים.',
-            icon: <FaMapLocationDot className="w-6 h-6 text-blue-500" />
+            icon: <FaMapLocationDot className="w-6 h-6 text-brand-primary" />
         },
         {
             title: 'המותג שלך במרכז',
@@ -133,12 +133,12 @@ export default function LandingPage() {
                         {/* Heading */}
                         <h1 className="text-5xl sm:text-6xl lg:text-8xl font-black tracking-tight leading-tight drop-shadow-sm">
                             למה לשלם עמלות?<br />
-                            <span className="text-blue-300 bg-clip-text text-transparent bg-gradient-to-r from-blue-200 to-blue-400">
+                            <span className="text-brand-accent bg-clip-text text-transparent bg-gradient-to-r from-amber-200 to-orange-300">
                                 שלם חודשית.
                             </span>
                         </h1>
 
-                        <p className="text-xl sm:text-2xl text-blue-100/90 font-medium max-w-3xl mx-auto leading-relaxed">
+                        <p className="text-xl sm:text-2xl text-white/80 font-medium max-w-3xl mx-auto leading-relaxed">
                             מערכת מתקדמת, 0% עמלה, 100% שליטה שלך.
                         </p>
 
@@ -179,15 +179,15 @@ export default function LandingPage() {
                 {/* Live Demo Section */}
                 <section id="demo" className="max-w-7xl mx-auto px-4 sm:px-6">
                     <div className="text-center mb-16">
-                        <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 text-gray-900">
+                        <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 text-gray-900 dark:text-brand-dark-text">
                             ראה את המערכת בפעולה
                         </h2>
-                        <p className="text-xl text-gray-500 max-w-2xl mx-auto">
+                        <p className="text-xl text-gray-500 dark:text-brand-dark-muted max-w-2xl mx-auto">
                             המערכת כבר חיה ועובדת – נסה בעצמך עכשיו ותראה כמה זה פשוט
                         </p>
                     </div>
 
-                    <div className="bg-white rounded-[2.5rem] p-8 sm:p-12 lg:p-16 border border-gray-100 shadow-2xl shadow-gray-200/50 relative overflow-hidden">
+                    <div className="bg-white dark:bg-brand-dark-surface rounded-[2.5rem] p-8 sm:p-12 lg:p-16 border border-gray-100 dark:border-brand-dark-border shadow-2xl shadow-gray-200/50 dark:shadow-black/20 relative overflow-hidden">
                         <div className="absolute top-0 right-0 w-full h-full bg-grid-slate-50 [mask-image:linear-gradient(to_bottom,white,transparent)] pointer-events-none" />
 
                         <div className="flex flex-col lg:grid lg:grid-cols-2 gap-12 lg:gap-20 items-center relative z-10">
@@ -199,7 +199,7 @@ export default function LandingPage() {
                                         onClick={() => setActiveDevice('mobile')}
                                         className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all duration-300 ${activeDevice === 'mobile'
                                                 ? 'bg-gradient-to-r from-brand-primary to-brand-secondary text-white shadow-lg scale-105'
-                                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                                : 'bg-gray-100 dark:bg-brand-dark-bg text-gray-600 dark:text-brand-dark-muted hover:bg-gray-200 dark:hover:bg-brand-dark-border'
                                             }`}
                                     >
                                         <FaMobileScreen className="text-lg" />
@@ -209,7 +209,7 @@ export default function LandingPage() {
                                         onClick={() => setActiveDevice('tablet')}
                                         className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all duration-300 ${activeDevice === 'tablet'
                                                 ? 'bg-gradient-to-r from-brand-primary to-brand-secondary text-white shadow-lg scale-105'
-                                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                                : 'bg-gray-100 dark:bg-brand-dark-bg text-gray-600 dark:text-brand-dark-muted hover:bg-gray-200 dark:hover:bg-brand-dark-border'
                                             }`}
                                     >
                                         <FaTabletScreenButton className="text-lg" />
@@ -219,7 +219,7 @@ export default function LandingPage() {
                                         onClick={() => setActiveDevice('desktop')}
                                         className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all duration-300 ${activeDevice === 'desktop'
                                                 ? 'bg-gradient-to-r from-brand-primary to-brand-secondary text-white shadow-lg scale-105'
-                                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                                : 'bg-gray-100 dark:bg-brand-dark-bg text-gray-600 dark:text-brand-dark-muted hover:bg-gray-200 dark:hover:bg-brand-dark-border'
                                             }`}
                                     >
                                         <FaDesktop className="text-lg" />
@@ -301,10 +301,10 @@ export default function LandingPage() {
                                         <FaUtensils />
                                         <span>נסה בעצמך</span>
                                     </div>
-                                    <h3 className="text-3xl font-bold text-gray-900">
+                                    <h3 className="text-3xl font-bold text-gray-900 dark:text-brand-dark-text">
                                         אחת המערכות, אינסוף אפשרויות
                                     </h3>
-                                    <p className="text-gray-600 leading-relaxed">
+                                    <p className="text-gray-600 dark:text-brand-dark-muted leading-relaxed">
                                         בין אם יש לך פיצרייה, המבורגריה או סושייה, TakeEat מתאימה את עצמה למותג שלך.
                                     </p>
                                 </div>
@@ -319,28 +319,28 @@ export default function LandingPage() {
                                             href={store.url}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className={`block p-5 border border-gray-200 rounded-2xl bg-white transition-all duration-300 group ${store.color}`}
+                                            className={`block p-5 border border-gray-200 dark:border-brand-dark-border rounded-2xl bg-white dark:bg-brand-dark-bg transition-all duration-300 group ${store.color}`}
                                         >
                                             <div className="flex items-center justify-between">
                                                 <div>
-                                                    <p className="font-bold text-lg text-gray-900">{store.name}</p>
-                                                    <p className="text-sm text-gray-500">{store.sub}</p>
+                                                    <p className="font-bold text-lg text-gray-900 dark:text-brand-dark-text">{store.name}</p>
+                                                    <p className="text-sm text-gray-500 dark:text-brand-dark-muted">{store.sub}</p>
                                                 </div>
-                                                <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center group-hover:bg-white transition-colors">
-                                                    <FaArrowLeft className="text-gray-400 group-hover:text-gray-900 transition-colors" />
+                                                <div className="w-10 h-10 rounded-full bg-gray-50 dark:bg-brand-dark-border flex items-center justify-center group-hover:bg-white dark:group-hover:bg-brand-dark-surface transition-colors">
+                                                    <FaArrowLeft className="text-gray-400 group-hover:text-gray-900 dark:group-hover:text-brand-dark-text transition-colors" />
                                                 </div>
                                             </div>
                                         </a>
                                     ))}
                                 </div>
 
-                                <div className="bg-blue-50/50 border border-blue-100 p-6 rounded-2xl flex gap-4">
-                                    <div className="mt-1 bg-blue-100 text-blue-600 w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <div className="bg-orange-50/50 dark:bg-orange-900/10 border border-orange-200 dark:border-brand-primary/20 p-6 rounded-2xl flex gap-4">
+                                    <div className="mt-1 bg-orange-100 dark:bg-brand-primary/20 text-brand-primary w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0">
                                         <FaWandMagicSparkles className="text-sm" />
                                     </div>
                                     <div>
-                                        <h4 className="font-bold text-gray-900 text-sm mb-1">טיפ לבדיקה</h4>
-                                        <p className="text-sm text-gray-600 leading-relaxed">
+                                        <h4 className="font-bold text-gray-900 dark:text-brand-dark-text text-sm mb-1">טיפ לבדיקה</h4>
+                                        <p className="text-sm text-gray-600 dark:text-brand-dark-muted leading-relaxed">
                                             נסה להוסיף מנות לעגלה ולראות כמה מהר המערכת מגיבה.
                                             הכל עובד חלק, בלי טעינות מיותרות.
                                         </p>
@@ -355,30 +355,30 @@ export default function LandingPage() {
                 <section className="max-w-7xl mx-auto px-4 sm:px-6">
                     <div className="grid md:grid-cols-3 gap-8">
                         {capabilities.map((cap, i) => (
-                            <div key={i} className="group bg-white p-8 rounded-[2rem] shadow-sm border border-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
-                                <div className="mb-6 bg-brand-light/30 w-20 h-20 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                            <div key={i} className="group bg-white dark:bg-brand-dark-surface p-8 rounded-[2rem] shadow-sm border border-gray-100 dark:border-brand-dark-border hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+                                <div className="mb-6 bg-brand-light/30 dark:bg-brand-primary/10 w-20 h-20 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
                                     {cap.icon}
                                 </div>
-                                <h3 className="text-2xl font-bold mb-4 text-gray-900">{cap.title}</h3>
-                                <p className="text-gray-600 leading-relaxed">{cap.desc}</p>
+                                <h3 className="text-2xl font-bold mb-4 text-gray-900 dark:text-brand-dark-text">{cap.title}</h3>
+                                <p className="text-gray-600 dark:text-brand-dark-muted leading-relaxed">{cap.desc}</p>
                             </div>
                         ))}
                     </div>
                 </section>
 
                 {/* Benefits Grid */}
-                <section className="bg-gray-50/50 py-24 border-y border-gray-100/50">
+                <section className="bg-gray-50/50 dark:bg-brand-dark-bg/50 py-24 border-y border-gray-100/50 dark:border-brand-dark-border">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6">
-                        <h2 className="text-4xl font-bold text-center mb-16 text-gray-900">היתרונות שלנו</h2>
+                        <h2 className="text-4xl font-bold text-center mb-16 text-gray-900 dark:text-brand-dark-text">היתרונות שלנו</h2>
                         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
                             {benefits.map((item, i) => (
-                                <div key={i} className="bg-white p-8 rounded-3xl shadow-[0_2px_20px_rgb(0,0,0,0.04)] border border-gray-100 hover:border-brand-primary/30 transition duration-300 flex flex-col items-start gap-4">
-                                    <div className="p-3 bg-gray-50 rounded-2xl">
+                                <div key={i} className="bg-white dark:bg-brand-dark-surface p-8 rounded-3xl shadow-[0_2px_20px_rgb(0,0,0,0.04)] dark:shadow-none border border-gray-100 dark:border-brand-dark-border hover:border-brand-primary/30 transition duration-300 flex flex-col items-start gap-4">
+                                    <div className="p-3 bg-gray-50 dark:bg-brand-dark-bg rounded-2xl">
                                         {item.icon}
                                     </div>
                                     <div>
-                                        <h3 className="text-xl font-bold mb-2 text-gray-900">{item.title}</h3>
-                                        <p className="text-sm text-gray-500 leading-relaxed">{item.desc}</p>
+                                        <h3 className="text-xl font-bold mb-2 text-gray-900 dark:text-brand-dark-text">{item.title}</h3>
+                                        <p className="text-sm text-gray-500 dark:text-brand-dark-muted leading-relaxed">{item.desc}</p>
                                     </div>
                                 </div>
                             ))}
@@ -390,17 +390,17 @@ export default function LandingPage() {
                 <section className="max-w-5xl mx-auto px-4 sm:px-6">
                     <div className="text-center mb-12">
                         <span className="text-brand-primary font-bold tracking-wider text-sm uppercase">השוואה עסקית</span>
-                        <h2 className="text-4xl font-bold mt-2 mb-4 text-gray-900">למה לשלם יותר?</h2>
-                        <p className="text-gray-600 text-lg">ההבדל בין שותף לבין ספק שירות</p>
+                        <h2 className="text-4xl font-bold mt-2 mb-4 text-gray-900 dark:text-brand-dark-text">למה לשלם יותר?</h2>
+                        <p className="text-gray-600 dark:text-brand-dark-muted text-lg">ההבדל בין שותף לבין ספק שירות</p>
                     </div>
 
-                    <div className="grid md:grid-cols-2 shadow-2xl shadow-gray-200/50 rounded-[2.5rem] overflow-hidden border border-gray-100 bg-white">
+                    <div className="grid md:grid-cols-2 shadow-2xl shadow-gray-200/50 dark:shadow-black/20 rounded-[2.5rem] overflow-hidden border border-gray-100 dark:border-brand-dark-border bg-white dark:bg-brand-dark-surface">
                         {/* Commission Model */}
-                        <div className="p-10 bg-gray-50/80 border-b md:border-b-0 md:border-l border-gray-100">
-                            <h3 className="text-xl font-bold text-gray-500 mb-8 flex items-center gap-3">
-                                <div className="p-2 bg-gray-200 rounded-lg"><FaStore /></div>
+                        <div className="p-10 bg-gray-50/80 dark:bg-brand-dark-bg/80 border-b md:border-b-0 md:border-l border-gray-100 dark:border-brand-dark-border">
+                            <h3 className="text-xl font-bold text-gray-500 dark:text-brand-dark-muted mb-8 flex items-center gap-3">
+                                <div className="p-2 bg-gray-200 dark:bg-brand-dark-border rounded-lg"><FaStore /></div>
                                 <span>מודל העמלות</span>
-                                <span className="mr-auto text-xs font-bold bg-gray-200 px-2 py-1 rounded text-gray-600">הישן</span>
+                                <span className="mr-auto text-xs font-bold bg-gray-200 dark:bg-brand-dark-border px-2 py-1 rounded text-gray-600 dark:text-brand-dark-muted">הישן</span>
                             </h3>
                             <ul className="space-y-6">
                                 {[
@@ -409,22 +409,22 @@ export default function LandingPage() {
                                     { label: 'מיתוג', val: 'כללי / גנרי' },
                                     { label: 'שליטה באזורים', val: 'מוגבלת' }
                                 ].map((row, i) => (
-                                    <li key={i} className="flex justify-between items-center text-gray-500">
+                                    <li key={i} className="flex justify-between items-center text-gray-500 dark:text-brand-dark-muted">
                                         <span>{row.label}</span>
-                                        <span className={`font-medium ${row.bad ? 'text-red-500 bg-red-50 px-2 py-1 rounded' : 'text-gray-700 bg-gray-200/50 px-2 py-1 rounded text-sm'}`}>
+                                        <span className={`font-medium ${row.bad ? 'text-red-500 bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded' : 'text-gray-700 dark:text-gray-400 bg-gray-200/50 dark:bg-brand-dark-border px-2 py-1 rounded text-sm'}`}>
                                             {row.val}
                                         </span>
                                     </li>
                                 ))}
                             </ul>
-                            <div className="mt-8 pt-8 border-t border-gray-200 text-center text-gray-400 text-sm">
+                            <div className="mt-8 pt-8 border-t border-gray-200 dark:border-brand-dark-border text-center text-gray-400 dark:text-brand-dark-muted text-sm">
                                 <FaCircleXmark className="inline-block mb-1 text-red-300 text-xl" />
                                 <p>שוחק את הרווחיות</p>
                             </div>
                         </div>
 
                         {/* Fixed Model (TakeEat) */}
-                        <div className="p-10 bg-white relative">
+                        <div className="p-10 bg-white dark:bg-brand-dark-surface relative">
                             <div className="absolute top-0 left-0 w-full h-1.5 bg-brand-primary"></div>
                             <h3 className="text-xl font-bold text-brand-primary mb-8 flex items-center gap-3">
                                 <div className="p-2 bg-brand-primary/10 rounded-lg"><FaRocket /></div>
@@ -438,15 +438,15 @@ export default function LandingPage() {
                                     { label: 'מיתוג', val: 'המותג שלך במרכז' },
                                     { label: 'שליטה באזורים', val: 'שליטה מלאה' }
                                 ].map((row, i) => (
-                                    <li key={i} className="flex justify-between items-center text-gray-900 font-medium">
+                                    <li key={i} className="flex justify-between items-center text-gray-900 dark:text-brand-dark-text font-medium">
                                         <span>{row.label}</span>
-                                        <span className={`text-sm px-2 py-1 rounded ${row.super ? 'text-green-600 bg-green-50 font-bold text-base' : 'bg-brand-light text-brand-dark'}`}>
+                                        <span className={`text-sm px-2 py-1 rounded ${row.super ? 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 font-bold text-base' : 'bg-brand-light dark:bg-brand-primary/10 text-brand-dark dark:text-brand-dark-text'}`}>
                                             {row.val}
                                         </span>
                                     </li>
                                 ))}
                             </ul>
-                            <div className="mt-8 pt-8 border-t border-gray-100 text-center text-brand-primary text-sm font-medium">
+                            <div className="mt-8 pt-8 border-t border-gray-100 dark:border-brand-dark-border text-center text-brand-primary text-sm font-medium">
                                 <FaCircleCheck className="inline-block mb-1 text-green-500 text-xl" />
                                 <p>מקסימום רווח למסעדה</p>
                             </div>
@@ -456,15 +456,15 @@ export default function LandingPage() {
 
                 {/* Pricing Plans */}
                 <section id="pricing" className="max-w-5xl mx-auto px-4 sm:px-6">
-                    <h2 className="text-4xl font-bold text-center mb-16 text-gray-900">תכניות ומחירים</h2>
+                    <h2 className="text-4xl font-bold text-center mb-16 text-gray-900 dark:text-brand-dark-text">תכניות ומחירים</h2>
 
                     <div className="grid md:grid-cols-2 gap-8 items-start">
                         {plans.map((plan) => (
                             <div
                                 key={plan.name}
                                 className={`relative p-8 rounded-[2rem] border transition-all duration-300 ${plan.highlight
-                                    ? 'bg-white shadow-2xl shadow-brand-primary/10 border-brand-primary ring-1 ring-brand-primary/20 scale-105 z-10'
-                                    : 'bg-white border-gray-100 text-gray-600 hover:border-gray-300 hover:shadow-lg'
+                                    ? 'bg-white dark:bg-brand-dark-surface shadow-2xl shadow-brand-primary/10 border-brand-primary ring-1 ring-brand-primary/20 scale-105 z-10'
+                                    : 'bg-white dark:bg-brand-dark-surface border-gray-100 dark:border-brand-dark-border text-gray-600 dark:text-brand-dark-muted hover:border-gray-300 dark:hover:border-brand-dark-muted hover:shadow-lg'
                                     }`}
                             >
                                 {plan.highlight && (
@@ -475,25 +475,25 @@ export default function LandingPage() {
                                 )}
 
                                 <div className="text-center mb-8">
-                                    <h3 className={`text-2xl font-bold mb-4 ${plan.highlight ? 'text-brand-primary' : 'text-gray-900'}`}>
+                                    <h3 className={`text-2xl font-bold mb-4 ${plan.highlight ? 'text-brand-primary' : 'text-gray-900 dark:text-brand-dark-text'}`}>
                                         {plan.name}
                                     </h3>
                                     <div className="flex justify-center items-baseline gap-1">
-                                        <span className={`text-5xl font-black ${plan.highlight ? 'text-gray-900' : 'text-gray-900'}`}>
+                                        <span className="text-5xl font-black text-gray-900 dark:text-brand-dark-text">
                                             {plan.price}
                                         </span>
-                                        <span className="text-gray-500 font-medium text-lg">{plan.period}</span>
+                                        <span className="text-gray-500 dark:text-brand-dark-muted font-medium text-lg">{plan.period}</span>
                                     </div>
-                                    <p className="text-sm text-gray-400 mt-2 font-medium">{plan.yearlyPrice}</p>
+                                    <p className="text-sm text-gray-400 dark:text-brand-dark-muted mt-2 font-medium">{plan.yearlyPrice}</p>
                                 </div>
 
                                 <ul className="space-y-4 mb-10">
                                     {plan.features.map((feature, i) => (
                                         <li key={i} className="flex items-start gap-3">
-                                            <div className={`mt-1 rounded-full p-0.5 ${plan.highlight ? 'bg-brand-primary/10 text-brand-primary' : 'bg-gray-100 text-gray-400'}`}>
+                                            <div className={`mt-1 rounded-full p-0.5 ${plan.highlight ? 'bg-brand-primary/10 text-brand-primary' : 'bg-gray-100 dark:bg-brand-dark-border text-gray-400 dark:text-brand-dark-muted'}`}>
                                                 <FaCheck className="text-xs" />
                                             </div>
-                                            <span className="text-gray-600 text-[15px]">{feature}</span>
+                                            <span className="text-gray-600 dark:text-brand-dark-muted text-[15px]">{feature}</span>
                                         </li>
                                     ))}
                                 </ul>
@@ -502,7 +502,7 @@ export default function LandingPage() {
                                     to="/register-restaurant"
                                     className={`block w-full py-4 rounded-xl font-bold text-center transition-all ${plan.highlight
                                         ? 'bg-brand-primary text-white hover:bg-brand-primary/90 shadow-lg hover:shadow-brand-primary/30 hover:-translate-y-0.5'
-                                        : 'bg-gray-50 border border-gray-200 text-gray-900 hover:bg-gray-100 hover:border-gray-300'
+                                        : 'bg-gray-50 dark:bg-brand-dark-bg border border-gray-200 dark:border-brand-dark-border text-gray-900 dark:text-brand-dark-text hover:bg-gray-100 dark:hover:bg-brand-dark-border hover:border-gray-300'
                                         }`}
                                 >
                                     בחר {plan.name}
@@ -513,16 +513,16 @@ export default function LandingPage() {
                 </section>
 
                 {/* Trusted By - Infinite Logo Carousel */}
-                <section className="py-20 overflow-hidden bg-white">
+                <section className="py-20 overflow-hidden bg-white dark:bg-brand-dark-surface">
                     <div className="text-center mb-12">
-                        <p className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">מסעדות שסומכות עלינו</p>
-                        <h3 className="text-2xl font-bold text-gray-900">המותגים שכבר איתנו</h3>
+                        <p className="text-sm font-semibold text-gray-400 dark:text-brand-dark-muted uppercase tracking-wider mb-2">מסעדות שסומכות עלינו</p>
+                        <h3 className="text-2xl font-bold text-gray-900 dark:text-brand-dark-text">המותגים שכבר איתנו</h3>
                     </div>
 
                     <div className="relative">
                         {/* Gradient Masks */}
-                        <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-white to-transparent z-10 pointer-events-none"></div>
-                        <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-white to-transparent z-10 pointer-events-none"></div>
+                        <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-white dark:from-brand-dark-surface to-transparent z-10 pointer-events-none"></div>
+                        <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-white dark:from-brand-dark-surface to-transparent z-10 pointer-events-none"></div>
 
                         {/* Infinite Scroll Container */}
                         <div className="flex gap-16 animate-ticker">
@@ -608,7 +608,7 @@ export default function LandingPage() {
 
                     <div className="max-w-3xl mx-auto space-y-8 relative z-10">
                         <h2 className="text-4xl sm:text-5xl font-black tracking-tight">מוכנים להתקדם?</h2>
-                        <p className="text-xl text-blue-100/80 leading-relaxed max-w-2xl mx-auto">
+                        <p className="text-xl text-white/80 leading-relaxed max-w-2xl mx-auto">
                             הצטרפו למסעדות הראשונות שעוברות למודל קבוע
                             והתחילו לחסוך עמלות כבר מההזמנה הראשונה                         </p>
                         <div className="pt-4">
