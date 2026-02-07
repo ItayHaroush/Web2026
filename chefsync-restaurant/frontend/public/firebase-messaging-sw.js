@@ -51,7 +51,7 @@ messaging.onBackgroundMessage(async (payload) => {
     // PWA App Badge – show the actual count of active notifications
     if (self.navigator?.setAppBadge) {
         const all = await self.registration.getNotifications();
-        self.navigator.setAppBadge(all.length).catch(() => {});
+        self.navigator.setAppBadge(all.length).catch(() => { });
     }
 });
 
@@ -66,9 +66,9 @@ self.addEventListener('notificationclick', (event) => {
             if (self.navigator?.setAppBadge) {
                 const remaining = await self.registration.getNotifications();
                 if (remaining.length > 0) {
-                    self.navigator.setAppBadge(remaining.length).catch(() => {});
+                    self.navigator.setAppBadge(remaining.length).catch(() => { });
                 } else {
-                    self.navigator.clearAppBadge().catch(() => {});
+                    self.navigator.clearAppBadge().catch(() => { });
                 }
             }
 
