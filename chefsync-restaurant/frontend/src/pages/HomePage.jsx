@@ -57,7 +57,7 @@ export default function HomePage() {
             icon: FaUserShield,
             title: "פרטיות מלאה",
             description: "ללא מידע אישי מיותר - רק שם וטלפון",
-            colors: "from-blue-500 to-indigo-600"
+            colors: "from-amber-400 to-orange-500"
         },
         {
             icon: FaMobileAlt,
@@ -219,7 +219,7 @@ export default function HomePage() {
                 <div className="flex items-center justify-center min-h-[60vh]">
                     <div className="text-center">
                         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary mx-auto mb-4"></div>
-                        <p className="text-gray-600">טוען מסעדות...</p>
+                        <p className="text-gray-600 dark:text-brand-dark-muted">טוען מסעדות...</p>
                     </div>
                 </div>
             </CustomerLayout>
@@ -354,16 +354,16 @@ export default function HomePage() {
 
                 {/* חיפוש/סינון צף */}
                 <div className="mx-3 sm:mx-6 lg:mx-8 -mt-6 sm:-mt-8 relative z-10">
-                    <div className="bg-white rounded-xl sm:rounded-2xl shadow-xl p-3 sm:p-4">
+                    <div className="bg-white dark:bg-brand-dark-surface rounded-xl sm:rounded-2xl shadow-xl p-3 sm:p-4">
                         <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 items-center">
                             <div className="flex-1 w-full relative group">
-                                <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-gray-400 group-focus-within:text-brand-primary transition-colors">
+                                <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-gray-400 dark:text-gray-500 group-focus-within:text-brand-primary transition-colors">
                                     <HiGlobeAlt className="w-5 h-5" />
                                 </div>
                                 <select
                                     value={selectedCity}
                                     onChange={(e) => setSelectedCity(e.target.value)}
-                                    className="w-full pr-10 pl-4 py-2.5 sm:py-3 bg-gray-50 border border-gray-200 rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary text-gray-700 font-semibold text-sm sm:text-base transition-all appearance-none cursor-pointer"
+                                    className="w-full pr-10 pl-4 py-2.5 sm:py-3 bg-gray-50 dark:bg-brand-dark-border/50 border border-gray-200 dark:border-brand-dark-border rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary text-gray-700 dark:text-gray-300 font-semibold text-sm sm:text-base transition-all appearance-none cursor-pointer"
                                 >
                                     <option value="">כל הערים</option>
                                     {cities.filter(Boolean).map((city, index) => (
@@ -372,13 +372,13 @@ export default function HomePage() {
                                         </option>
                                     ))}
                                 </select>
-                                <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-gray-400">
+                                <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-gray-400 dark:text-gray-500">
                                     <FaChevronLeft className="w-3 h-3 -rotate-90" />
                                 </div>
                             </div>
                             <div className="text-center sm:text-right px-4">
                                 <p className="text-xl sm:text-2xl font-black text-brand-primary leading-tight">{restaurants.length}</p>
-                                <p className="text-[10px] sm:text-xs uppercase tracking-wider font-bold text-gray-400">מסעדות</p>
+                                <p className="text-[10px] sm:text-xs uppercase tracking-wider font-bold text-gray-400 dark:text-gray-500">מסעדות</p>
                             </div>
                         </div>
                     </div>
@@ -388,11 +388,11 @@ export default function HomePage() {
             <div className="space-y-10">
                 {/* כותרת רשימת מסעדות */}
                 <div className="flex items-center justify-between">
-                    <h2 className="text-2xl sm:text-3xl font-black text-brand-dark tracking-tight">
+                    <h2 className="text-2xl sm:text-3xl font-black text-brand-dark dark:text-brand-dark-text tracking-tight">
                         {selectedCity ? `מסעדות ב${selectedCity}` : 'כל המסעדות'}
                     </h2>
                     {userLocation && (
-                        <div className="flex items-center gap-1.5 text-xs font-bold text-gray-500 bg-gray-100 px-3 py-1.5 rounded-full uppercase tracking-wider">
+                        <div className="flex items-center gap-1.5 text-xs font-bold text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-brand-dark-border px-3 py-1.5 rounded-full uppercase tracking-wider">
                             <FaStore className="w-3 h-3" />
                             <span>לפי מרחק</span>
                         </div>
@@ -401,12 +401,12 @@ export default function HomePage() {
 
                 {/* רשימת מסעדות - Grid בסגנון Wolt */}
                 {restaurants.length === 0 ? (
-                    <div className="text-center py-20 bg-white rounded-3xl shadow-sm border border-gray-50">
-                        <div className="inline-flex items-center justify-center w-20 h-20 bg-gray-50 rounded-full mb-6">
+                    <div className="text-center py-20 bg-white dark:bg-brand-dark-surface rounded-3xl shadow-sm border border-gray-50 dark:border-brand-dark-border">
+                        <div className="inline-flex items-center justify-center w-20 h-20 bg-gray-50 dark:bg-brand-dark-border/50 rounded-full mb-6">
                             <FaUtensils className="text-4xl text-gray-300" />
                         </div>
-                        <p className="text-gray-900 text-xl font-bold mb-2">לא נמצאו מסעדות</p>
-                        <p className="text-gray-400 text-sm font-medium">נסה לבחור עיר אחרת או להרחיב את החיפוש</p>
+                        <p className="text-gray-900 dark:text-brand-dark-text text-xl font-bold mb-2">לא נמצאו מסעדות</p>
+                        <p className="text-gray-400 dark:text-brand-dark-muted text-sm font-medium">נסה לבחור עיר אחרת או להרחיב את החיפוש</p>
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -414,11 +414,11 @@ export default function HomePage() {
                             <div
                                 key={restaurant.id ?? restaurant.tenant_id ?? `restaurant-${index}`}
                                 onClick={() => handleRestaurantClick(restaurant)}
-                                className="bg-white rounded-2xl shadow-sm hover:shadow-2xl transition-all duration-300 cursor-pointer group overflow-hidden border border-gray-100 hover:border-brand-primary/30"
+                                className="bg-white dark:bg-brand-dark-surface rounded-2xl shadow-sm hover:shadow-2xl transition-all duration-300 cursor-pointer group overflow-hidden border border-gray-100 dark:border-brand-dark-border hover:border-brand-primary/30"
                                 style={{ animationDelay: `${index * 50}ms` }}
                             >
                                 {/* תמונה/לוגו */}
-                                <div className="relative h-44 bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden">
+                                <div className="relative h-44 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-brand-dark-border/50 dark:to-brand-dark-bg overflow-hidden">
                                     {restaurant.logo_url ? (
                                         <>
                                             {/* רקע מעומעם */}
@@ -473,11 +473,11 @@ export default function HomePage() {
                                 {/* פרטים */}
                                 <div className="p-5">
                                     <div className="flex items-start justify-between gap-2 mb-2">
-                                        <h3 className="text-xl font-bold text-brand-dark group-hover:text-brand-primary transition-colors line-clamp-1 tracking-tight">
+                                        <h3 className="text-xl font-bold text-brand-dark dark:text-brand-dark-text group-hover:text-brand-primary transition-colors line-clamp-1 tracking-tight">
                                             {restaurant.name}
                                         </h3>
                                         {(restaurant.cuisine_type || restaurant.restaurant_type) && (
-                                            <span className="bg-gray-100 text-gray-600 text-[10px] font-black px-2 py-1 rounded-md uppercase tracking-wider">
+                                            <span className="bg-gray-100 dark:bg-brand-dark-border text-gray-600 dark:text-brand-dark-muted text-[10px] font-black px-2 py-1 rounded-md uppercase tracking-wider">
                                                 {restaurant.cuisine_type || (restaurant.restaurant_type ? ({
                                                     pizza: 'פיצה',
                                                     shawarma: 'שווארמה',
@@ -523,7 +523,7 @@ export default function HomePage() {
                                         )}
                                     </div>
 
-                                    <button className="w-full bg-gray-900 text-white font-bold py-3.5 rounded-xl group-hover:bg-brand-primary transition-all duration-300 flex items-center justify-center gap-2 shadow-sm group-hover:shadow-brand-primary/25">
+                                    <button className="w-full bg-gray-900 dark:bg-brand-dark-border text-white font-bold py-3.5 rounded-xl group-hover:bg-brand-primary transition-all duration-300 flex items-center justify-center gap-2 shadow-sm group-hover:shadow-brand-primary/25">
                                         <span>צפה בתפריט</span>
                                         <FaArrowLeft className="w-3 h-3 group-hover:-translate-x-1 transition-transform" />
                                     </button>
@@ -534,21 +534,21 @@ export default function HomePage() {
                 )}
 
                 {/* יתרונות - סגנון Wolt */}
-                <div className="mt-16 pt-10 border-t border-gray-100">
-                    <h3 className="text-2xl font-bold text-brand-dark text-center mb-8">למה {PRODUCT_NAME}?</h3>
+                <div className="mt-16 pt-10 border-t border-gray-100 dark:border-brand-dark-border">
+                    <h3 className="text-2xl font-bold text-brand-dark dark:text-brand-dark-text text-center mb-8">למה {PRODUCT_NAME}?</h3>
 
                     <div className="max-w-md mx-auto px-4">
-                        <div className="group relative p-8 bg-white rounded-[2rem] shadow-xl hover:shadow-2xl transition-all duration-500 border border-gray-100/50 overflow-hidden transform hover:-translate-y-1 min-h-[280px] flex flex-col items-center justify-center">
+                        <div className="group relative p-8 bg-white dark:bg-brand-dark-surface rounded-[2rem] shadow-xl hover:shadow-2xl transition-all duration-500 border border-gray-100/50 dark:border-brand-dark-border overflow-hidden transform hover:-translate-y-1 min-h-[280px] flex flex-col items-center justify-center">
                             <div className="absolute inset-0 bg-gradient-to-br from-brand-primary/5 to-brand-secondary/5 opacity-0 group-hover:opacity-100 transition-opacity" />
 
                             <div className={`relative w-20 h-20 mb-6 rounded-2xl bg-gradient-to-br ${features[activeFeature].colors} flex items-center justify-center shadow-lg mx-auto transition-all duration-500 group-hover:scale-110 group-hover:rotate-3`}>
                                 {React.createElement(features[activeFeature].icon, { className: "text-3xl text-white drop-shadow-md" })}
                             </div>
 
-                            <h4 className="relative text-2xl font-black text-gray-900 mb-3 text-center tracking-tight transition-all duration-300">
+                            <h4 className="relative text-2xl font-black text-gray-900 dark:text-brand-dark-text mb-3 text-center tracking-tight transition-all duration-300">
                                 {features[activeFeature].title}
                             </h4>
-                            <p className="relative text-gray-500 font-medium leading-relaxed text-center transition-all duration-300 max-w-[240px]">
+                            <p className="relative text-gray-500 dark:text-brand-dark-muted font-medium leading-relaxed text-center transition-all duration-300 max-w-[240px]">
                                 {features[activeFeature].description}
                             </p>
                         </div>
@@ -558,7 +558,7 @@ export default function HomePage() {
                                 <button
                                     key={index}
                                     onClick={() => setActiveFeature(index)}
-                                    className={`h-1.5 rounded-full transition-all duration-500 ${index === activeFeature ? 'w-10 bg-brand-primary' : 'w-2 bg-gray-200 hover:bg-gray-300'
+                                    className={`h-1.5 rounded-full transition-all duration-500 ${index === activeFeature ? 'w-10 bg-brand-primary' : 'w-2 bg-gray-200 dark:bg-brand-dark-border hover:bg-gray-300 dark:hover:bg-gray-500'
                                         }`}
                                     aria-label={`Go to feature ${index + 1}`}
                                 />
@@ -566,7 +566,7 @@ export default function HomePage() {
                         </div>
                     </div>
 
-                    <div className="mt-8 text-center text-sm text-gray-500">
+                    <div className="mt-8 text-center text-sm text-gray-500 dark:text-brand-dark-muted">
                         <Link to="/legal/end-user" className="text-brand-primary hover:underline font-semibold">
                             תנאי שימוש למשתמשי קצה
                         </Link>

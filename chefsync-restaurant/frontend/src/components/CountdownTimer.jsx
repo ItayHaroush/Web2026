@@ -70,13 +70,13 @@ export default function CountdownTimer({ startTime, etaMinutes, etaNote, deliver
     // אם ההזמנה נמסרה - הצג הודעת סיום
     if (orderStatus === 'delivered') {
         return (
-            <div className="bg-gradient-to-br from-green-50 to-emerald-100 rounded-xl sm:rounded-2xl p-6 sm:p-8 shadow-lg border-2 border-green-300">
+            <div className="bg-gradient-to-br from-green-50 to-emerald-100 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl sm:rounded-2xl p-6 sm:p-8 shadow-lg border-2 border-green-300 dark:border-green-700">
                 <div className="flex flex-col items-center gap-4">
                     <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-xl">
                         <FaCheckCircle className="text-4xl sm:text-5xl text-white" />
                     </div>
                     <div className="text-center space-y-2">
-                        <p className="text-xl sm:text-2xl font-black text-gray-800">
+                        <p className="text-xl sm:text-2xl font-black text-gray-800 dark:text-brand-dark-text">
                             {deliveryMethod === 'pickup' ? 'ההזמנה נאספה' : 'השליח כבר בדלת!'}
                         </p>
                         <p className="text-base sm:text-lg font-bold text-green-700 flex items-center justify-center gap-2">
@@ -99,7 +99,7 @@ export default function CountdownTimer({ startTime, etaMinutes, etaNote, deliver
     // אם ההזמנה עדיין ממתינה לאישור - הצג מצב המתנה
     if (orderStatus === 'pending') {
         return (
-            <div className="bg-gradient-to-br from-brand-light to-blue-50 rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-lg border-2 border-brand-primary/30">
+            <div className="bg-gradient-to-br from-brand-light to-orange-50 dark:from-orange-900/20 dark:to-orange-950/20 rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-lg border-2 border-brand-primary/30">
                 <div className="flex flex-col items-center gap-3 sm:gap-4">
                     {/* אנימציית טעינה מעגלית */}
                     <div className="relative w-20 h-20 sm:w-24 sm:h-24">
@@ -109,7 +109,7 @@ export default function CountdownTimer({ startTime, etaMinutes, etaNote, deliver
                                 cy="50"
                                 r="40"
                                 fill="none"
-                                stroke="#009DE0"
+                                stroke="#F97316"
                                 strokeWidth="8"
                                 strokeDasharray="63 189"
                                 strokeLinecap="round"
@@ -120,10 +120,10 @@ export default function CountdownTimer({ startTime, etaMinutes, etaNote, deliver
                         </div>
                     </div>
                     <div className="text-center">
-                        <p className="text-lg sm:text-xl font-black text-gray-900">
+                        <p className="text-lg sm:text-xl font-black text-gray-900 dark:text-brand-dark-text">
                             ממתין לאישור המסעדה
                         </p>
-                        <p className="text-sm sm:text-base text-gray-600 mt-2 font-medium">
+                        <p className="text-sm sm:text-base text-gray-600 dark:text-brand-dark-muted mt-2 font-medium">
                             {etaMinutes ? `זמן הכנה משוער: ${etaMinutes} דקות` : 'הזמן המשוער יעודכן לאחר האישור'}
                         </p>
                     </div>
@@ -135,7 +135,7 @@ export default function CountdownTimer({ startTime, etaMinutes, etaNote, deliver
     // אם אין זמן משוער - הצג מצב המתנה
     if (!etaMinutes) {
         return (
-            <div className="bg-gradient-to-br from-brand-light to-blue-50 rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-lg border-2 border-brand-primary/30">
+            <div className="bg-gradient-to-br from-brand-light to-orange-50 dark:from-orange-900/20 dark:to-orange-950/20 rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-lg border-2 border-brand-primary/30">
                 <div className="flex flex-col items-center gap-3 sm:gap-4">
                     {/* אנימציית טעינה מעגלית */}
                     <div className="relative w-20 h-20 sm:w-24 sm:h-24">
@@ -145,7 +145,7 @@ export default function CountdownTimer({ startTime, etaMinutes, etaNote, deliver
                                 cy="50"
                                 r="40"
                                 fill="none"
-                                stroke="#009DE0"
+                                stroke="#F97316"
                                 strokeWidth="8"
                                 strokeDasharray="63 189"
                                 strokeLinecap="round"
@@ -156,10 +156,10 @@ export default function CountdownTimer({ startTime, etaMinutes, etaNote, deliver
                         </div>
                     </div>
                     <div className="text-center">
-                        <p className="text-base sm:text-lg font-bold text-gray-800">
+                        <p className="text-base sm:text-lg font-bold text-gray-800 dark:text-brand-dark-text">
                             ממתינים שהמסעדה תקבל את ההזמנה שלכם
                         </p>
-                        <p className="text-xs sm:text-sm text-gray-600 mt-1">
+                        <p className="text-xs sm:text-sm text-gray-600 dark:text-brand-dark-muted mt-1">
                             הזמן המשוער יעודכן בקרוב
                         </p>
                     </div>
@@ -171,16 +171,16 @@ export default function CountdownTimer({ startTime, etaMinutes, etaNote, deliver
     // אם הזמן אזל
     if (timeLeft?.isZero) {
         return (
-            <div className="bg-gradient-to-br from-green-50 to-emerald-100 rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-lg border-2 border-brand-success/50">
+            <div className="bg-gradient-to-br from-green-50 to-emerald-100 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-lg border-2 border-brand-success/50 dark:border-green-700">
                 <div className="flex flex-col items-center gap-3">
                     <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-brand-success flex items-center justify-center">
                         <span className="text-3xl sm:text-4xl text-white">✓</span>
                     </div>
                     <div className="text-center">
-                        <p className="text-lg sm:text-xl font-bold text-gray-800">
+                        <p className="text-lg sm:text-xl font-bold text-gray-800 dark:text-brand-dark-text">
                             ההזמנה אמורה להגיע בקרוב!
                         </p>
-                        <p className="text-xs sm:text-sm text-gray-600 mt-1">
+                        <p className="text-xs sm:text-sm text-gray-600 dark:text-brand-dark-muted mt-1">
                             הזמן המשוער עבר
                         </p>
                     </div>
@@ -195,7 +195,7 @@ export default function CountdownTimer({ startTime, etaMinutes, etaNote, deliver
 
     return (
         <div
-            className={`bg-gradient-to-br from-brand-light via-blue-50 to-white rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-lg border-2 border-brand-primary/30 transition-all duration-500 ${hasChanged ? 'scale-105' : 'scale-100'
+            className={`bg-gradient-to-br from-brand-light via-orange-50 to-white dark:from-orange-900/20 dark:via-orange-950/20 dark:to-brand-dark-bg rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-lg border-2 border-brand-primary/30 transition-all duration-500 ${hasChanged ? 'scale-105' : 'scale-100'
                 }`}
         >
             <div className="flex flex-col items-center gap-3 sm:gap-4">
@@ -209,7 +209,7 @@ export default function CountdownTimer({ startTime, etaMinutes, etaNote, deliver
 
                 {/* זמן נותר */}
                 <div className="text-center">
-                    <p className="text-xs sm:text-sm text-gray-600 mb-1">
+                    <p className="text-xs sm:text-sm text-gray-600 dark:text-brand-dark-muted mb-1">
                         {deliveryMethod === 'pickup' ? 'זמן נותר עד הכנת הזמנה' : 'זמן נותר עד הגעת ההזמנה'}
                     </p>
                     <div
@@ -218,18 +218,18 @@ export default function CountdownTimer({ startTime, etaMinutes, etaNote, deliver
                     >
                         {formattedTime}
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">דקות:שניות</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">דקות:שניות</p>
                 </div>
 
                 {/* הערה נוספת אם קיימת */}
                 {etaNote && (
-                    <div className="bg-white/80 backdrop-blur-sm rounded-lg px-3 sm:px-4 py-2 border border-brand-primary/20">
-                        <p className="text-xs sm:text-sm text-gray-700 text-center">{etaNote}</p>
+                    <div className="bg-white/80 dark:bg-brand-dark-surface/80 backdrop-blur-sm rounded-lg px-3 sm:px-4 py-2 border border-brand-primary/20">
+                        <p className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 text-center">{etaNote}</p>
                     </div>
                 )}
 
                 {/* תצוגה נוספת של הזמן המשוער המקורי */}
-                <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-600">
+                <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-600 dark:text-brand-dark-muted">
                     <span>זמן הכנה משוער:</span>
                     <span className="font-semibold text-brand-primary">{etaMinutes} דקות</span>
                 </div>

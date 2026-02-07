@@ -244,7 +244,7 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
     if (loading) {
         const content = (
             <div className="flex justify-center items-center h-64">
-                <p className="text-lg text-gray-600">טוען...</p>
+                <p className="text-lg text-gray-600 dark:text-brand-dark-muted">טוען...</p>
             </div>
         );
 
@@ -280,7 +280,7 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
                         </button>
                         <button
                             onClick={() => navigate('/')}
-                            className="w-full sm:w-auto bg-gray-200 text-gray-800 px-4 py-2 rounded-lg text-sm hover:bg-gray-300 transition"
+                            className="w-full sm:w-auto bg-gray-200 dark:bg-brand-dark-border text-gray-800 dark:text-brand-dark-text px-4 py-2 rounded-lg text-sm hover:bg-gray-300 dark:hover:bg-gray-600 transition"
                         >
                             חזרה לבחירת מסעדה
                         </button>
@@ -363,7 +363,7 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
 
             <div className="text-center">
                 <h1 className="text-2xl sm:text-3xl font-bold text-brand-primary mb-2">סטטוס הזמנה</h1>
-                <p className="text-sm sm:text-base text-gray-600">הזמנה #{order.id}</p>
+                <p className="text-sm sm:text-base text-gray-600 dark:text-brand-dark-muted">הזמנה #{order.id}</p>
             </div>
 
             {etaAlert && (
@@ -389,15 +389,15 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
 
             {/* כרטיס הזמנה */}
             {showStatusCard && (
-                <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 sm:p-8 max-w-3xl mx-auto">
+                <div className="bg-white dark:bg-brand-dark-surface rounded-2xl shadow-lg dark:shadow-black/20 border border-gray-200 dark:border-brand-dark-border p-6 sm:p-8 max-w-3xl mx-auto">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-6">
                         <div className="flex items-start gap-3">
-                            <div className="mt-1 text-blue-600">
+                            <div className="mt-1 text-brand-primary">
                                 <FaUser className="text-lg" />
                             </div>
                             <div>
-                                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">שם לקוח</p>
-                                <p className="font-bold text-gray-900">{order.customer_name}</p>
+                                <p className="text-xs font-semibold text-gray-500 dark:text-brand-dark-muted uppercase tracking-wide mb-1">שם לקוח</p>
+                                <p className="font-bold text-gray-900 dark:text-brand-dark-text">{order.customer_name}</p>
                             </div>
                         </div>
                         <div className="flex items-start gap-3">
@@ -405,8 +405,8 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
                                 <FaPhone className="text-lg" />
                             </div>
                             <div>
-                                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">טלפון</p>
-                                <p className="font-bold text-gray-900 dir-ltr text-right">{formatIsraeliPhone(order.customer_phone)}</p>
+                                <p className="text-xs font-semibold text-gray-500 dark:text-brand-dark-muted uppercase tracking-wide mb-1">טלפון</p>
+                                <p className="font-bold text-gray-900 dark:text-brand-dark-text dir-ltr text-right">{formatIsraeliPhone(order.customer_phone)}</p>
                             </div>
                         </div>
 
@@ -415,8 +415,8 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
                                 <FaClock className="text-lg" />
                             </div>
                             <div>
-                                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">זמן הזמנה</p>
-                                <p className="font-bold text-gray-900">
+                                <p className="text-xs font-semibold text-gray-500 dark:text-brand-dark-muted uppercase tracking-wide mb-1">זמן הזמנה</p>
+                                <p className="font-bold text-gray-900 dark:text-brand-dark-text">
                                     {new Date(order.created_at).toLocaleString('he-IL', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })}
                                 </p>
                             </div>
@@ -426,10 +426,10 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
                                 <FaInfoCircle className="text-lg" />
                             </div>
                             <div className="flex-1">
-                                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">זמן הכנה משוער</p>
+                                <p className="text-xs font-semibold text-gray-500 dark:text-brand-dark-muted uppercase tracking-wide mb-1">זמן הכנה משוער</p>
                                 {order.eta_minutes ? (
                                     <div className="flex items-center gap-2">
-                                        <p className="font-bold text-gray-900">{order.eta_minutes} דקות</p>
+                                        <p className="font-bold text-gray-900 dark:text-brand-dark-text">{order.eta_minutes} דקות</p>
                                         {order.eta_note && (
                                             <div className="relative group">
                                                 <button
@@ -446,7 +446,7 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
                                         )}
                                     </div>
                                 ) : (
-                                    <p className="text-sm text-gray-500">ממתין לאישור המסעדה</p>
+                                    <p className="text-sm text-gray-500 dark:text-brand-dark-muted">ממתין לאישור המסעדה</p>
                                 )}
                             </div>
                         </div>
@@ -466,7 +466,7 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
                                 {order.status === ORDER_STATUS.DELIVERED && !order.rating && !reviewSuccess && (
                                     <div className="w-full space-y-4">
                                         <div className="border-t border-green-200 pt-4">
-                                            <h3 className="text-lg sm:text-xl font-black text-gray-900 mb-3 text-center">
+                                            <h3 className="text-lg sm:text-xl font-black text-gray-900 dark:text-brand-dark-text mb-3 text-center">
                                                 איך הייתה החוויה?
                                             </h3>
 
@@ -485,11 +485,11 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
                                                     value={reviewText}
                                                     onChange={(e) => setReviewText(e.target.value)}
                                                     placeholder="ספר לנו על החוויה שלך (אופציונלי)"
-                                                    className="w-full p-3 border-2 border-gray-200 rounded-xl resize-none focus:border-green-400 focus:ring-2 focus:ring-green-100 outline-none transition-all text-sm"
+                                                    className="w-full p-3 border-2 border-gray-200 dark:border-brand-dark-border rounded-xl resize-none focus:border-green-400 focus:ring-2 focus:ring-green-100 outline-none transition-all text-sm dark:bg-brand-dark-bg dark:text-brand-dark-text"
                                                     rows={2}
                                                     maxLength={500}
                                                 />
-                                                <p className="text-xs text-gray-500 mt-1 text-right">
+                                                <p className="text-xs text-gray-500 dark:text-brand-dark-muted mt-1 text-right">
                                                     {reviewText.length}/500 תווים
                                                 </p>
                                             </div>
@@ -509,7 +509,7 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
                                 {/* הצגת תודה אחרי שליחת דירוג */}
                                 {(order.rating || reviewSuccess) && order.status === ORDER_STATUS.DELIVERED && (
                                     <div className="w-full border-t border-green-200 pt-4 text-center space-y-3">
-                                        <h3 className="text-xl font-black text-gray-900">
+                                        <h3 className="text-xl font-black text-gray-900 dark:text-brand-dark-text">
                                             תודה על הדירוג! 💚
                                         </h3>
                                         {order.rating && (
@@ -520,7 +520,7 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
                                                     size="sm"
                                                 />
                                                 {order.review_text && (
-                                                    <div className="mt-3 bg-white/60 rounded-xl p-3 text-xs sm:text-sm text-gray-700 italic">
+                                                    <div className="mt-3 bg-white/60 dark:bg-brand-dark-bg/60 rounded-xl p-3 text-xs sm:text-sm text-gray-700 dark:text-gray-300 italic">
                                                         "{order.review_text}"
                                                     </div>
                                                 )}
@@ -535,18 +535,18 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
                     {!isCancelled && (
                         <>
                             {/* סטטוס סרגל */}
-                            <div className="bg-gray-50 rounded-xl p-6 space-y-4">
+                            <div className="bg-gray-50 dark:bg-brand-dark-border/50 rounded-xl p-6 space-y-4">
                                 <div className="flex items-center gap-2 mb-4">
-                                    <FaCheckCircle className="text-blue-600" />
-                                    <p className="text-sm font-bold text-gray-700">מעקב התקדמות</p>
+                                    <FaCheckCircle className="text-brand-primary" />
+                                    <p className="text-sm font-bold text-gray-700 dark:text-gray-300">מעקב התקדמות</p>
                                 </div>
 
                                 <div className="relative flex justify-between items-start">
                                     {/* קו רקע */}
-                                    <div className="absolute top-5 right-5 left-5 h-1 bg-gray-300 rounded-full" style={{ zIndex: 0 }}></div>
+                                    <div className="absolute top-5 right-5 left-5 h-1 bg-gray-300 dark:bg-gray-600 rounded-full" style={{ zIndex: 0 }}></div>
                                     {/* קו מלא */}
                                     <div
-                                        className="absolute top-5 right-5 h-1 bg-gradient-to-l from-green-500 to-blue-500 rounded-full transition-all duration-500"
+                                        className="absolute top-5 right-5 h-1 bg-gradient-to-l from-green-500 to-brand-primary rounded-full transition-all duration-500"
                                         style={{
                                             width: `calc(${(currentStepIndex / (statusSteps.length - 1)) * 100}% - 2.5rem)`,
                                             zIndex: 1
@@ -557,13 +557,13 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
                                         <div key={step.value} className="flex flex-col items-center flex-1 relative" style={{ zIndex: 2 }}>
                                             <div
                                                 className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm mb-2 border-2 transition-all ${index <= currentStepIndex
-                                                    ? 'bg-gradient-to-br from-blue-500 to-green-500 text-white border-transparent shadow-lg'
-                                                    : 'bg-white text-gray-400 border-gray-300'
+                                                    ? 'bg-gradient-to-br from-brand-primary to-green-500 text-white border-transparent shadow-lg'
+                                                    : 'bg-white dark:bg-brand-dark-bg text-gray-400 dark:text-gray-500 border-gray-300 dark:border-gray-600'
                                                     }`}
                                             >
                                                 {index < currentStepIndex ? <FaCheckCircle /> : index + 1}
                                             </div>
-                                            <p className={`text-xs text-center font-medium ${index <= currentStepIndex ? 'text-gray-900' : 'text-gray-500'
+                                            <p className={`text-xs text-center font-medium ${index <= currentStepIndex ? 'text-gray-900 dark:text-brand-dark-text' : 'text-gray-500 dark:text-brand-dark-muted'
                                                 }`}>{step.label}</p>
                                         </div>
                                     ))}
@@ -600,24 +600,24 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
                 <div className="space-y-4 max-w-3xl mx-auto">
                     {/* פרטי כתובת משלוח - רק במשלוח */}
                     {order.delivery_method === 'delivery' && order.delivery_address && (
-                        <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-5 border-2 border-blue-200 space-y-3">
+                        <div className="bg-gradient-to-br from-orange-50 to-brand-cream dark:from-orange-900/20 dark:to-brand-dark-surface rounded-xl p-5 border-2 border-brand-primary/30 dark:border-brand-dark-border space-y-3">
                             <div className="flex items-center gap-2 mb-2">
-                                <FaMapMarkerAlt className="text-xl text-blue-600" />
-                                <h2 className="text-lg font-black text-gray-900">כתובת משלוח</h2>
+                                <FaMapMarkerAlt className="text-xl text-brand-primary" />
+                                <h2 className="text-lg font-black text-gray-900 dark:text-brand-dark-text">כתובת משלוח</h2>
                             </div>
-                            <p className="text-base font-bold text-gray-800">{order.delivery_address}</p>
+                            <p className="text-base font-bold text-gray-800 dark:text-gray-200">{order.delivery_address}</p>
                             {order.delivery_notes && (
-                                <div className="bg-white/60 rounded-lg p-3 border border-blue-100">
-                                    <p className="text-xs font-semibold text-gray-500 mb-1">הערות לשליח:</p>
-                                    <p className="text-sm text-gray-700">{order.delivery_notes}</p>
+                                <div className="bg-white/60 dark:bg-brand-dark-bg/60 rounded-lg p-3 border border-brand-primary/20 dark:border-brand-dark-border">
+                                    <p className="text-xs font-semibold text-gray-500 dark:text-brand-dark-muted mb-1">הערות לשליח:</p>
+                                    <p className="text-sm text-gray-700 dark:text-gray-300">{order.delivery_notes}</p>
                                 </div>
                             )}
                         </div>
                     )}
 
                     <div className="flex items-center gap-2">
-                        <FaUtensils className="text-xl text-blue-600" />
-                        <h2 className="text-xl font-black text-gray-900">פריטי ההזמנה</h2>
+                        <FaUtensils className="text-xl text-brand-primary" />
+                        <h2 className="text-xl font-black text-gray-900 dark:text-brand-dark-text">פריטי ההזמנה</h2>
                     </div>
                     {order.items.map((item) => {
                         const quantity = item.quantity ?? item.qty ?? 1;
@@ -630,23 +630,23 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
                         const hasCustomizations = Boolean(item.variant_name) || addonsTotal > 0 || variantDelta > 0;
 
                         return (
-                            <div key={item.id} className="bg-white border border-gray-200 rounded-xl p-4 sm:p-5 space-y-2 hover:shadow-md transition-shadow">
+                            <div key={item.id} className="bg-white dark:bg-brand-dark-surface border border-gray-200 dark:border-brand-dark-border rounded-xl p-4 sm:p-5 space-y-2 hover:shadow-md dark:hover:shadow-black/20 transition-shadow">
                                 <div className="space-y-1">
                                     <div className="flex items-center justify-between gap-3">
-                                        <div className="font-semibold text-gray-900">
+                                        <div className="font-semibold text-gray-900 dark:text-brand-dark-text">
                                             {(item.menuItem?.name || item.menu_item?.name || item.name || 'פריט')}× {quantity}
                                         </div>
                                         {unitPrice > 0 && (
-                                            <div className="font-semibold text-gray-900">₪{lineTotal}</div>
+                                            <div className="font-semibold text-gray-900 dark:text-brand-dark-text">₪{lineTotal}</div>
                                         )}
                                     </div>
                                     {item.variant_name && (
-                                        <div className="text-sm text-gray-700">סוג לחם: {item.variant_name}</div>
+                                        <div className="text-sm text-gray-700 dark:text-gray-300">סוג לחם: {item.variant_name}</div>
                                     )}
                                     {addons.length > 0 && (
                                         <>
                                             {addons.filter(a => !a.on_side).length > 0 && (
-                                                <div className="text-sm text-gray-700">
+                                                <div className="text-sm text-gray-700 dark:text-gray-300">
                                                     תוספות: {addons.filter(a => !a.on_side).map(a => a.name).join(' · ')}
                                                 </div>
                                             )}
@@ -660,7 +660,7 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
                                     )}
                                 </div>
                                 {hasCustomizations && (
-                                    <div className="text-sm text-gray-700">
+                                    <div className="text-sm text-gray-700 dark:text-gray-300">
                                         {[
                                             basePrice > 0 ? `בסיס: ₪${basePrice.toFixed(2)}` : null,
                                             variantDelta > 0 ? `סוג לחם: ₪${variantDelta.toFixed(2)}` : null,
@@ -671,7 +671,7 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
                                     </div>
                                 )}
                                 {unitPrice > 0 && (
-                                    <div className="text-xs text-gray-600">₪{unitPrice.toFixed(2)} ליחידה</div>
+                                    <div className="text-xs text-gray-600 dark:text-brand-dark-muted">₪{unitPrice.toFixed(2)} ליחידה</div>
                                 )}
 
 
@@ -680,23 +680,23 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
                     })}
 
                     {/* פירוט מחיר */}
-                    <div className="bg-gradient-to-br from-gray-50 to-blue-50 rounded-xl p-5 space-y-3 border border-gray-200 shadow-sm">
-                        <div className="flex items-center justify-between text-gray-700">
+                    <div className="bg-gradient-to-br from-brand-cream to-orange-50 dark:from-brand-dark-surface dark:to-orange-900/20 rounded-xl p-5 space-y-3 border border-gray-200 dark:border-brand-dark-border shadow-sm dark:shadow-black/20">
+                        <div className="flex items-center justify-between text-gray-700 dark:text-gray-300">
                             <span>סכום ביניים</span>
                             <span>₪{(Number(order.total_amount || 0) - Number(order.delivery_fee || 0)).toFixed(2)}</span>
                         </div>
                         {order.delivery_method === 'delivery' && order.delivery_fee > 0 && (
-                            <div className="flex items-center justify-between text-gray-700">
+                            <div className="flex items-center justify-between text-gray-700 dark:text-gray-300">
                                 <span>
                                     משלוח
                                     {order.delivery_distance_km && (
-                                        <span className="text-sm text-gray-500"> ({Number(order.delivery_distance_km).toFixed(1)} ק"מ)</span>
+                                        <span className="text-sm text-gray-500 dark:text-brand-dark-muted"> ({Number(order.delivery_distance_km).toFixed(1)} ק"מ)</span>
                                     )}
                                 </span>
                                 <span>₪{Number(order.delivery_fee).toFixed(2)}</span>
                             </div>
                         )}
-                        <div className="border-t border-gray-300 pt-2 flex items-center justify-between text-lg font-bold text-gray-900">
+                        <div className="border-t border-gray-300 dark:border-brand-dark-border pt-2 flex items-center justify-between text-lg font-bold text-gray-900 dark:text-brand-dark-text">
                             <span>סה"כ</span>
                             <span>₪{Number(order.total_amount || 0).toFixed(2)}</span>
                         </div>
@@ -708,7 +708,7 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
             <div className="text-center">
                 <button
                     onClick={() => navigate(isPreviewMode ? '/admin/preview-menu' : '/menu')}
-                    className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-8 py-4 rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 inline-flex items-center gap-3 font-bold"
+                    className="bg-gradient-to-r from-brand-primary to-orange-600 text-white px-8 py-4 rounded-xl hover:from-orange-600 hover:to-orange-700 transition-all shadow-lg dark:shadow-black/20 hover:shadow-xl transform hover:scale-105 active:scale-95 inline-flex items-center gap-3 font-bold"
                 >
                     <FaShoppingBag className="text-lg" />
                     <span>חזור לתפריט</span>

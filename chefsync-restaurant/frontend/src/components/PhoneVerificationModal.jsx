@@ -26,7 +26,7 @@ export default function PhoneVerificationModal({ phone, onVerified, onClose, isP
     if (isPreviewMode) {
         return (
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 relative">
+                <div className="bg-white dark:bg-brand-dark-surface rounded-2xl shadow-2xl max-w-md w-full p-6 relative">
                     <button
                         onClick={onClose}
                         className="absolute top-4 left-4 text-gray-400 hover:text-gray-600 text-2xl font-bold"
@@ -41,7 +41,7 @@ export default function PhoneVerificationModal({ phone, onVerified, onClose, isP
                             </svg>
                         </div>
 
-                        <h3 className="text-xl font-bold text-gray-900 mb-2">מצב תצוגה מקדימה</h3>
+                        <h3 className="text-xl font-bold text-gray-900 dark:text-brand-dark-text mb-2">מצב תצוגה מקדימה</h3>
                         <p className="text-gray-600 mb-4">
                             במצב תצוגה מקדימה, אימות טלפון מדולג אוטומטית
                         </p>
@@ -112,13 +112,13 @@ export default function PhoneVerificationModal({ phone, onVerified, onClose, isP
 
     return (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-6 w-full max-w-xs mx-4">
+            <div className="bg-white dark:bg-brand-dark-surface rounded-2xl shadow-xl p-4 sm:p-6 w-full max-w-xs mx-4">
                 <button className="absolute top-2 left-2 text-gray-400 relative" onClick={onClose}>✕</button>
-                <h2 className="text-base sm:text-lg font-bold mb-2 text-center">אימות טלפון</h2>
+                <h2 className="text-base sm:text-lg font-bold mb-2 text-center dark:text-brand-dark-text">אימות טלפון</h2>
                 {step === 'input' && (
                     <>
                         <input
-                            className="w-full border rounded px-3 py-2 mb-3 text-right"
+                            className="w-full border dark:bg-brand-dark-bg dark:border-brand-dark-border dark:text-brand-dark-text rounded px-3 py-2 mb-3 text-right"
                             placeholder="מספר טלפון"
                             value={inputPhone}
                             onChange={e => setInputPhone(e.target.value)}
@@ -133,7 +133,7 @@ export default function PhoneVerificationModal({ phone, onVerified, onClose, isP
                     <>
                         <div className="mb-2 text-center">הוזן קוד ל־SMS</div>
                         <input
-                            className="w-full border rounded px-3 py-2 mb-3 text-center tracking-widest text-lg"
+                            className="w-full border dark:bg-brand-dark-bg dark:border-brand-dark-border dark:text-brand-dark-text rounded px-3 py-2 mb-3 text-center tracking-widest text-lg"
                             placeholder="הזן קוד"
                             value={code}
                             onChange={e => setCode(e.target.value)}

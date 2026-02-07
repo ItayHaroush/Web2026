@@ -221,11 +221,11 @@ export default function MenuItemModal({
             onClick={onClose}
         >
             <div
-                className="w-full max-w-2xl bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh]"
+                className="w-full max-w-2xl bg-white dark:bg-brand-dark-surface rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh]"
                 onClick={(e) => e.stopPropagation()}
             >
                 {item.image_url && (
-                    <div className="relative h-56 bg-gray-100 flex-shrink-0">
+                    <div className="relative h-56 bg-gray-100 dark:bg-brand-dark-bg flex-shrink-0">
                         <img
                             src={resolveAssetUrl(item.image_url)}
                             alt={item.name}
@@ -248,23 +248,23 @@ export default function MenuItemModal({
 
                 <div className="flex-1 overflow-y-auto px-6 pb-6 space-y-6">
                     <div>
-                        <h2 className="text-2xl font-bold text-brand-dark mb-2">{item.name}</h2>
+                        <h2 className="text-2xl font-bold text-brand-dark dark:text-brand-dark-text mb-2">{item.name}</h2>
                         {item.description && (
-                            <p className="text-gray-600 leading-relaxed">{item.description}</p>
+                            <p className="text-gray-600 dark:text-brand-dark-muted leading-relaxed">{item.description}</p>
                         )}
                     </div>
 
                     {variants.length > 0 && (
                         <div className="space-y-3">
                             <div className="flex items-center justify-between">
-                                <h3 className="text-lg font-semibold text-brand-dark">בחרו צורת הגשה</h3>
+                                <h3 className="text-lg font-semibold text-brand-dark dark:text-brand-dark-text">בחרו צורת הגשה</h3>
                                 <span className="text-sm text-gray-500">חובה לבחור אפשרות אחת</span>
                             </div>
                             <div className="space-y-2">
                                 {variants.map((variant) => (
                                     <label
                                         key={variant.id}
-                                        className={`flex items-center justify-between border rounded-2xl px-4 py-3 cursor-pointer transition ${selectedVariantId === variant.id ? 'border-brand-primary bg-brand-primary/5' : 'border-gray-200 hover:border-brand-primary/40'}`}
+                                        className={`flex items-center justify-between border rounded-2xl px-4 py-3 cursor-pointer transition ${selectedVariantId === variant.id ? 'border-brand-primary bg-brand-primary/5 dark:bg-brand-primary/10' : 'border-gray-200 dark:border-brand-dark-border hover:border-brand-primary/40'}`}
                                     >
                                         <div className="flex items-center gap-3">
                                             <input
@@ -274,7 +274,7 @@ export default function MenuItemModal({
                                                 onChange={() => setSelectedVariantId(variant.id)}
                                             />
                                             <div>
-                                                <p className="font-semibold text-brand-dark">{variant.name}</p>
+                                                <p className="font-semibold text-brand-dark dark:text-brand-dark-text">{variant.name}</p>
                                                 {variant.price_delta !== 0 && (
                                                     <p className="text-sm text-gray-500">{variant.price_delta > 0 ? `+₪${variant.price_delta}` : `₪${variant.price_delta}`}</p>
                                                 )}
@@ -295,10 +295,10 @@ export default function MenuItemModal({
                                 const groupError = computeGroupError(group);
                                 const selection = getGroupSelection(group.id);
                                 return (
-                                    <div key={group.id} className="border border-gray-200 rounded-2xl p-4">
+                                    <div key={group.id} className="border border-gray-200 dark:border-brand-dark-border rounded-2xl p-4">
                                         <div className="flex items-center justify-between mb-3">
                                             <div>
-                                                <h4 className="text-lg font-semibold text-brand-dark">{getGroupDisplayTitle(group)}</h4>
+                                                <h4 className="text-lg font-semibold text-brand-dark dark:text-brand-dark-text">{getGroupDisplayTitle(group)}</h4>
                                                 <p className="text-xs text-gray-500 mt-1">
                                                     {group.min_select ? `מינימום ${group.min_select}` : ''}
                                                     {group.min_select && group.max_select ? ' · ' : ''}
@@ -312,7 +312,7 @@ export default function MenuItemModal({
                                             {(group.addons || []).map((addon) => (
                                                 <div key={addon.id} className="space-y-1">
                                                     <label
-                                                        className={`flex items-center justify-between border rounded-xl px-3 py-2 cursor-pointer transition ${selection.includes(addon.id) ? 'border-brand-primary bg-brand-primary/5' : 'border-gray-200 hover:border-brand-primary/40'}`}
+                                                        className={`flex items-center justify-between border rounded-xl px-3 py-2 cursor-pointer transition ${selection.includes(addon.id) ? 'border-brand-primary bg-brand-primary/5 dark:bg-brand-primary/10' : 'border-gray-200 dark:border-brand-dark-border hover:border-brand-primary/40'}`}
                                                     >
                                                         <div className="flex items-center gap-3">
                                                             <input
@@ -323,7 +323,7 @@ export default function MenuItemModal({
                                                                 disabled={isAddonDisabled(group, addon.id)}
                                                             />
                                                             <div>
-                                                                <p className="font-medium text-brand-dark">{addon.name}</p>
+                                                                <p className="font-medium text-brand-dark dark:text-brand-dark-text">{addon.name}</p>
                                                                 {addon.price_delta !== 0 && (
                                                                     <p className="text-sm text-gray-500">{addon.price_delta > 0 ? `+₪${addon.price_delta}` : `₪${addon.price_delta}`}</p>
                                                                 )}
@@ -369,7 +369,7 @@ export default function MenuItemModal({
                     <div className="flex flex-wrap items-center justify-between gap-4">
                         <div className="flex items-center gap-3">
                             <span className="text-sm text-gray-500">כמות</span>
-                            <div className="flex items-center border rounded-full overflow-hidden">
+                            <div className="flex items-center border dark:border-brand-dark-border rounded-full overflow-hidden">
                                 <button
                                     type="button"
                                     className="px-4 py-2 text-lg"
@@ -378,7 +378,7 @@ export default function MenuItemModal({
                                 >
                                     −
                                 </button>
-                                <span className="px-5 font-semibold text-brand-dark">{qty}</span>
+                                <span className="px-5 font-semibold text-brand-dark dark:text-brand-dark-text">{qty}</span>
                                 <button
                                     type="button"
                                     className="px-4 py-2 text-lg"
@@ -404,7 +404,7 @@ export default function MenuItemModal({
                         type="button"
                         onClick={handleAdd}
                         disabled={!canSubmit}
-                        className={`w-full py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 ${canSubmit ? 'bg-brand-primary text-white hover:bg-brand-secondary transition' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`}
+                        className={`w-full py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 ${canSubmit ? 'bg-brand-primary text-white hover:bg-brand-secondary transition' : 'bg-gray-200 dark:bg-brand-dark-border text-gray-500 dark:text-gray-400 cursor-not-allowed'}`}
                     >
                         הוסף לסל · ₪{(unitPrice * qty).toFixed(2)}
                     </button>

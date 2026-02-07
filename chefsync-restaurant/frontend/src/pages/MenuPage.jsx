@@ -340,19 +340,19 @@ export default function MenuPage({ isPreviewMode = false }) {
                 {/* כרטיס מידע צף */}
                 {restaurant && (
                     <div className="mx-4 sm:mx-6 lg:mx-8 mt-0 sm:-mt-2 lg:-mt-8 relative z-10">
-                        <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-6">
+                        <div className="bg-white dark:bg-brand-dark-surface rounded-2xl shadow-xl p-4 sm:p-6">
                             {/* מבנה מובייל - שני שורות */}
                             <div className="lg:hidden space-y-3">
                                 {/* שורה ראשונה: כתובת+וויז לצד טלפון+חיוג */}
                                 <div className="flex items-center justify-between gap-3">
                                     {/* כתובת + וויז */}
-                                    <div className="flex items-center gap-2 text-sm text-gray-700 flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 flex-1 min-w-0">
                                         <span className="font-medium truncate">{restaurant.address}</span>
                                         <a
                                             href={wazeLink || undefined}
                                             target="_blank"
                                             rel="noreferrer"
-                                            className={`flex-shrink-0 flex items-center justify-center h-8 w-8 rounded-full border text-base ${wazeLink ? 'bg-gray-50 text-blue-700 border-gray-200 hover:bg-gray-100' : 'bg-gray-100 text-gray-400 border-transparent cursor-not-allowed pointer-events-none'}`}
+                                            className={`flex-shrink-0 flex items-center justify-center h-8 w-8 rounded-full border text-base ${wazeLink ? 'bg-gray-50 dark:bg-brand-dark-border text-brand-primary border-gray-200 dark:border-brand-dark-border hover:bg-gray-100 dark:hover:bg-gray-500' : 'bg-gray-100 text-gray-400 border-transparent cursor-not-allowed pointer-events-none'}`}
                                             aria-label="פתח ב-Waze"
                                         >
                                             <SiWaze className="h-4 w-4" />
@@ -379,7 +379,7 @@ export default function MenuPage({ isPreviewMode = false }) {
                                     {/* כפתור מידע נוסף */}
                                     <button
                                         onClick={() => setShowInfoModal(true)}
-                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 rounded-lg text-blue-700 transition-colors font-medium"
+                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/30 rounded-lg text-brand-primary transition-colors font-medium"
                                     >
                                         <FaInfoCircle className="w-3 h-3" />
                                         <span>מידע נוסף</span>
@@ -393,7 +393,7 @@ export default function MenuPage({ isPreviewMode = false }) {
 
                                     {/* משלוחים/איסוף */}
                                     {restaurant.has_delivery && (
-                                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full text-xs font-bold">
+                                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 dark:bg-orange-900/20 text-brand-primary rounded-full text-xs font-bold">
                                             <FaTruck className="w-3 h-3" />
                                             <span>משלוחים</span>
                                         </div>
@@ -419,13 +419,13 @@ export default function MenuPage({ isPreviewMode = false }) {
                                         />
                                     )}
                                     <div className="space-y-2 flex-1">
-                                        <div className="flex items-center gap-2 text-sm text-gray-700">
+                                        <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
                                             <span className="font-medium">{restaurant.address}</span>
                                             <a
                                                 href={wazeLink || undefined}
                                                 target="_blank"
                                                 rel="noreferrer"
-                                                className={`flex items-center justify-center h-9 w-9 rounded-full border text-base ${wazeLink ? 'bg-gray-50 text-blue-700 border-gray-200 hover:bg-gray-100' : 'bg-gray-100 text-gray-400 border-transparent cursor-not-allowed pointer-events-none'}`}
+                                                className={`flex items-center justify-center h-9 w-9 rounded-full border text-base ${wazeLink ? 'bg-gray-50 dark:bg-brand-dark-border text-brand-primary border-gray-200 dark:border-brand-dark-border hover:bg-gray-100 dark:hover:bg-gray-500' : 'bg-gray-100 text-gray-400 border-transparent cursor-not-allowed pointer-events-none'}`}
                                                 aria-label="פתח ב-Waze"
                                             >
                                                 <SiWaze className="h-5 w-5" />
@@ -458,7 +458,7 @@ export default function MenuPage({ isPreviewMode = false }) {
                                     {(restaurant.has_delivery || restaurant.has_pickup) && (
                                         <div className="flex items-center gap-2 text-xs text-gray-600 font-bold">
                                             {restaurant.has_delivery && (
-                                                <div className="flex items-center gap-1.5 px-3 py-2 bg-blue-50 text-blue-700 rounded-full">
+                                                <div className="flex items-center gap-1.5 px-3 py-2 bg-orange-50 dark:bg-orange-900/20 text-brand-primary rounded-full">
                                                     <FaTruck className="w-3 h-3" />
                                                     <span>משלוחים</span>
                                                 </div>
@@ -475,7 +475,7 @@ export default function MenuPage({ isPreviewMode = false }) {
                                     {/* כפתור מידע נוסף */}
                                     <button
                                         onClick={() => setShowInfoModal(true)}
-                                        className="flex items-center gap-2 px-4 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-full text-sm font-bold transition-colors"
+                                        className="flex items-center gap-2 px-4 py-2 bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/30 text-brand-primary rounded-full text-sm font-bold transition-colors"
                                     >
                                         <FaInfoCircle className="w-3 h-3" />
                                         <span>מידע נוסף</span>
@@ -489,7 +489,7 @@ export default function MenuPage({ isPreviewMode = false }) {
 
             {/* ניווט קטגוריות - למטה במובייל, למעלה בדסקטופ */}
             {menu.length > 0 && (
-                <div className="fixed md:sticky bottom-0 md:top-16 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t md:border-t-0 md:border-b border-gray-200 shadow-lg pb-safe md:-mx-4 lg:-mx-8 md:mb-6">
+                <div className="fixed md:sticky bottom-0 md:top-16 left-0 right-0 z-40 bg-white/95 dark:bg-brand-dark-bg/95 backdrop-blur-md border-t md:border-t-0 md:border-b border-gray-200 dark:border-brand-dark-border shadow-lg pb-safe md:-mx-4 lg:-mx-8 md:mb-6">
                     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
                         <div className="flex gap-2 overflow-x-auto scrollbar-hide">
                             {menu.map((category) => (
@@ -500,7 +500,7 @@ export default function MenuPage({ isPreviewMode = false }) {
                                         flex items-center gap-2 px-3 py-2 rounded-full whitespace-nowrap text-sm font-medium transition-all duration-300
                                         ${activeCategory === category.id
                                             ? 'bg-brand-primary text-white shadow-md'
-                                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                            : 'bg-gray-100 dark:bg-brand-dark-border text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-500'
                                         }
                                         ${isPWA ? 'pwa:px-5 pwa:py-3.5 pwa:text-base pwa:font-bold pwa:shadow-lg' : ''}
                                         ${isPWA && activeCategory === category.id ? 'pwa:bg-orange-600' : ''}
@@ -526,11 +526,11 @@ export default function MenuPage({ isPreviewMode = false }) {
             {/* תוכן התפריט */}
             <div className="space-y-10 pb-24 md:pb-0">
                 {menu.length === 0 ? (
-                    <div className="bg-white rounded-2xl shadow-sm p-12 text-center">
+                    <div className="bg-white dark:bg-brand-dark-surface rounded-2xl shadow-sm p-12 text-center">
                         {restaurant?.logo_url && (
                             <img src={resolveAssetUrl(restaurant.logo_url)} alt="" className="h-20 w-20 mx-auto mb-4 opacity-30" />
                         )}
-                        <p className="text-gray-500 text-lg">עדיין אין פריטים בתפריט</p>
+                        <p className="text-gray-500 dark:text-brand-dark-muted text-lg">עדיין אין פריטים בתפריט</p>
                     </div>
                 ) : (
                     menu.map((category) => (
@@ -551,12 +551,12 @@ export default function MenuPage({ isPreviewMode = false }) {
                                     </div>
                                 )}
                                 <div className="flex-1">
-                                    <h2 className="text-2xl sm:text-3xl font-bold text-brand-dark">{category.name}</h2>
+                                    <h2 className="text-2xl sm:text-3xl font-bold text-brand-dark dark:text-brand-dark-text">{category.name}</h2>
                                     {category.description && (
-                                        <p className="text-gray-500 text-sm mt-1">{category.description}</p>
+                                        <p className="text-gray-500 dark:text-brand-dark-muted text-sm mt-1">{category.description}</p>
                                     )}
                                 </div>
-                                <div className="hidden sm:block h-px flex-1 bg-gradient-to-l from-transparent via-gray-200 to-transparent"></div>
+                                <div className="hidden sm:block h-px flex-1 bg-gradient-to-l from-transparent via-gray-200 dark:via-brand-dark-border to-transparent"></div>
                             </div>
 
                             {/* Grid של מנות - סגנון Wolt */}
@@ -570,10 +570,10 @@ export default function MenuPage({ isPreviewMode = false }) {
                                             onClick={() => {
                                                 handleOpenItemModal(item);
                                             }}
-                                            className={`bg-white rounded-2xl shadow-sm transition-all duration-300 overflow-hidden group border border-gray-100 ${canOrder ? 'cursor-pointer hover:shadow-xl hover:border-brand-primary/30' : 'cursor-not-allowed opacity-80'}`}
+                                            className={`bg-white dark:bg-brand-dark-surface rounded-2xl shadow-sm transition-all duration-300 overflow-hidden group border border-gray-100 dark:border-brand-dark-border ${canOrder ? 'cursor-pointer hover:shadow-xl hover:border-brand-primary/30' : 'cursor-not-allowed opacity-80'}`}
                                         >
                                             {/* תמונה / לוגו placeholder */}
-                                            <div className="relative h-44 bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden">
+                                            <div className="relative h-44 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-brand-dark-border/50 dark:to-brand-dark-bg overflow-hidden">
                                                 {item.image_url ? (
                                                     <img
                                                         src={resolveAssetUrl(item.image_url)}
@@ -609,7 +609,7 @@ export default function MenuPage({ isPreviewMode = false }) {
                                             {/* פרטי המנה */}
                                             <div className="p-4">
                                                 <div className="flex justify-between items-start gap-2 mb-2">
-                                                    <h3 className="font-bold text-brand-dark group-hover:text-brand-primary transition-colors line-clamp-1">
+                                                    <h3 className="font-bold text-brand-dark dark:text-brand-dark-text group-hover:text-brand-primary transition-colors line-clamp-1">
                                                         {item.name}
                                                     </h3>
                                                     <span className="text-brand-primary font-bold whitespace-nowrap">
@@ -617,7 +617,7 @@ export default function MenuPage({ isPreviewMode = false }) {
                                                     </span>
                                                 </div>
                                                 {item.description && (
-                                                    <p className="text-gray-500 text-sm line-clamp-2 leading-relaxed">
+                                                    <p className="text-gray-500 dark:text-brand-dark-muted text-sm line-clamp-2 leading-relaxed">
                                                         {item.description}
                                                     </p>
                                                 )}
@@ -642,19 +642,19 @@ export default function MenuPage({ isPreviewMode = false }) {
             {/* מודל מידע נוסף */}
             {showInfoModal && restaurant && (
                 <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={() => setShowInfoModal(false)}>
-                    <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+                    <div className="bg-white dark:bg-brand-dark-surface rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
                         {/* כותרת */}
-                        <div className="bg-white p-5 border-b border-gray-100 rounded-t-2xl sticky top-0 z-10">
+                        <div className="bg-white dark:bg-brand-dark-surface p-5 border-b border-gray-100 dark:border-brand-dark-border rounded-t-2xl sticky top-0 z-10">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center">
-                                        <FaInfoCircle className="text-gray-900" size={18} />
+                                    <div className="w-10 h-10 bg-gray-50 dark:bg-brand-dark-border rounded-full flex items-center justify-center">
+                                        <FaInfoCircle className="text-gray-900 dark:text-brand-dark-text" size={18} />
                                     </div>
-                                    <h3 className="text-lg font-bold text-gray-900">מידע נוסף</h3>
+                                    <h3 className="text-lg font-bold text-gray-900 dark:text-brand-dark-text">מידע נוסף</h3>
                                 </div>
                                 <button
                                     onClick={() => setShowInfoModal(false)}
-                                    className="w-8 h-8 rounded-full bg-gray-50 hover:bg-gray-100 text-gray-500 flex items-center justify-center transition-colors"
+                                    className="w-8 h-8 rounded-full bg-gray-50 dark:bg-brand-dark-border hover:bg-gray-100 dark:hover:bg-gray-500 text-gray-500 dark:text-gray-400 flex items-center justify-center transition-colors"
                                 >
                                     ×
                                 </button>
@@ -667,13 +667,13 @@ export default function MenuPage({ isPreviewMode = false }) {
                             {(restaurant.kosher_type || restaurant.kosher_certificate || restaurant.kosher_notes) && (
                                 <div className="space-y-3">
                                     <div className="flex items-center gap-2">
-                                        <FaShieldAlt className="text-gray-400" size={14} />
-                                        <h4 className="text-sm font-bold text-gray-900">כשרות</h4>
+                                        <FaShieldAlt className="text-gray-400 dark:text-gray-500" size={14} />
+                                        <h4 className="text-sm font-bold text-gray-900 dark:text-brand-dark-text">כשרות</h4>
                                     </div>
                                     <div className="pl-6 space-y-2">
                                         {restaurant.kosher_type && (
                                             <div className="flex items-start">
-                                                <span className="text-xs font-medium text-gray-700 bg-gray-100 px-2.5 py-1 rounded-md border border-gray-200">
+                                                <span className="text-xs font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-brand-dark-border px-2.5 py-1 rounded-md border border-gray-200 dark:border-brand-dark-border">
                                                     {restaurant.kosher_type === 'kosher' && 'כשר'}
                                                     {restaurant.kosher_type === 'mehadrin' && 'כשר למהדרין'}
                                                     {restaurant.kosher_type === 'non-kosher' && 'לא כשר'}
@@ -681,12 +681,12 @@ export default function MenuPage({ isPreviewMode = false }) {
                                             </div>
                                         )}
                                         {restaurant.kosher_certificate && (
-                                            <p className="text-xs text-gray-600">
-                                                <span className="font-semibold text-gray-900">תעודה:</span> {restaurant.kosher_certificate}
+                                            <p className="text-xs text-gray-600 dark:text-brand-dark-muted">
+                                                <span className="font-semibold text-gray-900 dark:text-brand-dark-text">תעודה:</span> {restaurant.kosher_certificate}
                                             </p>
                                         )}
                                         {restaurant.kosher_notes && (
-                                            <p className="text-xs text-gray-500 leading-relaxed">
+                                            <p className="text-xs text-gray-500 dark:text-brand-dark-muted leading-relaxed">
                                                 {restaurant.kosher_notes}
                                             </p>
                                         )}
@@ -698,14 +698,14 @@ export default function MenuPage({ isPreviewMode = false }) {
                             {(allergensList.length > 0 || restaurant.allergen_notes) && (
                                 <div className="space-y-3">
                                     <div className="flex items-center gap-2">
-                                        <FaExclamationTriangle className="text-gray-400" size={14} />
-                                        <h4 className="text-sm font-bold text-gray-900">אלרגנים נפוצים</h4>
+                                        <FaExclamationTriangle className="text-gray-400 dark:text-gray-500" size={14} />
+                                        <h4 className="text-sm font-bold text-gray-900 dark:text-brand-dark-text">אלרגנים נפוצים</h4>
                                     </div>
                                     <div className="pl-6 space-y-3">
                                         {allergensList.length > 0 && (
                                             <div className="flex flex-wrap gap-2">
                                                 {allergensList.map((allergen, idx) => (
-                                                    <span key={idx} className="text-xs text-gray-600 bg-gray-50 border border-gray-100 px-2.5 py-1 rounded-md">
+                                                    <span key={idx} className="text-xs text-gray-600 dark:text-brand-dark-muted bg-gray-50 dark:bg-brand-dark-border/50 border border-gray-100 dark:border-brand-dark-border px-2.5 py-1 rounded-md">
                                                         {allergen === 'gluten' && 'גלוטן'}
                                                         {allergen === 'dairy' && 'חלב'}
                                                         {allergen === 'eggs' && 'ביצים'}
@@ -721,7 +721,7 @@ export default function MenuPage({ isPreviewMode = false }) {
                                             </div>
                                         )}
                                         {restaurant.allergen_notes && (
-                                            <p className="text-xs text-gray-500 leading-relaxed">
+                                            <p className="text-xs text-gray-500 dark:text-brand-dark-muted leading-relaxed">
                                                 {restaurant.allergen_notes}
                                             </p>
                                         )}
@@ -731,14 +731,14 @@ export default function MenuPage({ isPreviewMode = false }) {
 
                             {/* מפריד */}
                             {(restaurant.kosher_type || restaurant.kosher_certificate || restaurant.kosher_notes || allergensList.length > 0 || restaurant.allergen_notes) && (
-                                <div className="border-t border-gray-100 my-2"></div>
+                                <div className="border-t border-gray-100 dark:border-brand-dark-border my-2"></div>
                             )}
 
                             {/* שעות פתיחה */}
                             <div className="space-y-3">
                                 <div className="flex items-center gap-2">
-                                    <FaClock className="text-gray-400" size={14} />
-                                    <h4 className="text-sm font-bold text-gray-900">שעות פתיחה</h4>
+                                    <FaClock className="text-gray-400 dark:text-gray-500" size={14} />
+                                    <h4 className="text-sm font-bold text-gray-900 dark:text-brand-dark-text">שעות פתיחה</h4>
                                 </div>
 
                                 <div className="pl-6 space-y-4">
@@ -760,7 +760,7 @@ export default function MenuPage({ isPreviewMode = false }) {
                                             });
 
                                         if (!hasAnyValidHours) {
-                                            return <p className="text-xs text-gray-400 italic">לא עודכנו שעות פעילות</p>;
+                                            return <p className="text-xs text-gray-400 dark:text-gray-500 italic">לא עודכנו שעות פעילות</p>;
                                         }
 
                                         return (
@@ -772,9 +772,9 @@ export default function MenuPage({ isPreviewMode = false }) {
                                                     const hasValidHours = dayHours && dayHours.open && dayHours.close;
 
                                                     return (
-                                                        <div key={day} className={`flex justify-between ${isToday ? 'font-bold text-gray-900' : 'text-gray-500'}`}>
+                                                        <div key={day} className={`flex justify-between ${isToday ? 'font-bold text-gray-900 dark:text-brand-dark-text' : 'text-gray-500 dark:text-brand-dark-muted'}`}>
                                                             <span>{day}</span>
-                                                            <span className={isClosed ? 'text-gray-400' : ''}>
+                                                            <span className={isClosed ? 'text-gray-400 dark:text-gray-500' : ''}>
                                                                 {isClosed ? 'סגור' : (hasValidHours ? `${dayHours.open} - ${dayHours.close}` : '-')}
                                                             </span>
                                                         </div>
@@ -786,7 +786,7 @@ export default function MenuPage({ isPreviewMode = false }) {
 
                                     {/* הערות שעות */}
                                     {restaurant.operating_hours?.special_days && Object.keys(restaurant.operating_hours.special_days).length > 0 && (
-                                        <p className="text-xs text-gray-400 mt-2">
+                                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
                                             * ייתכנו שינויים בימים מיוחדים
                                         </p>
                                     )}
@@ -795,10 +795,10 @@ export default function MenuPage({ isPreviewMode = false }) {
                         </div>
 
                         {/* כפתור סגירה */}
-                        <div className="p-4 border-t border-gray-100">
+                        <div className="p-4 border-t border-gray-100 dark:border-brand-dark-border">
                             <button
                                 onClick={() => setShowInfoModal(false)}
-                                className="w-full py-3 bg-gray-900 text-white font-bold rounded-xl hover:bg-black transition-all text-sm"
+                                className="w-full py-3 bg-gray-900 dark:bg-brand-dark-border text-white font-bold rounded-xl hover:bg-black dark:hover:bg-gray-600 transition-all text-sm"
                             >
                                 סגור
                             </button>
