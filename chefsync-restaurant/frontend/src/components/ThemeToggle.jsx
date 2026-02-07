@@ -16,11 +16,10 @@ export default function ThemeToggle() {
                 <button
                     key={key}
                     onClick={() => setThemePreference(key)}
-                    className={`p-1.5 rounded-full transition-all duration-200 ${
-                        themePreference === key
+                    className={`p-1.5 rounded-full transition-all duration-200 ${themePreference === key
                             ? 'bg-brand-primary text-white shadow-sm'
                             : 'text-white/50 hover:text-white hover:bg-white/10'
-                    }`}
+                        }`}
                     title={options.find(o => o.key === key)?.label}
                 >
                     <Icon size={12} />
