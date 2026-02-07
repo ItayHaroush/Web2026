@@ -4,6 +4,7 @@ export default {
     "./index.html",
     "./src/**/*.{js,jsx}",
   ],
+  darkMode: 'class',
   theme: {
     extend: {
       fontFamily: {
@@ -17,13 +18,20 @@ export default {
       },
       colors: {
         brand: {
-          primary: '#009DE0',
-          secondary: '#00C2E8',
-          dark: '#002B49',
-          accent: '#FFC629',
-          light: '#F5F7FA',
+          primary: '#F97316',
+          secondary: '#FB923C',
+          dark: '#1F2937',
+          accent: '#FBBF24',
+          light: '#FFF7ED',
+          cream: '#FEF3C7',
+          surface: '#FFFFFF',
           success: '#04AA6D',
           warning: '#FF9500',
+          'dark-bg': '#111827',
+          'dark-surface': '#1F2937',
+          'dark-border': '#374151',
+          'dark-text': '#F9FAFB',
+          'dark-muted': '#9CA3AF',
         },
       },
     },

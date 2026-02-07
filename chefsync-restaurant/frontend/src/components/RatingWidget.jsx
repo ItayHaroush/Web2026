@@ -67,7 +67,7 @@ export default function RatingWidget({ value, onChange, readOnly = false, size =
                                 transition-all duration-200 transform
                                 ${!readOnly && 'cursor-pointer active:scale-90'}
                                 ${readOnly && 'cursor-default'}
-                                ${isActive ? option.color : 'text-gray-300'}
+                                ${isActive ? option.color : 'text-gray-300 dark:text-gray-600'}
                                 ${!readOnly && !isActive && option.hoverColor}
                                 ${isHovered && !readOnly && 'scale-125'}
                                 ${isSelected && 'scale-110 drop-shadow-lg'}
@@ -87,7 +87,7 @@ export default function RatingWidget({ value, onChange, readOnly = false, size =
                         {ratingOptions[displayValue - 1]?.label}
                     </p>
                     {!readOnly && (
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                             לחץ לבחירה
                         </p>
                     )}
@@ -96,7 +96,7 @@ export default function RatingWidget({ value, onChange, readOnly = false, size =
 
             {/* הצגת ערך מספרי במצב readOnly */}
             {readOnly && value && (
-                <div className="flex items-center gap-2 text-sm text-gray-600">
+                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-brand-dark-text">
                     <span className="font-bold">{value}</span>
                     <span>מתוך 5</span>
                 </div>

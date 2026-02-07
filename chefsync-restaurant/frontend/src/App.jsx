@@ -4,6 +4,7 @@ import { AdminAuthProvider, useAdminAuth } from './context/AdminAuthContext';
 import { RestaurantStatusProvider } from './context/RestaurantStatusContext';
 import { CartProvider } from './context/CartContext';
 import { ToastProvider } from './context/ToastContext';
+import { ThemeProvider } from './context/ThemeContext';
 import DevModeBanner from './components/DevModeBanner';
 import CookieConsent from './components/CookieConsent';
 import FacebookInAppWarning from './components/FacebookInAppWarning';
@@ -385,6 +386,7 @@ function AppRoutes() {
 export default function App() {
   return (
     <Router>
+      <ThemeProvider>
       <AdminAuthProvider>
         <RestaurantStatusProvider>
           <AuthProvider>
@@ -400,6 +402,7 @@ export default function App() {
           </AuthProvider>
         </RestaurantStatusProvider>
       </AdminAuthProvider>
+      </ThemeProvider>
     </Router>
   );
 }

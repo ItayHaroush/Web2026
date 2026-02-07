@@ -260,7 +260,7 @@ export default function RestaurantSharePage() {
                 <div className="max-w-md">
                     <h1 className="text-xl font-bold mb-2">שגיאה בטעינת העמוד</h1>
                     <p className="text-gray-400 mb-4">{error || 'המסעדה לא נמצאה'}</p>
-                    <button onClick={() => window.location.reload()} className="px-4 py-2 bg-blue-600 rounded-lg">נסה שוב</button>
+                    <button onClick={() => window.location.reload()} className="px-4 py-2 bg-brand-primary rounded-lg">נסה שוב</button>
                 </div>
             </div>
         );
@@ -312,7 +312,7 @@ export default function RestaurantSharePage() {
                         {line2 && (
                             <>
                                 <br />
-                                <span className="text-blue-400 font-bold text-2xl">{line2}</span>
+                                <span className="text-brand-primary font-bold text-2xl">{line2}</span>
                             </>
                         )}
                         {restLines.length > 0 && (
@@ -340,7 +340,7 @@ export default function RestaurantSharePage() {
                 <div className="flex flex-col gap-4 w-full">
                     <button
                         onClick={() => goToMenu(null)}
-                        className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 px-6 rounded-2xl shadow-lg shadow-blue-900/30 transition-all transform active:scale-95 flex items-center justify-center gap-3 text-lg border border-blue-500"
+                        className="w-full bg-brand-primary hover:bg-brand-secondary text-white font-bold py-4 px-6 rounded-2xl shadow-lg shadow-orange-900/30 transition-all transform active:scale-95 flex items-center justify-center gap-3 text-lg border border-orange-400"
                     >
                         <FaUtensils className="text-xl" /> לתפריט המלא
                     </button>
@@ -352,7 +352,7 @@ export default function RestaurantSharePage() {
                                     onClick={() => goToMenu('delivery')}
                                     className="w-full py-4 px-4 rounded-2xl font-bold flex flex-col items-center justify-center gap-2 transition-all border bg-gray-800 border-gray-700 hover:bg-gray-750 hover:border-gray-600 text-white shadow-lg active:scale-95"
                                 >
-                                    <FaMotorcycle size={24} className="text-blue-400" />
+                                    <FaMotorcycle size={24} className="text-brand-primary" />
                                     <span>משלוח</span>
                                 </button>
                                 {deliveryTime && (
@@ -414,7 +414,7 @@ export default function RestaurantSharePage() {
                 <div className="flex justify-center gap-8 mt-4 pt-6 border-t border-gray-800 w-full">
                     {wazeHref && (
                         <a href={wazeHref} target="_blank" rel="noreferrer" className="flex flex-col items-center gap-2 text-gray-400 hover:text-white transition-colors group w-20">
-                            <div className="p-4 bg-gray-800 rounded-2xl group-hover:bg-blue-500 group-hover:text-white transition-all shadow-md group-hover:shadow-blue-500/20">
+                            <div className="p-4 bg-gray-800 rounded-2xl group-hover:bg-brand-primary group-hover:text-white transition-all shadow-md group-hover:shadow-orange-500/20">
                                 <SiWaze size={28} />
                             </div>
                             <span className="text-sm font-medium">ניווט</span>
