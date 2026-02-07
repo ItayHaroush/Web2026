@@ -36,6 +36,7 @@ export default function AdminDashboard() {
     const storedToken = useMemo(() => getStoredFcmToken(), [pushState.status]);
     const isPushEnabled = permission === 'granted' && !!storedToken;
     const lastMessageIdsRef = useRef(new Set());
+    const notifCountRef = useRef(0);
 
     // רק בעלים ומנהלים רואים הכנסות
     const canViewRevenue = isOwner() || isManager();
@@ -66,10 +67,19 @@ export default function AdminDashboard() {
                     n.onclick = () => {
                         n.close();
                         window.focus();
+                        notifCountRef.current = Math.max(0, notifCountRef.current - 1);
+                        if (notifCountRef.current > 0) {
+                            if (navigator.setAppBadge) navigator.setAppBadge(notifCountRef.current).catch(() => {});
+                        } else {
+                            if (navigator.clearAppBadge) navigator.clearAppBadge().catch(() => {});
+                        }
                         if (payload?.data?.orderId) {
                             navigate('/admin/orders');
                         }
                     };
+                    // PWA App Badge – show actual count
+                    notifCountRef.current += 1;
+                    if (navigator.setAppBadge) navigator.setAppBadge(notifCountRef.current).catch(() => {});
                 } catch (e) {
                     // Some browsers block Notification() in certain contexts; fallback to console.
                     console.warn('[FCM] Notification() failed', e);
@@ -80,6 +90,19 @@ export default function AdminDashboard() {
         return () => {
             if (typeof unsubscribe === 'function') unsubscribe();
         };
+    }, []);
+
+    // Clear PWA app badge when the user opens / returns to the app
+    useEffect(() => {
+        const clearBadge = () => {
+            if (document.visibilityState === 'visible') {
+                notifCountRef.current = 0;
+                if (navigator.clearAppBadge) navigator.clearAppBadge().catch(() => {});
+            }
+        };
+        clearBadge(); // clear on mount (dashboard opened)
+        document.addEventListener('visibilitychange', clearBadge);
+        return () => document.removeEventListener('visibilitychange', clearBadge);
     }, []);
 
     const fetchDashboard = async () => {

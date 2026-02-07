@@ -41,12 +41,18 @@ messaging.onBackgroundMessage(async (payload) => {
     const title = payload.notification?.title || payload.data?.title || 'TakeEat';
     const body = payload.notification?.body || payload.data?.body || 'התראה חדשה';
 
-    self.registration.showNotification(title, {
+    await self.registration.showNotification(title, {
         body,
         icon: '/icon-192.png',
         badge: '/badge-72x72.png',
         data: payload.data || {},
     });
+
+    // PWA App Badge – show the actual count of active notifications
+    if (self.navigator?.setAppBadge) {
+        const all = await self.registration.getNotifications();
+        self.navigator.setAppBadge(all.length).catch(() => {});
+    }
 });
 
 self.addEventListener('notificationclick', (event) => {
@@ -56,6 +62,16 @@ self.addEventListener('notificationclick', (event) => {
 
     event.waitUntil(
         (async () => {
+            // Update badge to remaining notification count (or clear if none left)
+            if (self.navigator?.setAppBadge) {
+                const remaining = await self.registration.getNotifications();
+                if (remaining.length > 0) {
+                    self.navigator.setAppBadge(remaining.length).catch(() => {});
+                } else {
+                    self.navigator.clearAppBadge().catch(() => {});
+                }
+            }
+
             const allClients = await clients.matchAll({ type: 'window', includeUncontrolled: true });
             for (const client of allClients) {
                 if ('focus' in client) {
