@@ -382,7 +382,7 @@ class OrderController extends Controller
 
             // שליחת פוש לטאבלטים של המסעדה (רק אם לא הזמנת test)
             if (!($validated['is_test'] ?? false)) {
-                $notificationBody = "הזמנה מאת {$order->customer_name} בסך ₪{$order->total_amount}";
+                $notificationBody = "{$order->customer_name} - ₪{$order->total_amount}";
 
                 $this->sendOrderNotification(
                     tenantId: $tenantId,

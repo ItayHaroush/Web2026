@@ -30,12 +30,6 @@ class FcmService
                     'TTL' => '300',
                     'Urgency' => 'high',
                 ],
-                'notification' => [
-                    'title' => $title,
-                    'body' => $body,
-                    'icon' => '/icon-192.png',
-                    'badge' => '/badge-72x72.png',
-                ],
             ],
         ];
 
