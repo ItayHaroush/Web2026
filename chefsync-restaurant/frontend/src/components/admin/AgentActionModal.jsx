@@ -31,18 +31,16 @@ export default function AgentActionModal({ action, onConfirm, onClose }) {
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-             onClick={(e) => { if (e.target === e.currentTarget && !isExecuting) onClose(); }}>
-            <div className={`w-full max-w-md mx-4 rounded-2xl shadow-2xl overflow-hidden ${
-                isCritical
+            onClick={(e) => { if (e.target === e.currentTarget && !isExecuting) onClose(); }}>
+            <div className={`w-full max-w-md mx-4 rounded-2xl shadow-2xl overflow-hidden ${isCritical
                     ? 'bg-red-50 dark:bg-red-950 border-2 border-red-300 dark:border-red-800'
                     : 'bg-orange-50 dark:bg-orange-950 border-2 border-orange-300 dark:border-orange-800'
-            }`}>
+                }`}>
                 {/* Header */}
-                <div className={`p-4 ${
-                    isCritical
+                <div className={`p-4 ${isCritical
                         ? 'bg-red-600'
                         : 'bg-orange-600'
-                } text-white`}>
+                    } text-white`}>
                     <div className="flex items-center gap-3">
                         {isCritical
                             ? <FaSkullCrossbones className="text-2xl" />
@@ -106,11 +104,10 @@ export default function AgentActionModal({ action, onConfirm, onClose }) {
                     <button
                         onClick={handleConfirm}
                         disabled={isExecuting}
-                        className={`flex-1 ${
-                            isCritical
+                        className={`flex-1 ${isCritical
                                 ? 'bg-red-600 hover:bg-red-700'
                                 : 'bg-orange-600 hover:bg-orange-700'
-                        } text-white font-medium px-4 py-3 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50`}
+                            } text-white font-medium px-4 py-3 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50`}
                     >
                         {isExecuting ? (
                             <>
