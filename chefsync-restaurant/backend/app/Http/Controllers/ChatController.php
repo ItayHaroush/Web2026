@@ -177,13 +177,16 @@ class ChatController extends Controller
 
         // 3. הכנסות
         $revenueToday = Order::where('created_at', '>=', $today)
-            ->whereNotIn('status', ['cancelled'])
+            ->where('status', '!=', 'cancelled')
+            ->where('is_test', false)
             ->sum('total_amount');
         $revenueThisWeek = Order::where('created_at', '>=', $weekAgo)
-            ->whereNotIn('status', ['cancelled'])
+            ->where('status', '!=', 'cancelled')
+            ->where('is_test', false)
             ->sum('total_amount');
         $revenueThisMonth = Order::where('created_at', '>=', $monthAgo)
-            ->whereNotIn('status', ['cancelled'])
+            ->where('status', '!=', 'cancelled')
+            ->where('is_test', false)
             ->sum('total_amount');
 
         // 4. Top 5 מסעדות (לפי הזמנות)
@@ -349,14 +352,17 @@ class ChatController extends Controller
 
         // הכנסות (רק של המסעדה הזו)
         $revenueToday = Order::whereDate('created_at', $now->toDateString())
-            ->whereIn('status', ['delivered', 'ready'])
+            ->where('status', '!=', 'cancelled')
+            ->where('is_test', false)
             ->sum('total_amount');
         $revenueWeek = Order::whereBetween('created_at', [$now->copy()->startOfWeek(), $now])
-            ->whereIn('status', ['delivered', 'ready'])
+            ->where('status', '!=', 'cancelled')
+            ->where('is_test', false)
             ->sum('total_amount');
         $revenueMonth = Order::whereMonth('created_at', $now->month)
             ->whereYear('created_at', $now->year)
-            ->whereIn('status', ['delivered', 'ready'])
+            ->where('status', '!=', 'cancelled')
+            ->where('is_test', false)
             ->sum('total_amount');
 
         // פריטי תפריט פופולריים (רק של המסעדה הזו)
