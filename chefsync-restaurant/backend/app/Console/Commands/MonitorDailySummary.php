@@ -41,7 +41,8 @@ class MonitorDailySummary extends Command
 
             $revenueToday = Order::where('restaurant_id', $restaurant->id)
                 ->where('created_at', '>=', $today)
-                ->whereNotIn('status', ['cancelled'])
+                ->where('status', '!=', 'cancelled')
+                ->where('is_test', false)
                 ->sum('total_amount');
 
             $cancelledToday = Order::where('restaurant_id', $restaurant->id)

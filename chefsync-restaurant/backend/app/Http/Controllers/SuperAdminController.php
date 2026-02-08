@@ -33,10 +33,11 @@ class SuperAdminController extends Controller
             'total_restaurants' => Restaurant::count(),
             'active_restaurants' => Restaurant::where('is_open', true)->count(),
             'total_orders' => Order::count(),
-            'total_revenue' => Order::whereIn('status', ['delivered', 'ready'])->sum('total_amount'),
+            'total_revenue' => Order::where('status', '!=', 'cancelled')->where('is_test', false)->sum('total_amount'),
             'orders_today' => Order::whereDate('created_at', today())->count(),
             'revenue_today' => Order::whereDate('created_at', today())
-                ->whereIn('status', ['delivered', 'ready'])
+                ->where('status', '!=', 'cancelled')
+                ->where('is_test', false)
                 ->sum('total_amount'),
         ];
 
@@ -92,7 +93,8 @@ class SuperAdminController extends Controller
         // הוספת נתוני הכנסות לכל מסעדה
         $restaurants->getCollection()->transform(function ($restaurant) {
             $restaurant->total_revenue = Order::where('restaurant_id', $restaurant->id)
-                ->whereIn('status', ['delivered', 'ready'])
+                ->where('status', '!=', 'cancelled')
+                ->where('is_test', false)
                 ->sum('total_amount');
             $restaurant->orders_count = Order::where('restaurant_id', $restaurant->id)->count();
             return $restaurant;
@@ -399,14 +401,16 @@ class SuperAdminController extends Controller
         $stats = [
             'total_orders' => Order::where('restaurant_id', $id)->count(),
             'total_revenue' => Order::where('restaurant_id', $id)
-                ->whereIn('status', ['delivered', 'ready'])
+                ->where('status', '!=', 'cancelled')
+                ->where('is_test', false)
                 ->sum('total_amount'),
             'orders_today' => Order::where('restaurant_id', $id)
                 ->whereDate('created_at', today())
                 ->count(),
             'revenue_today' => Order::where('restaurant_id', $id)
                 ->whereDate('created_at', today())
-                ->whereIn('status', ['delivered', 'ready'])
+                ->where('status', '!=', 'cancelled')
+                ->where('is_test', false)
                 ->sum('total_amount'),
             'orders_by_status' => Order::where('restaurant_id', $id)
                 ->select('status', DB::raw('count(*) as count'))
