@@ -210,11 +210,18 @@ class OpenAiService extends BaseAiService
             $response = $this->callOpenAi($messages);
             $responseTime = (int)((microtime(true) - $startTime) * 1000);
 
+            // Parse proposed agent actions from AI response
+            $agentService = new AgentActionService();
+            $rawContent = $response['content'] ?? '';
+            $proposedActions = $agentService->parseProposedActions($rawContent);
+            $cleanContent = $agentService->stripActionsFromContent($rawContent);
+
             $result = [
-                'response' => $response['content'] ?? '',
+                'response' => $cleanContent,
                 'provider' => 'openai',
                 'model' => $this->mockMode ? 'mock' : $this->model,
-                'suggested_actions' => $this->getRestaurantSuggestedActions($context, $preset)
+                'suggested_actions' => $this->getRestaurantSuggestedActions($context, $preset),
+                'proposed_actions' => $proposedActions,
             ];
 
             // Log usage (from BaseAiService)
@@ -679,8 +686,42 @@ class OpenAiService extends BaseAiService
             $prompt .= "\n";
         }
 
+        // Categories data for the AI agent
+        if (!empty($context['categories'])) {
+            $prompt .= "קטגוריות תפריט (categories):\n";
+            foreach ($context['categories'] as $cat) {
+                $status = ($cat['is_active'] ?? true) ? 'פעילה' : 'מושבתת';
+                $icon = !empty($cat['icon']) ? " [{$cat['icon']}]" : '';
+                $prompt .= "- ID:{$cat['id']} {$cat['name']}{$icon} ({$status})\n";
+            }
+            $prompt .= "\n";
+        }
+
+        // Full menu items for the AI agent
+        if (!empty($context['menu_items'])) {
+            $prompt .= "פריטי תפריט (menu_items):\n";
+            foreach ($context['menu_items'] as $item) {
+                $avail = ($item['is_available'] ?? true) ? '' : ' [לא זמין]';
+                $prompt .= "- ID:{$item['id']} {$item['name']} - ₪{$item['price']} (קטגוריה: {$item['category']}, cat_id:{$item['category_id']}){$avail}\n";
+            }
+            $prompt .= "\n";
+        }
+
+        // Active orders for the AI agent
+        if (!empty($context['active_orders'])) {
+            $prompt .= "הזמנות פעילות כרגע:\n";
+            foreach ($context['active_orders'] as $order) {
+                $prompt .= "- הזמנה #{$order['id']} - {$order['status']} - ₪{$order['total']} - {$order['customer']} ({$order['method']}) - {$order['created_at']}\n";
+            }
+            $prompt .= "\n";
+        }
+
         $prompt .= "תפקידך: לעזור בניהול תפריט, הזמנות, וניתוח עסקי.\n";
         $prompt .= "השתמש בנתונים האמיתיים שלך למתן תשובות מדויקות.\n\n";
+
+        // Agent action instructions - allow AI to propose executable actions
+        $agentService = new AgentActionService();
+        $prompt .= $agentService->buildActionInstructions() . "\n\n";
 
         // Add Hebrew glossary from config
         $glossary = config('ai.language.glossary', [

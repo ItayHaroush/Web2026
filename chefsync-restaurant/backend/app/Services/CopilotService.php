@@ -1861,11 +1861,18 @@ PROMPT;
 
         $response = $this->callCopilot($systemPrompt . "\n\n" . $userMessage);
 
+        // Parse proposed agent actions from AI response
+        $agentService = new AgentActionService();
+        $rawContent = $response['content'] ?? 'שגיאה בקבלת תשובה מהסוכן';
+        $proposedActions = $agentService->parseProposedActions($rawContent);
+        $cleanContent = $agentService->stripActionsFromContent($rawContent);
+
         return [
-            'response' => $response['content'] ?? 'שגיאה בקבלת תשובה מהסוכן',
+            'response' => $cleanContent,
             'provider' => 'copilot',
             'model' => $response['model'] ?? 'copilot-cli',
             'suggested_actions' => $this->getRestaurantSuggestedActions($context, $preset),
+            'proposed_actions' => $proposedActions,
         ];
     }
 
@@ -1911,6 +1918,40 @@ PROMPT;
             }
             $systemPrompt .= "\n";
         }
+
+        // Categories data for the AI agent
+        if (!empty($context['categories'])) {
+            $systemPrompt .= "=== קטגוריות תפריט ===\n";
+            foreach ($context['categories'] as $cat) {
+                $status = ($cat['is_active'] ?? true) ? 'פעילה' : 'מושבתת';
+                $icon = !empty($cat['icon']) ? " [{$cat['icon']}]" : '';
+                $systemPrompt .= "- ID:{$cat['id']} {$cat['name']}{$icon} ({$status})\n";
+            }
+            $systemPrompt .= "\n";
+        }
+
+        // Full menu items for the AI agent
+        if (!empty($context['menu_items'])) {
+            $systemPrompt .= "=== כל פריטי התפריט ===\n";
+            foreach ($context['menu_items'] as $item) {
+                $avail = ($item['is_available'] ?? true) ? '' : ' [לא זמין]';
+                $systemPrompt .= "- ID:{$item['id']} {$item['name']} - ₪{$item['price']} (קטגוריה: {$item['category']}, cat_id:{$item['category_id']}){$avail}\n";
+            }
+            $systemPrompt .= "\n";
+        }
+
+        // Active orders for the AI agent
+        if (!empty($context['active_orders'])) {
+            $systemPrompt .= "=== הזמנות פעילות כרגע ===\n";
+            foreach ($context['active_orders'] as $order) {
+                $systemPrompt .= "- הזמנה #{$order['id']} - {$order['status']} - ₪{$order['total']} - {$order['customer']} ({$order['method']}) - {$order['created_at']}\n";
+            }
+            $systemPrompt .= "\n";
+        }
+
+        // Agent action instructions - allow AI to propose executable actions
+        $agentService = new AgentActionService();
+        $systemPrompt .= $agentService->buildActionInstructions() . "\n\n";
 
         $systemPrompt .= "השב בעברית, בצורה ברורה ומעשית עם המלצות ספציפיות למסעדה זו.";
 

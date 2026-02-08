@@ -29,7 +29,7 @@ export default function AdminBases() {
     const [editBase, setEditBase] = useState(null);
     const [saving, setSaving] = useState(false);
     const [savingPrices, setSavingPrices] = useState(false);
-    const [form, setForm] = useState({ name: '', price_delta: '0', is_active: true, is_default: false });
+    const [form, setForm] = useState({ name: '', is_active: true, is_default: false });
 
     useEffect(() => {
         fetchAll();
@@ -72,13 +72,12 @@ export default function AdminBases() {
             setEditBase(base);
             setForm({
                 name: base.name,
-                price_delta: typeof base.price_delta === 'number' ? base.price_delta.toString() : base.price_delta || '0',
                 is_active: Boolean(base.is_active),
                 is_default: Boolean(base.is_default),
             });
         } else {
             setEditBase(null);
-            setForm({ name: '', price_delta: '0', is_active: true, is_default: bases.length === 0 });
+            setForm({ name: '', is_active: true, is_default: bases.length === 0 });
         }
         setModalOpen(true);
     };
@@ -86,7 +85,7 @@ export default function AdminBases() {
     const closeModal = () => {
         setModalOpen(false);
         setEditBase(null);
-        setForm({ name: '', price_delta: '0', is_active: true, is_default: bases.length === 0 });
+        setForm({ name: '', is_active: true, is_default: bases.length === 0 });
     };
 
     const handleSubmit = async (event) => {
@@ -95,7 +94,6 @@ export default function AdminBases() {
 
         const payload = {
             name: form.name.trim(),
-            price_delta: Number(form.price_delta) || 0,
             is_active: form.is_active,
             is_default: form.is_default,
         };
@@ -264,22 +262,10 @@ export default function AdminBases() {
                                     </div>
                                     <div className="flex-1">
                                         <h3 className="text-2xl font-black text-gray-900 group-hover:text-brand-primary transition-colors">{base.name}</h3>
-                                        <div className="flex items-center gap-2 mt-1">
-                                            <span className="px-3 py-1 bg-gray-50 text-gray-400 rounded-lg text-[10px] font-black uppercase tracking-widest border border-gray-100">
-                                                מחיר ברירת מחדל
-                                            </span>
-                                        </div>
                                     </div>
                                 </div>
 
                                 <div className="space-y-6 pt-6 border-t border-gray-50">
-                                    <div className="flex items-center justify-between px-2">
-                                        <span className="text-sm font-black text-gray-400 uppercase tracking-widest">תוספת מחיר</span>
-                                        <span className={`text-2xl font-black tracking-tighter ${Number(base.price_delta) > 0 ? 'text-emerald-600' : 'text-gray-900'}`}>
-                                            {Number(base.price_delta) === 0 ? 'חינם' : `+ ₪${Number(base.price_delta).toFixed(2)}`}
-                                        </span>
-                                    </div>
-
                                     {!base.is_default && isManager() && base.is_active && (
                                         <button
                                             onClick={() => markAsDefault(base)}
@@ -329,7 +315,7 @@ export default function AdminBases() {
                                     </div>
                                     <div>
                                         <h2 className="text-2xl font-black text-gray-900">תמחור בסיסים לפי קטגוריה</h2>
-                                        <p className="text-gray-500 font-medium text-xs">הגדר מחיר שונה לכל בסיס בהתאם לקטגוריה. שדה ריק = מחיר ברירת המחדל של הבסיס</p>
+                                        <p className="text-gray-500 font-medium text-xs">הגדר מחיר תוספת לכל בסיס בהתאם לקטגוריה. שדה ריק = ₪0 (חינם)</p>
                                     </div>
                                 </div>
                                 <button
@@ -360,9 +346,6 @@ export default function AdminBases() {
                                                     <div className="flex flex-col items-center gap-1">
                                                         <FaBreadSlice className="text-amber-500" size={16} />
                                                         <span className="text-xs font-black text-gray-700">{base.name}</span>
-                                                        <span className="text-[10px] text-gray-400 font-bold">
-                                                            ברירת מחדל: {Number(base.price_delta) === 0 ? 'חינם' : `₪${Number(base.price_delta).toFixed(1)}`}
-                                                        </span>
                                                     </div>
                                                 </th>
                                             ))}
@@ -390,7 +373,7 @@ export default function AdminBases() {
                                                                     step="0.5"
                                                                     value={val ?? ''}
                                                                     onChange={(e) => handlePriceChange(cat.id, base.id, e.target.value)}
-                                                                    placeholder={Number(base.price_delta).toFixed(1)}
+                                                                    placeholder="0"
                                                                     className={`w-full px-3 py-3 rounded-xl text-center font-black text-sm transition-all focus:ring-4 focus:ring-indigo-300/30 border-none ${hasCustomPrice ? 'bg-indigo-50 text-indigo-700' : 'bg-gray-50 text-gray-400'}`}
                                                                 />
                                                                 {hasCustomPrice && (
@@ -418,7 +401,7 @@ export default function AdminBases() {
                                     <FaInfoCircle className="text-amber-600 mt-0.5 shrink-0" />
                                     <div className="text-sm font-medium text-amber-900/70 leading-relaxed">
                                         <p className="font-black text-amber-800 mb-1">איך זה עובד?</p>
-                                        <p>הזן מחיר ספציפי לכל שילוב של קטגוריה ובסיס. שדה ריק משתמש במחיר ברירת המחדל של הבסיס. לדוגמה: פיתה עלות ₪0 בשווארמה, אבל ₪3 בסלטים.</p>
+                                        <p>הזן מחיר תוספת לכל שילוב של קטגוריה ובסיס. שדה ריק = ₪0 (חינם). לדוגמה: באגט ₪7 בשווארמה, פיתה ₪0 בסלטים. ניתן להתאים מחיר גם ברמת פריט בודד דרך עריכת הפריט בתפריט.</p>
                                     </div>
                                 </div>
                             </div>
@@ -439,7 +422,7 @@ export default function AdminBases() {
                                         <h2 className="text-2xl font-black text-gray-900 tracking-tight">
                                             {editBase ? 'עריכת בסיס' : 'הוספת בסיס חדש'}
                                         </h2>
-                                        <p className="text-gray-500 font-medium text-sm">הגדרת שם, מחיר ברירת מחדל וסטטוס</p>
+                                        <p className="text-gray-500 font-medium text-sm">הגדרת שם וסטטוס הבסיס</p>
                                     </div>
                                 </div>
                                 <button
@@ -463,22 +446,6 @@ export default function AdminBases() {
                                         className="w-full px-6 py-5 bg-gray-50 border-none rounded-[1.5rem] focus:ring-4 focus:ring-brand-primary/10 text-gray-900 font-black transition-all"
                                         placeholder="למשל: לחם צרפתי, לחם דגנים..."
                                     />
-                                </div>
-
-                                <div className="space-y-3">
-                                    <label className="text-sm font-black text-gray-700 mr-2 uppercase tracking-widest">תוספת מחיר ברירת מחדל (₪)</label>
-                                    <div className="relative">
-                                        <div className="absolute left-6 top-1/2 -translate-y-1/2 font-black text-gray-400">₪</div>
-                                        <input
-                                            type="number"
-                                            min="0"
-                                            step="0.5"
-                                            value={form.price_delta}
-                                            onChange={(e) => setForm({ ...form, price_delta: e.target.value })}
-                                            className="w-full px-6 py-5 bg-gray-50 border-none rounded-[1.5rem] focus:ring-4 focus:ring-brand-primary/10 text-gray-900 font-black"
-                                        />
-                                    </div>
-                                    <p className="text-[10px] text-gray-400 mr-2 font-bold italic">מחיר זה ישמש כברירת מחדל לקטגוריות ללא מחיר ספציפי</p>
                                 </div>
 
                                 <div className="bg-gray-50 rounded-[2.5rem] p-8 space-y-6">

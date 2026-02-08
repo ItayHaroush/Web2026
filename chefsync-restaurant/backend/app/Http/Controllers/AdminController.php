@@ -12,7 +12,9 @@ use App\Models\RestaurantAddon;
 use App\Models\RestaurantAddonGroup;
 use App\Models\RestaurantVariant;
 use App\Models\CategoryBasePrice;
+use App\Models\PriceRule;
 use App\Models\DeliveryZone;
+use App\Services\BasePriceService;
 use App\Models\RestaurantPayment;
 use App\Models\RestaurantSubscription;
 use Illuminate\Http\Request;
@@ -921,7 +923,6 @@ class AdminController extends Controller
 
         $request->validate([
             'name' => 'required|string|max:255',
-            'price_delta' => 'nullable|numeric|min:0|max:999.99',
             'is_active' => 'sometimes|boolean',
             'is_default' => 'sometimes|boolean',
         ]);
@@ -945,7 +946,7 @@ class AdminController extends Controller
             'restaurant_id' => $restaurant->id,
             'tenant_id' => $restaurant->tenant_id,
             'name' => $request->input('name'),
-            'price_delta' => $request->input('price_delta', 0),
+            'price_delta' => 0,
             'is_active' => $request->boolean('is_active', true),
             'is_default' => $isDefault,
             'sort_order' => $maxOrder + 1,
@@ -971,7 +972,6 @@ class AdminController extends Controller
 
         $request->validate([
             'name' => 'sometimes|string|max:255',
-            'price_delta' => 'sometimes|numeric|min:0|max:999.99',
             'is_active' => 'sometimes|boolean',
             'is_default' => 'sometimes|boolean',
             'sort_order' => 'sometimes|integer|min:0',
@@ -988,7 +988,7 @@ class AdminController extends Controller
         $base = RestaurantVariant::where('restaurant_id', $restaurant->id)
             ->findOrFail($id);
 
-        $payload = $request->only(['name', 'price_delta', 'is_active', 'is_default', 'sort_order']);
+        $payload = $request->only(['name', 'is_active', 'is_default', 'sort_order']);
 
         if ($request->has('is_default') && $request->boolean('is_default')) {
             RestaurantVariant::where('restaurant_id', $restaurant->id)
@@ -1058,9 +1058,21 @@ class AdminController extends Controller
             ], 404);
         }
 
-        $prices = CategoryBasePrice::where('tenant_id', $restaurant->tenant_id)
-            ->with(['category:id,name,icon', 'variant:id,name'])
-            ->get();
+        $prices = PriceRule::where('tenant_id', $restaurant->tenant_id)
+            ->where('target_type', 'base')
+            ->where('scope_type', 'category')
+            ->get()
+            ->map(function ($rule) {
+                return [
+                    'id' => $rule->id,
+                    'category_id' => $rule->scope_id,
+                    'restaurant_variant_id' => $rule->target_id,
+                    'price_delta' => (float) $rule->price_delta,
+                    'tenant_id' => $rule->tenant_id,
+                    'created_at' => $rule->created_at,
+                    'updated_at' => $rule->updated_at,
+                ];
+            });
 
         return response()->json([
             'success' => true,
@@ -1107,29 +1119,156 @@ class AdminController extends Controller
             ->whereIn('id', $variantIds)
             ->pluck('id');
 
-        // מחק מחירים קיימים עבור הקטגוריות שנשלחו (החלפה מלאה)
-        CategoryBasePrice::where('tenant_id', $restaurant->tenant_id)
-            ->whereIn('category_id', $validCategoryIds)
+        // מחק כללי מחיר קיימים ברמת קטגוריה עבור הקטגוריות שנשלחו
+        PriceRule::where('tenant_id', $restaurant->tenant_id)
+            ->where('target_type', 'base')
+            ->where('scope_type', 'category')
+            ->whereIn('scope_id', $validCategoryIds)
             ->delete();
 
-        // הכנס מחירים חדשים
-        $created = [];
+        // הכנס כללי מחיר חדשים
+        $count = 0;
         foreach ($request->input('prices') as $priceData) {
             if (!$validCategoryIds->contains($priceData['category_id'])) continue;
             if (!$validVariantIds->contains($priceData['restaurant_variant_id'])) continue;
 
-            $created[] = CategoryBasePrice::create([
-                'category_id' => $priceData['category_id'],
-                'restaurant_variant_id' => $priceData['restaurant_variant_id'],
+            PriceRule::create([
                 'tenant_id' => $restaurant->tenant_id,
+                'target_type' => 'base',
+                'target_id' => $priceData['restaurant_variant_id'],
+                'scope_type' => 'category',
+                'scope_id' => $priceData['category_id'],
                 'price_delta' => $priceData['price_delta'],
             ]);
+            $count++;
         }
 
         return response()->json([
             'success' => true,
             'message' => 'מחירי הבסיסים עודכנו בהצלחה!',
-            'count' => count($created),
+            'count' => $count,
+        ]);
+    }
+
+    // =============================================
+    // מחירי בסיס ברמת פריט (item-level)
+    // =============================================
+
+    public function getItemBasePrices(Request $request, $itemId)
+    {
+        $user = $request->user();
+
+        if (!$user->isManager()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'אין לך הרשאה לצפות במחירי בסיסים',
+            ], 403);
+        }
+
+        $restaurant = $user->restaurant;
+        if (!$restaurant) {
+            return response()->json([
+                'success' => false,
+                'message' => 'לא נמצאה מסעדה למשתמש',
+            ], 404);
+        }
+
+        $menuItem = MenuItem::where('id', $itemId)
+            ->whereHas('category', function ($q) use ($restaurant) {
+                $q->where('restaurant_id', $restaurant->id);
+            })
+            ->firstOrFail();
+
+        $bases = RestaurantVariant::where('restaurant_id', $restaurant->id)
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->get();
+
+        $priceService = new BasePriceService();
+        $categoryPrices = $priceService->getCategoryPrices($menuItem->category_id);
+        $itemAdjustments = $priceService->getItemAdjustments($menuItem->id);
+        $calculatedPrices = $priceService->calculateBasePricesForItem($menuItem->id, $menuItem->category_id, $bases);
+
+        $result = $bases->map(function ($base) use ($categoryPrices, $itemAdjustments, $calculatedPrices) {
+            return [
+                'base_id' => $base->id,
+                'base_name' => $base->name,
+                'category_price' => $categoryPrices[$base->id] ?? 0,
+                'item_adjustment' => $itemAdjustments[$base->id] ?? 0,
+                'final_price' => $calculatedPrices[$base->id] ?? 0,
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'item_id' => (int) $itemId,
+            'category_id' => $menuItem->category_id,
+            'bases' => $result,
+        ]);
+    }
+
+    public function saveItemBasePrices(Request $request, $itemId)
+    {
+        $user = $request->user();
+
+        if (!$user->isManager()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'אין לך הרשאה לעדכן מחירי בסיסים',
+            ], 403);
+        }
+
+        $request->validate([
+            'adjustments' => 'required|array',
+            'adjustments.*.base_id' => 'required|integer|exists:restaurant_variants,id',
+            'adjustments.*.price_delta' => 'required|numeric|min:-999.99|max:999.99',
+        ]);
+
+        $restaurant = $user->restaurant;
+        if (!$restaurant) {
+            return response()->json([
+                'success' => false,
+                'message' => 'לא נמצאה מסעדה למשתמש',
+            ], 404);
+        }
+
+        $menuItem = MenuItem::where('id', $itemId)
+            ->whereHas('category', function ($q) use ($restaurant) {
+                $q->where('restaurant_id', $restaurant->id);
+            })
+            ->firstOrFail();
+
+        $validBaseIds = RestaurantVariant::where('restaurant_id', $restaurant->id)
+            ->pluck('id');
+
+        // מחק כללי מחיר קיימים ברמת פריט
+        PriceRule::where('tenant_id', $restaurant->tenant_id)
+            ->where('target_type', 'base')
+            ->where('scope_type', 'item')
+            ->where('scope_id', $menuItem->id)
+            ->delete();
+
+        // הכנס כללי מחיר חדשים (רק אם delta != 0)
+        $count = 0;
+        foreach ($request->input('adjustments') as $adj) {
+            if (!$validBaseIds->contains($adj['base_id'])) continue;
+            if ((float) $adj['price_delta'] == 0) continue;
+
+            PriceRule::create([
+                'tenant_id' => $restaurant->tenant_id,
+                'target_type' => 'base',
+                'target_id' => $adj['base_id'],
+                'scope_type' => 'item',
+                'scope_id' => $menuItem->id,
+                'price_delta' => $adj['price_delta'],
+            ]);
+            $count++;
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'התאמות מחיר ברמת הפריט עודכנו בהצלחה!',
+            'count' => $count,
         ]);
     }
 
