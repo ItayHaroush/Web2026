@@ -228,8 +228,9 @@ class CopilotService
      */
     private function callCopilotCli(string $prompt): array
     {
-        // Use direct copilot CLI instead of gh wrapper
-        $cliPath = '/Users/itaymac/Library/Application Support/Code/User/globalStorage/github.copilot-chat/copilotCli/copilot';
+        // Use CLI path from config, fallback to known VS Code location
+        $cliPath = config('copilot.cli_path')
+            ?: '/Users/itaymac/Library/Application Support/Code/User/globalStorage/github.copilot-chat/copilotCli/copilot';
 
         if (!file_exists($cliPath)) {
             Log::warning('Copilot CLI not found, falling back to mock response', [
@@ -410,35 +411,42 @@ class CopilotService
      */
     private function generateMockBusinessInsight(string $prompt): array
     {
-        $promptLower = mb_strtolower($prompt);
+        // Randomize mock responses to avoid always returning the same text
+        $responses = [
+            [
+                'content' => "על סמך הנתונים האחרונים, זיהיתי הזדמנות לשפר את המכירות.\n**ניתוח הזמנות:** בלטה עלייה בהזמנות בשעות הערב (18:00-21:00). נראה שהמטבח עומד בעומס יפה.\n\n**המלצה:** שקול לתגבר את מערך השליחים בסופ\"ש הקרוב.",
+                'chartTitle' => 'עומס הזמנות (לפי שעה)',
+                'chartData' => [2, 5, 15, 30, 45, 20, 10],
+            ],
+            [
+                'content' => "**תובנה עסקית:** הלקוחות החוזרים מהווים 60% מההזמנות השבוע. זה נתון מצוין!\n\nעם זאת, יש ירידה קלה בלקוחות חדשים.\n\n**המלצה:** כדאי להפעיל קמפיין הטבות למצטרפים חדשים כדי לאזן את התמהיל.",
+                'chartTitle' => 'לקוחות חדשים vs חוזרים',
+                'chartData' => [5, 8, 4, 10, 3, 12, 7],
+            ],
+            [
+                'content' => "**צמיחה עסקית:** מנות הספיישל זוכות לחשיפה נמוכה באפליקציה.\n\n**המלצה:** הוסף תמונות חדשות ואיכותיות למנות המיוחדות וצור קופון הנחה ממוקד לקהל הצעיר.",
+                'chartTitle' => 'מגמות מכירות',
+                'chartData' => [10, 15, 12, 18, 20, 25, 22],
+            ],
+            [
+                'content' => "**ניתוח מגמות:** ניכרת עלייה של 12% בהכנסות לעומת השבוע הקודם. המנות הפופולריות ביותר הן אלו שבקטגוריית העיקריות.\n\n**המלצה:** כדאי לקדם ארוחות עסקיות בשעות הצהריים כדי למנף את התנועה.",
+                'chartTitle' => 'הכנסות שבועיות',
+                'chartData' => [120, 135, 118, 142, 155, 168, 175],
+            ],
+        ];
 
-        $content = "על סמך הנתונים האחרונים, זיהיתי הזדמנות לשפר את המכירות.\n";
-        $chartTitle = "מגמות מכירות";
-        $chartData = [10, 15, 12, 18, 20, 25, 22]; // Example upward trend
-
-        if (str_contains($promptLower, 'לקוחות') || str_contains($promptLower, 'customers')) {
-            $content .= "**תובנה עסקית:** הלקוחות החוזרים מהווים 60% מההזמנות השבוע. זה נתון מצוין! עם זאת, יש ירידה קלה בלקוחות חדשים.\n\n**המלצה:** כדאי להפעיל קמפיין הטבות למצטרפים חדשים כדי לאזן את התמהיל.";
-            $chartTitle = "לקוחות חדשים vs חוזרים";
-            $chartData = [5, 8, 4, 10, 3, 12, 7];
-        } elseif (str_contains($promptLower, 'הזמנות') || str_contains($promptLower, 'orders')) {
-            $content .= "**ניתוח הזמנות:** בלטה עלייה בהזמנות בשעות הערב (18:00-21:00). נראה שהמטבח עומד בעומס יפה, אך זמן המשלוח הממוצע עלה ב-5 דקות.\n\n**המלצה:** שקול לתגבר את מערך השליחים בסופ\"ש הקרוב.";
-            $chartTitle = "עומס הזמנות (לפי שעה)";
-            $chartData = [2, 5, 15, 30, 45, 20, 10]; // Peak hours
-        } else {
-            // General marketing/growth
-            $content .= "**צמיחה עסקית:** מנות הספיישל זוכות לחשיפה נמוכה באפליקציה.\n\n**המלצה:** הוסף תמונות חדשות ואיכותיות למנות המיוחדות וצור קופון הנחה ממוקד לקהל הצעיר.";
-        }
+        $selected = $responses[array_rand($responses)];
 
         return [
-            'content' => $content,
+            'content' => $selected['content'],
             'chart' => [
                 'type' => 'line',
                 'data' => [
                     'labels' => ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'],
                     'datasets' => [
                         [
-                            'label' => $chartTitle,
-                            'data' => $chartData,
+                            'label' => $selected['chartTitle'],
+                            'data' => $selected['chartData'],
                             'borderColor' => '#3b82f6',
                             'backgroundColor' => 'rgba(59, 130, 246, 0.2)',
                             'fill' => true
@@ -447,13 +455,12 @@ class CopilotService
                 ]
             ],
             'actions' => [
-                ['label' => '🎫 יצירת קופון', 'route' => '/admin/promotions/new'],
-                ['label' => '📢 קמפיין שיווקי', 'route' => '/admin/marketing'],
-                ['label' => '⭐ תובנות נוספות', 'route' => '/admin/reports']
+                ['label' => '🎫 צור קופון', 'route' => '/admin/promotions/new'],
+                ['label' => '📊 דוחות', 'route' => '/admin/reports']
             ],
             'tokens' => 150,
             'model' => 'copilot-business-mock',
-            'should_type' => true // Hint for frontend typing effect
+            'should_type' => true
         ];
     }
 
@@ -1547,10 +1554,23 @@ PROMPT;
         $topSellersSummary = "\nהמנות הנמכרות ביותר (30 יום אחרונים):\n";
         if (!empty($topSellers)) {
             foreach ($topSellers as $seller) {
-                $topSellersSummary .= "- {$seller->name}: {$seller->total_sold} יחידות\n";
+                $sellerName = is_object($seller) ? $seller->name : ($seller['name'] ?? 'מנה');
+                $sellerSold = is_object($seller) ? $seller->total_sold : ($seller['total_sold'] ?? 0);
+                $topSellersSummary .= "- {$sellerName}: {$sellerSold} יחידות\n";
             }
         } else {
             $topSellersSummary .= "אין נתוני מכירות זמינים\n";
+        }
+
+        // Build hourly distribution summary
+        $hourlyDistribution = $context['hourly_distribution'] ?? [];
+        $hourlySummary = "\nפילוח הזמנות לפי שעות (30 יום אחרונים):\n";
+        if (!empty($hourlyDistribution)) {
+            foreach ($hourlyDistribution as $hour => $count) {
+                $hourlySummary .= "- שעה {$hour}:00 - {$count} הזמנות\n";
+            }
+        } else {
+            $hourlySummary .= "אין נתוני שעות זמינים\n";
         }
 
         $prompt = "אתה אנליסט עסקי למסעדה '{$restaurantName}' (tenant_id: {$tenantId}). אתה חייב לענות רק על סמך הנתונים האמיתיים של המסעדה הזו. אסור לך להמציא מנות או מידע שלא קיים. אם אין נתונים - אמור זאת במפורש.\n\n"
@@ -1565,11 +1585,12 @@ PROMPT;
             . "- שבוע אחרון: ₪{$revenueWeek}\n\n"
             . "🍽️ {$menuSummary}\n"
             . "🏆 {$topSellersSummary}\n"
+            . "🕐 {$hourlySummary}\n"
             . "⏳ הזמנות ממתינות: {$pendingOrders}\n\n"
             . "**חשוב: השתמש רק במידע האמיתי שסיפקתי. אל תמציא מנות או נתונים!**\n\n"
             . "מבנה ה-JSON הנדרש (תוכן בעברית):\n"
             . '{"sales_trend": "ניתוח מגמת מכירות", "top_performers": "המנות המובילות בפועל", '
-            . '"peak_times": "זמני שיא (אם יש נתונים)", "recommendations": ["המלצה 1", "המלצה 2"], "alert": "התראה או null"}'
+            . '"peak_times": "זמני שיא לפי הנתונים", "recommendations": ["המלצה 1", "המלצה 2"], "alert": "התראה חשובה אם יש, או אין התראות"}'
             . "\n\nהנחיות:\n"
             . "1. כתוב משפטים מלאים וברורים בעברית.\n"
             . "2. התייחס רק למנות שמופיעות ברשימה האמיתית.\n"
@@ -1594,7 +1615,7 @@ PROMPT;
                     'top_performers' => $sanitize($parsed['top_performers'] ?? 'אין נתונים'),
                     'peak_times' => $sanitize($parsed['peak_times'] ?? 'אין נתונים'),
                     'recommendations' => $parsed['recommendations'] ?? [],
-                    'alert' => $parsed['alert'] ?? null,
+                    'alert' => $sanitize($parsed['alert'] ?? 'אין התראות'),
                     'provider' => 'copilot_cli'
                 ];
             }
@@ -1604,13 +1625,29 @@ PROMPT;
             // Fallback: Smart Mock based on REAL DATA from context
             $menuItemsList = $context['menu_items'] ?? [];
             $topSellers = $context['top_sellers'] ?? [];
+            $hourlyDistribution = $context['hourly_distribution'] ?? [];
 
             // Generate "Smart" text based on real top sellers
             if (!empty($topSellers)) {
-                $topNames = array_map(fn($item) => $item->name, array_slice($topSellers, 0, 2));
+                $topNames = [];
+                foreach (array_slice($topSellers, 0, 2) as $seller) {
+                    $topNames[] = is_object($seller) ? $seller->name : ($seller['name'] ?? 'מנה');
+                }
                 $topPerformersText = implode(' ו-', $topNames) . " מובילות את המכירות השבוע.";
             } else {
                 $topPerformersText = "עדיין אין מספיק נתונים לזיהוי מנות מובילות.";
+            }
+
+            // Generate peak times from hourly distribution
+            $peakTimesText = "טרם זוהו שעות עומס מובהקות";
+            if (!empty($hourlyDistribution)) {
+                arsort($hourlyDistribution);
+                $topHours = array_slice($hourlyDistribution, 0, 3, true);
+                $peakParts = [];
+                foreach ($topHours as $hour => $count) {
+                    $peakParts[] = "{$hour}:00 ({$count} הזמנות)";
+                }
+                $peakTimesText = "שעות שיא: " . implode(', ', $peakParts);
             }
 
             // Generate "Smart" recommendations based on real menu
@@ -1626,10 +1663,10 @@ PROMPT;
             $result = [
                 'sales_trend' => $ordersWeek > 0 ? "נרשמת פעילות עסקית עם {$ordersWeek} הזמנות השבוע" : "אין מספיק נתונים לזיהוי מגמה",
                 'top_performers' => $topPerformersText,
-                'peak_times' => $ordersToday > 5 ? "נראה שיש פעילות ערה היום, המשך לעקוב" : "טרם זוהו שעות עומס מובהקות",
+                'peak_times' => $peakTimesText,
                 'recommendations' => $recommendations,
-                'alert' => null,
-                'provider' => 'copilot_smart_fallback' // Mark as fallback so we know
+                'alert' => 'אין התראות',
+                'provider' => 'copilot_smart_fallback'
             ];
         }
 
@@ -1816,7 +1853,7 @@ PROMPT;
     /**
      * שיחה עם עוזר AI למנהל מסעדה - נתונים ספציפיים למסעדה בלבד
      */
-    public function chatWithRestaurant(string $message, array $context, ?string $preset = null): string
+    public function chatWithRestaurant(string $message, array $context, ?string $preset = null): array
     {
         set_time_limit(120);
         $systemPrompt = $this->buildRestaurantSystemPrompt($context);
@@ -1824,8 +1861,12 @@ PROMPT;
 
         $response = $this->callCopilot($systemPrompt . "\n\n" . $userMessage);
 
-        // callCopilot מחזיר array עם 'content'
-        return $response['content'] ?? 'שגיאה בקבלת תשובה מהסוכן';
+        return [
+            'response' => $response['content'] ?? 'שגיאה בקבלת תשובה מהסוכן',
+            'provider' => 'copilot',
+            'model' => $response['model'] ?? 'copilot-cli',
+            'suggested_actions' => $this->getRestaurantSuggestedActions($context, $preset),
+        ];
     }
 
     /**
@@ -1837,6 +1878,11 @@ PROMPT;
         $systemPrompt = "אתה עוזר AI חכם למסעדה '{$restaurant['name']}' במערכת TakeEat.\n\n";
         $systemPrompt .= "תפקידך: לספק תובנות עסקיות, המלצות תפריט, וניתוח ביצועים **רק עבור מסעדה זו**.\n\n";
         $systemPrompt .= "⚠️ חשוב: אל תתייחס לנתונים של מסעדות אחרות - רק למסעדה הזו!\n\n";
+
+        // תאריך ושעה נוכחיים
+        if (!empty($context['current_datetime'])) {
+            $systemPrompt .= "📅 תאריך ושעה נוכחיים (שעון ישראל): {$context['current_datetime']}\n\n";
+        }
 
         // מידע על המסעדה
         $systemPrompt .= "=== מידע על המסעדה ===\n";

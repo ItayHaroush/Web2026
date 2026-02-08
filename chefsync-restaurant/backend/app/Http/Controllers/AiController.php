@@ -214,6 +214,16 @@ class AiController extends Controller
                 ->get()
                 ->toArray();
 
+            // Hourly order distribution (last 30 days) for peak_times analysis
+            $hourlyDistribution = DB::table('orders')
+                ->where('tenant_id', $tenantId)
+                ->where('created_at', '>=', now()->subDays(30))
+                ->select(DB::raw('HOUR(created_at) as hour'), DB::raw('COUNT(*) as count'))
+                ->groupBy(DB::raw('HOUR(created_at)'))
+                ->orderBy('hour')
+                ->pluck('count', 'hour')
+                ->toArray();
+
             $context = [
                 'restaurant_name' => $restaurant->name,
                 'tenant_id' => $tenantId,
@@ -228,6 +238,8 @@ class AiController extends Controller
                 'revenue_today' => $restaurant->orders()->whereDate('created_at', today())->sum('total_amount'),
                 'revenue_week' => $restaurant->orders()->where('created_at', '>=', now()->subDays(7))->sum('total_amount'),
                 'pending_orders' => $restaurant->orders()->where('status', 'received')->count(),
+                'hourly_distribution' => $hourlyDistribution,
+                'is_open' => $restaurant->is_open ?? true,
             ];
 
             // ⚠️ Check if there's enough data for insights

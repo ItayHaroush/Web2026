@@ -19,6 +19,9 @@ class RestaurantAddonGroup extends Model
         'is_active',
         'sort_order',
         'placement',
+        'source_type',
+        'source_category_id',
+        'source_include_prices',
     ];
 
     protected $casts = [
@@ -27,6 +30,8 @@ class RestaurantAddonGroup extends Model
         'is_required' => 'boolean',
         'is_active' => 'boolean',
         'sort_order' => 'integer',
+        'source_category_id' => 'integer',
+        'source_include_prices' => 'boolean',
     ];
 
     protected static function booted()
@@ -41,6 +46,11 @@ class RestaurantAddonGroup extends Model
     public function restaurant(): BelongsTo
     {
         return $this->belongsTo(Restaurant::class);
+    }
+
+    public function sourceCategory(): BelongsTo
+    {
+        return $this->belongsTo(Category::class, 'source_category_id');
     }
 
     public function addons(): HasMany

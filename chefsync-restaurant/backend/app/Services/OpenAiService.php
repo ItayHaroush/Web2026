@@ -292,10 +292,23 @@ class OpenAiService extends BaseAiService
             $topSellersSummary = "\nהמנות הנמכרות ביותר (30 יום אחרונים):\n";
             if (!empty($topSellers)) {
                 foreach ($topSellers as $seller) {
-                    $topSellersSummary .= "- {$seller->name}: {$seller->total_sold} יחידות\n";
+                    $sellerName = is_object($seller) ? $seller->name : ($seller['name'] ?? 'מנה');
+                    $sellerSold = is_object($seller) ? $seller->total_sold : ($seller['total_sold'] ?? 0);
+                    $topSellersSummary .= "- {$sellerName}: {$sellerSold} יחידות\n";
                 }
             } else {
                 $topSellersSummary .= "אין נתוני מכירות זמינים\n";
+            }
+
+            // Build hourly distribution summary
+            $hourlyDistribution = $context['hourly_distribution'] ?? [];
+            $hourlySummary = "\nפילוח הזמנות לפי שעות (30 יום אחרונים):\n";
+            if (!empty($hourlyDistribution)) {
+                foreach ($hourlyDistribution as $hour => $count) {
+                    $hourlySummary .= "- שעה {$hour}:00 - {$count} הזמנות\n";
+                }
+            } else {
+                $hourlySummary .= "אין נתוני שעות זמינים\n";
             }
 
             $systemPrompt = "אתה אנליסט עסקי למסעדה '{$restaurantName}' (tenant_id: {$tenantId}). אתה חייב לענות רק על סמך הנתונים האמיתיים של המסעדה הזו. אסור לך להמציא מנות או מידע שלא קיים. אם אין נתונים - אמור זאת במפורש. הנתח את הנתונים בעברית ובצורה ממוקדת.";
@@ -311,11 +324,12 @@ class OpenAiService extends BaseAiService
                 . "- שבוע אחרון: ₪{$revenueWeek}\n\n"
                 . "🍽️ {$menuSummary}\n"
                 . "🏆 {$topSellersSummary}\n"
+                . "🕐 {$hourlySummary}\n"
                 . "⏳ הזמנות ממתינות: {$pendingOrders}\n\n"
                 . "**חשוב: השתמש רק במידע האמיתי שסיפקתי. אל תמציא מנות או נתונים!**\n\n"
                 . "החזר JSON בפורמט הזה בלבד (תוכן בעברית):\n"
                 . '{"sales_trend": "ניתוח מגמת מכירות", "top_performers": "המנות המובילות בפועל", '
-                . '"peak_times": "זמני שיא (אם יש נתונים)", "recommendations": ["המלצה 1", "המלצה 2"], "alert": "התראה או null"}';
+                . '"peak_times": "זמני שיא לפי הנתונים", "recommendations": ["המלצה 1", "המלצה 2"], "alert": "התראה חשובה אם יש, או אין התראות"}';
 
             $response = $this->callOpenAi($prompt, $systemPrompt);
             $responseTime = (int)((microtime(true) - $startTime) * 1000);
@@ -335,7 +349,7 @@ class OpenAiService extends BaseAiService
                             'top_performers' => $sanitize($parsed['top_performers'] ?? 'אין נתונים'),
                             'peak_times' => $sanitize($parsed['peak_times'] ?? 'אין נתונים'),
                             'recommendations' => $parsed['recommendations'] ?? [],
-                            'alert' => $parsed['alert'] ?? null,
+                            'alert' => $sanitize($parsed['alert'] ?? 'אין התראות'),
                             'provider' => 'openai'
                         ];
                     }
@@ -349,6 +363,7 @@ class OpenAiService extends BaseAiService
                 // Fallback: Smart Mock based on REAL DATA from context
                 $menuItemsList = $context['menu_items'] ?? [];
                 $topSellers = $context['top_sellers'] ?? [];
+                $hourlyDistribution = $context['hourly_distribution'] ?? [];
 
                 // Generate "Smart" text based on real top sellers
                 if (!empty($topSellers)) {
@@ -359,6 +374,18 @@ class OpenAiService extends BaseAiService
                     $topPerformersText = implode(' ו-', $topNames) . " מובילות את המכירות השבוע.";
                 } else {
                     $topPerformersText = "עדיין אין מספיק נתונים לזיהוי מנות מובילות.";
+                }
+
+                // Generate peak times from hourly distribution
+                $peakTimesText = "טרם זוהו שעות עומס מובהקות";
+                if (!empty($hourlyDistribution)) {
+                    arsort($hourlyDistribution);
+                    $topHours = array_slice($hourlyDistribution, 0, 3, true);
+                    $peakParts = [];
+                    foreach ($topHours as $hour => $count) {
+                        $peakParts[] = "{$hour}:00 ({$count} הזמנות)";
+                    }
+                    $peakTimesText = "שעות שיא: " . implode(', ', $peakParts);
                 }
 
                 // Generate "Smart" recommendations based on real menu
@@ -374,9 +401,9 @@ class OpenAiService extends BaseAiService
                 $result = [
                     'sales_trend' => $ordersWeek > 0 ? "נרשמת פעילות עסקית עם {$ordersWeek} הזמנות השבוע" : "אין מספיק נתונים לזיהוי מגמה",
                     'top_performers' => $topPerformersText,
-                    'peak_times' => $ordersToday > 5 ? "נראה שיש פעילות ערה היום, המשך לעקוב" : "טרם זוהו שעות עומס מובהקות",
+                    'peak_times' => $peakTimesText,
                     'recommendations' => $recommendations,
-                    'alert' => null,
+                    'alert' => 'אין התראות',
                     'provider' => 'openai_smart_fallback'
                 ];
             }
@@ -600,6 +627,11 @@ class OpenAiService extends BaseAiService
     private function buildRestaurantChatPrompt(array $context): string
     {
         $prompt = "אתה עוזר AI ידידותי למנהלי מסעדות המשתמשים במערכת TakeEat.\n\n";
+
+        // תאריך ושעה נוכחיים
+        if (!empty($context['current_datetime'])) {
+            $prompt .= "📅 תאריך ושעה נוכחיים (שעון ישראל): {$context['current_datetime']}\n\n";
+        }
 
         // Add restaurant specific context
         if (!empty($context['restaurant'])) {

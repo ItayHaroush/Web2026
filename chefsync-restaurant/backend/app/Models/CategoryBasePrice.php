@@ -4,25 +4,18 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class RestaurantVariant extends Model
+class CategoryBasePrice extends Model
 {
     protected $fillable = [
-        'restaurant_id',
+        'category_id',
+        'restaurant_variant_id',
         'tenant_id',
-        'name',
         'price_delta',
-        'is_default',
-        'is_active',
-        'sort_order',
     ];
 
     protected $casts = [
         'price_delta' => 'decimal:2',
-        'is_default' => 'boolean',
-        'is_active' => 'boolean',
-        'sort_order' => 'integer',
     ];
 
     protected static function booted()
@@ -34,13 +27,13 @@ class RestaurantVariant extends Model
         });
     }
 
-    public function restaurant(): BelongsTo
+    public function category(): BelongsTo
     {
-        return $this->belongsTo(Restaurant::class);
+        return $this->belongsTo(Category::class);
     }
 
-    public function categoryPrices(): HasMany
+    public function variant(): BelongsTo
     {
-        return $this->hasMany(CategoryBasePrice::class, 'restaurant_variant_id');
+        return $this->belongsTo(RestaurantVariant::class, 'restaurant_variant_id');
     }
 }
