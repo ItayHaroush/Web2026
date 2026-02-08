@@ -11,6 +11,7 @@ use App\Models\City;
 use App\Models\RestaurantAddon;
 use App\Models\RestaurantAddonGroup;
 use App\Models\RestaurantVariant;
+use App\Models\CategoryBasePrice;
 use App\Models\DeliveryZone;
 use App\Models\RestaurantPayment;
 use App\Models\RestaurantSubscription;
@@ -1004,6 +1005,134 @@ class AdminController extends Controller
         ]);
     }
 
+    public function deleteBase(Request $request, $id)
+    {
+        $user = $request->user();
+
+        if (!$user->isManager()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'אין לך הרשאה למחוק בסיסים',
+            ], 403);
+        }
+
+        $restaurant = $user->restaurant;
+        if (!$restaurant) {
+            return response()->json([
+                'success' => false,
+                'message' => 'לא נמצאה מסעדה למשתמש',
+            ], 404);
+        }
+
+        $base = RestaurantVariant::where('restaurant_id', $restaurant->id)
+            ->findOrFail($id);
+
+        $base->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'הבסיס נמחק בהצלחה!',
+        ]);
+    }
+
+    // =============================================
+    // ניהול מחירי בסיס לפי קטגוריה
+    // =============================================
+
+    public function getCategoryBasePrices(Request $request)
+    {
+        $user = $request->user();
+
+        if (!$user->isManager()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'אין לך הרשאה לצפות במחירי בסיסים',
+            ], 403);
+        }
+
+        $restaurant = $user->restaurant;
+        if (!$restaurant) {
+            return response()->json([
+                'success' => false,
+                'message' => 'לא נמצאה מסעדה למשתמש',
+            ], 404);
+        }
+
+        $prices = CategoryBasePrice::where('tenant_id', $restaurant->tenant_id)
+            ->with(['category:id,name,icon', 'variant:id,name'])
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'category_base_prices' => $prices,
+        ]);
+    }
+
+    public function saveCategoryBasePrices(Request $request)
+    {
+        $user = $request->user();
+
+        if (!$user->isManager()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'אין לך הרשאה לעדכן מחירי בסיסים',
+            ], 403);
+        }
+
+        $request->validate([
+            'prices' => 'required|array',
+            'prices.*.category_id' => 'required|integer|exists:categories,id',
+            'prices.*.restaurant_variant_id' => 'required|integer|exists:restaurant_variants,id',
+            'prices.*.price_delta' => 'required|numeric|min:0|max:999.99',
+        ]);
+
+        $restaurant = $user->restaurant;
+        if (!$restaurant) {
+            return response()->json([
+                'success' => false,
+                'message' => 'לא נמצאה מסעדה למשתמש',
+            ], 404);
+        }
+
+        $categoryIds = collect($request->input('prices'))->pluck('category_id')->unique();
+        $variantIds = collect($request->input('prices'))->pluck('restaurant_variant_id')->unique();
+
+        // וודא שהקטגוריות שייכות למסעדה
+        $validCategoryIds = Category::where('restaurant_id', $restaurant->id)
+            ->whereIn('id', $categoryIds)
+            ->pluck('id');
+
+        // וודא שהבסיסים שייכים למסעדה
+        $validVariantIds = RestaurantVariant::where('restaurant_id', $restaurant->id)
+            ->whereIn('id', $variantIds)
+            ->pluck('id');
+
+        // מחק מחירים קיימים עבור הקטגוריות שנשלחו (החלפה מלאה)
+        CategoryBasePrice::where('tenant_id', $restaurant->tenant_id)
+            ->whereIn('category_id', $validCategoryIds)
+            ->delete();
+
+        // הכנס מחירים חדשים
+        $created = [];
+        foreach ($request->input('prices') as $priceData) {
+            if (!$validCategoryIds->contains($priceData['category_id'])) continue;
+            if (!$validVariantIds->contains($priceData['restaurant_variant_id'])) continue;
+
+            $created[] = CategoryBasePrice::create([
+                'category_id' => $priceData['category_id'],
+                'restaurant_variant_id' => $priceData['restaurant_variant_id'],
+                'tenant_id' => $restaurant->tenant_id,
+                'price_delta' => $priceData['price_delta'],
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'מחירי הבסיסים עודכנו בהצלחה!',
+            'count' => count($created),
+        ]);
+    }
+
     // =============================================
     // ניהול קבוצות תוספות (Add-on Groups)
     // =============================================
@@ -1024,6 +1153,9 @@ class AdminController extends Controller
             'min_selections' => 'sometimes|integer|min:0|max:99',
             'max_selections' => 'nullable|integer|min:0|max:99',
             'is_active' => 'sometimes|boolean',
+            'source_type' => 'sometimes|in:manual,category',
+            'source_category_id' => 'nullable|integer|exists:categories,id',
+            'source_include_prices' => 'sometimes|boolean',
         ]);
 
         $restaurant = $user->restaurant;
@@ -1032,6 +1164,17 @@ class AdminController extends Controller
                 'success' => false,
                 'message' => 'לא נמצאה מסעדה למשתמש',
             ], 404);
+        }
+
+        // אם source_type=category, וודא שהקטגוריה שייכת למסעדה
+        $sourceType = $request->input('source_type', 'manual');
+        $sourceCategoryId = null;
+        $sourceIncludePrices = $request->boolean('source_include_prices', true);
+        if ($sourceType === 'category') {
+            $sourceCategoryId = $request->input('source_category_id');
+            if ($sourceCategoryId) {
+                Category::where('restaurant_id', $restaurant->id)->findOrFail($sourceCategoryId);
+            }
         }
 
         $maxSortOrder = RestaurantAddonGroup::where('restaurant_id', $restaurant->id)->max('sort_order') ?? 0;
@@ -1058,6 +1201,9 @@ class AdminController extends Controller
             'is_active' => $request->boolean('is_active', true),
             'sort_order' => $maxSortOrder + 1,
             'placement' => $request->input('placement', 'inside'),
+            'source_type' => $sourceType,
+            'source_category_id' => $sourceCategoryId,
+            'source_include_prices' => $sourceIncludePrices,
         ]);
 
         return response()->json([
@@ -1085,6 +1231,9 @@ class AdminController extends Controller
             'min_selections' => 'sometimes|integer|min:0|max:99',
             'max_selections' => 'nullable|integer|min:0|max:99',
             'placement' => 'sometimes|in:inside,side',
+            'source_type' => 'sometimes|in:manual,category',
+            'source_category_id' => 'nullable|integer|exists:categories,id',
+            'source_include_prices' => 'sometimes|boolean',
         ]);
 
         $restaurant = $user->restaurant;
@@ -1101,6 +1250,24 @@ class AdminController extends Controller
             ->findOrFail($id);
 
         $payload = $request->only(['name', 'sort_order', 'is_active', 'min_selections', 'max_selections', 'placement']);
+
+        // טיפול ב-source_type / source_category_id
+        if ($request->has('source_type')) {
+            $payload['source_type'] = $request->input('source_type');
+            if ($payload['source_type'] === 'category') {
+                $sourceCategoryId = $request->input('source_category_id');
+                if ($sourceCategoryId) {
+                    Category::where('restaurant_id', $restaurant->id)->findOrFail($sourceCategoryId);
+                }
+                $payload['source_category_id'] = $sourceCategoryId;
+            } else {
+                $payload['source_category_id'] = null;
+            }
+        }
+
+        if ($request->has('source_include_prices')) {
+            $payload['source_include_prices'] = $request->boolean('source_include_prices');
+        }
 
         // טיפול ב-max_selections = 0 (ללא הגבלה - יהפך ל-null)
         if ($request->has('max_selections')) {
@@ -1207,6 +1374,9 @@ class AdminController extends Controller
             'is_required' => $originalGroup->is_required,
             'is_active' => $originalGroup->is_active,
             'sort_order' => $maxSortOrder + 1,
+            'source_type' => $originalGroup->source_type ?? 'manual',
+            'source_category_id' => $originalGroup->source_category_id,
+            'source_include_prices' => $originalGroup->source_include_prices ?? true,
         ]);
 
         // העתק את כל הפריטים

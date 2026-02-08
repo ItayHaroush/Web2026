@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\MenuItem;
 use App\Models\Category;
+use App\Models\CategoryBasePrice;
 use App\Models\Restaurant;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -68,6 +69,14 @@ class MenuController extends Controller
             $restaurantVariants = $restaurant?->variants ?? collect();
             $restaurantAddonGroups = $restaurant?->addonGroups ?? collect();
 
+            // טען מחירי בסיס לפי קטגוריה (category_id => variant_id => price_delta)
+            $categoryBasePricesMap = CategoryBasePrice::where('tenant_id', $tenantId)
+                ->get()
+                ->groupBy('category_id')
+                ->map(function ($prices) {
+                    return $prices->keyBy('restaurant_variant_id');
+                });
+
             // קבל קטגוריות - רק פעילות (גם במצב preview, כדי שהמנהל יראה בדיוק מה הלקוח רואה)
             $categoriesQuery = Category::where('tenant_id', $tenantId)
                 ->where('is_active', true);
@@ -97,19 +106,27 @@ class MenuController extends Controller
                     }
                 ])
                 ->get()
-                ->map(function ($category) use ($restaurantVariants, $restaurantAddonGroups) {
+                ->map(function ($category) use ($restaurantVariants, $restaurantAddonGroups, $categoryBasePricesMap) {
+                    // מחירי בסיס ספציפיים לקטגוריה זו
+                    $categoryPrices = $categoryBasePricesMap->get($category->id);
+
                     return [
                         'id' => $category->id,
                         'name' => $category->name,
                         'description' => $category->description,
                         'icon' => $category->icon,
-                        'items' => $category->items->map(function ($item) use ($restaurantVariants, $restaurantAddonGroups) {
+                        'items' => $category->items->map(function ($item) use ($restaurantVariants, $restaurantAddonGroups, $categoryPrices) {
                             $variants = $item->use_variants
-                                ? $restaurantVariants->map(function ($variant) {
+                                ? $restaurantVariants->map(function ($variant) use ($categoryPrices) {
+                                    // אם יש מחיר ספציפי לקטגוריה, השתמש בו; אחרת fallback למחיר הגלובלי
+                                    $priceDelta = $categoryPrices && $categoryPrices->has($variant->id)
+                                        ? (float) $categoryPrices->get($variant->id)->price_delta
+                                        : (float) $variant->price_delta;
+
                                     return [
                                         'id' => $variant->id,
                                         'name' => $variant->name,
-                                        'price_delta' => (float) $variant->price_delta,
+                                        'price_delta' => $priceDelta,
                                         'is_default' => (bool) $variant->is_default,
                                     ];
                                 })->values()->toArray()
@@ -243,6 +260,9 @@ class MenuController extends Controller
     {
         $groups = $this->cloneAddonGroups($groups);
 
+        // פתרון תוספות מבוססות קטגוריה
+        $groups = $groups->map(fn($group) => $this->resolveCategoryAddons($group));
+
         // אם אין הגדרת scope - נציג את כל הקבוצות
         if (empty($item->addons_group_scope)) {
             return $this->filterAddonGroupsByCategory($groups, $categoryId);
@@ -321,5 +341,36 @@ class MenuController extends Controller
             $clone->setRelation('addons', $addons);
             return $clone;
         });
+    }
+
+    /**
+     * לקבוצה מבוססת קטגוריה - שלוף פריטי מנה פעילים מהקטגוריה כתוספות
+     */
+    private function resolveCategoryAddons($group)
+    {
+        if ($group->source_type !== 'category' || !$group->source_category_id) {
+            return $group;
+        }
+
+        $items = MenuItem::where('category_id', $group->source_category_id)
+            ->where('is_available', true)
+            ->orderBy('name')
+            ->get();
+
+        $includePrices = (bool) ($group->source_include_prices ?? true);
+
+        // המר פריטי מנה לפורמט תוספות
+        $syntheticAddons = $items->map(function ($item) use ($includePrices) {
+            $addon = new \stdClass();
+            $addon->id = 'cat_item_' . $item->id;
+            $addon->name = $item->name;
+            $addon->price_delta = $includePrices ? (float) $item->price : 0;
+            $addon->selection_weight = 1;
+            $addon->is_default = false;
+            return $addon;
+        });
+
+        $group->setRelation('addons', $syntheticAddons);
+        return $group;
     }
 }

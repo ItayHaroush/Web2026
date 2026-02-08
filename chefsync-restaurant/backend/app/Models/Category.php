@@ -47,6 +47,14 @@ class Category extends Model
     }
 
     /**
+     * מחירי בסיסים ספציפיים לקטגוריה
+     */
+    public function basePrices(): HasMany
+    {
+        return $this->hasMany(CategoryBasePrice::class);
+    }
+
+    /**
      * מדפסות המשויכות לקטגוריה
      */
     public function printers(): BelongsToMany

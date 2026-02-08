@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import AdminLayout from '../../layouts/AdminLayout';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import api from '../../services/apiClient';
@@ -14,34 +14,58 @@ import {
     FaToggleOff,
     FaTimes,
     FaSave,
-    FaInfoCircle
+    FaInfoCircle,
+    FaTable,
 } from 'react-icons/fa';
 
 export default function AdminBases() {
     const { getAuthHeaders, isManager } = useAdminAuth();
     const [bases, setBases] = useState([]);
+    const [categories, setCategories] = useState([]);
+    const [categoryBasePrices, setCategoryBasePrices] = useState([]);
+    const [priceMatrix, setPriceMatrix] = useState({});
     const [loading, setLoading] = useState(true);
     const [modalOpen, setModalOpen] = useState(false);
     const [editBase, setEditBase] = useState(null);
     const [saving, setSaving] = useState(false);
+    const [savingPrices, setSavingPrices] = useState(false);
     const [form, setForm] = useState({ name: '', price_delta: '0', is_active: true, is_default: false });
 
     useEffect(() => {
-        fetchBases();
+        fetchAll();
     }, []);
 
-    const fetchBases = async () => {
+    const fetchAll = async () => {
         try {
-            const response = await api.get('/admin/bases', { headers: getAuthHeaders() });
-            if (response.data.success) {
-                setBases(response.data.bases || []);
+            const [basesResult, categoriesResult, pricesResult] = await Promise.allSettled([
+                api.get('/admin/bases', { headers: getAuthHeaders() }),
+                api.get('/admin/categories', { headers: getAuthHeaders() }),
+                api.get('/admin/category-base-prices', { headers: getAuthHeaders() }),
+            ]);
+
+            if (basesResult.status === 'fulfilled' && basesResult.value.data.success) {
+                setBases(basesResult.value.data.bases || []);
+            }
+            if (categoriesResult.status === 'fulfilled' && categoriesResult.value.data.success) {
+                setCategories(categoriesResult.value.data.categories || []);
+            }
+            if (pricesResult.status === 'fulfilled' && pricesResult.value.data.success) {
+                const pricesData = pricesResult.value.data.category_base_prices || [];
+                setCategoryBasePrices(pricesData);
+                const matrix = {};
+                pricesData.forEach((p) => {
+                    matrix[`${p.category_id}-${p.restaurant_variant_id}`] = String(p.price_delta);
+                });
+                setPriceMatrix(matrix);
             }
         } catch (error) {
-            console.error('Failed to load bases', error.response?.data || error.message);
+            console.error('Failed to load data', error.response?.data || error.message);
         } finally {
             setLoading(false);
         }
     };
+
+    const activeBases = useMemo(() => bases.filter(b => b.is_active), [bases]);
 
     const openModal = (base = null) => {
         if (base) {
@@ -84,7 +108,7 @@ export default function AdminBases() {
                 await api.post('/admin/bases', payload, { headers: getAuthHeaders() });
             }
             closeModal();
-            fetchBases();
+            fetchAll();
         } catch (error) {
             console.error('Failed to save base', error.response?.data || error.message);
             alert(error.response?.data?.message || 'שגיאה בשמירת הבסיס');
@@ -100,7 +124,7 @@ export default function AdminBases() {
                 { is_active: !base.is_active },
                 { headers: getAuthHeaders() }
             );
-            fetchBases();
+            fetchAll();
         } catch (error) {
             console.error('Failed to toggle base', error.response?.data || error.message);
         }
@@ -113,9 +137,57 @@ export default function AdminBases() {
                 { is_default: true },
                 { headers: getAuthHeaders() }
             );
-            fetchBases();
+            fetchAll();
         } catch (error) {
             console.error('Failed to set default base', error.response?.data || error.message);
+        }
+    };
+
+    const deleteBase = async (base) => {
+        if (!isManager()) return;
+        if (!window.confirm(`למחוק את הבסיס "${base.name}"? פעולה זו לא ניתנת לביטול.`)) return;
+        try {
+            await api.delete(`/admin/bases/${base.id}`, { headers: getAuthHeaders() });
+            fetchAll();
+        } catch (error) {
+            console.error('Failed to delete base', error.response?.data || error.message);
+            alert(error.response?.data?.message || 'שגיאה במחיקת הבסיס');
+        }
+    };
+
+    const handlePriceChange = (categoryId, variantId, value) => {
+        setPriceMatrix(prev => ({
+            ...prev,
+            [`${categoryId}-${variantId}`]: value,
+        }));
+    };
+
+    const saveCategoryPrices = async () => {
+        if (!isManager()) return;
+        setSavingPrices(true);
+        try {
+            const prices = [];
+            categories.forEach(cat => {
+                activeBases.forEach(base => {
+                    const key = `${cat.id}-${base.id}`;
+                    const val = priceMatrix[key];
+                    if (val !== undefined && val !== '') {
+                        prices.push({
+                            category_id: cat.id,
+                            restaurant_variant_id: base.id,
+                            price_delta: Number(val) || 0,
+                        });
+                    }
+                });
+            });
+
+            await api.post('/admin/category-base-prices', { prices }, { headers: getAuthHeaders() });
+            fetchAll();
+        } catch (error) {
+            console.error('Failed to save category base prices', error.response?.data || error.message);
+            alert(error.response?.data?.message || 'שגיאה בשמירת מחירי הבסיסים');
+        } finally {
+            setSavingPrices(false);
         }
     };
 
@@ -132,7 +204,7 @@ export default function AdminBases() {
 
     return (
         <AdminLayout>
-            <div className="max-w-5xl mx-auto space-y-8 pb-32 animate-in fade-in duration-500">
+            <div className="max-w-7xl mx-auto space-y-12 pb-32 animate-in fade-in duration-500">
                 {/* Header Section */}
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 px-4">
                     <div className="flex items-center gap-5">
@@ -141,7 +213,7 @@ export default function AdminBases() {
                         </div>
                         <div>
                             <h1 className="text-4xl font-black text-gray-900 tracking-tight">בסיסי כריך</h1>
-                            <p className="text-gray-500 font-medium mt-1">ניהול בסיסים זמינים, תמחור וברירת מחדל</p>
+                            <p className="text-gray-500 font-medium mt-1">ניהול בסיסים זמינים, תמחור לפי קטגוריה וברירת מחדל</p>
                         </div>
                     </div>
                     {isManager() && (
@@ -194,7 +266,7 @@ export default function AdminBases() {
                                         <h3 className="text-2xl font-black text-gray-900 group-hover:text-brand-primary transition-colors">{base.name}</h3>
                                         <div className="flex items-center gap-2 mt-1">
                                             <span className="px-3 py-1 bg-gray-50 text-gray-400 rounded-lg text-[10px] font-black uppercase tracking-widest border border-gray-100">
-                                                בסיס גלובלי
+                                                מחיר ברירת מחדל
                                             </span>
                                         </div>
                                     </div>
@@ -220,18 +292,24 @@ export default function AdminBases() {
                                 </div>
 
                                 {isManager() && (
-                                    <div className="grid grid-cols-2 gap-4 mt-auto pt-4 translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">
+                                    <div className="grid grid-cols-3 gap-4 mt-auto pt-4 translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">
                                         <button
                                             onClick={() => openModal(base)}
-                                            className="flex items-center justify-center gap-3 py-4 bg-gray-50 text-gray-700 rounded-2xl text-sm font-black hover:bg-gray-200 transition-all active:scale-95 shadow-sm"
+                                            className="flex items-center justify-center gap-2 py-4 bg-gray-50 text-gray-700 rounded-2xl text-sm font-black hover:bg-gray-200 transition-all active:scale-95 shadow-sm"
                                         >
-                                            <FaEdit size={16} /> עריכה
+                                            <FaEdit size={14} /> עריכה
                                         </button>
                                         <button
                                             onClick={() => toggleActive(base)}
-                                            className={`flex items-center justify-center gap-3 py-4 rounded-2xl text-sm font-black transition-all active:scale-95 shadow-sm ${base.is_active ? 'bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white' : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white'}`}
+                                            className={`flex items-center justify-center gap-2 py-4 rounded-2xl text-sm font-black transition-all active:scale-95 shadow-sm ${base.is_active ? 'bg-amber-50 text-amber-600 hover:bg-amber-600 hover:text-white' : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white'}`}
                                         >
-                                            {base.is_active ? <><FaToggleOn size={18} /> השבת</> : <><FaToggleOff size={18} /> הפעל</>}
+                                            {base.is_active ? <><FaToggleOn size={16} /> השבת</> : <><FaToggleOff size={16} /> הפעל</>}
+                                        </button>
+                                        <button
+                                            onClick={() => deleteBase(base)}
+                                            className="flex items-center justify-center gap-2 py-4 bg-rose-50 text-rose-600 rounded-2xl text-sm font-black hover:bg-rose-600 hover:text-white transition-all active:scale-95 shadow-sm"
+                                        >
+                                            <FaTrash size={14} /> מחיקה
                                         </button>
                                     </div>
                                 )}
@@ -239,6 +317,114 @@ export default function AdminBases() {
                         ))
                     )}
                 </div>
+
+                {/* Category Base Prices Matrix */}
+                {activeBases.length > 0 && categories.length > 0 && isManager() && (
+                    <div className="px-4 space-y-6">
+                        <div className="bg-white rounded-[3rem] shadow-xl shadow-gray-200/50 border border-gray-100 overflow-hidden">
+                            <div className="p-8 border-b border-gray-50 bg-gray-50/30 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                                <div className="flex items-center gap-4">
+                                    <div className="p-3 bg-indigo-500 text-white rounded-2xl shadow-lg">
+                                        <FaTable size={20} />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-2xl font-black text-gray-900">תמחור בסיסים לפי קטגוריה</h2>
+                                        <p className="text-gray-500 font-medium text-xs">הגדר מחיר שונה לכל בסיס בהתאם לקטגוריה. שדה ריק = מחיר ברירת המחדל של הבסיס</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={saveCategoryPrices}
+                                    disabled={savingPrices}
+                                    className="flex items-center gap-3 bg-emerald-500 text-white px-8 py-3.5 rounded-2xl font-black hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20 active:scale-95 disabled:opacity-50"
+                                >
+                                    {savingPrices ? (
+                                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                                    ) : (
+                                        <>
+                                            <FaSave size={16} />
+                                            שמור מחירים
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+
+                            <div className="p-6 overflow-x-auto">
+                                <table className="w-full border-collapse">
+                                    <thead>
+                                        <tr>
+                                            <th className="text-right p-4 text-xs font-black text-gray-400 uppercase tracking-widest border-b-2 border-gray-100 sticky right-0 bg-white z-10 min-w-[160px]">
+                                                קטגוריה
+                                            </th>
+                                            {activeBases.map(base => (
+                                                <th key={base.id} className="p-4 text-center border-b-2 border-gray-100 min-w-[130px]">
+                                                    <div className="flex flex-col items-center gap-1">
+                                                        <FaBreadSlice className="text-amber-500" size={16} />
+                                                        <span className="text-xs font-black text-gray-700">{base.name}</span>
+                                                        <span className="text-[10px] text-gray-400 font-bold">
+                                                            ברירת מחדל: {Number(base.price_delta) === 0 ? 'חינם' : `₪${Number(base.price_delta).toFixed(1)}`}
+                                                        </span>
+                                                    </div>
+                                                </th>
+                                            ))}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {categories.map((cat, idx) => (
+                                            <tr key={cat.id} className={idx % 2 === 0 ? 'bg-gray-50/30' : 'bg-white'}>
+                                                <td className="p-4 border-b border-gray-50 sticky right-0 bg-inherit z-10">
+                                                    <div className="flex items-center gap-3">
+                                                        <span className="text-lg">{cat.icon || '📂'}</span>
+                                                        <span className="text-sm font-black text-gray-800">{cat.name}</span>
+                                                    </div>
+                                                </td>
+                                                {activeBases.map(base => {
+                                                    const key = `${cat.id}-${base.id}`;
+                                                    const val = priceMatrix[key];
+                                                    const hasCustomPrice = val !== undefined && val !== '';
+                                                    return (
+                                                        <td key={base.id} className="p-3 border-b border-gray-50 text-center">
+                                                            <div className="relative">
+                                                                <input
+                                                                    type="number"
+                                                                    min="0"
+                                                                    step="0.5"
+                                                                    value={val ?? ''}
+                                                                    onChange={(e) => handlePriceChange(cat.id, base.id, e.target.value)}
+                                                                    placeholder={Number(base.price_delta).toFixed(1)}
+                                                                    className={`w-full px-3 py-3 rounded-xl text-center font-black text-sm transition-all focus:ring-4 focus:ring-indigo-300/30 border-none ${hasCustomPrice ? 'bg-indigo-50 text-indigo-700' : 'bg-gray-50 text-gray-400'}`}
+                                                                />
+                                                                {hasCustomPrice && (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handlePriceChange(cat.id, base.id, '')}
+                                                                        className="absolute -top-1 -left-1 w-5 h-5 bg-rose-500 text-white rounded-full flex items-center justify-center text-[8px] hover:bg-rose-600 transition-all shadow-sm"
+                                                                        title="חזור למחיר ברירת מחדל"
+                                                                    >
+                                                                        <FaTimes size={8} />
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        </td>
+                                                    );
+                                                })}
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div className="p-6 pt-0">
+                                <div className="bg-amber-50/50 rounded-2xl p-5 border border-amber-100/50 flex items-start gap-3">
+                                    <FaInfoCircle className="text-amber-600 mt-0.5 shrink-0" />
+                                    <div className="text-sm font-medium text-amber-900/70 leading-relaxed">
+                                        <p className="font-black text-amber-800 mb-1">איך זה עובד?</p>
+                                        <p>הזן מחיר ספציפי לכל שילוב של קטגוריה ובסיס. שדה ריק משתמש במחיר ברירת המחדל של הבסיס. לדוגמה: פיתה עלות ₪0 בשווארמה, אבל ₪3 בסלטים.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Modern Modal */}
                 {modalOpen && (
@@ -253,7 +439,7 @@ export default function AdminBases() {
                                         <h2 className="text-2xl font-black text-gray-900 tracking-tight">
                                             {editBase ? 'עריכת בסיס' : 'הוספת בסיס חדש'}
                                         </h2>
-                                        <p className="text-gray-500 font-medium text-sm">הגדרת שם, מחיר וסטטוס</p>
+                                        <p className="text-gray-500 font-medium text-sm">הגדרת שם, מחיר ברירת מחדל וסטטוס</p>
                                     </div>
                                 </div>
                                 <button
@@ -280,7 +466,7 @@ export default function AdminBases() {
                                 </div>
 
                                 <div className="space-y-3">
-                                    <label className="text-sm font-black text-gray-700 mr-2 uppercase tracking-widest">תוספת מחיר (₪)</label>
+                                    <label className="text-sm font-black text-gray-700 mr-2 uppercase tracking-widest">תוספת מחיר ברירת מחדל (₪)</label>
                                     <div className="relative">
                                         <div className="absolute left-6 top-1/2 -translate-y-1/2 font-black text-gray-400">₪</div>
                                         <input
@@ -292,6 +478,7 @@ export default function AdminBases() {
                                             className="w-full px-6 py-5 bg-gray-50 border-none rounded-[1.5rem] focus:ring-4 focus:ring-brand-primary/10 text-gray-900 font-black"
                                         />
                                     </div>
+                                    <p className="text-[10px] text-gray-400 mr-2 font-bold italic">מחיר זה ישמש כברירת מחדל לקטגוריות ללא מחיר ספציפי</p>
                                 </div>
 
                                 <div className="bg-gray-50 rounded-[2.5rem] p-8 space-y-6">

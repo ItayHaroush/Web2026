@@ -338,7 +338,7 @@ class ChatController extends Controller
      */
     private function buildRestaurantContext($tenantId, $restaurant)
     {
-        $now = now();
+        $now = now()->setTimezone('Asia/Jerusalem');
 
         // הזמנות (רק של המסעדה הזו)
         $ordersToday = Order::whereDate('created_at', $now->toDateString())->count();
@@ -398,6 +398,7 @@ class ChatController extends Controller
                     'orders' => $item->order_count
                 ];
             })->toArray(),
+            'current_datetime' => $now->format('Y-m-d H:i') . ' (' . ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'][$now->dayOfWeek] . ')',
             'generated_at' => $now->toIso8601String()
         ];
     }

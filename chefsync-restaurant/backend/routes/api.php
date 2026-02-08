@@ -181,6 +181,11 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'tenant'])->group(function (
         Route::get('/bases', [AdminController::class, 'getBases'])->name('admin.bases.index');
         Route::post('/bases', [AdminController::class, 'storeBase'])->name('admin.bases.store');
         Route::put('/bases/{id}', [AdminController::class, 'updateBase'])->name('admin.bases.update');
+        Route::delete('/bases/{id}', [AdminController::class, 'deleteBase'])->name('admin.bases.delete');
+
+        // מחירי בסיס לפי קטגוריה
+        Route::get('/category-base-prices', [AdminController::class, 'getCategoryBasePrices'])->name('admin.category-base-prices.index');
+        Route::post('/category-base-prices', [AdminController::class, 'saveCategoryBasePrices'])->name('admin.category-base-prices.save');
 
         // ניהול הזמנות
         Route::get('/orders', [AdminController::class, 'getOrders'])->name('admin.orders.index');
