@@ -6,6 +6,7 @@ use App\Models\MenuItem;
 use App\Models\Category;
 use App\Models\CategoryBasePrice;
 use App\Models\Restaurant;
+use App\Services\BasePriceService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -69,13 +70,7 @@ class MenuController extends Controller
             $restaurantVariants = $restaurant?->variants ?? collect();
             $restaurantAddonGroups = $restaurant?->addonGroups ?? collect();
 
-            // טען מחירי בסיס לפי קטגוריה (category_id => variant_id => price_delta)
-            $categoryBasePricesMap = CategoryBasePrice::where('tenant_id', $tenantId)
-                ->get()
-                ->groupBy('category_id')
-                ->map(function ($prices) {
-                    return $prices->keyBy('restaurant_variant_id');
-                });
+            $basePriceService = new BasePriceService();
 
             // קבל קטגוריות - רק פעילות (גם במצב preview, כדי שהמנהל יראה בדיוק מה הלקוח רואה)
             $categoriesQuery = Category::where('tenant_id', $tenantId)
@@ -106,30 +101,25 @@ class MenuController extends Controller
                     }
                 ])
                 ->get()
-                ->map(function ($category) use ($restaurantVariants, $restaurantAddonGroups, $categoryBasePricesMap) {
-                    // מחירי בסיס ספציפיים לקטגוריה זו
-                    $categoryPrices = $categoryBasePricesMap->get($category->id);
-
+                ->map(function ($category) use ($restaurantVariants, $restaurantAddonGroups, $basePriceService) {
                     return [
                         'id' => $category->id,
                         'name' => $category->name,
                         'description' => $category->description,
                         'icon' => $category->icon,
-                        'items' => $category->items->map(function ($item) use ($restaurantVariants, $restaurantAddonGroups, $categoryPrices) {
+                        'items' => $category->items->map(function ($item) use ($restaurantVariants, $restaurantAddonGroups, $basePriceService, $category) {
                             $variants = $item->use_variants
-                                ? $restaurantVariants->map(function ($variant) use ($categoryPrices) {
-                                    // אם יש מחיר ספציפי לקטגוריה, השתמש בו; אחרת fallback למחיר הגלובלי
-                                    $priceDelta = $categoryPrices && $categoryPrices->has($variant->id)
-                                        ? (float) $categoryPrices->get($variant->id)->price_delta
-                                        : (float) $variant->price_delta;
-
-                                    return [
-                                        'id' => $variant->id,
-                                        'name' => $variant->name,
-                                        'price_delta' => $priceDelta,
-                                        'is_default' => (bool) $variant->is_default,
-                                    ];
-                                })->values()->toArray()
+                                ? (function () use ($restaurantVariants, $basePriceService, $item, $category) {
+                                    $prices = $basePriceService->calculateBasePricesForItem($item->id, $category->id, $restaurantVariants);
+                                    return $restaurantVariants->map(function ($variant) use ($prices) {
+                                        return [
+                                            'id' => $variant->id,
+                                            'name' => $variant->name,
+                                            'price_delta' => $prices[$variant->id] ?? 0,
+                                            'is_default' => (bool) $variant->is_default,
+                                        ];
+                                    })->values()->toArray();
+                                })()
                                 : $item->variants->map(function ($variant) {
                                     return [
                                         'id' => $variant->id,

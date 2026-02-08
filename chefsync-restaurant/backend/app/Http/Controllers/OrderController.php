@@ -10,6 +10,7 @@ use App\Models\FcmToken;
 use App\Models\DeliveryZone;
 use App\Services\FcmService;
 use App\Services\PhoneValidationService;
+use App\Services\BasePriceService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
@@ -220,7 +221,9 @@ class OrderController extends Controller
                             "items.$index.variant_id" => ['וריאציה שנבחרה אינה זמינה לפריט זה'],
                         ]);
                     }
-                    $variantDelta = round((float) $selectedVariant->price_delta, 2);
+                    $variantDelta = $variantSourceIsRestaurant
+                        ? round((new BasePriceService())->calculateBasePrice($menuItem->id, $menuItem->category_id, $variantId), 2)
+                        : round((float) $selectedVariant->price_delta, 2);
                 }
 
                 $addonEntries = collect($itemData['addons'] ?? [])

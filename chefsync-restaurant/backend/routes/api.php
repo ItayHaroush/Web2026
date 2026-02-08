@@ -138,6 +138,16 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'tenant'])->group(function (
                 ->name('admin.ai.enhancements');
             Route::delete('/enhancements/{id}', [\App\Http\Controllers\AiImageController::class, 'delete'])
                 ->name('admin.ai.enhancements.delete');
+
+            // סוכן AI - ביצוע פעולות והתראות ניטור
+            Route::prefix('agent')->group(function () {
+                Route::post('/execute', [\App\Http\Controllers\AgentActionController::class, 'execute'])
+                    ->name('admin.ai.agent.execute');
+                Route::get('/alerts', [\App\Http\Controllers\AgentActionController::class, 'getAlerts'])
+                    ->name('admin.ai.agent.alerts');
+                Route::patch('/alerts/{id}/read', [\App\Http\Controllers\AgentActionController::class, 'markAlertRead'])
+                    ->name('admin.ai.agent.alerts.read');
+            });
         });
 
         // ניהול מסעדה
@@ -186,6 +196,10 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'tenant'])->group(function (
         // מחירי בסיס לפי קטגוריה
         Route::get('/category-base-prices', [AdminController::class, 'getCategoryBasePrices'])->name('admin.category-base-prices.index');
         Route::post('/category-base-prices', [AdminController::class, 'saveCategoryBasePrices'])->name('admin.category-base-prices.save');
+
+        // מחירי בסיס ברמת פריט
+        Route::get('/menu-items/{id}/base-prices', [AdminController::class, 'getItemBasePrices'])->name('admin.menu-items.base-prices.index');
+        Route::post('/menu-items/{id}/base-prices', [AdminController::class, 'saveItemBasePrices'])->name('admin.menu-items.base-prices.save');
 
         // ניהול הזמנות
         Route::get('/orders', [AdminController::class, 'getOrders'])->name('admin.orders.index');

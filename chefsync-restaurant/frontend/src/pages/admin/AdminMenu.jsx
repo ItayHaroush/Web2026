@@ -26,7 +26,9 @@ import {
     FaSync,
     FaEye,
     FaGripVertical,
-    FaEyeSlash
+    FaEyeSlash,
+    FaBreadSlice,
+    FaSave
 } from 'react-icons/fa';
 
 export default function AdminMenu() {
@@ -43,6 +45,10 @@ export default function AdminMenu() {
     const [activeTab, setActiveTab] = useState('items'); // 'items' או 'categories'
     const [draggedCategory, setDraggedCategory] = useState(null);
     const [categoryBeingSorted, setCategoryBeingSorted] = useState([]);
+    const [basePrices, setBasePrices] = useState([]);
+    const [basePriceAdjustments, setBasePriceAdjustments] = useState({});
+    const [loadingBasePrices, setLoadingBasePrices] = useState(false);
+    const [savingBasePrices, setSavingBasePrices] = useState(false);
 
     const [form, setForm] = useState({
         name: '',
@@ -99,6 +105,41 @@ export default function AdminMenu() {
         }
     };
 
+    const fetchItemBasePrices = async (itemId) => {
+        setLoadingBasePrices(true);
+        try {
+            const res = await api.get(`/admin/menu-items/${itemId}/base-prices`, { headers: getAuthHeaders() });
+            if (res.data.success) {
+                setBasePrices(res.data.bases || []);
+                const adjustments = {};
+                (res.data.bases || []).forEach(b => {
+                    adjustments[b.base_id] = String(b.item_adjustment || 0);
+                });
+                setBasePriceAdjustments(adjustments);
+            }
+        } catch (error) {
+            console.error('Failed to fetch item base prices:', error);
+        } finally {
+            setLoadingBasePrices(false);
+        }
+    };
+
+    const saveItemBasePrices = async (itemId) => {
+        setSavingBasePrices(true);
+        try {
+            const adjustments = basePrices.map(b => ({
+                base_id: b.base_id,
+                price_delta: Number(basePriceAdjustments[b.base_id] || 0),
+            }));
+            await api.post(`/admin/menu-items/${itemId}/base-prices`, { adjustments }, { headers: getAuthHeaders() });
+        } catch (error) {
+            console.error('Failed to save item base prices:', error);
+            alert('שגיאה בשמירת התאמות מחירי בסיסים');
+        } finally {
+            setSavingBasePrices(false);
+        }
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -131,6 +172,7 @@ export default function AdminMenu() {
         });
 
         try {
+            let savedItemId = editItem?.id;
             if (editItem) {
                 // ✅ Laravel PUT + multipart workaround
                 formData.append('_method', 'PUT');
@@ -143,6 +185,12 @@ export default function AdminMenu() {
                     headers: { ...getAuthHeaders(), 'Content-Type': 'multipart/form-data' }
                 });
                 console.log('✅ Create response:', response.data);
+                savedItemId = response.data.item?.id;
+            }
+
+            // שמור התאמות מחירי בסיסים אם יש
+            if (form.use_variants && savedItemId && basePrices.length > 0) {
+                await saveItemBasePrices(savedItemId);
             }
 
             closeModal();
@@ -221,10 +269,20 @@ export default function AdminMenu() {
             addons_group_scope: groupScope,
         });
         setShowModal(true);
+
+        // טען מחירי בסיס ברמת פריט אם הפריט משתמש בבסיסים
+        if (Boolean(item.use_variants)) {
+            fetchItemBasePrices(item.id);
+        } else {
+            setBasePrices([]);
+            setBasePriceAdjustments({});
+        }
     };
 
     const openNewModal = () => {
         setEditItem(null);
+        setBasePrices([]);
+        setBasePriceAdjustments({});
         setForm({
             name: '',
             description: '',
@@ -786,6 +844,61 @@ export default function AdminMenu() {
                                         </div>
                                     </label>
                                 </div>
+
+                                {/* Item-level base pricing - visible when use_variants is on and editing an existing item */}
+                                {form.use_variants && editItem && (
+                                    <div className="bg-orange-50/50 rounded-2xl p-5 space-y-4 animate-in slide-in-from-top-2 duration-300 border border-orange-100/50">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <FaBreadSlice className="text-orange-500" size={14} />
+                                                <p className="text-[10px] font-black text-gray-600 uppercase tracking-widest">התאמת מחירי בסיס למנה זו</p>
+                                            </div>
+                                        </div>
+
+                                        {loadingBasePrices ? (
+                                            <div className="flex items-center justify-center py-4">
+                                                <div className="w-5 h-5 border-2 border-orange-300 border-t-orange-600 rounded-full animate-spin"></div>
+                                                <span className="mr-2 text-xs text-gray-400 font-bold">טוען...</span>
+                                            </div>
+                                        ) : basePrices.length === 0 ? (
+                                            <p className="text-xs text-gray-400 text-center py-2">אין בסיסים פעילים</p>
+                                        ) : (
+                                            <div className="space-y-2">
+                                                {basePrices.map(base => {
+                                                    const adj = Number(basePriceAdjustments[base.base_id] || 0);
+                                                    const finalPrice = Number(base.category_price || 0) + adj;
+                                                    return (
+                                                        <div key={base.base_id} className="flex items-center gap-3 bg-white rounded-xl p-3 border border-gray-100">
+                                                            <div className="flex-1 min-w-0">
+                                                                <span className="text-xs font-black text-gray-800 block truncate">{base.base_name}</span>
+                                                            </div>
+                                                            <div className="flex items-center gap-2 shrink-0">
+                                                                <span className="text-[10px] font-bold text-gray-400 whitespace-nowrap">
+                                                                    קטגוריה: {Number(base.category_price) === 0 ? 'חינם' : `+${Number(base.category_price).toFixed(0)}`}
+                                                                </span>
+                                                                <input
+                                                                    type="number"
+                                                                    step="0.5"
+                                                                    value={basePriceAdjustments[base.base_id] ?? '0'}
+                                                                    onChange={(e) => setBasePriceAdjustments(prev => ({
+                                                                        ...prev,
+                                                                        [base.base_id]: e.target.value,
+                                                                    }))}
+                                                                    className="w-20 px-2 py-1.5 rounded-lg text-center font-black text-xs bg-slate-50 border-none focus:ring-2 focus:ring-orange-300/50"
+                                                                    placeholder="0"
+                                                                />
+                                                                <span className={`text-xs font-black whitespace-nowrap min-w-[50px] text-left ${finalPrice > 0 ? 'text-emerald-600' : finalPrice < 0 ? 'text-rose-500' : 'text-gray-500'}`}>
+                                                                    = {finalPrice === 0 ? 'חינם' : `${finalPrice > 0 ? '+' : ''}${finalPrice.toFixed(1)}`}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                                <p className="text-[9px] text-gray-400 font-medium mt-1">התאמה 0 = ללא שינוי ממחיר הקטגוריה. ערך שלילי מוזיל, חיובי מייקר.</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
 
                                 {form.use_addons && (
                                     <div className="bg-slate-50 rounded-2xl p-5 space-y-4 animate-in slide-in-from-top-2 duration-300">

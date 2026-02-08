@@ -11,6 +11,7 @@ use App\Models\RestaurantSubscription;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\MenuItem;
+use App\Models\Category;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -315,7 +316,8 @@ class ChatController extends Controller
                 'answer' => $response['response'] ?? $response['content'] ?? '',
                 'credits_remaining' => $aiCredit->credits_remaining,
                 'credits_limit' => $aiCredit->monthly_limit,
-                'suggested_actions' => $response['suggested_actions'] ?? []
+                'suggested_actions' => $response['suggested_actions'] ?? [],
+                'proposed_actions' => $response['proposed_actions'] ?? [],
             ]);
         } catch (\Exception $e) {
             Log::error('Restaurant AI Chat Error', [
@@ -373,6 +375,24 @@ class ChatController extends Controller
             ->where('status', 'active')
             ->first();
 
+        // קטגוריות עם מזהים (נדרש לסוכן AI)
+        $categories = Category::select('id', 'name', 'is_active', 'icon')
+            ->orderBy('sort_order')
+            ->get();
+
+        // כל פריטי התפריט עם מזהים (נדרש לסוכן AI)
+        $allMenuItems = MenuItem::select('id', 'name', 'price', 'category_id', 'is_available', 'description')
+            ->with('category:id,name')
+            ->orderBy('name')
+            ->get();
+
+        // הזמנות אחרונות פעילות (נדרש לסוכן AI)
+        $recentOrders = Order::whereIn('status', ['pending', 'received', 'preparing', 'ready', 'delivering'])
+            ->orderBy('created_at', 'desc')
+            ->limit(10)
+            ->select('id', 'status', 'total_amount', 'customer_name', 'delivery_method', 'created_at')
+            ->get();
+
         return [
             'restaurant' => [
                 'name' => $restaurant->name,
@@ -394,8 +414,37 @@ class ChatController extends Controller
             ],
             'top_items' => $topMenuItems->map(function ($item) {
                 return [
+                    'id' => $item->menu_item_id,
                     'name' => $item->menuItem->name ?? 'N/A',
                     'orders' => $item->order_count
+                ];
+            })->toArray(),
+            'categories' => $categories->map(function ($cat) {
+                return [
+                    'id' => $cat->id,
+                    'name' => $cat->name,
+                    'is_active' => $cat->is_active,
+                    'icon' => $cat->icon,
+                ];
+            })->toArray(),
+            'menu_items' => $allMenuItems->map(function ($item) {
+                return [
+                    'id' => $item->id,
+                    'name' => $item->name,
+                    'price' => $item->price,
+                    'category' => $item->category->name ?? 'N/A',
+                    'category_id' => $item->category_id,
+                    'is_available' => $item->is_available,
+                ];
+            })->toArray(),
+            'active_orders' => $recentOrders->map(function ($order) {
+                return [
+                    'id' => $order->id,
+                    'status' => $order->status,
+                    'total' => $order->total_amount,
+                    'customer' => $order->customer_name,
+                    'method' => $order->delivery_method,
+                    'created_at' => $order->created_at->format('H:i'),
                 ];
             })->toArray(),
             'current_datetime' => $now->format('Y-m-d H:i') . ' (' . ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'][$now->dayOfWeek] . ')',
