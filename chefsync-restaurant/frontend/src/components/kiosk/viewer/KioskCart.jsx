@@ -4,8 +4,15 @@ import { FaTimes, FaMinus, FaPlus, FaTrash, FaPaperPlane } from 'react-icons/fa'
 export default function KioskCart({ items, totalPrice, requireName, onUpdateQty, onRemove, onSubmit, onClose, submitting }) {
     const [customerName, setCustomerName] = useState('');
 
+    const [nameError, setNameError] = useState(false);
+
     const handleSubmit = () => {
-        onSubmit(customerName || null);
+        if (!customerName.trim()) {
+            setNameError(true);
+            return;
+        }
+        setNameError(false);
+        onSubmit(customerName.trim());
     };
 
     return (
@@ -76,17 +83,20 @@ export default function KioskCart({ items, totalPrice, requireName, onUpdateQty,
                     )}
 
                     {/* Customer name */}
-                    {items.length > 0 && requireName && (
+                    {items.length > 0 && (
                         <div className="mt-4">
-                            <label className="text-sm font-black text-gray-700 mb-2 block">שם (לקריאה כשההזמנה מוכנה)</label>
+                            <label className="text-sm font-black text-gray-700 mb-2 block">שם *</label>
                             <input
                                 type="text"
                                 value={customerName}
-                                onChange={(e) => setCustomerName(e.target.value)}
+                                onChange={(e) => { setCustomerName(e.target.value); setNameError(false); }}
                                 placeholder="הכנס את שמך..."
-                                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl font-bold text-gray-900 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 transition-all"
+                                className={`w-full px-4 py-3 bg-gray-50 border rounded-xl font-bold text-gray-900 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 transition-all ${nameError ? 'border-red-400 bg-red-50' : 'border-gray-200'}`}
                                 maxLength={100}
                             />
+                            {nameError && (
+                                <p className="text-red-500 text-xs font-bold mt-1">נא להזין שם</p>
+                            )}
                         </div>
                     )}
                 </div>

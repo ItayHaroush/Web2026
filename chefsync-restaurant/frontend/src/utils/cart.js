@@ -53,12 +53,12 @@ export const buildCartKey = (menuItemId, variant, addons = []) => {
     return `${menuItemId}::${variantKey}::${addonsKey}`;
 };
 
-export const calculateUnitPrice = (basePrice, variant, addons = []) => {
+export const calculateUnitPrice = (basePrice, variant, addons = [], dineInAdjustment = 0) => {
     const normalizedBase = sanitizeNumber(basePrice);
     const variantDelta = sanitizeNumber(variant?.price_delta ?? 0);
     const addonsTotal = addons.reduce((sum, addon) => sum + sanitizeNumber(addon?.price_delta ?? 0), 0);
-
-    return Number((normalizedBase + variantDelta + addonsTotal).toFixed(2));
+    const adjustment = sanitizeNumber(dineInAdjustment);
+    return Number((normalizedBase + variantDelta + addonsTotal + adjustment).toFixed(2));
 };
 
 export const normalizeCartItem = (rawItem) => {

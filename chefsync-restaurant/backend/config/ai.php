@@ -67,6 +67,12 @@ return [
             'cost_credits' => 1,
             'cache_enabled' => false, // No caching for chat
         ],
+        'dine_in_recommendation' => [
+            'enabled' => true,
+            'cost_credits' => 5,
+            'cache_enabled' => true,
+            'cache_ttl' => 3600, // 1 hour
+        ],
     ],
 
     /*

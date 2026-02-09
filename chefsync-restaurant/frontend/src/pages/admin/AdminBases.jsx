@@ -169,17 +169,19 @@ export default function AdminBases() {
                 activeBases.forEach(base => {
                     const key = `${cat.id}-${base.id}`;
                     const val = priceMatrix[key];
-                    if (val !== undefined && val !== '') {
+                    const numVal = val !== undefined && val !== '' ? parseFloat(val) : 0;
+                    if (numVal > 0) {
                         prices.push({
                             category_id: cat.id,
                             restaurant_variant_id: base.id,
-                            price_delta: Number(val) || 0,
+                            price_delta: numVal,
                         });
                     }
                 });
             });
 
-            await api.post('/admin/category-base-prices', { prices }, { headers: getAuthHeaders() });
+            const categoryIds = categories.map(c => c.id);
+            await api.post('/admin/category-base-prices', { prices, category_ids: categoryIds }, { headers: getAuthHeaders() });
             fetchAll();
         } catch (error) {
             console.error('Failed to save category base prices', error.response?.data || error.message);

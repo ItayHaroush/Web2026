@@ -1221,6 +1221,108 @@ class CopilotService
     }
 
     /**
+     * Recommend dine-in pricing adjustments for the restaurant menu
+     */
+    public function recommendDineInAdjustments(array $menuContext): array
+    {
+        set_time_limit(120);
+
+        $feature = 'dine_in_recommendation';
+        $creditsRequired = 5;
+
+        // Check credits and rate limit
+        $this->validateAccess($feature);
+
+        try {
+            // Build context strings
+            $categoriesStr = implode(', ', $menuContext['categories'] ?? []);
+            $itemsList = collect($menuContext['items'] ?? [])->map(function ($item) {
+                return "- {$item['name']} ({$item['category']}): {$item['price']} ₪";
+            })->implode("\n");
+
+            $prompt = "אתה יועץ מחירים למסעדות. נתח את התפריט הבא והמלץ על התאמות מחירים לישיבה במקום (Dine-In) לעומת משלוח/טייק-אוויי.\n\n"
+                . "מסעדה: " . ($menuContext['restaurant_name'] ?? 'לא צוין') . "\n"
+                . "קטגוריות: {$categoriesStr}\n\n"
+                . "פריטי תפריט:\n{$itemsList}\n\n"
+                . "החזר JSON בפורמט הבא:\n"
+                . '{"adjustments": [{"item_name": "שם", "current_price": 45, "recommended_dine_in_price": 52, "adjustment_percent": 15.5, "reasoning": "סיבה קצרה"}], '
+                . '"general_recommendation": "המלצה כללית", '
+                . '"confidence": "high", '
+                . '"factors": ["גורם1", "גורם2"]}';
+
+            // Call Copilot API
+            $response = $this->callCopilot($prompt);
+
+            // Parse JSON from response
+            $content = $response['content'] ?? '';
+
+            $result = null;
+            if (preg_match('/\{[\s\S]*\}/', $content, $matches)) {
+                try {
+                    $parsed = json_decode($matches[0], true);
+                    if (json_last_error() === JSON_ERROR_NONE) {
+                        $result = [
+                            'adjustments' => $parsed['adjustments'] ?? [],
+                            'general_recommendation' => $parsed['general_recommendation'] ?? 'אין המלצה כללית',
+                            'confidence' => $parsed['confidence'] ?? 'medium',
+                            'factors' => $parsed['factors'] ?? [],
+                            'provider' => 'copilot'
+                        ];
+                    }
+                } catch (\Exception $e) {
+                    Log::warning('Failed to parse dine-in recommendation JSON', ['error' => $e->getMessage()]);
+                }
+            }
+
+            // Fallback
+            if (!$result) {
+                $result = [
+                    'adjustments' => [],
+                    'general_recommendation' => $content ?: 'לא ניתן לקבל המלצה',
+                    'confidence' => 'low',
+                    'factors' => [],
+                    'provider' => 'copilot'
+                ];
+            }
+
+            // Log usage
+            $this->logUsage(
+                $feature,
+                'generate',
+                $creditsRequired,
+                $response['response_time_ms'] ?? 0,
+                false,
+                null,
+                'success',
+                $prompt,
+                json_encode($result)
+            );
+
+            // Deduct credits
+            $credits = AiCredit::getOrCreateForRestaurant($this->restaurant);
+            $credits->useCredits($creditsRequired);
+
+            return $result;
+        } catch (\Exception $e) {
+            $this->logUsage(
+                $feature,
+                'generate',
+                0,
+                0,
+                false,
+                null,
+                'error',
+                null,
+                null,
+                null,
+                $e->getMessage()
+            );
+
+            throw $e;
+        }
+    }
+
+    /**
      * Gather dashboard data for analysis
      */
     private function gatherDashboardData(): array

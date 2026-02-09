@@ -69,6 +69,7 @@ class Restaurant extends Model
         'delivery_time_note',
         'pickup_time_minutes',
         'pickup_time_note',
+        'enable_dine_in_pricing',
     ];
 
     protected $attributes = [
@@ -96,6 +97,7 @@ class Restaurant extends Model
         'delivery_time_minutes' => 'integer',
         'pickup_time_minutes' => 'integer',
         'ai_credits_monthly' => 'integer', // קרדיטים חודשיים
+        'enable_dine_in_pricing' => 'boolean',
     ];
 
     /**

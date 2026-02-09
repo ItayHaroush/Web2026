@@ -2,15 +2,18 @@ import { useState } from 'react';
 import { FaTimes, FaMinus, FaPlus, FaShoppingCart } from 'react-icons/fa';
 import { calculateUnitPrice } from '../../../utils/cart';
 
-export default function KioskItemDetail({ item, onAddToCart, onClose }) {
+export default function KioskItemDetail({ item, onAddToCart, onClose, orderType, enableDineInPricing }) {
     const [selectedVariant, setSelectedVariant] = useState(null);
     const [selectedAddons, setSelectedAddons] = useState([]);
     const [qty, setQty] = useState(1);
 
+    const dineInAdjustment = (orderType === 'dine_in' && enableDineInPricing) ? (item.dine_in_adjustment || 0) : 0;
+
     const unitPrice = calculateUnitPrice(
         item.price,
         selectedVariant,
-        selectedAddons
+        selectedAddons,
+        dineInAdjustment
     );
     const totalPrice = Number((unitPrice * qty).toFixed(2));
 
@@ -31,7 +34,7 @@ export default function KioskItemDetail({ item, onAddToCart, onClose }) {
     };
 
     const handleAdd = () => {
-        onAddToCart(item, selectedVariant, selectedAddons, qty);
+        onAddToCart(item, selectedVariant, selectedAddons, qty, dineInAdjustment);
         onClose();
     };
 
@@ -62,7 +65,7 @@ export default function KioskItemDetail({ item, onAddToCart, onClose }) {
                         {item.description && (
                             <p className="text-gray-500 mt-2 font-medium">{item.description}</p>
                         )}
-                        <p className="text-xl font-black text-amber-600 mt-2">{item.price.toFixed(2)} ₪</p>
+                        <p className="text-xl font-black text-amber-600 mt-2">{Number((item.price + dineInAdjustment).toFixed(2)).toFixed(2)} ₪</p>
                     </div>
 
                     {/* Variants */}

@@ -202,7 +202,7 @@ class KioskController extends Controller
                 $q->where('is_active', true);
             })
             ->with([
-                'category:id,name,sort_order',
+                'category:id,name,sort_order,dine_in_adjustment',
                 'variants' => function ($q) {
                     $q->where('is_active', true)->orderBy('sort_order');
                 },
@@ -300,6 +300,7 @@ class KioskController extends Controller
                     'use_variants' => (bool) $item->use_variants,
                     'use_addons' => (bool) $item->use_addons,
                     'max_addons' => $item->max_addons,
+                    'dine_in_adjustment' => $item->getEffectiveDineInAdjustment(),
                     'variants' => $variants,
                     'addon_groups' => $addonGroups,
                 ];
@@ -329,6 +330,7 @@ class KioskController extends Controller
                     'name' => $restaurant->name ?? '',
                     'logo_url' => $restaurant->logo_url ?? null,
                     'is_open_now' => $restaurant->is_open_now ?? false,
+                    'enable_dine_in_pricing' => (bool) ($restaurant->enable_dine_in_pricing ?? false),
                 ],
                 'categories' => $categories,
                 'items' => $items->values(),
@@ -381,21 +383,21 @@ class KioskController extends Controller
             }
 
             $validated = $request->validate([
-                'customer_name' => 'nullable|string|max:100',
+                'customer_name' => 'required|string|max:100',
                 'order_type' => 'nullable|string|in:dine_in,takeaway',
                 'table_number' => 'nullable|string|max:20',
                 'items' => 'required|array|min:1',
                 'items.*.menu_item_id' => 'required|integer|exists:menu_items,id',
                 'items.*.variant_id' => 'nullable|integer',
                 'items.*.addons' => 'nullable|array',
-                'items.*.addons.*.addon_id' => 'required|integer',
+                'items.*.addons.*.addon_id' => 'required',  // integer or 'cat_item_X' for category-based addons
                 'items.*.addons.*.on_side' => 'nullable|boolean',
                 'items.*.qty' => 'required|integer|min:1',
             ]);
 
             $tenantId = $restaurant->tenant_id;
             $restaurantVariants = $restaurant->variants ?? collect();
-            $restaurantAddonGroups = $restaurant->addonGroups ?? collect();
+            $restaurantAddonGroups = $this->resolveAddonGroups($restaurant->addonGroups ?? collect());
 
             $lineItems = [];
             $totalAmount = 0;
@@ -450,19 +452,19 @@ class KioskController extends Controller
 
                 $availableAddonGroups = $menuItem->use_addons
                     ? $this->filterAddonGroupsByScope($restaurantAddonGroups, $menuItem)
-                    : $menuItem->addonGroups;
+                    : $this->resolveAddonGroups($menuItem->addonGroups);
 
                 $addonsDetails = [];
                 $addonsTotal = 0.0;
 
                 foreach ($addonEntries as $addonEntry) {
-                    $addonId = (int) $addonEntry['addon_id'];
+                    $addonId = $addonEntry['addon_id']; // string or int (e.g. 5 or 'cat_item_5')
                     $matchedAddon = null;
                     $matchedGroup = null;
 
                     foreach ($availableAddonGroups as $group) {
                         $groupAddons = $group->addons ?? collect();
-                        $matchedAddon = $groupAddons->firstWhere('id', $addonId);
+                        $matchedAddon = $groupAddons->first(fn($a) => (string) $a->id === (string) $addonId);
                         if ($matchedAddon) {
                             $matchedGroup = $group;
                             break;
@@ -489,7 +491,15 @@ class KioskController extends Controller
 
                 $addonsTotal = round($addonsTotal, 2);
                 $basePrice = round((float) $menuItem->price, 2);
-                $unitPrice = round($basePrice + $variantDelta + $addonsTotal, 2);
+
+                // התאמת מחיר לישיבה
+                $dineInAdjustment = 0.0;
+                $orderType = $validated['order_type'] ?? 'takeaway';
+                if ($orderType === 'dine_in' && ($restaurant->enable_dine_in_pricing ?? false)) {
+                    $dineInAdjustment = round($menuItem->getEffectiveDineInAdjustment(), 2);
+                }
+
+                $unitPrice = round($basePrice + $variantDelta + $addonsTotal + $dineInAdjustment, 2);
                 $lineTotal = round($unitPrice * $quantity, 2);
                 $totalAmount = round($totalAmount + $lineTotal, 2);
 
@@ -584,6 +594,35 @@ class KioskController extends Controller
     // ============================================
     // Private Helpers
     // ============================================
+
+    private function resolveAddonGroups($groups)
+    {
+        return $groups->map(function ($group) {
+            if (($group->source_type ?? null) !== 'category' || !($group->source_category_id ?? null)) {
+                return $group;
+            }
+
+            $items = MenuItem::where('category_id', $group->source_category_id)
+                ->where('is_available', true)
+                ->orderBy('name')
+                ->get();
+
+            $includePrices = (bool) ($group->source_include_prices ?? true);
+
+            $syntheticAddons = $items->map(function ($item) use ($includePrices) {
+                $addon = new \stdClass();
+                $addon->id = 'cat_item_' . $item->id;
+                $addon->name = $item->name;
+                $addon->price_delta = $includePrices ? (float) $item->price : 0;
+                $addon->selection_weight = 1;
+                $addon->is_default = false;
+                return $addon;
+            });
+
+            $group->setRelation('addons', $syntheticAddons);
+            return $group;
+        });
+    }
 
     private function filterAddonGroupsByScope($groups, MenuItem $item)
     {

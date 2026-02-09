@@ -546,7 +546,7 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
                                     <div className="absolute top-5 right-5 left-5 h-1 bg-gray-300 dark:bg-gray-600 rounded-full" style={{ zIndex: 0 }}></div>
                                     {/* קו מלא */}
                                     <div
-                                        className="absolute top-5 right-5 h-1 bg-gradient-to-l from-green-500 to-brand-primary rounded-full transition-all duration-500"
+                                        className="absolute top-5 right-5 h-1 bg-gradient-to-l from-brand-secondary to-brand-primary rounded-full transition-all duration-500"
                                         style={{
                                             width: `calc(${(currentStepIndex / (statusSteps.length - 1)) * 100}% - 2.5rem)`,
                                             zIndex: 1
@@ -557,7 +557,7 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
                                         <div key={step.value} className="flex flex-col items-center flex-1 relative" style={{ zIndex: 2 }}>
                                             <div
                                                 className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm mb-2 border-2 transition-all ${index <= currentStepIndex
-                                                    ? 'bg-gradient-to-br from-brand-primary to-green-500 text-white border-transparent shadow-lg'
+                                                    ? 'bg-gradient-to-br from-brand-primary to-brand-secondary text-white border-transparent shadow-lg'
                                                     : 'bg-white dark:bg-brand-dark-bg text-gray-400 dark:text-gray-500 border-gray-300 dark:border-gray-600'
                                                     }`}
                                             >

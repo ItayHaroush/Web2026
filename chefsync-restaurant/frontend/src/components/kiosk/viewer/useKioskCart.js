@@ -4,9 +4,9 @@ import { buildCartKey, calculateUnitPrice } from '../../../utils/cart';
 export default function useKioskCart() {
     const [items, setItems] = useState([]);
 
-    const addItem = useCallback((menuItem, variant, addons, qty) => {
+    const addItem = useCallback((menuItem, variant, addons, qty, dineInAdjustment = 0) => {
         const cartKey = buildCartKey(menuItem.id, variant, addons);
-        const unitPrice = calculateUnitPrice(menuItem.price, variant, addons);
+        const unitPrice = calculateUnitPrice(menuItem.price, variant, addons, dineInAdjustment);
 
         setItems(prev => {
             const existingIndex = prev.findIndex(item => item.cartKey === cartKey);
@@ -31,6 +31,7 @@ export default function useKioskCart() {
                 unitPrice,
                 totalPrice: Number((unitPrice * qty).toFixed(2)),
                 imageUrl: menuItem.image_url,
+                dineInAdjustment,
             }];
         });
     }, []);
