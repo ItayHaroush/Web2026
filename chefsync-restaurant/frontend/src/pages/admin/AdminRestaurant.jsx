@@ -29,7 +29,9 @@ import {
     FaHamburger,
     FaUtensils,
     FaConciergeBell,
-    FaShieldAlt
+    FaShieldAlt,
+    FaChair,
+    FaTrashAlt,
 } from 'react-icons/fa';
 import { GiKebabSpit, GiChefToque } from 'react-icons/gi';
 
@@ -94,6 +96,7 @@ export default function AdminRestaurant() {
     const [justFetched, setJustFetched] = useState(false);
     const [openDayPanels, setOpenDayPanels] = useState({});
     const shareQrRef = useRef(null);
+    const [resettingDineIn, setResettingDineIn] = useState(false);
 
     const normalizeOperatingHours = (oh) => {
         if (!oh) return {};
@@ -268,6 +271,9 @@ export default function AdminRestaurant() {
             // חשוב: שלח תמיד את דגל הכפייה כדי שיהיה אפשר לבטל כפייה בצורה מפורשת
             formData.append('is_override_status', overrideStatus ? '1' : '0');
 
+            // שלח את דגל תמחור ישיבה
+            formData.append('enable_dine_in_pricing', restaurant.enable_dine_in_pricing ? '1' : '0');
+
             // ✅ שלח את כל השדות בלי לדלג על ריקים
             const fieldsToSend = [
                 'name',
@@ -403,6 +409,27 @@ export default function AdminRestaurant() {
             alert('לא הצלחנו לבטל כפייה. נסה שוב.');
         } finally {
             setSaving(false);
+        }
+    };
+
+    const resetDineInAdjustments = async () => {
+        if (!isOwner()) {
+            alert('רק בעל המסעדה יכול לאפס התאמות');
+            return;
+        }
+        if (!confirm('זה יאפס את כל התאמות המחיר לישיבה (בקטגוריות ובפריטים) ויכבה את הפיצ׳ר. להמשיך?')) {
+            return;
+        }
+        setResettingDineIn(true);
+        try {
+            await api.post('/admin/restaurant/reset-dine-in-adjustments', null, { headers: getAuthHeaders() });
+            setRestaurant(prev => ({ ...prev, enable_dine_in_pricing: false }));
+            alert('כל ההתאמות אופסו בהצלחה');
+        } catch (error) {
+            console.error('Failed to reset dine-in adjustments:', error);
+            alert('שגיאה באיפוס ההתאמות');
+        } finally {
+            setResettingDineIn(false);
         }
     };
 
@@ -762,6 +789,48 @@ export default function AdminRestaurant() {
                                 </div>
                                 <p className="text-[10px] text-gray-400 font-bold text-center">מומלץ: תמונה ריבועית על רקע לבן/שקוף</p>
                             </div>
+                        </section>
+
+                        {/* Dine-In Pricing Toggle */}
+                        <section className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 p-6">
+                            <h3 className="font-black text-gray-900 mb-4 flex items-center gap-2">
+                                <FaChair className="text-amber-500" /> תמחור ישיבה במקום
+                            </h3>
+                            <p className="text-xs text-gray-500 mb-4">
+                                הפעלת תוספת מחיר אוטומטית להזמנות &quot;לשבת במקום&quot; בקיוסק
+                            </p>
+
+                            <label className="flex items-center gap-3 p-4 bg-gray-50 rounded-2xl cursor-pointer hover:bg-gray-100 transition-colors border border-transparent hover:border-gray-200 group">
+                                <div className={`w-10 h-6 flex items-center rounded-full p-1 transition-colors ${restaurant.enable_dine_in_pricing ? 'bg-amber-500' : 'bg-gray-300'}`}>
+                                    <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${restaurant.enable_dine_in_pricing ? '-translate-x-4' : 'translate-x-0'}`}></div>
+                                </div>
+                                <input
+                                    type="checkbox"
+                                    className="hidden"
+                                    checked={!!restaurant.enable_dine_in_pricing}
+                                    onChange={(e) => handleChange('enable_dine_in_pricing', e.target.checked)}
+                                />
+                                <span className="text-sm font-black text-gray-700 group-hover:text-gray-900">
+                                    {restaurant.enable_dine_in_pricing ? 'מופעל' : 'כבוי'}
+                                </span>
+                            </label>
+
+                            {restaurant.enable_dine_in_pricing && (
+                                <div className="mt-3 space-y-3">
+                                    <div className="p-3 bg-amber-50 rounded-xl border border-amber-100 text-xs text-amber-800">
+                                        התאמות המחיר מוגדרות בניהול קטגוריות ופריטי תפריט
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={resetDineInAdjustments}
+                                        disabled={resettingDineIn}
+                                        className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-red-50 hover:bg-red-100 text-red-600 rounded-2xl text-sm font-black transition-all disabled:opacity-50"
+                                    >
+                                        <FaTrashAlt size={12} />
+                                        {resettingDineIn ? 'מאפס...' : 'איפוס כל ההתאמות'}
+                                    </button>
+                                </div>
+                            )}
                         </section>
                     </div>
 

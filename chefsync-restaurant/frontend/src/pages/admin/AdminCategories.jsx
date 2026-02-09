@@ -39,7 +39,7 @@ export default function AdminCategories() {
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [editCategory, setEditCategory] = useState(null);
-    const [form, setForm] = useState({ name: '', description: '', icon: '📂', dish_type: 'both' });
+    const [form, setForm] = useState({ name: '', description: '', icon: '📂', dish_type: 'both', dine_in_adjustment: '' });
     const [showIconPicker, setShowIconPicker] = useState(false);
     const [showAllIcons, setShowAllIcons] = useState(false);
 
@@ -94,7 +94,7 @@ export default function AdminCategories() {
 
     const openNew = () => {
         setEditCategory(null);
-        setForm({ name: '', description: '', icon: '📂', dish_type: 'both' });
+        setForm({ name: '', description: '', icon: '📂', dish_type: 'both', dine_in_adjustment: '' });
         setShowIconPicker(false);
         setShowAllIcons(false);
         setShowModal(true);
@@ -107,6 +107,7 @@ export default function AdminCategories() {
             description: cat.description || '',
             icon: cat.icon || '📂',
             dish_type: cat.dish_type || 'both',
+            dine_in_adjustment: cat.dine_in_adjustment ?? '',
         });
         setShowModal(true);
     };
@@ -379,6 +380,26 @@ export default function AdminCategories() {
                                                 </button>
                                             ))}
                                         </div>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-black text-gray-700 mr-2 flex items-center gap-2">
+                                            תוספת מחיר לישיבה (ברירת מחדל)
+                                        </label>
+                                        <div className="flex items-center gap-3">
+                                            <input
+                                                type="number"
+                                                step="0.5"
+                                                value={form.dine_in_adjustment}
+                                                onChange={(e) => setForm({ ...form, dine_in_adjustment: e.target.value })}
+                                                className="flex-1 px-5 py-4 bg-gray-50 border-none rounded-2xl focus:ring-4 focus:ring-brand-primary/10 text-gray-900 font-black transition-all"
+                                                placeholder="0.00"
+                                            />
+                                            <span className="text-gray-500 font-black">₪</span>
+                                        </div>
+                                        <p className="text-xs text-gray-400 font-medium">
+                                            תוספת שתחול על כל הפריטים בקטגוריה כשהלקוח בוחר "לישיבה" בקיוסק. ניתן לדרוס ברמת פריט.
+                                        </p>
                                     </div>
                                 </div>
 

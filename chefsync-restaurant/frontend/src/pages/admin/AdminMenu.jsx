@@ -8,6 +8,7 @@ import { resolveAssetUrl } from '../../utils/assets';
 import AiDescriptionGenerator from '../../components/AiDescriptionGenerator';
 import AiPriceRecommender from '../../components/AiPriceRecommender';
 import AiImageEnhancer from '../../components/AiImageEnhancer';
+import AiDineInRecommender from '../../components/AiDineInRecommender';
 import {
     FaUtensils,
     FaPlus,
@@ -59,6 +60,7 @@ export default function AdminMenu() {
         use_variants: false,
         use_addons: false,
         addons_group_scope: [],
+        dine_in_adjustment: '',
     });
 
     useEffect(() => {
@@ -124,6 +126,24 @@ export default function AdminMenu() {
         }
     };
 
+    const handleApplyDineInAdjustments = async (adjustments) => {
+        try {
+            for (const adj of adjustments) {
+                const value = parseFloat(adj.recommended_dine_in_price || adj.suggested_adjustment || 0);
+                if (adj.category_id) {
+                    await api.put(`/admin/categories/${adj.category_id}`, { dine_in_adjustment: value }, { headers: getAuthHeaders() });
+                }
+                if (adj.item_id) {
+                    await api.put(`/admin/menu-items/${adj.item_id}`, { dine_in_adjustment: value }, { headers: getAuthHeaders() });
+                }
+            }
+            await fetchData();
+        } catch (error) {
+            console.error('Failed to apply dine-in adjustments:', error);
+            alert('שגיאה בהחלת ההתאמות');
+        }
+    };
+
     const saveItemBasePrices = async (itemId) => {
         setSavingBasePrices(true);
         try {
@@ -162,6 +182,10 @@ export default function AdminMenu() {
             ? JSON.stringify(form.addons_group_scope)
             : '';
         formData.append('addons_group_scope', scopeValue);
+
+        if (form.dine_in_adjustment !== '' && form.dine_in_adjustment !== null) {
+            formData.append('dine_in_adjustment', form.dine_in_adjustment);
+        }
 
         console.log('📤 Submitting menu item:', {
             name: form.name,
@@ -267,6 +291,7 @@ export default function AdminMenu() {
             use_variants: Boolean(item.use_variants),
             use_addons: Boolean(item.use_addons),
             addons_group_scope: groupScope,
+            dine_in_adjustment: item.dine_in_adjustment ?? '',
         });
         setShowModal(true);
 
@@ -292,6 +317,7 @@ export default function AdminMenu() {
             use_variants: false,
             use_addons: false,
             addons_group_scope: [],
+            dine_in_adjustment: '',
         });
         setShowModal(true);
     };
@@ -308,6 +334,7 @@ export default function AdminMenu() {
             use_variants: false,
             use_addons: false,
             addons_group_scope: [],
+            dine_in_adjustment: '',
         });
     };
 
@@ -409,15 +436,18 @@ export default function AdminMenu() {
                         </p>
                     </div>
                     {activeTab === 'items' && (
-                        <button
-                            onClick={() => setShowModal(true)}
-                            disabled={isLocked}
-                            className={`bg-brand-primary hover:bg-brand-primary/90 text-white px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-wider shadow-lg shadow-brand-primary/20 flex items-center gap-2 transition-all ${isLocked ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105'
-                                }`}
-                        >
-                            <FaPlus />
-                            הוסף פריט
-                        </button>
+                        <div className="flex items-center gap-3">
+                            <AiDineInRecommender onApplyAdjustments={handleApplyDineInAdjustments} />
+                            <button
+                                onClick={() => setShowModal(true)}
+                                disabled={isLocked}
+                                className={`bg-brand-primary hover:bg-brand-primary/90 text-white px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-wider shadow-lg shadow-brand-primary/20 flex items-center gap-2 transition-all ${isLocked ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105'
+                                    }`}
+                            >
+                                <FaPlus />
+                                הוסף פריט
+                            </button>
+                        </div>
                     )}
                 </div>
             </div>
@@ -929,6 +959,52 @@ export default function AdminMenu() {
                                         </div>
                                     </div>
                                 )}
+
+                                {/* התאמות מחיר לפי מצב הזמנה */}
+                                <div className="pt-6 border-t border-gray-100 space-y-4">
+                                    <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                                        <span className="w-1 h-1 bg-amber-500 rounded-full" />
+                                        התאמות לפי מצב הזמנה
+                                    </h3>
+
+                                    <div className="bg-amber-50/50 rounded-2xl p-5 space-y-3 border border-amber-100/50">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <span className="text-xs font-black text-gray-500">מחיר בסיס</span>
+                                            <span className="text-sm font-black text-gray-800">{form.price || '0.00'} ₪</span>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            {[
+                                                { mode: 'pickup', label: 'איסוף עצמי', editable: false },
+                                                { mode: 'delivery', label: 'משלוח', editable: false },
+                                                { mode: 'takeaway', label: 'לקחת', editable: false },
+                                            ].map(row => (
+                                                <div key={row.mode} className="flex items-center justify-between bg-white rounded-xl p-3 border border-gray-100">
+                                                    <span className="text-xs font-bold text-gray-700">{row.label}</span>
+                                                    <span className="text-xs font-bold text-gray-400">0.00 ₪</span>
+                                                </div>
+                                            ))}
+                                            <div className="flex items-center justify-between bg-white rounded-xl p-3 border border-amber-200">
+                                                <span className="text-xs font-bold text-amber-700">לישיבה</span>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-[10px] font-bold text-gray-400">+</span>
+                                                    <input
+                                                        type="number"
+                                                        step="0.5"
+                                                        value={form.dine_in_adjustment}
+                                                        onChange={(e) => setForm({ ...form, dine_in_adjustment: e.target.value })}
+                                                        className="w-24 px-3 py-2 rounded-lg text-center font-black text-xs bg-slate-50 border-none focus:ring-2 focus:ring-amber-300/50"
+                                                        placeholder="0.00"
+                                                    />
+                                                    <span className="text-[10px] font-bold text-gray-400">₪</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <p className="text-[9px] text-gray-400 font-medium mt-2">
+                                            ריק = שימוש בברירת מחדל מהקטגוריה. הזן 0 לביטול מפורש.
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
                         </form>
 

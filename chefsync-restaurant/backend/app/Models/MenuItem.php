@@ -27,6 +27,7 @@ class MenuItem extends Model
         'use_addons',
         'addons_group_scope',
         'max_addons',
+        'dine_in_adjustment',
     ];
 
     protected $casts = [
@@ -36,6 +37,7 @@ class MenuItem extends Model
         'use_addons' => 'boolean',
         'max_addons' => 'integer',
         'allergen_tags' => 'array',  // JSON array של אלרגנים
+        'dine_in_adjustment' => 'decimal:2',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
@@ -78,6 +80,17 @@ class MenuItem extends Model
     public function addonGroups(): HasMany
     {
         return $this->hasMany(MenuItemAddonGroup::class)->orderBy('sort_order');
+    }
+
+    /**
+     * חישוב התאמת מחיר לישיבה אפקטיבית: ברמת פריט אם קיים, אחרת ברמת קטגוריה, אחרת 0
+     */
+    public function getEffectiveDineInAdjustment(): float
+    {
+        if ($this->dine_in_adjustment !== null) {
+            return (float) $this->dine_in_adjustment;
+        }
+        return (float) ($this->category?->dine_in_adjustment ?? 0);
     }
 
     protected static function booted()

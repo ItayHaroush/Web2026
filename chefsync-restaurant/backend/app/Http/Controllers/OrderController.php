@@ -55,7 +55,7 @@ class OrderController extends Controller
                 'items.*.menu_item_id' => 'required|integer|exists:menu_items,id',
                 'items.*.variant_id' => 'nullable|integer',
                 'items.*.addons' => 'nullable|array',
-                'items.*.addons.*.addon_id' => 'required|integer',
+                'items.*.addons.*.addon_id' => 'required',  // integer or 'cat_item_X' for category-based addons
                 'items.*.addons.*.on_side' => 'nullable|boolean',
                 'items.*.qty' => 'nullable|integer|min:1',
                 'items.*.quantity' => 'nullable|integer|min:1',
@@ -134,7 +134,7 @@ class OrderController extends Controller
 
             $restaurantId = $restaurant->id;
             $restaurantVariants = $restaurant->variants ?? collect();
-            $restaurantAddonGroups = $restaurant->addonGroups ?? collect();
+            $restaurantAddonGroups = $this->resolveAddonGroups($restaurant->addonGroups ?? collect());
 
             $deliveryZone = null;
             $deliveryFee = 0.0;
@@ -233,17 +233,17 @@ class OrderController extends Controller
 
                 $availableAddonGroups = $menuItem->use_addons
                     ? $this->filterAddonGroupsByScope($restaurantAddonGroups, $menuItem, $menuItem->category_id)
-                    : $menuItem->addonGroups;
+                    : $this->resolveAddonGroups($menuItem->addonGroups);
 
                 $selectedAddonsByGroup = [];
                 foreach ($addonEntries as $addonEntry) {
-                    $addonId = (int) $addonEntry['addon_id'];
+                    $addonId = $addonEntry['addon_id']; // string or int (e.g. 5 or 'cat_item_5')
                     $matchedAddon = null;
                     $matchedGroup = null;
 
                     foreach ($availableAddonGroups as $group) {
                         $groupAddons = $group->addons ?? collect();
-                        $matchedAddon = $groupAddons->firstWhere('id', $addonId);
+                        $matchedAddon = $groupAddons->first(fn($a) => (string) $a->id === (string) $addonId);
                         if ($matchedAddon) {
                             $matchedGroup = $group;
                             break;
@@ -865,6 +865,39 @@ class OrderController extends Controller
         }
 
         return 0.0;
+    }
+
+    /**
+     * Resolve category-based addon groups by converting source-category menu items into synthetic addon objects.
+     * Mirrors the logic in MenuController::resolveCategoryAddons().
+     */
+    private function resolveAddonGroups($groups)
+    {
+        return $groups->map(function ($group) {
+            if (($group->source_type ?? null) !== 'category' || !($group->source_category_id ?? null)) {
+                return $group;
+            }
+
+            $items = MenuItem::where('category_id', $group->source_category_id)
+                ->where('is_available', true)
+                ->orderBy('name')
+                ->get();
+
+            $includePrices = (bool) ($group->source_include_prices ?? true);
+
+            $syntheticAddons = $items->map(function ($item) use ($includePrices) {
+                $addon = new \stdClass();
+                $addon->id = 'cat_item_' . $item->id;
+                $addon->name = $item->name;
+                $addon->price_delta = $includePrices ? (float) $item->price : 0;
+                $addon->selection_weight = 1;
+                $addon->is_default = false;
+                return $addon;
+            });
+
+            $group->setRelation('addons', $syntheticAddons);
+            return $group;
+        });
     }
 
     private function filterAddonGroupsByScope($groups, MenuItem $item, ?int $categoryId)

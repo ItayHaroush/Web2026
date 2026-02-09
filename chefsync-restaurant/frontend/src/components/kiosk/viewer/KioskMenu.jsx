@@ -1,7 +1,15 @@
 import { useState } from 'react';
 
-export default function KioskMenu({ categories, items, onSelectItem }) {
+export default function KioskMenu({ categories, items, onSelectItem, orderType, enableDineInPricing }) {
     const [activeCategory, setActiveCategory] = useState(null);
+
+    const getDisplayPrice = (item) => {
+        const base = item.price;
+        if (orderType === 'dine_in' && enableDineInPricing && item.dine_in_adjustment != null && item.dine_in_adjustment !== 0) {
+            return Number((base + item.dine_in_adjustment).toFixed(2));
+        }
+        return base;
+    };
 
     const filteredItems = activeCategory
         ? items.filter(item => item.category_id === activeCategory)
@@ -62,7 +70,7 @@ export default function KioskMenu({ categories, items, onSelectItem }) {
                                     <p className="text-xs text-gray-400 mt-1 line-clamp-2">{item.description}</p>
                                 )}
                                 <div className="mt-2 font-black text-amber-600 text-lg">
-                                    {item.price.toFixed(2)} ₪
+                                    {getDisplayPrice(item).toFixed(2)} ₪
                                 </div>
                             </div>
                         </button>

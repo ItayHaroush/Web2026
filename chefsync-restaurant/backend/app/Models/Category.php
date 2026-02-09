@@ -22,12 +22,14 @@ class Category extends Model
         'is_active',
         'display_order',
         'dish_type',
+        'dine_in_adjustment',
     ];
 
     protected $casts = [
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'is_active' => 'boolean',
+        'dine_in_adjustment' => 'decimal:2',
     ];
 
     /**

@@ -234,7 +234,7 @@ export default function MenuPage({ isPreviewMode = false }) {
     return (
         <CustomerLayout>
             {!canOrder && restaurant && (
-                <div className="mb-6 bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-xl">
+                <div className="mb-6 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 text-red-800 dark:text-red-400 px-4 py-3 rounded-xl">
                     המסעדה סגורה כרגע. אפשר לעיין בתפריט, אך לא ניתן לבצע הזמנה.
                 </div>
             )}

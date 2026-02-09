@@ -124,6 +124,8 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'tenant'])->group(function (
                 ->name('admin.ai.dashboard-insights');
             Route::post('/recommend-price', [\App\Http\Controllers\AiController::class, 'recommendPrice'])
                 ->name('admin.ai.recommend-price');
+            Route::post('/recommend-dine-in', [\App\Http\Controllers\AiController::class, 'recommendDineInAdjustments'])
+                ->name('admin.ai.recommend-dine-in');
 
             // צ'אט אינטראקטיבי עם סוכן AI (מותאם למנהל מסעדה)
             Route::post('/chat', [ChatController::class, 'restaurantChat'])
@@ -154,6 +156,7 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'tenant'])->group(function (
         Route::get('/restaurant', [AdminController::class, 'getRestaurant'])->name('admin.restaurant.get');
         Route::put('/restaurant', [AdminController::class, 'updateRestaurant'])->name('admin.restaurant.update');
         Route::post('/restaurant/override/clear', [AdminController::class, 'clearRestaurantOverride'])->name('admin.restaurant.override.clear');
+        Route::post('/restaurant/reset-dine-in-adjustments', [AdminController::class, 'resetDineInAdjustments'])->name('admin.restaurant.reset-dine-in');
 
         // ניהול קטגוריות
         Route::get('/categories', [AdminController::class, 'getCategories'])->name('admin.categories.index');

@@ -93,6 +93,14 @@ class AiService
     }
 
     /**
+     * Recommend dine-in pricing adjustments
+     */
+    public function recommendDineInAdjustments(array $menuContext): array
+    {
+        return $this->getProvider()->recommendDineInAdjustments($menuContext);
+    }
+
+    /**
      * Get suggested actions for restaurant
      */
     public function getRestaurantSuggestedActions(array $context = [], ?string $preset = null): array

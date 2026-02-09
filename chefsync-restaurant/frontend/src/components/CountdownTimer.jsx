@@ -70,16 +70,16 @@ export default function CountdownTimer({ startTime, etaMinutes, etaNote, deliver
     // אם ההזמנה נמסרה - הצג הודעת סיום
     if (orderStatus === 'delivered') {
         return (
-            <div className="bg-gradient-to-br from-green-50 to-emerald-100 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl sm:rounded-2xl p-6 sm:p-8 shadow-lg border-2 border-green-300 dark:border-green-700">
+            <div className="bg-gradient-to-br from-brand-light to-orange-50 dark:from-brand-success/10 dark:to-brand-dark-bg rounded-xl sm:rounded-2xl p-6 sm:p-8 shadow-lg border-2 border-brand-success/40 dark:border-brand-success/30">
                 <div className="flex flex-col items-center gap-4">
-                    <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-xl">
+                    <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-br from-brand-success to-brand-primary flex items-center justify-center shadow-xl">
                         <FaCheckCircle className="text-4xl sm:text-5xl text-white" />
                     </div>
                     <div className="text-center space-y-2">
                         <p className="text-xl sm:text-2xl font-black text-gray-800 dark:text-brand-dark-text">
                             {deliveryMethod === 'pickup' ? 'ההזמנה נאספה' : 'השליח כבר בדלת!'}
                         </p>
-                        <p className="text-base sm:text-lg font-bold text-green-700 flex items-center justify-center gap-2">
+                        <p className="text-base sm:text-lg font-bold text-brand-success flex items-center justify-center gap-2">
                             <FaUtensils />
                             בתאבון!
                         </p>
@@ -171,7 +171,7 @@ export default function CountdownTimer({ startTime, etaMinutes, etaNote, deliver
     // אם הזמן אזל
     if (timeLeft?.isZero) {
         return (
-            <div className="bg-gradient-to-br from-green-50 to-emerald-100 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-lg border-2 border-brand-success/50 dark:border-green-700">
+            <div className="bg-gradient-to-br from-brand-light to-orange-50 dark:from-brand-success/10 dark:to-brand-dark-bg rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-lg border-2 border-brand-success/40 dark:border-brand-success/30">
                 <div className="flex flex-col items-center gap-3">
                     <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-brand-success flex items-center justify-center">
                         <span className="text-3xl sm:text-4xl text-white">✓</span>

@@ -313,12 +313,11 @@ export default function AdminSalads() {
         const group = groups.find(g => g.id === groupId);
         const itemsCount = salads.filter(s => String(s.addon_group_id) === String(groupId)).length;
 
-        if (itemsCount > 0) {
-            alert(`לא ניתן למחוק קבוצה שיש בה ${itemsCount} פריטים.\nנא למחוק תחילה את הפריטים או להעביר אותם לקבוצה אחרת.`);
-            return;
-        }
+        const confirmMsg = itemsCount > 0
+            ? `האם אתה בטוח שברצונך למחוק את הקבוצה "${group?.name}" ו-${itemsCount} הפריטים שבה?\nפעולה זו לא ניתנת לביטול.`
+            : `האם אתה בטוח שברצונך למחוק את הקבוצה "${group?.name}"?`;
 
-        if (!confirm(`האם אתה בטוח שברצונך למחוק את הקבוצה "${group?.name}"?`)) return;
+        if (!confirm(confirmMsg)) return;
 
         try {
             await api.delete(`/admin/addon-groups/${groupId}`, { headers: getAuthHeaders() });

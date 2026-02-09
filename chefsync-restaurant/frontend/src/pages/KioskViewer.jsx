@@ -147,6 +147,8 @@ export default function KioskViewer() {
                 categories={categories}
                 items={items}
                 onSelectItem={(item) => setSelectedItem(item)}
+                orderType={orderType}
+                enableDineInPricing={restaurant?.enable_dine_in_pricing}
             />
 
             {/* Item Detail Modal */}
@@ -155,6 +157,8 @@ export default function KioskViewer() {
                     item={selectedItem}
                     onAddToCart={cart.addItem}
                     onClose={() => setSelectedItem(null)}
+                    orderType={orderType}
+                    enableDineInPricing={restaurant?.enable_dine_in_pricing}
                 />
             )}
 

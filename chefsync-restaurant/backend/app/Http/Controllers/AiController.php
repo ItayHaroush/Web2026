@@ -341,4 +341,66 @@ class AiController extends Controller
             ], 200);
         }
     }
+
+    /**
+     * Recommend dine-in pricing adjustments for the menu
+     * 
+     * POST /admin/ai/recommend-dine-in
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function recommendDineInAdjustments(Request $request)
+    {
+        try {
+            $tenantId = app('tenant_id');
+            $restaurant = Restaurant::where('tenant_id', $tenantId)->firstOrFail();
+            $user = $request->user();
+
+            // Initialize AI Service
+            $ai = new AiService($tenantId, $restaurant, $user);
+
+            // Load active categories and menu items
+            $categories = $restaurant->categories()
+                ->where('is_active', true)
+                ->pluck('name')
+                ->toArray();
+
+            $items = $restaurant->menuItems()
+                ->with('category')
+                ->where('is_available', true)
+                ->get()
+                ->map(fn($item) => [
+                    'name' => $item->name,
+                    'category' => $item->category?->name ?? 'ללא קטגוריה',
+                    'price' => $item->price,
+                ])
+                ->toArray();
+
+            $menuContext = [
+                'restaurant_name' => $restaurant->name,
+                'categories' => $categories,
+                'items' => $items,
+            ];
+
+            // Generate dine-in recommendations
+            $recommendation = $ai->recommendDineInAdjustments($menuContext);
+
+            return response()->json([
+                'success' => true,
+                'data' => $recommendation,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('AI Dine-In Recommendation Failed', [
+                'tenant_id' => app('tenant_id'),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 200);
+        }
+    }
 }

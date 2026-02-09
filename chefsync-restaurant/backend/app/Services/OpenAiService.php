@@ -542,6 +542,102 @@ class OpenAiService extends BaseAiService
     }
 
     /**
+     * Recommend dine-in pricing adjustments for the restaurant menu
+     */
+    public function recommendDineInAdjustments(array $menuContext): array
+    {
+        $feature = 'dine_in_recommendation';
+        $startTime = microtime(true);
+
+        try {
+            $this->validateAccess($feature, $this->restaurant, $this->user);
+
+            // Build context strings
+            $categoriesStr = implode(', ', $menuContext['categories'] ?? []);
+            $itemsList = collect($menuContext['items'] ?? [])->map(function ($item) {
+                return "- {$item['name']} ({$item['category']}): {$item['price']} ₪";
+            })->implode("\n");
+
+            $prompt = "אתה יועץ מחירים למסעדות. נתח את התפריט הבא והמלץ על התאמות מחירים לישיבה במקום (Dine-In) לעומת משלוח/טייק-אוויי.\n\n"
+                . "מסעדה: " . ($menuContext['restaurant_name'] ?? 'לא צוין') . "\n"
+                . "קטגוריות: {$categoriesStr}\n\n"
+                . "פריטי תפריט:\n{$itemsList}\n\n"
+                . "החזר JSON בפורמט הבא:\n"
+                . '{"adjustments": [{"item_name": "שם", "current_price": 45, "recommended_dine_in_price": 52, "adjustment_percent": 15.5, "reasoning": "סיבה קצרה"}], '
+                . '"general_recommendation": "המלצה כללית", '
+                . '"confidence": "high", '
+                . '"factors": ["גורם1", "גורם2"]}';
+
+            $response = $this->callOpenAi($prompt);
+            $responseTime = (int)((microtime(true) - $startTime) * 1000);
+
+            // Parse JSON response
+            $content = $response['content'] ?? '';
+
+            $result = null;
+            if (preg_match('/\{[\s\S]*\}/', $content, $matches)) {
+                try {
+                    $parsed = json_decode($matches[0], true);
+                    if (json_last_error() === JSON_ERROR_NONE) {
+                        $result = [
+                            'adjustments' => $parsed['adjustments'] ?? [],
+                            'general_recommendation' => $parsed['general_recommendation'] ?? 'אין המלצה כללית',
+                            'confidence' => $parsed['confidence'] ?? 'medium',
+                            'factors' => $parsed['factors'] ?? [],
+                            'provider' => 'openai'
+                        ];
+                    }
+                } catch (\Exception $e) {
+                    Log::warning('Failed to parse dine-in recommendation JSON', ['error' => $e->getMessage()]);
+                }
+            }
+
+            // Fallback
+            if (!$result) {
+                $result = [
+                    'adjustments' => [],
+                    'general_recommendation' => $content ?: 'לא ניתן לקבל המלצה',
+                    'confidence' => 'low',
+                    'factors' => [],
+                    'provider' => 'openai'
+                ];
+            }
+
+            // Log usage
+            $costCredits = config("ai.features.{$feature}.cost_credits", 5);
+            $this->logUsage(
+                $feature,
+                'recommend',
+                $costCredits,
+                $response['tokens'] ?? 0,
+                false,
+                null,
+                'success',
+                null,
+                $responseTime,
+                ['restaurant' => $menuContext['restaurant_name'] ?? 'unknown', 'mock' => $this->mockMode]
+            );
+
+            return $result;
+        } catch (\Exception $e) {
+            $responseTime = (int)((microtime(true) - $startTime) * 1000);
+            $this->logUsage(
+                $feature,
+                'recommend',
+                0,
+                0,
+                false,
+                null,
+                'error',
+                $e->getMessage(),
+                $responseTime,
+                ['error' => $e->getMessage()]
+            );
+            throw $e;
+        }
+    }
+
+    /**
      * Call OpenAI API (or return mock response)
      */
     private function callOpenAi($input, $systemPrompt = null): array

@@ -24,8 +24,6 @@ use Illuminate\Support\Str;
 
 class AdminController extends Controller
 {
-    private const DEFAULT_SALAD_GROUP_NAME = 'סלטים קבועים';
-    private const DEFAULT_HOT_GROUP_NAME = 'תוספות חמות';
     /**
      * דשבורד - סטטיסטיקות
      */
@@ -111,6 +109,7 @@ class AdminController extends Controller
             'description' => 'nullable|string',
             'icon' => 'nullable|string|max:50',
             'dish_type' => 'nullable|string|in:plate,sandwich,both',
+            'dine_in_adjustment' => 'nullable|numeric',
         ]);
 
         $user = $request->user();
@@ -135,6 +134,7 @@ class AdminController extends Controller
             'sort_order' => $maxOrder + 1,
             'is_active' => true,
             'dish_type' => $request->input('dish_type', 'both'),
+            'dine_in_adjustment' => $request->input('dine_in_adjustment'),
         ]);
 
         return response()->json([
@@ -157,9 +157,19 @@ class AdminController extends Controller
             'is_active' => 'sometimes|boolean',
             'sort_order' => 'sometimes|integer',
             'dish_type' => 'sometimes|string|in:plate,sandwich,both',
+            'dine_in_adjustment' => 'nullable|numeric',
         ]);
 
-        $category->update($request->only(['name', 'description', 'icon', 'is_active', 'sort_order', 'dish_type']));
+        $category->update($request->only(['name', 'description', 'icon', 'is_active', 'sort_order', 'dish_type', 'dine_in_adjustment']));
+
+        // הפעלה אוטומטית של תמחור ישיבה כשמגדירים התאמה בקטגוריה
+        $dineInVal = $request->input('dine_in_adjustment');
+        if ($dineInVal !== null && $dineInVal !== '' && (float) $dineInVal != 0) {
+            $restaurant = \App\Models\Restaurant::find($user->restaurant_id);
+            if ($restaurant && !$restaurant->enable_dine_in_pricing) {
+                $restaurant->update(['enable_dine_in_pricing' => true]);
+            }
+        }
 
         return response()->json([
             'success' => true,
@@ -295,6 +305,7 @@ class AdminController extends Controller
             'use_addons' => 'sometimes|boolean',
             'addons_group_scope' => 'nullable|string',  // משנה לקבל JSON string
             'max_addons' => 'nullable|integer|min:1|max:99',
+            'dine_in_adjustment' => 'nullable|numeric',
         ]);
 
         $user = $request->user();
@@ -343,6 +354,7 @@ class AdminController extends Controller
             'use_addons' => $useAddons,
             'addons_group_scope' => $addonsGroupScope,
             'max_addons' => $maxAddons,
+            'dine_in_adjustment' => $request->input('dine_in_adjustment'),
         ]);
 
         return response()->json([
@@ -369,6 +381,7 @@ class AdminController extends Controller
             'use_addons' => 'sometimes|boolean',
             'addons_group_scope' => 'nullable|string',  // משנה לקבל JSON string
             'max_addons' => 'nullable|integer|min:1|max:99',
+            'dine_in_adjustment' => 'nullable|numeric',
         ]);
 
         if ($request->hasFile('image')) {
@@ -406,7 +419,20 @@ class AdminController extends Controller
             $payload['addons_group_scope'] = $request->input('addons_group_scope') ?: null;
         }
 
+        if ($request->has('dine_in_adjustment')) {
+            $value = $request->input('dine_in_adjustment');
+            $payload['dine_in_adjustment'] = ($value === '' || $value === null) ? null : (float) $value;
+        }
+
         $item->update($payload);
+
+        // הפעלה אוטומטית של תמחור ישיבה כשמגדירים התאמה
+        if (isset($payload['dine_in_adjustment']) && $payload['dine_in_adjustment'] !== null && (float) $payload['dine_in_adjustment'] != 0) {
+            $restaurant = \App\Models\Restaurant::find($user->restaurant_id);
+            if ($restaurant && !$restaurant->enable_dine_in_pricing) {
+                $restaurant->update(['enable_dine_in_pricing' => true]);
+            }
+        }
 
         return response()->json([
             'success' => true,
@@ -457,7 +483,6 @@ class AdminController extends Controller
             ], 404);
         }
 
-        $this->ensureDefaultAddonGroups($restaurant);
         $groups = RestaurantAddonGroup::where('restaurant_id', $restaurant->id)
             ->orderBy('sort_order')
             ->get();
@@ -501,11 +526,10 @@ class AdminController extends Controller
             ], 404);
         }
 
-        $this->ensureDefaultAddonGroups($restaurant);
         $groupId = $request->input('group_id');
         $group = $groupId
             ? RestaurantAddonGroup::where('restaurant_id', $restaurant->id)->findOrFail($groupId)
-            : $this->ensureDefaultSaladGroup($restaurant);
+            : RestaurantAddonGroup::where('restaurant_id', $restaurant->id)->orderBy('sort_order')->firstOrFail();
         $maxOrder = RestaurantAddon::where('addon_group_id', $group->id)->max('sort_order') ?? 0;
         $categoryIds = collect($request->input('category_ids', []))
             ->filter(fn($id) => is_numeric($id))
@@ -570,7 +594,6 @@ class AdminController extends Controller
             ], 404);
         }
 
-        $this->ensureDefaultAddonGroups($restaurant);
         $salad = RestaurantAddon::where('restaurant_id', $restaurant->id)
             ->findOrFail($id);
 
@@ -1092,10 +1115,12 @@ class AdminController extends Controller
         }
 
         $request->validate([
-            'prices' => 'required|array',
+            'prices' => 'present|array',
             'prices.*.category_id' => 'required|integer|exists:categories,id',
             'prices.*.restaurant_variant_id' => 'required|integer|exists:restaurant_variants,id',
             'prices.*.price_delta' => 'required|numeric|min:0|max:999.99',
+            'category_ids' => 'sometimes|array',
+            'category_ids.*' => 'integer',
         ]);
 
         $restaurant = $user->restaurant;
@@ -1106,31 +1131,39 @@ class AdminController extends Controller
             ], 404);
         }
 
-        $categoryIds = collect($request->input('prices'))->pluck('category_id')->unique();
-        $variantIds = collect($request->input('prices'))->pluck('restaurant_variant_id')->unique();
+        // קבל את כל הקטגוריות שצריך לנקות (מה-category_ids או ממערך prices)
+        $allCategoryIds = collect($request->input('category_ids', []))
+            ->merge(collect($request->input('prices', []))->pluck('category_id'))
+            ->unique();
+        $variantIds = collect($request->input('prices', []))->pluck('restaurant_variant_id')->unique();
 
         // וודא שהקטגוריות שייכות למסעדה
         $validCategoryIds = Category::where('restaurant_id', $restaurant->id)
-            ->whereIn('id', $categoryIds)
+            ->whereIn('id', $allCategoryIds)
             ->pluck('id');
 
         // וודא שהבסיסים שייכים למסעדה
-        $validVariantIds = RestaurantVariant::where('restaurant_id', $restaurant->id)
-            ->whereIn('id', $variantIds)
-            ->pluck('id');
+        $validVariantIds = $variantIds->isNotEmpty()
+            ? RestaurantVariant::where('restaurant_id', $restaurant->id)
+                ->whereIn('id', $variantIds)
+                ->pluck('id')
+            : collect();
 
-        // מחק כללי מחיר קיימים ברמת קטגוריה עבור הקטגוריות שנשלחו
-        PriceRule::where('tenant_id', $restaurant->tenant_id)
-            ->where('target_type', 'base')
-            ->where('scope_type', 'category')
-            ->whereIn('scope_id', $validCategoryIds)
-            ->delete();
+        // מחק כללי מחיר קיימים ברמת קטגוריה עבור כל הקטגוריות
+        if ($validCategoryIds->isNotEmpty()) {
+            PriceRule::where('tenant_id', $restaurant->tenant_id)
+                ->where('target_type', 'base')
+                ->where('scope_type', 'category')
+                ->whereIn('scope_id', $validCategoryIds)
+                ->delete();
+        }
 
-        // הכנס כללי מחיר חדשים
+        // הכנס כללי מחיר חדשים (רק ערכים שונים מ-0)
         $count = 0;
-        foreach ($request->input('prices') as $priceData) {
+        foreach ($request->input('prices', []) as $priceData) {
             if (!$validCategoryIds->contains($priceData['category_id'])) continue;
             if (!$validVariantIds->contains($priceData['restaurant_variant_id'])) continue;
+            if ((float) $priceData['price_delta'] == 0) continue;
 
             PriceRule::create([
                 'tenant_id' => $restaurant->tenant_id,
@@ -1383,8 +1416,6 @@ class AdminController extends Controller
             ], 404);
         }
 
-        $this->ensureDefaultAddonGroups($restaurant);
-
         $group = RestaurantAddonGroup::where('restaurant_id', $restaurant->id)
             ->findOrFail($id);
 
@@ -1460,20 +1491,17 @@ class AdminController extends Controller
         $group = RestaurantAddonGroup::where('restaurant_id', $restaurant->id)
             ->findOrFail($id);
 
-        // בדוק אם יש פריטים בקבוצה
+        // מחק את כל הפריטים בקבוצה (cascade ברמת DB, אבל נעשה גם ברמת אפליקציה)
         $itemsCount = RestaurantAddon::where('addon_group_id', $id)->count();
-        if ($itemsCount > 0) {
-            return response()->json([
-                'success' => false,
-                'message' => "לא ניתן למחוק קבוצה שיש בה {$itemsCount} פריטים. נא למחוק תחילה את הפריטים.",
-            ], 400);
-        }
+        RestaurantAddon::where('addon_group_id', $id)->delete();
 
         $group->delete();
 
         return response()->json([
             'success' => true,
-            'message' => 'הקבוצה נמחקה בהצלחה!',
+            'message' => $itemsCount > 0
+                ? "הקבוצה ו-{$itemsCount} הפריטים שבה נמחקו בהצלחה!"
+                : 'הקבוצה נמחקה בהצלחה!',
         ]);
     }
 
@@ -1623,6 +1651,7 @@ class AdminController extends Controller
             'operating_days' => 'nullable|string',
             'operating_hours' => 'nullable|string',
             'logo' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
+            'enable_dine_in_pricing' => 'sometimes|boolean',
         ]);
 
         if ($request->hasFile('logo')) {
@@ -1728,6 +1757,10 @@ class AdminController extends Controller
 
         if ($request->has('allergen_notes')) {
             $updateData['allergen_notes'] = $request->input('allergen_notes');
+        }
+
+        if ($request->has('enable_dine_in_pricing')) {
+            $updateData['enable_dine_in_pricing'] = $request->boolean('enable_dine_in_pricing');
         }
 
         if ($request->has('common_allergens')) {
@@ -2320,36 +2353,6 @@ class AdminController extends Controller
     // העלאת תמונות
     // =============================================
 
-    private function ensureDefaultSaladGroup(Restaurant $restaurant): RestaurantAddonGroup
-    {
-        return $this->ensureAddonGroup($restaurant, self::DEFAULT_SALAD_GROUP_NAME, 0);
-    }
-
-    private function ensureDefaultAddonGroups(Restaurant $restaurant): void
-    {
-        $this->ensureAddonGroup($restaurant, self::DEFAULT_SALAD_GROUP_NAME, 0);
-        $this->ensureAddonGroup($restaurant, self::DEFAULT_HOT_GROUP_NAME, 1);
-    }
-
-    private function ensureAddonGroup(Restaurant $restaurant, string $name, int $sortOrder): RestaurantAddonGroup
-    {
-        return RestaurantAddonGroup::firstOrCreate(
-            [
-                'restaurant_id' => $restaurant->id,
-                'tenant_id' => $restaurant->tenant_id,
-                'name' => $name,
-            ],
-            [
-                'selection_type' => 'multiple',
-                'min_selections' => 0,
-                'max_selections' => null,
-                'is_required' => false,
-                'is_active' => true,
-                'sort_order' => $sortOrder,
-            ]
-        );
-    }
-
     private function uploadImage($file, $folder)
     {
         $filename = Str::uuid() . '.' . $file->getClientOriginalExtension();
@@ -2428,5 +2431,32 @@ class AdminController extends Controller
 
         // טיפול רגיל
         return $currentTime >= $open && $currentTime <= $close;
+    }
+
+    /**
+     * איפוס כל התאמות מחיר לישיבה
+     */
+    public function resetDineInAdjustments(Request $request)
+    {
+        $user = $request->user();
+
+        if (!$user->isOwner()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'רק בעל המסעדה יכול לבצע פעולה זו',
+            ], 403);
+        }
+
+        $restaurantId = $user->restaurant_id;
+        $restaurant = Restaurant::findOrFail($restaurantId);
+
+        Category::where('restaurant_id', $restaurantId)->update(['dine_in_adjustment' => null]);
+        MenuItem::where('restaurant_id', $restaurantId)->update(['dine_in_adjustment' => null]);
+        $restaurant->update(['enable_dine_in_pricing' => false]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'כל ההתאמות לישיבה אופסו בהצלחה',
+        ]);
     }
 }

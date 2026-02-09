@@ -395,7 +395,7 @@ export default function MenuItemModal({
                     </div>
 
                     {!isOrderingEnabled && (
-                        <div className="bg-yellow-50 border border-yellow-200 text-yellow-900 px-4 py-3 rounded-2xl text-sm">
+                        <div className="bg-yellow-50 dark:bg-yellow-500/10 border border-yellow-200 dark:border-yellow-500/30 text-yellow-900 dark:text-yellow-300 px-4 py-3 rounded-2xl text-sm">
                             המסעדה סגורה כרגע. ניתן לעיין במנה אך לא ניתן להזמין.
                         </div>
                     )}
