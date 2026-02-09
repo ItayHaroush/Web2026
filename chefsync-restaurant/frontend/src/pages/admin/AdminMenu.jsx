@@ -129,12 +129,26 @@ export default function AdminMenu() {
     const handleApplyDineInAdjustments = async (adjustments) => {
         try {
             for (const adj of adjustments) {
-                const value = parseFloat(adj.recommended_dine_in_price || adj.suggested_adjustment || 0);
-                if (adj.category_id) {
-                    await api.put(`/admin/categories/${adj.category_id}`, { dine_in_adjustment: value }, { headers: getAuthHeaders() });
+                const value = Math.round(parseFloat(adj.recommended_dine_in_price || adj.suggested_adjustment || 0));
+
+                // Match by ID if available, otherwise match by name
+                let itemId = adj.item_id;
+                let categoryId = adj.category_id;
+
+                if (!itemId && adj.item_name) {
+                    const match = items.find(i => i.name === adj.item_name);
+                    if (match) itemId = match.id;
                 }
-                if (adj.item_id) {
-                    await api.put(`/admin/menu-items/${adj.item_id}`, { dine_in_adjustment: value }, { headers: getAuthHeaders() });
+
+                if (!categoryId && adj.category_name) {
+                    const match = categories.find(c => c.name === adj.category_name);
+                    if (match) categoryId = match.id;
+                }
+
+                if (itemId) {
+                    await api.put(`/admin/menu-items/${itemId}`, { dine_in_adjustment: value }, { headers: getAuthHeaders() });
+                } else if (categoryId) {
+                    await api.put(`/admin/categories/${categoryId}`, { dine_in_adjustment: value }, { headers: getAuthHeaders() });
                 }
             }
             await fetchData();

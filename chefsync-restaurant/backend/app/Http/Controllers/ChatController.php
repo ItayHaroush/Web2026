@@ -287,7 +287,10 @@ class ChatController extends Controller
     {
         $request->validate([
             'message' => 'required|string|max:1000',
-            'preset' => 'nullable|string|in:order_summary,menu_suggestions,performance_insights,customer_engagement'
+            'preset' => 'nullable|string|in:order_summary,menu_suggestions,performance_insights,customer_engagement',
+            'history' => 'nullable|array|max:10',
+            'history.*.role' => 'required_with:history|string|in:user,assistant',
+            'history.*.content' => 'required_with:history|string|max:2000',
         ]);
 
         $user = $request->user();
@@ -303,12 +306,14 @@ class ChatController extends Controller
             // יצירת AiService עם הפרמטרים הנכונים
             $aiService = new AiService($tenantId, $restaurant, $user);
 
-            // קריאה לסוכן AI עם preset אם קיים
+            // קריאה לסוכן AI עם preset אם קיים + היסטוריית שיחה
             $preset = $request->input('preset');
+            $history = $request->input('history', []);
             $response = $aiService->chatWithRestaurant(
                 $request->input('message'),
                 $context,
-                $preset
+                $preset,
+                $history
             );
 
             // קבלת מצב קרדיטים עדכני (הופחת כבר בתוך AiService)

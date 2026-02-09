@@ -230,11 +230,18 @@ export default function FloatingRestaurantAssistant({ isSidebarOpen = false }) {
         setIsLoading(true);
 
         try {
+            // Build conversation history (last 10 messages, only role + content)
+            const history = messages
+                .filter(m => m.role === 'user' || m.role === 'assistant')
+                .slice(-10)
+                .map(m => ({ role: m.role, content: m.content }));
+
             const response = await api.post(
                 '/admin/ai/chat',
                 {
                     message: messageText,
-                    preset: preset
+                    preset: preset,
+                    history: history
                 },
                 { headers: getAuthHeaders() }
             );
@@ -423,8 +430,8 @@ export default function FloatingRestaurantAssistant({ isSidebarOpen = false }) {
                                     </div>
                                 )}
 
-                                {/* Suggested Actions (Navigation) */}
-                                {msg.suggested_actions && msg.suggested_actions.length > 0 && (
+                                {/* Suggested Actions (Navigation) - hide when proposed actions exist */}
+                                {msg.suggested_actions && msg.suggested_actions.length > 0 && !(msg.proposed_actions && msg.proposed_actions.length > 0) && (
                                     <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 space-y-2">
                                         {msg.suggested_actions.map((action, i) => (
                                             <button

@@ -72,7 +72,8 @@ class AgentActionService
      */
     public function executeAction(string $actionId, array $params, User $user): array
     {
-        $def = config("agent_actions.{$actionId}");
+        $registry = config('agent_actions', []);
+        $def = $registry[$actionId] ?? null;
 
         if (!$def) {
             return ['success' => false, 'message' => 'פעולה לא קיימת'];
@@ -125,7 +126,8 @@ class AgentActionService
      */
     public function getActionDefinition(string $actionId): ?array
     {
-        return config("agent_actions.{$actionId}");
+        $registry = config('agent_actions', []);
+        return $registry[$actionId] ?? null;
     }
 
     /**

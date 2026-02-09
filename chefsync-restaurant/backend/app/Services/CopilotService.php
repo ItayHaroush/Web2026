@@ -347,6 +347,11 @@ class CopilotService
             return $this->generateMockSuperAdminResponse($prompt);
         }
 
+        // Check for dine-in pricing recommendation BEFORE business questions
+        if (str_contains($prompt, 'ישיבה במקום') || str_contains($prompt, 'Dine-In') || str_contains($prompt, 'dine-in') || str_contains($prompt, 'dine_in')) {
+            return $this->generateMockDineInResponse($prompt);
+        }
+
         // Check for specific restaurant presets or business questions
         $isBusinessQuestion = false;
         $promptLower = mb_strtolower($prompt);
@@ -462,6 +467,46 @@ class CopilotService
             'model' => 'copilot-business-mock',
             'should_type' => true
         ];
+    }
+
+    /**
+     * Generate mock dine-in pricing response from actual menu items in the prompt
+     */
+    private function generateMockDineInResponse(string $prompt): string
+    {
+        $adjustments = [];
+        $reasonings = [
+            'מנה שנהנים לאכול במקום עם חווית ישיבה',
+            'פריט פופולרי לאכילה במסעדה',
+            'מנה שדורשת הגשה מיוחדת בישיבה',
+            'ערך מוסף גבוה בחוויית ישיבה',
+            'מתאימה במיוחד לאכילה במקום',
+        ];
+
+        // Parse real items from the prompt: "- שם (קטגוריה): מחיר ₪"
+        if (preg_match_all('/- (.+?) \((.+?)\): ([\d.]+) ₪/', $prompt, $matches, PREG_SET_ORDER)) {
+            foreach ($matches as $i => $match) {
+                $name = $match[1];
+                $price = (float) $match[3];
+                $addition = (float) max(1, round($price * (8 + ($i % 5) * 1.5) / 100));
+                $percent = round($addition / $price * 100, 1);
+
+                $adjustments[] = [
+                    'item_name' => $name,
+                    'current_price' => $price,
+                    'recommended_dine_in_price' => $addition,
+                    'adjustment_percent' => $percent,
+                    'reasoning' => $reasonings[$i % count($reasonings)],
+                ];
+            }
+        }
+
+        return json_encode([
+            'adjustments' => $adjustments,
+            'general_recommendation' => 'מומלץ להוסיף 8-12% תוספת ישיבה על מנות עיקריות, ו-5-8% על שתייה ומנות קטנות.',
+            'confidence' => 'high',
+            'factors' => ['עלויות שירות', 'שטח ישיבה', 'כלים חד-פעמיים מול רב-פעמיים', 'זמן שהייה'],
+        ], JSON_UNESCAPED_UNICODE);
     }
 
     /**
@@ -1240,15 +1285,20 @@ class CopilotService
                 return "- {$item['name']} ({$item['category']}): {$item['price']} ₪";
             })->implode("\n");
 
-            $prompt = "אתה יועץ מחירים למסעדות. נתח את התפריט הבא והמלץ על התאמות מחירים לישיבה במקום (Dine-In) לעומת משלוח/טייק-אוויי.\n\n"
+            $prompt = "אתה יועץ תמחור מומחה למסעדות. התפקיד שלך הוא להמליץ על תוספות מחיר (בשקלים) עבור הזמנות ישיבה במקום (Dine-In) לעומת משלוח/טייק-אוויי.\n"
+                . "ישיבה במקום כוללת עלויות נוספות למסעדה: שירות, ניקיון, שטח ישיבה, כלים וכו'.\n"
+                . "עליך להחזיר אך ורק JSON תקין, בלי טקסט מסביב, בלי markdown.\n"
+                . "הפורמט המדויק:\n"
+                . '{"adjustments": [{"item_name": "שם הפריט", "current_price": 45, "recommended_dine_in_price": 5, "adjustment_percent": 11.1, "reasoning": "סיבה קצרה"}], '
+                . '"general_recommendation": "המלצה כללית קצרה על אסטרטגיית התמחור", '
+                . '"confidence": "high", '
+                . '"factors": ["גורם 1", "גורם 2"]}'
+                . "\n\nשדה recommended_dine_in_price הוא סכום התוספת בשקלים שלמים בלבד (לא המחיר החדש). לדוגמה: אם מחיר בסיס 45 ואתה ממליץ 50, אז recommended_dine_in_price=5. חובה מספרים שלמים בלבד (1, 2, 3, 5, 8 וכו')."
+                . "\nconfidence: high/medium/low. factors: רשימה קצרה של הגורמים שהשפיעו."
+                . "\nחובה להחזיר adjustments עבור כל פריט ברשימה.\n\n"
                 . "מסעדה: " . ($menuContext['restaurant_name'] ?? 'לא צוין') . "\n"
                 . "קטגוריות: {$categoriesStr}\n\n"
-                . "פריטי תפריט:\n{$itemsList}\n\n"
-                . "החזר JSON בפורמט הבא:\n"
-                . '{"adjustments": [{"item_name": "שם", "current_price": 45, "recommended_dine_in_price": 52, "adjustment_percent": 15.5, "reasoning": "סיבה קצרה"}], '
-                . '"general_recommendation": "המלצה כללית", '
-                . '"confidence": "high", '
-                . '"factors": ["גורם1", "גורם2"]}';
+                . "פריטי תפריט:\n{$itemsList}";
 
             // Call Copilot API
             $response = $this->callCopilot($prompt);
@@ -1955,13 +2005,27 @@ PROMPT;
     /**
      * שיחה עם עוזר AI למנהל מסעדה - נתונים ספציפיים למסעדה בלבד
      */
-    public function chatWithRestaurant(string $message, array $context, ?string $preset = null): array
+    public function chatWithRestaurant(string $message, array $context, ?string $preset = null, array $history = []): array
     {
         set_time_limit(120);
         $systemPrompt = $this->buildRestaurantSystemPrompt($context);
         $userMessage = $preset ? $this->expandRestaurantPreset($preset, $context) : $message;
 
-        $response = $this->callCopilot($systemPrompt . "\n\n" . $userMessage);
+        // Build full prompt with conversation history
+        $fullPrompt = $systemPrompt;
+
+        if (!empty($history)) {
+            $fullPrompt .= "\n\n=== היסטוריית שיחה אחרונה ===\n";
+            foreach ($history as $msg) {
+                $role = $msg['role'] === 'user' ? 'מנהל המסעדה' : 'עוזר AI';
+                $fullPrompt .= "{$role}: {$msg['content']}\n";
+            }
+            $fullPrompt .= "=== סוף היסטוריה ===\n";
+        }
+
+        $fullPrompt .= "\n\n" . $userMessage;
+
+        $response = $this->callCopilot($fullPrompt);
 
         // Parse proposed agent actions from AI response
         $agentService = new AgentActionService();
