@@ -300,8 +300,8 @@ export default function AdminCategories() {
                                                         type="button"
                                                         onClick={() => setShowIconPicker(!showIconPicker)}
                                                         className={`w-full py-5 rounded-[1.5rem] border-2 transition-all font-black flex items-center justify-center gap-3 text-lg ${showIconPicker
-                                                                ? 'bg-brand-primary text-white border-brand-primary shadow-xl shadow-brand-primary/20'
-                                                                : 'bg-white text-gray-700 border-gray-100 hover:border-brand-primary/30 hover:bg-gray-50'
+                                                            ? 'bg-brand-primary text-white border-brand-primary shadow-xl shadow-brand-primary/20'
+                                                            : 'bg-white text-gray-700 border-gray-100 hover:border-brand-primary/30 hover:bg-gray-50'
                                                             }`}
                                                     >
                                                         {showIconPicker ? <FaChevronUp /> : <FaSmile />}
@@ -334,8 +334,8 @@ export default function AdminCategories() {
                                                                         setShowIconPicker(false);
                                                                     }}
                                                                     className={`h-14 w-14 flex items-center justify-center text-3xl rounded-2xl transition-all ${form.icon === emoji
-                                                                            ? 'bg-brand-primary text-white shadow-xl shadow-brand-primary/30 transform scale-110 rotate-3 z-10'
-                                                                            : 'bg-white hover:bg-brand-primary/5 border border-white hover:border-brand-primary/20 shadow-sm'
+                                                                        ? 'bg-brand-primary text-white shadow-xl shadow-brand-primary/30 transform scale-110 rotate-3 z-10'
+                                                                        : 'bg-white hover:bg-brand-primary/5 border border-white hover:border-brand-primary/20 shadow-sm'
                                                                         }`}
                                                                 >
                                                                     {emoji}
@@ -363,8 +363,8 @@ export default function AdminCategories() {
                                                     type="button"
                                                     onClick={() => setForm({ ...form, dish_type: type.id })}
                                                     className={`group flex flex-col items-center justify-center gap-3 p-6 rounded-[2rem] border-2 transition-all duration-300 relative ${form.dish_type === type.id
-                                                            ? 'bg-brand-primary/5 border-brand-primary text-brand-primary shadow-lg shadow-brand-primary/5'
-                                                            : 'bg-gray-50 border-transparent text-gray-400 hover:bg-gray-100'
+                                                        ? 'bg-brand-primary/5 border-brand-primary text-brand-primary shadow-lg shadow-brand-primary/5'
+                                                        : 'bg-gray-50 border-transparent text-gray-400 hover:bg-gray-100'
                                                         }`}
                                                 >
                                                     <span className={`text-4xl transition-transform duration-500 ${form.dish_type === type.id ? 'scale-110' : 'group-hover:scale-110'}`}>{type.icon}</span>
