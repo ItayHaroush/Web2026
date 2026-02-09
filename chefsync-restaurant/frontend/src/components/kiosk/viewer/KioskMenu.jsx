@@ -23,8 +23,8 @@ export default function KioskMenu({ categories, items, onSelectItem, orderType, 
                     <button
                         onClick={() => setActiveCategory(null)}
                         className={`px-5 py-2.5 rounded-xl font-bold text-sm whitespace-nowrap transition-all ${activeCategory === null
-                                ? 'bg-amber-500 text-white shadow-lg'
-                                : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+                            ? 'bg-amber-500 text-white shadow-lg'
+                            : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
                             }`}
                     >
                         הכל
@@ -34,8 +34,8 @@ export default function KioskMenu({ categories, items, onSelectItem, orderType, 
                             key={cat.id}
                             onClick={() => setActiveCategory(cat.id)}
                             className={`px-5 py-2.5 rounded-xl font-bold text-sm whitespace-nowrap transition-all ${activeCategory === cat.id
-                                    ? 'bg-amber-500 text-white shadow-lg'
-                                    : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+                                ? 'bg-amber-500 text-white shadow-lg'
+                                : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
                                 }`}
                         >
                             {cat.name}

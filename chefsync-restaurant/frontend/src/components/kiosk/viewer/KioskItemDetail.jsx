@@ -78,8 +78,8 @@ export default function KioskItemDetail({ item, onAddToCart, onClose, orderType,
                                         key={v.id}
                                         onClick={() => setSelectedVariant(selectedVariant?.id === v.id ? null : v)}
                                         className={`p-3 rounded-xl border-2 text-sm font-bold transition-all ${selectedVariant?.id === v.id
-                                                ? 'bg-amber-50 border-amber-400 text-amber-700'
-                                                : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                                            ? 'bg-amber-50 border-amber-400 text-amber-700'
+                                            : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
                                             }`}
                                     >
                                         <span>{v.name}</span>
@@ -116,8 +116,8 @@ export default function KioskItemDetail({ item, onAddToCart, onClose, orderType,
                                             <button
                                                 onClick={() => toggleAddon(addon)}
                                                 className={`flex-1 flex items-center justify-between p-3 rounded-xl border-2 transition-all ${isSelected
-                                                        ? 'bg-amber-50 border-amber-300 text-amber-700'
-                                                        : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                                                    ? 'bg-amber-50 border-amber-300 text-amber-700'
+                                                    : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
                                                     }`}
                                             >
                                                 <span className="font-bold text-sm">{addon.name}</span>
@@ -129,8 +129,8 @@ export default function KioskItemDetail({ item, onAddToCart, onClose, orderType,
                                                 <button
                                                     onClick={() => toggleAddonOnSide(addon.id)}
                                                     className={`px-3 py-3 rounded-xl text-xs font-bold border-2 transition-all whitespace-nowrap ${selectedAddons.find(a => a.id === addon.id)?.on_side
-                                                            ? 'bg-blue-50 border-blue-300 text-blue-600'
-                                                            : 'bg-gray-50 border-gray-200 text-gray-400'
+                                                        ? 'bg-blue-50 border-blue-300 text-blue-600'
+                                                        : 'bg-gray-50 border-gray-200 text-gray-400'
                                                         }`}
                                                 >
                                                     בצד

@@ -1145,8 +1145,8 @@ class AdminController extends Controller
         // וודא שהבסיסים שייכים למסעדה
         $validVariantIds = $variantIds->isNotEmpty()
             ? RestaurantVariant::where('restaurant_id', $restaurant->id)
-                ->whereIn('id', $variantIds)
-                ->pluck('id')
+            ->whereIn('id', $variantIds)
+            ->pluck('id')
             : collect();
 
         // מחק כללי מחיר קיימים ברמת קטגוריה עבור כל הקטגוריות
