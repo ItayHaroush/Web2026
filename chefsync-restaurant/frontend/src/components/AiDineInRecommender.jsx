@@ -76,7 +76,7 @@ const AiDineInRecommender = ({ onApplyAdjustments }) => {
     };
 
     return (
-        <div className="relative inline-block">
+        <>
             <button
                 type="button"
                 onClick={handleRecommend}
@@ -98,9 +98,10 @@ const AiDineInRecommender = ({ onApplyAdjustments }) => {
                 <span>AI תמחור ישיבה</span>
             </button>
 
+            {/* Error toast - fixed at top */}
             {error && (
-                <div className="absolute z-50 right-0 top-full mt-2 w-72 shadow-xl">
-                    <div className="p-3 bg-red-50 text-red-600 text-sm rounded-xl border border-red-100">
+                <div className="fixed inset-x-0 top-4 z-[60] flex justify-center px-4">
+                    <div className="w-full max-w-sm p-3 bg-red-50 text-red-600 text-sm rounded-xl border border-red-100 shadow-xl">
                         <div className="flex items-start gap-2">
                             <span className="text-lg">&#9888;&#65039;</span>
                             <div className="flex-1">
@@ -122,15 +123,22 @@ const AiDineInRecommender = ({ onApplyAdjustments }) => {
                 </div>
             )}
 
-            {/* Floating Card */}
-            <div className={`
-                absolute z-50 right-0 top-full mt-2
-                w-[calc(100vw-2rem)] sm:w-[400px] max-w-[420px]
-                transition-all duration-300 ease-out transform origin-top-right
-                ${showDetails ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 -translate-y-2 pointer-events-none'}
-            `}>
-                {recommendation && (
-                    <div className="bg-white rounded-xl shadow-2xl border border-amber-100 ring-1 ring-black/10 overflow-hidden max-h-[80vh] flex flex-col">
+            {/* Modal overlay */}
+            {showDetails && recommendation && (
+                <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+                    {/* Backdrop */}
+                    <div
+                        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+                        onClick={() => setShowDetails(false)}
+                    />
+
+                    {/* Modal card */}
+                    <div className="relative w-full sm:w-[420px] sm:max-w-[90vw] max-h-[85vh] sm:max-h-[80vh] bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl border border-amber-100 ring-1 ring-black/10 overflow-hidden flex flex-col animate-[slideUp_0.3s_ease-out]">
+                        {/* Drag handle - mobile only */}
+                        <div className="sm:hidden flex justify-center pt-2 pb-1 shrink-0">
+                            <div className="w-10 h-1 rounded-full bg-gray-300" />
+                        </div>
+
                         {/* Header */}
                         <div className="bg-gradient-to-r from-amber-500 to-orange-500 p-4 flex justify-between items-center text-white shrink-0">
                             <div>
@@ -170,7 +178,7 @@ const AiDineInRecommender = ({ onApplyAdjustments }) => {
                                             <span className="font-bold text-gray-800 text-sm">{adj.item_name || adj.category_name || 'פריט'}</span>
                                             <div className="flex items-center gap-2">
                                                 <span className="text-amber-600 font-black text-sm">
-                                                    +{'\u20AA'}{parseFloat(adj.recommended_dine_in_price || adj.suggested_adjustment || 0).toFixed(2)}
+                                                    +{'\u20AA'}{Math.round(parseFloat(adj.recommended_dine_in_price || adj.suggested_adjustment || 0))}
                                                 </span>
                                                 {appliedRows.has(index) ? (
                                                     <span className="text-green-500"><FaCheck size={12} /></span>
@@ -223,9 +231,9 @@ const AiDineInRecommender = ({ onApplyAdjustments }) => {
                             </div>
                         )}
                     </div>
-                )}
-            </div>
-        </div>
+                </div>
+            )}
+        </>
     );
 };
 

@@ -71,9 +71,9 @@ class AiService
     /**
      * Chat with Restaurant
      */
-    public function chatWithRestaurant(string $message, array $context = [], ?string $preset = null): array
+    public function chatWithRestaurant(string $message, array $context = [], ?string $preset = null, array $history = []): array
     {
-        return $this->getProvider()->chatWithRestaurant($message, $context, $preset);
+        return $this->getProvider()->chatWithRestaurant($message, $context, $preset, $history);
     }
 
     /**

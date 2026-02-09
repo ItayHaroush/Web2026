@@ -191,7 +191,7 @@ class OpenAiService extends BaseAiService
     /**
      * Chat with Restaurant
      */
-    public function chatWithRestaurant(string $message, array $context = [], ?string $preset = null): array
+    public function chatWithRestaurant(string $message, array $context = [], ?string $preset = null, array $history = []): array
     {
         $feature = 'restaurant_chat';
         $startTime = microtime(true);
@@ -204,8 +204,18 @@ class OpenAiService extends BaseAiService
 
             $messages = [
                 ['role' => 'system', 'content' => $systemPrompt],
-                ['role' => 'user', 'content' => $message]
             ];
+
+            // Inject conversation history between system prompt and new user message
+            if (!empty($history)) {
+                foreach ($history as $msg) {
+                    if (in_array($msg['role'], ['user', 'assistant']) && !empty($msg['content'])) {
+                        $messages[] = ['role' => $msg['role'], 'content' => $msg['content']];
+                    }
+                }
+            }
+
+            $messages[] = ['role' => 'user', 'content' => $message];
 
             $response = $this->callOpenAi($messages);
             $responseTime = (int)((microtime(true) - $startTime) * 1000);
@@ -558,17 +568,23 @@ class OpenAiService extends BaseAiService
                 return "- {$item['name']} ({$item['category']}): {$item['price']} ₪";
             })->implode("\n");
 
-            $prompt = "אתה יועץ מחירים למסעדות. נתח את התפריט הבא והמלץ על התאמות מחירים לישיבה במקום (Dine-In) לעומת משלוח/טייק-אוויי.\n\n"
-                . "מסעדה: " . ($menuContext['restaurant_name'] ?? 'לא צוין') . "\n"
-                . "קטגוריות: {$categoriesStr}\n\n"
-                . "פריטי תפריט:\n{$itemsList}\n\n"
-                . "החזר JSON בפורמט הבא:\n"
-                . '{"adjustments": [{"item_name": "שם", "current_price": 45, "recommended_dine_in_price": 52, "adjustment_percent": 15.5, "reasoning": "סיבה קצרה"}], '
-                . '"general_recommendation": "המלצה כללית", '
+            $systemPrompt = "אתה יועץ תמחור מומחה למסעדות. התפקיד שלך הוא להמליץ על תוספות מחיר (בשקלים) עבור הזמנות ישיבה במקום (Dine-In) לעומת משלוח/טייק-אוויי.\n"
+                . "ישיבה במקום כוללת עלויות נוספות למסעדה: שירות, ניקיון, שטח ישיבה, כלים וכו'.\n"
+                . "עליך להחזיר אך ורק JSON תקין, בלי טקסט מסביב, בלי markdown.\n"
+                . "הפורמט המדויק:\n"
+                . '{"adjustments": [{"item_name": "שם הפריט", "current_price": 45, "recommended_dine_in_price": 5, "adjustment_percent": 11.1, "reasoning": "סיבה קצרה"}], '
+                . '"general_recommendation": "המלצה כללית קצרה על אסטרטגיית התמחור", '
                 . '"confidence": "high", '
-                . '"factors": ["גורם1", "גורם2"]}';
+                . '"factors": ["גורם 1", "גורם 2"]}'
+                . "\n\nשדה recommended_dine_in_price הוא סכום התוספת בשקלים שלמים בלבד (לא המחיר החדש). לדוגמה: אם מחיר בסיס 45 ואתה ממליץ 50, אז recommended_dine_in_price=5. חובה מספרים שלמים בלבד (1, 2, 3, 5, 8 וכו')."
+                . "\nconfidence: high/medium/low. factors: רשימה קצרה של הגורמים שהשפיעו."
+                . "\nחובה להחזיר adjustments עבור כל פריט ברשימה.";
 
-            $response = $this->callOpenAi($prompt);
+            $userPrompt = "מסעדה: " . ($menuContext['restaurant_name'] ?? 'לא צוין') . "\n"
+                . "קטגוריות: {$categoriesStr}\n\n"
+                . "פריטי תפריט:\n{$itemsList}";
+
+            $response = $this->callOpenAi($userPrompt, $systemPrompt);
             $responseTime = (int)((microtime(true) - $startTime) * 1000);
 
             // Parse JSON response
@@ -644,7 +660,8 @@ class OpenAiService extends BaseAiService
     {
         // Mock mode: return sample responses
         if ($this->mockMode) {
-            return $this->generateMockResponse($input);
+            $mockInput = $systemPrompt ? $systemPrompt . "\n" . $input : $input;
+            return $this->generateMockResponse($mockInput);
         }
 
         try {
@@ -707,7 +724,41 @@ class OpenAiService extends BaseAiService
         $inputText = is_array($input) ? json_encode($input) : $input;
 
         // Detect intent from input
-        if (str_contains($inputText, 'description') || str_contains($inputText, 'תיאור')) {
+        if (str_contains($inputText, 'dine_in') || str_contains($inputText, 'dine-in') || str_contains($inputText, 'ישיבה במקום') || str_contains($inputText, 'Dine-In')) {
+            $adjustments = [];
+            $reasonings = [
+                'מנה שנהנים לאכול במקום עם חווית ישיבה',
+                'פריט פופולרי לאכילה במסעדה',
+                'מנה שדורשת הגשה מיוחדת בישיבה',
+                'ערך מוסף גבוה בחוויית ישיבה',
+                'מתאימה במיוחד לאכילה במקום',
+            ];
+
+            // Parse real items from the prompt: "- שם (קטגוריה): מחיר ₪"
+            if (preg_match_all('/- (.+?) \((.+?)\): ([\d.]+) ₪/', $inputText, $matches, PREG_SET_ORDER)) {
+                foreach ($matches as $i => $match) {
+                    $name = $match[1];
+                    $price = (float) $match[3];
+                    $addition = (float) max(1, round($price * (8 + ($i % 5) * 1.5) / 100));
+                    $percent = round($addition / $price * 100, 1);
+
+                    $adjustments[] = [
+                        'item_name' => $name,
+                        'current_price' => $price,
+                        'recommended_dine_in_price' => $addition,
+                        'adjustment_percent' => $percent,
+                        'reasoning' => $reasonings[$i % count($reasonings)],
+                    ];
+                }
+            }
+
+            $mockContent = json_encode([
+                'adjustments' => $adjustments,
+                'general_recommendation' => 'מומלץ להוסיף 8-12% תוספת ישיבה על מנות עיקריות, ו-5-8% על שתייה ומנות קטנות.',
+                'confidence' => 'high',
+                'factors' => ['עלויות שירות', 'שטח ישיבה', 'כלים חד-פעמיים מול רב-פעמיים', 'זמן שהייה']
+            ], JSON_UNESCAPED_UNICODE);
+        } elseif (str_contains($inputText, 'description') || str_contains($inputText, 'תיאור')) {
             $mockContent = "מנה טעימה ומיוחדת שתפנק את החיך שלכם! מוכנת בקפידה ממרכיבים טריים ואיכותיים. מומלץ מאוד!";
         } elseif (str_contains($inputText, 'price') || str_contains($inputText, 'מחיר')) {
             $mockContent = "המחיר המומלץ: ₪45-55 בהתבסס על ניתוח השוק והמתחרים.";
