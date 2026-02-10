@@ -12,7 +12,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('restaurants', function (Blueprint $table) {
-            $table->boolean('hyp_setup_fee_charged')->default(false)->after('accepted_payment_methods');
+            if (!Schema::hasColumn('restaurants', 'hyp_setup_fee_charged')) {
+                $table->boolean('hyp_setup_fee_charged')->default(false)->after('accepted_payment_methods');
+            }
         });
     }
 
