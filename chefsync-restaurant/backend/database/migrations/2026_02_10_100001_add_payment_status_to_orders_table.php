@@ -34,28 +34,32 @@ return new class extends Migration
             }
         });
 
-        // שלב 2: המרת payment_method מ-enum ל-string (בתוך transaction)
-        // בדוק אם כבר בוצע (אם payment_method_new לא קיים ו-payment_method הוא עדיין enum)
+        // שלב 2: המרת payment_method מ-enum ל-string
+        // בדוק אם כבר בוצע (אם payment_method הוא עדיין enum)
+        // נקה שאריות מהרצה כושלת קודמת
+        if (Schema::hasColumn('orders', 'payment_method_new')) {
+            Schema::table('orders', function (Blueprint $table) {
+                $table->dropColumn('payment_method_new');
+            });
+        }
         $columnType = DB::selectOne("SELECT DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'orders' AND COLUMN_NAME = 'payment_method'");
         if ($columnType && $columnType->DATA_TYPE === 'enum') {
-            DB::transaction(function () {
-                // הוסף עמודה חדשה string
-                Schema::table('orders', function (Blueprint $table) {
-                    $table->string('payment_method_new')->default('cash')->after('payment_method');
-                });
+            // הוסף עמודה חדשה string
+            Schema::table('orders', function (Blueprint $table) {
+                $table->string('payment_method_new')->default('cash')->after('payment_method');
+            });
 
-                // העתק נתונים קיימים
-                DB::statement("UPDATE orders SET payment_method_new = payment_method");
+            // העתק נתונים קיימים
+            DB::statement("UPDATE orders SET payment_method_new = payment_method");
 
-                // מחק עמודה ישנה (enum)
-                Schema::table('orders', function (Blueprint $table) {
-                    $table->dropColumn('payment_method');
-                });
+            // מחק עמודה ישנה (enum)
+            Schema::table('orders', function (Blueprint $table) {
+                $table->dropColumn('payment_method');
+            });
 
-                // שנה שם עמודה חדשה
-                Schema::table('orders', function (Blueprint $table) {
-                    $table->renameColumn('payment_method_new', 'payment_method');
-                });
+            // שנה שם עמודה חדשה
+            Schema::table('orders', function (Blueprint $table) {
+                $table->renameColumn('payment_method_new', 'payment_method');
             });
         }
 
@@ -81,20 +85,18 @@ return new class extends Migration
         });
 
         // החזר payment_method ל-enum (כל הערכים הקיימים הם 'cash')
-        DB::transaction(function () {
-            Schema::table('orders', function (Blueprint $table) {
-                $table->string('payment_method_backup')->default('cash')->after('payment_method');
-            });
+        Schema::table('orders', function (Blueprint $table) {
+            $table->string('payment_method_backup')->default('cash')->after('payment_method');
+        });
 
-            DB::statement("UPDATE orders SET payment_method_backup = 'cash'");
+        DB::statement("UPDATE orders SET payment_method_backup = 'cash'");
 
-            Schema::table('orders', function (Blueprint $table) {
-                $table->dropColumn('payment_method');
-            });
+        Schema::table('orders', function (Blueprint $table) {
+            $table->dropColumn('payment_method');
+        });
 
-            Schema::table('orders', function (Blueprint $table) {
-                $table->renameColumn('payment_method_backup', 'payment_method');
-            });
+        Schema::table('orders', function (Blueprint $table) {
+            $table->renameColumn('payment_method_backup', 'payment_method');
         });
 
         // הסר שדות תשלום
