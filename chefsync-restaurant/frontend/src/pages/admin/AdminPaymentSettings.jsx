@@ -165,11 +165,10 @@ export default function AdminPaymentSettings() {
 
                 {/* Message */}
                 {message && (
-                    <div className={`mx-4 p-4 rounded-2xl text-sm font-medium ${
-                        message.type === 'success' ? 'bg-green-50 text-green-800 border border-green-200' :
-                        message.type === 'warning' ? 'bg-orange-50 text-orange-800 border border-orange-200' :
-                        'bg-red-50 text-red-800 border border-red-200'
-                    }`}>
+                    <div className={`mx-4 p-4 rounded-2xl text-sm font-medium ${message.type === 'success' ? 'bg-green-50 text-green-800 border border-green-200' :
+                            message.type === 'warning' ? 'bg-orange-50 text-orange-800 border border-orange-200' :
+                                'bg-red-50 text-red-800 border border-red-200'
+                        }`}>
                         {message.text}
                     </div>
                 )}
@@ -268,35 +267,35 @@ export default function AdminPaymentSettings() {
 
                         {/* TakeEat Connection Fee - Checkbox Agreement */}
                         {!setupFeeCharged ? (
-                        <div className="p-5 rounded-xl bg-amber-50 border border-amber-200 space-y-3">
-                            <div className="flex items-start gap-3">
-                                <FaWrench className="text-amber-600 mt-1 flex-shrink-0" size={16} />
-                                <div className="text-sm text-amber-900">
-                                    <p className="font-black mb-1">דמי הקמה - חיבור אשראי למערכת TakeEat</p>
-                                    <p className="text-amber-700">חיבור המסוף למערכת כולל הטמעה, בדיקות, אימות ותמיכה שוטפת.</p>
+                            <div className="p-5 rounded-xl bg-amber-50 border border-amber-200 space-y-3">
+                                <div className="flex items-start gap-3">
+                                    <FaWrench className="text-amber-600 mt-1 flex-shrink-0" size={16} />
+                                    <div className="text-sm text-amber-900">
+                                        <p className="font-black mb-1">דמי הקמה - חיבור אשראי למערכת TakeEat</p>
+                                        <p className="text-amber-700">חיבור המסוף למערכת כולל הטמעה, בדיקות, אימות ותמיכה שוטפת.</p>
+                                    </div>
                                 </div>
+                                <div className="bg-white/70 rounded-lg p-4 space-y-2">
+                                    <p className="text-sm font-bold text-amber-900">דמי הקמה חד-פעמיים: <span className="text-lg">{setupFee}₪</span></p>
+                                    <p className="text-xs text-amber-700">הסכום ייגבה פעם אחת בעת הגדרת החיבור ויתווסף לחיוב החודשי הקרוב.</p>
+                                </div>
+                                <label className="flex items-start gap-3 cursor-pointer select-none">
+                                    <input
+                                        type="checkbox"
+                                        checked={agreedToFee}
+                                        onChange={(e) => setAgreedToFee(e.target.checked)}
+                                        className="w-5 h-5 rounded accent-amber-600 mt-0.5 flex-shrink-0"
+                                    />
+                                    <span className="text-sm font-bold text-amber-900">
+                                        קראתי ואני מאשר/ת את דמי ההקמה החד-פעמיים ({setupFee}₪)
+                                    </span>
+                                </label>
                             </div>
-                            <div className="bg-white/70 rounded-lg p-4 space-y-2">
-                                <p className="text-sm font-bold text-amber-900">דמי הקמה חד-פעמיים: <span className="text-lg">{setupFee}₪</span></p>
-                                <p className="text-xs text-amber-700">הסכום ייגבה פעם אחת בעת הגדרת החיבור ויתווסף לחיוב החודשי הקרוב.</p>
-                            </div>
-                            <label className="flex items-start gap-3 cursor-pointer select-none">
-                                <input
-                                    type="checkbox"
-                                    checked={agreedToFee}
-                                    onChange={(e) => setAgreedToFee(e.target.checked)}
-                                    className="w-5 h-5 rounded accent-amber-600 mt-0.5 flex-shrink-0"
-                                />
-                                <span className="text-sm font-bold text-amber-900">
-                                    קראתי ואני מאשר/ת את דמי ההקמה החד-פעמיים ({setupFee}₪)
-                                </span>
-                            </label>
-                        </div>
                         ) : (
-                        <div className="p-4 rounded-xl bg-green-50 border border-green-200 flex items-center gap-3">
-                            <FaCheckCircle className="text-green-600 flex-shrink-0" size={18} />
-                            <p className="text-sm font-bold text-green-800">דמי הקמה שולמו - החיבור פעיל</p>
-                        </div>
+                            <div className="p-4 rounded-xl bg-green-50 border border-green-200 flex items-center gap-3">
+                                <FaCheckCircle className="text-green-600 flex-shrink-0" size={18} />
+                                <p className="text-sm font-bold text-green-800">דמי הקמה שולמו - החיבור פעיל</p>
+                            </div>
                         )}
 
                         {/* Terminal ID */}

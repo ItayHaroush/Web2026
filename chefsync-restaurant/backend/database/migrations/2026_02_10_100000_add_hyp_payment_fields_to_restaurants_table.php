@@ -12,11 +12,21 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('restaurants', function (Blueprint $table) {
-            $table->string('hyp_terminal_id')->nullable()->after('tranzila_token');
-            $table->text('hyp_terminal_password')->nullable()->after('hyp_terminal_id'); // stored encrypted via model cast
-            $table->boolean('hyp_terminal_verified')->default(false)->after('hyp_terminal_password');
-            $table->timestamp('hyp_terminal_verified_at')->nullable()->after('hyp_terminal_verified');
-            $table->json('accepted_payment_methods')->default('["cash"]')->after('hyp_terminal_verified_at');
+            if (!Schema::hasColumn('restaurants', 'hyp_terminal_id')) {
+                $table->string('hyp_terminal_id')->nullable()->after('tranzila_token');
+            }
+            if (!Schema::hasColumn('restaurants', 'hyp_terminal_password')) {
+                $table->text('hyp_terminal_password')->nullable()->after('hyp_terminal_id');
+            }
+            if (!Schema::hasColumn('restaurants', 'hyp_terminal_verified')) {
+                $table->boolean('hyp_terminal_verified')->default(false)->after('hyp_terminal_password');
+            }
+            if (!Schema::hasColumn('restaurants', 'hyp_terminal_verified_at')) {
+                $table->timestamp('hyp_terminal_verified_at')->nullable()->after('hyp_terminal_verified');
+            }
+            if (!Schema::hasColumn('restaurants', 'accepted_payment_methods')) {
+                $table->json('accepted_payment_methods')->default('["cash"]')->after('hyp_terminal_verified_at');
+            }
         });
     }
 

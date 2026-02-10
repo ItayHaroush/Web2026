@@ -396,21 +396,21 @@ export default function App() {
   return (
     <Router>
       <ThemeProvider>
-      <AdminAuthProvider>
-        <RestaurantStatusProvider>
-          <AuthProvider>
-            <ToastProvider>
-              <CartProvider>
-                <AppRoutes />
-                <Toaster position="bottom-right" />
-                <FacebookInAppWarning />
-                <DevModeBanner />
-                <CookieConsent />
-              </CartProvider>
-            </ToastProvider>
-          </AuthProvider>
-        </RestaurantStatusProvider>
-      </AdminAuthProvider>
+        <AdminAuthProvider>
+          <RestaurantStatusProvider>
+            <AuthProvider>
+              <ToastProvider>
+                <CartProvider>
+                  <AppRoutes />
+                  <Toaster position="bottom-right" />
+                  <FacebookInAppWarning />
+                  <DevModeBanner />
+                  <CookieConsent />
+                </CartProvider>
+              </ToastProvider>
+            </AuthProvider>
+          </RestaurantStatusProvider>
+        </AdminAuthProvider>
       </ThemeProvider>
     </Router>
   );

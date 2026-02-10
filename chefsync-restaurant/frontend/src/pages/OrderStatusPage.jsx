@@ -454,32 +454,31 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
 
                     {/* אמצעי תשלום */}
                     {order.payment_status && order.payment_status !== 'not_required' && (
-                    <div className="flex items-start gap-3 bg-gray-50 dark:bg-brand-dark-border/30 rounded-xl p-4 border border-gray-100 dark:border-brand-dark-border">
-                        <div className="mt-0.5">
-                            {order.payment_method === 'credit_card'
-                                ? <FaCreditCard className="text-lg text-blue-500" />
-                                : <FaMoneyBillWave className="text-lg text-green-600" />
-                            }
+                        <div className="flex items-start gap-3 bg-gray-50 dark:bg-brand-dark-border/30 rounded-xl p-4 border border-gray-100 dark:border-brand-dark-border">
+                            <div className="mt-0.5">
+                                {order.payment_method === 'credit_card'
+                                    ? <FaCreditCard className="text-lg text-blue-500" />
+                                    : <FaMoneyBillWave className="text-lg text-green-600" />
+                                }
+                            </div>
+                            <div>
+                                <p className="text-xs font-semibold text-gray-500 dark:text-brand-dark-muted uppercase tracking-wide mb-1">אמצעי תשלום</p>
+                                <p className={`font-bold ${order.payment_status === 'paid'
+                                        ? 'text-green-700 dark:text-green-400'
+                                        : order.payment_status === 'pending'
+                                            ? 'text-orange-600 dark:text-orange-400'
+                                            : order.payment_status === 'failed'
+                                                ? 'text-red-600 dark:text-red-400'
+                                                : 'text-gray-900 dark:text-brand-dark-text'
+                                    }`}>
+                                    {order.payment_status === 'paid'
+                                        ? (order.payment_method === 'credit_card' ? 'שולם באשראי' : 'שולם במזומן')
+                                        : order.payment_status === 'pending'
+                                            ? (order.payment_method === 'credit_card' ? 'ממתין לתשלום באשראי' : 'תשלום במזומן בעת קבלה')
+                                            : order.payment_status === 'failed' ? 'תשלום נכשל' : ''}
+                                </p>
+                            </div>
                         </div>
-                        <div>
-                            <p className="text-xs font-semibold text-gray-500 dark:text-brand-dark-muted uppercase tracking-wide mb-1">אמצעי תשלום</p>
-                            <p className={`font-bold ${
-                                order.payment_status === 'paid'
-                                    ? 'text-green-700 dark:text-green-400'
-                                    : order.payment_status === 'pending'
-                                        ? 'text-orange-600 dark:text-orange-400'
-                                        : order.payment_status === 'failed'
-                                            ? 'text-red-600 dark:text-red-400'
-                                            : 'text-gray-900 dark:text-brand-dark-text'
-                            }`}>
-                                {order.payment_status === 'paid'
-                                    ? (order.payment_method === 'credit_card' ? 'שולם באשראי' : 'שולם במזומן')
-                                    : order.payment_status === 'pending'
-                                        ? (order.payment_method === 'credit_card' ? 'ממתין לתשלום באשראי' : 'תשלום במזומן בעת קבלה')
-                                        : order.payment_status === 'failed' ? 'תשלום נכשל' : ''}
-                            </p>
-                        </div>
-                    </div>
                     )}
 
                     {/* שעון ספירה לאחור */}

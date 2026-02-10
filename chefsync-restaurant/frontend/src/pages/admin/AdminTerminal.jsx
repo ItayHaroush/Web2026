@@ -364,18 +364,17 @@ export default function AdminTerminal() {
                                                 {statusLabel[order.status]}
                                             </div>
                                             {order.payment_status && order.payment_status !== 'not_required' && (
-                                            <div className={`px-4 py-1.5 rounded-2xl text-[10px] font-black uppercase tracking-wider shadow-sm flex items-center gap-1.5 ${
-                                                order.payment_status === 'paid' ? 'bg-green-100 text-green-700 border border-green-200' :
-                                                order.payment_status === 'pending' ? 'bg-orange-100 text-orange-700 border border-orange-200' :
-                                                order.payment_status === 'failed' ? 'bg-red-100 text-red-700 border border-red-200' :
-                                                'bg-gray-100 text-gray-600 border border-gray-200'
-                                            }`}>
-                                                {order.payment_method === 'credit_card' ? <FaCreditCard size={10} /> : null}
-                                                {order.payment_status === 'paid'
-                                                    ? (order.payment_method === 'credit_card' ? 'שולם באשראי' : 'שולם במזומן')
-                                                    : order.payment_status === 'pending' ? 'ממתין לתשלום'
-                                                    : order.payment_status === 'failed' ? 'נכשל' : ''}
-                                            </div>
+                                                <div className={`px-4 py-1.5 rounded-2xl text-[10px] font-black uppercase tracking-wider shadow-sm flex items-center gap-1.5 ${order.payment_status === 'paid' ? 'bg-green-100 text-green-700 border border-green-200' :
+                                                        order.payment_status === 'pending' ? 'bg-orange-100 text-orange-700 border border-orange-200' :
+                                                            order.payment_status === 'failed' ? 'bg-red-100 text-red-700 border border-red-200' :
+                                                                'bg-gray-100 text-gray-600 border border-gray-200'
+                                                    }`}>
+                                                    {order.payment_method === 'credit_card' ? <FaCreditCard size={10} /> : null}
+                                                    {order.payment_status === 'paid'
+                                                        ? (order.payment_method === 'credit_card' ? 'שולם באשראי' : 'שולם במזומן')
+                                                        : order.payment_status === 'pending' ? 'ממתין לתשלום'
+                                                            : order.payment_status === 'failed' ? 'נכשל' : ''}
+                                                </div>
                                             )}
                                         </div>
 
