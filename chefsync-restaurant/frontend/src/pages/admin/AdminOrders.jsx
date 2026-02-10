@@ -27,12 +27,14 @@ import {
     FaHistory,
     FaStickyNote,
     FaEye,
-    FaTabletAlt
+    FaTabletAlt,
+    FaCreditCard,
+    FaMoneyBillWave
 } from 'react-icons/fa';
 import { SiWaze, SiGooglemaps } from 'react-icons/si';
 
 export default function AdminOrders() {
-    const { getAuthHeaders } = useAdminAuth();
+    const { getAuthHeaders, isOwner, user } = useAdminAuth();
     const { restaurantStatus } = useRestaurantStatus();
     const [searchParams, setSearchParams] = useSearchParams();
     const [orders, setOrders] = useState([]);
@@ -212,6 +214,19 @@ export default function AdminOrders() {
             alert('המסעדה ממתינה לאישור מנהל מערכת. פעולות על הזמנות נעולות זמנית.');
             return;
         }
+
+        // בעת מסירה - אם התשלום במזומן או שהתשלום באשראי נכשל, הקפצת אישור גבייה
+        if (newStatus === 'delivered') {
+            const order = allOrders.find(o => o.id === orderId) || selectedOrder;
+            if (order && (order.payment_method === 'cash' || order.payment_status === 'failed')) {
+                const total = Number(order.total).toFixed(2);
+                const confirmed = confirm(
+                    `💰 יש לגבות ₪${total} במזומן מ${order.customer_name} (הזמנה #${order.id})\n\nהאם התשלום התקבל?`
+                );
+                if (!confirmed) return;
+            }
+        }
+
         try {
             console.log('Updating order', orderId, 'to status:', newStatus);
             const response = await api.patch(`/admin/orders/${orderId}/status`,
@@ -525,6 +540,20 @@ export default function AdminOrders() {
                                                                 <span className="w-1 h-1 rounded-full bg-current animate-pulse" />
                                                                 {statusBadge.text}
                                                             </div>
+                                                            {order.payment_status && order.payment_status !== 'not_required' && (
+                                                                <div className={`px-2.5 py-0.5 rounded-lg text-[9px] font-black uppercase border flex items-center gap-1.5 ${
+                                                                    order.payment_status === 'paid' ? 'bg-green-50 text-green-700 border-green-200' :
+                                                                    order.payment_status === 'pending' ? 'bg-orange-50 text-orange-700 border-orange-200' :
+                                                                    order.payment_status === 'failed' ? 'bg-red-50 text-red-700 border-red-200' :
+                                                                    'bg-gray-50 text-gray-600 border-gray-200'
+                                                                }`}>
+                                                                    {order.payment_method === 'credit_card' ? <FaCreditCard size={9} /> : <FaMoneyBillWave size={9} />}
+                                                                    {order.payment_status === 'paid'
+                                                                        ? (order.payment_method === 'credit_card' ? 'שולם באשראי' : 'שולם במזומן')
+                                                                        : order.payment_status === 'pending' ? 'ממתין לתשלום'
+                                                                        : order.payment_status === 'failed' ? 'תשלום נכשל' : ''}
+                                                                </div>
+                                                            )}
                                                             {order.is_test && (
                                                                 <div className="px-2.5 py-0.5 rounded-lg text-[9px] font-black uppercase border bg-purple-50 text-purple-700 border-purple-200 flex items-center gap-1.5">
                                                                     <FaEye size={10} />
@@ -1009,6 +1038,78 @@ export default function AdminOrders() {
                                         </div>
                                     </div>
                                 </div>
+
+                                {/* פרטי תשלום */}
+                                {selectedOrder.payment_status && selectedOrder.payment_status !== 'not_required' && (
+                                <div className="bg-white rounded-3xl border border-gray-100 p-5 shadow-sm">
+                                    <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-3">פרטי תשלום</h4>
+                                    <div className="space-y-3">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2 text-sm font-bold text-gray-700">
+                                                {selectedOrder.payment_method === 'credit_card' ? <FaCreditCard size={14} className="text-blue-500" /> : <FaMoneyBillWave size={14} className="text-green-500" />}
+                                                {selectedOrder.payment_method === 'credit_card' ? 'כרטיס אשראי' : 'מזומן'}
+                                            </div>
+                                            <div className={`px-2.5 py-1 rounded-lg text-[10px] font-black border ${
+                                                selectedOrder.payment_status === 'paid' ? 'bg-green-50 text-green-700 border-green-200' :
+                                                selectedOrder.payment_status === 'pending' ? 'bg-orange-50 text-orange-700 border-orange-200' :
+                                                selectedOrder.payment_status === 'failed' ? 'bg-red-50 text-red-700 border-red-200' :
+                                                'bg-gray-50 text-gray-500 border-gray-200'
+                                            }`}>
+                                                {selectedOrder.payment_status === 'paid'
+                                                    ? (selectedOrder.payment_method === 'credit_card' ? 'שולם באשראי' : 'שולם במזומן')
+                                                    : selectedOrder.payment_status === 'pending' ? 'ממתין לתשלום'
+                                                    : selectedOrder.payment_status === 'failed' ? 'תשלום נכשל' : ''}
+                                            </div>
+                                        </div>
+                                        {selectedOrder.payment_transaction_id && (
+                                            <div className="text-xs text-gray-400">
+                                                מזהה עסקה: <span className="font-mono">{selectedOrder.payment_transaction_id}</span>
+                                            </div>
+                                        )}
+                                        {selectedOrder.paid_at && (
+                                            <div className="text-xs text-gray-400">
+                                                שולם בתאריך: {new Date(selectedOrder.paid_at).toLocaleString('he-IL')}
+                                            </div>
+                                        )}
+                                        {selectedOrder.marked_paid_by && (
+                                            <div className="text-xs text-gray-400 bg-gray-50 rounded-lg p-2">
+                                                סומן כשולם ע"י: <strong>{selectedOrder.marked_paid_by}</strong>
+                                                {selectedOrder.marked_paid_at && (
+                                                    <> בתאריך {new Date(selectedOrder.marked_paid_at).toLocaleString('he-IL')}</>
+                                                )}
+                                            </div>
+                                        )}
+                                        {selectedOrder.payment_method === 'credit_card' &&
+                                         selectedOrder.payment_status !== 'paid' &&
+                                         isOwner() && (
+                                            <button
+                                                onClick={async () => {
+                                                    if (!confirm('האם לסמן את ההזמנה כשולמה?')) return;
+                                                    try {
+                                                        const res = await api.post(`/admin/orders/${selectedOrder.id}/mark-paid`, {}, { headers: getAuthHeaders() });
+                                                        if (res.data.success) {
+                                                            setSelectedOrder(prev => ({
+                                                                ...prev,
+                                                                payment_status: 'paid',
+                                                                marked_paid_by: user?.name,
+                                                                marked_paid_at: new Date().toISOString()
+                                                            }));
+                                                            setOrders(prev => prev.map(o => o.id === selectedOrder.id ? { ...o, payment_status: 'paid', marked_paid_by: user?.name, marked_paid_at: new Date().toISOString() } : o));
+                                                            setAllOrders(prev => prev.map(o => o.id === selectedOrder.id ? { ...o, payment_status: 'paid', marked_paid_by: user?.name, marked_paid_at: new Date().toISOString() } : o));
+                                                        }
+                                                    } catch (err) {
+                                                        alert(err.response?.data?.message || 'שגיאה בסימון ההזמנה כשולמה');
+                                                    }
+                                                }}
+                                                className="w-full bg-green-50 text-green-700 border border-green-200 p-3 rounded-2xl font-black text-xs uppercase tracking-wider hover:bg-green-100 transition-all active:scale-95 flex items-center justify-center gap-2"
+                                            >
+                                                <FaCheckCircle size={14} />
+                                                סמן כשולם
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                                )}
 
                                 {/* כפתורי פעולה - מודרניים */}
                                 <div className="space-y-4 pt-2 pb-6">

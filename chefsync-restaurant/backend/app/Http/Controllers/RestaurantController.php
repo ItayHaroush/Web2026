@@ -70,6 +70,7 @@ class RestaurantController extends Controller
             'kosher_notes' => $restaurant->kosher_notes ?? null,
             'common_allergens' => $restaurant->common_allergens ?? [],
             'allergen_notes' => $restaurant->allergen_notes ?? null,
+            'available_payment_methods' => $restaurant->getPublicPaymentMethods(),
         ];
     }
 

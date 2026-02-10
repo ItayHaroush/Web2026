@@ -30,8 +30,8 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
     const [deliveryLocation, setDeliveryLocation] = useState(null);
     const [deliveryFee, setDeliveryFee] = useState(0);
 
-    // בדיקה אם אנחנו במצב preview (מ-prop או מ-localStorage)
-    const isPreviewMode = propIsPreviewMode || localStorage.getItem('isPreviewMode') === 'true';
+    // מצב preview נקבע אך ורק מ-prop שמועבר ע"י AdminCartPreview
+    const isPreviewMode = propIsPreviewMode;
     const [deliveryZoneAvailable, setDeliveryZoneAvailable] = useState(true);
     const [checkingZone, setCheckingZone] = useState(false);
     const [restaurant, setRestaurant] = useState(null);
@@ -163,9 +163,6 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
 
         try {
             setSubmitting(true);
-
-            // בדיקה אם זה מצב preview (מסעדן שמתנסה)
-            const isPreviewMode = localStorage.getItem('isPreviewMode') === 'true';
 
             const orderData = {
                 customer_name: customerInfo.name,
@@ -670,11 +667,59 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                                 <FaMoneyBillWave className="text-green-600" />
                                 <p className="text-xs font-bold text-gray-600 dark:text-brand-dark-muted uppercase tracking-wide">תשלום</p>
                             </div>
-                            <p className="text-gray-900 dark:text-brand-dark-text font-bold flex items-center gap-2">
-                                <FaCreditCard className="text-green-600" />
-                                מזומן בלבד
-                            </p>
-                            <p className="text-xs text-gray-600 dark:text-brand-dark-muted mt-1">תשלום בעת איסוף/משלוח</p>
+                            {(() => {
+                                const availMethods = restaurant?.available_payment_methods || ['cash'];
+                                const hasCreditCard = availMethods.includes('credit_card');
+                                const hasCash = availMethods.includes('cash');
+
+                                if (hasCreditCard && hasCash) {
+                                    // Both methods available - show radio buttons
+                                    return (
+                                        <div className="space-y-2">
+                                            <label className="flex items-center gap-2 cursor-pointer">
+                                                <input
+                                                    type="radio"
+                                                    name="payment_method"
+                                                    value="cash"
+                                                    checked={(customerInfo.payment_method || 'cash') === 'cash'}
+                                                    onChange={() => setCustomerInfo(prev => ({ ...prev, payment_method: 'cash' }))}
+                                                    className="accent-green-600"
+                                                />
+                                                <FaMoneyBillWave className="text-green-600" />
+                                                <span className="font-bold text-gray-900 dark:text-brand-dark-text">מזומן</span>
+                                            </label>
+                                            <label className="flex items-center gap-2 cursor-pointer">
+                                                <input
+                                                    type="radio"
+                                                    name="payment_method"
+                                                    value="credit_card"
+                                                    checked={customerInfo.payment_method === 'credit_card'}
+                                                    onChange={() => setCustomerInfo(prev => ({ ...prev, payment_method: 'credit_card' }))}
+                                                    className="accent-indigo-600"
+                                                />
+                                                <FaCreditCard className="text-indigo-600" />
+                                                <span className="font-bold text-gray-900 dark:text-brand-dark-text">כרטיס אשראי</span>
+                                            </label>
+                                            <p className="text-xs text-gray-500 dark:text-brand-dark-muted mt-1">
+                                                {(customerInfo.payment_method || 'cash') === 'cash'
+                                                    ? 'תשלום בעת קבלת ההזמנה'
+                                                    : 'תשלום מאובטח באשראי'}
+                                            </p>
+                                        </div>
+                                    );
+                                }
+
+                                // Default: cash only
+                                return (
+                                    <>
+                                        <p className="text-gray-900 dark:text-brand-dark-text font-bold flex items-center gap-2">
+                                            <FaMoneyBillWave className="text-green-600" />
+                                            מזומן בלבד
+                                        </p>
+                                        <p className="text-xs text-gray-600 dark:text-brand-dark-muted mt-1">תשלום בעת איסוף/משלוח</p>
+                                    </>
+                                );
+                            })()}
                         </div>
                     </div>
 
@@ -688,7 +733,7 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                             {submitting
                                 ? 'שולח...'
                                 : submitStep === 'payment'
-                                    ? 'שלם עכשיו'
+                                    ? (customerInfo.payment_method === 'credit_card' ? 'שלם באשראי' : 'המשך לאישור')
                                     : 'שלח הזמנה'}
                         </button>
                         <a

@@ -21,7 +21,8 @@ import {
     FaCheck,
     FaMapMarkerAlt,
     FaArrowLeft,
-    FaTabletAlt
+    FaTabletAlt,
+    FaExclamationTriangle
 } from 'react-icons/fa';
 
 export default function AdminDashboard() {
@@ -290,6 +291,23 @@ export default function AdminDashboard() {
                 </div>
             </div>
 
+            {/* התראה על הזמנות לא שולמו */}
+            {(() => {
+                const unpaidCount = recentOrders.filter(o => o.payment_status === 'pending' || o.payment_status === 'failed').length;
+                if (unpaidCount === 0) return null;
+                return (
+                    <div
+                        onClick={() => navigate('/admin/orders')}
+                        className="bg-orange-50 border border-orange-200 rounded-2xl p-4 mb-6 flex items-center gap-3 cursor-pointer hover:bg-orange-100 transition-colors"
+                    >
+                        <FaExclamationTriangle className="text-orange-500 flex-shrink-0" />
+                        <p className="text-sm font-bold text-orange-800">
+                            {unpaidCount === 1 ? 'יש הזמנה אחת בהמתנה לתשלום' : `יש ${unpaidCount} הזמנות בהמתנה לתשלום`}
+                        </p>
+                    </div>
+                );
+            })()}
+
             {/* כרטיסי סטטיסטיקה מצומצמים */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 {statCards.map((card) => (
@@ -398,6 +416,19 @@ export default function AdminDashboard() {
                                                     <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase border shrink-0 ${statusBadge.color}`}>
                                                         {statusBadge.text}
                                                     </span>
+                                                    {order.payment_status && order.payment_status !== 'not_required' && (
+                                                    <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase border shrink-0 ${
+                                                        order.payment_status === 'paid' ? 'bg-green-50 text-green-700 border-green-100' :
+                                                        order.payment_status === 'pending' ? 'bg-orange-50 text-orange-700 border-orange-100' :
+                                                        order.payment_status === 'failed' ? 'bg-red-50 text-red-700 border-red-100' :
+                                                        'bg-gray-50 text-gray-600 border-gray-100'
+                                                    }`}>
+                                                        {order.payment_status === 'paid'
+                                                            ? (order.payment_method === 'credit_card' ? 'שולם באשראי' : 'שולם במזומן')
+                                                            : order.payment_status === 'pending' ? 'ממתין לתשלום'
+                                                            : order.payment_status === 'failed' ? 'תשלום נכשל' : ''}
+                                                    </span>
+                                                    )}
                                                 </div>
                                                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                                                     <p className="text-[10px] font-bold text-gray-400 flex items-center gap-1 uppercase tracking-tighter">

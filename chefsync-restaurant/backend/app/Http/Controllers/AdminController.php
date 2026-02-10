@@ -2143,6 +2143,15 @@ class AdminController extends Controller
         $order->status = $request->status;
         $order->updated_by_name = $user->name;
         $order->updated_by_user_id = $user->id;
+
+        // כשהזמנה נמסרה - סמן תשלום כשולם אוטומטית (מזומן נגבה בעת מסירה)
+        if ($request->status === 'delivered' && $order->payment_status === 'pending') {
+            $order->payment_status = 'paid';
+            if ($order->payment_method === 'cash') {
+                $order->paid_at = now();
+            }
+        }
+
         $order->save();
 
         // הפעלת הדפסה למטבח כשהזמנה מאושרת
@@ -2457,6 +2466,50 @@ class AdminController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'כל ההתאמות לישיבה אופסו בהצלחה',
+        ]);
+    }
+
+    /**
+     * סימון הזמנה כשולמה ידנית
+     * מוגבל ל-Owner / SuperAdmin בלבד
+     */
+    public function markOrderPaid(Request $request, $id)
+    {
+        $user = $request->user();
+
+        if (!$user->isOwner() && !$user->isSuperAdmin()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'רק בעל מסעדה או סופר-אדמין יכולים לסמן הזמנה כשולמה',
+            ], 403);
+        }
+
+        $order = Order::where('restaurant_id', $user->restaurant_id)
+            ->findOrFail($id);
+
+        if ($order->payment_status === Order::PAYMENT_PAID) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ההזמנה כבר סומנה כשולמה',
+            ], 422);
+        }
+
+        $order->payment_status = Order::PAYMENT_PAID;
+        $order->marked_paid_by = $user->name;
+        $order->marked_paid_at = now();
+        $order->save();
+
+        Log::info('Order marked as paid manually', [
+            'order_id' => $order->id,
+            'marked_by' => $user->name,
+            'user_id' => $user->id,
+            'restaurant_id' => $order->restaurant_id,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'ההזמנה סומנה כשולמה',
+            'order' => $order->load('items.menuItem.category'),
         ]);
     }
 }

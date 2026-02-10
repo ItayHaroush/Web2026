@@ -26,7 +26,8 @@ import {
     FaShieldAlt,
     FaClock,
     FaTv,
-    FaTabletAlt
+    FaTabletAlt,
+    FaCreditCard
 } from 'react-icons/fa';
 
 export default function AdminLayout({ children }) {
@@ -125,6 +126,12 @@ export default function AdminLayout({ children }) {
             icon: <FaStore />,
             label: 'פרטי מסעדה',
             show: isManager() || isOwner()
+        },
+        {
+            path: '/admin/payment-settings',
+            icon: <FaCreditCard />,
+            label: 'הגדרות תשלום',
+            show: isOwner()
         },
         {
             path: '/admin/delivery-zones',

@@ -38,6 +38,7 @@ import ScreenViewer from './pages/ScreenViewer';
 import KioskViewer from './pages/KioskViewer';
 import AdminKiosks from './pages/admin/AdminKiosks';
 import AdminReports from './pages/admin/AdminReports';
+import AdminPaymentSettings from './pages/admin/AdminPaymentSettings';
 import AdminAuthDebug from './pages/admin/AdminAuthDebug';
 import SuperAdminDashboard from './pages/super-admin/SuperAdminDashboard';
 import SuperAdminNotifications from './pages/super-admin/SuperAdminNotifications';
@@ -202,6 +203,14 @@ function AppRoutes() {
         element={
           <AdminRoute>
             <AdminRestaurant />
+          </AdminRoute>
+        }
+      />
+      <Route
+        path="/admin/payment-settings"
+        element={
+          <AdminRoute>
+            <AdminPaymentSettings />
           </AdminRoute>
         }
       />

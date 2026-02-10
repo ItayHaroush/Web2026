@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { FaWhatsapp, FaPhoneAlt, FaMask, FaShoppingBag, FaTruck, FaClock, FaShieldAlt, FaExclamationTriangle, FaInfoCircle } from 'react-icons/fa';
+import { FaWhatsapp, FaPhoneAlt, FaMask, FaShoppingBag, FaTruck, FaClock, FaShieldAlt, FaExclamationTriangle, FaInfoCircle, FaCreditCard, FaMoneyBillWave } from 'react-icons/fa';
 import { SiWaze } from 'react-icons/si';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
@@ -91,15 +91,15 @@ export default function MenuPage({ isPreviewMode = false }) {
         return () => window.removeEventListener('scroll', handleScroll);
     }, [menu]);
 
-    // שמירת מצב preview ב-localStorage כדי שעמוד Cart יוכל לגשת אליו
+    // הגדרת header למצב preview + ניקוי defense-in-depth
     useEffect(() => {
         if (isPreviewMode) {
-            localStorage.setItem('isPreviewMode', 'true');
-            // הוספת header מיוחד ל-apiClient כדי שה-backend יזהה מצב preview
+            // header מיוחד ל-apiClient כדי שה-backend יזהה מצב preview
             apiClient.defaults.headers.common['X-Preview-Mode'] = 'true';
+        } else {
+            // defense-in-depth: אם אנחנו ב-route ציבורי, נקה שאריות
+            localStorage.removeItem('isPreviewMode');
         }
-        // הסרה רק אם המצב הוא לא preview mode
-        // (לא נוסיף cleanup שימחק את זה כי AdminMenuPreview צריך לשלוט על זה)
     }, [isPreviewMode]);
 
     useEffect(() => {
@@ -729,10 +729,28 @@ export default function MenuPage({ isPreviewMode = false }) {
                                 </div>
                             )}
 
+                            {/* אמצעי תשלום */}
+                            <div className="space-y-3">
+                                <div className="flex items-center gap-2">
+                                    <FaCreditCard className="text-gray-400 dark:text-gray-500" size={14} />
+                                    <h4 className="text-sm font-bold text-gray-900 dark:text-brand-dark-text">אמצעי תשלום</h4>
+                                </div>
+                                <div className="pl-6 flex flex-wrap gap-2">
+                                    <span className="text-xs text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-800 px-2.5 py-1 rounded-md flex items-center gap-1.5">
+                                        <FaMoneyBillWave size={10} />
+                                        מזומן
+                                    </span>
+                                    {restaurant.available_payment_methods?.includes('credit_card') && (
+                                        <span className="text-xs text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 px-2.5 py-1 rounded-md flex items-center gap-1.5">
+                                            <FaCreditCard size={10} />
+                                            כרטיס אשראי
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+
                             {/* מפריד */}
-                            {(restaurant.kosher_type || restaurant.kosher_certificate || restaurant.kosher_notes || allergensList.length > 0 || restaurant.allergen_notes) && (
-                                <div className="border-t border-gray-100 dark:border-brand-dark-border my-2"></div>
-                            )}
+                            <div className="border-t border-gray-100 dark:border-brand-dark-border my-2"></div>
 
                             {/* שעות פתיחה */}
                             <div className="space-y-3">
