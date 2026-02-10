@@ -18,6 +18,12 @@ class Order extends Model
         'customer_phone',
         'delivery_method',
         'payment_method',
+        'payment_status',
+        'payment_transaction_id',
+        'payment_amount',
+        'paid_at',
+        'marked_paid_by',
+        'marked_paid_at',
         'source',
         'kiosk_id',
         'order_type',
@@ -52,11 +58,14 @@ class Order extends Model
         'delivery_distance_km' => 'decimal:2',
         'delivery_lat' => 'decimal:7',
         'delivery_lng' => 'decimal:7',
+        'payment_amount' => 'decimal:2',
         'is_test' => 'boolean',          // הזמנת בדיקה
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'eta_updated_at' => 'datetime',
         'reviewed_at' => 'datetime',
+        'paid_at' => 'datetime',
+        'marked_paid_at' => 'datetime',
     ];
 
     /**
@@ -77,6 +86,15 @@ class Order extends Model
     const STATUS_DELIVERING = 'delivering';  // במשלוח
     const STATUS_DELIVERED = 'delivered';    // נמסרה
     const STATUS_CANCELLED = 'cancelled';    // בוטלה
+
+    /**
+     * סטטוסי תשלום
+     */
+    const PAYMENT_NOT_REQUIRED = 'not_required';  // מזומן - לא דורש תשלום מקוון
+    const PAYMENT_PENDING = 'pending';            // ממתין לתשלום
+    const PAYMENT_PAID = 'paid';                  // שולם
+    const PAYMENT_FAILED = 'failed';              // תשלום נכשל
+    const PAYMENT_REFUNDED = 'refunded';          // הוחזר
 
     public static function validStatuses(): array
     {

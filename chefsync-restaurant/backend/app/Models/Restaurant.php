@@ -70,6 +70,15 @@ class Restaurant extends Model
         'pickup_time_minutes',
         'pickup_time_note',
         'enable_dine_in_pricing',
+        'hyp_terminal_id',
+        'hyp_terminal_password',
+        'hyp_terminal_verified',
+        'hyp_terminal_verified_at',
+        'accepted_payment_methods',
+    ];
+
+    protected $hidden = [
+        'hyp_terminal_password', // לעולם לא להחזיר ב-API
     ];
 
     protected $attributes = [
@@ -98,6 +107,10 @@ class Restaurant extends Model
         'pickup_time_minutes' => 'integer',
         'ai_credits_monthly' => 'integer', // קרדיטים חודשיים
         'enable_dine_in_pricing' => 'boolean',
+        'hyp_terminal_verified' => 'boolean',
+        'hyp_terminal_verified_at' => 'datetime',
+        'hyp_terminal_password' => 'encrypted',
+        'accepted_payment_methods' => 'array',
     ];
 
     /**
@@ -160,6 +173,46 @@ class Restaurant extends Model
     public function displayScreens(): HasMany
     {
         return $this->hasMany(DisplayScreen::class, 'restaurant_id');
+    }
+
+    /**
+     * האם המסעדה מקבלת אשראי (מסוף מאומת + בחרה אשראי)
+     */
+    public function acceptsCreditCard(): bool
+    {
+        return in_array('credit_card', $this->accepted_payment_methods ?? [])
+            && $this->hyp_terminal_verified === true;
+    }
+
+    /**
+     * האם המסעדה מקבלת מזומן
+     */
+    public function acceptsCash(): bool
+    {
+        return in_array('cash', $this->accepted_payment_methods ?? ['cash']);
+    }
+
+    /**
+     * אמצעי תשלום זמינים בפועל (לתצוגה ללקוח)
+     * מסנן אשראי אם המסוף לא מאומת
+     */
+    public function getPublicPaymentMethods(): array
+    {
+        $methods = $this->accepted_payment_methods ?? ['cash'];
+        // אם מסוף לא מאומת, לא להציג אשראי
+        if (!$this->hyp_terminal_verified) {
+            $methods = array_values(array_filter($methods, fn($m) => $m !== 'credit_card'));
+        }
+        // תמיד להחזיר לפחות מזומן
+        if (empty($methods)) {
+            $methods = ['cash'];
+        }
+        return $methods;
+    }
+
+    public function paymentVerifications(): HasMany
+    {
+        return $this->hasMany(PaymentVerification::class);
     }
 
     /**

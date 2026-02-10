@@ -16,6 +16,7 @@ use App\Http\Controllers\ChatController;
 use App\Http\Controllers\DisplayScreenController;
 use App\Http\Controllers\KioskController;
 use App\Http\Controllers\PrinterController;
+use App\Http\Controllers\PaymentSettingsController;
 
 /**
  * API Routes
@@ -208,6 +209,12 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'tenant'])->group(function (
         Route::get('/orders', [AdminController::class, 'getOrders'])->name('admin.orders.index');
         Route::patch('/orders/{id}/status', [AdminController::class, 'updateOrderStatus'])->name('admin.orders.status');
         Route::patch('/orders/{id}/eta', [AdminController::class, 'updateOrderEta'])->name('admin.orders.eta');
+        Route::post('/orders/{id}/mark-paid', [AdminController::class, 'markOrderPaid'])->name('admin.orders.mark-paid');
+
+        // הגדרות תשלום
+        Route::get('/payment-settings', [PaymentSettingsController::class, 'getSettings'])->name('admin.payment-settings.get');
+        Route::post('/payment-settings', [PaymentSettingsController::class, 'saveSettings'])->name('admin.payment-settings.save');
+        Route::post('/payment-settings/verify', [PaymentSettingsController::class, 'verifyTerminal'])->name('admin.payment-settings.verify');
 
         // ניהול עובדים
         Route::get('/employees', [AdminController::class, 'getEmployees'])->name('admin.employees.index');

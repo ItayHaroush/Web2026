@@ -351,6 +351,7 @@ class OrderController extends Controller
                 'customer_phone' => $normalizedCustomerPhone,
                 'delivery_method' => $validated['delivery_method'],
                 'payment_method' => $validated['payment_method'],
+                'payment_status' => Order::PAYMENT_PENDING, // תשלום נדרש - מזומן ייגבה בעת מסירה
                 'delivery_address' => $validated['delivery_address'] ?? null,
                 'delivery_notes' => $validated['delivery_notes'] ?? null,
                 'delivery_zone_id' => $deliveryZone?->id,
