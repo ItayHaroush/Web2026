@@ -70,9 +70,9 @@ export default function AdminDashboard() {
                         window.focus();
                         notifCountRef.current = Math.max(0, notifCountRef.current - 1);
                         if (notifCountRef.current > 0) {
-                            if (navigator.setAppBadge) navigator.setAppBadge(notifCountRef.current).catch(() => {});
+                            if (navigator.setAppBadge) navigator.setAppBadge(notifCountRef.current).catch(() => { });
                         } else {
-                            if (navigator.clearAppBadge) navigator.clearAppBadge().catch(() => {});
+                            if (navigator.clearAppBadge) navigator.clearAppBadge().catch(() => { });
                         }
                         if (payload?.data?.orderId) {
                             navigate('/admin/orders');
@@ -80,7 +80,7 @@ export default function AdminDashboard() {
                     };
                     // PWA App Badge – show actual count
                     notifCountRef.current += 1;
-                    if (navigator.setAppBadge) navigator.setAppBadge(notifCountRef.current).catch(() => {});
+                    if (navigator.setAppBadge) navigator.setAppBadge(notifCountRef.current).catch(() => { });
                 } catch (e) {
                     // Some browsers block Notification() in certain contexts; fallback to console.
                     console.warn('[FCM] Notification() failed', e);
@@ -98,7 +98,7 @@ export default function AdminDashboard() {
         const clearBadge = () => {
             if (document.visibilityState === 'visible') {
                 notifCountRef.current = 0;
-                if (navigator.clearAppBadge) navigator.clearAppBadge().catch(() => {});
+                if (navigator.clearAppBadge) navigator.clearAppBadge().catch(() => { });
             }
         };
         clearBadge(); // clear on mount (dashboard opened)
@@ -417,17 +417,16 @@ export default function AdminDashboard() {
                                                         {statusBadge.text}
                                                     </span>
                                                     {order.payment_status && order.payment_status !== 'not_required' && (
-                                                    <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase border shrink-0 ${
-                                                        order.payment_status === 'paid' ? 'bg-green-50 text-green-700 border-green-100' :
-                                                        order.payment_status === 'pending' ? 'bg-orange-50 text-orange-700 border-orange-100' :
-                                                        order.payment_status === 'failed' ? 'bg-red-50 text-red-700 border-red-100' :
-                                                        'bg-gray-50 text-gray-600 border-gray-100'
-                                                    }`}>
-                                                        {order.payment_status === 'paid'
-                                                            ? (order.payment_method === 'credit_card' ? 'שולם באשראי' : 'שולם במזומן')
-                                                            : order.payment_status === 'pending' ? 'ממתין לתשלום'
-                                                            : order.payment_status === 'failed' ? 'תשלום נכשל' : ''}
-                                                    </span>
+                                                        <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase border shrink-0 ${order.payment_status === 'paid' ? 'bg-green-50 text-green-700 border-green-100' :
+                                                                order.payment_status === 'pending' ? 'bg-orange-50 text-orange-700 border-orange-100' :
+                                                                    order.payment_status === 'failed' ? 'bg-red-50 text-red-700 border-red-100' :
+                                                                        'bg-gray-50 text-gray-600 border-gray-100'
+                                                            }`}>
+                                                            {order.payment_status === 'paid'
+                                                                ? (order.payment_method === 'credit_card' ? 'שולם באשראי' : 'שולם במזומן')
+                                                                : order.payment_status === 'pending' ? 'ממתין לתשלום'
+                                                                    : order.payment_status === 'failed' ? 'תשלום נכשל' : ''}
+                                                        </span>
                                                     )}
                                                 </div>
                                                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
