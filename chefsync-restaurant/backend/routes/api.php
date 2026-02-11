@@ -216,6 +216,11 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'tenant'])->group(function (
         Route::post('/payment-settings', [PaymentSettingsController::class, 'saveSettings'])->name('admin.payment-settings.save');
         Route::post('/payment-settings/verify', [PaymentSettingsController::class, 'verifyTerminal'])->name('admin.payment-settings.verify');
 
+        // TODO Phase 2: webhook endpoint לקבלת עדכוני תשלום מ-HYP
+        // Route::post('/payments/hyp-webhook', [PaymentWebhookController::class, 'handle'])
+        //     ->withoutMiddleware(['auth:sanctum'])
+        //     ->name('payments.hyp-webhook');
+
         // ניהול עובדים
         Route::get('/employees', [AdminController::class, 'getEmployees'])->name('admin.employees.index');
         Route::put('/employees/{id}', [AdminController::class, 'updateEmployee'])->name('admin.employees.update');

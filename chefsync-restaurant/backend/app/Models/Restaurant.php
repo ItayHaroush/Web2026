@@ -199,6 +199,12 @@ class Restaurant extends Model
     public function getPublicPaymentMethods(): array
     {
         $methods = $this->accepted_payment_methods ?? ['cash'];
+
+        // דגל גלובלי - אם אשראי כבוי ברמת המערכת, לא להציג אשראי לאף מסעדה
+        if (!config('payment.credit_card_enabled')) {
+            $methods = array_values(array_filter($methods, fn($m) => $m !== 'credit_card'));
+        }
+
         // אם מסוף לא מאומת, לא להציג אשראי
         if (!$this->hyp_terminal_verified) {
             $methods = array_values(array_filter($methods, fn($m) => $m !== 'credit_card'));
