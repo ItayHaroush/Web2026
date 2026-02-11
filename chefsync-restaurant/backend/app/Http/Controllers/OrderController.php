@@ -46,7 +46,7 @@ class OrderController extends Controller
                 'customer_name' => 'required|string|max:100',
                 'customer_phone' => 'required|string|max:20',
                 'delivery_method' => 'required|in:pickup,delivery',
-                'payment_method' => 'required|in:cash',
+                'payment_method' => 'required|in:' . (config('payment.credit_card_enabled') ? 'cash,credit_card' : 'cash'),
                 'delivery_address' => 'nullable|string|max:255',
                 'delivery_notes' => 'nullable|string|max:500',
                 'delivery_lat' => 'nullable|numeric|between:-90,90',
@@ -130,6 +130,16 @@ class OrderController extends Controller
                         'is_override_status' => (bool) ($restaurant->is_override_status ?? false),
                     ],
                 ], 403);
+            }
+
+            // ולידציה: אם בחרו אשראי, לוודא שהמסעדה תומכת (מסוף מאומת + שיטה מופעלת)
+            if (($validated['payment_method'] ?? 'cash') === 'credit_card') {
+                if (!$restaurant->acceptsCreditCard()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'המסעדה אינה מקבלת תשלום באשראי כרגע',
+                    ], 422);
+                }
             }
 
             $restaurantId = $restaurant->id;
@@ -344,6 +354,11 @@ class OrderController extends Controller
             }
 
             // צור את ההזמנה עם סכום סופי
+            // TODO Phase 2 - Payment Processing Integration:
+            // 1. payment_sessions table: order_id, session_token, hyp_transaction_id, amount, status, expires_at
+            // 2. אם payment_method=credit_card -> יצירת payment session -> הפניה ל-HYP iframe
+            // 3. Webhook מ-HYP מעדכן payment_status ל-paid ושומר transaction_id
+            // 4. Frontend polling ב-OrderStatusPage בודק שינוי ב-payment_status
             $order = Order::create([
                 'tenant_id' => $tenantId,
                 'restaurant_id' => $restaurantId,

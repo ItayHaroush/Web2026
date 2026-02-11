@@ -71,6 +71,14 @@ class PaymentSettingsController extends Controller
             $methods[] = 'cash';
         }
 
+        // דגל גלובלי: אם אשראי כבוי ברמת המערכת, לא לאפשר הפעלה
+        if (in_array('credit_card', $methods) && !config('payment.credit_card_enabled')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'תשלום באשראי עדיין לא זמין במערכת. יופעל בקרוב.',
+            ], 422);
+        }
+
         // אם מפעיל אשראי ולא שילם דמי הקמה - חובה לאשר
         $enablingCreditCard = in_array('credit_card', $methods);
         if ($enablingCreditCard && !$restaurant->hyp_setup_fee_charged) {
@@ -153,6 +161,12 @@ class PaymentSettingsController extends Controller
     /**
      * אימות מסוף תשלום (placeholder - Phase 2 יבצע חיוב 1 ש"ח אמיתי)
      * מוגבל ל-Owner/SuperAdmin בלבד
+     *
+     * TODO Phase 2:
+     * - שליחת חיוב 1 ש"ח אמיתי דרך HYP API
+     * - בדיקת תגובת HYP (transaction_id, status)
+     * - שמירת transaction_id ב-PaymentVerification
+     * - זיכוי אוטומטי של ה-1 ש"ח לאחר אימות מוצלח
      */
     public function verifyTerminal(Request $request)
     {

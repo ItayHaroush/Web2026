@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import PhoneVerificationModal from '../components/PhoneVerificationModal';
 import LocationPickerModal from '../components/LocationPickerModal';
+import OrderConfirmationSheet from '../components/OrderConfirmationSheet';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
@@ -26,7 +27,7 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
     const [showPhoneModal, setShowPhoneModal] = useState(false);
     const [showDeliveryModal, setShowDeliveryModal] = useState(false);
     const [showLocationModal, setShowLocationModal] = useState(false);
-    const [submitStep, setSubmitStep] = useState('payment'); // payment -> confirm
+    const [showConfirmation, setShowConfirmation] = useState(false);
     const [deliveryLocation, setDeliveryLocation] = useState(null);
     const [deliveryFee, setDeliveryFee] = useState(0);
 
@@ -104,7 +105,7 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
         }
     };
 
-    const handleSubmitOrder = async (e) => {
+    const handleProceedToConfirmation = async (e) => {
         e.preventDefault();
         setError(null);
 
@@ -154,13 +155,11 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
             return;
         }
 
-        // שלב ראשון: הכנה (ללא שליחה)
-        if (submitStep === 'payment') {
-            setSubmitStep('confirm');
-            setError('');
-            return;
-        }
+        // כל האימותים עברו - פתח מודל אישור
+        setShowConfirmation(true);
+    };
 
+    const handleConfirmOrder = async () => {
         try {
             setSubmitting(true);
 
@@ -197,7 +196,7 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                 localStorage.setItem(`order_tenant_${response.data.id}`, resolvedTenantSlug);
             }
             clearCart();
-            setSubmitStep('payment');
+            setShowConfirmation(false);
 
             // ניווט שונה בהתאם למצב
             if (isPreviewMode) {
@@ -207,6 +206,7 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
             }
         } catch (err) {
             console.error('שגיאה בהגשת הזמנה:', err);
+            setShowConfirmation(false);
             setError(err.response?.data?.message || 'שגיאה בהגשת ההזמנה');
         } finally {
             setSubmitting(false);
@@ -262,6 +262,8 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                         onVerified={(phone) => {
                             setPhoneVerified(true);
                             setShowPhoneModal(false);
+                            // אחרי אימות טלפון מוצלח - פתח מודל אישור
+                            setShowConfirmation(true);
                         }}
                         onClose={() => setShowPhoneModal(false)}
                         isPreviewMode={isPreviewMode}
@@ -370,8 +372,7 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                     }}
                     customerInfo={customerInfo}
                     setCustomerInfo={setCustomerInfo} deliveryLocation={deliveryLocation} onSaved={() => {
-                        // אחרי שמירת פרטי משלוח אפשר להתקדם לשלב אישור
-                        setSubmitStep('confirm');
+                        // פרטי המשלוח נשמרו - הלקוח יכול להמשיך
                     }}
                 />
 
@@ -510,7 +511,7 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                 </div>
 
                 {/* טופס פרטים אישיים */}
-                <form id="cart-order-form" onSubmit={handleSubmitOrder} className="space-y-6 bg-white dark:bg-brand-dark-surface border border-gray-200 dark:border-brand-dark-border p-6 sm:p-8 rounded-2xl shadow-sm">
+                <form id="cart-order-form" onSubmit={handleProceedToConfirmation} className="space-y-6 bg-white dark:bg-brand-dark-surface border border-gray-200 dark:border-brand-dark-border p-6 sm:p-8 rounded-2xl shadow-sm">
                     <div className="flex items-center gap-2 pb-4 border-b border-gray-200 dark:border-brand-dark-border">
                         <FaUser className="text-brand-primary" />
                         <h2 className="text-xl font-black text-gray-900 dark:text-brand-dark-text">פרטים אישיים</h2>
@@ -709,6 +710,8 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                                     );
                                 }
 
+                                {/* TODO Phase 2: כשאשראי נבחר ולוחץ "שלם" -> הצגת HypPaymentModal עם iframe לסליקה */}
+
                                 // Default: cash only
                                 return (
                                     <>
@@ -730,11 +733,7 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                             disabled={submitting}
                             className="flex-1 bg-gradient-to-r from-brand-primary to-orange-600 text-white font-black py-4 rounded-xl hover:from-orange-600 hover:to-orange-700 transition-all shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed"
                         >
-                            {submitting
-                                ? 'שולח...'
-                                : submitStep === 'payment'
-                                    ? (customerInfo.payment_method === 'credit_card' ? 'שלם באשראי' : 'המשך לאישור')
-                                    : 'שלח הזמנה'}
+                            {customerInfo.payment_method === 'credit_card' ? 'שלם באשראי' : 'המשך לאישור'}
                         </button>
                         <a
                             href={tenantId ? `/${tenantId}/menu` : '/'}
@@ -756,6 +755,27 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                         .
                     </div>
                 </form>
+
+                {/* מודל אישור הזמנה */}
+                <OrderConfirmationSheet
+                    open={showConfirmation}
+                    onClose={() => setShowConfirmation(false)}
+                    restaurantName={restaurant?.name}
+                    restaurantLogoUrl={restaurant?.logo_url}
+                    cartItems={cartItems}
+                    subtotal={total}
+                    deliveryFee={deliveryFee}
+                    totalWithDelivery={totalWithDelivery}
+                    customerName={customerInfo.name}
+                    customerPhone={customerInfo.phone}
+                    deliveryMethod={customerInfo.delivery_method || 'pickup'}
+                    deliveryAddress={customerInfo.delivery_address}
+                    deliveryNotes={customerInfo.delivery_notes}
+                    paymentMethod={customerInfo.payment_method || 'cash'}
+                    onConfirmOrder={handleConfirmOrder}
+                    submitting={submitting}
+                    onRemoveItem={removeFromCart}
+                />
 
                 {/* מודל הערות למנה */}
                 {showNotesModal && (
