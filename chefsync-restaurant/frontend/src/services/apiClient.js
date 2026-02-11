@@ -128,11 +128,12 @@ apiClient.interceptors.response.use(
             const hasAdminToken = !!(localStorage.getItem('authToken') || localStorage.getItem('admin_token'));
             // Don't auto-redirect for AI endpoints - let components handle it
             const isAiEndpoint = error.config?.url?.includes('/ai/');
-            if (hasAdminToken && !isAiEndpoint && window.location.pathname !== '/admin/subscription') {
+            const isAlreadyOnPaywall = ['/admin/paywall', '/admin/payment'].includes(window.location.pathname);
+            if (hasAdminToken && !isAiEndpoint && !isAlreadyOnPaywall) {
                 try {
                     localStorage.setItem('paywall_data', JSON.stringify(error.response?.data?.data || {}));
                 } catch { }
-                window.location.href = '/admin/subscription';
+                window.location.href = '/admin/paywall';
             }
         }
         return Promise.reject(error);
