@@ -710,7 +710,7 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                                     );
                                 }
 
-                                {/* TODO Phase 2: כשאשראי נבחר ולוחץ "שלם" -> הצגת HypPaymentModal עם iframe לסליקה */}
+                                {/* TODO Phase 2: כשאשראי נבחר ולוחץ "שלם" -> הצגת HypPaymentModal עם iframe לסליקה */ }
 
                                 // Default: cash only
                                 return (
