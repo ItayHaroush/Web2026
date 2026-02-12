@@ -464,12 +464,12 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
                             <div>
                                 <p className="text-xs font-semibold text-gray-500 dark:text-brand-dark-muted uppercase tracking-wide mb-1">אמצעי תשלום</p>
                                 <p className={`font-bold ${order.payment_status === 'paid'
-                                        ? 'text-green-700 dark:text-green-400'
-                                        : order.payment_status === 'pending'
-                                            ? 'text-orange-600 dark:text-orange-400'
-                                            : order.payment_status === 'failed'
-                                                ? 'text-red-600 dark:text-red-400'
-                                                : 'text-gray-900 dark:text-brand-dark-text'
+                                    ? 'text-green-700 dark:text-green-400'
+                                    : order.payment_status === 'pending'
+                                        ? 'text-orange-600 dark:text-orange-400'
+                                        : order.payment_status === 'failed'
+                                            ? 'text-red-600 dark:text-red-400'
+                                            : 'text-gray-900 dark:text-brand-dark-text'
                                     }`}>
                                     {order.payment_status === 'paid'
                                         ? (order.payment_method === 'credit_card' ? 'שולם באשראי' : 'שולם במזומן')
