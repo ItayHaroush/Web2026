@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { AdminAuthProvider, useAdminAuth } from './context/AdminAuthContext';
 import { RestaurantStatusProvider } from './context/RestaurantStatusContext';
 import { CartProvider } from './context/CartContext';
+import { PromotionProvider } from './context/PromotionContext';
 import { ToastProvider } from './context/ToastContext';
 import { ThemeProvider } from './context/ThemeContext';
 import DevModeBanner from './components/DevModeBanner';
@@ -401,11 +402,13 @@ export default function App() {
             <AuthProvider>
               <ToastProvider>
                 <CartProvider>
+                  <PromotionProvider>
                   <AppRoutes />
                   <Toaster position="bottom-right" />
                   <FacebookInAppWarning />
                   <DevModeBanner />
                   <CookieConsent />
+                  </PromotionProvider>
                 </CartProvider>
               </ToastProvider>
             </AuthProvider>

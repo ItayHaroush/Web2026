@@ -17,6 +17,7 @@ use App\Http\Controllers\DisplayScreenController;
 use App\Http\Controllers\KioskController;
 use App\Http\Controllers\PrinterController;
 use App\Http\Controllers\PaymentSettingsController;
+use App\Http\Controllers\PromotionController;
 
 /**
  * API Routes
@@ -166,6 +167,7 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'tenant'])->group(function (
         Route::delete('/categories/{id}', [AdminController::class, 'deleteCategory'])->name('admin.categories.delete');
         Route::post('/categories/reorder', [AdminController::class, 'reorderCategories'])->name('admin.categories.reorder');
         Route::patch('/categories/{id}/toggle-active', [AdminController::class, 'toggleCategoryActive'])->name('admin.categories.toggle');
+        Route::post('/categories/{id}/duplicate', [AdminController::class, 'duplicateCategory'])->name('admin.categories.duplicate');
 
         // ניהול פריטי תפריט
         Route::get('/menu-items', [AdminController::class, 'getMenuItems'])->name('admin.menu.index');
@@ -252,6 +254,14 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'tenant'])->group(function (
         Route::patch('/printers/{id}/toggle', [PrinterController::class, 'toggle'])->name('admin.printers.toggle');
         Route::post('/printers/{id}/test', [PrinterController::class, 'testPrint'])->name('admin.printers.test');
         Route::post('/orders/{id}/reprint', [PrinterController::class, 'reprint'])->name('admin.orders.reprint');
+
+        // ניהול מבצעים
+        Route::get('/promotions', [PromotionController::class, 'index'])->name('admin.promotions.index');
+        Route::post('/promotions', [PromotionController::class, 'store'])->name('admin.promotions.store');
+        Route::get('/promotions/{id}', [PromotionController::class, 'show'])->name('admin.promotions.show');
+        Route::put('/promotions/{id}', [PromotionController::class, 'update'])->name('admin.promotions.update');
+        Route::delete('/promotions/{id}', [PromotionController::class, 'destroy'])->name('admin.promotions.destroy');
+        Route::patch('/promotions/{id}/toggle', [PromotionController::class, 'toggle'])->name('admin.promotions.toggle');
     });
 });
 
@@ -269,6 +279,12 @@ Route::middleware(['api', 'tenant'])->group(function () {
     Route::post('/orders', [OrderController::class, 'store'])->name('orders.store');
     Route::get('/orders/{id}', [OrderController::class, 'show'])->name('orders.show');
     Route::post('/check-delivery-zone', [OrderController::class, 'checkDeliveryZone'])->name('orders.check-delivery');
+
+    // ============================================
+    // מבצעים - ללקוחות
+    // ============================================
+    Route::get('/promotions/active', [PromotionController::class, 'active'])->name('promotions.active');
+    Route::post('/promotions/check', [PromotionController::class, 'check'])->name('promotions.check');
 
     // ============================================
     // רישום FCM לטאבלטים/דפדפנים

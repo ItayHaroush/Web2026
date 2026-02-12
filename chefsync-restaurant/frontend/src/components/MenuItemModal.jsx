@@ -209,6 +209,7 @@ export default function MenuItemModal({
             addons: normalizedAddons,
             qty,
             imageUrl: item.image_url,
+            categoryId: item.category_id,
             restaurantId: currentRestaurantId,
             restaurantName: currentRestaurantName,
         });

@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { FaTimes, FaTrash, FaUser, FaPhone, FaStore, FaTruck, FaMapMarkerAlt, FaMoneyBillWave, FaCreditCard, FaComment, FaBoxOpen, FaSpinner, FaCheckCircle } from 'react-icons/fa';
+import { FaTimes, FaTrash, FaUser, FaPhone, FaStore, FaTruck, FaMapMarkerAlt, FaMoneyBillWave, FaCreditCard, FaComment, FaBoxOpen, FaSpinner, FaCheckCircle, FaGift } from 'react-icons/fa';
 import { resolveAssetUrl } from '../utils/assets';
 
 /**
@@ -25,6 +25,9 @@ export default function OrderConfirmationSheet({
     onConfirmOrder,
     submitting,
     onRemoveItem,
+    promotionDiscount = 0,
+    giftItems = [],
+    metPromotions = [],
 }) {
     // נעילת גלילת רקע כשהמודל פתוח
     useEffect(() => {
@@ -142,6 +145,21 @@ export default function OrderConfirmationSheet({
                                 );
                             })}
                         </div>
+                        {/* פריטי מתנה ממבצע */}
+                        {giftItems.length > 0 && (
+                            <div className="mt-3 space-y-2">
+                                {giftItems.map((gift, i) => (
+                                    <div key={`gift-${i}`} className="flex justify-between items-center py-2 border-b border-brand-primary/20 dark:border-orange-900/30 last:border-0">
+                                        <div className="flex items-center gap-2">
+                                            <FaGift className="text-brand-primary" size={12} />
+                                            <span className="font-bold text-brand-primary dark:text-orange-400 text-sm">{gift.name}</span>
+                                            <span className="bg-brand-light text-brand-primary text-xs px-2 py-0.5 rounded-full font-bold">מתנה</span>
+                                        </div>
+                                        <span className="font-bold text-brand-primary text-sm">{'\u20aa'}0.00</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
 
                     {/* סיכום מחירים */}
@@ -155,6 +173,28 @@ export default function OrderConfirmationSheet({
                                 <span className="text-gray-600 dark:text-gray-400">דמי משלוח</span>
                                 <span className="font-bold text-gray-900 dark:text-brand-dark-text">
                                     {deliveryFee > 0 ? `${'\u20aa'}${deliveryFee.toFixed(2)}` : 'חינם'}
+                                </span>
+                            </div>
+                        )}
+                        {promotionDiscount > 0 && (
+                            <div className="flex justify-between items-center text-sm">
+                                <span className="text-brand-primary dark:text-orange-400 flex items-center gap-1">
+                                    <FaGift size={12} />
+                                    הנחת מבצע
+                                </span>
+                                <span className="font-bold text-brand-primary dark:text-orange-400">
+                                    -{'\u20aa'}{promotionDiscount.toFixed(2)}
+                                </span>
+                            </div>
+                        )}
+                        {!promotionDiscount && giftItems.length > 0 && (
+                            <div className="flex justify-between items-center text-sm">
+                                <span className="text-brand-primary dark:text-orange-400 flex items-center gap-1">
+                                    <FaGift size={12} />
+                                    מבצע פעיל
+                                </span>
+                                <span className="font-bold text-brand-primary dark:text-orange-400 text-sm">
+                                    ההנחה תחושב בהזמנה
                                 </span>
                             </div>
                         )}

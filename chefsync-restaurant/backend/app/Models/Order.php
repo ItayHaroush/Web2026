@@ -42,6 +42,7 @@ class Order extends Model
         'is_test',              // הזמנת בדיקה
         'test_note',            // הערה להזמנת בדיקה
         'total_amount',
+        'promotion_discount',
         'notes',
         'updated_by_name',
         'updated_by_user_id',
@@ -54,6 +55,7 @@ class Order extends Model
 
     protected $casts = [
         'total_amount' => 'decimal:2',
+        'promotion_discount' => 'decimal:2',
         'delivery_fee' => 'decimal:2',
         'delivery_distance_km' => 'decimal:2',
         'delivery_lat' => 'decimal:7',
