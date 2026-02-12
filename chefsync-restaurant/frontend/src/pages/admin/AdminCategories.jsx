@@ -11,6 +11,7 @@ import {
     FaPlus,
     FaEdit,
     FaTrash,
+    FaCopy,
     FaFolderOpen,
     FaInfoCircle,
     FaRegEdit,
@@ -42,6 +43,7 @@ export default function AdminCategories() {
     const [form, setForm] = useState({ name: '', description: '', icon: '📂', dish_type: 'both', dine_in_adjustment: '' });
     const [showIconPicker, setShowIconPicker] = useState(false);
     const [showAllIcons, setShowAllIcons] = useState(false);
+    const [duplicatingId, setDuplicatingId] = useState(null);
 
     useEffect(() => {
         fetchCategories();
@@ -89,6 +91,32 @@ export default function AdminCategories() {
         } catch (error) {
             console.error('Failed to delete category:', error);
             alert(error.response?.data?.message || 'שגיאה במחיקה');
+        }
+    };
+
+    const duplicateCategory = async (cat) => {
+        const itemsCount = cat.items_count || 0;
+        const confirmMsg = itemsCount > 0
+            ? `האם להעתיק את הקטגוריה "${cat.name}" כולל ${itemsCount} פריטים?`
+            : `האם להעתיק את הקטגוריה "${cat.name}"?`;
+        if (!confirm(confirmMsg)) return;
+
+        setDuplicatingId(cat.id);
+        try {
+            const response = await api.post(
+                `/admin/categories/${cat.id}/duplicate`,
+                {},
+                { headers: getAuthHeaders() }
+            );
+            if (response.data.success) {
+                await fetchCategories();
+                alert(`הקטגוריה "${response.data.category?.name}" הועתקה בהצלחה!`);
+            }
+        } catch (error) {
+            console.error('Failed to duplicate category:', error);
+            alert(error.response?.data?.message || 'שגיאה בהעתקת הקטגוריה');
+        } finally {
+            setDuplicatingId(null);
         }
     };
 
@@ -217,6 +245,18 @@ export default function AdminCategories() {
                                                 title="עריכה"
                                             >
                                                 <FaEdit size={18} />
+                                            </button>
+                                            <button
+                                                onClick={() => duplicateCategory(cat)}
+                                                disabled={duplicatingId === cat.id}
+                                                className="p-4 bg-emerald-50 text-emerald-600 rounded-2xl hover:bg-emerald-600 hover:text-white transition-all shadow-sm disabled:opacity-50"
+                                                title="העתק קטגוריה"
+                                            >
+                                                {duplicatingId === cat.id ? (
+                                                    <div className="animate-spin rounded-full h-[18px] w-[18px] border-2 border-emerald-600 border-t-transparent" />
+                                                ) : (
+                                                    <FaCopy size={18} />
+                                                )}
                                             </button>
                                             <button
                                                 onClick={() => deleteCategory(cat.id)}

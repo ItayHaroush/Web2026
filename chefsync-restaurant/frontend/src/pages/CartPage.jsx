@@ -6,12 +6,15 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { CustomerLayout } from '../layouts/CustomerLayout';
-import { FaMask, FaBoxOpen, FaStickyNote, FaTimes, FaShoppingCart, FaUser, FaPhone, FaMapMarkerAlt, FaMoneyBillWave, FaCreditCard, FaTruck, FaStore, FaHome, FaEdit, FaComment, FaExclamationTriangle } from 'react-icons/fa';
+import { FaMask, FaBoxOpen, FaStickyNote, FaTimes, FaShoppingCart, FaUser, FaPhone, FaMapMarkerAlt, FaMoneyBillWave, FaCreditCard, FaTruck, FaStore, FaHome, FaEdit, FaComment, FaExclamationTriangle, FaGift, FaSearch } from 'react-icons/fa';
 import orderService from '../services/orderService';
 import { UI_TEXT } from '../constants/ui';
 import DeliveryDetailsModal from '../components/DeliveryDetailsModal';
 import { isValidIsraeliMobile } from '../utils/phone';
 import apiClient from '../services/apiClient';
+import { usePromotions } from '../context/PromotionContext';
+import PromotionProgress from '../components/PromotionProgress';
+import GiftSelectionModal from '../components/GiftSelectionModal';
 
 /**
  * עמוד סל קניות
@@ -38,6 +41,8 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
     const [restaurant, setRestaurant] = useState(null);
     const [showNotesModal, setShowNotesModal] = useState(false);
     const [tempNotes, setTempNotes] = useState('');
+    const [giftPromotion, setGiftPromotion] = useState(null);
+    const { getAppliedPromotions, eligiblePromotions, selectedGifts } = usePromotions();
 
     // Fetch restaurant info
     React.useEffect(() => {
@@ -186,6 +191,8 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                 // הוספת שדות test אם זה מצב preview
                 is_test: isPreviewMode || false,
                 test_note: isPreviewMode ? 'הזמנה מתצוגה מקדימה - Admin' : undefined,
+                // מבצעים שהלקוח עומד בתנאים שלהם
+                applied_promotions: getAppliedPromotions(),
             };
             console.log('📦 Sending order data:', orderData);
             console.log('📞 Customer info for SMS:', customerInfo);
@@ -227,7 +234,7 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                                     <FaShoppingCart className="text-2xl text-white" />
                                 </div>
                                 <div className="flex-1">
-                                    <h3 className="font-bold text-purple-900 text-lg mb-1">🔍 מצב תצוגה מקדימה</h3>
+                                    <h3 className="font-bold text-purple-900 text-lg mb-1 flex items-center gap-2"><FaSearch className="text-purple-700" /> מצב תצוגה מקדימה</h3>
                                     <p className="text-sm text-purple-800">
                                         אתה צופה בסל כמנהל מסעדה. חזור לתפריט והוסף פריטים לסל.
                                     </p>
@@ -252,6 +259,35 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
 
     const total = getTotal();
     const totalWithDelivery = total + deliveryFee;
+
+    // מבצעים שעומדים בתנאים
+    const metPromotions = eligiblePromotions.filter(p => p.progress?.met);
+    // בניית רשימת מתנות נבחרות (עם שמות) מ-selectedGifts
+    const selectedGiftItems = [];
+    for (const promo of metPromotions) {
+        const promoGifts = selectedGifts[String(promo.promotion_id)] || [];
+        if (promoGifts.length === 0) continue;
+
+        const allSpecific = (promo.rewards || []).every(r =>
+            r.reward_type !== 'free_item' || r.reward_menu_item_id
+        );
+
+        if (allSpecific) {
+            (promo.rewards || []).filter(r => r.reward_type === 'free_item').forEach(r => {
+                const qty = r.max_selectable || 1;
+                for (let i = 0; i < qty; i++) {
+                    selectedGiftItems.push({
+                        menu_item_id: r.reward_menu_item_id,
+                        name: r.reward_menu_item_name || 'מתנה',
+                    });
+                }
+            });
+        } else {
+            promoGifts.forEach(itemId => {
+                selectedGiftItems.push({ menu_item_id: itemId, name: `מתנה ממבצע: ${promo.name}` });
+            });
+        }
+    }
 
     return (
         <CustomerLayout>
@@ -308,7 +344,7 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                                 <FaShoppingCart className="text-2xl text-white" />
                             </div>
                             <div className="flex-1">
-                                <h3 className="font-bold text-purple-900 text-lg mb-1">🔍 מצב תצוגה מקדימה</h3>
+                                <h3 className="font-bold text-purple-900 text-lg mb-1 flex items-center gap-2"><FaSearch className="text-purple-700" /> מצב תצוגה מקדימה</h3>
                                 <p className="text-sm text-purple-800">
                                     אתה צופה בסל כמנהל מסעדה. ההזמנה תסומן כ-<strong>הזמנת דוגמה</strong> ולא תשפיע על מונים ודוחות.
                                 </p>
@@ -338,7 +374,7 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
                         <div className="bg-white dark:bg-brand-dark-surface border border-gray-200 dark:border-brand-dark-border rounded-2xl p-4 sm:p-6 max-w-md w-full shadow-2xl mx-4">
                             <div className="text-center">
-                                <div className="text-4xl sm:text-5xl mb-3 sm:mb-4">⚠️</div>
+                                <div className="text-4xl sm:text-5xl mb-3 sm:mb-4 text-amber-500 flex justify-center"><FaExclamationTriangle /></div>
                                 <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-brand-dark-text mb-2 sm:mb-3">שגיאה</h3>
                                 <p className="text-sm sm:text-base text-gray-700 dark:text-gray-300 mb-4 sm:mb-6">{error}</p>
                                 <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
@@ -350,7 +386,7 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                                             }}
                                             className="w-full sm:flex-1 bg-brand-primary text-white px-4 py-2.5 sm:py-3 rounded-xl text-sm sm:text-base font-medium hover:bg-orange-700 transition"
                                         >
-                                            📍 שנה מיקום
+                                            <FaMapMarkerAlt className="inline" /> שנה מיקום
                                         </button>
                                     )}
                                     <button
@@ -444,6 +480,15 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                     })}
                 </div>
 
+                {/* מבצעים - התקדמות ובחירת מתנה */}
+                <PromotionProgress onSelectGift={(promo) => setGiftPromotion(promo)} />
+                {giftPromotion && (
+                    <GiftSelectionModal
+                        promotion={giftPromotion}
+                        onClose={() => setGiftPromotion(null)}
+                    />
+                )}
+
                 {/* סכום ביניים */}
                 <div className="bg-gradient-to-br from-brand-cream to-orange-50 dark:from-brand-dark-surface dark:to-orange-900/20 border-2 border-gray-200 dark:border-brand-dark-border rounded-2xl p-6 space-y-3">
                     <div className="flex justify-between items-center text-lg">
@@ -459,6 +504,17 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                             </div>
                             <span className="font-bold text-gray-900 dark:text-brand-dark-text">
                                 {deliveryFee > 0 ? `₪${deliveryFee.toFixed(2)}` : checkingZone ? '...' : '₪0.00'}
+                            </span>
+                        </div>
+                    )}
+
+                    {selectedGiftItems.length > 0 && (
+                        <div className="flex justify-between items-center text-lg">
+                            <span className="font-medium text-brand-primary dark:text-orange-400 flex items-center gap-1">
+                                <FaGift size={14} /> מבצע פעיל
+                            </span>
+                            <span className="font-bold text-brand-primary dark:text-orange-400 text-sm">
+                                ההנחה תחושב בהזמנה
                             </span>
                         </div>
                     )}
@@ -493,7 +549,7 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 bg-orange-50 dark:bg-orange-900/20 p-3 rounded-lg text-sm">
                             <div className="flex-1">
                                 <p className="font-medium text-gray-900 dark:text-brand-dark-text text-xs sm:text-sm break-words">
-                                    📍 {deliveryLocation.fullAddress ||
+                                    <FaMapMarkerAlt className="text-brand-primary inline shrink-0" /> {deliveryLocation.fullAddress ||
                                         (deliveryLocation.street && deliveryLocation.cityName
                                             ? `${deliveryLocation.street}, ${deliveryLocation.cityName}`
                                             : deliveryLocation.cityName || 'מיקום למשלוח')}
@@ -775,6 +831,8 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                     onConfirmOrder={handleConfirmOrder}
                     submitting={submitting}
                     onRemoveItem={removeFromCart}
+                    giftItems={selectedGiftItems}
+                    metPromotions={metPromotions}
                 />
 
                 {/* מודל הערות למנה */}

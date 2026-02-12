@@ -11,6 +11,7 @@ use App\Models\DeliveryZone;
 use App\Services\FcmService;
 use App\Services\PhoneValidationService;
 use App\Services\BasePriceService;
+use App\Services\PromotionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
@@ -61,6 +62,10 @@ class OrderController extends Controller
                 'items.*.quantity' => 'nullable|integer|min:1',
                 'is_test' => 'nullable|boolean',        // הזמנת בדיקה (מצב preview)
                 'test_note' => 'nullable|string|max:255', // הערה להזמנת בדיקה
+                'applied_promotions' => 'nullable|array',
+                'applied_promotions.*.promotion_id' => 'required|integer',
+                'applied_promotions.*.gift_items' => 'nullable|array',
+                'applied_promotions.*.gift_items.*.menu_item_id' => 'required|integer|exists:menu_items,id',
             ]);
 
             Log::info('Order request received', [
@@ -353,6 +358,17 @@ class OrderController extends Controller
                 ];
             }
 
+            // חישוב מבצעים (אם הלקוח שלח applied_promotions)
+            $promotionDiscount = 0;
+            $giftLineItems = [];
+            $promotionService = null;
+            if (!empty($validated['applied_promotions'])) {
+                $promotionService = app(PromotionService::class);
+                $result = $promotionService->validateAndApply($lineItems, $validated['applied_promotions'], $tenantId);
+                $promotionDiscount = $result['promotion_discount'];
+                $giftLineItems = $result['gift_items'];
+            }
+
             // צור את ההזמנה עם סכום סופי
             // TODO Phase 2 - Payment Processing Integration:
             // 1. payment_sessions table: order_id, session_token, hyp_transaction_id, amount, status, expires_at
@@ -380,7 +396,8 @@ class OrderController extends Controller
                 'status' => Order::STATUS_PENDING,
                 'is_test' => $validated['is_test'] ?? false,           // הזמנת בדיקה
                 'test_note' => $validated['test_note'] ?? null,         // הערה להזמנת בדיקה
-                'total_amount' => $totalAmount + $deliveryFee,
+                'promotion_discount' => $promotionDiscount,
+                'total_amount' => $totalAmount + $deliveryFee - $promotionDiscount,
             ]);
 
             foreach ($lineItems as $lineItem) {
@@ -397,6 +414,32 @@ class OrderController extends Controller
                     'quantity' => $lineItem['quantity'],
                     'price_at_order' => $lineItem['price_at_order'],
                 ]);
+            }
+
+            // יצירת פריטי מתנה מהמבצעים
+            foreach ($giftLineItems as $gift) {
+                OrderItem::create([
+                    'order_id' => $order->id,
+                    'menu_item_id' => $gift['menu_item_id'],
+                    'category_id' => $gift['category_id'],
+                    'category_name' => $gift['category_name'],
+                    'quantity' => 1,
+                    'price_at_order' => 0,
+                    'variant_id' => null,
+                    'variant_name' => null,
+                    'variant_price_delta' => 0,
+                    'addons' => [],
+                    'addons_total' => 0,
+                    'promotion_id' => $gift['promotion_id'],
+                    'is_gift' => true,
+                ]);
+            }
+
+            // שמירת שימוש במבצעים
+            if ($promotionService && !empty($validated['applied_promotions'])) {
+                foreach ($validated['applied_promotions'] as $ap) {
+                    $promotionService->recordUsage($ap['promotion_id'], $order->id, $normalizedCustomerPhone);
+                }
             }
 
             // שליחת פוש לטאבלטים של המסעדה (רק אם לא הזמנת test)

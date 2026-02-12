@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { CustomerLayout } from '../layouts/CustomerLayout';
-import { FaMask, FaBoxOpen, FaUser, FaPhone, FaClock, FaInfoCircle, FaUtensils, FaShoppingBag, FaCheckCircle, FaExclamationTriangle, FaMapMarkerAlt, FaCreditCard, FaMoneyBillWave } from 'react-icons/fa';
+import { FaMask, FaBoxOpen, FaUser, FaPhone, FaClock, FaInfoCircle, FaUtensils, FaShoppingBag, FaCheckCircle, FaExclamationTriangle, FaMapMarkerAlt, FaCreditCard, FaMoneyBillWave, FaGift, FaHeart } from 'react-icons/fa';
 import orderService from '../services/orderService';
 import { ORDER_STATUS, ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from '../constants/api';
 import RatingWidget from '../components/RatingWidget';
@@ -539,7 +539,7 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
                                 {(order.rating || reviewSuccess) && order.status === ORDER_STATUS.DELIVERED && (
                                     <div className="w-full border-t border-green-200 pt-4 text-center space-y-3">
                                         <h3 className="text-xl font-black text-gray-900 dark:text-brand-dark-text">
-                                            תודה על הדירוג! 💚
+                                            תודה על הדירוג! <FaHeart className="text-green-500 inline" />
                                         </h3>
                                         {order.rating && (
                                             <div className="pt-2">
@@ -662,8 +662,11 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
                             <div key={item.id} className="bg-white dark:bg-brand-dark-surface border border-gray-200 dark:border-brand-dark-border rounded-xl p-4 sm:p-5 space-y-2 hover:shadow-md dark:hover:shadow-black/20 transition-shadow">
                                 <div className="space-y-1">
                                     <div className="flex items-center justify-between gap-3">
-                                        <div className="font-semibold text-gray-900 dark:text-brand-dark-text">
+                                        <div className="font-semibold text-gray-900 dark:text-brand-dark-text flex items-center gap-2">
                                             {(item.menuItem?.name || item.menu_item?.name || item.name || 'פריט')}× {quantity}
+                                            {item.is_gift && (
+                                                <span className="bg-brand-light text-brand-primary text-xs px-2 py-0.5 rounded-full font-bold flex items-center gap-1"><FaGift size={10} /> מתנה</span>
+                                            )}
                                         </div>
                                         {unitPrice > 0 && (
                                             <div className="font-semibold text-gray-900 dark:text-brand-dark-text">₪{lineTotal}</div>
@@ -712,7 +715,7 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
                     <div className="bg-gradient-to-br from-brand-cream to-orange-50 dark:from-brand-dark-surface dark:to-orange-900/20 rounded-xl p-5 space-y-3 border border-gray-200 dark:border-brand-dark-border shadow-sm dark:shadow-black/20">
                         <div className="flex items-center justify-between text-gray-700 dark:text-gray-300">
                             <span>סכום ביניים</span>
-                            <span>₪{(Number(order.total_amount || 0) - Number(order.delivery_fee || 0)).toFixed(2)}</span>
+                            <span>₪{(Number(order.total_amount || 0) - Number(order.delivery_fee || 0) + Number(order.promotion_discount || 0)).toFixed(2)}</span>
                         </div>
                         {order.delivery_method === 'delivery' && order.delivery_fee > 0 && (
                             <div className="flex items-center justify-between text-gray-700 dark:text-gray-300">
@@ -723,6 +726,12 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
                                     )}
                                 </span>
                                 <span>₪{Number(order.delivery_fee).toFixed(2)}</span>
+                            </div>
+                        )}
+                        {Number(order.promotion_discount || 0) > 0 && (
+                            <div className="flex items-center justify-between text-brand-primary dark:text-orange-400">
+                                <span className="flex items-center gap-1"><FaGift size={12} /> הנחת מבצע</span>
+                                <span>-₪{Number(order.promotion_discount).toFixed(2)}</span>
                             </div>
                         )}
                         <div className="border-t border-gray-300 dark:border-brand-dark-border pt-2 flex items-center justify-between text-lg font-bold text-gray-900 dark:text-brand-dark-text">

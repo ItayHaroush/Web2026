@@ -22,6 +22,8 @@ class OrderItem extends Model
         'addons_total',
         'quantity',
         'price_at_order',
+        'promotion_id',
+        'is_gift',
         // Legacy / upcoming aliases to prevent mass-assignment failures in older deployments
         'addons_json',
         'unit_price',
@@ -37,6 +39,7 @@ class OrderItem extends Model
         'addons' => 'array',
         'addons_total' => 'decimal:2',
         'category_id' => 'integer',
+        'is_gift' => 'boolean',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];

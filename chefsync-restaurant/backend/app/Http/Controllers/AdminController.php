@@ -12,6 +12,9 @@ use App\Models\RestaurantAddon;
 use App\Models\RestaurantAddonGroup;
 use App\Models\RestaurantVariant;
 use App\Models\CategoryBasePrice;
+use App\Models\MenuItemVariant;
+use App\Models\MenuItemAddonGroup;
+use App\Models\MenuItemAddon;
 use App\Models\PriceRule;
 use App\Models\DeliveryZone;
 use App\Services\BasePriceService;
@@ -251,6 +254,151 @@ class AdminController extends Controller
             'message' => $category->is_active ? 'הקטגוריה הופעלה!' : 'הקטגוריה הוסתרה מהתפריט',
             'category' => $category,
         ]);
+    }
+
+    public function duplicateCategory(Request $request, $id)
+    {
+        $user = $request->user();
+
+        if (!$user->isManager()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'אין לך הרשאה להעתיק קטגוריות',
+            ], 403);
+        }
+
+        $restaurant = $user->restaurant;
+        if (!$restaurant) {
+            return response()->json([
+                'success' => false,
+                'message' => 'לא נמצאה מסעדה למשתמש',
+            ], 404);
+        }
+
+        $originalCategory = Category::where('restaurant_id', $restaurant->id)
+            ->with([
+                'items.variants',
+                'items.addonGroups.addons',
+                'basePrices',
+            ])
+            ->findOrFail($id);
+
+        $maxSortOrder = Category::where('restaurant_id', $restaurant->id)->max('sort_order') ?? 0;
+
+        $newCategory = Category::create([
+            'restaurant_id' => $restaurant->id,
+            'tenant_id'     => $restaurant->tenant_id,
+            'name'          => $originalCategory->name . ' (עותק)',
+            'description'   => $originalCategory->description,
+            'icon'          => $originalCategory->icon,
+            'sort_order'    => $maxSortOrder + 1,
+            'is_active'     => $originalCategory->is_active,
+            'dish_type'     => $originalCategory->dish_type,
+            'dine_in_adjustment' => $originalCategory->dine_in_adjustment,
+        ]);
+
+        // העתקת תמחור בסיס לקטגוריה
+        foreach ($originalCategory->basePrices as $basePrice) {
+            CategoryBasePrice::create([
+                'category_id'          => $newCategory->id,
+                'restaurant_variant_id' => $basePrice->restaurant_variant_id,
+                'tenant_id'            => $restaurant->tenant_id,
+                'price_delta'          => $basePrice->price_delta,
+            ]);
+        }
+
+        // העתקת כל פריטי התפריט עם וריאנטים ותוספות
+        foreach ($originalCategory->items as $originalItem) {
+            // העתקת קובץ תמונה אם קיים
+            $newImageUrl = null;
+            $rawUrl = $originalItem->getRawOriginal('image_url');
+            if ($rawUrl) {
+                // חילוץ הנתיב היחסי - תמיכה גם ב-URL מלא וגם בנתיב יחסי
+                $storagePath = $rawUrl;
+                // אם זה URL מלא, חלץ רק את חלק הנתיב
+                if (str_starts_with($storagePath, 'http://') || str_starts_with($storagePath, 'https://')) {
+                    $storagePath = parse_url($storagePath, PHP_URL_PATH) ?: $rawUrl;
+                }
+                $oldPath = str_replace('/storage/', 'public/', $storagePath);
+                if (Storage::exists($oldPath)) {
+                    $extension = pathinfo($oldPath, PATHINFO_EXTENSION);
+                    $newFilename = Str::uuid() . '.' . $extension;
+                    $newPath = 'public/menu-items/' . $newFilename;
+                    Storage::copy($oldPath, $newPath);
+                    $newImageUrl = Storage::url($newPath);
+                } else {
+                    // אם הקובץ הפיזי לא נמצא, שמור את אותו URL מקורי
+                    $newImageUrl = $rawUrl;
+                }
+            }
+
+            $newItem = MenuItem::create([
+                'restaurant_id'      => $restaurant->id,
+                'category_id'        => $newCategory->id,
+                'tenant_id'          => $restaurant->tenant_id,
+                'name'               => $originalItem->name,
+                'description'        => $originalItem->description,
+                'allergen_tags'      => $originalItem->allergen_tags,
+                'price'              => $originalItem->price,
+                'image_url'          => $newImageUrl,
+                'is_available'       => $originalItem->is_available,
+                'use_variants'       => $originalItem->use_variants,
+                'use_addons'         => $originalItem->use_addons,
+                'addons_group_scope' => $originalItem->addons_group_scope,
+                'max_addons'         => $originalItem->max_addons,
+                'dine_in_adjustment' => $originalItem->dine_in_adjustment,
+            ]);
+
+            // העתקת וריאנטים ברמת פריט
+            foreach ($originalItem->variants as $variant) {
+                MenuItemVariant::create([
+                    'menu_item_id' => $newItem->id,
+                    'tenant_id'    => $restaurant->tenant_id,
+                    'name'         => $variant->name,
+                    'price_delta'  => $variant->price_delta,
+                    'is_default'   => $variant->is_default,
+                    'is_active'    => $variant->is_active,
+                    'sort_order'   => $variant->sort_order,
+                ]);
+            }
+
+            // העתקת קבוצות תוספות ברמת פריט
+            foreach ($originalItem->addonGroups as $originalGroup) {
+                $newGroup = MenuItemAddonGroup::create([
+                    'menu_item_id'   => $newItem->id,
+                    'tenant_id'      => $restaurant->tenant_id,
+                    'name'           => $originalGroup->name,
+                    'selection_type' => $originalGroup->selection_type,
+                    'min_selections' => $originalGroup->min_selections,
+                    'max_selections' => $originalGroup->max_selections,
+                    'is_required'    => $originalGroup->is_required,
+                    'is_active'      => $originalGroup->is_active,
+                    'sort_order'     => $originalGroup->sort_order,
+                ]);
+
+                // העתקת תוספות בודדות בקבוצה
+                foreach ($originalGroup->addons as $addon) {
+                    MenuItemAddon::create([
+                        'addon_group_id' => $newGroup->id,
+                        'menu_item_id'   => $newItem->id,
+                        'tenant_id'      => $restaurant->tenant_id,
+                        'name'           => $addon->name,
+                        'price_delta'    => $addon->price_delta,
+                        'is_default'     => $addon->is_default,
+                        'is_active'      => $addon->is_active,
+                        'sort_order'     => $addon->sort_order,
+                    ]);
+                }
+            }
+        }
+
+        $newCategory->loadCount('items');
+
+        return response()->json([
+            'success'  => true,
+            'message'  => 'הקטגוריה הועתקה בהצלחה!',
+            'category' => $newCategory,
+        ], 201);
     }
 
     // =============================================
