@@ -13,7 +13,8 @@ import {
     FaSms,
     FaUserShield,
     FaClipboardList,
-    FaReceipt
+    FaReceipt,
+    FaEnvelope
 } from 'react-icons/fa';
 
 export default function SuperAdminLayout({ children }) {
@@ -48,6 +49,11 @@ export default function SuperAdminLayout({ children }) {
             label: 'חשבוניות',
             path: '/super-admin/invoices',
             icon: <FaReceipt />,
+        },
+        {
+            label: 'מיילים',
+            path: '/super-admin/emails',
+            icon: <FaEnvelope />,
         },
         {
             label: 'הגדרות',

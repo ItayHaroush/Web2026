@@ -13,7 +13,10 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use App\Mail\WelcomeMail;
 
 class RegisterRestaurantController extends Controller
 {
@@ -222,6 +225,17 @@ class RegisterRestaurantController extends Controller
             }
 
             DB::commit();
+
+            // שליחת מייל ברכה לבעל המסעדה
+            try {
+                Mail::to($owner->email)->send(new WelcomeMail($restaurant, $owner->name, $owner->email));
+            } catch (\Exception $mailError) {
+                Log::warning('Welcome email failed', [
+                    'restaurant_id' => $restaurant->id,
+                    'email' => $owner->email,
+                    'error' => $mailError->getMessage(),
+                ]);
+            }
 
             return response()->json([
                 'success' => true,
