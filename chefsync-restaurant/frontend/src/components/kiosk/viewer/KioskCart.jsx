@@ -112,11 +112,10 @@ export default function KioskCart({ items, totalPrice, requireName, onUpdateQty,
                             <div className={`grid ${hasCreditOption ? 'grid-cols-2' : 'grid-cols-1'} gap-2`}>
                                 <button
                                     onClick={() => setSelectedPayment('cash')}
-                                    className={`flex flex-col items-center gap-2 p-3 sm:p-4 rounded-xl border-2 transition-all active:scale-95 ${
-                                        selectedPayment === 'cash'
+                                    className={`flex flex-col items-center gap-2 p-3 sm:p-4 rounded-xl border-2 transition-all active:scale-95 ${selectedPayment === 'cash'
                                             ? 'border-amber-500 bg-amber-50 text-amber-700 shadow-md shadow-amber-500/10'
                                             : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300 hover:bg-gray-50'
-                                    }`}
+                                        }`}
                                 >
                                     <FaMoneyBillWave size={22} />
                                     <span className="text-xs sm:text-sm font-bold text-center leading-tight">מזומן</span>
@@ -124,11 +123,10 @@ export default function KioskCart({ items, totalPrice, requireName, onUpdateQty,
                                 {hasCreditOption && (
                                     <button
                                         onClick={() => setSelectedPayment('credit_card')}
-                                        className={`flex flex-col items-center gap-2 p-3 sm:p-4 rounded-xl border-2 transition-all active:scale-95 ${
-                                            selectedPayment === 'credit_card'
+                                        className={`flex flex-col items-center gap-2 p-3 sm:p-4 rounded-xl border-2 transition-all active:scale-95 ${selectedPayment === 'credit_card'
                                                 ? 'border-amber-500 bg-amber-50 text-amber-700 shadow-md shadow-amber-500/10'
                                                 : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300 hover:bg-gray-50'
-                                        }`}
+                                            }`}
                                     >
                                         <FaCreditCard size={22} />
                                         <span className="text-xs sm:text-sm font-bold text-center leading-tight">אשראי</span>
