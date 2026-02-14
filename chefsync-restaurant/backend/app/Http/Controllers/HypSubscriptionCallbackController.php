@@ -139,10 +139,7 @@ class HypSubscriptionCallbackController extends Controller
      */
     private function activateSubscription(Restaurant $restaurant, string $tier, string $planType, string $transactionId): void
     {
-        $prices = [
-            'basic' => ['monthly' => 450, 'yearly' => 4500, 'ai_credits' => 0],
-            'pro'   => ['monthly' => 600, 'yearly' => 5000, 'ai_credits' => 500],
-        ];
+        $prices = SuperAdminSettingsController::getPricingArray();
 
         $chargeAmount = $prices[$tier][$planType === 'yearly' ? 'yearly' : 'monthly'];
         $monthlyFeeForTracking = $planType === 'yearly'

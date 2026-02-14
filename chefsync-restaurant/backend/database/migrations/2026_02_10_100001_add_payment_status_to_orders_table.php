@@ -57,10 +57,8 @@ return new class extends Migration
                 $table->dropColumn('payment_method');
             });
 
-            // שנה שם עמודה חדשה
-            Schema::table('orders', function (Blueprint $table) {
-                $table->renameColumn('payment_method_new', 'payment_method');
-            });
+            // שנה שם עמודה חדשה (raw SQL — renameColumn שובר default על MariaDB)
+            DB::statement("ALTER TABLE orders CHANGE payment_method_new payment_method VARCHAR(255) NOT NULL DEFAULT 'cash'");
         }
 
         // שלב 3: הוסף אינדקסים (רק אם לא קיימים)
@@ -95,9 +93,7 @@ return new class extends Migration
             $table->dropColumn('payment_method');
         });
 
-        Schema::table('orders', function (Blueprint $table) {
-            $table->renameColumn('payment_method_backup', 'payment_method');
-        });
+        DB::statement("ALTER TABLE orders CHANGE payment_method_backup payment_method VARCHAR(255) NOT NULL DEFAULT 'cash'");
 
         // הסר שדות תשלום
         Schema::table('orders', function (Blueprint $table) {

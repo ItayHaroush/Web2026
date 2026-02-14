@@ -74,6 +74,125 @@ class SuperAdminSettingsController extends Controller
     }
 
     // ==========================================
+    // Pricing Tiers
+    // ==========================================
+
+    /**
+     * Default pricing (fallback if no DB record)
+     */
+    private static array $defaultPricing = [
+        'basic' => [
+            'label'            => 'בייסיק',
+            'monthly'          => 450,
+            'yearly'           => 4500,
+            'ai_credits'       => 0,
+            'trial_ai_credits' => 0,
+            'features'         => ['תפריט דיגיטלי', 'ניהול הזמנות', 'דוחות בסיסיים'],
+        ],
+        'pro' => [
+            'label'            => 'פרו',
+            'monthly'          => 600,
+            'yearly'           => 5000,
+            'ai_credits'       => 500,
+            'trial_ai_credits' => 50,
+            'features'         => ['תפריט דיגיטלי', 'ניהול הזמנות', 'דוחות מתקדמים', 'AI מתקדם', 'תמיכה מועדפת'],
+        ],
+    ];
+
+    /**
+     * Get pricing tiers (super admin)
+     */
+    public function getPricingTiers()
+    {
+        $tiers = SystemSetting::get('pricing_tiers');
+
+        if (!$tiers || !is_array($tiers)) {
+            $tiers = self::$defaultPricing;
+        }
+
+        return response()->json([
+            'success' => true,
+            'data'    => $tiers,
+        ]);
+    }
+
+    /**
+     * Update pricing tiers (super admin)
+     */
+    public function updatePricingTiers(Request $request)
+    {
+        $validated = $request->validate([
+            'tiers'                        => 'required|array',
+            'tiers.basic'                  => 'required|array',
+            'tiers.basic.label'            => 'required|string|max:50',
+            'tiers.basic.monthly'          => 'required|numeric|min:0',
+            'tiers.basic.yearly'           => 'required|numeric|min:0',
+            'tiers.basic.ai_credits'       => 'required|integer|min:0',
+            'tiers.basic.trial_ai_credits' => 'required|integer|min:0',
+            'tiers.basic.features'         => 'required|array',
+            'tiers.basic.features.*'       => 'string|max:100',
+            'tiers.pro'                    => 'required|array',
+            'tiers.pro.label'              => 'required|string|max:50',
+            'tiers.pro.monthly'            => 'required|numeric|min:0',
+            'tiers.pro.yearly'             => 'required|numeric|min:0',
+            'tiers.pro.ai_credits'         => 'required|integer|min:0',
+            'tiers.pro.trial_ai_credits'   => 'required|integer|min:0',
+            'tiers.pro.features'           => 'required|array',
+            'tiers.pro.features.*'         => 'string|max:100',
+        ]);
+
+        SystemSetting::set(
+            'pricing_tiers',
+            $validated['tiers'],
+            'json',
+            'billing',
+            'מחירי חבילות (basic/pro)'
+        );
+
+        Log::info('Pricing tiers updated by super admin', [
+            'user_id' => $request->user()->id,
+            'tiers'   => $validated['tiers'],
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'המחירים עודכנו בהצלחה',
+            'data'    => $validated['tiers'],
+        ]);
+    }
+
+    /**
+     * Public endpoint — pricing for registration page
+     */
+    public static function getPublicPricing()
+    {
+        $tiers = SystemSetting::get('pricing_tiers');
+
+        if (!$tiers || !is_array($tiers)) {
+            $tiers = self::$defaultPricing;
+        }
+
+        return response()->json([
+            'success' => true,
+            'data'    => $tiers,
+        ]);
+    }
+
+    /**
+     * Helper: get pricing array (for use in other controllers/services)
+     */
+    public static function getPricingArray(): array
+    {
+        $tiers = SystemSetting::get('pricing_tiers');
+
+        if (!$tiers || !is_array($tiers)) {
+            return self::$defaultPricing;
+        }
+
+        return $tiers;
+    }
+
+    // ==========================================
     // Policy Versions
     // ==========================================
 
