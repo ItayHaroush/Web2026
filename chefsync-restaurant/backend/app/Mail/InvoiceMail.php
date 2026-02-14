@@ -15,10 +15,18 @@ class InvoiceMail extends Mailable
     use Queueable, SerializesModels;
 
     private const HEBREW_MONTHS = [
-        '01' => 'ינואר', '02' => 'פברואר', '03' => 'מרץ',
-        '04' => 'אפריל', '05' => 'מאי', '06' => 'יוני',
-        '07' => 'יולי', '08' => 'אוגוסט', '09' => 'ספטמבר',
-        '10' => 'אוקטובר', '11' => 'נובמבר', '12' => 'דצמבר',
+        '01' => 'ינואר',
+        '02' => 'פברואר',
+        '03' => 'מרץ',
+        '04' => 'אפריל',
+        '05' => 'מאי',
+        '06' => 'יוני',
+        '07' => 'יולי',
+        '08' => 'אוגוסט',
+        '09' => 'ספטמבר',
+        '10' => 'אוקטובר',
+        '11' => 'נובמבר',
+        '12' => 'דצמבר',
     ];
 
     public function __construct(
@@ -48,7 +56,7 @@ class InvoiceMail extends Mailable
         $filename = sprintf('TakeEat-Invoice-%s.pdf', $this->invoice->month);
 
         return [
-            Attachment::fromData(fn () => $this->pdfContent, $filename)
+            Attachment::fromData(fn() => $this->pdfContent, $filename)
                 ->withMime('application/pdf'),
         ];
     }

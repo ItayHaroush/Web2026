@@ -54,7 +54,7 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
     useEffect(() => {
         menuService.getMenu()
             .then(data => setMenuCategories(data || []))
-            .catch(() => {});
+            .catch(() => { });
     }, []);
 
     const handlePromoCategoryAdd = (item) => {
