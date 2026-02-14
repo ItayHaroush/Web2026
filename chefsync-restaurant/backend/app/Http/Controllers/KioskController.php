@@ -9,6 +9,7 @@ use App\Models\OrderItem;
 use App\Models\Restaurant;
 use App\Models\FcmToken;
 use App\Services\FcmService;
+use App\Services\PromotionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -331,11 +332,44 @@ class KioskController extends Controller
                     'logo_url' => $restaurant->logo_url ?? null,
                     'is_open_now' => $restaurant->is_open_now ?? false,
                     'enable_dine_in_pricing' => (bool) ($restaurant->enable_dine_in_pricing ?? false),
+                    'accepted_payment_methods' => $restaurant->getPublicPaymentMethods(),
                 ],
                 'categories' => $categories,
                 'items' => $items->values(),
+                'promotions' => $this->getKioskPromotions($restaurant->tenant_id),
             ],
         ]);
+    }
+
+    /**
+     * קבלת מבצעים פעילים לקיוסק
+     */
+    private function getKioskPromotions($tenantId)
+    {
+        try {
+            $promotionService = app(PromotionService::class);
+            $promotions = $promotionService->getActivePromotions($tenantId);
+            return $promotions->map(function ($promotion) {
+                return [
+                    'id' => $promotion->id,
+                    'name' => $promotion->name,
+                    'description' => $promotion->description,
+                    'rules' => $promotion->rules->map(fn($rule) => [
+                        'required_category_id' => $rule->required_category_id,
+                        'category_name' => $rule->category?->name ?? '',
+                        'min_quantity' => $rule->min_quantity,
+                    ]),
+                    'rewards' => $promotion->rewards->map(fn($reward) => [
+                        'reward_type' => $reward->reward_type,
+                        'reward_category_name' => $reward->rewardCategory?->name ?? '',
+                        'reward_menu_item_name' => $reward->rewardMenuItem?->name ?? '',
+                        'reward_value' => $reward->reward_value,
+                    ]),
+                ];
+            })->values();
+        } catch (\Exception $e) {
+            return [];
+        }
     }
 
     public function placeOrder(Request $request, $token)
@@ -386,6 +420,7 @@ class KioskController extends Controller
                 'customer_name' => 'required|string|max:100',
                 'order_type' => 'nullable|string|in:dine_in,takeaway',
                 'table_number' => 'nullable|string|max:20',
+                'payment_method' => 'nullable|string|in:cash,credit_card',
                 'items' => 'required|array|min:1',
                 'items.*.menu_item_id' => 'required|integer|exists:menu_items,id',
                 'items.*.variant_id' => 'nullable|integer',
@@ -519,13 +554,21 @@ class KioskController extends Controller
                 ];
             }
 
+            // קביעת אמצעי תשלום - ברירת מחדל: מזומן
+            $paymentMethod = $validated['payment_method'] ?? 'cash';
+            // ולידציה שהמסעדה תומכת באמצעי התשלום שנבחר
+            if ($paymentMethod === 'credit_card' && !$restaurant->acceptsCreditCard()) {
+                $paymentMethod = 'cash';
+            }
+
             $order = Order::create([
                 'tenant_id' => $tenantId,
                 'restaurant_id' => $restaurant->id,
                 'customer_name' => $validated['customer_name'] ?? 'לקוח קיוסק',
                 'customer_phone' => '',
                 'delivery_method' => 'pickup',
-                'payment_method' => 'cash',
+                'payment_method' => $paymentMethod,
+                'payment_status' => Order::PAYMENT_PENDING,
                 'source' => 'kiosk',
                 'kiosk_id' => $kiosk->id,
                 'order_type' => $validated['order_type'] ?? 'takeaway',

@@ -9,7 +9,8 @@ export default function DashboardSidebar({
     toggleCollapse,
     menuItems,
     title = 'TakeEat',
-    onLogout
+    onLogout,
+    impersonating = false
 }) {
     const showCollapsed = isCollapsed && !isOpen;
 
@@ -26,9 +27,10 @@ export default function DashboardSidebar({
             {/* Sidebar Container */}
             <aside
                 className={`
-                    fixed top-0 right-0 h-full bg-white shadow-2xl z-50 transition-all duration-300 ease-in-out border-l border-gray-100 flex flex-col
-                    ${isOpen ? 'translate-x-0' : 'translate-x-full'} 
-                    lg:translate-x-0 
+                    fixed right-0 bottom-0 bg-white shadow-2xl z-50 transition-all duration-300 ease-in-out border-l border-gray-100 flex flex-col
+                    ${impersonating ? 'top-10' : 'top-0'}
+                    ${isOpen ? 'translate-x-0' : 'translate-x-full'}
+                    lg:translate-x-0
                     ${showCollapsed ? 'w-20' : 'w-72'}
                 `}
             >

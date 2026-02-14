@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { FaWhatsapp, FaPhoneAlt, FaMask, FaShoppingBag, FaTruck, FaClock, FaShieldAlt, FaExclamationTriangle, FaInfoCircle, FaCreditCard, FaMoneyBillWave } from 'react-icons/fa';
+import { FaWhatsapp, FaPhoneAlt, FaMask, FaShoppingBag, FaTruck, FaClock, FaShieldAlt, FaExclamationTriangle, FaInfoCircle, FaCreditCard, FaMoneyBillWave, FaGift, FaTimes, FaPlus, FaArrowLeft } from 'react-icons/fa';
 import { SiWaze } from 'react-icons/si';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
@@ -7,11 +7,13 @@ import { useToast } from '../context/ToastContext';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { CustomerLayout } from '../layouts/CustomerLayout';
 import menuService from '../services/menuService';
+import promotionService from '../services/promotionService';
 import { UI_TEXT } from '../constants/ui';
 import apiClient from '../services/apiClient';
 import { resolveAssetUrl } from '../utils/assets';
 import { API_BASE_URL, TENANT_HEADER } from '../constants/api';
 import MenuItemModal from '../components/MenuItemModal';
+import { getSuggestions } from '../components/SuggestionCards';
 
 /**
  * עמוד תפריט - עיצוב בסגנון Wolt
@@ -23,7 +25,7 @@ export default function MenuPage({ isPreviewMode = false }) {
     const navigate = useNavigate();
     const params = useParams();
     const [searchParams] = useSearchParams();
-    const { addToCart, setCustomerInfo, getItemCount } = useCart();
+    const { addToCart, setCustomerInfo, getItemCount, cartItems } = useCart();
     const { addToast } = useToast();
     const [menu, setMenu] = useState([]);
     const [restaurant, setRestaurant] = useState(null);
@@ -34,6 +36,9 @@ export default function MenuPage({ isPreviewMode = false }) {
     const [selectedMenuItem, setSelectedMenuItem] = useState(null);
     const [isPWA, setIsPWA] = useState(false);
     const [showInfoModal, setShowInfoModal] = useState(false);
+    const [activePromotions, setActivePromotions] = useState([]);
+    const [showSuggestionModal, setShowSuggestionModal] = useState(false);
+    const [suggestionMenuItem, setSuggestionMenuItem] = useState(null);
     const categoryRefs = useRef({});
 
     const effectiveTenantId = useMemo(() => {
@@ -122,11 +127,20 @@ export default function MenuPage({ isPreviewMode = false }) {
 
         loadRestaurantInfo();
         loadMenu();
+        loadPromotions();
 
         const savedOrderId = localStorage.getItem(`activeOrder_${effectiveTenantId}`);
         setActiveOrderId(savedOrderId || null);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [effectiveTenantId, searchParams, setCustomerInfo]);
+
+    // גלילה לקטגוריה לפי query param (מהסל בחזרה לתפריט)
+    useEffect(() => {
+        const scrollToId = searchParams.get('scrollTo');
+        if (scrollToId && menu.length > 0) {
+            setTimeout(() => scrollToCategory(Number(scrollToId)), 300);
+        }
+    }, [menu, searchParams]);
 
     // הגדרת קטגוריה פעילה ראשונה
     useEffect(() => {
@@ -160,6 +174,15 @@ export default function MenuPage({ isPreviewMode = false }) {
             setError('לא הצלחנו לטעון את התפריט. אנא נסה שוב.');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const loadPromotions = async () => {
+        try {
+            const result = await promotionService.getActivePromotions();
+            setActivePromotions(result?.data || []);
+        } catch (err) {
+            // silently fail — promotions are non-critical
         }
     };
 
@@ -203,6 +226,38 @@ export default function MenuPage({ isPreviewMode = false }) {
 
     const handleAddFromModal = (cartPayload) => {
         addToCart(cartPayload);
+    };
+
+    const currentSuggestions = useMemo(() => {
+        if (menu.length === 0 || cartItems.length === 0) return [];
+        return getSuggestions(menu, cartItems);
+    }, [menu, cartItems]);
+
+    const handleCartClick = () => {
+        if (currentSuggestions.length > 0) {
+            setShowSuggestionModal(true);
+        } else {
+            navigate(`/${effectiveTenantId || tenantId || ''}/cart`);
+        }
+    };
+
+    const handleSuggestionQuickAdd = (item) => {
+        const category = menu.find(cat => (cat.items || []).some(i => i.id === item.id));
+        addToCart({
+            menuItemId: item.id,
+            categoryId: category?.id,
+            name: item.name,
+            price: item.price,
+            variant: null,
+            addons: [],
+            qty: 1,
+        });
+        addToast(`${item.name} נוסף לסל`, 'success');
+    };
+
+    const goToCart = () => {
+        setShowSuggestionModal(false);
+        navigate(`/${effectiveTenantId || tenantId || ''}/cart`);
     };
 
     if (loading) {
@@ -486,6 +541,45 @@ export default function MenuPage({ isPreviewMode = false }) {
                     </div>
                 )}
             </div>
+
+            {/* באנר מבצעים פעילים */}
+            {activePromotions.length > 0 && (
+                <div className="mb-6 space-y-2">
+                    {activePromotions.map((promo) => {
+                        const rewardText = promo.rewards?.map(r => {
+                            if (r.reward_type === 'free_item' && r.reward_menu_item_name) return `${r.reward_menu_item_name} במתנה`;
+                            if (r.reward_type === 'free_item' && r.reward_category_name) return `${r.reward_category_name} במתנה`;
+                            if (r.reward_type === 'discount_percent') return `${r.reward_value}% הנחה`;
+                            if (r.reward_type === 'discount_fixed') return `₪${r.reward_value} הנחה`;
+                            if (r.reward_type === 'fixed_price') return `במחיר מיוחד ₪${r.reward_value}`;
+                            return 'הטבה מיוחדת';
+                        }).join(' + ') || 'הטבה מיוחדת';
+
+                        const ruleCategory = promo.rules?.[0];
+
+                        return (
+                            <button
+                                key={promo.id}
+                                onClick={() => {
+                                    if (ruleCategory?.required_category_id) {
+                                        scrollToCategory(ruleCategory.required_category_id);
+                                    }
+                                }}
+                                className="w-full bg-gradient-to-l from-amber-500 to-orange-500 rounded-2xl p-4 flex items-center gap-3 text-white shadow-lg shadow-orange-500/20 hover:shadow-xl hover:from-amber-400 hover:to-orange-400 transition-all active:scale-[0.98]"
+                            >
+                                <div className="bg-white/20 backdrop-blur-sm p-2.5 rounded-xl shrink-0">
+                                    <FaGift className="text-lg" />
+                                </div>
+                                <div className="flex-1 text-right min-w-0">
+                                    <p className="font-black text-sm sm:text-base truncate">{promo.name}</p>
+                                    <p className="text-xs sm:text-sm opacity-90 truncate">{rewardText}</p>
+                                </div>
+                                <span className="text-white/80 text-lg shrink-0">👈</span>
+                            </button>
+                        );
+                    })}
+                </div>
+            )}
 
             {/* ניווט קטגוריות - למטה במובייל, למעלה בדסקטופ */}
             {menu.length > 0 && (
@@ -827,7 +921,7 @@ export default function MenuPage({ isPreviewMode = false }) {
 
             {totalCartItems > 0 && (
                 <button
-                    onClick={() => navigate(`/${effectiveTenantId || tenantId || ''}/cart`)}
+                    onClick={handleCartClick}
                     className="fixed bottom-20 md:bottom-6 left-4 md:left-6 z-[60] bg-brand-primary text-white p-4 rounded-full shadow-xl hover:bg-brand-secondary transition-transform active:scale-95"
                     aria-label="מעבר לסל הקניות"
                 >
@@ -837,6 +931,113 @@ export default function MenuPage({ isPreviewMode = false }) {
                         {totalCartItems}
                     </span>
                 </button>
+            )}
+
+            {/* Suggestion Modal - before going to cart */}
+            {showSuggestionModal && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
+                    <div className="bg-white dark:bg-brand-dark-surface w-full max-w-lg rounded-2xl max-h-[85vh] flex flex-col overflow-hidden shadow-2xl">
+                        {/* Header */}
+                        <div className="flex items-center justify-between p-4 sm:p-5 border-b border-gray-100 dark:border-brand-dark-border shrink-0">
+                            <h2 className="text-lg sm:text-xl font-black text-gray-900 dark:text-brand-dark-text">רגע לפני הסל...</h2>
+                            <button
+                                onClick={goToCart}
+                                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-all"
+                            >
+                                <FaTimes size={18} />
+                            </button>
+                        </div>
+
+                        {/* Suggestions */}
+                        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                            {currentSuggestions.map((suggestion) => {
+                                const Icon = suggestion.icon;
+                                return (
+                                    <div key={suggestion.type} className="bg-gradient-to-l from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-2xl p-4 border border-blue-100 dark:border-blue-800/30">
+                                        <div className="flex items-center gap-2 mb-3">
+                                            <div className="bg-blue-100 dark:bg-blue-800/30 p-2 rounded-xl">
+                                                <Icon className="text-blue-600 dark:text-blue-400" size={16} />
+                                            </div>
+                                            <div>
+                                                <p className="font-bold text-gray-800 dark:text-gray-200 text-sm">{suggestion.title}</p>
+                                                <p className="text-xs text-gray-500 dark:text-gray-400">{suggestion.subtitle}</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-1">
+                                            {suggestion.items.map((item) => (
+                                                <div
+                                                    key={item.id}
+                                                    className="flex-shrink-0 w-28 bg-white dark:bg-brand-dark-surface rounded-xl border border-gray-100 dark:border-brand-dark-border overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                                                    onClick={() => {
+                                                        if (item.use_variants || item.use_addons) {
+                                                            setSuggestionMenuItem(item);
+                                                        } else {
+                                                            handleSuggestionQuickAdd(item);
+                                                        }
+                                                    }}
+                                                >
+                                                    <div className="h-20 bg-gray-50 dark:bg-brand-dark-border/50 overflow-hidden relative">
+                                                        {item.image_url ? (
+                                                            <img src={resolveAssetUrl(item.image_url)} alt="" className="w-full h-full object-cover" />
+                                                        ) : restaurant?.logo_url ? (
+                                                            <div className="absolute inset-0 flex items-center justify-center p-3">
+                                                                <img src={resolveAssetUrl(restaurant.logo_url)} alt="" className="w-full h-full object-contain opacity-15" />
+                                                            </div>
+                                                        ) : null}
+                                                        <button
+                                                            className="absolute bottom-1 left-1 bg-brand-primary text-white w-6 h-6 rounded-full flex items-center justify-center shadow-md"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                if (item.use_variants || item.use_addons) {
+                                                                    setSuggestionMenuItem(item);
+                                                                } else {
+                                                                    handleSuggestionQuickAdd(item);
+                                                                }
+                                                            }}
+                                                        >
+                                                            <FaPlus size={10} />
+                                                        </button>
+                                                    </div>
+                                                    <div className="p-2">
+                                                        <p className="text-xs font-bold text-gray-800 dark:text-gray-200 truncate">{item.name}</p>
+                                                        <p className="text-xs text-brand-primary font-bold">{item.price} ₪</p>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        {/* Footer */}
+                        <div className="p-4 border-t border-gray-100 dark:border-brand-dark-border shrink-0">
+                            <button
+                                onClick={goToCart}
+                                className="w-full bg-gradient-to-r from-brand-primary to-orange-600 text-white font-black py-3.5 rounded-xl shadow-lg hover:shadow-xl active:scale-95 transition-all flex items-center justify-center gap-2 text-lg"
+                            >
+                                <FaArrowLeft size={16} />
+                                המשך לסל
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* MenuItemModal for suggestion items */}
+            {suggestionMenuItem && (
+                <MenuItemModal
+                    item={suggestionMenuItem}
+                    isOpen={true}
+                    onClose={() => setSuggestionMenuItem(null)}
+                    onAdd={(itemData) => {
+                        addToCart(itemData);
+                        setSuggestionMenuItem(null);
+                        addToast(`${itemData.name || suggestionMenuItem.name} נוסף לסל`, 'success');
+                    }}
+                    isOrderingEnabled={true}
+                />
             )}
         </CustomerLayout>
     );

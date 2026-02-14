@@ -1,6 +1,7 @@
 import { useState } from 'react';
+import { FaGift } from 'react-icons/fa';
 
-export default function KioskMenu({ categories, items, onSelectItem, orderType, enableDineInPricing }) {
+export default function KioskMenu({ categories, items, onSelectItem, orderType, enableDineInPricing, promotions, onPromotionClick }) {
     const [activeCategory, setActiveCategory] = useState(null);
 
     const getDisplayPrice = (item) => {
@@ -15,8 +16,47 @@ export default function KioskMenu({ categories, items, onSelectItem, orderType, 
         ? items.filter(item => item.category_id === activeCategory)
         : items;
 
+    const getRewardText = (promo) => {
+        return promo.rewards?.map(r => {
+            if (r.reward_type === 'free_item' && r.reward_menu_item_name) return `${r.reward_menu_item_name} במתנה`;
+            if (r.reward_type === 'free_item' && r.reward_category_name) return `${r.reward_category_name} במתנה`;
+            if (r.reward_type === 'discount_percent') return `${r.reward_value}% הנחה`;
+            if (r.reward_type === 'discount_fixed') return `₪${r.reward_value} הנחה`;
+            return 'הטבה מיוחדת';
+        }).join(' + ') || 'הטבה מיוחדת';
+    };
+
     return (
         <div className="flex flex-col flex-1 min-h-0">
+            {/* Promotions banner */}
+            {promotions && promotions.length > 0 && (
+                <div className="px-4 pt-3 space-y-2 shrink-0">
+                    {promotions.map(promo => {
+                        const ruleCategory = promo.rules?.[0];
+                        return (
+                            <button
+                                key={promo.id}
+                                onClick={() => {
+                                    if (ruleCategory?.required_category_id && onPromotionClick) {
+                                        const cat = categories.find(c => c.id === ruleCategory.required_category_id);
+                                        onPromotionClick(ruleCategory.required_category_id, cat?.name || ruleCategory.category_name || '');
+                                    }
+                                }}
+                                className="w-full bg-gradient-to-l from-amber-500 to-orange-500 rounded-xl p-3 flex items-center gap-3 text-white shadow-lg hover:shadow-xl transition-all active:scale-[0.98]"
+                            >
+                                <div className="bg-white/20 p-2 rounded-lg shrink-0">
+                                    <FaGift size={16} />
+                                </div>
+                                <div className="flex-1 text-right min-w-0">
+                                    <p className="font-black text-sm truncate">{promo.name}</p>
+                                    <p className="text-xs opacity-90 truncate">{getRewardText(promo)}</p>
+                                </div>
+                            </button>
+                        );
+                    })}
+                </div>
+            )}
+
             {/* Category tabs */}
             {categories.length > 1 && (
                 <div className="bg-gray-50 border-b border-gray-100 px-4 py-3 overflow-x-auto flex gap-2 shrink-0">

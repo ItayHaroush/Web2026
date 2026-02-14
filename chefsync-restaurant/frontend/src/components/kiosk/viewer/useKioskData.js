@@ -72,5 +72,6 @@ export default function useKioskData(token) {
         restaurant: data?.restaurant || null,
         categories: data?.categories || [],
         items: data?.items || [],
+        promotions: data?.promotions || [],
     };
 }

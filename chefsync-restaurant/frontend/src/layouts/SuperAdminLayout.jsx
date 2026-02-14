@@ -11,7 +11,9 @@ import {
     FaFileInvoiceDollar,
     FaCogs,
     FaSms,
-    FaUserShield
+    FaUserShield,
+    FaClipboardList,
+    FaReceipt
 } from 'react-icons/fa';
 
 export default function SuperAdminLayout({ children }) {
@@ -43,6 +45,11 @@ export default function SuperAdminLayout({ children }) {
             icon: <FaFileInvoiceDollar />,
         },
         {
+            label: 'חשבוניות',
+            path: '/super-admin/invoices',
+            icon: <FaReceipt />,
+        },
+        {
             label: 'הגדרות',
             path: '/super-admin/settings',
             icon: <FaCogs />,
@@ -51,6 +58,11 @@ export default function SuperAdminLayout({ children }) {
             label: 'SMS Debug',
             path: '/super-admin/sms-debug',
             icon: <FaSms />,
+        },
+        {
+            label: 'לוגים והזמנות',
+            path: '/super-admin/order-debug',
+            icon: <FaClipboardList />,
         },
         {
             label: 'בדיקת Auth',

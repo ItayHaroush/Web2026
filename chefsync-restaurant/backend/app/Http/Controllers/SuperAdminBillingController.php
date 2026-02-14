@@ -2,12 +2,19 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\MonthlyInvoice;
+use App\Models\Order;
 use App\Models\Restaurant;
 use App\Models\RestaurantPayment;
 use App\Models\RestaurantSubscription;
+use App\Services\PlatformCommissionService;
+use App\Services\InvoicePdfService;
+use App\Mail\InvoiceMail;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 
 class SuperAdminBillingController extends Controller
 {
@@ -19,13 +26,45 @@ class SuperAdminBillingController extends Controller
             ->whereBetween('paid_at', [now()->startOfMonth(), now()->endOfMonth()])
             ->sum('amount');
 
+        // Fallback: if no subscriptions exist, use Restaurant model fields
+        if ($monthlyExpected == 0) {
+            $monthlyExpected = Restaurant::where('subscription_status', 'active')
+                ->sum('monthly_price');
+        }
+
+        // Order-based revenue data
+        $orderRevenueMonth = Order::whereBetween('created_at', [now()->startOfMonth(), now()->endOfMonth()])
+            ->whereNotIn('status', ['cancelled'])
+            ->sum('total_amount');
+        $orderRevenueTotal = Order::whereNotIn('status', ['cancelled'])->sum('total_amount');
+        $ordersThisMonth = Order::whereBetween('created_at', [now()->startOfMonth(), now()->endOfMonth()])->count();
+
+        $totalRestaurants = Restaurant::count();
+        $activeRestaurants = Restaurant::where('is_approved', true)->count();
+        $trialRestaurants = Restaurant::where('subscription_status', 'trial')->count();
+
+        // Invoice stats
+        $currentMonth = now()->format('Y-m');
+        $invoicedThisMonth = MonthlyInvoice::where('month', $currentMonth)->sum('total_due');
+        $invoicesPaidThisMonth = MonthlyInvoice::where('month', $currentMonth)
+            ->where('status', 'paid')->sum('total_due');
+        $invoicesOverdue = MonthlyInvoice::where('status', 'overdue')->count();
+
         return response()->json([
             'success' => true,
             'data' => [
                 'monthly_expected' => $monthlyExpected,
                 'outstanding' => $outstanding,
                 'paid_this_month' => $paidThisMonth,
-                'total_restaurants' => Restaurant::count(),
+                'total_restaurants' => $totalRestaurants,
+                'active_restaurants' => $activeRestaurants,
+                'trial_restaurants' => $trialRestaurants,
+                'order_revenue_month' => $orderRevenueMonth,
+                'order_revenue_total' => $orderRevenueTotal,
+                'orders_this_month' => $ordersThisMonth,
+                'invoiced_this_month' => $invoicedThisMonth,
+                'invoices_paid_this_month' => $invoicesPaidThisMonth,
+                'invoices_overdue_count' => $invoicesOverdue,
             ],
         ]);
     }
@@ -36,7 +75,11 @@ class SuperAdminBillingController extends Controller
             ->with('subscription')
             ->withSum(['payments as total_paid_ytd' => function ($q) {
                 $q->whereYear('paid_at', now()->year)->where('status', 'paid');
-            }], 'amount');
+            }], 'amount')
+            ->withCount('orders')
+            ->withSum(['orders as order_revenue' => function ($q) {
+                $q->whereNotIn('status', ['cancelled']);
+            }], 'total_amount');
 
         if ($request->filled('search')) {
             $search = $request->search;
@@ -50,13 +93,20 @@ class SuperAdminBillingController extends Controller
 
         $restaurants->getCollection()->transform(function ($restaurant) {
             $subscription = $restaurant->subscription;
-            $restaurant->monthly_fee = $subscription?->monthly_fee ?? 0;
+            $restaurant->monthly_fee = $subscription?->monthly_fee ?? $restaurant->monthly_price ?? 0;
             $restaurant->billing_day = $subscription?->billing_day;
-            $restaurant->billing_status = $subscription?->status ?? 'inactive';
+            $restaurant->billing_status = $subscription?->status ?? $restaurant->subscription_status ?? 'inactive';
             $restaurant->outstanding_amount = $subscription?->outstanding_amount ?? 0;
-            $restaurant->next_charge_at = $subscription?->next_charge_at;
-            $restaurant->last_paid_at = $subscription?->last_paid_at;
+            $restaurant->next_charge_at = $subscription?->next_charge_at ?? $restaurant->next_payment_at;
+            $restaurant->last_paid_at = $subscription?->last_paid_at ?? $restaurant->last_payment_at;
             $restaurant->total_paid_ytd = $restaurant->total_paid_ytd ?? 0;
+            $restaurant->orders_count = $restaurant->orders_count ?? 0;
+            $restaurant->order_revenue = $restaurant->order_revenue ?? 0;
+            $restaurant->trial_ends_at = $restaurant->trial_ends_at;
+            $restaurant->tier = $restaurant->tier;
+            $restaurant->billing_model = $subscription?->billing_model ?? 'flat';
+            $restaurant->base_fee = $subscription?->base_fee ?? 0;
+            $restaurant->commission_percent = $subscription?->commission_percent ?? 0;
             return $restaurant;
         });
 
@@ -145,6 +195,206 @@ class SuperAdminBillingController extends Controller
             'success' => true,
             'payments' => $payments,
         ]);
+    }
+
+    // ============================================
+    // Monthly Invoices
+    // ============================================
+
+    public function generateInvoices(Request $request, PlatformCommissionService $service)
+    {
+        $validated = $request->validate([
+            'month' => 'required|string|regex:/^\d{4}-\d{2}$/',
+            'overwrite_drafts' => 'nullable|boolean',
+        ]);
+
+        $results = $service->generateMonthlyInvoices(
+            $validated['month'],
+            $validated['overwrite_drafts'] ?? false
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => "נוצרו {$results['generated']} חשבוניות, {$results['skipped']} דולגו",
+            'data' => $results,
+        ]);
+    }
+
+    public function invoices(Request $request)
+    {
+        $query = MonthlyInvoice::with('restaurant:id,name,tenant_id,tier')
+            ->when($request->filled('month'), fn($q) => $q->where('month', $request->month))
+            ->when($request->filled('status'), fn($q) => $q->where('status', $request->status))
+            ->when($request->filled('restaurant_id'), fn($q) => $q->where('restaurant_id', $request->restaurant_id))
+            ->orderByDesc('month')
+            ->orderByDesc('created_at');
+
+        $invoices = $query->paginate(50);
+
+        // Summary stats
+        $statsQuery = MonthlyInvoice::query();
+        if ($request->filled('month')) {
+            $statsQuery->where('month', $request->month);
+        }
+
+        $stats = [
+            'total_due' => (clone $statsQuery)->sum('total_due'),
+            'total_paid' => (clone $statsQuery)->where('status', 'paid')->sum('total_due'),
+            'draft_count' => (clone $statsQuery)->where('status', 'draft')->count(),
+            'pending_count' => (clone $statsQuery)->where('status', 'pending')->count(),
+            'overdue_count' => (clone $statsQuery)->where('status', 'overdue')->count(),
+            'paid_count' => (clone $statsQuery)->where('status', 'paid')->count(),
+        ];
+
+        return response()->json([
+            'success' => true,
+            'invoices' => $invoices,
+            'stats' => $stats,
+        ]);
+    }
+
+    public function invoiceDetail(int $id)
+    {
+        $invoice = MonthlyInvoice::with('restaurant:id,name,tenant_id,tier')
+            ->findOrFail($id);
+
+        return response()->json([
+            'success' => true,
+            'invoice' => $invoice,
+        ]);
+    }
+
+    public function updateInvoice(Request $request, int $id, PlatformCommissionService $service)
+    {
+        $validated = $request->validate([
+            'status' => 'required|string|in:pending,paid,overdue',
+            'payment_link' => 'nullable|string|max:500',
+            'notes' => 'nullable|string|max:1000',
+        ]);
+
+        $invoice = MonthlyInvoice::findOrFail($id);
+
+        if ($validated['status'] === 'paid') {
+            $invoice = $service->markInvoicePaid($id, $validated['payment_link'] ?? null);
+        } else {
+            $invoice->update([
+                'status' => $validated['status'],
+                'payment_link' => $validated['payment_link'] ?? $invoice->payment_link,
+                'notes' => $validated['notes'] ?? $invoice->notes,
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'החשבונית עודכנה בהצלחה',
+            'invoice' => $invoice->fresh()->load('restaurant:id,name,tenant_id'),
+        ]);
+    }
+
+    public function finalizeInvoices(Request $request, PlatformCommissionService $service)
+    {
+        $validated = $request->validate([
+            'month' => 'required|string|regex:/^\d{4}-\d{2}$/',
+        ]);
+
+        $count = $service->finalizeInvoices($validated['month']);
+
+        return response()->json([
+            'success' => true,
+            'message' => "סופקו {$count} חשבוניות",
+            'finalized_count' => $count,
+        ]);
+    }
+
+    public function updateBillingConfig(Request $request, int $id)
+    {
+        $validated = $request->validate([
+            'billing_model' => 'required|string|in:flat,percentage,hybrid',
+            'base_fee' => 'required|numeric|min:0',
+            'commission_percent' => 'required|numeric|min:0|max:100',
+        ]);
+
+        $restaurant = Restaurant::findOrFail($id);
+
+        $subscription = RestaurantSubscription::firstOrCreate(
+            ['restaurant_id' => $restaurant->id],
+            [
+                'monthly_fee' => $validated['base_fee'],
+                'billing_day' => 1,
+                'currency' => 'ILS',
+                'status' => 'active',
+                'outstanding_amount' => 0,
+            ]
+        );
+
+        $subscription->update([
+            'billing_model' => $validated['billing_model'],
+            'base_fee' => $validated['base_fee'],
+            'commission_percent' => $validated['commission_percent'],
+            'monthly_fee' => $validated['base_fee'],
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'הגדרות חיוב עודכנו',
+            'subscription' => $subscription->fresh(),
+        ]);
+    }
+
+    // ============================================
+    // Invoice PDF & Email
+    // ============================================
+
+    public function previewInvoicePdf(int $id, InvoicePdfService $service)
+    {
+        $invoice = MonthlyInvoice::with('restaurant')->findOrFail($id);
+        return $service->streamPdf($invoice);
+    }
+
+    public function downloadInvoicePdf(int $id, InvoicePdfService $service)
+    {
+        $invoice = MonthlyInvoice::with('restaurant')->findOrFail($id);
+        return $service->downloadPdf($invoice);
+    }
+
+    public function sendInvoiceEmail(Request $request, int $id, InvoicePdfService $service)
+    {
+        $validated = $request->validate([
+            'email' => 'nullable|email',
+        ]);
+
+        $invoice = MonthlyInvoice::with('restaurant')->findOrFail($id);
+
+        $email = $validated['email'] ?? $service->getOwnerEmail($invoice->restaurant);
+
+        if (!$email) {
+            return response()->json([
+                'success' => false,
+                'message' => 'לא נמצא אימייל לבעל המסעדה. ניתן לציין אימייל ידנית.',
+            ], 400);
+        }
+
+        try {
+            $pdfContent = $service->getPdfContent($invoice);
+            Mail::to($email)->send(new InvoiceMail($invoice, $pdfContent));
+
+            return response()->json([
+                'success' => true,
+                'message' => 'החשבונית נשלחה בהצלחה ל-' . $email,
+                'sent_to' => $email,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Invoice email failed', [
+                'invoice_id' => $id,
+                'email' => $email,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'שליחת החשבונית נכשלה: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 
     private function calculateNextChargeDate(RestaurantSubscription $subscription, Carbon $from): Carbon

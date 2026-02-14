@@ -14,6 +14,7 @@ class Order extends Model
     protected $fillable = [
         'restaurant_id',
         'tenant_id',
+        'correlation_id',
         'customer_name',
         'customer_phone',
         'delivery_method',
@@ -194,6 +195,14 @@ class Order extends Model
     public function items(): HasMany
     {
         return $this->hasMany(OrderItem::class);
+    }
+
+    /**
+     * אירועי לוג של ההזמנה
+     */
+    public function events(): HasMany
+    {
+        return $this->hasMany(OrderEvent::class);
     }
 
     public function deliveryZone(): BelongsTo

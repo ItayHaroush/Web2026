@@ -12,6 +12,8 @@ use App\Services\FcmService;
 use App\Services\PhoneValidationService;
 use App\Services\BasePriceService;
 use App\Services\PromotionService;
+use App\Services\OrderEventService;
+use App\Models\SystemError;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
@@ -378,6 +380,7 @@ class OrderController extends Controller
             $order = Order::create([
                 'tenant_id' => $tenantId,
                 'restaurant_id' => $restaurantId,
+                'correlation_id' => \Illuminate\Support\Str::uuid()->toString(),
                 'customer_name' => $validated['customer_name'],
                 'customer_phone' => $normalizedCustomerPhone,
                 'delivery_method' => $validated['delivery_method'],
@@ -456,6 +459,26 @@ class OrderController extends Controller
                         'url' => '/admin/orders'
                     ]
                 );
+            }
+
+            // Event Log - רישום אירוע יצירת הזמנה
+            try {
+                OrderEventService::log(
+                    $order->id,
+                    'order_created',
+                    'customer',
+                    null,
+                    [
+                        'delivery_method' => $validated['delivery_method'],
+                        'payment_method' => $validated['payment_method'],
+                        'total_amount' => $order->total_amount,
+                        'items_count' => count($lineItems),
+                        'has_promotions' => !empty($validated['applied_promotions']),
+                    ],
+                    $request
+                );
+            } catch (\Exception $e) {
+                Log::warning('Failed to log order event', ['error' => $e->getMessage()]);
             }
 
             return response()->json([
@@ -632,7 +655,22 @@ class OrderController extends Controller
                 ], 422);
             }
 
+            $oldStatus = $order->status;
             $order->update(['status' => $validated['status']]);
+
+            // Event Log - רישום שינוי סטטוס
+            try {
+                OrderEventService::logStatusChange(
+                    $order->id,
+                    $oldStatus,
+                    $validated['status'],
+                    'admin',
+                    $request->user()?->id,
+                    $request
+                );
+            } catch (\Exception $e) {
+                Log::warning('Failed to log order status change event', ['error' => $e->getMessage()]);
+            }
 
             // הפעלת הדפסה למטבח כשהזמנה מאושרת
             if ($validated['status'] === 'preparing') {

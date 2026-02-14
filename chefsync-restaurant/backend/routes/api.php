@@ -18,6 +18,8 @@ use App\Http\Controllers\KioskController;
 use App\Http\Controllers\PrinterController;
 use App\Http\Controllers\PaymentSettingsController;
 use App\Http\Controllers\PromotionController;
+use App\Http\Controllers\SuperAdminSettingsController;
+use App\Http\Controllers\OrderEventController;
 
 /**
  * API Routes
@@ -86,6 +88,21 @@ Route::prefix('super-admin')->middleware(['auth:sanctum', 'super_admin'])->group
     Route::post('/billing/restaurants/{id}/charge', [SuperAdminBillingController::class, 'chargeRestaurant'])->name('super-admin.billing.charge');
     Route::get('/billing/payments', [SuperAdminBillingController::class, 'payments'])->name('super-admin.billing.payments');
 
+    // חשבוניות חודשיות
+    Route::get('/billing/invoices', [SuperAdminBillingController::class, 'invoices'])->name('super-admin.billing.invoices');
+    Route::post('/billing/invoices/generate', [SuperAdminBillingController::class, 'generateInvoices'])->name('super-admin.billing.invoices.generate');
+    Route::post('/billing/invoices/finalize', [SuperAdminBillingController::class, 'finalizeInvoices'])->name('super-admin.billing.invoices.finalize');
+    Route::get('/billing/invoices/{id}', [SuperAdminBillingController::class, 'invoiceDetail'])->name('super-admin.billing.invoices.detail');
+    Route::patch('/billing/invoices/{id}', [SuperAdminBillingController::class, 'updateInvoice'])->name('super-admin.billing.invoices.update');
+
+    // PDF חשבוניות + שליחה במייל
+    Route::get('/billing/invoices/{id}/pdf', [SuperAdminBillingController::class, 'previewInvoicePdf'])->name('super-admin.billing.invoices.pdf');
+    Route::get('/billing/invoices/{id}/pdf/download', [SuperAdminBillingController::class, 'downloadInvoicePdf'])->name('super-admin.billing.invoices.pdf.download');
+    Route::post('/billing/invoices/{id}/send-email', [SuperAdminBillingController::class, 'sendInvoiceEmail'])->name('super-admin.billing.invoices.send-email');
+
+    // הגדרות חיוב פר-מסעדה
+    Route::put('/billing/restaurants/{id}/billing-config', [SuperAdminBillingController::class, 'updateBillingConfig'])->name('super-admin.billing.config.update');
+
     // סטטוס סכימת בסיס נתונים ומיגרציות (אבחון)
     Route::get('/schema-status', [SuperAdminController::class, 'schemaStatus'])->name('super-admin.schema.status');
 
@@ -98,6 +115,42 @@ Route::prefix('super-admin')->middleware(['auth:sanctum', 'super_admin'])->group
 
     // עוזר AI לסופר אדמין
     Route::post('/ai/chat', [ChatController::class, 'chat'])->name('super-admin.ai.chat');
+
+    // ============================================
+    // הגדרות פלטפורמה (System Settings)
+    // ============================================
+    Route::get('/settings/{group}', [SuperAdminSettingsController::class, 'getSettings'])->name('super-admin.settings.get');
+    Route::post('/settings', [SuperAdminSettingsController::class, 'updateSettings'])->name('super-admin.settings.update');
+
+    // מדיניות ותנאי שימוש (Policy Versions)
+    Route::get('/policies/{type}', [SuperAdminSettingsController::class, 'getPolicies'])->name('super-admin.policies.get');
+    Route::post('/policies', [SuperAdminSettingsController::class, 'createPolicyVersion'])->name('super-admin.policies.create');
+    Route::post('/policies/{id}/publish', [SuperAdminSettingsController::class, 'publishPolicy'])->name('super-admin.policies.publish');
+
+    // תחזוקת בסיס נתונים (Database Maintenance)
+    Route::get('/database/status', [SuperAdminSettingsController::class, 'getDatabaseStatus'])->name('super-admin.database.status');
+    Route::post('/database/backup', [SuperAdminSettingsController::class, 'runBackup'])->name('super-admin.database.backup');
+    Route::post('/database/clear-logs', [SuperAdminSettingsController::class, 'clearOldLogs'])->name('super-admin.database.clear-logs');
+    Route::post('/database/optimize', [SuperAdminSettingsController::class, 'optimizeTables'])->name('super-admin.database.optimize');
+
+    // SMTP / SMS Status
+    Route::get('/smtp/status', [SuperAdminSettingsController::class, 'getSmtpStatus'])->name('super-admin.smtp.status');
+    Route::post('/smtp/test', [SuperAdminSettingsController::class, 'testSmtp'])->name('super-admin.smtp.test');
+    Route::get('/sms/balance', [SuperAdminSettingsController::class, 'getSmsBalance'])->name('super-admin.sms.balance');
+
+    // Audit Log
+    Route::get('/audit-log', [SuperAdminSettingsController::class, 'getAuditLog'])->name('super-admin.audit-log');
+
+    // ============================================
+    // לוגים של הזמנות ושגיאות מערכת (Order Events)
+    // ============================================
+    Route::get('/order-events/search', [OrderEventController::class, 'search'])->name('super-admin.order-events.search');
+    Route::get('/order-events/{orderId}/timeline', [OrderEventController::class, 'timeline'])->name('super-admin.order-events.timeline');
+    Route::get('/system-errors', [OrderEventController::class, 'getSystemErrors'])->name('super-admin.system-errors');
+    Route::post('/system-errors/{id}/resolve', [OrderEventController::class, 'resolveError'])->name('super-admin.system-errors.resolve');
+
+    // Impersonation - כניסה כמסעדה
+    Route::post('/impersonate/{restaurantId}', [SuperAdminController::class, 'impersonate'])->name('super-admin.impersonate');
 });
 
 // ============================================
@@ -327,6 +380,10 @@ Route::get('/restaurants', [RestaurantController::class, 'index'])->name('restau
 // מסעדה לפי tenant/slug - ציבורי (לטעינת דף תפריט מלא גם אם המסעדה סגורה)
 Route::get('/restaurants/by-tenant/{tenantId}', [RestaurantController::class, 'publicShowByTenant'])
     ->name('restaurants.byTenant');
+
+// מדיניות ותנאי שימוש - ציבורי
+Route::get('/policies/{type}/published', [SuperAdminSettingsController::class, 'getPublishedPolicy'])
+    ->name('policies.published');
 
 // ============================================
 // CORS Preflight (OPTIONS)

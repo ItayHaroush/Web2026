@@ -60,11 +60,12 @@ export default function useKioskCart() {
     const totalPrice = Number(items.reduce((sum, item) => sum + item.totalPrice, 0).toFixed(2));
 
     // Build API payload from cart items
-    const toOrderPayload = useCallback((customerName, orderType, tableNumber) => {
+    const toOrderPayload = useCallback((customerName, orderType, tableNumber, paymentMethod) => {
         return {
             customer_name: customerName || undefined,
             order_type: orderType || 'takeaway',
             table_number: tableNumber || undefined,
+            payment_method: paymentMethod || 'cash',
             items: items.map(item => ({
                 menu_item_id: item.menuItemId,
                 variant_id: item.variant?.id || null,

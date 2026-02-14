@@ -5,6 +5,7 @@ export default function PrivacyPolicy() {
         <LegalMarkdownPage
             title="מדיניות פרטיות"
             markdownPath="/legal/privacy.md"
+            policyType="privacy_policy"
         />
     );
 }
