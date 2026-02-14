@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { CustomerLayout } from '../layouts/CustomerLayout';
 import { FaMask, FaBoxOpen, FaUser, FaPhone, FaClock, FaInfoCircle, FaUtensils, FaShoppingBag, FaCheckCircle, FaExclamationTriangle, FaMapMarkerAlt, FaCreditCard, FaMoneyBillWave, FaGift, FaHeart } from 'react-icons/fa';
@@ -34,6 +34,8 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
     const { tenantId: urlTenantId, orderId } = useParams();
     const { tenantId, loginAsCustomer } = useAuth();
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const paymentResult = searchParams.get('payment'); // 'success' | 'failed' | null
     const [order, setOrder] = useState(null);
     const [restaurant, setRestaurant] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -451,6 +453,20 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
                             </div>
                         </div>
                     </div>
+
+                    {/* באנר תוצאת תשלום (B2C - redirect חזרה מ-HYP) */}
+                    {paymentResult === 'success' && (
+                        <div className="flex items-center gap-3 bg-green-50 dark:bg-green-900/20 rounded-xl p-4 border border-green-200 dark:border-green-800">
+                            <FaCheckCircle className="text-green-500 text-lg flex-shrink-0" />
+                            <p className="font-bold text-green-700 dark:text-green-400">התשלום התקבל בהצלחה!</p>
+                        </div>
+                    )}
+                    {paymentResult === 'failed' && (
+                        <div className="flex items-center gap-3 bg-red-50 dark:bg-red-900/20 rounded-xl p-4 border border-red-200 dark:border-red-800">
+                            <FaExclamationTriangle className="text-red-500 text-lg flex-shrink-0" />
+                            <p className="font-bold text-red-700 dark:text-red-400">התשלום נכשל. ניתן לנסות שוב מדף ההזמנה.</p>
+                        </div>
+                    )}
 
                     {/* אמצעי תשלום */}
                     {order.payment_status && order.payment_status !== 'not_required' && (

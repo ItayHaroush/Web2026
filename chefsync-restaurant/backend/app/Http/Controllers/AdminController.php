@@ -18,6 +18,7 @@ use App\Models\MenuItemAddon;
 use App\Models\PriceRule;
 use App\Models\DeliveryZone;
 use App\Services\BasePriceService;
+use App\Services\HypPaymentService;
 use App\Models\RestaurantPayment;
 use App\Models\RestaurantSubscription;
 use Illuminate\Http\Request;
@@ -2553,6 +2554,74 @@ class AdminController extends Controller
             'subscription' => $subscription,
             'restaurant' => $restaurant->fresh(),
             'payment' => $payment,
+        ]);
+    }
+
+    /**
+     * יצירת session תשלום עבור מנוי (B2B)
+     * אם HYP מוגדר -> מחזיר URL לדף תשלום
+     * אם לא -> מחזיר hyp_ready: false (frontend ממשיך עם V page)
+     */
+    public function createPaymentSession(Request $request)
+    {
+        $validated = $request->validate([
+            'plan_type' => 'required|in:monthly,yearly',
+            'tier' => 'required|in:basic,pro',
+        ]);
+
+        $restaurant = $request->user()->restaurant;
+
+        if (!$restaurant) {
+            return response()->json([
+                'success' => false,
+                'message' => 'לא נמצאה מסעדה למשתמש',
+            ], 404);
+        }
+
+        $hypService = app(HypPaymentService::class);
+
+        if (!$hypService->isConfigured()) {
+            return response()->json([
+                'success' => true,
+                'hyp_ready' => false,
+                'message' => 'HYP לא מוגדר — השתמש בדף V',
+            ]);
+        }
+
+        $prices = [
+            'basic' => ['monthly' => 450, 'yearly' => 4500],
+            'pro'   => ['monthly' => 600, 'yearly' => 5000],
+        ];
+
+        $tier = $validated['tier'];
+        $planType = $validated['plan_type'];
+        $amount = $prices[$tier][$planType === 'yearly' ? 'yearly' : 'monthly'];
+
+        // שמירת session data ב-cache (15 דקות)
+        \Illuminate\Support\Facades\Cache::put(
+            "hyp_session:{$restaurant->id}",
+            ['tier' => $tier, 'plan_type' => $planType],
+            now()->addMinutes(15)
+        );
+
+        $owner = $request->user();
+        $backendUrl = rtrim(config('app.url', 'http://localhost:8000'), '/');
+
+        $paymentUrl = $hypService->generatePaymentUrl([
+            'amount'      => $amount,
+            'info'        => "TakeEat - " . ucfirst($tier) . " " . ($planType === 'yearly' ? 'Yearly' : 'Monthly'),
+            'fild1'       => (string) $restaurant->id,
+            'success_url' => "{$backendUrl}/api/payments/hyp/subscription/success",
+            'error_url'   => "{$backendUrl}/api/payments/hyp/subscription/error",
+            'client_name' => $owner->name ?? '',
+            'email'       => $owner->email ?? '',
+            'phone'       => $restaurant->phone ?? '',
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'hyp_ready' => true,
+            'payment_url' => $paymentUrl,
         ]);
     }
 

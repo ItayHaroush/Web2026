@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Restaurant;
 use App\Models\RestaurantSubscription;
 use App\Models\PaymentVerification;
+use App\Services\RestaurantPaymentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -159,14 +160,10 @@ class PaymentSettingsController extends Controller
     }
 
     /**
-     * אימות מסוף תשלום (placeholder - Phase 2 יבצע חיוב 1 ש"ח אמיתי)
+     * אימות מסוף תשלום - בדיקת Masof + PassP מול HYP ללא חיוב
+     * שולח soft request עם dummy token — CCode 901-903 = credentials שגויים
+     * משתמש ב-Masof של המסעדה (B2C)
      * מוגבל ל-Owner/SuperAdmin בלבד
-     *
-     * TODO Phase 2:
-     * - שליחת חיוב 1 ש"ח אמיתי דרך HYP API
-     * - בדיקת תגובת HYP (transaction_id, status)
-     * - שמירת transaction_id ב-PaymentVerification
-     * - זיכוי אוטומטי של ה-1 ש"ח לאחר אימות מוצלח
      */
     public function verifyTerminal(Request $request)
     {
@@ -193,34 +190,62 @@ class PaymentSettingsController extends Controller
             ], 422);
         }
 
+        if (empty($restaurant->getRawOriginal('hyp_terminal_password'))) {
+            return response()->json([
+                'success' => false,
+                'message' => 'נא להזין סיסמת מסוף לפני אימות',
+            ], 422);
+        }
+
+        $paymentService = app(RestaurantPaymentService::class);
+
+        // אימות credentials ללא חיוב אמיתי
+        $result = $paymentService->verifyCredentials($restaurant);
+
         // לוג בטבלת verifications
         $verification = PaymentVerification::create([
             'restaurant_id' => $restaurant->id,
-            'amount' => 1.00,
-            'status' => 'success', // Placeholder - Phase 2 יבצע חיוב אמיתי
+            'amount' => 0,
+            'status' => $result['valid'] ? 'success' : 'failed',
             'initiated_by' => ($user->is_super_admin ?? false) ? 'super_admin' : 'owner',
         ]);
 
-        // עדכון סטטוס אימות
-        $restaurant->update([
-            'hyp_terminal_verified' => true,
-            'hyp_terminal_verified_at' => now(),
-        ]);
+        if ($result['valid']) {
+            $restaurant->update([
+                'hyp_terminal_verified' => true,
+                'hyp_terminal_verified_at' => now(),
+            ]);
 
-        Log::info('Terminal verification completed (placeholder)', [
+            Log::info('Terminal verification succeeded', [
+                'restaurant_id' => $restaurant->id,
+                'verification_id' => $verification->id,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'המסוף אומת בהצלחה',
+                'data' => [
+                    'hyp_terminal_verified' => true,
+                    'hyp_terminal_verified_at' => $restaurant->hyp_terminal_verified_at,
+                    'verification_id' => $verification->id,
+                ],
+            ]);
+        }
+
+        Log::warning('Terminal verification failed', [
             'restaurant_id' => $restaurant->id,
             'verification_id' => $verification->id,
-            'initiated_by' => $verification->initiated_by,
+            'ccode' => $result['ccode'],
+            'error' => $result['error'],
         ]);
 
         return response()->json([
-            'success' => true,
-            'message' => 'המסוף אומת בהצלחה',
+            'success' => false,
+            'message' => 'אימות המסוף נכשל — נא לוודא שמזהה המסוף והסיסמה נכונים.',
             'data' => [
-                'hyp_terminal_verified' => true,
-                'hyp_terminal_verified_at' => $restaurant->hyp_terminal_verified_at,
                 'verification_id' => $verification->id,
+                'error' => $result['error'] ?? 'Unknown error',
             ],
-        ]);
+        ], 422);
     }
 }

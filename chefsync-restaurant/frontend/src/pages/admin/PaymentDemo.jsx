@@ -1,12 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import { activateSubscription } from '../../services/subscriptionService';
-import { FaCreditCard, FaCheckCircle, FaArrowRight, FaShieldAlt, FaArrowLeft, FaExclamationTriangle } from 'react-icons/fa';
+import { activateSubscription, createPaymentSession } from '../../services/subscriptionService';
+import { FaCreditCard, FaCheckCircle, FaArrowRight, FaShieldAlt, FaArrowLeft, FaExclamationTriangle, FaSpinner } from 'react-icons/fa';
 
 /**
- * דף תשלום - בעתיד יוטמע כאן iframe של HYP לסליקה אמיתית
- * כרגע: מעבר מהיר להפעלת מנוי (ללא חיוב בפועל)
+ * דף תשלום - Phase 2: בודק אם HYP מוגדר ומפנה לדף תשלום
+ * אם HYP לא מוגדר: מציג V page (הפעלה ידנית ללא חיוב)
  */
 export default function PaymentDemo() {
     const navigate = useNavigate();
@@ -14,6 +14,8 @@ export default function PaymentDemo() {
     const { tier, billingCycle, amount } = location.state || {};
 
     const [processing, setProcessing] = useState(false);
+    const [checkingHyp, setCheckingHyp] = useState(true);
+    const [hypReady, setHypReady] = useState(false);
 
     // אם אין פרטי הזמנה, חזור לדף המנויים
     if (!tier || !billingCycle || !amount) {
@@ -21,13 +23,38 @@ export default function PaymentDemo() {
         return null;
     }
 
+    // בדיקת זמינות HYP בעלייה
+    useEffect(() => {
+        const checkHyp = async () => {
+            try {
+                const res = await createPaymentSession(billingCycle, tier);
+                const data = res.data;
+
+                if (data.hyp_ready && data.payment_url) {
+                    // HYP מוגדר – redirect ישיר לדף תשלום
+                    setHypReady(true);
+                    window.location.href = data.payment_url;
+                    return;
+                }
+
+                // HYP לא מוגדר – V page
+                setHypReady(false);
+            } catch (error) {
+                console.error('Failed to check HYP:', error);
+                setHypReady(false);
+            } finally {
+                setCheckingHyp(false);
+            }
+        };
+
+        checkHyp();
+    }, [tier, billingCycle]);
+
     const handleActivate = async () => {
         setProcessing(true);
 
         try {
-            // הפעלת המנוי בבקאנד
             await activateSubscription(billingCycle, tier);
-
             toast.success('המנוי הופעל בהצלחה!');
             navigate('/admin/dashboard');
         } catch (error) {
@@ -38,6 +65,21 @@ export default function PaymentDemo() {
         }
     };
 
+    // מסך טעינה בזמן בדיקת HYP
+    if (checkingHyp || hypReady) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-gray-100 flex items-center justify-center">
+                <div className="text-center">
+                    <FaSpinner className="animate-spin text-brand-primary text-4xl mx-auto mb-4" />
+                    <p className="text-gray-600 font-medium">
+                        {hypReady ? 'מעביר לדף תשלום מאובטח...' : 'בודק זמינות תשלום...'}
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
+    // V page – HYP לא מוגדר
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-gray-100 py-12 px-4">
             <div className="max-w-xl mx-auto">
@@ -90,20 +132,7 @@ export default function PaymentDemo() {
                         </p>
                     </div>
 
-                    {/* HYP Payment placeholder */}
-                    <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-6 mb-6">
-                        <div className="flex items-start gap-3">
-                            <FaCreditCard className="text-blue-500 mt-1 flex-shrink-0" size={20} />
-                            <div>
-                                <p className="text-blue-800 font-bold text-sm mb-1">תשלום באשראי (בקרוב)</p>
-                                <p className="text-blue-600 text-sm">
-                                    אפשרות תשלום מאובטח באשראי דרך HYP תתווסף כאן בקרוב.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Temporary notice */}
+                    {/* Temporary notice – V page */}
                     <div className="bg-amber-50 border-2 border-amber-200 rounded-xl p-4 mb-6">
                         <div className="flex items-start gap-3">
                             <FaExclamationTriangle className="text-amber-500 mt-0.5 flex-shrink-0" />

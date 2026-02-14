@@ -21,6 +21,8 @@ use App\Http\Controllers\PromotionController;
 use App\Http\Controllers\SuperAdminSettingsController;
 use App\Http\Controllers\SuperAdminEmailController;
 use App\Http\Controllers\OrderEventController;
+use App\Http\Controllers\HypSubscriptionCallbackController;
+use App\Http\Controllers\HypOrderCallbackController;
 
 /**
  * API Routes
@@ -169,6 +171,7 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'tenant'])->group(function (
     // סטטוס מנוי + תשלום - זמין גם אם פג הניסיון
     Route::get('/subscription/status', [AdminController::class, 'subscriptionStatus'])->name('admin.subscription.status');
     Route::post('/subscription/activate', [AdminController::class, 'activateSubscription'])->name('admin.subscription.activate');
+    Route::post('/subscription/create-payment-session', [AdminController::class, 'createPaymentSession'])->name('admin.subscription.payment-session');
 
     Route::middleware(\App\Http\Middleware\CheckRestaurantAccess::class)->group(function () {
         // דשבורד
@@ -280,11 +283,6 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'tenant'])->group(function (
         Route::post('/payment-settings', [PaymentSettingsController::class, 'saveSettings'])->name('admin.payment-settings.save');
         Route::post('/payment-settings/verify', [PaymentSettingsController::class, 'verifyTerminal'])->name('admin.payment-settings.verify');
 
-        // TODO Phase 2: webhook endpoint לקבלת עדכוני תשלום מ-HYP
-        // Route::post('/payments/hyp-webhook', [PaymentWebhookController::class, 'handle'])
-        //     ->withoutMiddleware(['auth:sanctum'])
-        //     ->name('payments.hyp-webhook');
-
         // ניהול עובדים
         Route::get('/employees', [AdminController::class, 'getEmployees'])->name('admin.employees.index');
         Route::put('/employees/{id}', [AdminController::class, 'updateEmployee'])->name('admin.employees.update');
@@ -393,6 +391,19 @@ Route::get('/restaurants/by-tenant/{tenantId}', [RestaurantController::class, 'p
 // מדיניות ותנאי שימוש - ציבורי
 Route::get('/policies/{type}/published', [SuperAdminSettingsController::class, 'getPublishedPolicy'])
     ->name('policies.published');
+
+// ============================================
+// HYP Payment Callbacks (ציבורי - redirect מ-HYP)
+// ============================================
+Route::prefix('payments/hyp')->group(function () {
+    // B2B: תשלום מנוי מסעדה
+    Route::get('/subscription/success', [HypSubscriptionCallbackController::class, 'handleSuccess'])->name('payments.hyp.subscription.success');
+    Route::get('/subscription/error', [HypSubscriptionCallbackController::class, 'handleError'])->name('payments.hyp.subscription.error');
+
+    // B2C: תשלום הזמנת לקוח
+    Route::get('/order/success', [HypOrderCallbackController::class, 'handleSuccess'])->name('payments.hyp.order.success');
+    Route::get('/order/error', [HypOrderCallbackController::class, 'handleError'])->name('payments.hyp.order.error');
+});
 
 // ============================================
 // CORS Preflight (OPTIONS)

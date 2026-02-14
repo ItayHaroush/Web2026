@@ -66,10 +66,18 @@ class CheckRestaurantAccess
         }
 
         if (!$restaurant->hasAccess()) {
+            $reason = $restaurant->subscription_status === 'suspended'
+                ? 'payment_failed'
+                : 'subscription_inactive';
+
+            $message = $reason === 'payment_failed'
+                ? 'המנוי הושהה עקב כשלון תשלום. יש לעדכן אמצעי תשלום כדי להמשיך.'
+                : 'פג תוקף תקופת הניסיון. יש להשלים תשלום כדי להמשיך להשתמש במערכת.';
+
             return response()->json([
                 'success' => false,
-                'message' => 'פג תוקף תקופת הניסיון. יש להשלים תשלום כדי להמשיך להשתמש במערכת.',
-                'error' => 'subscription_inactive',
+                'message' => $message,
+                'error' => $reason,
                 'data' => [
                     'subscription_status' => $restaurant->subscription_status,
                     'trial_ends_at' => $restaurant->trial_ends_at,
