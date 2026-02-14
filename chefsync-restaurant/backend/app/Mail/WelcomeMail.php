@@ -46,7 +46,7 @@ class WelcomeMail extends Mailable
             ? max(0, now()->diffInDays($this->restaurant->trial_ends_at, false))
             : 14;
 
-        $loginUrl = config('app.frontend_url', 'https://app.takeeat.co.il') . '/admin/login';
+        $loginUrl = EmailLayoutHelper::siteUrl('/admin/login');
 
         $body = '';
 

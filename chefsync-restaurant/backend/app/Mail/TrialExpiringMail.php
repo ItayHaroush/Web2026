@@ -52,6 +52,8 @@ class TrialExpiringMail extends Mailable
             ? $this->restaurant->trial_ends_at->format('d/m/Y')
             : '';
         $ordersCount = $this->usageSummary['orders'] ?? 0;
+        $webOrdersCount = $this->usageSummary['web_orders'] ?? 0;
+        $kioskOrdersCount = $this->usageSummary['kiosk_orders'] ?? 0;
         $menuItemsCount = $this->usageSummary['menu_items'] ?? 0;
 
         $pricing = [
@@ -105,6 +107,15 @@ class TrialExpiringMail extends Mailable
             $body .= '<td style="width: 12px;"></td>';
             $body .= EmailLayoutHelper::statCard((string) $menuItemsCount, 'פריטי תפריט', '#3b82f6');
             $body .= '</tr></table>';
+
+            // פילוח הזמנות אם יש קיוסק
+            if ($kioskOrdersCount > 0) {
+                $body .= '<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-top: 8px;"><tr>';
+                $body .= EmailLayoutHelper::statCard((string) $webOrdersCount, 'הזמנות אתר', '#3b82f6');
+                $body .= '<td style="width: 12px;"></td>';
+                $body .= EmailLayoutHelper::statCard((string) $kioskOrdersCount, 'הזמנות קיוסק', '#8b5cf6');
+                $body .= '</tr></table>';
+            }
         }
 
         // מחירים
@@ -129,7 +140,7 @@ class TrialExpiringMail extends Mailable
         );
 
         // כפתור
-        $loginUrl = config('app.frontend_url', 'https://app.takeeat.co.il') . '/admin/login';
+        $loginUrl = EmailLayoutHelper::siteUrl('/admin/login');
         $body .= EmailLayoutHelper::ctaButton('הפעלת מנוי', $loginUrl, '#22c55e');
 
         $body .= EmailLayoutHelper::paragraph(
@@ -140,6 +151,6 @@ class TrialExpiringMail extends Mailable
             ? "תקופת הניסיון שלכם מסתיימת מחר! {$restaurantName}"
             : "נותרו {$this->daysRemaining} ימים לניסיון — {$restaurantName}";
 
-        return EmailLayoutHelper::wrap($body, $preheader);
+        return EmailLayoutHelper::wrap($body, $preheader, 'billing@chefsync.co.il');
     }
 }

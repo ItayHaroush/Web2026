@@ -11,6 +11,7 @@ use App\Mail\CustomMail;
 use App\Models\Restaurant;
 use App\Models\User;
 use App\Models\Order;
+use App\Models\Kiosk;
 use App\Models\MonthlyInvoice;
 use App\Models\RestaurantSubscription;
 use Illuminate\Http\Request;
@@ -294,10 +295,13 @@ class SuperAdminEmailController extends Controller
 
     private function buildTrialInfoMail(Restaurant $restaurant): TrialInfoMail
     {
+        $ordersQuery = Order::where('restaurant_id', $restaurant->id)->where('is_test', false);
         $stats = [
             'categories' => $restaurant->categories()->count(),
             'menu_items' => $restaurant->menuItems()->count(),
-            'orders' => Order::where('restaurant_id', $restaurant->id)->count(),
+            'orders' => (clone $ordersQuery)->count(),
+            'web_orders' => (clone $ordersQuery)->where('source', 'web')->count(),
+            'kiosk_orders' => (clone $ordersQuery)->where('source', 'kiosk')->count(),
         ];
         $dayNumber = $restaurant->created_at
             ? (int) $restaurant->created_at->diffInDays(now())
@@ -311,8 +315,11 @@ class SuperAdminEmailController extends Controller
         $daysRemaining = $restaurant->trial_ends_at
             ? max(0, (int) now()->diffInDays($restaurant->trial_ends_at, false))
             : 3;
+        $ordersQuery = Order::where('restaurant_id', $restaurant->id)->where('is_test', false);
         $usageSummary = [
-            'orders' => Order::where('restaurant_id', $restaurant->id)->count(),
+            'orders' => (clone $ordersQuery)->count(),
+            'web_orders' => (clone $ordersQuery)->where('source', 'web')->count(),
+            'kiosk_orders' => (clone $ordersQuery)->where('source', 'kiosk')->count(),
             'menu_items' => $restaurant->menuItems()->count(),
         ];
 
@@ -370,7 +377,7 @@ class SuperAdminEmailController extends Controller
     }
 
     /**
-     * אוסף נתוני דוח חודשי
+     * אוסף נתוני דוח חודשי (כולל פילוח web/kiosk)
      */
     public function gatherMonthlyReportData(string $month): array
     {
@@ -380,15 +387,26 @@ class SuperAdminEmailController extends Controller
         $start = "{$month}-01 00:00:00";
         $end = date('Y-m-t 23:59:59', mktime(0, 0, 0, $mon, 1, $year));
 
-        $totalOrders = Order::whereBetween('created_at', [$start, $end])
+        // שאילתת בסיס - כל ההזמנות (לא בוטלו, לא בדיקה)
+        $baseQuery = fn() => Order::whereBetween('created_at', [$start, $end])
             ->whereNotIn('status', ['cancelled'])
-            ->where('is_test', false)
-            ->count();
+            ->where('is_test', false);
 
-        $totalRevenue = Order::whereBetween('created_at', [$start, $end])
-            ->whereNotIn('status', ['cancelled'])
-            ->where('is_test', false)
-            ->sum('total_amount');
+        // סה״כ הזמנות
+        $totalOrders = $baseQuery()->count();
+        $totalRevenue = $baseQuery()->sum('total_amount');
+
+        // הזמנות אתר
+        $webOrders = $baseQuery()->where('source', 'web')->count();
+        $webRevenue = $baseQuery()->where('source', 'web')->sum('total_amount');
+
+        // הזמנות קיוסק
+        $kioskOrders = $baseQuery()->where('source', 'kiosk')->count();
+        $kioskRevenue = $baseQuery()->where('source', 'kiosk')->sum('total_amount');
+
+        // קיוסקים פעילים
+        $activeKiosks = Kiosk::withoutGlobalScopes()->where('is_active', true)->count();
+        $totalKiosks = Kiosk::withoutGlobalScopes()->count();
 
         $newRestaurants = Restaurant::whereBetween('created_at', [$start, $end])->count();
 
@@ -404,12 +422,24 @@ class SuperAdminEmailController extends Controller
             ->whereIn('status', ['pending', 'overdue'])
             ->sum('total_due');
 
-        // טופ מסעדות
+        // טופ מסעדות (כולל פילוח web/kiosk)
         $topRestaurants = Restaurant::where('is_approved', true)
             ->withCount(['orders as month_orders' => function ($q) use ($start, $end) {
                 $q->whereBetween('created_at', [$start, $end])
                     ->whereNotIn('status', ['cancelled'])
                     ->where('is_test', false);
+            }])
+            ->withCount(['orders as web_orders' => function ($q) use ($start, $end) {
+                $q->whereBetween('created_at', [$start, $end])
+                    ->whereNotIn('status', ['cancelled'])
+                    ->where('is_test', false)
+                    ->where('source', 'web');
+            }])
+            ->withCount(['orders as kiosk_orders' => function ($q) use ($start, $end) {
+                $q->whereBetween('created_at', [$start, $end])
+                    ->whereNotIn('status', ['cancelled'])
+                    ->where('is_test', false)
+                    ->where('source', 'kiosk');
             }])
             ->withSum(['orders as month_revenue' => function ($q) use ($start, $end) {
                 $q->whereBetween('created_at', [$start, $end])
@@ -422,6 +452,8 @@ class SuperAdminEmailController extends Controller
             ->map(fn($r) => [
                 'name' => $r->name,
                 'orders' => $r->month_orders ?? 0,
+                'web_orders' => $r->web_orders ?? 0,
+                'kiosk_orders' => $r->kiosk_orders ?? 0,
                 'revenue' => $r->month_revenue ?? 0,
             ])
             ->toArray();
@@ -433,6 +465,12 @@ class SuperAdminEmailController extends Controller
             'new_restaurants' => $newRestaurants,
             'total_orders' => $totalOrders,
             'total_revenue' => $totalRevenue,
+            'web_orders' => $webOrders,
+            'web_revenue' => $webRevenue,
+            'kiosk_orders' => $kioskOrders,
+            'kiosk_revenue' => $kioskRevenue,
+            'active_kiosks' => $activeKiosks,
+            'total_kiosks' => $totalKiosks,
             'mrr' => $mrr,
             'invoices_sent' => $invoicesSent,
             'invoices_paid' => $invoicesPaid,

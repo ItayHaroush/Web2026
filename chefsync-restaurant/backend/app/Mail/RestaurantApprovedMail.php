@@ -36,8 +36,8 @@ class RestaurantApprovedMail extends Mailable
     {
         $name = e($this->ownerName);
         $restaurantName = e($this->restaurant->name);
-        $loginUrl = config('app.frontend_url', 'https://app.takeeat.co.il') . '/admin/login';
-        $menuUrl = config('app.frontend_url', 'https://app.takeeat.co.il') . '/' . e($this->restaurant->tenant_id) . '/menu';
+        $loginUrl = EmailLayoutHelper::siteUrl('/admin/login');
+        $menuUrl = EmailLayoutHelper::siteUrl('/' . e($this->restaurant->tenant_id) . '/menu');
 
         $body = '';
 

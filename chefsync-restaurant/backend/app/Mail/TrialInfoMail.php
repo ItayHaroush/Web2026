@@ -45,6 +45,8 @@ class TrialInfoMail extends Mailable
         $categoriesCount = $this->stats['categories'] ?? 0;
         $menuItemsCount = $this->stats['menu_items'] ?? 0;
         $ordersCount = $this->stats['orders'] ?? 0;
+        $webOrdersCount = $this->stats['web_orders'] ?? 0;
+        $kioskOrdersCount = $this->stats['kiosk_orders'] ?? 0;
         $daysLeft = $this->restaurant->trial_ends_at
             ? max(0, (int) now()->diffInDays($this->restaurant->trial_ends_at, false))
             : 0;
@@ -72,6 +74,15 @@ class TrialInfoMail extends Mailable
         $body .= EmailLayoutHelper::statCard("{$daysLeft}", 'ימים נותרו', '#ef4444');
         $body .= '</tr></table>';
 
+        // פילוח הזמנות אם יש קיוסק
+        if ($kioskOrdersCount > 0) {
+            $body .= '<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-top: 8px;"><tr>';
+            $body .= EmailLayoutHelper::statCard((string) $webOrdersCount, 'הזמנות אתר', '#3b82f6');
+            $body .= '<td style="width: 8px;"></td>';
+            $body .= EmailLayoutHelper::statCard((string) $kioskOrdersCount, 'הזמנות קיוסק', '#8b5cf6');
+            $body .= '</tr></table>';
+        }
+
         // טיפים
         $body .= EmailLayoutHelper::sectionTitle('טיפים לשימוש מיטבי');
 
@@ -97,7 +108,7 @@ class TrialInfoMail extends Mailable
         $body .= EmailLayoutHelper::featureList($tips);
 
         // כפתור
-        $loginUrl = config('app.frontend_url', 'https://app.takeeat.co.il') . '/admin/login';
+        $loginUrl = EmailLayoutHelper::siteUrl('/admin/login');
         $body .= EmailLayoutHelper::ctaButton('כניסה לפאנל הניהול', $loginUrl);
 
         // תזכורת ימי ניסיון

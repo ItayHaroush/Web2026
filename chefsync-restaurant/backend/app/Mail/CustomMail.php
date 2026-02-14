@@ -59,6 +59,6 @@ class CustomMail extends Mailable
             . '<p style="margin: 4px 0 0; font-size: 14px; font-weight: bold; color: #f97316;">צוות TakeEat</p>'
             . '</div>';
 
-        return EmailLayoutHelper::wrap($body, $this->emailSubject);
+        return EmailLayoutHelper::wrap($body, $this->emailSubject, 'info@chefsync.co.il');
     }
 }
