@@ -666,86 +666,86 @@
 
     {{-- Dynamic tips based on data --}}
     @if($totalOrders < 20)
-    <table class="tip-card">
+        <table class="tip-card">
         <tr>
             <td>
                 <div class="tip-title">הגדל את החשיפה של התפריט הדיגיטלי</div>
                 <div class="tip-description">קיבלת {{ $totalOrders }} הזמנות החודש. שתף את הלינק לתפריט ברשתות חברתיות, בגוגל מפות ובכרטיס ביקור. ניתן גם להדפיס QR Code ולהניח על השולחנות.</div>
             </td>
         </tr>
-    </table>
-    @endif
+        </table>
+        @endif
 
-    @if($cancelledCount > 0)
-    <table class="tip-card">
-        <tr>
-            <td>
-                <div class="tip-title">צמצם ביטולי הזמנות</div>
-                <div class="tip-description">החודש בוטלו {{ $cancelledCount }} הזמנות. מומלץ לבדוק את הסיבות ולעדכן זמינות פריטים בזמן אמת כדי להפחית ביטולים.</div>
-            </td>
-        </tr>
-    </table>
-    @endif
+        @if($cancelledCount > 0)
+        <table class="tip-card">
+            <tr>
+                <td>
+                    <div class="tip-title">צמצם ביטולי הזמנות</div>
+                    <div class="tip-description">החודש בוטלו {{ $cancelledCount }} הזמנות. מומלץ לבדוק את הסיבות ולעדכן זמינות פריטים בזמן אמת כדי להפחית ביטולים.</div>
+                </td>
+            </tr>
+        </table>
+        @endif
 
-    <table class="tip-card">
-        <tr>
-            <td>
-                <div class="tip-title">בדוק את הדוחות בפאנל הניהול</div>
-                <div class="tip-description">בדף הדוחות תוכל לראות ניתוח מפורט של מגמות מכירות, פריטים פופולריים ושעות עומס. נתונים אלה יעזרו לך לקבל החלטות מבוססות נתונים על התפריט ושעות הפעילות.</div>
-            </td>
-        </tr>
-    </table>
+        <table class="tip-card">
+            <tr>
+                <td>
+                    <div class="tip-title">בדוק את הדוחות בפאנל הניהול</div>
+                    <div class="tip-description">בדף הדוחות תוכל לראות ניתוח מפורט של מגמות מכירות, פריטים פופולריים ושעות עומס. נתונים אלה יעזרו לך לקבל החלטות מבוססות נתונים על התפריט ושעות הפעילות.</div>
+                </td>
+            </tr>
+        </table>
 
-    <table class="tip-card">
-        <tr>
-            <td>
-                <div class="tip-title">עדכן את התפריט באופן שוטף</div>
-                <div class="tip-description">יש לך {{ $menuItemsCount }} פריטים בתפריט. מומלץ לוודא שכל הפריטים מעודכנים עם תמונות איכותיות ותיאורים מפורטים. ניתן להשתמש בסוכן ה-AI ליצירת תיאורים מושכים באופן אוטומטי.</div>
-            </td>
-        </tr>
-    </table>
+        <table class="tip-card">
+            <tr>
+                <td>
+                    <div class="tip-title">עדכן את התפריט באופן שוטף</div>
+                    <div class="tip-description">יש לך {{ $menuItemsCount }} פריטים בתפריט. מומלץ לוודא שכל הפריטים מעודכנים עם תמונות איכותיות ותיאורים מפורטים. ניתן להשתמש בסוכן ה-AI ליצירת תיאורים מושכים באופן אוטומטי.</div>
+                </td>
+            </tr>
+        </table>
 
-    @if($displayScreensCount == 0 && $kiosksCount == 0)
-    <table class="tip-card">
-        <tr>
-            <td>
-                <div class="tip-title">הפעל מסכי תצוגה וקיוסקים</div>
-                <div class="tip-description">מסכי תצוגה מאפשרים ללקוחות לראות את סטטוס ההזמנה בזמן אמת, וקיוסקים מאפשרים הזמנה עצמאית. שניהם מגדילים יעילות תפעולית ושביעות רצון לקוחות.</div>
-            </td>
-        </tr>
-    </table>
-    @endif
+        @if($displayScreensCount == 0 && $kiosksCount == 0)
+        <table class="tip-card">
+            <tr>
+                <td>
+                    <div class="tip-title">הפעל מסכי תצוגה וקיוסקים</div>
+                    <div class="tip-description">מסכי תצוגה מאפשרים ללקוחות לראות את סטטוס ההזמנה בזמן אמת, וקיוסקים מאפשרים הזמנה עצמאית. שניהם מגדילים יעילות תפעולית ושביעות רצון לקוחות.</div>
+                </td>
+            </tr>
+        </table>
+        @endif
 
-    @if($aiCreditsMonthly > 0 && $totalAiCreditsUsed < ($aiCreditsMonthly * 0.3))
-    <table class="tip-card">
-        <tr>
-            <td>
-                <div class="tip-title">נצל את קרדיטי ה-AI שלך</div>
-                <div class="tip-description">השתמשת ב-{{ $totalAiCreditsUsed }} מתוך {{ $aiCreditsMonthly }} קרדיטים בלבד. נסה את הסוכן החכם ליצירת תיאורי מנות, המלצות מחיר ותובנות עסקיות.</div>
-            </td>
-        </tr>
-    </table>
-    @endif
+        @if($aiCreditsMonthly > 0 && $totalAiCreditsUsed < ($aiCreditsMonthly * 0.3))
+            <table class="tip-card">
+            <tr>
+                <td>
+                    <div class="tip-title">נצל את קרדיטי ה-AI שלך</div>
+                    <div class="tip-description">השתמשת ב-{{ $totalAiCreditsUsed }} מתוך {{ $aiCreditsMonthly }} קרדיטים בלבד. נסה את הסוכן החכם ליצירת תיאורי מנות, המלצות מחיר ותובנות עסקיות.</div>
+                </td>
+            </tr>
+            </table>
+            @endif
 
-    <table class="tip-card">
-        <tr>
-            <td>
-                <div class="tip-title">גישה מהירה לפאנל הניהול</div>
-                <div class="tip-description">ניתן לגשת לפאנל הניהול בכל עת ומכל מכשיר. שם תוכל לנהל הזמנות, לעדכן תפריט, לצפות בדוחות, להגדיר קופונים, לנהל עובדים ועוד.</div>
-            </td>
-        </tr>
-    </table>
+            <table class="tip-card">
+                <tr>
+                    <td>
+                        <div class="tip-title">גישה מהירה לפאנל הניהול</div>
+                        <div class="tip-description">ניתן לגשת לפאנל הניהול בכל עת ומכל מכשיר. שם תוכל לנהל הזמנות, לעדכן תפריט, לצפות בדוחות, להגדיר קופונים, לנהל עובדים ועוד.</div>
+                    </td>
+                </tr>
+            </table>
 
-    {{-- CTA --}}
-    <table class="cta-box">
-        <tr>
-            <td>
-                <div class="cta-title">צריך עזרה? הצוות שלנו כאן לשירותך</div>
-                <div class="cta-text">לשאלות, בירורים או סיוע טכני ניתן לפנות אלינו בכל עת</div>
-                <div class="cta-url">billing@takeeat.co.il</div>
-            </td>
-        </tr>
-    </table>
+            {{-- CTA --}}
+            <table class="cta-box">
+                <tr>
+                    <td>
+                        <div class="cta-title">צריך עזרה? הצוות שלנו כאן לשירותך</div>
+                        <div class="cta-text">לשאלות, בירורים או סיוע טכני ניתן לפנות אלינו בכל עת</div>
+                        <div class="cta-url">billing@takeeat.co.il</div>
+                    </td>
+                </tr>
+            </table>
 
 </body>
 
