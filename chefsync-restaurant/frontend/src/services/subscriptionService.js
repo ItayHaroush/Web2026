@@ -8,3 +8,8 @@ export const activateSubscription = (planType = 'monthly', tier = 'pro') =>
         tier: tier
     });
 
+export const createPaymentSession = (planType = 'monthly', tier = 'pro') =>
+    api.post('/admin/subscription/create-payment-session', {
+        plan_type: planType,
+        tier: tier
+    });

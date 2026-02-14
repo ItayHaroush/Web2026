@@ -231,6 +231,12 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
             clearCart();
             setShowConfirmation(false);
 
+            // B2C: אם יש payment_url — redirect לדף תשלום HYP
+            if (response.payment_url) {
+                window.location.href = response.payment_url;
+                return;
+            }
+
             // ניווט שונה בהתאם למצב
             if (isPreviewMode) {
                 navigate(`/admin/preview-order-status/${response.data.id}`);

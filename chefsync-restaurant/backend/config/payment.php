@@ -3,7 +3,7 @@
 return [
     /*
     |--------------------------------------------------------------------------
-    | דגל גלובלי להפעלת תשלום באשראי
+    | דגל גלובלי להפעלת תשלום באשראי (B2C)
     |--------------------------------------------------------------------------
     | כאשר false - אף מסעדה לא תוכל לקבל אשראי, גם אם הגדירה מסוף
     | הפעל רק אחרי שחיבור HYP מוכן לייצור
@@ -12,16 +12,26 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | HYP Integration (Phase 2)
+    | HYP Platform Account (B2B) - חשבון Master לחיוב מנויי מסעדות
     |--------------------------------------------------------------------------
-    | TODO Phase 2:
-    | - iframe_url: כתובת iframe לסליקה
-    | - webhook_secret: סוד לאימות webhook מ-HYP
-    | - session_timeout_minutes: timeout לסשן תשלום
+    | Masof + PassP = credentials של בעל הפלטפורמה (אתה)
+    | משמש לחיוב מסעדות על מנוי חודשי/שנתי + חיובים חוזרים (soft protocol)
     */
     'hyp' => [
-        'iframe_url' => env('HYP_IFRAME_URL', 'https://icom.yaad.net/p/'),
-        'webhook_secret' => env('HYP_WEBHOOK_SECRET', ''),
+        'base_url'    => env('HYP_BASE_URL', 'https://pay.hyp.co.il/p/'),
+        'masof'       => env('HYP_MASOF', ''),
+        'passp'       => env('HYP_PASSP', ''),
+        'api_key'     => env('HYP_API_KEY', ''),
+        'coin'        => env('HYP_COIN', '1'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Order Payment (B2C) - תשלומי לקוחות על הזמנות
+    |--------------------------------------------------------------------------
+    | המסוף = hyp_terminal_id של כל מסעדה (לא של הפלטפורמה)
+    */
+    'order_payment' => [
         'session_timeout_minutes' => env('HYP_SESSION_TIMEOUT', 15),
     ],
 ];

@@ -13,6 +13,8 @@ use App\Services\PhoneValidationService;
 use App\Services\BasePriceService;
 use App\Services\PromotionService;
 use App\Services\OrderEventService;
+use App\Services\RestaurantPaymentService;
+use App\Models\PaymentSession;
 use App\Models\SystemError;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -372,11 +374,11 @@ class OrderController extends Controller
             }
 
             // צור את ההזמנה עם סכום סופי
-            // TODO Phase 2 - Payment Processing Integration:
-            // 1. payment_sessions table: order_id, session_token, hyp_transaction_id, amount, status, expires_at
-            // 2. אם payment_method=credit_card -> יצירת payment session -> הפניה ל-HYP iframe
-            // 3. Webhook מ-HYP מעדכן payment_status ל-paid ושומר transaction_id
-            // 4. Frontend polling ב-OrderStatusPage בודק שינוי ב-payment_status
+            $paymentMethod = $validated['payment_method'];
+            $paymentStatus = $paymentMethod === 'cash'
+                ? Order::PAYMENT_NOT_REQUIRED
+                : Order::PAYMENT_PENDING;
+
             $order = Order::create([
                 'tenant_id' => $tenantId,
                 'restaurant_id' => $restaurantId,
@@ -384,8 +386,8 @@ class OrderController extends Controller
                 'customer_name' => $validated['customer_name'],
                 'customer_phone' => $normalizedCustomerPhone,
                 'delivery_method' => $validated['delivery_method'],
-                'payment_method' => $validated['payment_method'],
-                'payment_status' => Order::PAYMENT_PENDING, // תשלום נדרש - מזומן ייגבה בעת מסירה
+                'payment_method' => $paymentMethod,
+                'payment_status' => $paymentStatus,
                 'delivery_address' => $validated['delivery_address'] ?? null,
                 'delivery_notes' => $validated['delivery_notes'] ?? null,
                 'delivery_zone_id' => $deliveryZone?->id,
@@ -481,10 +483,38 @@ class OrderController extends Controller
                 Log::warning('Failed to log order event', ['error' => $e->getMessage()]);
             }
 
+            // B2C: אם תשלום באשראי, צור payment session + payment URL
+            $paymentUrl = null;
+            $sessionToken = null;
+
+            if ($paymentMethod === 'credit_card') {
+                $restaurant = Restaurant::withoutGlobalScope('tenant')->find($restaurantId);
+                $restaurantPaymentService = app(RestaurantPaymentService::class);
+
+                if ($restaurant && $restaurantPaymentService->isRestaurantReady($restaurant)) {
+                    $session = PaymentSession::create([
+                        'tenant_id'     => $tenantId,
+                        'restaurant_id' => $restaurantId,
+                        'order_id'      => $order->id,
+                        'session_token' => \Illuminate\Support\Str::uuid()->toString(),
+                        'amount'        => $order->total_amount,
+                        'status'        => 'pending',
+                        'expires_at'    => now()->addMinutes(config('payment.order_payment.session_timeout_minutes', 15)),
+                    ]);
+
+                    $paymentUrl = $restaurantPaymentService->generateOrderPaymentUrl($restaurant, $order, $session);
+
+                    $session->update(['payment_url' => $paymentUrl]);
+                    $sessionToken = $session->session_token;
+                }
+            }
+
             return response()->json([
                 'success' => true,
                 'message' => 'הזמנה נקבלה בהצלחה',
                 'data' => $order->load(['items.menuItem', 'items.variant']),
+                'payment_url' => $paymentUrl,
+                'session_token' => $sessionToken,
             ], 201);
         } catch (\Illuminate\Validation\ValidationException $e) {
             Log::warning('Order validation failed', [

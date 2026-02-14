@@ -75,10 +75,17 @@ class Restaurant extends Model
         'hyp_terminal_verified',
         'hyp_terminal_verified_at',
         'accepted_payment_methods',
+        'hyp_card_token',
+        'hyp_card_expiry',
+        'hyp_card_last4',
+        'payment_failed_at',
+        'payment_failure_count',
+        'hyp_setup_fee_charged',
     ];
 
     protected $hidden = [
-        'hyp_terminal_password', // לעולם לא להחזיר ב-API
+        'hyp_terminal_password',
+        'hyp_card_token',
     ];
 
     protected $attributes = [
@@ -110,7 +117,9 @@ class Restaurant extends Model
         'hyp_terminal_verified' => 'boolean',
         'hyp_terminal_verified_at' => 'datetime',
         'hyp_terminal_password' => 'encrypted',
+        'hyp_card_token' => 'encrypted',
         'accepted_payment_methods' => 'array',
+        'payment_failed_at' => 'datetime',
     ];
 
     /**
@@ -309,11 +318,25 @@ class Restaurant extends Model
     }
 
     /**
-     * בדיקה האם יש גישה למערכת (ניסיון או מנוי פעיל)
+     * בדיקה האם יש גישה למערכת (ניסיון, מנוי פעיל, או grace period)
      */
     public function hasAccess(): bool
     {
-        return $this->isOnTrial() || $this->hasActiveSubscription();
+        return $this->isOnTrial() || $this->hasActiveSubscription() || $this->isInGracePeriod();
+    }
+
+    /**
+     * בדיקה האם המסעדה ב-grace period (חיוב נכשל אבל עדיין בתוך חלון הזמן)
+     */
+    public function isInGracePeriod(): bool
+    {
+        if (!$this->payment_failed_at) {
+            return false;
+        }
+
+        $graceDays = (int) (SystemSetting::get('grace_period_days', 3));
+
+        return $this->payment_failed_at->addDays($graceDays)->isFuture();
     }
 
     /**
