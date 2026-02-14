@@ -28,12 +28,56 @@ use Illuminate\Support\Str;
 class AdminController extends Controller
 {
     /**
+     * Resolve restaurant ID - supports super admin impersonation via X-Tenant-ID
+     */
+    private function resolveRestaurantId(Request $request): ?int
+    {
+        $user = $request->user();
+
+        if ($user->restaurant_id) {
+            return $user->restaurant_id;
+        }
+
+        // Super admin impersonation: resolve from tenant_id
+        if ($user->is_super_admin) {
+            $tenantId = app()->has('tenant_id') ? app('tenant_id') : $request->header('X-Tenant-ID');
+            if ($tenantId) {
+                $restaurant = Restaurant::where('tenant_id', $tenantId)->first();
+                return $restaurant?->id;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Resolve restaurant model - supports super admin impersonation via X-Tenant-ID
+     */
+    private function resolveRestaurant(Request $request): ?Restaurant
+    {
+        $user = $request->user();
+
+        if ($user->restaurant_id) {
+            return $user->restaurant;
+        }
+
+        if ($user->is_super_admin) {
+            $tenantId = app()->has('tenant_id') ? app('tenant_id') : $request->header('X-Tenant-ID');
+            if ($tenantId) {
+                return Restaurant::where('tenant_id', $tenantId)->first();
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * דשבורד - סטטיסטיקות
      */
     public function dashboard(Request $request)
     {
         $user = $request->user();
-        $restaurantId = $user->restaurant_id;
+        $restaurantId = $this->resolveRestaurantId($request);
 
         $stats = [
             'orders_today' => Order::where('restaurant_id', $restaurantId)
@@ -49,8 +93,8 @@ class AdminController extends Controller
             'employees' => User::where('restaurant_id', $restaurantId)->count(),
         ];
 
-        // רק בעלים ומנהלים רואים הכנסות
-        if ($user->isOwner() || $user->isManager()) {
+        // רק בעלים ומנהלים רואים הכנסות (סופר אדמין בהתחזות רואה הכל)
+        if ($user->isOwner() || $user->isManager() || $user->is_super_admin) {
             $stats['revenue_today'] = Order::where('restaurant_id', $restaurantId)
                 ->where('is_test', false)  // ← מתעלם מהזמנות test
                 ->whereDate('created_at', today())
@@ -94,7 +138,7 @@ class AdminController extends Controller
     public function getCategories(Request $request)
     {
         $user = $request->user();
-        $categories = Category::where('restaurant_id', $user->restaurant_id)
+        $categories = Category::where('restaurant_id', $this->resolveRestaurantId($request))
             ->withCount('items')
             ->orderBy('sort_order')
             ->get();
@@ -116,7 +160,7 @@ class AdminController extends Controller
         ]);
 
         $user = $request->user();
-        $restaurant = $user->restaurant;
+        $restaurant = $this->resolveRestaurant($request);
 
         if (!$restaurant) {
             return response()->json([
@@ -125,12 +169,12 @@ class AdminController extends Controller
             ], 400);
         }
 
-        $maxOrder = Category::where('restaurant_id', $user->restaurant_id)->max('sort_order') ?? 0;
+        $maxOrder = Category::where('restaurant_id', $this->resolveRestaurantId($request))->max('sort_order') ?? 0;
 
         // ✅ וודא tenant_id + restaurant_id
         $category = Category::create([
             'tenant_id' => $restaurant->tenant_id,  // ← חובה!
-            'restaurant_id' => $user->restaurant_id,
+            'restaurant_id' => $this->resolveRestaurantId($request),
             'name' => $request->name,
             'description' => $request->description,
             'icon' => $request->icon ?? '🍽️',
@@ -150,7 +194,7 @@ class AdminController extends Controller
     public function updateCategory(Request $request, $id)
     {
         $user = $request->user();
-        $category = Category::where('restaurant_id', $user->restaurant_id)
+        $category = Category::where('restaurant_id', $this->resolveRestaurantId($request))
             ->findOrFail($id);
 
         $request->validate([
@@ -168,7 +212,7 @@ class AdminController extends Controller
         // הפעלה אוטומטית של תמחור ישיבה כשמגדירים התאמה בקטגוריה
         $dineInVal = $request->input('dine_in_adjustment');
         if ($dineInVal !== null && $dineInVal !== '' && (float) $dineInVal != 0) {
-            $restaurant = \App\Models\Restaurant::find($user->restaurant_id);
+            $restaurant = $this->resolveRestaurant($request);
             if ($restaurant && !$restaurant->enable_dine_in_pricing) {
                 $restaurant->update(['enable_dine_in_pricing' => true]);
             }
@@ -184,7 +228,7 @@ class AdminController extends Controller
     public function deleteCategory(Request $request, $id)
     {
         $user = $request->user();
-        $category = Category::where('restaurant_id', $user->restaurant_id)
+        $category = Category::where('restaurant_id', $this->resolveRestaurantId($request))
             ->findOrFail($id);
 
         // בדיקה אם יש פריטים בקטגוריה
@@ -215,7 +259,7 @@ class AdminController extends Controller
         ]);
 
         $user = $request->user();
-        $restaurantId = $user->restaurant_id;
+        $restaurantId = $this->resolveRestaurantId($request);
 
         try {
             foreach ($request->categories as $categoryData) {
@@ -243,7 +287,7 @@ class AdminController extends Controller
     public function toggleCategoryActive(Request $request, $id)
     {
         $user = $request->user();
-        $category = Category::where('restaurant_id', $user->restaurant_id)
+        $category = Category::where('restaurant_id', $this->resolveRestaurantId($request))
             ->findOrFail($id);
 
         $category->is_active = !$category->is_active;
@@ -260,14 +304,14 @@ class AdminController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isManager()) {
+        if (!$user->isManager() && !$user->is_super_admin) {
             return response()->json([
                 'success' => false,
                 'message' => 'אין לך הרשאה להעתיק קטגוריות',
             ], 403);
         }
 
-        $restaurant = $user->restaurant;
+        $restaurant = $this->resolveRestaurant($request);
         if (!$restaurant) {
             return response()->json([
                 'success' => false,
@@ -408,7 +452,7 @@ class AdminController extends Controller
     public function getMenuItems(Request $request)
     {
         $user = $request->user();
-        $restaurantId = $user->restaurant_id;
+        $restaurantId = $this->resolveRestaurantId($request);
 
         Log::info('getMenuItems called', [
             'user_id' => $user->id,
@@ -459,12 +503,12 @@ class AdminController extends Controller
         $user = $request->user();
 
         // וידוא שהקטגוריה שייכת למסעדה
-        $category = Category::where('restaurant_id', $user->restaurant_id)
+        $category = Category::where('restaurant_id', $this->resolveRestaurantId($request))
             ->findOrFail($request->category_id);
 
         // ✅ חישוב sort_order עם tenant_id
         $maxOrder = MenuItem::where('category_id', $request->category_id)
-            ->where('tenant_id', $user->restaurant->tenant_id)
+            ->where('tenant_id', $this->resolveRestaurant($request)->tenant_id)
             ->max('sort_order') ?? 0;
 
         $imageUrl = null;
@@ -489,8 +533,8 @@ class AdminController extends Controller
 
         // ✅ וודא tenant_id + restaurant_id
         $item = MenuItem::create([
-            'tenant_id' => $user->restaurant->tenant_id,  // ← חובה!
-            'restaurant_id' => $user->restaurant_id,
+            'tenant_id' => $this->resolveRestaurant($request)->tenant_id,  // ← חובה!
+            'restaurant_id' => $this->resolveRestaurantId($request),
             'category_id' => $request->category_id,
             'name' => $request->name,
             'description' => $request->description,
@@ -515,7 +559,7 @@ class AdminController extends Controller
     public function updateMenuItem(Request $request, $id)
     {
         $user = $request->user();
-        $item = MenuItem::where('restaurant_id', $user->restaurant_id)
+        $item = MenuItem::where('restaurant_id', $this->resolveRestaurantId($request))
             ->findOrFail($id);
 
         $request->validate([
@@ -576,7 +620,7 @@ class AdminController extends Controller
 
         // הפעלה אוטומטית של תמחור ישיבה כשמגדירים התאמה
         if (isset($payload['dine_in_adjustment']) && $payload['dine_in_adjustment'] !== null && (float) $payload['dine_in_adjustment'] != 0) {
-            $restaurant = \App\Models\Restaurant::find($user->restaurant_id);
+            $restaurant = $this->resolveRestaurant($request);
             if ($restaurant && !$restaurant->enable_dine_in_pricing) {
                 $restaurant->update(['enable_dine_in_pricing' => true]);
             }
@@ -592,7 +636,7 @@ class AdminController extends Controller
     public function deleteMenuItem(Request $request, $id)
     {
         $user = $request->user();
-        $item = MenuItem::where('restaurant_id', $user->restaurant_id)
+        $item = MenuItem::where('restaurant_id', $this->resolveRestaurantId($request))
             ->findOrFail($id);
 
         // מחיקת תמונה
@@ -616,14 +660,14 @@ class AdminController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isManager()) {
+        if (!$user->isManager() && !$user->is_super_admin) {
             return response()->json([
                 'success' => false,
                 'message' => 'אין לך הרשאה לצפות בסלטים',
             ], 403);
         }
 
-        $restaurant = $user->restaurant;
+        $restaurant = $this->resolveRestaurant($request);
         if (!$restaurant) {
             return response()->json([
                 'success' => false,
@@ -649,7 +693,7 @@ class AdminController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isManager()) {
+        if (!$user->isManager() && !$user->is_super_admin) {
             return response()->json([
                 'success' => false,
                 'message' => 'אין לך הרשאה להוסיף סלטים',
@@ -666,7 +710,7 @@ class AdminController extends Controller
             'group_id' => 'nullable|integer',
         ]);
 
-        $restaurant = $user->restaurant;
+        $restaurant = $this->resolveRestaurant($request);
         if (!$restaurant) {
             return response()->json([
                 'success' => false,
@@ -716,7 +760,7 @@ class AdminController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isManager()) {
+        if (!$user->isManager() && !$user->is_super_admin) {
             return response()->json([
                 'success' => false,
                 'message' => 'אין לך הרשאה לעדכן סלטים',
@@ -734,7 +778,7 @@ class AdminController extends Controller
             'group_id' => 'nullable|integer',
         ]);
 
-        $restaurant = $user->restaurant;
+        $restaurant = $this->resolveRestaurant($request);
         if (!$restaurant) {
             return response()->json([
                 'success' => false,
@@ -781,14 +825,14 @@ class AdminController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isManager()) {
+        if (!$user->isManager() && !$user->is_super_admin) {
             return response()->json([
                 'success' => false,
                 'message' => 'אין לך הרשאה למחוק סלטים',
             ], 403);
         }
 
-        $restaurant = $user->restaurant;
+        $restaurant = $this->resolveRestaurant($request);
         if (!$restaurant) {
             return response()->json([
                 'success' => false,
@@ -815,14 +859,14 @@ class AdminController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isManager()) {
+        if (!$user->isManager() && !$user->is_super_admin) {
             return response()->json([
                 'success' => false,
                 'message' => 'אין לך הרשאה לצפות באזורי משלוח',
             ], 403);
         }
 
-        $restaurant = $user->restaurant;
+        $restaurant = $this->resolveRestaurant($request);
         if (!$restaurant) {
             return response()->json([
                 'success' => false,
@@ -844,7 +888,7 @@ class AdminController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isManager()) {
+        if (!$user->isManager() && !$user->is_super_admin) {
             return response()->json([
                 'success' => false,
                 'message' => 'אין לך הרשאה להוסיף אזורי משלוח',
@@ -875,7 +919,7 @@ class AdminController extends Controller
             ], 422);
         }
 
-        $restaurant = $user->restaurant;
+        $restaurant = $this->resolveRestaurant($request);
         if (!$restaurant) {
             return response()->json([
                 'success' => false,
@@ -941,7 +985,7 @@ class AdminController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isManager()) {
+        if (!$user->isManager() && !$user->is_super_admin) {
             return response()->json([
                 'success' => false,
                 'message' => 'אין לך הרשאה לעדכן אזורי משלוח',
@@ -964,7 +1008,7 @@ class AdminController extends Controller
             'preview_image' => 'nullable|string',
         ]);
 
-        $restaurant = $user->restaurant;
+        $restaurant = $this->resolveRestaurant($request);
         if (!$restaurant) {
             return response()->json([
                 'success' => false,
@@ -1024,14 +1068,14 @@ class AdminController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isManager()) {
+        if (!$user->isManager() && !$user->is_super_admin) {
             return response()->json([
                 'success' => false,
                 'message' => 'אין לך הרשאה למחוק אזורי משלוח',
             ], 403);
         }
 
-        $restaurant = $user->restaurant;
+        $restaurant = $this->resolveRestaurant($request);
         if (!$restaurant) {
             return response()->json([
                 'success' => false,
@@ -1056,14 +1100,14 @@ class AdminController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isManager()) {
+        if (!$user->isManager() && !$user->is_super_admin) {
             return response()->json([
                 'success' => false,
                 'message' => 'אין לך הרשאה לצפות בבסיסים',
             ], 403);
         }
 
-        $restaurant = $user->restaurant;
+        $restaurant = $this->resolveRestaurant($request);
         if (!$restaurant) {
             return response()->json([
                 'success' => false,
@@ -1085,7 +1129,7 @@ class AdminController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isManager()) {
+        if (!$user->isManager() && !$user->is_super_admin) {
             return response()->json([
                 'success' => false,
                 'message' => 'אין לך הרשאה להוסיף בסיסים',
@@ -1098,7 +1142,7 @@ class AdminController extends Controller
             'is_default' => 'sometimes|boolean',
         ]);
 
-        $restaurant = $user->restaurant;
+        $restaurant = $this->resolveRestaurant($request);
         if (!$restaurant) {
             return response()->json([
                 'success' => false,
@@ -1134,7 +1178,7 @@ class AdminController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isManager()) {
+        if (!$user->isManager() && !$user->is_super_admin) {
             return response()->json([
                 'success' => false,
                 'message' => 'אין לך הרשאה לעדכן בסיסים',
@@ -1148,7 +1192,7 @@ class AdminController extends Controller
             'sort_order' => 'sometimes|integer|min:0',
         ]);
 
-        $restaurant = $user->restaurant;
+        $restaurant = $this->resolveRestaurant($request);
         if (!$restaurant) {
             return response()->json([
                 'success' => false,
@@ -1180,14 +1224,14 @@ class AdminController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isManager()) {
+        if (!$user->isManager() && !$user->is_super_admin) {
             return response()->json([
                 'success' => false,
                 'message' => 'אין לך הרשאה למחוק בסיסים',
             ], 403);
         }
 
-        $restaurant = $user->restaurant;
+        $restaurant = $this->resolveRestaurant($request);
         if (!$restaurant) {
             return response()->json([
                 'success' => false,
@@ -1214,14 +1258,14 @@ class AdminController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isManager()) {
+        if (!$user->isManager() && !$user->is_super_admin) {
             return response()->json([
                 'success' => false,
                 'message' => 'אין לך הרשאה לצפות במחירי בסיסים',
             ], 403);
         }
 
-        $restaurant = $user->restaurant;
+        $restaurant = $this->resolveRestaurant($request);
         if (!$restaurant) {
             return response()->json([
                 'success' => false,
@@ -1255,7 +1299,7 @@ class AdminController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isManager()) {
+        if (!$user->isManager() && !$user->is_super_admin) {
             return response()->json([
                 'success' => false,
                 'message' => 'אין לך הרשאה לעדכן מחירי בסיסים',
@@ -1271,7 +1315,7 @@ class AdminController extends Controller
             'category_ids.*' => 'integer',
         ]);
 
-        $restaurant = $user->restaurant;
+        $restaurant = $this->resolveRestaurant($request);
         if (!$restaurant) {
             return response()->json([
                 'success' => false,
@@ -1339,14 +1383,14 @@ class AdminController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isManager()) {
+        if (!$user->isManager() && !$user->is_super_admin) {
             return response()->json([
                 'success' => false,
                 'message' => 'אין לך הרשאה לצפות במחירי בסיסים',
             ], 403);
         }
 
-        $restaurant = $user->restaurant;
+        $restaurant = $this->resolveRestaurant($request);
         if (!$restaurant) {
             return response()->json([
                 'success' => false,
@@ -1392,7 +1436,7 @@ class AdminController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isManager()) {
+        if (!$user->isManager() && !$user->is_super_admin) {
             return response()->json([
                 'success' => false,
                 'message' => 'אין לך הרשאה לעדכן מחירי בסיסים',
@@ -1405,7 +1449,7 @@ class AdminController extends Controller
             'adjustments.*.price_delta' => 'required|numeric|min:-999.99|max:999.99',
         ]);
 
-        $restaurant = $user->restaurant;
+        $restaurant = $this->resolveRestaurant($request);
         if (!$restaurant) {
             return response()->json([
                 'success' => false,
@@ -1461,7 +1505,7 @@ class AdminController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isManager()) {
+        if (!$user->isManager() && !$user->is_super_admin) {
             return response()->json([
                 'success' => false,
                 'message' => 'אין לך הרשאה ליצור קבוצות תוספות',
@@ -1478,7 +1522,7 @@ class AdminController extends Controller
             'source_include_prices' => 'sometimes|boolean',
         ]);
 
-        $restaurant = $user->restaurant;
+        $restaurant = $this->resolveRestaurant($request);
         if (!$restaurant) {
             return response()->json([
                 'success' => false,
@@ -1537,7 +1581,7 @@ class AdminController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isManager()) {
+        if (!$user->isManager() && !$user->is_super_admin) {
             return response()->json([
                 'success' => false,
                 'message' => 'אין לך הרשאה לעדכן קבוצות תוספות',
@@ -1556,7 +1600,7 @@ class AdminController extends Controller
             'source_include_prices' => 'sometimes|boolean',
         ]);
 
-        $restaurant = $user->restaurant;
+        $restaurant = $this->resolveRestaurant($request);
         if (!$restaurant) {
             return response()->json([
                 'success' => false,
@@ -1621,14 +1665,14 @@ class AdminController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isManager()) {
+        if (!$user->isManager() && !$user->is_super_admin) {
             return response()->json([
                 'success' => false,
                 'message' => 'אין לך הרשאה למחוק קבוצות תוספות',
             ], 403);
         }
 
-        $restaurant = $user->restaurant;
+        $restaurant = $this->resolveRestaurant($request);
         if (!$restaurant) {
             return response()->json([
                 'success' => false,
@@ -1657,14 +1701,14 @@ class AdminController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isManager()) {
+        if (!$user->isManager() && !$user->is_super_admin) {
             return response()->json([
                 'success' => false,
                 'message' => 'אין לך הרשאה להעתיק קבוצות תוספות',
             ], 403);
         }
 
-        $restaurant = $user->restaurant;
+        $restaurant = $this->resolveRestaurant($request);
         if (!$restaurant) {
             return response()->json([
                 'success' => false,
@@ -1724,7 +1768,8 @@ class AdminController extends Controller
     public function getRestaurant(Request $request)
     {
         $user = $request->user();
-        $restaurant = Restaurant::findOrFail($user->restaurant_id);
+        $restaurantId = $this->resolveRestaurantId($request);
+        $restaurant = Restaurant::findOrFail($restaurantId);
 
         // ספירת הזמנות פעילות לצורך חיווי בפעמון
         $activeOrdersCount = \App\Models\Order::where('restaurant_id', $restaurant->id)
@@ -1749,14 +1794,14 @@ class AdminController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isOwner()) {
+        if (!$user->isOwner() && !$user->is_super_admin) {
             return response()->json([
                 'success' => false,
                 'message' => 'רק בעל המסעדה יכול לעדכן פרטים',
             ], 403);
         }
 
-        $restaurant = Restaurant::findOrFail($user->restaurant_id);
+        $restaurant = $this->resolveRestaurant($request);
         $isApproved = (bool) $restaurant->is_approved;
 
         // 🔍 DEBUG - מה מגיע מהפרונט בדיוק
@@ -2104,14 +2149,14 @@ class AdminController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isOwner()) {
+        if (!$user->isOwner() && !$user->is_super_admin) {
             return response()->json([
                 'success' => false,
                 'message' => 'רק בעל המסעדה יכול לבטל כפייה',
             ], 403);
         }
 
-        $restaurant = Restaurant::findOrFail($user->restaurant_id);
+        $restaurant = $this->resolveRestaurant($request);
 
         $calculated = $this->isRestaurantOpen($restaurant->operating_days ?? [], $restaurant->operating_hours ?? []);
 
@@ -2136,14 +2181,14 @@ class AdminController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isManager()) {
+        if (!$user->isManager() && !$user->is_super_admin) {
             return response()->json([
                 'success' => false,
                 'message' => 'אין לך הרשאה לצפות בעובדים',
             ], 403);
         }
 
-        $employees = User::where('restaurant_id', $user->restaurant_id)
+        $employees = User::where('restaurant_id', $this->resolveRestaurantId($request))
             ->orderBy('role')
             ->orderBy('name')
             ->get(['id', 'name', 'email', 'phone', 'role', 'is_active', 'created_at']);
@@ -2244,7 +2289,7 @@ class AdminController extends Controller
     public function getOrders(Request $request)
     {
         $user = $request->user();
-        $query = Order::where('restaurant_id', $user->restaurant_id)
+        $query = Order::where('restaurant_id', $this->resolveRestaurantId($request))
             ->with('items.menuItem.category');
 
         if ($request->has('status')) {
@@ -2267,7 +2312,7 @@ class AdminController extends Controller
     public function updateOrderStatus(Request $request, $id)
     {
         $user = $request->user();
-        $order = Order::where('restaurant_id', $user->restaurant_id)
+        $order = Order::where('restaurant_id', $this->resolveRestaurantId($request))
             ->findOrFail($id);
 
         $request->validate([
@@ -2300,6 +2345,11 @@ class AdminController extends Controller
             }
         }
 
+        // כשהזמנה מבוטלת - בטל המתנה לתשלום
+        if ($request->status === 'cancelled' && $order->payment_status === 'pending') {
+            $order->payment_status = 'cancelled';
+        }
+
         $order->save();
 
         // הפעלת הדפסה למטבח כשהזמנה מאושרת
@@ -2321,7 +2371,7 @@ class AdminController extends Controller
     public function updateOrderEta(Request $request, $id)
     {
         $user = $request->user();
-        $order = Order::where('restaurant_id', $user->restaurant_id)
+        $order = Order::where('restaurant_id', $this->resolveRestaurantId($request))
             ->findOrFail($id);
 
         $validated = $request->validate([
@@ -2597,14 +2647,14 @@ class AdminController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isOwner()) {
+        if (!$user->isOwner() && !$user->is_super_admin) {
             return response()->json([
                 'success' => false,
                 'message' => 'רק בעל המסעדה יכול לבצע פעולה זו',
             ], 403);
         }
 
-        $restaurantId = $user->restaurant_id;
+        $restaurantId = $this->resolveRestaurantId($request);
         $restaurant = Restaurant::findOrFail($restaurantId);
 
         Category::where('restaurant_id', $restaurantId)->update(['dine_in_adjustment' => null]);
@@ -2632,7 +2682,7 @@ class AdminController extends Controller
             ], 403);
         }
 
-        $order = Order::where('restaurant_id', $user->restaurant_id)
+        $order = Order::where('restaurant_id', $this->resolveRestaurantId($request))
             ->findOrFail($id);
 
         if ($order->payment_status === Order::PAYMENT_PAID) {

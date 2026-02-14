@@ -44,7 +44,15 @@ import AdminAuthDebug from './pages/admin/AdminAuthDebug';
 import SuperAdminDashboard from './pages/super-admin/SuperAdminDashboard';
 import SuperAdminNotifications from './pages/super-admin/SuperAdminNotifications';
 import SuperAdminReports from './pages/super-admin/SuperAdminReports';
+import SuperAdminInvoices from './pages/super-admin/SuperAdminInvoices';
 import SuperAdminSettings from './pages/super-admin/SuperAdminSettings';
+import SuperAdminOrderDebug from './pages/super-admin/SuperAdminOrderDebug';
+import RegionalSettings from './pages/super-admin/settings/RegionalSettings';
+import BillingSettings from './pages/super-admin/settings/BillingSettings';
+import SecuritySettings from './pages/super-admin/settings/SecuritySettings';
+import NotificationSettings from './pages/super-admin/settings/NotificationSettings';
+import PolicySettings from './pages/super-admin/settings/PolicySettings';
+import DatabaseMaintenance from './pages/super-admin/settings/DatabaseMaintenance';
 import DebugAuth from './pages/super-admin/DebugAuth';
 import SuperAdminSmsDebug from './pages/super-admin/SuperAdminSmsDebug';
 import DebugAPI from './pages/DebugAPI';
@@ -63,7 +71,7 @@ import './App.css';
  */
 
 function AdminRoute({ children }) {
-  const { isAuthenticated, loading, user } = useAdminAuth();
+  const { isAuthenticated, loading, user, impersonating } = useAdminAuth();
 
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen">טוען...</div>;
@@ -73,8 +81,8 @@ function AdminRoute({ children }) {
     return <Navigate to="/admin/login" replace />;
   }
 
-  // אם זה Super Admin, החזר ל-Super Admin dashboard
-  if (user?.is_super_admin) {
+  // Allow super admin through if impersonating a restaurant
+  if (user?.is_super_admin && !impersonating) {
     return <Navigate to="/super-admin/dashboard" replace />;
   }
 
@@ -364,10 +372,74 @@ function AppRoutes() {
         }
       />
       <Route
+        path="/super-admin/invoices"
+        element={
+          <SuperAdminRoute>
+            <SuperAdminInvoices />
+          </SuperAdminRoute>
+        }
+      />
+      <Route
         path="/super-admin/settings"
         element={
           <SuperAdminRoute>
             <SuperAdminSettings />
+          </SuperAdminRoute>
+        }
+      />
+      <Route
+        path="/super-admin/settings/regional"
+        element={
+          <SuperAdminRoute>
+            <RegionalSettings />
+          </SuperAdminRoute>
+        }
+      />
+      <Route
+        path="/super-admin/settings/billing"
+        element={
+          <SuperAdminRoute>
+            <BillingSettings />
+          </SuperAdminRoute>
+        }
+      />
+      <Route
+        path="/super-admin/settings/security"
+        element={
+          <SuperAdminRoute>
+            <SecuritySettings />
+          </SuperAdminRoute>
+        }
+      />
+      <Route
+        path="/super-admin/settings/notifications"
+        element={
+          <SuperAdminRoute>
+            <NotificationSettings />
+          </SuperAdminRoute>
+        }
+      />
+      <Route
+        path="/super-admin/settings/policies"
+        element={
+          <SuperAdminRoute>
+            <PolicySettings />
+          </SuperAdminRoute>
+        }
+      />
+      <Route
+        path="/super-admin/settings/database"
+        element={
+          <SuperAdminRoute>
+            <DatabaseMaintenance />
+          </SuperAdminRoute>
+        }
+      />
+      <Route
+        path="/super-admin/order-debug"
+        element={
+          <SuperAdminRoute>
+            <SuperAdminOrderDebug />
           </SuperAdminRoute>
         }
       />

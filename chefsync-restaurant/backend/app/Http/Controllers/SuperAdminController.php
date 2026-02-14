@@ -13,6 +13,9 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use App\Services\SmsService;
+use App\Models\RestaurantSubscription;
+use App\Models\RestaurantPayment;
+use App\Models\SystemError;
 
 /**
  * SuperAdminController - ניהול מערכת כללי
@@ -41,6 +44,25 @@ class SuperAdminController extends Controller
                 ->sum('total_amount'),
         ];
 
+        // SaaS KPIs
+        $mrr = 0;
+        $trialRestaurants = 0;
+        $suspendedRestaurants = 0;
+        $failedPaymentsRecent = 0;
+
+        try {
+            $mrr = RestaurantSubscription::where('status', 'active')->sum('monthly_fee');
+            $trialRestaurants = Restaurant::where('is_demo', true)->count();
+            $suspendedRestaurants = RestaurantSubscription::where('status', 'suspended')->count();
+            $failedPaymentsRecent = RestaurantPayment::where('status', 'failed')
+                ->where('created_at', '>=', now()->subDays(30))
+                ->count();
+        } catch (\Exception $e) {
+            // Tables might not exist yet
+        }
+
+        $recentSystemErrors = SystemError::unresolved()->recent(24)->count();
+
         // מסעדות לפי סטטוס
         $restaurantsByStatus = [
             'active' => Restaurant::where('is_open', true)->count(),
@@ -56,6 +78,13 @@ class SuperAdminController extends Controller
             'success' => true,
             'data' => [
                 'stats' => $stats,
+                'saas' => [
+                    'mrr' => $mrr,
+                    'trial_restaurants' => $trialRestaurants,
+                    'suspended_restaurants' => $suspendedRestaurants,
+                    'failed_payments_recent' => $failedPaymentsRecent,
+                    'system_errors_unresolved' => $recentSystemErrors,
+                ],
                 'restaurants_by_status' => $restaurantsByStatus,
                 'orders_by_status' => $ordersByStatus,
             ],
@@ -641,6 +670,35 @@ class SuperAdminController extends Controller
                 'http_status' => $providerDebug['http_status'] ?? null,
                 'provider_status' => $providerDebug['provider_status'] ?? null,
                 'provider_message' => $providerDebug['provider_message'] ?? null,
+            ],
+        ]);
+    }
+
+    /**
+     * Impersonation - כניסה כמסעדה (Context Switch)
+     */
+    public function impersonate(Request $request, $restaurantId)
+    {
+        $restaurant = Restaurant::findOrFail($restaurantId);
+
+        $owner = User::where('restaurant_id', $restaurant->id)
+            ->where('role', 'owner')
+            ->first();
+
+        Log::info('Super admin impersonation', [
+            'super_admin_id' => $request->user()->id,
+            'restaurant_id' => $restaurant->id,
+            'tenant_id' => $restaurant->tenant_id,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'tenant_id' => $restaurant->tenant_id,
+                'restaurant_id' => $restaurant->id,
+                'restaurant_name' => $restaurant->name,
+                'owner_name' => $owner?->name,
+                'owner_email' => $owner?->email,
             ],
         ]);
     }

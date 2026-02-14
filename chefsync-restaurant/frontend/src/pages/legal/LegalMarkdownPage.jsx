@@ -2,8 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import api from '../../services/apiClient';
 
-export default function LegalMarkdownPage({ title, markdownPath }) {
+export default function LegalMarkdownPage({ title, markdownPath, policyType }) {
     const [markdown, setMarkdown] = useState('');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -22,6 +23,20 @@ export default function LegalMarkdownPage({ title, markdownPath }) {
                 setLoading(true);
                 setError('');
 
+                // Try loading published policy from API first
+                if (policyType) {
+                    try {
+                        const res = await api.get(`/policies/${policyType}/published`);
+                        if (res.data.success && res.data.data?.content) {
+                            if (!cancelled) setMarkdown(res.data.data.content);
+                            return;
+                        }
+                    } catch {
+                        // No published version in DB, fall through to static file
+                    }
+                }
+
+                // Fallback: load from static markdown file
                 const res = await fetch(absolutePath, {
                     headers: { Accept: 'text/markdown, text/plain;q=0.9, */*;q=0.1' },
                     cache: 'no-cache',
@@ -42,12 +57,12 @@ export default function LegalMarkdownPage({ title, markdownPath }) {
             }
         }
 
-        if (absolutePath) load();
+        if (policyType || absolutePath) load();
 
         return () => {
             cancelled = true;
         };
-    }, [absolutePath]);
+    }, [absolutePath, policyType]);
 
     return (
         <div className="min-h-screen bg-gray-50" dir="rtl">

@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { FaTimes, FaMinus, FaPlus, FaTrash, FaPaperPlane } from 'react-icons/fa';
+import { FaTimes, FaMinus, FaPlus, FaTrash, FaPaperPlane, FaMoneyBillWave, FaCreditCard, FaCashRegister } from 'react-icons/fa';
 
-export default function KioskCart({ items, totalPrice, requireName, onUpdateQty, onRemove, onSubmit, onClose, submitting }) {
+export default function KioskCart({ items, totalPrice, requireName, onUpdateQty, onRemove, onSubmit, onClose, submitting, acceptedPaymentMethods }) {
     const [customerName, setCustomerName] = useState('');
-
     const [nameError, setNameError] = useState(false);
+    const [selectedPayment, setSelectedPayment] = useState('cash');
+
+    const hasCreditOption = (acceptedPaymentMethods || []).includes('credit_card');
 
     const handleSubmit = () => {
         if (!customerName.trim()) {
@@ -12,7 +14,7 @@ export default function KioskCart({ items, totalPrice, requireName, onUpdateQty,
             return;
         }
         setNameError(false);
-        onSubmit(customerName.trim());
+        onSubmit(customerName.trim(), selectedPayment);
     };
 
     return (
@@ -99,6 +101,43 @@ export default function KioskCart({ items, totalPrice, requireName, onUpdateQty,
                             )}
                         </div>
                     )}
+
+                    {/* Payment method selection — pay at register */}
+                    {items.length > 0 && (
+                        <div className="mt-4">
+                            <div className="flex items-center gap-2 mb-3">
+                                <FaCashRegister className="text-gray-600" size={16} />
+                                <label className="text-sm font-black text-gray-700">תשלום בקופה</label>
+                            </div>
+                            <div className={`grid ${hasCreditOption ? 'grid-cols-2' : 'grid-cols-1'} gap-2`}>
+                                <button
+                                    onClick={() => setSelectedPayment('cash')}
+                                    className={`flex flex-col items-center gap-2 p-3 sm:p-4 rounded-xl border-2 transition-all active:scale-95 ${
+                                        selectedPayment === 'cash'
+                                            ? 'border-amber-500 bg-amber-50 text-amber-700 shadow-md shadow-amber-500/10'
+                                            : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300 hover:bg-gray-50'
+                                    }`}
+                                >
+                                    <FaMoneyBillWave size={22} />
+                                    <span className="text-xs sm:text-sm font-bold text-center leading-tight">מזומן</span>
+                                </button>
+                                {hasCreditOption && (
+                                    <button
+                                        onClick={() => setSelectedPayment('credit_card')}
+                                        className={`flex flex-col items-center gap-2 p-3 sm:p-4 rounded-xl border-2 transition-all active:scale-95 ${
+                                            selectedPayment === 'credit_card'
+                                                ? 'border-amber-500 bg-amber-50 text-amber-700 shadow-md shadow-amber-500/10'
+                                                : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300 hover:bg-gray-50'
+                                        }`}
+                                    >
+                                        <FaCreditCard size={22} />
+                                        <span className="text-xs sm:text-sm font-bold text-center leading-tight">אשראי</span>
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
                 </div>
 
                 {/* Footer */}
@@ -122,9 +161,6 @@ export default function KioskCart({ items, totalPrice, requireName, onUpdateQty,
                                 </>
                             )}
                         </button>
-                        <p className="text-center text-xs text-gray-400 font-medium">
-                            התשלום יתבצע בקופה
-                        </p>
                     </div>
                 )}
             </div>

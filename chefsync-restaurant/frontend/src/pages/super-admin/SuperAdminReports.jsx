@@ -14,7 +14,8 @@ import {
     FaCheckCircle,
     FaExclamationCircle,
     FaCoins,
-    FaChevronLeft
+    FaShoppingCart,
+    FaReceipt
 } from 'react-icons/fa';
 
 export default function SuperAdminReports() {
@@ -60,14 +61,40 @@ export default function SuperAdminReports() {
     const totals = useMemo(() => {
         const monthly = filteredRestaurants.reduce((sum, r) => sum + Number(r.monthly_fee || 0), 0);
         const outstanding = filteredRestaurants.reduce((sum, r) => sum + Number(r.outstanding_amount || 0), 0);
-        const paidYtd = filteredRestaurants.reduce((sum, r) => sum + Number(r.total_paid_ytd || 0), 0);
-        return { monthly, outstanding, paidYtd };
+        const orderRevenue = filteredRestaurants.reduce((sum, r) => sum + Number(r.order_revenue || 0), 0);
+        const totalOrders = filteredRestaurants.reduce((sum, r) => sum + Number(r.orders_count || 0), 0);
+        return { monthly, outstanding, orderRevenue, totalOrders };
     }, [filteredRestaurants]);
 
     const formatDate = (value) => {
         if (!value) return '—';
         const d = new Date(value);
         return isNaN(d.getTime()) ? '—' : d.toLocaleDateString('he-IL');
+    };
+
+    const StatusBadge = ({ status }) => {
+        const styles = {
+            active: 'bg-green-100 text-green-700 border-green-200',
+            trial: 'bg-blue-100 text-blue-700 border-blue-200',
+            suspended: 'bg-orange-100 text-orange-700 border-orange-200',
+            cancelled: 'bg-red-100 text-red-700 border-red-200',
+            inactive: 'bg-gray-100 text-gray-500 border-gray-200',
+        };
+        const labels = {
+            active: 'פעילה',
+            trial: 'ניסיון',
+            suspended: 'מושהית',
+            cancelled: 'בוטלה',
+            inactive: 'לא פעילה',
+        };
+        const s = status || 'inactive';
+        return (
+            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase border ${styles[s] || styles.inactive}`}>
+                {s === 'active' && <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />}
+                {s === 'trial' && <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />}
+                {labels[s] || s}
+            </span>
+        );
     };
 
     const StatCard = ({ title, value, subtitle, accent = 'blue', icon }) => {
@@ -77,6 +104,7 @@ export default function SuperAdminReports() {
             purple: 'text-purple-600 bg-purple-50/50 border-purple-100',
             blue: 'text-blue-600 bg-blue-50/50 border-blue-100',
             brand: 'text-brand-primary bg-brand-primary/5 border-brand-primary/10',
+            amber: 'text-amber-600 bg-amber-50/50 border-amber-100',
         };
         const iconClasses = {
             orange: 'bg-orange-100 text-orange-500',
@@ -84,6 +112,7 @@ export default function SuperAdminReports() {
             purple: 'bg-purple-100 text-purple-500',
             blue: 'bg-blue-100 text-blue-500',
             brand: 'bg-brand-primary/10 text-brand-primary',
+            amber: 'bg-amber-100 text-amber-500',
         };
 
         return (
@@ -113,7 +142,7 @@ export default function SuperAdminReports() {
                             </div>
                             דוחות פיננסיים
                         </h1>
-                        <p className="text-sm text-gray-500 mt-1">מעקב תשלומים, הכנסות וחובות מסעדות</p>
+                        <p className="text-sm text-gray-500 mt-1">מעקב תשלומים, הכנסות והזמנות מסעדות</p>
                     </div>
                     <button
                         onClick={fetchData}
@@ -126,36 +155,64 @@ export default function SuperAdminReports() {
                 </div>
 
                 {summary && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                        <StatCard
-                            title="חיוב חודשי צפוי"
-                            value={`₪${Number(summary.monthly_expected || 0).toLocaleString()}`}
-                            subtitle="כל המסעדות הפעילות"
-                            accent="blue"
-                            icon={<FaCalendarAlt size={18} />}
-                        />
-                        <StatCard
-                            title="שולם החודש"
-                            value={`₪${Number(summary.paid_this_month || 0).toLocaleString()}`}
-                            subtitle="תשלומים שנקלטו"
-                            accent="green"
-                            icon={<FaCheckCircle size={18} />}
-                        />
-                        <StatCard
-                            title="חוב פתוח"
-                            value={`₪${Number(summary.outstanding || 0).toLocaleString()}`}
-                            subtitle="סך הכל ממתין"
-                            accent="orange"
-                            icon={<FaExclamationCircle size={18} />}
-                        />
-                        <StatCard
-                            title="מסעדות במערכת"
-                            value={summary.total_restaurants}
-                            subtitle="סה״כ רשומות"
-                            accent="purple"
-                            icon={<FaStore size={18} />}
-                        />
-                    </div>
+                    <>
+                        {/* Billing Stats Row */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                            <StatCard
+                                title="חיוב חודשי צפוי"
+                                value={`₪${Number(summary.monthly_expected || 0).toLocaleString()}`}
+                                subtitle={`${summary.active_restaurants || 0} מסעדות פעילות`}
+                                accent="blue"
+                                icon={<FaCalendarAlt size={18} />}
+                            />
+                            <StatCard
+                                title="שולם החודש"
+                                value={`₪${Number(summary.paid_this_month || 0).toLocaleString()}`}
+                                subtitle="תשלומים שנקלטו"
+                                accent="green"
+                                icon={<FaCheckCircle size={18} />}
+                            />
+                            <StatCard
+                                title="חוב פתוח"
+                                value={`₪${Number(summary.outstanding || 0).toLocaleString()}`}
+                                subtitle="סך הכל ממתין"
+                                accent="orange"
+                                icon={<FaExclamationCircle size={18} />}
+                            />
+                            <StatCard
+                                title="מסעדות במערכת"
+                                value={summary.total_restaurants || 0}
+                                subtitle={`${summary.active_restaurants || 0} פעילות • ${summary.trial_restaurants || 0} ניסיון`}
+                                accent="purple"
+                                icon={<FaStore size={18} />}
+                            />
+                        </div>
+
+                        {/* Order Revenue Stats Row */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+                            <StatCard
+                                title="הכנסות הזמנות החודש"
+                                value={`₪${Number(summary.order_revenue_month || 0).toLocaleString()}`}
+                                subtitle={`${summary.orders_this_month || 0} הזמנות החודש`}
+                                accent="brand"
+                                icon={<FaShoppingCart size={18} />}
+                            />
+                            <StatCard
+                                title="הכנסות הזמנות כולל"
+                                value={`₪${Number(summary.order_revenue_total || 0).toLocaleString()}`}
+                                subtitle="סך הכל מתחילת הפעילות"
+                                accent="amber"
+                                icon={<FaReceipt size={18} />}
+                            />
+                            <StatCard
+                                title="ממוצע למסעדה"
+                                value={`₪${summary.active_restaurants > 0 ? Math.round(Number(summary.order_revenue_total || 0) / summary.active_restaurants).toLocaleString() : '0'}`}
+                                subtitle="הכנסות הזמנות ממוצע"
+                                accent="green"
+                                icon={<FaCoins size={18} />}
+                            />
+                        </div>
+                    </>
                 )}
 
                 <div className="mb-6 flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between">
@@ -172,7 +229,8 @@ export default function SuperAdminReports() {
                     <div className="flex items-center gap-4 text-xs font-bold text-gray-400 bg-gray-50 px-4 py-2.5 rounded-xl border border-gray-100 overflow-x-auto whitespace-nowrap">
                         <span className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-blue-400" /> חודשי: <span className="text-gray-900 font-black">₪{totals.monthly.toLocaleString()}</span></span>
                         <span className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-orange-400" /> חוב: <span className="text-gray-900 font-black">₪{totals.outstanding.toLocaleString()}</span></span>
-                        <span className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-green-400" /> השנה: <span className="text-gray-900 font-black">₪{totals.paidYtd.toLocaleString()}</span></span>
+                        <span className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-green-400" /> הכנסות: <span className="text-gray-900 font-black">₪{totals.orderRevenue.toLocaleString()}</span></span>
+                        <span className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-purple-400" /> הזמנות: <span className="text-gray-900 font-black">{totals.totalOrders.toLocaleString()}</span></span>
                     </div>
                 </div>
 
@@ -198,8 +256,9 @@ export default function SuperAdminReports() {
                                         <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest hidden md:table-cell">TENANT</th>
                                         <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-left">חיוב חודשי</th>
                                         <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-left">חוב פתוח</th>
-                                        <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-center hidden lg:table-cell">תשלום אחרון</th>
-                                        <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-center hidden xl:table-cell">שולם YTD</th>
+                                        <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-center hidden lg:table-cell">הזמנות</th>
+                                        <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-center hidden lg:table-cell">הכנסות הזמנות</th>
+                                        <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-center hidden xl:table-cell">תשלום אחרון</th>
                                         <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-center">סטטוס</th>
                                     </tr>
                                 </thead>
@@ -211,7 +270,12 @@ export default function SuperAdminReports() {
                                                     <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400 group-hover:bg-brand-primary/10 group-hover:text-brand-primary transition-colors">
                                                         <FaStore size={14} />
                                                     </div>
-                                                    <span className="text-sm font-black text-gray-900">{r.name}</span>
+                                                    <div>
+                                                        <span className="text-sm font-black text-gray-900 block">{r.name}</span>
+                                                        {r.tier && (
+                                                            <span className="text-[10px] text-gray-400 font-bold">{r.tier === 'basic' ? 'Basic' : 'Pro'}</span>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 hidden md:table-cell">
@@ -228,6 +292,16 @@ export default function SuperAdminReports() {
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4 text-center hidden lg:table-cell">
+                                                <span className="text-sm font-bold text-gray-700">
+                                                    {Number(r.orders_count || 0).toLocaleString()}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 text-center hidden lg:table-cell">
+                                                <span className="text-sm font-bold text-brand-primary bg-brand-primary/5 px-3 py-1 rounded-full border border-brand-primary/10">
+                                                    ₪{Number(r.order_revenue || 0).toLocaleString()}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 text-center hidden xl:table-cell">
                                                 <div className="flex flex-col items-center">
                                                     <span className="text-xs font-bold text-gray-700">{formatDate(r.last_paid_at)}</span>
                                                     <span className="text-[10px] font-black text-gray-400 uppercase mt-0.5 flex items-center gap-1">
@@ -235,23 +309,9 @@ export default function SuperAdminReports() {
                                                     </span>
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-4 text-center hidden xl:table-cell">
-                                                <span className="text-sm font-bold text-green-600 bg-green-50 px-3 py-1 rounded-full border border-green-100">
-                                                    ₪{Number(r.total_paid_ytd || 0).toLocaleString()}
-                                                </span>
-                                            </td>
                                             <td className="px-6 py-4 text-center">
                                                 <div className="flex justify-center">
-                                                    {r.billing_status === 'active' ? (
-                                                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase bg-green-100 text-green-700 border border-green-200">
-                                                            <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                                                            פעילה
-                                                        </span>
-                                                    ) : (
-                                                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase bg-orange-100 text-orange-700 border border-orange-200">
-                                                            מושהית
-                                                        </span>
-                                                    )}
+                                                    <StatusBadge status={r.billing_status} />
                                                 </div>
                                             </td>
                                         </tr>
@@ -265,7 +325,3 @@ export default function SuperAdminReports() {
         </SuperAdminLayout>
     );
 }
-
-// StatCard helper removed as it's now internal to main component for cleaner code or I can keep it outside.
-// I'll leave the code balanced.
-

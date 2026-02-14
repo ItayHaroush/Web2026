@@ -1,7 +1,7 @@
 import { usePromotions } from '../context/PromotionContext';
-import { FaGift, FaCheck, FaExchangeAlt } from 'react-icons/fa';
+import { FaGift, FaCheck, FaExchangeAlt, FaPlus } from 'react-icons/fa';
 
-export default function PromotionProgress({ onSelectGift }) {
+export default function PromotionProgress({ onSelectGift, onNavigateToCategory }) {
     const { eligiblePromotions, selectedGifts } = usePromotions();
 
     if (!eligiblePromotions || eligiblePromotions.length === 0) return null;
@@ -54,6 +54,22 @@ export default function PromotionProgress({ onSelectGift }) {
                                 );
                             })}
                         </div>
+
+                        {/* CTA for unmet rules — navigate to add items */}
+                        {!met && onNavigateToCategory && (
+                            <div className="mt-2 flex flex-wrap gap-2">
+                                {(rules || []).filter(r => r.current < r.required).map((rule, i) => (
+                                    <button
+                                        key={i}
+                                        onClick={() => onNavigateToCategory(rule.category_id)}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-primary/10 hover:bg-brand-primary/20 text-brand-primary rounded-lg text-xs font-bold transition-colors"
+                                    >
+                                        <FaPlus size={10} />
+                                        <span>הוסף עוד {rule.required - rule.current} {rule.category_name}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
 
                         {/* CTA when met */}
                         {met && onSelectGift && (() => {

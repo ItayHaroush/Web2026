@@ -8,6 +8,12 @@ export function AdminAuthProvider({ children }) {
     const [loading, setLoading] = useState(true);
     const [token, setToken] = useState(localStorage.getItem('authToken') || localStorage.getItem('admin_token'));
 
+    // Impersonation state
+    const [impersonating, setImpersonating] = useState(() => {
+        const saved = sessionStorage.getItem('impersonation');
+        return saved ? JSON.parse(saved) : null;
+    });
+
     useEffect(() => {
         if (token) {
             checkAuth();
@@ -91,15 +97,40 @@ export function AdminAuthProvider({ children }) {
         }
     };
 
-    const isOwner = () => user?.role === 'owner';
-    const isManager = () => ['owner', 'manager'].includes(user?.role);
-    const isEmployee = () => ['owner', 'manager', 'employee'].includes(user?.role);
+    const isOwner = () => user?.role === 'owner' || (user?.is_super_admin && !!impersonating);
+    const isManager = () => ['owner', 'manager'].includes(user?.role) || (user?.is_super_admin && !!impersonating);
+    const isEmployee = () => ['owner', 'manager', 'employee'].includes(user?.role) || (user?.is_super_admin && !!impersonating);
     const isDelivery = () => user?.role === 'delivery';
     const isSuperAdmin = () => user?.is_super_admin === true;
 
     const getAuthHeaders = () => ({
         Authorization: `Bearer ${token}`
     });
+
+    // Impersonation methods
+    const startImpersonation = (restaurantId, tenantId, restaurantName) => {
+        // Save original tenantId before switching
+        const originalTenantId = localStorage.getItem('tenantId');
+        const impersonationData = { restaurantId, tenantId, restaurantName, originalTenantId };
+
+        sessionStorage.setItem('impersonation', JSON.stringify(impersonationData));
+        localStorage.setItem('tenantId', tenantId);
+        setImpersonating(impersonationData);
+    };
+
+    const stopImpersonation = () => {
+        const saved = sessionStorage.getItem('impersonation');
+        if (saved) {
+            const data = JSON.parse(saved);
+            if (data.originalTenantId) {
+                localStorage.setItem('tenantId', data.originalTenantId);
+            } else {
+                localStorage.removeItem('tenantId');
+            }
+        }
+        sessionStorage.removeItem('impersonation');
+        setImpersonating(null);
+    };
 
     const value = {
         user,
@@ -115,6 +146,9 @@ export function AdminAuthProvider({ children }) {
         isSuperAdmin,
         getAuthHeaders,
         isAuthenticated: !!user,
+        impersonating,
+        startImpersonation,
+        stopImpersonation,
     };
 
     return (

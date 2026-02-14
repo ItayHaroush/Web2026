@@ -7,6 +7,7 @@ import { PRODUCT_NAME } from '../constants/brand';
 import DashboardSidebar from '../components/admin/DashboardSidebar';
 import DashboardHeader from '../components/admin/DashboardHeader';
 import FloatingRestaurantAssistant from '../components/admin/FloatingRestaurantAssistant';
+import ImpersonationBanner from '../components/admin/ImpersonationBanner';
 import {
     FaChartPie,
     FaClipboardList,
@@ -34,7 +35,7 @@ export default function AdminLayout({ children }) {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [subscriptionData, setSubscriptionData] = useState(null);
-    const { user, logout, isOwner, isManager, getAuthHeaders } = useAdminAuth();
+    const { user, logout, isOwner, isManager, getAuthHeaders, impersonating } = useAdminAuth();
     const { restaurantStatus, setRestaurantStatus } = useRestaurantStatus();
     const location = useLocation();
     const navigate = useNavigate();
@@ -206,46 +207,51 @@ export default function AdminLayout({ children }) {
     );
 
     return (
-        <div className="min-h-screen bg-gray-50 flex w-full overflow-x-hidden" dir="rtl">
-            <DashboardSidebar
-                isOpen={sidebarOpen}
-                isCollapsed={isCollapsed}
-                toggleSidebar={() => setSidebarOpen(!sidebarOpen)}
-                toggleCollapse={() => setIsCollapsed(!isCollapsed)}
-                menuItems={menuItems}
-                onLogout={handleLogout}
-                title={PRODUCT_NAME}
-            />
-
-            <div className={`flex-1 min-w-0 flex flex-col min-h-screen transition-all duration-300 ${isCollapsed ? 'lg:mr-20' : 'lg:mr-72'}`}>
-                <DashboardHeader
-                    toggleSidebar={() => setSidebarOpen(!sidebarOpen)}
-                    user={user}
-                    title={menuItems.find(item => item.path === location.pathname)?.label || 'ניהול מסעדה'}
+        <div className="min-h-screen bg-gray-50 flex flex-col w-full overflow-x-hidden" dir="rtl">
+            <ImpersonationBanner />
+            <div className="flex flex-1 min-h-0">
+                <DashboardSidebar
+                    isOpen={sidebarOpen}
                     isCollapsed={isCollapsed}
-                    endContent={statusBadge}
-                    notificationCount={restaurantStatus.active_orders_count || 0} // ✅ העברת המונה להדר
+                    toggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+                    toggleCollapse={() => setIsCollapsed(!isCollapsed)}
+                    menuItems={menuItems}
+                    onLogout={handleLogout}
+                    title={PRODUCT_NAME}
+                    impersonating={!!impersonating}
                 />
 
-                <main className="flex-1 p-4 lg:p-8 mt-20 overflow-x-hidden">
-                    {restaurantStatus.is_approved === false && (
-                        <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-800 shadow-sm animate-pulse-slow">
-                            <div className="flex items-start gap-3">
-                                <span className="text-xl">⏳</span>
-                                <div>
-                                    <p className="font-bold">ממתין לאישור מנהל מערכת</p>
-                                    <p className="text-sm">בינתיים ניתן לעדכן פרטי מסעדה, אבל פעולות פתיחה/סגירה והזמנות מנוטרלות עד לאישור.</p>
+                <div className={`flex-1 min-w-0 flex flex-col min-h-screen transition-all duration-300 ${isCollapsed ? 'lg:mr-20' : 'lg:mr-72'}`}>
+                    <DashboardHeader
+                        toggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+                        user={user}
+                        title={menuItems.find(item => item.path === location.pathname)?.label || 'ניהול מסעדה'}
+                        isCollapsed={isCollapsed}
+                        endContent={statusBadge}
+                        notificationCount={restaurantStatus.active_orders_count || 0}
+                        impersonating={!!impersonating}
+                    />
+
+                    <main className={`flex-1 p-4 lg:p-8 overflow-x-hidden ${impersonating ? 'mt-[7.5rem]' : 'mt-20'}`}>
+                        {restaurantStatus.is_approved === false && (
+                            <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-800 shadow-sm animate-pulse-slow">
+                                <div className="flex items-start gap-3">
+                                    <span className="text-xl">⏳</span>
+                                    <div>
+                                        <p className="font-bold">ממתין לאישור מנהל מערכת</p>
+                                        <p className="text-sm">בינתיים ניתן לעדכן פרטי מסעדה, אבל פעולות פתיחה/סגירה והזמנות מנוטרלות עד לאישור.</p>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    )}
-                    {subscriptionData && <TrialBanner {...subscriptionData} navigate={navigate} />}
-                    {children}
-                </main>
-            </div>
+                        )}
+                        {subscriptionData && <TrialBanner {...subscriptionData} navigate={navigate} />}
+                        {children}
+                    </main>
+                </div>
 
-            {/* סוכן AI ספציפי למסעדה - עם מכסת קרדיטים */}
-            <FloatingRestaurantAssistant isSidebarOpen={sidebarOpen} />
+                {/* סוכן AI ספציפי למסעדה - עם מכסת קרדיטים */}
+                <FloatingRestaurantAssistant isSidebarOpen={sidebarOpen} />
+            </div>
         </div>
     );
 }

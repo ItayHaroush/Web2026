@@ -145,13 +145,11 @@ export function PromotionProvider({ children }) {
             const promoIdStr = String(promo.promotion_id);
             const gifts = selectedGifts[promoIdStr] || [];
 
-            // הלקוח לא בחר/קיבל מתנה - לא כולל את המבצע
-            if (gifts.length === 0) continue;
-
             const allSpecific = (promo.rewards || []).every(r =>
                 r.reward_type !== 'free_item' || r.reward_menu_item_id
             );
 
+            // תמיד כולל מבצע שעמד בתנאים — הבקאנד מטפל בפריטים ספציפיים והנחות אוטומטית
             applied.push({
                 promotion_id: promo.promotion_id,
                 gift_items: allSpecific ? [] : gifts.map(menuItemId => ({ menu_item_id: menuItemId })),

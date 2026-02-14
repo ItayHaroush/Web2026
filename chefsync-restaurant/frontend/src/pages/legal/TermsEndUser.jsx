@@ -5,6 +5,7 @@ export default function TermsEndUser() {
         <LegalMarkdownPage
             title="תנאי שימוש – משתמשי קצה"
             markdownPath="/legal/terms-end-user.md"
+            policyType="terms_end_user"
         />
     );
 }

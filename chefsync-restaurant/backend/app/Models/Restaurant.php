@@ -167,6 +167,11 @@ class Restaurant extends Model
         return $this->hasMany(RestaurantPayment::class);
     }
 
+    public function monthlyInvoices(): HasMany
+    {
+        return $this->hasMany(MonthlyInvoice::class);
+    }
+
     /**
      * מסכי תצוגה של המסעדה
      */

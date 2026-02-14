@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import SuperAdminLayout from '../../layouts/SuperAdminLayout';
 import api from '../../services/apiClient';
@@ -26,11 +27,15 @@ import {
     FaFilter,
     FaEye,
     FaPowerOff,
-    FaCog
+    FaCog,
+    FaUserSecret,
+    FaExclamationTriangle,
+    FaCreditCard
 } from 'react-icons/fa';
 
 export default function SuperAdminDashboard() {
-    const { getAuthHeaders } = useAdminAuth();
+    const { getAuthHeaders, startImpersonation } = useAdminAuth();
+    const navigate = useNavigate();
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
     const [restaurants, setRestaurants] = useState([]);
@@ -156,6 +161,24 @@ export default function SuperAdminDashboard() {
         }
     };
 
+    const handleImpersonate = async (restaurant) => {
+        try {
+            const response = await api.post(
+                `/super-admin/impersonate/${restaurant.id}`,
+                {},
+                { headers: getAuthHeaders() }
+            );
+            if (response.data.success) {
+                const { tenant_id, restaurant_id, restaurant_name } = response.data.data;
+                startImpersonation(restaurant_id, tenant_id, restaurant_name);
+                toast.success(`נכנס כמסעדה: ${restaurant_name}`);
+                navigate('/admin/dashboard');
+            }
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'שגיאה בכניסה כמסעדה');
+        }
+    };
+
 
     const StatCard = ({ label, value, subtext, icon, color }) => {
         const colorClasses = {
@@ -241,6 +264,40 @@ export default function SuperAdminDashboard() {
                             subtext="מחזור עסקאות"
                             icon={<FaCoins size={18} />}
                             color="orange"
+                        />
+                    </div>
+                )}
+
+                {/* SaaS KPIs */}
+                {stats?.saas && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                        <StatCard
+                            label="MRR"
+                            value={`₪${Number(stats.saas.mrr || 0).toLocaleString()}`}
+                            subtext="הכנסה חודשית חוזרת"
+                            icon={<FaCreditCard size={18} />}
+                            color="green"
+                        />
+                        <StatCard
+                            label="תקופת ניסיון"
+                            value={stats.saas.trial_restaurants || 0}
+                            subtext="מסעדות בניסיון"
+                            icon={<FaMask size={18} />}
+                            color="orange"
+                        />
+                        <StatCard
+                            label="מושעים"
+                            value={stats.saas.suspended_restaurants || 0}
+                            subtext="מסעדות מושעות"
+                            icon={<FaBan size={18} />}
+                            color="purple"
+                        />
+                        <StatCard
+                            label="שגיאות מערכת"
+                            value={stats.saas.system_errors_unresolved || 0}
+                            subtext="שגיאות פתוחות (24 שעות)"
+                            icon={<FaExclamationTriangle size={18} />}
+                            color="blue"
                         />
                     </div>
                 )}
@@ -417,6 +474,14 @@ export default function SuperAdminDashboard() {
                                                         בטל אישור
                                                     </button>
                                                 )}
+
+                                                <button
+                                                    onClick={() => handleImpersonate(restaurant)}
+                                                    title="כניסה כמסעדה"
+                                                    className="p-2.5 bg-purple-50 text-purple-600 border border-purple-100 rounded-xl hover:bg-purple-600 hover:text-white transition-all"
+                                                >
+                                                    <FaUserSecret size={16} />
+                                                </button>
 
                                                 <button
                                                     onClick={() => toggleRestaurant(restaurant.id)}

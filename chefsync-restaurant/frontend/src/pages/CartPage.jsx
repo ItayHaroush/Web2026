@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import PhoneVerificationModal from '../components/PhoneVerificationModal';
 import LocationPickerModal from '../components/LocationPickerModal';
 import OrderConfirmationSheet from '../components/OrderConfirmationSheet';
@@ -8,6 +8,7 @@ import { useCart } from '../context/CartContext';
 import { CustomerLayout } from '../layouts/CustomerLayout';
 import { FaMask, FaBoxOpen, FaStickyNote, FaTimes, FaShoppingCart, FaUser, FaPhone, FaMapMarkerAlt, FaMoneyBillWave, FaCreditCard, FaTruck, FaStore, FaHome, FaEdit, FaComment, FaExclamationTriangle, FaGift, FaSearch } from 'react-icons/fa';
 import orderService from '../services/orderService';
+import menuService from '../services/menuService';
 import { UI_TEXT } from '../constants/ui';
 import DeliveryDetailsModal from '../components/DeliveryDetailsModal';
 import { isValidIsraeliMobile } from '../utils/phone';
@@ -15,6 +16,8 @@ import apiClient from '../services/apiClient';
 import { usePromotions } from '../context/PromotionContext';
 import PromotionProgress from '../components/PromotionProgress';
 import GiftSelectionModal from '../components/GiftSelectionModal';
+import MenuItemModal from '../components/MenuItemModal';
+import { resolveAssetUrl } from '../utils/assets';
 
 /**
  * עמוד סל קניות
@@ -24,7 +27,7 @@ import GiftSelectionModal from '../components/GiftSelectionModal';
 export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
     const navigate = useNavigate();
     const { tenantId } = useAuth();
-    const { cartItems, removeFromCart, updateQuantity, getTotal, clearCart, customerInfo, setCustomerInfo, phoneVerified, setPhoneVerified } = useCart();
+    const { cartItems, removeFromCart, updateQuantity, getTotal, clearCart, customerInfo, setCustomerInfo, phoneVerified, setPhoneVerified, addToCart } = useCart();
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState(null);
     const [showPhoneModal, setShowPhoneModal] = useState(false);
@@ -43,6 +46,29 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
     const [tempNotes, setTempNotes] = useState('');
     const [giftPromotion, setGiftPromotion] = useState(null);
     const { getAppliedPromotions, eligiblePromotions, selectedGifts } = usePromotions();
+    const [menuCategories, setMenuCategories] = useState([]);
+    const [promoCategoryModal, setPromoCategoryModal] = useState(null);
+    const [promoMenuItem, setPromoMenuItem] = useState(null);
+
+    // Fetch menu for category quick-add modal
+    useEffect(() => {
+        menuService.getMenu()
+            .then(data => setMenuCategories(data || []))
+            .catch(() => {});
+    }, []);
+
+    const handlePromoCategoryAdd = (item) => {
+        const category = menuCategories.find(cat => (cat.items || []).some(i => i.id === item.id));
+        addToCart({
+            menuItemId: item.id,
+            categoryId: category?.id,
+            name: item.name,
+            price: item.price,
+            variant: null,
+            addons: [],
+            qty: 1,
+        });
+    };
 
     // Fetch restaurant info
     React.useEffect(() => {
@@ -266,13 +292,13 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
     const selectedGiftItems = [];
     for (const promo of metPromotions) {
         const promoGifts = selectedGifts[String(promo.promotion_id)] || [];
-        if (promoGifts.length === 0) continue;
 
         const allSpecific = (promo.rewards || []).every(r =>
             r.reward_type !== 'free_item' || r.reward_menu_item_id
         );
 
         if (allSpecific) {
+            // פריטים ספציפיים — תמיד מוצגים כשעמד בתנאים (ללא צורך בבחירה ידנית)
             (promo.rewards || []).filter(r => r.reward_type === 'free_item').forEach(r => {
                 const qty = r.max_selectable || 1;
                 for (let i = 0; i < qty; i++) {
@@ -282,7 +308,8 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                     });
                 }
             });
-        } else {
+        } else if (promoGifts.length > 0) {
+            // מתנות שנבחרו ידנית מקטגוריה
             promoGifts.forEach(itemId => {
                 selectedGiftItems.push({ menu_item_id: itemId, name: `מתנה ממבצע: ${promo.name}` });
             });
@@ -481,7 +508,16 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                 </div>
 
                 {/* מבצעים - התקדמות ובחירת מתנה */}
-                <PromotionProgress onSelectGift={(promo) => setGiftPromotion(promo)} />
+                <PromotionProgress
+                    onSelectGift={(promo) => setGiftPromotion(promo)}
+                    onNavigateToCategory={(categoryId) => {
+                        const category = menuCategories.find(cat => cat.id === categoryId);
+                        setPromoCategoryModal({
+                            categoryId,
+                            categoryName: category?.name || '',
+                        });
+                    }}
+                />
                 {giftPromotion && (
                     <GiftSelectionModal
                         promotion={giftPromotion}
@@ -902,6 +938,77 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                             </div>
                         </div>
                     </div>
+                )}
+
+                {/* מודל הוספה מהירה מקטגוריה (מבצעים) */}
+                {promoCategoryModal && (
+                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                        <div className="bg-white dark:bg-brand-dark-surface w-full max-w-lg rounded-2xl max-h-[85vh] flex flex-col overflow-hidden shadow-2xl">
+                            <div className="flex items-center justify-between p-4 sm:p-5 border-b border-gray-100 dark:border-brand-dark-border shrink-0">
+                                <h2 className="text-lg sm:text-xl font-black text-gray-900 dark:text-brand-dark-text">{promoCategoryModal.categoryName}</h2>
+                                <button
+                                    onClick={() => setPromoCategoryModal(null)}
+                                    className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-all"
+                                >
+                                    <FaTimes size={18} />
+                                </button>
+                            </div>
+                            <div className="flex-1 overflow-y-auto p-4">
+                                {menuCategories.length === 0 ? (
+                                    <div className="flex items-center justify-center py-12">
+                                        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-brand-primary"></div>
+                                    </div>
+                                ) : (() => {
+                                    const categoryItems = menuCategories
+                                        .flatMap(cat => (cat.items || []).map(item => ({ ...item, _catId: cat.id })))
+                                        .filter(item => String(item._catId) === String(promoCategoryModal.categoryId) && item.is_available !== false);
+                                    if (categoryItems.length === 0) {
+                                        return <div className="text-center py-12 text-gray-400 dark:text-brand-dark-muted font-bold">אין פריטים בקטגוריה זו</div>;
+                                    }
+                                    return (
+                                        <div className="grid grid-cols-2 gap-3">
+                                            {categoryItems.map(item => (
+                                                <button
+                                                    key={item.id}
+                                                    onClick={() => setPromoMenuItem(item)}
+                                                    className="bg-gray-50 dark:bg-brand-dark-border/50 rounded-xl border border-gray-100 dark:border-brand-dark-border overflow-hidden shadow-sm hover:shadow-lg hover:border-brand-primary/30 active:scale-[0.98] transition-all text-right"
+                                                >
+                                                    {item.image_url ? (
+                                                        <img src={resolveAssetUrl(item.image_url)} alt={item.name} className="w-full h-28 object-cover" />
+                                                    ) : (
+                                                        <div className="w-full h-28 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-brand-dark-border dark:to-brand-dark-bg flex items-center justify-center">
+                                                            <span className="text-3xl opacity-30">🍽</span>
+                                                        </div>
+                                                    )}
+                                                    <div className="p-3">
+                                                        <h3 className="font-black text-gray-900 dark:text-brand-dark-text text-sm truncate">{item.name}</h3>
+                                                        <div className="mt-1 font-black text-brand-primary text-base">
+                                                            {item.price?.toFixed(2)} ₪
+                                                        </div>
+                                                    </div>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    );
+                                })()}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* MenuItemModal for promo category items */}
+                {promoMenuItem && (
+                    <MenuItemModal
+                        item={promoMenuItem}
+                        isOpen={true}
+                        onClose={() => setPromoMenuItem(null)}
+                        onAdd={(itemData) => {
+                            addToCart(itemData);
+                            setPromoMenuItem(null);
+                            setPromoCategoryModal(null);
+                        }}
+                        isOrderingEnabled={true}
+                    />
                 )}
             </div>
         </CustomerLayout>

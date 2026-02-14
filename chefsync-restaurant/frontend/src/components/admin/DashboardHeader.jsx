@@ -8,15 +8,17 @@ const DashboardHeader = ({
     title,
     isCollapsed,
     endContent,
-    notificationCount = 0
+    notificationCount = 0,
+    impersonating = false
 }) => {
     const navigate = useNavigate();
 
     return (
         <header
             className={`
-                fixed top-0 left-0 right-0 h-20 bg-white/80 backdrop-blur-md shadow-sm z-30 transition-all duration-300
+                fixed left-0 right-0 h-20 bg-white/80 backdrop-blur-md shadow-sm z-30 transition-all duration-300
                 lg:right-72 ${isCollapsed ? 'lg:!right-20' : ''}
+                ${impersonating ? 'top-10' : 'top-0'}
             `}
         >
             <div className="h-full px-6 flex items-center justify-between">
