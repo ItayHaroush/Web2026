@@ -104,9 +104,9 @@ class TrialInfoMail extends Mailable
         if ($daysLeft <= 7) {
             $body .= EmailLayoutHelper::warningBox(
                 '<p style="margin: 0; font-size: 14px; color: #92400e; text-align: center;">'
-                . "<strong>נותרו לכם {$daysLeft} ימי ניסיון</strong><br>"
-                . '<span style="font-size: 12px;">לאחר תקופת הניסיון, יש להפעיל מנוי כדי להמשיך.</span>'
-                . '</p>'
+                    . "<strong>נותרו לכם {$daysLeft} ימי ניסיון</strong><br>"
+                    . '<span style="font-size: 12px;">לאחר תקופת הניסיון, יש להפעיל מנוי כדי להמשיך.</span>'
+                    . '</p>'
             );
         }
 

@@ -57,10 +57,10 @@ class WelcomeMail extends Mailable
         // פרטי חשבון
         $body .= EmailLayoutHelper::infoBox(
             EmailLayoutHelper::infoRow('שם מסעדה', $restaurantName)
-            . EmailLayoutHelper::infoRow('מזהה (Tenant)', $tenantId)
-            . EmailLayoutHelper::infoRow('סוג מנוי', $tier)
-            . EmailLayoutHelper::infoRow('תקופת ניסיון', "{$daysLeft} ימים (עד {$trialEnds})")
-            . EmailLayoutHelper::infoRow('אימייל', e($this->ownerEmail))
+                . EmailLayoutHelper::infoRow('מזהה (Tenant)', $tenantId)
+                . EmailLayoutHelper::infoRow('סוג מנוי', $tier)
+                . EmailLayoutHelper::infoRow('תקופת ניסיון', "{$daysLeft} ימים (עד {$trialEnds})")
+                . EmailLayoutHelper::infoRow('אימייל', e($this->ownerEmail))
         );
 
         // מה עכשיו?

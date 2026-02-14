@@ -395,7 +395,8 @@ class SuperAdminEmailController extends Controller
         $mrr = 0;
         try {
             $mrr = RestaurantSubscription::where('status', 'active')->sum('monthly_fee');
-        } catch (\Exception $e) {}
+        } catch (\Exception $e) {
+        }
 
         $invoicesSent = MonthlyInvoice::where('month', $month)->count();
         $invoicesPaid = MonthlyInvoice::where('month', $month)->where('status', 'paid')->count();

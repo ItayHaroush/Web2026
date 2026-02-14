@@ -47,11 +47,11 @@ class RestaurantApprovedMail extends Mailable
         // הודעת אישור
         $body .= EmailLayoutHelper::successBox(
             '<div style="text-align: center;">'
-            . '<p style="margin: 0; font-size: 20px; color: #166534; font-weight: bold;">המסעדה אושרה!</p>'
-            . '<p style="margin: 8px 0 0; font-size: 14px; color: #166534;">'
-            . "המסעדה <strong>\"{$restaurantName}\"</strong> אושרה בהצלחה על ידי צוות TakeEat."
-            . '</p>'
-            . '</div>'
+                . '<p style="margin: 0; font-size: 20px; color: #166534; font-weight: bold;">המסעדה אושרה!</p>'
+                . '<p style="margin: 8px 0 0; font-size: 14px; color: #166534;">'
+                . "המסעדה <strong>\"{$restaurantName}\"</strong> אושרה בהצלחה על ידי צוות TakeEat."
+                . '</p>'
+                . '</div>'
         );
 
         // הנחיות
