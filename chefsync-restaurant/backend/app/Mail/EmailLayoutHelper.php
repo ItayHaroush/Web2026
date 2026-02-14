@@ -10,16 +10,30 @@ namespace App\Mail;
  * - Responsive (מובייל + דסקטופ)
  * - צבע מותג: כתום #f97316
  * - Font: Arial, sans-serif
+ * - דומיין: chefsync.co.il
  */
 class EmailLayoutHelper
 {
+    /** כתובת הלוגו — מוגש מה-backend (storage) */
+    private static function logoUrl(): string
+    {
+        return rtrim(config('app.url', 'http://localhost:8000'), '/') . '/storage/email-logo.png';
+    }
+
+    /** כתובת בסיס האתר */
+    public static function siteUrl(string $path = ''): string
+    {
+        return rtrim(config('app.frontend_url', 'https://www.takeeat.co.il'), '/') . $path;
+    }
+
     /**
      * עוטף תוכן HTML ב-layout מלא של TakeEat
+     * @param string $contactEmail כתובת המייל לחזרה (support/billing/info)
      */
-    public static function wrap(string $bodyContent, string $preheader = ''): string
+    public static function wrap(string $bodyContent, string $preheader = '', string $contactEmail = 'support@chefsync.co.il'): string
     {
         $header = self::header();
-        $footer = self::footer();
+        $footer = self::footer($contactEmail);
         $preheaderHtml = $preheader
             ? '<div style="display:none;font-size:1px;color:#f9fafb;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">' . e($preheader) . '</div>'
             : '';
@@ -83,10 +97,13 @@ HTML;
      */
     private static function header(): string
     {
+        $logoUrl = self::logoUrl();
+
         return <<<HTML
         <tr>
-            <td style="background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); padding: 28px 32px; text-align: center;">
-                <h1 style="margin: 0; font-size: 28px; font-weight: bold; color: #ffffff; letter-spacing: 1px;">TakeEat</h1>
+            <td style="background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); padding: 24px 32px; text-align: center;">
+                <img src="{$logoUrl}" alt="TakeEat" width="52" height="52" style="display: block; margin: 0 auto 10px; border-radius: 12px;" />
+                <h1 style="margin: 0; font-size: 26px; font-weight: bold; color: #ffffff; letter-spacing: 1px;">TakeEat</h1>
                 <p style="margin: 6px 0 0; font-size: 13px; color: rgba(255,255,255,0.85);">פלטפורמת ההזמנות החכמה למסעדות</p>
             </td>
         </tr>
@@ -94,11 +111,16 @@ HTML;
     }
 
     /**
-     * Footer קבוע
+     * Footer עם כתובת חזרה רלוונטית
      */
-    private static function footer(): string
+    private static function footer(string $contactEmail = 'support@chefsync.co.il'): string
     {
         $year = date('Y');
+        $contactLabel = match ($contactEmail) {
+            'billing@chefsync.co.il' => 'חיוב ותשלומים',
+            'info@chefsync.co.il' => 'מידע כללי',
+            default => 'תמיכה',
+        };
 
         return <<<HTML
         <tr>
@@ -108,7 +130,7 @@ HTML;
                         <td style="border-top: 1px solid #e5e7eb; padding: 20px 0; text-align: center;">
                             <p style="margin: 0 0 4px; font-size: 12px; color: #9ca3af; font-weight: bold;">TakeEat Platform</p>
                             <p style="margin: 0 0 4px; font-size: 11px; color: #d1d5db;">הודעה זו נשלחה אוטומטית ממערכת TakeEat</p>
-                            <p style="margin: 0; font-size: 11px; color: #d1d5db;">לשאלות ובירורים: support@takeeat.co.il</p>
+                            <p style="margin: 0 0 2px; font-size: 11px; color: #d1d5db;">{$contactLabel}: <a href="mailto:{$contactEmail}" style="color: #f97316; text-decoration: none;">{$contactEmail}</a></p>
                             <p style="margin: 8px 0 0; font-size: 10px; color: #e5e7eb;">&copy; {$year} TakeEat. כל הזכויות שמורות.</p>
                         </td>
                     </tr>

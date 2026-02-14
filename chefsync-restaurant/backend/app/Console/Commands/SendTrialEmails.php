@@ -106,17 +106,23 @@ class SendTrialEmails extends Command
 
     private function getRestaurantStats(Restaurant $restaurant): array
     {
+        $ordersQuery = Order::where('restaurant_id', $restaurant->id)->where('is_test', false);
         return [
             'categories' => $restaurant->categories()->count(),
             'menu_items' => $restaurant->menuItems()->count(),
-            'orders' => Order::where('restaurant_id', $restaurant->id)->count(),
+            'orders' => (clone $ordersQuery)->count(),
+            'web_orders' => (clone $ordersQuery)->where('source', 'web')->count(),
+            'kiosk_orders' => (clone $ordersQuery)->where('source', 'kiosk')->count(),
         ];
     }
 
     private function getUsageSummary(Restaurant $restaurant): array
     {
+        $ordersQuery = Order::where('restaurant_id', $restaurant->id)->where('is_test', false);
         return [
-            'orders' => Order::where('restaurant_id', $restaurant->id)->count(),
+            'orders' => (clone $ordersQuery)->count(),
+            'web_orders' => (clone $ordersQuery)->where('source', 'web')->count(),
+            'kiosk_orders' => (clone $ordersQuery)->where('source', 'kiosk')->count(),
             'menu_items' => $restaurant->menuItems()->count(),
         ];
     }
