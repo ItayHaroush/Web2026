@@ -19,6 +19,7 @@ use App\Http\Controllers\PrinterController;
 use App\Http\Controllers\PaymentSettingsController;
 use App\Http\Controllers\PromotionController;
 use App\Http\Controllers\SuperAdminSettingsController;
+use App\Http\Controllers\SuperAdminEmailController;
 use App\Http\Controllers\OrderEventController;
 
 /**
@@ -140,6 +141,14 @@ Route::prefix('super-admin')->middleware(['auth:sanctum', 'super_admin'])->group
 
     // Audit Log
     Route::get('/audit-log', [SuperAdminSettingsController::class, 'getAuditLog'])->name('super-admin.audit-log');
+
+    // ============================================
+    // ניהול תבניות מייל (Email Templates)
+    // ============================================
+    Route::get('/emails/templates', [SuperAdminEmailController::class, 'getTemplates'])->name('super-admin.emails.templates');
+    Route::get('/emails/preview/{type}', [SuperAdminEmailController::class, 'previewTemplate'])->name('super-admin.emails.preview');
+    Route::post('/emails/send', [SuperAdminEmailController::class, 'sendTestEmail'])->name('super-admin.emails.send');
+    Route::post('/emails/send-bulk', [SuperAdminEmailController::class, 'sendBulkEmail'])->name('super-admin.emails.send-bulk');
 
     // ============================================
     // לוגים של הזמנות ושגיאות מערכת (Order Events)

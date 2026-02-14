@@ -47,6 +47,7 @@ import SuperAdminReports from './pages/super-admin/SuperAdminReports';
 import SuperAdminInvoices from './pages/super-admin/SuperAdminInvoices';
 import SuperAdminSettings from './pages/super-admin/SuperAdminSettings';
 import SuperAdminOrderDebug from './pages/super-admin/SuperAdminOrderDebug';
+import SuperAdminEmails from './pages/super-admin/SuperAdminEmails';
 import RegionalSettings from './pages/super-admin/settings/RegionalSettings';
 import BillingSettings from './pages/super-admin/settings/BillingSettings';
 import SecuritySettings from './pages/super-admin/settings/SecuritySettings';
@@ -456,6 +457,14 @@ function AppRoutes() {
         element={
           <SuperAdminRoute>
             <SuperAdminSmsDebug />
+          </SuperAdminRoute>
+        }
+      />
+      <Route
+        path="/super-admin/emails"
+        element={
+          <SuperAdminRoute>
+            <SuperAdminEmails />
           </SuperAdminRoute>
         }
       />

@@ -16,6 +16,8 @@ use App\Services\SmsService;
 use App\Models\RestaurantSubscription;
 use App\Models\RestaurantPayment;
 use App\Models\SystemError;
+use App\Mail\RestaurantApprovedMail;
+use Illuminate\Support\Facades\Mail;
 
 /**
  * SuperAdminController - ניהול מערכת כללי
@@ -383,12 +385,28 @@ class SuperAdminController extends Controller
             $smsSent = SmsService::sendApprovalMessage($ownerPhone, $restaurant->name);
         }
 
+        // שליחת מייל אישור לבעל המסעדה
+        $emailSent = false;
+        if ($owner && $owner->email) {
+            try {
+                Mail::to($owner->email)->send(new RestaurantApprovedMail($restaurant, $owner->name));
+                $emailSent = true;
+            } catch (\Exception $mailError) {
+                Log::warning('Restaurant approval email failed', [
+                    'restaurant_id' => $restaurant->id,
+                    'email' => $owner->email,
+                    'error' => $mailError->getMessage(),
+                ]);
+            }
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'המסעדה אושרה בהצלחה',
             'restaurant' => $restaurant,
             'notification' => [
                 'sms_sent' => $smsSent,
+                'email_sent' => $emailSent,
                 'owner_id' => $owner?->id,
             ],
         ]);
