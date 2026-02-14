@@ -505,19 +505,24 @@
 
     <table class="activity-table">
         <tr>
-            <td style="width: 30%;">
+            <td style="width: 22%;">
                 <div class="stat-number">{{ number_format($totalOrders) }}</div>
-                <div class="stat-label">סה״כ הזמנות</div>
+                <div class="stat-label">הזמנות שבוצעו</div>
             </td>
             <td class="spacer"></td>
-            <td style="width: 30%;">
+            <td style="width: 22%;">
                 <div class="stat-number">{{ number_format($totalRevenue, 2) }} &#8362;</div>
                 <div class="stat-label">מחזור (ללא ביטולים)</div>
             </td>
             <td class="spacer"></td>
-            <td style="width: 30%;">
+            <td style="width: 22%;">
                 <div class="stat-number">{{ number_format($avgOrderValue, 2) }} &#8362;</div>
                 <div class="stat-label">ממוצע להזמנה</div>
+            </td>
+            <td class="spacer"></td>
+            <td style="width: 22%;">
+                <div class="stat-number" style="color: #ef4444;">{{ number_format($cancelledCount) }}</div>
+                <div class="stat-label">הזמנות שבוטלו ({{ number_format($cancelledRevenue, 2) }} ₪)</div>
             </td>
         </tr>
     </table>
@@ -572,6 +577,39 @@
                 @else
                 <p class="info-line" style="color: #9ca3af;">אין נתונים</p>
                 @endif
+            </td>
+        </tr>
+    </table>
+    @endif
+
+    {{-- Orders by Source (web/kiosk) --}}
+    @if(count($ordersBySource) > 0)
+    <table class="info-table">
+        <tr>
+            <td>
+                <div class="info-label">לפי מקור הזמנה</div>
+                <table class="breakdown">
+                    <thead>
+                        <tr>
+                            <th>מקור</th>
+                            <th class="num-col">כמות</th>
+                            <th class="num-col">סכום</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($ordersBySource as $source => $data)
+                        <tr>
+                            <td>{{ $sourceLabels[$source] ?? $source }}</td>
+                            <td class="num-col">{{ $data['count'] }}</td>
+                            <td class="num-col">{{ number_format($data['total'], 2) }} &#8362;</td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </td>
+            <td class="spacer"></td>
+            <td>
+                <div class="info-label">&nbsp;</div>
             </td>
         </tr>
     </table>

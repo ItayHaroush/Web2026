@@ -37,9 +37,12 @@ class SuperAdminController extends Controller
         $stats = [
             'total_restaurants' => Restaurant::count(),
             'active_restaurants' => Restaurant::where('is_open', true)->count(),
-            'total_orders' => Order::count(),
+            'total_orders' => Order::where('status', '!=', 'cancelled')->where('is_test', false)->count(),
             'total_revenue' => Order::where('status', '!=', 'cancelled')->where('is_test', false)->sum('total_amount'),
-            'orders_today' => Order::whereDate('created_at', today())->count(),
+            'orders_today' => Order::whereDate('created_at', today())
+                ->where('status', '!=', 'cancelled')
+                ->where('is_test', false)
+                ->count(),
             'revenue_today' => Order::whereDate('created_at', today())
                 ->where('status', '!=', 'cancelled')
                 ->where('is_test', false)
@@ -127,7 +130,10 @@ class SuperAdminController extends Controller
                 ->where('status', '!=', 'cancelled')
                 ->where('is_test', false)
                 ->sum('total_amount');
-            $restaurant->orders_count = Order::where('restaurant_id', $restaurant->id)->count();
+            $restaurant->orders_count = Order::where('restaurant_id', $restaurant->id)
+                ->where('status', '!=', 'cancelled')
+                ->where('is_test', false)
+                ->count();
             return $restaurant;
         });
 
@@ -142,11 +148,18 @@ class SuperAdminController extends Controller
      */
     public function getRestaurant($id)
     {
-        $restaurant = Restaurant::withCount(['orders', 'categories', 'menuItems'])->findOrFail($id);
+        $restaurant = Restaurant::withCount([
+            'orders as orders_count' => function ($q) {
+                $q->where('status', '!=', 'cancelled')->where('is_test', false);
+            },
+            'categories',
+            'menuItems',
+        ])->findOrFail($id);
 
         // נתוני הכנסות
         $restaurant->total_revenue = Order::where('restaurant_id', $restaurant->id)
-            ->whereIn('status', ['delivered', 'ready'])
+            ->where('status', '!=', 'cancelled')
+            ->where('is_test', false)
             ->sum('total_amount');
 
         // משתמשים של המסעדה
@@ -446,13 +459,18 @@ class SuperAdminController extends Controller
         $restaurant = Restaurant::findOrFail($id);
 
         $stats = [
-            'total_orders' => Order::where('restaurant_id', $id)->count(),
+            'total_orders' => Order::where('restaurant_id', $id)
+                ->where('status', '!=', 'cancelled')
+                ->where('is_test', false)
+                ->count(),
             'total_revenue' => Order::where('restaurant_id', $id)
                 ->where('status', '!=', 'cancelled')
                 ->where('is_test', false)
                 ->sum('total_amount'),
             'orders_today' => Order::where('restaurant_id', $id)
                 ->whereDate('created_at', today())
+                ->where('status', '!=', 'cancelled')
+                ->where('is_test', false)
                 ->count(),
             'revenue_today' => Order::where('restaurant_id', $id)
                 ->whereDate('created_at', today())

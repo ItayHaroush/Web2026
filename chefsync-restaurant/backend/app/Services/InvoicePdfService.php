@@ -73,6 +73,11 @@ class InvoicePdfService
         'expired' => 'פג תוקף',
     ];
 
+    private const SOURCE_LABELS = [
+        'web' => 'אתר / קישור',
+        'kiosk' => 'קיוסק',
+    ];
+
     public function generatePdf(MonthlyInvoice $invoice): Mpdf
     {
         $invoice->loadMissing('restaurant');
@@ -106,10 +111,14 @@ class InvoicePdfService
             ->get();
 
         $activeOrders = $orders->where('status', '!=', 'cancelled');
-        $totalOrders = $orders->count();
+        $cancelledOrders = $orders->where('status', 'cancelled');
+        $totalOrdersAll = $orders->count();
+        $totalOrders = $activeOrders->count();
+        $cancelledCount = $cancelledOrders->count();
+        $cancelledRevenue = $cancelledOrders->sum('total_amount');
         $totalRevenue = $activeOrders->sum('total_amount');
-        $avgOrderValue = $activeOrders->count() > 0
-            ? round($totalRevenue / $activeOrders->count(), 2)
+        $avgOrderValue = $totalOrders > 0
+            ? round($totalRevenue / $totalOrders, 2)
             : 0;
 
         // Orders by status
@@ -119,6 +128,11 @@ class InvoicePdfService
 
         // Orders by payment method
         $ordersByPayment = $activeOrders->groupBy('payment_method')
+            ->map(fn($g) => ['count' => $g->count(), 'total' => $g->sum('total_amount')])
+            ->toArray();
+
+        // Orders by source (web / kiosk)
+        $ordersBySource = $activeOrders->groupBy(fn($o) => $o->source ?? 'web')
             ->map(fn($g) => ['count' => $g->count(), 'total' => $g->sum('total_amount')])
             ->toArray();
 
@@ -160,13 +174,17 @@ class InvoicePdfService
             'subscriptionStatusLabels' => self::SUBSCRIPTION_STATUS_LABELS,
             // Orders
             'totalOrders' => $totalOrders,
+            'totalOrdersAll' => $totalOrdersAll,
             'totalRevenue' => $totalRevenue,
             'avgOrderValue' => $avgOrderValue,
-            'cancelledCount' => $orders->where('status', 'cancelled')->count(),
+            'cancelledCount' => $cancelledCount,
+            'cancelledRevenue' => $cancelledRevenue,
             'ordersByStatus' => $ordersByStatus,
             'ordersByPayment' => $ordersByPayment,
+            'ordersBySource' => $ordersBySource,
             'orderStatusLabels' => self::ORDER_STATUS_LABELS,
             'paymentMethodLabels' => self::PAYMENT_METHOD_LABELS,
+            'sourceLabels' => self::SOURCE_LABELS,
             // AI & Features
             'aiUsage' => $aiUsage,
             'totalAiCreditsUsed' => $totalAiCreditsUsed,
