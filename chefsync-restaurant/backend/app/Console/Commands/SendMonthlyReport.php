@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Mail\MonthlyReportMail;
 use App\Http\Controllers\SuperAdminEmailController;
+use App\Models\SystemSetting;
 use App\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Mail;
@@ -13,10 +14,10 @@ class SendMonthlyReport extends Command
 {
     protected $signature = 'emails:monthly-report
                             {--month= : חודש בפורמט YYYY-MM (ברירת מחדל: חודש קודם)}
-                            {--email= : כתובת מייל ספציפית (ברירת מחדל: כל סופר אדמינים)}
+                            {--email= : כתובת מייל ספציפית (ברירת מחדל: בעל המערכת)}
                             {--dry-run : הצגת הדוח בלי לשלוח}';
 
-    protected $description = 'שליחת דוח חודשי לסופר אדמינים';
+    protected $description = 'שליחת דוח חודשי לבעל המערכת';
 
     public function handle(): int
     {
@@ -51,17 +52,25 @@ class SendMonthlyReport extends Command
             ],
         );
 
-        // רשימת נמענים
+        // נמען — בעל המערכת בלבד
         $recipients = [];
         if ($specificEmail) {
             $recipients[] = $specificEmail;
         } else {
-            $superAdmins = User::where('is_super_admin', true)->pluck('email')->toArray();
-            $recipients = array_filter($superAdmins);
+            $ownerEmail = SystemSetting::get('owner_email');
+            if ($ownerEmail) {
+                $recipients[] = $ownerEmail;
+            } else {
+                // fallback: הסופר אדמין הראשון במערכת
+                $firstAdmin = User::where('is_super_admin', true)->first();
+                if ($firstAdmin && $firstAdmin->email) {
+                    $recipients[] = $firstAdmin->email;
+                }
+            }
         }
 
         if (empty($recipients)) {
-            $this->error('לא נמצאו נמענים (סופר אדמינים)');
+            $this->error('לא נמצא נמען — יש להגדיר owner_email בהגדרות המערכת');
             return self::FAILURE;
         }
 
