@@ -387,8 +387,9 @@ class SuperAdminEmailController extends Controller
         $start = "{$month}-01 00:00:00";
         $end = date('Y-m-t 23:59:59', mktime(0, 0, 0, $mon, 1, $year));
 
-        // שאילתת בסיס - כל ההזמנות (לא בוטלו, לא בדיקה)
-        $baseQuery = fn() => Order::whereBetween('created_at', [$start, $end])
+        // שאילתת בסיס - כל ההזמנות מכל המסעדות (ללא סינון tenant)
+        $baseQuery = fn() => Order::withoutGlobalScopes()
+            ->whereBetween('created_at', [$start, $end])
             ->whereNotIn('status', ['cancelled'])
             ->where('is_test', false);
 
@@ -408,11 +409,15 @@ class SuperAdminEmailController extends Controller
         $activeKiosks = Kiosk::withoutGlobalScopes()->where('is_active', true)->count();
         $totalKiosks = Kiosk::withoutGlobalScopes()->count();
 
-        $newRestaurants = Restaurant::whereBetween('created_at', [$start, $end])->count();
+        $newRestaurants = Restaurant::withoutGlobalScopes()
+            ->whereBetween('created_at', [$start, $end])->count();
 
+        // MRR — חישוב לפי מנויים שהיו פעילים בחודש הנתון
         $mrr = 0;
         try {
-            $mrr = RestaurantSubscription::where('status', 'active')->sum('monthly_fee');
+            $mrr = RestaurantSubscription::where('status', 'active')
+                ->where('created_at', '<=', $end)
+                ->sum('monthly_fee');
         } catch (\Exception $e) {
         }
 
@@ -422,8 +427,8 @@ class SuperAdminEmailController extends Controller
             ->whereIn('status', ['pending', 'overdue'])
             ->sum('total_due');
 
-        // טופ מסעדות (כולל פילוח web/kiosk)
-        $topRestaurants = Restaurant::where('is_approved', true)
+        // טופ מסעדות (כולל פילוח web/kiosk) — ללא סינון tenant
+        $topRestaurants = Restaurant::withoutGlobalScopes()->where('is_approved', true)
             ->withCount(['orders as month_orders' => function ($q) use ($start, $end) {
                 $q->whereBetween('created_at', [$start, $end])
                     ->whereNotIn('status', ['cancelled'])
@@ -459,9 +464,11 @@ class SuperAdminEmailController extends Controller
             ->toArray();
 
         return [
-            'total_restaurants' => Restaurant::count(),
-            'active_restaurants' => Restaurant::where('is_approved', true)->where('is_open', true)->count(),
-            'trial_restaurants' => Restaurant::where('subscription_status', 'trial')->count(),
+            'total_restaurants' => Restaurant::withoutGlobalScopes()->count(),
+            'active_restaurants' => Restaurant::withoutGlobalScopes()
+                ->where('is_approved', true)->where('is_open', true)->count(),
+            'trial_restaurants' => Restaurant::withoutGlobalScopes()
+                ->where('subscription_status', 'trial')->count(),
             'new_restaurants' => $newRestaurants,
             'total_orders' => $totalOrders,
             'total_revenue' => $totalRevenue,

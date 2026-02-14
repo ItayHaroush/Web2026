@@ -7,3 +7,4 @@ Schedule::command('monitor:daily-summary')->dailyAt('22:00');
 Schedule::command('billing:charge-subscriptions')->dailyAt('06:00');
 Schedule::command('payments:reconcile')->everyTenMinutes();
 Schedule::command('emails:trial')->dailyAt('09:00');
+Schedule::command('emails:monthly-report')->monthlyOn(1, '08:00');
