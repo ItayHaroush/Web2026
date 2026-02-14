@@ -35,9 +35,15 @@ class SuperAdminBillingController extends Controller
         // Order-based revenue data
         $orderRevenueMonth = Order::whereBetween('created_at', [now()->startOfMonth(), now()->endOfMonth()])
             ->whereNotIn('status', ['cancelled'])
+            ->where('is_test', false)
             ->sum('total_amount');
-        $orderRevenueTotal = Order::whereNotIn('status', ['cancelled'])->sum('total_amount');
-        $ordersThisMonth = Order::whereBetween('created_at', [now()->startOfMonth(), now()->endOfMonth()])->count();
+        $orderRevenueTotal = Order::whereNotIn('status', ['cancelled'])
+            ->where('is_test', false)
+            ->sum('total_amount');
+        $ordersThisMonth = Order::whereBetween('created_at', [now()->startOfMonth(), now()->endOfMonth()])
+            ->whereNotIn('status', ['cancelled'])
+            ->where('is_test', false)
+            ->count();
 
         $totalRestaurants = Restaurant::count();
         $activeRestaurants = Restaurant::where('is_approved', true)->count();
@@ -76,9 +82,11 @@ class SuperAdminBillingController extends Controller
             ->withSum(['payments as total_paid_ytd' => function ($q) {
                 $q->whereYear('paid_at', now()->year)->where('status', 'paid');
             }], 'amount')
-            ->withCount('orders')
+            ->withCount(['orders as orders_count' => function ($q) {
+                $q->whereNotIn('status', ['cancelled'])->where('is_test', false);
+            }])
             ->withSum(['orders as order_revenue' => function ($q) {
-                $q->whereNotIn('status', ['cancelled']);
+                $q->whereNotIn('status', ['cancelled'])->where('is_test', false);
             }], 'total_amount');
 
         if ($request->filled('search')) {

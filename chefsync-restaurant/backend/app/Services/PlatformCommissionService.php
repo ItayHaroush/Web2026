@@ -95,10 +95,11 @@ class PlatformCommissionService
 
         $config = $subscription->getEffectiveBillingConfig();
 
-        // Query orders across tenants
+        // Query orders across tenants (exclude cancelled and test orders)
         $orderQuery = Order::withoutGlobalScope('tenant')
             ->where('restaurant_id', $restaurant->id)
             ->whereBetween('created_at', [$periodStart, $periodEnd])
+            ->where('is_test', false)
             ->whereNotIn('status', ['cancelled']);
 
         $orderRevenue = (float) $orderQuery->sum('total_amount');

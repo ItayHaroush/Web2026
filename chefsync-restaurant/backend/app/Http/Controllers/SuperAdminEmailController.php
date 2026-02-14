@@ -397,9 +397,13 @@ class SuperAdminEmailController extends Controller
         $totalOrders = $baseQuery()->count();
         $totalRevenue = $baseQuery()->sum('total_amount');
 
-        // הזמנות אתר
-        $webOrders = $baseQuery()->where('source', 'web')->count();
-        $webRevenue = $baseQuery()->where('source', 'web')->sum('total_amount');
+        // הזמנות אתר (כולל NULL שהוא ברירת מחדל)
+        $webOrders = $baseQuery()->where(function ($q) {
+            $q->where('source', 'web')->orWhereNull('source');
+        })->count();
+        $webRevenue = $baseQuery()->where(function ($q) {
+            $q->where('source', 'web')->orWhereNull('source');
+        })->sum('total_amount');
 
         // הזמנות קיוסק
         $kioskOrders = $baseQuery()->where('source', 'kiosk')->count();
@@ -428,7 +432,7 @@ class SuperAdminEmailController extends Controller
             ->sum('total_due');
 
         // טופ מסעדות (כולל פילוח web/kiosk) — ללא סינון tenant
-        $topRestaurants = Restaurant::withoutGlobalScopes()->where('is_approved', true)
+        $topRestaurants = Restaurant::withoutGlobalScopes()
             ->withCount(['orders as month_orders' => function ($q) use ($start, $end) {
                 $q->whereBetween('created_at', [$start, $end])
                     ->whereNotIn('status', ['cancelled'])
@@ -438,7 +442,9 @@ class SuperAdminEmailController extends Controller
                 $q->whereBetween('created_at', [$start, $end])
                     ->whereNotIn('status', ['cancelled'])
                     ->where('is_test', false)
-                    ->where('source', 'web');
+                    ->where(function ($sq) {
+                        $sq->where('source', 'web')->orWhereNull('source');
+                    });
             }])
             ->withCount(['orders as kiosk_orders' => function ($q) use ($start, $end) {
                 $q->whereBetween('created_at', [$start, $end])
