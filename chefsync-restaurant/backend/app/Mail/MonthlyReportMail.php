@@ -13,10 +13,18 @@ class MonthlyReportMail extends Mailable
     use Queueable, SerializesModels;
 
     private const HEBREW_MONTHS = [
-        '01' => 'ינואר', '02' => 'פברואר', '03' => 'מרץ',
-        '04' => 'אפריל', '05' => 'מאי', '06' => 'יוני',
-        '07' => 'יולי', '08' => 'אוגוסט', '09' => 'ספטמבר',
-        '10' => 'אוקטובר', '11' => 'נובמבר', '12' => 'דצמבר',
+        '01' => 'ינואר',
+        '02' => 'פברואר',
+        '03' => 'מרץ',
+        '04' => 'אפריל',
+        '05' => 'מאי',
+        '06' => 'יוני',
+        '07' => 'יולי',
+        '08' => 'אוגוסט',
+        '09' => 'ספטמבר',
+        '10' => 'אוקטובר',
+        '11' => 'נובמבר',
+        '12' => 'דצמבר',
     ];
 
     /**
@@ -100,11 +108,11 @@ class MonthlyReportMail extends Mailable
         $body .= EmailLayoutHelper::sectionTitle('הזמנות וחיוב');
         $body .= EmailLayoutHelper::infoBox(
             EmailLayoutHelper::infoRow('סה״כ הזמנות', number_format($totalOrders))
-            . EmailLayoutHelper::infoRow('מחזור הכנסות', number_format($totalRevenue, 2) . ' &#8362;')
-            . EmailLayoutHelper::infoRow('ממוצע להזמנה', number_format($avgOrderValue, 2) . ' &#8362;')
-            . EmailLayoutHelper::infoRow('חשבוניות שנשלחו', (string) $invoicesSent)
-            . EmailLayoutHelper::infoRow('חשבוניות ששולמו', (string) $invoicesPaid)
-            . EmailLayoutHelper::infoRow('יתרה לגבייה', number_format($outstandingAmount, 2) . ' &#8362;')
+                . EmailLayoutHelper::infoRow('מחזור הכנסות', number_format($totalRevenue, 2) . ' &#8362;')
+                . EmailLayoutHelper::infoRow('ממוצע להזמנה', number_format($avgOrderValue, 2) . ' &#8362;')
+                . EmailLayoutHelper::infoRow('חשבוניות שנשלחו', (string) $invoicesSent)
+                . EmailLayoutHelper::infoRow('חשבוניות ששולמו', (string) $invoicesPaid)
+                . EmailLayoutHelper::infoRow('יתרה לגבייה', number_format($outstandingAmount, 2) . ' &#8362;')
         );
 
         // טופ מסעדות
