@@ -87,7 +87,7 @@ class InvoiceMail extends Mailable
 
         $body .= EmailLayoutHelper::paragraph(
             '<span style="font-size: 13px; color: #6b7280;">החשבונית המלאה מצורפת כקובץ PDF.<br>'
-            . 'לשאלות ובירורים: <a href="mailto:billing@chefsync.co.il" style="color: #f97316;">billing@chefsync.co.il</a></span>'
+                . 'לשאלות ובירורים: <a href="mailto:billing@chefsync.co.il" style="color: #f97316;">billing@chefsync.co.il</a></span>'
         );
 
         return EmailLayoutHelper::wrap($body, "חשבונית TakeEat — {$monthHebrew}", 'billing@chefsync.co.il');
