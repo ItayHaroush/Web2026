@@ -2414,6 +2414,7 @@ class AdminController extends Controller
         return response()->json([
             'success' => true,
             'data' => [
+                'tier' => $restaurant->tier,
                 'subscription_status' => $restaurant->subscription_status,
                 'trial_ends_at' => $restaurant->trial_ends_at,
                 'subscription_ends_at' => $restaurant->subscription_ends_at,

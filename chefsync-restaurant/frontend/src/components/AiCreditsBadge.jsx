@@ -211,7 +211,7 @@ const AiCreditsBadge = ({ detailed = false }) => {
                     )}
 
                     {/* Upgrade Button */}
-                    {credits.tier === 'free' && (
+                    {(credits.tier === 'free' || credits.tier === 'basic') && (
                         <div className="mt-4">
                             <button
                                 onClick={() => navigate('/admin/paywall')}

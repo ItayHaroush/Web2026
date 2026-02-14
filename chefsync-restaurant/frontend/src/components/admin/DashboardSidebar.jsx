@@ -1,6 +1,7 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
-import { FaTimes, FaSignOutAlt, FaChevronRight, FaChevronLeft, FaUtensils } from 'react-icons/fa';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { FaTimes, FaSignOutAlt, FaChevronRight, FaChevronLeft, FaUtensils, FaStar } from 'react-icons/fa';
+import { useRestaurantStatus } from '../../context/RestaurantStatusContext';
 
 export default function DashboardSidebar({
     isOpen,
@@ -13,6 +14,9 @@ export default function DashboardSidebar({
     impersonating = false
 }) {
     const showCollapsed = isCollapsed && !isOpen;
+    const navigate = useNavigate();
+    const { subscriptionInfo } = useRestaurantStatus();
+    const isBasic = subscriptionInfo?.tier === 'basic';
 
     return (
         <>
@@ -85,6 +89,36 @@ export default function DashboardSidebar({
                         </NavLink>
                     ))}
                 </nav>
+
+                {/* Upgrade CTA for basic tier */}
+                {isBasic && (
+                    <div className={`px-3 pb-2 shrink-0 ${showCollapsed ? 'flex justify-center' : ''}`}>
+                        {showCollapsed ? (
+                            <button
+                                onClick={() => navigate('/admin/paywall')}
+                                className="w-10 h-10 bg-gradient-to-br from-amber-400 to-orange-500 rounded-xl flex items-center justify-center text-white shadow-sm hover:shadow-md transition-all group relative"
+                            >
+                                <FaStar size={16} />
+                                <div className="absolute left-full ml-2 bg-gray-900 text-white text-xs px-2 py-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none shadow-xl" style={{ zIndex: 9999 }}>
+                                    שדרג ל-Pro
+                                </div>
+                            </button>
+                        ) : (
+                            <button
+                                onClick={() => navigate('/admin/paywall')}
+                                className="w-full flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl hover:from-amber-100 hover:to-orange-100 transition-all group"
+                            >
+                                <div className="p-1.5 bg-gradient-to-br from-amber-400 to-orange-500 rounded-lg text-white shadow-sm">
+                                    <FaStar size={12} />
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-xs font-black text-gray-800">שדרג ל-Pro</p>
+                                    <p className="text-[10px] text-gray-500 font-medium">קבל גישה לכל התכונות</p>
+                                </div>
+                            </button>
+                        )}
+                    </div>
+                )}
 
                 {/* Footer Actions */}
                 <div className="p-4 border-t border-gray-100 bg-gray-50/50 shrink-0 space-y-2">
