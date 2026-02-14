@@ -13,17 +13,17 @@
         body {
             direction: rtl;
             color: #1f2937;
-            font-size: 12px;
-            line-height: 1.5;
-            padding: 25px 35px;
+            font-size: 11px;
+            line-height: 1.4;
+            padding: 20px 30px 40px;
         }
 
         /* Header */
         .header {
             width: 100%;
-            margin-bottom: 20px;
+            margin-bottom: 12px;
             border-bottom: 3px solid #f97316;
-            padding-bottom: 15px;
+            padding-bottom: 10px;
         }
 
         .header-table {
@@ -35,33 +35,39 @@
         }
 
         .invoice-title {
-            font-size: 24px;
+            font-size: 20px;
             font-weight: bold;
             color: #f97316;
-            margin-bottom: 3px;
+            margin-bottom: 2px;
         }
 
         .invoice-number {
-            font-size: 12px;
+            font-size: 11px;
             color: #6b7280;
         }
 
         .logo {
-            height: 50px;
+            height: 42px;
+        }
+
+        .logo-text {
+            font-size: 18px;
+            font-weight: bold;
+            color: #f97316;
         }
 
         /* Info Section */
         .info-table {
             width: 100%;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
         }
 
         .info-table td {
             vertical-align: top;
             width: 48%;
-            padding: 12px 14px;
+            padding: 7px 10px;
             background: #f9fafb;
-            border-radius: 6px;
+            border-radius: 5px;
         }
 
         .info-table td.spacer {
@@ -71,10 +77,10 @@
         }
 
         .info-label {
-            font-size: 10px;
+            font-size: 9px;
             color: #9ca3af;
             letter-spacing: 1px;
-            margin-bottom: 6px;
+            margin-bottom: 3px;
             font-weight: bold;
         }
 
@@ -83,23 +89,23 @@
         }
 
         .info-line {
-            font-size: 12px;
-            margin-bottom: 2px;
+            font-size: 11px;
+            margin-bottom: 1px;
         }
 
         /* Items Table */
         table.items {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 15px;
+            margin-bottom: 8px;
         }
 
         table.items th {
             background: #f97316;
             color: white;
-            padding: 8px 12px;
+            padding: 5px 10px;
             text-align: right;
-            font-size: 11px;
+            font-size: 10px;
             font-weight: bold;
         }
 
@@ -108,9 +114,9 @@
         }
 
         table.items td {
-            padding: 9px 12px;
+            padding: 6px 10px;
             border-bottom: 1px solid #e5e7eb;
-            font-size: 12px;
+            font-size: 11px;
             text-align: right;
         }
 
@@ -126,26 +132,27 @@
         /* Total */
         .total-box {
             width: 100%;
-            margin-top: 12px;
+            margin-top: 6px;
+            margin-bottom: 10px;
             border: 2px solid #f97316;
-            border-radius: 6px;
+            border-radius: 5px;
             background: #fff7ed;
         }
 
         .total-box td {
-            padding: 12px 16px;
+            padding: 8px 14px;
             vertical-align: middle;
         }
 
         .total-label {
-            font-size: 15px;
+            font-size: 13px;
             font-weight: bold;
             text-align: right;
         }
 
         .total-amount {
             text-align: left;
-            font-size: 20px;
+            font-size: 17px;
             font-weight: bold;
             color: #f97316;
         }
@@ -153,9 +160,9 @@
         /* Status Badge */
         .status-badge {
             display: inline-block;
-            padding: 2px 10px;
+            padding: 2px 8px;
             border-radius: 20px;
-            font-size: 10px;
+            font-size: 9px;
             font-weight: bold;
         }
 
@@ -181,26 +188,26 @@
 
         /* Section Header */
         .section-header {
-            font-size: 14px;
+            font-size: 12px;
             font-weight: bold;
             color: #f97316;
-            margin-top: 25px;
-            margin-bottom: 10px;
-            padding-bottom: 6px;
+            margin-top: 12px;
+            margin-bottom: 6px;
+            padding-bottom: 3px;
             border-bottom: 2px solid #fed7aa;
         }
 
         /* Activity Cards */
         .activity-table {
             width: 100%;
-            margin-bottom: 15px;
+            margin-bottom: 8px;
         }
 
         .activity-table td {
             vertical-align: top;
-            padding: 10px 14px;
+            padding: 7px 10px;
             background: #f9fafb;
-            border-radius: 6px;
+            border-radius: 5px;
         }
 
         .activity-table td.spacer {
@@ -210,13 +217,13 @@
         }
 
         .stat-number {
-            font-size: 18px;
+            font-size: 15px;
             font-weight: bold;
             color: #1f2937;
         }
 
         .stat-label {
-            font-size: 10px;
+            font-size: 9px;
             color: #6b7280;
             margin-top: 1px;
         }
@@ -225,14 +232,14 @@
         table.breakdown {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 10px;
+            margin-bottom: 4px;
         }
 
         table.breakdown th {
             background: #f3f4f6;
-            padding: 6px 12px;
+            padding: 3px 8px;
             text-align: right;
-            font-size: 10px;
+            font-size: 9px;
             font-weight: bold;
             color: #6b7280;
             border-bottom: 1px solid #e5e7eb;
@@ -243,8 +250,8 @@
         }
 
         table.breakdown td {
-            padding: 5px 12px;
-            font-size: 11px;
+            padding: 3px 8px;
+            font-size: 10px;
             text-align: right;
             border-bottom: 1px solid #f3f4f6;
         }
@@ -257,14 +264,14 @@
         /* Features Grid */
         .features-table {
             width: 100%;
-            margin-bottom: 10px;
+            margin-bottom: 6px;
         }
 
         .features-table td {
             width: 24%;
-            padding: 10px;
+            padding: 7px;
             background: #f9fafb;
-            border-radius: 6px;
+            border-radius: 5px;
             text-align: center;
         }
 
@@ -275,75 +282,128 @@
         }
 
         .feature-number {
-            font-size: 16px;
+            font-size: 14px;
             font-weight: bold;
             color: #f97316;
         }
 
         .feature-label {
-            font-size: 9px;
+            font-size: 8px;
             color: #6b7280;
-            margin-top: 2px;
+            margin-top: 1px;
         }
 
         /* Notes */
         .notes-box {
-            margin-top: 15px;
-            padding: 10px 14px;
+            margin-top: 8px;
+            padding: 7px 10px;
             background: #eff6ff;
-            border-radius: 6px;
-            border-right: 4px solid #3b82f6;
+            border-radius: 5px;
+            border-right: 3px solid #3b82f6;
         }
 
         .notes-title {
-            font-size: 11px;
+            font-size: 10px;
             color: #1e40af;
             font-weight: bold;
-            margin-bottom: 3px;
+            margin-bottom: 2px;
         }
 
         .notes-text {
-            font-size: 11px;
+            font-size: 10px;
             color: #1e40af;
         }
 
-        /* Footer */
-        .footer {
-            margin-top: 25px;
-            padding-top: 15px;
-            border-top: 1px solid #e5e7eb;
+        /* Page 2 - Tips */
+        .tips-subtitle {
+            font-size: 11px;
+            color: #6b7280;
             text-align: center;
-            color: #9ca3af;
-            font-size: 10px;
+            margin-bottom: 16px;
         }
 
-        .footer p {
-            margin-bottom: 2px;
+        .tip-card {
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        .tip-card td {
+            padding: 12px 14px;
+            background: #f9fafb;
+            border-radius: 6px;
+            border-right: 4px solid #f97316;
+        }
+
+        .tip-title {
+            font-size: 12px;
+            font-weight: bold;
+            color: #1f2937;
+            margin-bottom: 3px;
+        }
+
+        .tip-description {
+            font-size: 10px;
+            color: #6b7280;
+            line-height: 1.5;
+        }
+
+        .cta-box {
+            width: 100%;
+            margin-top: 16px;
+            border: 2px solid #f97316;
+            border-radius: 6px;
+            background: #fff7ed;
+        }
+
+        .cta-box td {
+            padding: 14px 18px;
+            text-align: center;
+        }
+
+        .cta-title {
+            font-size: 14px;
+            font-weight: bold;
+            color: #1f2937;
+            margin-bottom: 3px;
+        }
+
+        .cta-text {
+            font-size: 10px;
+            color: #6b7280;
+        }
+
+        .cta-url {
+            font-size: 11px;
+            font-weight: bold;
+            color: #f97316;
+            margin-top: 4px;
         }
     </style>
 </head>
 
 <body>
 
-    {{-- ==================== HEADER ==================== --}}
+    {{-- ==================== PAGE 1 — INVOICE ==================== --}}
+
+    {{-- HEADER --}}
     <table class="header-table">
         <tr>
             <td style="width: 60%; text-align: right;">
-                <div class="invoice-title">חשבונית חודשית</div>
+                <div class="invoice-title">חשבונית חודשית TakeEat</div>
                 <div class="invoice-number">{{ $invoiceNumber }}</div>
             </td>
             <td style="width: 40%; text-align: left;">
                 @if($logoBase64)
                 <img src="data:image/png;base64,{{ $logoBase64 }}" class="logo" alt="TakeEat">
                 @else
-                <div style="font-size: 20px; font-weight: bold; color: #f97316;">TakeEat</div>
+                <div class="logo-text">TakeEat</div>
                 @endif
             </td>
         </tr>
     </table>
     <div class="header"></div>
 
-    {{-- ==================== INFO SECTION ==================== --}}
+    {{-- INFO SECTION --}}
     <table class="info-table">
         <tr>
             <td>
@@ -373,11 +433,11 @@
         </tr>
     </table>
 
-    {{-- ==================== SUBSCRIPTION INFO ==================== --}}
-    <div class="section-header">פרטי מנוי</div>
+    {{-- SUBSCRIPTION + BILLING COMBINED --}}
     <table class="info-table">
         <tr>
             <td>
+                <div class="info-label">פרטי מנוי</div>
                 <p class="info-line">סוג מנוי: <span class="info-value">{{ $tierLabel }}</span></p>
                 <p class="info-line">מודל חיוב: <span class="info-value">{{ $billingModelLabels[$invoice->billing_model] ?? $invoice->billing_model }}</span></p>
                 @if($subscription)
@@ -386,6 +446,7 @@
             </td>
             <td class="spacer"></td>
             <td>
+                <div class="info-label">&nbsp;</div>
                 @if($invoice->billing_model !== 'flat' && $invoice->commission_percent > 0)
                 <p class="info-line">אחוז עמלה: <span class="info-value">{{ $invoice->commission_percent }}%</span></p>
                 @endif
@@ -397,7 +458,7 @@
         </tr>
     </table>
 
-    {{-- ==================== BILLING TABLE ==================== --}}
+    {{-- BILLING TABLE --}}
     <div class="section-header">פירוט חיוב</div>
     <table class="items">
         <thead>
@@ -439,10 +500,9 @@
         </tr>
     </table>
 
-    {{-- ==================== ORDER ACTIVITY ==================== --}}
-    <div class="section-header">פעילות הזמנות — {{ $monthHebrew }}</div>
+    {{-- ORDER ACTIVITY --}}
+    <div class="section-header">פעילות הזמנות - {{ $monthHebrew }}</div>
 
-    {{-- Summary Cards --}}
     <table class="activity-table">
         <tr>
             <td style="width: 30%;">
@@ -462,7 +522,7 @@
         </tr>
     </table>
 
-    {{-- Orders by Status --}}
+    {{-- Orders by Status & Payment --}}
     @if(count($ordersByStatus) > 0)
     <table class="info-table">
         <tr>
@@ -517,10 +577,9 @@
     </table>
     @endif
 
-    {{-- ==================== FEATURES & AI USAGE ==================== --}}
+    {{-- FEATURES & AI USAGE --}}
     <div class="section-header">שימוש בתכונות המערכת</div>
 
-    {{-- Feature Counts Grid --}}
     <table class="features-table">
         <tr>
             <td>
@@ -545,7 +604,6 @@
         </tr>
     </table>
 
-    {{-- AI Usage --}}
     @if($aiCreditsMonthly > 0 || $totalAiCreditsUsed > 0)
     <table class="info-table">
         <tr>
@@ -576,7 +634,6 @@
     </table>
     @endif
 
-    {{-- ==================== NOTES ==================== --}}
     @if($invoice->notes)
     <div class="notes-box">
         <p class="notes-title">הערות:</p>
@@ -584,12 +641,111 @@
     </div>
     @endif
 
-    {{-- ==================== FOOTER ==================== --}}
-    <div class="footer">
-        <p><strong>TakeEat Platform</strong></p>
-        <p>חשבונית זו הופקה אוטומטית ואינה דורשת חתימה</p>
-        <p>לשאלות ובירורים ניתן לפנות בדוא״ל: billing@takeeat.co.il</p>
-    </div>
+    {{-- ==================== PAGE 2 — TIPS & RECOMMENDATIONS ==================== --}}
+    <pagebreak />
+
+    {{-- Header for page 2 --}}
+    <table class="header-table">
+        <tr>
+            <td style="width: 60%; text-align: right;">
+                <div class="invoice-title">הצעות לייעול העסק</div>
+                <div class="invoice-number">{{ $restaurant->name }} — {{ $monthHebrew }}</div>
+            </td>
+            <td style="width: 40%; text-align: left;">
+                @if($logoBase64)
+                <img src="data:image/png;base64,{{ $logoBase64 }}" class="logo" alt="TakeEat">
+                @else
+                <div class="logo-text">TakeEat</div>
+                @endif
+            </td>
+        </tr>
+    </table>
+    <div class="header"></div>
+
+    <div class="tips-subtitle">בהתבסס על הנתונים שלך מ{{ $monthHebrew }}, הנה כמה הצעות שיכולות לעזור לך לשפר את הביצועים</div>
+
+    {{-- Dynamic tips based on data --}}
+    @if($totalOrders < 20)
+    <table class="tip-card">
+        <tr>
+            <td>
+                <div class="tip-title">הגדל את החשיפה של התפריט הדיגיטלי</div>
+                <div class="tip-description">קיבלת {{ $totalOrders }} הזמנות החודש. שתף את הלינק לתפריט ברשתות חברתיות, בגוגל מפות ובכרטיס ביקור. ניתן גם להדפיס QR Code ולהניח על השולחנות.</div>
+            </td>
+        </tr>
+    </table>
+    @endif
+
+    @if($cancelledCount > 0)
+    <table class="tip-card">
+        <tr>
+            <td>
+                <div class="tip-title">צמצם ביטולי הזמנות</div>
+                <div class="tip-description">החודש בוטלו {{ $cancelledCount }} הזמנות. מומלץ לבדוק את הסיבות ולעדכן זמינות פריטים בזמן אמת כדי להפחית ביטולים.</div>
+            </td>
+        </tr>
+    </table>
+    @endif
+
+    <table class="tip-card">
+        <tr>
+            <td>
+                <div class="tip-title">בדוק את הדוחות בפאנל הניהול</div>
+                <div class="tip-description">בדף הדוחות תוכל לראות ניתוח מפורט של מגמות מכירות, פריטים פופולריים ושעות עומס. נתונים אלה יעזרו לך לקבל החלטות מבוססות נתונים על התפריט ושעות הפעילות.</div>
+            </td>
+        </tr>
+    </table>
+
+    <table class="tip-card">
+        <tr>
+            <td>
+                <div class="tip-title">עדכן את התפריט באופן שוטף</div>
+                <div class="tip-description">יש לך {{ $menuItemsCount }} פריטים בתפריט. מומלץ לוודא שכל הפריטים מעודכנים עם תמונות איכותיות ותיאורים מפורטים. ניתן להשתמש בסוכן ה-AI ליצירת תיאורים מושכים באופן אוטומטי.</div>
+            </td>
+        </tr>
+    </table>
+
+    @if($displayScreensCount == 0 && $kiosksCount == 0)
+    <table class="tip-card">
+        <tr>
+            <td>
+                <div class="tip-title">הפעל מסכי תצוגה וקיוסקים</div>
+                <div class="tip-description">מסכי תצוגה מאפשרים ללקוחות לראות את סטטוס ההזמנה בזמן אמת, וקיוסקים מאפשרים הזמנה עצמאית. שניהם מגדילים יעילות תפעולית ושביעות רצון לקוחות.</div>
+            </td>
+        </tr>
+    </table>
+    @endif
+
+    @if($aiCreditsMonthly > 0 && $totalAiCreditsUsed < ($aiCreditsMonthly * 0.3))
+    <table class="tip-card">
+        <tr>
+            <td>
+                <div class="tip-title">נצל את קרדיטי ה-AI שלך</div>
+                <div class="tip-description">השתמשת ב-{{ $totalAiCreditsUsed }} מתוך {{ $aiCreditsMonthly }} קרדיטים בלבד. נסה את הסוכן החכם ליצירת תיאורי מנות, המלצות מחיר ותובנות עסקיות.</div>
+            </td>
+        </tr>
+    </table>
+    @endif
+
+    <table class="tip-card">
+        <tr>
+            <td>
+                <div class="tip-title">גישה מהירה לפאנל הניהול</div>
+                <div class="tip-description">ניתן לגשת לפאנל הניהול בכל עת ומכל מכשיר. שם תוכל לנהל הזמנות, לעדכן תפריט, לצפות בדוחות, להגדיר קופונים, לנהל עובדים ועוד.</div>
+            </td>
+        </tr>
+    </table>
+
+    {{-- CTA --}}
+    <table class="cta-box">
+        <tr>
+            <td>
+                <div class="cta-title">צריך עזרה? הצוות שלנו כאן לשירותך</div>
+                <div class="cta-text">לשאלות, בירורים או סיוע טכני ניתן לפנות אלינו בכל עת</div>
+                <div class="cta-url">billing@takeeat.co.il</div>
+            </td>
+        </tr>
+    </table>
 
 </body>
 

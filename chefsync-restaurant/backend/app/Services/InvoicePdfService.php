@@ -78,7 +78,10 @@ class InvoicePdfService
         $invoice->loadMissing('restaurant');
         $restaurant = $invoice->restaurant;
 
-        $logoPath = storage_path('app/public/logo.png');
+        $logoPath = storage_path('app/public/email-logo.png');
+        if (!file_exists($logoPath)) {
+            $logoPath = storage_path('app/public/logo.png');
+        }
         $logoBase64 = file_exists($logoPath)
             ? base64_encode(file_get_contents($logoPath))
             : null;
@@ -185,7 +188,16 @@ class InvoicePdfService
             'biDirectional' => true,
             'default_font' => 'dejavusans',
             'tempDir' => storage_path('app/mpdf-temp'),
+            'margin_bottom' => 25,
         ]);
+
+        // Footer on all pages
+        $mpdf->SetHTMLFooter('
+            <div style="border-top: 1px solid #e5e7eb; padding-top: 6px; text-align: center; color: #9ca3af; font-size: 9px; direction: rtl;">
+                <strong>TakeEat Platform</strong><br>
+                חשבונית זו הופקה אוטומטית ואינה דורשת חתימה | לשאלות ובירורים: billing@takeeat.co.il
+            </div>
+        ');
 
         $mpdf->WriteHTML($html);
 
