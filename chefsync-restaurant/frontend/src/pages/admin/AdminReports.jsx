@@ -1,5 +1,6 @@
 import React from 'react';
 import AdminLayout from '../../layouts/AdminLayout';
+import UpgradeBanner from '../../components/UpgradeBanner';
 import {
     FaChartLine,
     FaShoppingBag,
@@ -167,6 +168,9 @@ export default function AdminReports() {
                         </button>
                     </div>
                 </div>
+
+                {/* Upgrade Banner */}
+                <UpgradeBanner variant="inline" context="reports" />
             </div>
         </AdminLayout>
     );

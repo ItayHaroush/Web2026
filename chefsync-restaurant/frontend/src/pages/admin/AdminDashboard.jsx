@@ -7,6 +7,7 @@ import { clearStoredFcmToken, disableFcm, getStoredFcmToken, listenForegroundMes
 import { PRODUCT_NAME } from '../../constants/brand';
 import AiCreditsBadge from '../../components/AiCreditsBadge';
 import AiInsightsPanel from '../../components/AiInsightsPanel';
+import UpgradeBanner from '../../components/UpgradeBanner';
 import {
     FaBox,
     FaClock,
@@ -366,6 +367,11 @@ export default function AdminDashboard() {
                 </div>
             </div>
 
+            {/* Upgrade Banner */}
+            <div className="mb-6">
+                <UpgradeBanner variant="card" context="ai" />
+            </div>
+
             {/* AI Credits Section */}
             <div className="mb-6">
                 <AiCreditsBadge detailed={canViewRevenue} />
@@ -418,9 +424,9 @@ export default function AdminDashboard() {
                                                     </span>
                                                     {order.payment_status && order.payment_status !== 'not_required' && (
                                                         <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase border shrink-0 ${order.payment_status === 'paid' ? 'bg-green-50 text-green-700 border-green-100' :
-                                                                order.payment_status === 'pending' ? 'bg-orange-50 text-orange-700 border-orange-100' :
-                                                                    order.payment_status === 'failed' ? 'bg-red-50 text-red-700 border-red-100' :
-                                                                        'bg-gray-50 text-gray-600 border-gray-100'
+                                                            order.payment_status === 'pending' ? 'bg-orange-50 text-orange-700 border-orange-100' :
+                                                                order.payment_status === 'failed' ? 'bg-red-50 text-red-700 border-red-100' :
+                                                                    'bg-gray-50 text-gray-600 border-gray-100'
                                                             }`}>
                                                             {order.payment_status === 'paid'
                                                                 ? (order.payment_method === 'credit_card' ? 'שולם באשראי' : 'שולם במזומן')

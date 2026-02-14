@@ -8,9 +8,15 @@ export function RestaurantStatusProvider({ children }) {
         is_override: false,
         is_approved: true,
     });
+    const [subscriptionInfo, setSubscriptionInfo] = useState({
+        tier: null,
+        subscription_status: null,
+        subscription_plan: null,
+        trial_ends_at: null,
+    });
 
     return (
-        <RestaurantStatusContext.Provider value={{ restaurantStatus, setRestaurantStatus }}>
+        <RestaurantStatusContext.Provider value={{ restaurantStatus, setRestaurantStatus, subscriptionInfo, setSubscriptionInfo }}>
             {children}
         </RestaurantStatusContext.Provider>
     );

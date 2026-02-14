@@ -36,7 +36,7 @@ export default function AdminLayout({ children }) {
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [subscriptionData, setSubscriptionData] = useState(null);
     const { user, logout, isOwner, isManager, getAuthHeaders, impersonating } = useAdminAuth();
-    const { restaurantStatus, setRestaurantStatus } = useRestaurantStatus();
+    const { restaurantStatus, setRestaurantStatus, setSubscriptionInfo } = useRestaurantStatus();
     const location = useLocation();
     const navigate = useNavigate();
 
@@ -59,6 +59,13 @@ export default function AdminLayout({ children }) {
                         trial_ends_at: restaurant.trial_ends_at,
                         tier: restaurant.tier,
                         subscription_plan: restaurant.subscription_plan
+                    });
+                    // שמור גם בקונטקסט גלובלי לשימוש בכל הדפים
+                    setSubscriptionInfo({
+                        tier: restaurant.tier,
+                        subscription_status: restaurant.subscription_status,
+                        subscription_plan: restaurant.subscription_plan,
+                        trial_ends_at: restaurant.trial_ends_at,
                     });
                 }
             } catch (error) {

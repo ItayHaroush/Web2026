@@ -146,14 +146,6 @@ export default function AdminPaywall() {
                 </div>
 
                 {/* Tier Selection Cards */}
-                {registeredTier && (
-                    <div className="text-center mb-4">
-                        <p className="text-sm text-gray-500 bg-blue-50 border border-blue-200 rounded-lg px-4 py-2 inline-flex items-center gap-2">
-                            <FaGift className="text-blue-500" />
-                            <span>נבחרה תוכנית <strong className="text-brand-primary">{registeredTier === 'basic' ? 'Basic' : 'Pro'}</strong> בהרשמה</span>
-                        </p>
-                    </div>
-                )}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
                     <TierCard
                         tier="basic"
@@ -164,10 +156,9 @@ export default function AdminPaywall() {
                         aiCredits={PLANS.basic.aiCredits}
                         features={PLANS.basic.features}
                         selected={selectedTier === 'basic'}
-                        onSelect={() => !registeredTier && setSelectedTier('basic')}
+                        onSelect={() => setSelectedTier('basic')}
                         icon={<FaRocket />}
                         color="from-blue-500 to-indigo-600"
-                        disabled={registeredTier && registeredTier !== 'basic'}
                     />
                     <TierCard
                         tier="pro"
@@ -179,11 +170,10 @@ export default function AdminPaywall() {
                         features={PLANS.pro.features}
                         trialNote={PLANS.pro.trialNote}
                         selected={selectedTier === 'pro'}
-                        onSelect={() => !registeredTier && setSelectedTier('pro')}
+                        onSelect={() => setSelectedTier('pro')}
                         icon={<FaBrain />}
                         color="from-amber-500 to-orange-600"
                         badge="מומלץ"
-                        disabled={registeredTier && registeredTier !== 'pro'}
                     />
                 </div>
 
