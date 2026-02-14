@@ -77,11 +77,8 @@ class RegisterRestaurantController extends Controller
             $verification->save();
         }
 
-        // מחירים דינמיים לפי tier
-        $pricing = [
-            'basic' => ['monthly' => 450, 'yearly' => 4500, 'ai_credits' => 0],
-            'pro' => ['monthly' => 600, 'yearly' => 5000, 'ai_credits' => 500, 'trial_ai_credits' => 50],
-        ];
+        // מחירים דינמיים מ-SystemSettings
+        $pricing = SuperAdminSettingsController::getPricingArray();
 
         $tier = $validated['tier'];
         $planType = $validated['plan_type'];

@@ -8,10 +8,10 @@ import { FaCheckCircle } from 'react-icons/fa';
 import { FaStore, FaBrain, FaPizzaSlice, FaHamburger, FaUtensils, FaConciergeBell } from 'react-icons/fa';
 import { GiKebabSpit, GiChefToque } from 'react-icons/gi';
 
-// מחירים חדשים לפי tier
-const PRICING = {
-    basic: { monthly: 450, yearly: 4500, aiCredits: 0 },
-    pro: { monthly: 600, yearly: 5000, aiCredits: 500, trialAiCredits: 50 },
+// fallback מחירים (בזמן טעינה או אם API נכשל)
+const DEFAULT_PRICING = {
+    basic: { monthly: 450, yearly: 4500, ai_credits: 0 },
+    pro: { monthly: 600, yearly: 5000, ai_credits: 500, trial_ai_credits: 50 },
 };
 
 export default function RegisterRestaurant() {
@@ -19,6 +19,7 @@ export default function RegisterRestaurant() {
     const [loading, setLoading] = useState(false);
     const [cities, setCities] = useState([]);
     const [selectedTier, setSelectedTier] = useState('pro'); // basic or pro
+    const [pricing, setPricing] = useState(DEFAULT_PRICING);
     const [form, setForm] = useState({
         name: '',
         tenant_id: '',
@@ -50,7 +51,18 @@ export default function RegisterRestaurant() {
                 console.error('שגיאה בטעינת רשימת ערים', err);
             }
         };
+        const loadPricing = async () => {
+            try {
+                const { data } = await api.get('/pricing');
+                if (data?.success && data?.data) {
+                    setPricing(data.data);
+                }
+            } catch (err) {
+                console.error('שגיאה בטעינת מחירים, שימוש ב-defaults', err);
+            }
+        };
         loadCities();
+        loadPricing();
     }, []);
 
     const handleChange = (e) => {
@@ -157,8 +169,8 @@ export default function RegisterRestaurant() {
     };
 
     const currentPrice = form.plan_type === 'annual'
-        ? PRICING[selectedTier].yearly
-        : PRICING[selectedTier].monthly;
+        ? pricing[selectedTier].yearly
+        : pricing[selectedTier].monthly;
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-brand-primary/10 to-white py-12 px-4">
@@ -175,10 +187,10 @@ export default function RegisterRestaurant() {
                             tier="basic"
                             title="Standard"
                             subtitle="המערכת המלאה למסעדה"
-                            monthlyPrice={PRICING.basic.monthly}
-                            yearlyPrice={PRICING.basic.yearly}
-                            aiCredits={PRICING.basic.aiCredits}
-                            features={[
+                            monthlyPrice={pricing.basic.monthly}
+                            yearlyPrice={pricing.basic.yearly}
+                            aiCredits={pricing.basic.ai_credits}
+                            features={pricing.basic.features || [
                                 'דף אישי למסעדה + תפריט דיגיטלי',
                                 'מערכת הזמנות (איסוף ומשלוח)',
                                 'הגדרת אזורי משלוח והגבלות',
@@ -195,10 +207,10 @@ export default function RegisterRestaurant() {
                             tier="pro"
                             title="Pro"
                             subtitle="מערכת + סוכן חכם מלא"
-                            monthlyPrice={PRICING.pro.monthly}
-                            yearlyPrice={PRICING.pro.yearly}
-                            aiCredits={PRICING.pro.aiCredits}
-                            features={[
+                            monthlyPrice={pricing.pro.monthly}
+                            yearlyPrice={pricing.pro.yearly}
+                            aiCredits={pricing.pro.ai_credits}
+                            features={pricing.pro.features || [
                                 '✨ כל מה שיש ב־Standard',
                                 '🤖 סוכן חכם לתובנות עסקיות',
                                 '📝 שיפור תיאורי מנות',
@@ -221,14 +233,14 @@ export default function RegisterRestaurant() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <PlanCard
                             title="חודשי"
-                            price={PRICING[selectedTier].monthly}
+                            price={pricing[selectedTier].monthly}
                             subtitle="חיוב חודשי"
                             selected={form.plan_type === 'monthly'}
                             onSelect={() => setForm((p) => ({ ...p, plan_type: 'monthly' }))}
                         />
                         <PlanCard
                             title="שנתי"
-                            price={PRICING[selectedTier].yearly}
+                            price={pricing[selectedTier].yearly}
                             subtitle="חיסכון מול חודשי"
                             selected={form.plan_type === 'annual'}
                             onSelect={() => setForm((p) => ({ ...p, plan_type: 'annual' }))}
@@ -288,8 +300,8 @@ export default function RegisterRestaurant() {
                                         type="button"
                                         onClick={() => setForm(p => ({ ...p, restaurant_type: type.value }))}
                                         className={`p-4 rounded-xl border-2 transition-all ${form.restaurant_type === type.value
-                                                ? 'border-brand-primary bg-brand-primary/10 shadow-md'
-                                                : 'border-gray-200 hover:border-brand-primary/50'
+                                            ? 'border-brand-primary bg-brand-primary/10 shadow-md'
+                                            : 'border-gray-200 hover:border-brand-primary/50'
                                             }`}
                                     >
                                         <Icon className={`text-3xl mb-1 mx-auto ${type.color}`} />

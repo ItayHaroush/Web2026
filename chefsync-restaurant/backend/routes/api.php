@@ -125,6 +125,10 @@ Route::prefix('super-admin')->middleware(['auth:sanctum', 'super_admin'])->group
     Route::get('/settings/{group}', [SuperAdminSettingsController::class, 'getSettings'])->name('super-admin.settings.get');
     Route::post('/settings', [SuperAdminSettingsController::class, 'updateSettings'])->name('super-admin.settings.update');
 
+    // חבילות מחירים (Pricing Tiers)
+    Route::get('/pricing-tiers', [SuperAdminSettingsController::class, 'getPricingTiers'])->name('super-admin.pricing.get');
+    Route::put('/pricing-tiers', [SuperAdminSettingsController::class, 'updatePricingTiers'])->name('super-admin.pricing.update');
+
     // מדיניות ותנאי שימוש (Policy Versions)
     Route::get('/policies/{type}', [SuperAdminSettingsController::class, 'getPolicies'])->name('super-admin.policies.get');
     Route::post('/policies', [SuperAdminSettingsController::class, 'createPolicyVersion'])->name('super-admin.policies.create');
@@ -391,6 +395,10 @@ Route::get('/restaurants/by-tenant/{tenantId}', [RestaurantController::class, 'p
 // מדיניות ותנאי שימוש - ציבורי
 Route::get('/policies/{type}/published', [SuperAdminSettingsController::class, 'getPublishedPolicy'])
     ->name('policies.published');
+
+// מחירי חבילות - ציבורי (לטופס הרשמה)
+Route::get('/pricing', [SuperAdminSettingsController::class, 'getPublicPricing'])
+    ->name('pricing.public');
 
 // ============================================
 // HYP Payment Callbacks (ציבורי - redirect מ-HYP)

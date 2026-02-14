@@ -19,7 +19,7 @@ return new class extends Migration
             $table->unsignedBigInteger('restaurant_id')->unique();
 
             // Credits tracking
-            $table->enum('tier', ['free', 'pro', 'enterprise'])->default('free');
+            $table->enum('tier', ['free', 'basic', 'pro', 'enterprise'])->default('free');
             $table->integer('monthly_limit'); // Based on tier
             $table->integer('credits_used')->default(0); // This month
             $table->integer('credits_remaining'); // Calculated
