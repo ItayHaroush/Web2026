@@ -292,7 +292,7 @@ export default function SuperAdminInvoices() {
                                 title="סגור"
                             >✕</button>
                             <iframe
-                                src="/api/custom-invoice"
+                                src="https://api.chefsync.co.il/custom-invoice"
                                 title="הפק חשבונית ידנית ל-Itay Solutions"
                                 style={{ border: 'none', width: '100%', height: '100%', borderRadius: 12, minHeight: 500 }}
                             />
