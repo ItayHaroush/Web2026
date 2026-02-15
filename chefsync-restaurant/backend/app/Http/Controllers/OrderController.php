@@ -375,9 +375,7 @@ class OrderController extends Controller
 
             // צור את ההזמנה עם סכום סופי
             $paymentMethod = $validated['payment_method'];
-            $paymentStatus = $paymentMethod === 'cash'
-                ? Order::PAYMENT_NOT_REQUIRED
-                : Order::PAYMENT_PENDING;
+            $paymentStatus = Order::PAYMENT_PENDING;
 
             $order = Order::create([
                 'tenant_id' => $tenantId,
