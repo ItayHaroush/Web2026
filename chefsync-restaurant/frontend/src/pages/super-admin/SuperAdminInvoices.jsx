@@ -24,6 +24,7 @@ import {
 } from 'react-icons/fa';
 
 export default function SuperAdminInvoices() {
+    const [showCustomInvoice, setShowCustomInvoice] = useState(false);
     const { getAuthHeaders } = useAdminAuth();
     const [invoices, setInvoices] = useState([]);
     const [stats, setStats] = useState(null);
@@ -262,15 +263,42 @@ export default function SuperAdminInvoices() {
                         </h1>
                         <p className="text-sm text-gray-500 mt-1">הפקה, מעקב ואישור חשבוניות למסעדות</p>
                     </div>
-                    <button
-                        onClick={fetchInvoices}
-                        disabled={loading}
-                        className="px-5 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 font-bold transition-all shadow-sm flex items-center justify-center gap-2 text-sm disabled:opacity-50"
-                    >
-                        <FaSync size={14} className={loading ? 'animate-spin' : ''} />
-                        רענון
-                    </button>
+                    <div className="flex gap-2 items-center">
+                        <button
+                            onClick={() => setShowCustomInvoice(true)}
+                            className="px-5 py-2.5 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 transition-all shadow-sm flex items-center gap-2 text-sm"
+                        >
+                            <FaFileInvoiceDollar size={14} />
+                            הפק חשבונית ידנית ל-Itay Solutions
+                        </button>
+                        <button
+                            onClick={fetchInvoices}
+                            disabled={loading}
+                            className="px-5 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 font-bold transition-all shadow-sm flex items-center justify-center gap-2 text-sm disabled:opacity-50"
+                        >
+                            <FaSync size={14} className={loading ? 'animate-spin' : ''} />
+                            רענון
+                        </button>
+                    </div>
                 </div>
+
+                {/* Custom Invoice Modal */}
+                {showCustomInvoice && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+                        <div className="bg-white rounded-xl shadow-2xl p-0 max-w-2xl w-full relative flex flex-col" style={{ height: '90vh', maxWidth: 600 }}>
+                            <button
+                                onClick={() => setShowCustomInvoice(false)}
+                                className="absolute left-2 top-2 text-gray-400 hover:text-gray-700 text-xl font-bold z-10"
+                                title="סגור"
+                            >✕</button>
+                            <iframe
+                                src="http://localhost:8000/custom-invoice"
+                                title="הפק חשבונית ידנית ל-Itay Solutions"
+                                style={{ border: 'none', width: '100%', height: '100%', borderRadius: 12, minHeight: 500 }}
+                            />
+                        </div>
+                    </div>
+                )}
 
                 {/* Month Selector + Actions */}
                 <div className="mb-6 flex flex-col sm:flex-row gap-4 items-stretch sm:items-center justify-between">
@@ -353,8 +381,8 @@ export default function SuperAdminInvoices() {
                             key={tab.key}
                             onClick={() => setStatusFilter(tab.key)}
                             className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${statusFilter === tab.key
-                                    ? 'bg-brand-primary text-white shadow-sm'
-                                    : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-50'
+                                ? 'bg-brand-primary text-white shadow-sm'
+                                : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-50'
                                 }`}
                         >
                             {tab.label}
