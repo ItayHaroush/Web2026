@@ -292,7 +292,7 @@ export default function SuperAdminInvoices() {
                                 title="סגור"
                             >✕</button>
                             <iframe
-                                src="http://localhost:8000/custom-invoice"
+                                src="/custom-invoice"
                                 title="הפק חשבונית ידנית ל-Itay Solutions"
                                 style={{ border: 'none', width: '100%', height: '100%', borderRadius: 12, minHeight: 500 }}
                             />
