@@ -1,4 +1,7 @@
+
 <?php
+// Hide deprecated notices (e.g. PDO::MYSQL_ATTR_SSL_CA)
+error_reporting(E_ALL & ~E_DEPRECATED & ~E_USER_DEPRECATED);
 
 use Illuminate\Http\Request;
 
