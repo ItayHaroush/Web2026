@@ -3,6 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
+    <link rel="shortcut icon" href="/images/1.png" type="image/png">
     <title>הפק חשבונית מותאמת ל-Itay Solutions</title>
     <style>
         body {
