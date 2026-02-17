@@ -446,7 +446,8 @@ class OrderController extends Controller
             }
 
             // שליחת פוש לטאבלטים של המסעדה (רק אם לא הזמנת test)
-            if (!($validated['is_test'] ?? false)) {
+            // חשוב: עבור תשלום באשראי, נשלח את ההתראה רק אחרי אישור תשלום ב-HYP (ב-HypOrderCallbackController)
+            if (!($validated['is_test'] ?? false) && $paymentMethod !== 'credit_card') {
                 $notificationBody = "{$order->customer_name} - ₪{$order->total_amount}";
 
                 $this->sendOrderNotification(
