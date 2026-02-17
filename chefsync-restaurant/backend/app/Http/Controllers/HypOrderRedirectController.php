@@ -163,8 +163,12 @@ class HypOrderRedirectController extends Controller
 
         try {
             $signUrl = rtrim($baseUrl, '/') . '/';
+            $referer = config('payment.hyp.referer_url', 'https://api.chefsync.co.il');
 
-            $response = Http::timeout(15)->get($signUrl, $signParams);
+            $response = Http::timeout(15)
+                ->withHeaders(['Referer' => $referer])
+                ->get($signUrl, $signParams);
+
             $body = $response->body();
 
             Log::info('HYP APISign response', [
