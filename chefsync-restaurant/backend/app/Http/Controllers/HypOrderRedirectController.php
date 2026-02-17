@@ -13,8 +13,10 @@ use Illuminate\Support\Facades\Log;
  *
  * שלב ביניים בין האתר ל-HYP Pay Protocol עבור תשלום B2C:
  * 1. שולף PaymentSession + Order + Restaurant
- * 2. קורא ל-HYP APISign (server-to-server) לקבלת חתימה
+ * 2. קורא ל-HYP APISign (server-to-server) לקבלת חתימה — עם Referer header
  * 3. מפנה (redirect) את הלקוח לעמוד תשלום HYP עם כל הפרמטרים + signature
+ *
+ * אימות: REFERER (לא PassP) — לפי הגדרת המסוף ב-HYP
  */
 class HypOrderRedirectController extends Controller
 {
@@ -47,11 +49,10 @@ class HypOrderRedirectController extends Controller
         }
 
         $masof = $restaurant->hyp_terminal_id;
-        $passp = $restaurant->hyp_terminal_password;
         $apiKey = $restaurant->hyp_api_key;
 
-        if (empty($masof) || empty($passp)) {
-            Log::error('HYP redirect: missing terminal credentials', [
+        if (empty($masof)) {
+            Log::error('HYP redirect: missing terminal ID', [
                 'restaurant_id' => $restaurant->id,
             ]);
 
@@ -73,10 +74,10 @@ class HypOrderRedirectController extends Controller
         $baseUrl = rtrim(config('payment.hyp.base_url', 'https://pay.hyp.co.il/p/'), '/');
         $backendUrl = rtrim(config('app.url', 'http://localhost:8000'), '/');
         $amount = number_format($session->amount, 2, '.', '');
-
         $info = "הזמנה #{$order->id} - {$restaurant->name}";
 
-        // פרמטרים בסיסיים לתשלום (Required לפי HYP Pay Protocol)
+        // פרמטרים לתשלום (Required לפי HYP Pay Protocol)
+        // אימות = REFERER, לכן אין PassP
         $payParams = [
             'Masof'      => $masof,
             'Amount'     => $amount,
@@ -105,17 +106,7 @@ class HypOrderRedirectController extends Controller
         }
 
         // --- שלב 1: קבלת חתימה מ-HYP APISign (server-to-server) ---
-        // דיבאג 902: בדיקת credentials שנשלחים (בלי לחשוף ערכים מלאים)
-        Log::info('HYP APISign credentials check', [
-            'masof'          => $masof,
-            'passp_length'   => strlen($passp ?? ''),
-            'passp_preview'  => $passp ? substr($passp, 0, 2) . '***' . substr($passp, -2) : '(empty)',
-            'apiKey_length'  => strlen($apiKey ?? ''),
-            'apiKey_preview' => $apiKey ? substr($apiKey, 0, 2) . '***' . substr($apiKey, -2) : '(empty)',
-            'restaurant_id'  => $restaurant->id,
-        ]);
-
-        $signResult = $this->getSignature($baseUrl, $masof, $passp, $apiKey, $payParams);
+        $signResult = $this->getSignature($baseUrl, $masof, $apiKey, $payParams);
 
         if (!$signResult['success']) {
             Log::error('HYP APISign failed — cannot proceed without signature', [
@@ -133,9 +124,7 @@ class HypOrderRedirectController extends Controller
 
         // --- שלב 2: הפנייה לעמוד תשלום HYP ---
         $payParams['action'] = 'pay';
-        $payParams['PassP'] = $passp;
 
-        // URL עם /? (חשוב — בלי ה-/ לפני ? יש redirects מוזרים ב-HYP)
         $payUrl = rtrim($baseUrl, '/') . '/?' . http_build_query($payParams);
 
         return response()->view('hyp.order_redirect', [
@@ -145,15 +134,15 @@ class HypOrderRedirectController extends Controller
 
     /**
      * קריאה ל-HYP APISign לקבלת חתימה server-to-server
+     * אימות: Referer header (לפי הגדרת המסוף ב-HYP)
      */
-    private function getSignature(string $baseUrl, string $masof, string $passp, string $apiKey, array $params): array
+    private function getSignature(string $baseUrl, string $masof, string $apiKey, array $params): array
     {
-        // כל הפרמטרים ה-Required לפי HYP Pay Protocol עבור APISign SIGN
+        // פרמטרים ל-APISign — בלי PassP (אימות דרך Referer)
         $signParams = [
             'action'  => 'APISign',
             'What'    => 'SIGN',
             'KEY'     => $apiKey,
-            'PassP'   => $passp,
             'Masof'   => $masof,
             'Amount'  => $params['Amount'],
             'Order'   => $params['Order'] ?? '',
@@ -176,13 +165,22 @@ class HypOrderRedirectController extends Controller
 
         try {
             $signUrl = rtrim($baseUrl, '/') . '/';
-            $response = Http::timeout(15)->get($signUrl, $signParams);
+
+            // Referer header חייב להתאים למה שמוגדר במסוף HYP
+            $referer = config('payment.hyp.referer_url', 'https://api.chefsync.co.il');
+
+            $response = Http::timeout(15)
+                ->withHeaders([
+                    'Referer' => $referer,
+                ])
+                ->get($signUrl, $signParams);
+
             $body = $response->body();
 
-            Log::info('HYP APISign raw response', [
-                'http_status' => $response->status(),
-                'body_length' => strlen($body),
-                'body_preview' => substr($body, 0, 500),
+            Log::info('HYP APISign response', [
+                'http_status'  => $response->status(),
+                'body_preview' => substr($body, 0, 300),
+                'referer_sent' => $referer,
             ]);
 
             $result = [];
