@@ -21,7 +21,7 @@ class RestaurantPaymentService
 
     public function __construct()
     {
-        $this->baseUrl = rtrim(config('payment.hyp.base_url', 'https://pay.hyp.co.il/p/'), '/');
+        $this->baseUrl = rtrim(config('payment.hyp.base_url', 'https://pay.hyp.co.il/cgi-bin/yaadpay/yaadpay3ds.pl'), '/');
     }
 
     /**
