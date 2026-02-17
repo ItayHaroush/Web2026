@@ -27,7 +27,7 @@ return [
     | משמש לחיוב מסעדות על מנוי חודשי/שנתי + חיובים חוזרים (soft protocol)
     */
     'hyp' => [
-        'base_url'    => env('HYP_BASE_URL', 'https://pay.hyp.co.il/cgi-bin/yaadpay/yaadpay3ds.pl'),
+        'base_url'    => env('HYP_BASE_URL', 'https://pay.hyp.co.il/p/'),
         'masof'       => env('HYP_MASOF', ''),
         'passp'       => env('HYP_PASSP', ''),
         'api_key'     => env('HYP_API_KEY', ''),

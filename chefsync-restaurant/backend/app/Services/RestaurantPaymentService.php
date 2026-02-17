@@ -21,7 +21,7 @@ class RestaurantPaymentService
 
     public function __construct()
     {
-        $this->baseUrl = rtrim(config('payment.hyp.base_url', 'https://pay.hyp.co.il/cgi-bin/yaadpay/yaadpay3ds.pl'), '/');
+        $this->baseUrl = rtrim(config('payment.hyp.base_url', 'https://pay.hyp.co.il/p/'), '/');
     }
 
     /**
@@ -36,13 +36,10 @@ class RestaurantPaymentService
     }
 
     /**
-     * בונה URL להפניית הלקוח לעמוד redirect פנימי,
-     * אשר מייצר form POST אוטומטי ל-HYP (Pay Protocol).
-     *
-     * ה-redirect הפנימי אחראי על:
-     * - Masof + PassP אמיתיים של המסעדה
-     * - חישוב Sign לפי מסמך HYP
-     * - שליחת POST ל-yaadpay3ds.pl
+     * בונה URL להפניית הלקוח לעמוד redirect פנימי.
+     * ה-controller (HypOrderRedirectController) אחראי על:
+     * - קריאת APISign server-to-server לקבלת חתימה
+     * - הפנייה לעמוד תשלום HYP עם כל הפרמטרים + signature
      */
     public function generateOrderPaymentUrl(Restaurant $restaurant, Order $order, PaymentSession $session): string
     {
@@ -95,7 +92,7 @@ class RestaurantPaymentService
 
     /**
      * אימות עסקת הזמנה (APISign VERIFY)
-     * משתמש ב-Masof של המסעדה (לא של הפלטפורמה!)
+     * משתמש ב-Masof + KEY של המסעדה (לא של הפלטפורמה!)
      */
     public function verifyOrderTransaction(Restaurant $restaurant, array $responseParams): array
     {
@@ -108,6 +105,10 @@ class RestaurantPaymentService
             'CCode'  => $responseParams['CCode'] ?? '',
             'Amount' => $responseParams['Amount'] ?? '',
         ];
+
+        if (!empty($restaurant->hyp_api_key)) {
+            $query['KEY'] = $restaurant->hyp_api_key;
+        }
 
         try {
             $response = Http::timeout(15)->get($this->baseUrl, $query);
