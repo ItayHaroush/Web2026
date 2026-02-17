@@ -42,6 +42,7 @@ import KioskViewer from './pages/KioskViewer';
 import AdminKiosks from './pages/admin/AdminKiosks';
 import AdminReports from './pages/admin/AdminReports';
 import AdminPaymentSettings from './pages/admin/AdminPaymentSettings';
+import PaymentCallback from './pages/PaymentCallback';
 import AdminAuthDebug from './pages/admin/AdminAuthDebug';
 import SuperAdminDashboard from './pages/super-admin/SuperAdminDashboard';
 import SuperAdminNotifications from './pages/super-admin/SuperAdminNotifications';
@@ -136,6 +137,11 @@ function AppRoutes() {
       <Route path="/menu" element={tenantId ? <MenuPage /> : <Navigate to="/" />} />
       <Route path="/cart" element={tenantId ? <CartPage /> : <Navigate to="/" />} />
       <Route path="/order-status/:orderId" element={tenantId ? <OrderStatusPage /> : <Navigate to="/" />} />
+
+      {/* callback חזרה מ-HYP אחרי תשלום הזמנה */}
+      <Route path="/payment/success" element={<PaymentCallback />} />
+      <Route path="/payment/error" element={<PaymentCallback />} />
+      <Route path="/payment/failed" element={<PaymentCallback />} />
 
       {/* לינק ישיר למסעדה */}
       <Route path="/:tenantId/menu" element={<MenuPage />} />
