@@ -31,7 +31,7 @@ class RestaurantPaymentService
     {
         return $restaurant->hyp_terminal_verified
             && !empty($restaurant->hyp_terminal_id)
-            && !empty($restaurant->getRawOriginal('hyp_terminal_password'))
+            && !empty($restaurant->hyp_terminal_password)
             && config('payment.credit_card_enabled');
     }
 

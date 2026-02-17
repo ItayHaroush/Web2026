@@ -78,7 +78,7 @@ class ReconcilePayments extends Command
         foreach ($byRestaurant as $restaurantId => $sessions) {
             $restaurant = $sessions->first()->restaurant;
 
-            if (!$restaurant || empty($restaurant->hyp_terminal_id) || empty($restaurant->getRawOriginal('hyp_terminal_password'))) {
+            if (!$restaurant || empty($restaurant->hyp_terminal_id) || empty($restaurant->hyp_terminal_password)) {
                 $this->warn("Restaurant #{$restaurantId}: missing HYP credentials, skipping.");
                 continue;
             }

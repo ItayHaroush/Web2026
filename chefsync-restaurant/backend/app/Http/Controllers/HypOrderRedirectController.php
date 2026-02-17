@@ -48,9 +48,9 @@ class HypOrderRedirectController extends Controller
             ], 404);
         }
 
-        // פרטי מסוף יעד (Masof + PassP)
+        // פרטי מסוף יעד (Masof + PassP) — חשוב: לגשת דרך Eloquent כדי ש-Laravel יפענח את ה-encrypted cast
         $masof = $restaurant->hyp_terminal_id;
-        $passp = $restaurant->getRawOriginal('hyp_terminal_password');
+        $passp = $restaurant->hyp_terminal_password;
 
         if (empty($masof) || empty($passp)) {
             Log::error('HYP redirect: missing terminal credentials', [
@@ -101,13 +101,12 @@ class HypOrderRedirectController extends Controller
 
         $hypActionUrl = config('payment.hyp.base_url', 'https://pay.hyp.co.il/cgi-bin/yaadpay/yaadpay3ds.pl');
 
-        // דיבאג לפני שליחה ל-HYP: וידוא ש-Masof ו-PassP נשלחים (אם PassP ריק → HYP מחזיר Masof Error)
+        // דיבאג לפני שליחה ל-HYP
         Log::info('HYP redirect: params before POST', [
             'masof'         => $masof,
-            'passp'         => $passp,
             'passp_empty'   => empty($passp),
-            'passp_null'    => $passp === null,
             'passp_length'  => strlen($passp ?? ''),
+            'passp_preview' => $passp ? substr($passp, 0, 3) . '***' : '(null)',
             'restaurant_id' => $restaurant->id,
         ]);
 

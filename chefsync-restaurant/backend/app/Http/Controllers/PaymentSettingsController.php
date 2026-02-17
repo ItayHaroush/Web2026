@@ -32,7 +32,7 @@ class PaymentSettingsController extends Controller
             'success' => true,
             'data' => [
                 'hyp_terminal_id' => $restaurant->hyp_terminal_id,
-                'has_password' => !empty($restaurant->getRawOriginal('hyp_terminal_password')),
+                'has_password' => !empty($restaurant->hyp_terminal_password),
                 'hyp_terminal_verified' => $restaurant->hyp_terminal_verified,
                 'hyp_terminal_verified_at' => $restaurant->hyp_terminal_verified_at,
                 'accepted_payment_methods' => $restaurant->accepted_payment_methods ?? ['cash'],
@@ -148,7 +148,7 @@ class PaymentSettingsController extends Controller
             'warnings' => $warnings,
             'data' => [
                 'hyp_terminal_id' => $restaurant->hyp_terminal_id,
-                'has_password' => !empty($restaurant->getRawOriginal('hyp_terminal_password')),
+                'has_password' => !empty($restaurant->hyp_terminal_password),
                 'hyp_terminal_verified' => $restaurant->hyp_terminal_verified,
                 'hyp_terminal_verified_at' => $restaurant->hyp_terminal_verified_at,
                 'accepted_payment_methods' => $restaurant->accepted_payment_methods,
@@ -191,7 +191,7 @@ class PaymentSettingsController extends Controller
             ], 422);
         }
 
-        if (empty($restaurant->getRawOriginal('hyp_terminal_password'))) {
+        if (empty($restaurant->hyp_terminal_password)) {
             return response()->json([
                 'success' => false,
                 'message' => 'נא להזין סיסמת מסוף לפני אימות',
