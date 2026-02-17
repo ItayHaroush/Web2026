@@ -17,7 +17,9 @@ export default function AdminPaymentSettings() {
     const [availableMethods, setAvailableMethods] = useState(['cash']);
     const [terminalId, setTerminalId] = useState('');
     const [terminalPassword, setTerminalPassword] = useState('');
+    const [apiKey, setApiKey] = useState('');
     const [hasPassword, setHasPassword] = useState(false);
+    const [hasApiKey, setHasApiKey] = useState(false);
     const [verified, setVerified] = useState(false);
     const [verifiedAt, setVerifiedAt] = useState(null);
     const [tier, setTier] = useState('basic');
@@ -37,6 +39,7 @@ export default function AdminPaymentSettings() {
                 setAvailableMethods(data.available_payment_methods || ['cash']);
                 setTerminalId(data.hyp_terminal_id || '');
                 setHasPassword(data.has_password || false);
+                setHasApiKey(data.has_api_key || false);
                 setVerified(data.hyp_terminal_verified || false);
                 setVerifiedAt(data.hyp_terminal_verified_at || null);
                 setTier(data.tier || 'basic');
@@ -58,6 +61,7 @@ export default function AdminPaymentSettings() {
             // Clear terminal fields when disabling credit card
             setTerminalId('');
             setTerminalPassword('');
+            setApiKey('');
         }
     };
 
@@ -73,6 +77,10 @@ export default function AdminPaymentSettings() {
             if (terminalPassword) {
                 payload.hyp_terminal_password = terminalPassword;
             }
+            // Only send API key if user entered a new one
+            if (apiKey) {
+                payload.hyp_api_key = apiKey;
+            }
             // Send fee agreement if enabling credit card and not yet charged
             if (creditCardEnabled && !setupFeeCharged && agreedToFee) {
                 payload.agree_setup_fee = true;
@@ -84,6 +92,7 @@ export default function AdminPaymentSettings() {
                 // Update local state from response
                 if (result.data) {
                     setHasPassword(result.data.has_password || false);
+                    setHasApiKey(result.data.has_api_key || false);
                     setVerified(result.data.hyp_terminal_verified || false);
                     setVerifiedAt(result.data.hyp_terminal_verified_at || null);
                     setAcceptedMethods(result.data.accepted_payment_methods || ['cash']);
@@ -94,7 +103,8 @@ export default function AdminPaymentSettings() {
                 if (result.warnings && result.warnings.length > 0) {
                     setMessage({ type: 'warning', text: result.warnings.join(', ') });
                 }
-                setTerminalPassword(''); // Clear password field after save
+                setTerminalPassword('');
+                setApiKey('');
             } else {
                 setMessage({ type: 'error', text: result.message || 'שגיאה בשמירת ההגדרות' });
             }
@@ -313,7 +323,7 @@ export default function AdminPaymentSettings() {
 
                         {/* Terminal Password */}
                         <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-2">סיסמת מסוף</label>
+                            <label className="block text-sm font-bold text-gray-700 mb-2">סיסמת מסוף (PassP)</label>
                             <input
                                 type="password"
                                 value={terminalPassword}
@@ -323,6 +333,20 @@ export default function AdminPaymentSettings() {
                                 dir="ltr"
                             />
                             <p className="text-xs text-gray-400 mt-1">הסיסמה מוצפנת ולא תוצג לאחר שמירה</p>
+                        </div>
+
+                        {/* API Key */}
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-2">מפתח API (API Key)</label>
+                            <input
+                                type="password"
+                                value={apiKey}
+                                onChange={(e) => setApiKey(e.target.value)}
+                                placeholder={hasApiKey ? '••••••••  (הוזן - הזינו מפתח חדש לעדכון)' : 'הזינו את מפתח ה-API שקיבלתם מ-HYP'}
+                                className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 outline-none transition-colors"
+                                dir="ltr"
+                            />
+                            <p className="text-xs text-gray-400 mt-1">משמש לחתימה ואימות עסקאות מול HYP. מוצפן ולא יוצג לאחר שמירה</p>
                         </div>
 
                         {/* Verification Status */}

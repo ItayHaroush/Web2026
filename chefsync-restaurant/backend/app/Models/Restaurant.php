@@ -72,6 +72,7 @@ class Restaurant extends Model
         'enable_dine_in_pricing',
         'hyp_terminal_id',
         'hyp_terminal_password',
+        'hyp_api_key',
         'hyp_terminal_verified',
         'hyp_terminal_verified_at',
         'accepted_payment_methods',
@@ -85,6 +86,7 @@ class Restaurant extends Model
 
     protected $hidden = [
         'hyp_terminal_password',
+        'hyp_api_key',
         'hyp_card_token',
     ];
 
@@ -117,6 +119,7 @@ class Restaurant extends Model
         'hyp_terminal_verified' => 'boolean',
         'hyp_terminal_verified_at' => 'datetime',
         'hyp_terminal_password' => 'encrypted',
+        'hyp_api_key' => 'encrypted',
         'hyp_card_token' => 'encrypted',
         'accepted_payment_methods' => 'array',
         'payment_failed_at' => 'datetime',

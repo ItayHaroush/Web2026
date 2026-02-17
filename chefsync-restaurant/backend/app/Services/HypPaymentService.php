@@ -22,7 +22,7 @@ class HypPaymentService
 
     public function __construct()
     {
-        $this->baseUrl = rtrim(config('payment.hyp.base_url', 'https://pay.hyp.co.il/cgi-bin/yaadpay/yaadpay3ds.pl'), '/');
+        $this->baseUrl = rtrim(config('payment.hyp.base_url', 'https://pay.hyp.co.il/p/'), '/');
         $this->masof = config('payment.hyp.masof', '');
         $this->passp = config('payment.hyp.passp', '');
         $this->apiKey = config('payment.hyp.api_key', '');

@@ -46,40 +46,33 @@
             to { transform: rotate(360deg); }
         }
         .button {
+            display: inline-block;
             margin-top: 16px;
-            padding: 10px 16px;
+            padding: 10px 24px;
             border-radius: 999px;
             border: none;
             background: #f97316;
             color: #fff;
             font-weight: 600;
+            font-size: 14px;
             cursor: pointer;
+            text-decoration: none;
         }
     </style>
 </head>
 <body>
     <div class="card">
         <h1>מעביר אותך לתשלום מאובטח</h1>
-        <p>אנא המתן מספר שניות לסיום החיבור ל-HYP.</p>
+        <p>אנא המתן מספר שניות...</p>
         <div class="spinner"></div>
-        <p>אם אינך מועבר אוטומטית, לחץ על הכפתור:</p>
-        <button class="button" onclick="document.getElementById('hyp-payment-form').submit();">
-            המשך לתשלום
-        </button>
+        <p>אם אינך מועבר אוטומטית:</p>
+        <a class="button" href="{{ $paymentUrl }}">המשך לתשלום</a>
     </div>
 
-    <form id="hyp-payment-form" method="POST" action="{{ $actionUrl }}">
-        @foreach($params as $name => $value)
-            <input type="hidden" name="{{ $name }}" value="{{ $value }}">
-        @endforeach
-    </form>
-
     <script>
-        // Submit אוטומטי אחרי טעינה קצרה
         setTimeout(function () {
-            document.getElementById('hyp-payment-form').submit();
-        }, 500);
+            window.location.href = @json($paymentUrl);
+        }, 600);
     </script>
 </body>
 </html>
-

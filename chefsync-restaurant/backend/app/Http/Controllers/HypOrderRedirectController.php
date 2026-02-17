@@ -5,17 +5,16 @@ namespace App\Http\Controllers;
 use App\Models\Order;
 use App\Models\PaymentSession;
 use App\Models\Restaurant;
-use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 /**
  * HypOrderRedirectController
  *
- * מחולל טופס POST אוטומטי ל-HYP (YaadPay) עבור תשלום B2C.
- * דף זה הוא שלב ביניים בין האתר לבין HYP:
- * - שולף PaymentSession + Order + Restaurant
- * - מחשב חתימת Sign לפי Masof + PassP + Amount + Coin + Tash
- * - יוצר form אוטומטי ל-https://pay.hyp.co.il/cgi-bin/yaadpay/yaadpay3ds.pl
+ * שלב ביניים בין האתר ל-HYP Pay Protocol עבור תשלום B2C:
+ * 1. שולף PaymentSession + Order + Restaurant
+ * 2. קורא ל-HYP APISign (server-to-server) לקבלת חתימה
+ * 3. מפנה (redirect) את הלקוח לעמוד תשלום HYP עם כל הפרמטרים + signature
  */
 class HypOrderRedirectController extends Controller
 {
@@ -26,7 +25,6 @@ class HypOrderRedirectController extends Controller
         if (!$session || $session->isExpired() || $session->status !== 'pending') {
             Log::warning('HYP redirect: invalid or expired session', [
                 'session_token' => $sessionToken,
-                'session'       => $session?->toArray(),
             ]);
 
             return response()->view('hyp.order_error', [
@@ -48,9 +46,9 @@ class HypOrderRedirectController extends Controller
             ], 404);
         }
 
-        // פרטי מסוף יעד (Masof + PassP) — חשוב: לגשת דרך Eloquent כדי ש-Laravel יפענח את ה-encrypted cast
         $masof = $restaurant->hyp_terminal_id;
         $passp = $restaurant->hyp_terminal_password;
+        $apiKey = $restaurant->hyp_api_key;
 
         if (empty($masof) || empty($passp)) {
             Log::error('HYP redirect: missing terminal credentials', [
@@ -62,29 +60,23 @@ class HypOrderRedirectController extends Controller
             ], 500);
         }
 
-        $amount = number_format($session->amount, 2, '.', '');
-        $coin   = '1';
-        $tash   = '1';
-
-        // חישוב Sign לפי הנחיות HYP (הסדר חשוב!)
-        $signString = $masof . $passp . $amount . $coin . $tash;
-        $sign       = md5($signString);
-
+        $baseUrl = rtrim(config('payment.hyp.base_url', 'https://pay.hyp.co.il/p/'), '/');
         $backendUrl = rtrim(config('app.url', 'http://localhost:8000'), '/');
+        $amount = number_format($session->amount, 2, '.', '');
 
-        $params = [
-            'action'     => 'pay',
+        // פרמטרים בסיסיים לתשלום
+        $payParams = [
             'Masof'      => $masof,
-            'PassP'      => $passp,
             'Amount'     => $amount,
+            'Order'      => (string) $order->id,
             'Info'       => "הזמנה #{$order->id} - {$restaurant->name}",
-            'Coin'       => $coin,
-            'Tash'       => $tash,
+            'Coin'       => '1',
+            'Tash'       => '1',
             'PageLang'   => 'HEB',
             'UTF8'       => 'True',
             'UTF8out'    => 'True',
             'MoreData'   => 'True',
-            'Sign'       => $sign,
+            'Sign'       => 'True',
             'Fild1'      => $session->session_token,
             'Fild2'      => (string) $restaurant->id,
             'Fild3'      => (string) $order->id,
@@ -93,27 +85,90 @@ class HypOrderRedirectController extends Controller
         ];
 
         if ($order->customer_name) {
-            $params['ClientName'] = $order->customer_name;
+            $payParams['ClientName'] = $order->customer_name;
         }
         if ($order->customer_phone) {
-            $params['cell'] = $order->customer_phone;
+            $payParams['cell'] = $order->customer_phone;
         }
 
-        $hypActionUrl = config('payment.hyp.base_url', 'https://pay.hyp.co.il/cgi-bin/yaadpay/yaadpay3ds.pl');
+        // --- שלב 1: קבלת חתימה מ-HYP APISign (server-to-server) ---
+        if (!empty($apiKey)) {
+            $signResult = $this->getSignature($baseUrl, $masof, $passp, $apiKey, $payParams);
 
-        // דיבאג לפני שליחה ל-HYP
-        Log::info('HYP redirect: params before POST', [
-            'masof'         => $masof,
-            'passp_empty'   => empty($passp),
-            'passp_length'  => strlen($passp ?? ''),
-            'passp_preview' => $passp ? substr($passp, 0, 3) . '***' : '(null)',
-            'restaurant_id' => $restaurant->id,
-        ]);
+            if ($signResult['success']) {
+                $payParams['signature'] = $signResult['signature'];
+            } else {
+                Log::error('HYP APISign failed, falling back to local Sign', [
+                    'restaurant_id' => $restaurant->id,
+                    'error'         => $signResult['error'],
+                ]);
+            }
+        }
+
+        // --- שלב 2: הפנייה לעמוד תשלום HYP ---
+        $payParams['action'] = 'pay';
+        $payParams['PassP'] = $passp;
+        $payUrl = $baseUrl . '?' . http_build_query($payParams);
 
         return response()->view('hyp.order_redirect', [
-            'actionUrl' => rtrim($hypActionUrl, '/'),
-            'params'    => $params,
+            'paymentUrl' => $payUrl,
         ]);
     }
-}
 
+    /**
+     * קריאה ל-HYP APISign לקבלת חתימה server-to-server
+     */
+    private function getSignature(string $baseUrl, string $masof, string $passp, string $apiKey, array $params): array
+    {
+        $signParams = [
+            'action' => 'APISign',
+            'What'   => 'SIGN',
+            'KEY'    => $apiKey,
+            'PassP'  => $passp,
+            'Masof'  => $masof,
+            'Amount' => $params['Amount'],
+            'Order'  => $params['Order'] ?? '',
+        ];
+
+        if (!empty($params['Coin'])) {
+            $signParams['Coin'] = $params['Coin'];
+        }
+        if (!empty($params['Tash'])) {
+            $signParams['Tash'] = $params['Tash'];
+        }
+        if (!empty($params['ClientName'])) {
+            $signParams['ClientName'] = $params['ClientName'];
+        }
+
+        try {
+            $response = Http::timeout(15)->get($baseUrl, $signParams);
+            $body = $response->body();
+
+            $result = [];
+            parse_str($body, $result);
+
+            if (!empty($result['signature'])) {
+                return [
+                    'success'   => true,
+                    'signature' => $result['signature'],
+                    'error'     => null,
+                ];
+            }
+
+            $ccode = $result['CCode'] ?? null;
+            $errMsg = $result['ErrMsg'] ?? 'No signature returned';
+
+            return [
+                'success'   => false,
+                'signature' => null,
+                'error'     => "CCode={$ccode}: {$errMsg}",
+            ];
+        } catch (\Exception $e) {
+            return [
+                'success'   => false,
+                'signature' => null,
+                'error'     => $e->getMessage(),
+            ];
+        }
+    }
+}

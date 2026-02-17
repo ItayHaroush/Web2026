@@ -14,6 +14,6 @@ Route::post('/custom-invoice', [CustomInvoiceController::class, 'generate'])->na
 Route::get('/custom-invoice/show', [CustomInvoiceController::class, 'showInvoice'])->name('custom-invoice.show');
 Route::post('/custom-invoice/download', [CustomInvoiceController::class, 'download'])->name('custom-invoice.download');
 
-// Redirect לתשלום HYP (B2C) – יוצר form POST ל-YaadPay
+// Redirect לתשלום HYP (B2C) – קורא APISign לחתימה ומפנה לעמוד תשלום HYP
 Route::get('/pay/hyp/order/{sessionToken}', [HypOrderRedirectController::class, 'redirect'])
     ->name('payments.hyp.order.redirect');

@@ -33,6 +33,7 @@ class PaymentSettingsController extends Controller
             'data' => [
                 'hyp_terminal_id' => $restaurant->hyp_terminal_id,
                 'has_password' => !empty($restaurant->hyp_terminal_password),
+                'has_api_key' => !empty($restaurant->hyp_api_key),
                 'hyp_terminal_verified' => $restaurant->hyp_terminal_verified,
                 'hyp_terminal_verified_at' => $restaurant->hyp_terminal_verified_at,
                 'accepted_payment_methods' => $restaurant->accepted_payment_methods ?? ['cash'],
@@ -52,6 +53,7 @@ class PaymentSettingsController extends Controller
         $validated = $request->validate([
             'hyp_terminal_id' => 'nullable|string|max:100',
             'hyp_terminal_password' => 'nullable|string|max:255',
+            'hyp_api_key' => 'nullable|string|max:255',
             'accepted_payment_methods' => 'required|array|min:1',
             'accepted_payment_methods.*' => 'in:cash,credit_card',
             'agree_setup_fee' => 'nullable|boolean',
@@ -124,9 +126,14 @@ class PaymentSettingsController extends Controller
         // עדכון password אם סופק (יוצפן אוטומטית על ידי encrypted cast)
         if (!empty($validated['hyp_terminal_password'])) {
             $updateData['hyp_terminal_password'] = $validated['hyp_terminal_password'];
-            // אם שינו credentials, מס terminal ל-unverified
+            // אם שינו credentials, סמן terminal כ-unverified
             $updateData['hyp_terminal_verified'] = false;
             $updateData['hyp_terminal_verified_at'] = null;
+        }
+
+        // עדכון API Key אם סופק (יוצפן אוטומטית על ידי encrypted cast)
+        if (!empty($validated['hyp_api_key'])) {
+            $updateData['hyp_api_key'] = $validated['hyp_api_key'];
         }
 
         $restaurant->update($updateData);
@@ -149,6 +156,7 @@ class PaymentSettingsController extends Controller
             'data' => [
                 'hyp_terminal_id' => $restaurant->hyp_terminal_id,
                 'has_password' => !empty($restaurant->hyp_terminal_password),
+                'has_api_key' => !empty($restaurant->hyp_api_key),
                 'hyp_terminal_verified' => $restaurant->hyp_terminal_verified,
                 'hyp_terminal_verified_at' => $restaurant->hyp_terminal_verified_at,
                 'accepted_payment_methods' => $restaurant->accepted_payment_methods,
