@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\Order;
 use App\Models\PaymentSession;
 use App\Models\Restaurant;
+use App\Models\FcmToken;
 use App\Services\RestaurantPaymentService;
+use App\Services\FcmService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -119,6 +121,25 @@ class HypOrderCallbackController extends Controller
             'amount'         => $expectedAmount,
         ]);
 
+        // שליחת פוש לטאבלטים של המסעדה רק אחרי אישור תשלום באשראי
+        try {
+            $this->sendOrderNotification(
+                tenantId: $restaurant->tenant_id,
+                title: "הזמנה חדשה #{$order->id}",
+                body: "{$order->customer_name} - ₪{$expectedAmount}",
+                data: [
+                    'orderId' => (string) $order->id,
+                    'type'    => 'new_order',
+                    'url'     => '/admin/orders',
+                ]
+            );
+        } catch (\Throwable $e) {
+            Log::warning('Failed to send FCM notification after HYP payment', [
+                'order_id' => $order->id,
+                'error'    => $e->getMessage(),
+            ]);
+        }
+
         return $this->redirectToOrderStatus($restaurantId, $orderId, 'success');
     }
 
@@ -159,6 +180,28 @@ class HypOrderCallbackController extends Controller
         }
 
         return $this->redirectToOrderStatus($restaurantId, $orderId, 'failed');
+    }
+
+    /**
+     * שליחת התראת Push לטאבלטים של המסעדה (העתק מהלוגיקה ב-OrderController)
+     */
+    private function sendOrderNotification(string $tenantId, string $title, string $body, array $data = []): void
+    {
+        try {
+            $tokens = FcmToken::where('tenant_id', $tenantId)->pluck('token');
+            if ($tokens->isEmpty()) {
+                return;
+            }
+
+            $fcm = app(FcmService::class);
+            foreach ($tokens as $token) {
+                $fcm->sendToToken($token, $title, $body, $data);
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Failed to send FCM notification (HypOrderCallbackController)', [
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     private function redirectToOrderStatus(string $restaurantId, string $orderId, string $paymentStatus): \Illuminate\Http\RedirectResponse

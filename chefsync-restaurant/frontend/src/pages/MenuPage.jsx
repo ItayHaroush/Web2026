@@ -252,7 +252,6 @@ export default function MenuPage({ isPreviewMode = false }) {
             addons: [],
             qty: 1,
         });
-        addToast(`${item.name} נוסף לסל`, 'success');
     };
 
     const goToCart = () => {
@@ -1034,7 +1033,6 @@ export default function MenuPage({ isPreviewMode = false }) {
                     onAdd={(itemData) => {
                         addToCart(itemData);
                         setSuggestionMenuItem(null);
-                        addToast(`${itemData.name || suggestionMenuItem.name} נוסף לסל`, 'success');
                     }}
                     isOrderingEnabled={true}
                 />
