@@ -31,6 +31,7 @@ class RestaurantPaymentService
     {
         return $restaurant->hyp_terminal_verified
             && !empty($restaurant->hyp_terminal_id)
+            && !empty($restaurant->hyp_terminal_password)
             && !empty($restaurant->hyp_api_key)
             && config('payment.credit_card_enabled');
     }
@@ -51,7 +52,7 @@ class RestaurantPaymentService
 
     /**
      * אימות credentials של מסוף — שולח APISign SIGN עם סכום קטן
-     * אימות: REFERER header (לא PassP)
+     * אימות: KEY + PassP
      * HYP מחזיר signature אם credentials תקינים, או CCode 901-903 אם לא
      */
     public function verifyCredentials(Restaurant $restaurant): array
@@ -60,6 +61,7 @@ class RestaurantPaymentService
             'action'  => 'APISign',
             'What'    => 'SIGN',
             'KEY'     => $restaurant->hyp_api_key,
+            'PassP'   => $restaurant->hyp_terminal_password,
             'Masof'   => $restaurant->hyp_terminal_id,
             'Amount'  => '0.01',
             'Order'   => 'verify-' . time(),
@@ -70,16 +72,10 @@ class RestaurantPaymentService
             'UserId'  => '000000000',
         ];
 
-        $referer = config('payment.hyp.referer_url', 'https://api.chefsync.co.il');
-
         try {
-            $response = Http::timeout(15)
-                ->withHeaders(['Referer' => $referer])
-                ->get($this->baseUrl, $query);
-
+            $response = Http::timeout(15)->get($this->baseUrl, $query);
             $result = $this->parseResponse($response->body());
 
-            // אם חזר signature — ה-credentials תקינים
             if (!empty($result['signature'])) {
                 return [
                     'valid' => true,
@@ -104,7 +100,7 @@ class RestaurantPaymentService
 
     /**
      * אימות עסקת הזמנה (APISign VERIFY)
-     * אימות: REFERER header (לא PassP) — לפי הגדרת המסוף ב-HYP
+     * אימות: KEY + PassP
      */
     public function verifyOrderTransaction(Restaurant $restaurant, array $responseParams): array
     {
@@ -112,19 +108,15 @@ class RestaurantPaymentService
             'action' => 'APISign',
             'What'   => 'VERIFY',
             'KEY'    => $restaurant->hyp_api_key,
+            'PassP'  => $restaurant->hyp_terminal_password,
             'Masof'  => $restaurant->hyp_terminal_id,
             'Id'     => $responseParams['Id'] ?? '',
             'CCode'  => $responseParams['CCode'] ?? '',
             'Amount' => $responseParams['Amount'] ?? '',
         ];
 
-        $referer = config('payment.hyp.referer_url', 'https://api.chefsync.co.il');
-
         try {
-            $response = Http::timeout(15)
-                ->withHeaders(['Referer' => $referer])
-                ->get($this->baseUrl, $query);
-
+            $response = Http::timeout(15)->get($this->baseUrl, $query);
             $result = $this->parseResponse($response->body());
 
             return [
