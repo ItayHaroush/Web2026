@@ -64,14 +64,17 @@ class HypOrderRedirectController extends Controller
         $backendUrl = rtrim(config('app.url', 'http://localhost:8000'), '/');
         $amount = number_format($session->amount, 2, '.', '');
 
-        // פרמטרים בסיסיים לתשלום
+        $info = "הזמנה #{$order->id} - {$restaurant->name}";
+
+        // פרמטרים בסיסיים לתשלום (Required לפי HYP Pay Protocol)
         $payParams = [
             'Masof'      => $masof,
             'Amount'     => $amount,
             'Order'      => (string) $order->id,
-            'Info'       => "הזמנה #{$order->id} - {$restaurant->name}",
+            'Info'       => $info,
             'Coin'       => '1',
             'Tash'       => '1',
+            'UserId'     => '000000000',
             'PageLang'   => 'HEB',
             'UTF8'       => 'True',
             'UTF8out'    => 'True',
@@ -120,14 +123,20 @@ class HypOrderRedirectController extends Controller
      */
     private function getSignature(string $baseUrl, string $masof, string $passp, string $apiKey, array $params): array
     {
+        // כל הפרמטרים ה-Required לפי HYP Pay Protocol עבור APISign SIGN
         $signParams = [
-            'action' => 'APISign',
-            'What'   => 'SIGN',
-            'KEY'    => $apiKey,
-            'PassP'  => $passp,
-            'Masof'  => $masof,
-            'Amount' => $params['Amount'],
-            'Order'  => $params['Order'] ?? '',
+            'action'  => 'APISign',
+            'What'    => 'SIGN',
+            'KEY'     => $apiKey,
+            'PassP'   => $passp,
+            'Masof'   => $masof,
+            'Amount'  => $params['Amount'],
+            'Order'   => $params['Order'] ?? '',
+            'Info'    => $params['Info'] ?? '',
+            'Sign'    => 'True',
+            'UTF8'    => 'True',
+            'UTF8out' => 'True',
+            'UserId'  => $params['UserId'] ?? '000000000',
         ];
 
         if (!empty($params['Coin'])) {
