@@ -167,7 +167,8 @@ class PaymentSettingsController extends Controller
      */
     public function verifyTerminal(Request $request)
     {
-        $user = $request->attributes->get('auth_user');
+        // משתמש מאומת מתוך Sanctum
+        $user = $request->user();
         if (!$user || !in_array($user->role, ['owner']) && !($user->is_super_admin ?? false)) {
             return response()->json([
                 'success' => false,
