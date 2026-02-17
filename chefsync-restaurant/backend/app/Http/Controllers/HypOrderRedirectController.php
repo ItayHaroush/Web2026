@@ -60,6 +60,16 @@ class HypOrderRedirectController extends Controller
             ], 500);
         }
 
+        if (empty($apiKey)) {
+            Log::error('HYP redirect: missing API Key — cannot generate signature', [
+                'restaurant_id' => $restaurant->id,
+            ]);
+
+            return response()->view('hyp.order_error', [
+                'message' => 'מפתח API של המסעדה אינו מוגדר. יש להזין אותו בהגדרות תשלום.',
+            ], 500);
+        }
+
         $baseUrl = rtrim(config('payment.hyp.base_url', 'https://pay.hyp.co.il/p/'), '/');
         $backendUrl = rtrim(config('app.url', 'http://localhost:8000'), '/');
         $amount = number_format($session->amount, 2, '.', '');
@@ -95,23 +105,28 @@ class HypOrderRedirectController extends Controller
         }
 
         // --- שלב 1: קבלת חתימה מ-HYP APISign (server-to-server) ---
-        if (!empty($apiKey)) {
-            $signResult = $this->getSignature($baseUrl, $masof, $passp, $apiKey, $payParams);
+        $signResult = $this->getSignature($baseUrl, $masof, $passp, $apiKey, $payParams);
 
-            if ($signResult['success']) {
-                $payParams['signature'] = $signResult['signature'];
-            } else {
-                Log::error('HYP APISign failed, falling back to local Sign', [
-                    'restaurant_id' => $restaurant->id,
-                    'error'         => $signResult['error'],
-                ]);
-            }
+        if (!$signResult['success']) {
+            Log::error('HYP APISign failed — cannot proceed without signature', [
+                'restaurant_id' => $restaurant->id,
+                'order_id'      => $order->id,
+                'error'         => $signResult['error'],
+            ]);
+
+            return response()->view('hyp.order_error', [
+                'message' => 'שגיאה בקבלת חתימה מ-HYP. נא לנסות שוב או ליצור קשר עם התמיכה.',
+            ], 500);
         }
+
+        $payParams['signature'] = $signResult['signature'];
 
         // --- שלב 2: הפנייה לעמוד תשלום HYP ---
         $payParams['action'] = 'pay';
         $payParams['PassP'] = $passp;
-        $payUrl = $baseUrl . '?' . http_build_query($payParams);
+
+        // URL עם /? (חשוב — בלי ה-/ לפני ? יש redirects מוזרים ב-HYP)
+        $payUrl = rtrim($baseUrl, '/') . '/?' . http_build_query($payParams);
 
         return response()->view('hyp.order_redirect', [
             'paymentUrl' => $payUrl,
@@ -150,8 +165,15 @@ class HypOrderRedirectController extends Controller
         }
 
         try {
-            $response = Http::timeout(15)->get($baseUrl, $signParams);
+            $signUrl = rtrim($baseUrl, '/') . '/';
+            $response = Http::timeout(15)->get($signUrl, $signParams);
             $body = $response->body();
+
+            Log::info('HYP APISign raw response', [
+                'http_status' => $response->status(),
+                'body_length' => strlen($body),
+                'body_preview' => substr($body, 0, 500),
+            ]);
 
             $result = [];
             parse_str($body, $result);
