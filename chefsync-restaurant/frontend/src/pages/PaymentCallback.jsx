@@ -2,7 +2,13 @@ import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { FaSpinner } from 'react-icons/fa';
 
-const API = import.meta.env.VITE_API_URL || '';
+const getEnv = (key, fallback) => {
+    try { return import.meta?.env?.[key] || fallback; }
+    catch { return fallback; }
+};
+
+const PROD_API = getEnv('VITE_API_URL_PRODUCTION', 'https://api.chefsync.co.il/api');
+const API = getEnv('PROD', false) ? PROD_API : getEnv('VITE_API_URL_LOCAL', PROD_API);
 
 /**
  * דף callback אחרי תשלום HYP (B2C).
@@ -15,10 +21,9 @@ export default function PaymentCallback() {
     useEffect(() => {
         const isError = location.pathname.includes('/error') || location.pathname.includes('/failed');
         const endpoint = isError
-            ? `${API}/api/payments/hyp/order/error`
-            : `${API}/api/payments/hyp/order/success`;
+            ? `${API}/payments/hyp/order/error`
+            : `${API}/payments/hyp/order/success`;
 
-        // העברת כל הפרמטרים מ-HYP ישירות לבאקנד (GET redirect)
         const queryString = location.search;
         window.location.href = `${endpoint}${queryString}`;
     }, []);
