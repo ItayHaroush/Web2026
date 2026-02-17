@@ -121,6 +121,7 @@ class HypOrderRedirectController extends Controller
 
         // --- שלב 2: הפנייה לעמוד תשלום HYP ---
         $payParams['action'] = 'pay';
+        $payParams['PassP'] = $passp;
 
         $payUrl = rtrim($baseUrl, '/') . '/?' . http_build_query($payParams);
 
