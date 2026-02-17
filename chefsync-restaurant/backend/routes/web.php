@@ -1,9 +1,8 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-
-
 use App\Http\Controllers\CustomInvoiceController;
+use App\Http\Controllers\HypOrderRedirectController;
 
 Route::get('/', function () {
     return ['message' => 'TakeEat API'];
@@ -14,3 +13,7 @@ Route::get('/custom-invoice', [CustomInvoiceController::class, 'showForm'])->nam
 Route::post('/custom-invoice', [CustomInvoiceController::class, 'generate'])->name('custom-invoice.generate');
 Route::get('/custom-invoice/show', [CustomInvoiceController::class, 'showInvoice'])->name('custom-invoice.show');
 Route::post('/custom-invoice/download', [CustomInvoiceController::class, 'download'])->name('custom-invoice.download');
+
+// Redirect לתשלום HYP (B2C) – יוצר form POST ל-YaadPay
+Route::get('/pay/hyp/order/{sessionToken}', [HypOrderRedirectController::class, 'redirect'])
+    ->name('payments.hyp.order.redirect');

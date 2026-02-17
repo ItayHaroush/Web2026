@@ -182,6 +182,18 @@ class Order extends Model
     }
 
     /**
+     * Scope: הזמנות שנראות למסעדה (לא "סטנד בי" ממתין לאישור אשראי).
+     * הזמנות באשראי עם payment_status=pending לא יופיעו ברשימה עד שאושרו ב-HYP.
+     */
+    public function scopeVisibleToRestaurant($query)
+    {
+        return $query->where(function ($q) {
+            $q->where('payment_method', '!=', 'credit_card')
+                ->orWhere('payment_status', '!=', self::PAYMENT_PENDING);
+        });
+    }
+
+    /**
      * המסעדה של ההזמנה
      */
     public function restaurant(): BelongsTo
