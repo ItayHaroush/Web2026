@@ -408,9 +408,13 @@ Route::prefix('payments/hyp')->group(function () {
     Route::get('/subscription/success', [HypSubscriptionCallbackController::class, 'handleSuccess'])->name('payments.hyp.subscription.success');
     Route::get('/subscription/error', [HypSubscriptionCallbackController::class, 'handleError'])->name('payments.hyp.subscription.error');
 
-    // B2C: תשלום הזמנת לקוח
+    // B2C: תשלום הזמנת לקוח — GET redirect ישיר מ-HYP
     Route::get('/order/success', [HypOrderCallbackController::class, 'handleSuccess'])->name('payments.hyp.order.success');
     Route::get('/order/error', [HypOrderCallbackController::class, 'handleError'])->name('payments.hyp.order.error');
+
+    // B2C: תשלום הזמנת לקוח — POST JSON מהפרונט (כש-HYP מפנה ישירות לפרונט)
+    Route::post('/order/success-json', [HypOrderCallbackController::class, 'handleSuccessJson'])->name('payments.hyp.order.success-json');
+    Route::post('/order/error-json', [HypOrderCallbackController::class, 'handleErrorJson'])->name('payments.hyp.order.error-json');
 });
 
 // ============================================
