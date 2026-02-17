@@ -25,6 +25,13 @@ class ChargeSubscriptions extends Command
     {
         $isDryRun = $this->option('dry-run');
 
+        // Feature flag: ניתן לכבות חיוב מנויים לחלוטין דרך קונפיג/ENV
+        if (!config('payment.subscription_billing_enabled')) {
+            $this->warn('חיוב מנויים (B2B) כבוי לפי SUBSCRIPTION_BILLING_ENABLED – דילוג.');
+            Log::info('billing:charge-subscriptions skipped: subscription_billing_enabled=false');
+            return 0;
+        }
+
         if (!$hypService->isConfigured()) {
             $this->warn('HYP לא מוגדר – דילוג על חיוב אוטומטי.');
             Log::warning('billing:charge-subscriptions: HYP not configured, skipping.');
