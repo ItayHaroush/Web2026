@@ -630,6 +630,7 @@ class OrderController extends Controller
             $status = $request->query('status'); // סנן לפי סטטוס אם יש
 
             $query = Order::where('tenant_id', $tenantId)
+                ->visibleToRestaurant()
                 ->with(['items.menuItem', 'items.variant'])
                 ->orderBy('created_at', 'desc');
 
@@ -669,6 +670,14 @@ class OrderController extends Controller
 
             $tenantId = app('tenant_id');
             $order = Order::where('tenant_id', $tenantId)->findOrFail($id);
+
+            // הזמנה באשראי שממתינה לאישור תשלום — לא ניתן לעדכן סטטוס עד שאושרה
+            if ($order->payment_method === 'credit_card' && $order->payment_status === Order::PAYMENT_PENDING) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'ההזמנה ממתינה לאישור תשלום באשראי. ניתן לעדכן סטטוס רק לאחר אישור התשלום.',
+                ], 422);
+            }
 
             // ולידציה: בדיקה שהמעבר מותר לפי transition map
             if (!$order->canTransitionTo($validated['status'])) {

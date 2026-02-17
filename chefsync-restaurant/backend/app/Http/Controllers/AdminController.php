@@ -82,10 +82,12 @@ class AdminController extends Controller
 
         $stats = [
             'orders_today' => Order::where('restaurant_id', $restaurantId)
+                ->visibleToRestaurant()
                 ->where('is_test', false)  // ← מתעלם מהזמנות test
                 ->whereDate('created_at', today())
                 ->count(),
             'orders_pending' => Order::where('restaurant_id', $restaurantId)
+                ->visibleToRestaurant()
                 ->where('is_test', false)  // ← מתעלם מהזמנות test
                 ->whereIn('status', ['pending', 'received', 'preparing'])
                 ->count(),
@@ -97,6 +99,7 @@ class AdminController extends Controller
         // רק בעלים ומנהלים רואים הכנסות (סופר אדמין בהתחזות רואה הכל)
         if ($user->isOwner() || $user->isManager() || $user->is_super_admin) {
             $stats['revenue_today'] = Order::where('restaurant_id', $restaurantId)
+                ->visibleToRestaurant()
                 ->where('is_test', false)  // ← מתעלם מהזמנות test
                 ->whereDate('created_at', today())
                 ->where('status', '!=', 'cancelled')
@@ -111,6 +114,7 @@ class AdminController extends Controller
             $weekEnd = $weekStart->copy()->addWeek();
 
             $stats['revenue_week'] = Order::where('restaurant_id', $restaurantId)
+                ->visibleToRestaurant()
                 ->where('is_test', false)  // ← מתעלם מהזמנות test
                 ->whereBetween('created_at', [$weekStart, $weekEnd])
                 ->where('status', '!=', 'cancelled')
@@ -119,6 +123,7 @@ class AdminController extends Controller
 
         // הזמנות אחרונות
         $recentOrders = Order::where('restaurant_id', $restaurantId)
+            ->visibleToRestaurant()
             ->where('is_test', false)  // ← מתעלם מהזמנות test
             ->with('items.menuItem.category')
             ->orderBy('created_at', 'desc')
@@ -1774,6 +1779,7 @@ class AdminController extends Controller
 
         // ספירת הזמנות פעילות לצורך חיווי בפעמון
         $activeOrdersCount = \App\Models\Order::where('restaurant_id', $restaurant->id)
+            ->visibleToRestaurant()
             ->whereIn('status', [
                 \App\Models\Order::STATUS_PENDING,
                 \App\Models\Order::STATUS_RECEIVED,
@@ -2291,6 +2297,7 @@ class AdminController extends Controller
     {
         $user = $request->user();
         $query = Order::where('restaurant_id', $this->resolveRestaurantId($request))
+            ->visibleToRestaurant()
             ->with('items.menuItem.category');
 
         if ($request->has('status')) {
@@ -2315,6 +2322,14 @@ class AdminController extends Controller
         $user = $request->user();
         $order = Order::where('restaurant_id', $this->resolveRestaurantId($request))
             ->findOrFail($id);
+
+        // הזמנה באשראי שממתינה לאישור תשלום — לא ניתן לעדכן סטטוס עד שאושרה
+        if ($order->payment_method === 'credit_card' && $order->payment_status === Order::PAYMENT_PENDING) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ההזמנה ממתינה לאישור תשלום באשראי. ניתן לעדכן סטטוס רק לאחר אישור התשלום.',
+            ], 422);
+        }
 
         $request->validate([
             'status' => 'required|in:pending,received,preparing,ready,delivering,delivered,cancelled',

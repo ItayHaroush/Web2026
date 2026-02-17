@@ -36,40 +36,20 @@ class RestaurantPaymentService
     }
 
     /**
-     * בונה URL לדף תשלום HYP עבור הזמנה (Pay Protocol)
-     * משתמש ב-Masof של המסעדה
+     * בונה URL להפניית הלקוח לעמוד redirect פנימי,
+     * אשר מייצר form POST אוטומטי ל-HYP (Pay Protocol).
+     *
+     * ה-redirect הפנימי אחראי על:
+     * - Masof + PassP אמיתיים של המסעדה
+     * - חישוב Sign לפי מסמך HYP
+     * - שליחת POST ל-yaadpay3ds.pl
      */
     public function generateOrderPaymentUrl(Restaurant $restaurant, Order $order, PaymentSession $session): string
     {
-        $query = [
-            'action'     => 'pay',
-            'Masof'      => $restaurant->hyp_terminal_id,
-            'Amount'     => number_format($order->total_amount, 2, '.', ''),
-            'Info'       => "הזמנה #{$order->id} - {$restaurant->name}",
-            'Coin'       => '1',
-            'Tash'       => '1',
-            'PageLang'   => 'HEB',
-            'UTF8'       => 'True',
-            'UTF8out'    => 'True',
-            'MoreData'   => 'True',
-            'Sign'       => 'True',
-            'Fild1'      => $session->session_token,
-            'Fild2'      => (string) $restaurant->id,
-            'Fild3'      => (string) $order->id,
-        ];
-
         $backendUrl = rtrim(config('app.url', 'http://localhost:8000'), '/');
-        $query['SuccessUrl'] = "{$backendUrl}/api/payments/hyp/order/success";
-        $query['ErrorUrl'] = "{$backendUrl}/api/payments/hyp/order/error";
 
-        if ($order->customer_name) {
-            $query['ClientName'] = $order->customer_name;
-        }
-        if ($order->customer_phone) {
-            $query['cell'] = $order->customer_phone;
-        }
-
-        return $this->baseUrl . '?' . http_build_query($query);
+        // ה-frontend יעשה redirect ל-URL הזה; ה-controller בצד שרת יבנה form ויבצע POST ל-HYP
+        return "{$backendUrl}/pay/hyp/order/{$session->session_token}";
     }
 
     /**
