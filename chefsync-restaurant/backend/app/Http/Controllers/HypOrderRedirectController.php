@@ -105,6 +105,16 @@ class HypOrderRedirectController extends Controller
         }
 
         // --- שלב 1: קבלת חתימה מ-HYP APISign (server-to-server) ---
+        // דיבאג 902: בדיקת credentials שנשלחים (בלי לחשוף ערכים מלאים)
+        Log::info('HYP APISign credentials check', [
+            'masof'          => $masof,
+            'passp_length'   => strlen($passp ?? ''),
+            'passp_preview'  => $passp ? substr($passp, 0, 2) . '***' . substr($passp, -2) : '(empty)',
+            'apiKey_length'  => strlen($apiKey ?? ''),
+            'apiKey_preview' => $apiKey ? substr($apiKey, 0, 2) . '***' . substr($apiKey, -2) : '(empty)',
+            'restaurant_id'  => $restaurant->id,
+        ]);
+
         $signResult = $this->getSignature($baseUrl, $masof, $passp, $apiKey, $payParams);
 
         if (!$signResult['success']) {
