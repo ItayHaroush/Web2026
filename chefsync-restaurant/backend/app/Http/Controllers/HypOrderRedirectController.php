@@ -88,6 +88,7 @@ class HypOrderRedirectController extends Controller
             'UTF8out'    => 'True',
             'MoreData'   => 'True',
             'Sign'       => 'True',
+            'tmp'        => '5',
             'Fild1'      => $session->session_token,
             'Fild2'      => (string) $restaurant->id,
             'Fild3'      => (string) $order->id,
@@ -149,6 +150,7 @@ class HypOrderRedirectController extends Controller
             'UTF8'    => 'True',
             'UTF8out' => 'True',
             'UserId'  => $params['UserId'] ?? '000000000',
+            'tmp'     => $params['tmp'] ?? '5',
         ];
 
         if (!empty($params['Coin'])) {
