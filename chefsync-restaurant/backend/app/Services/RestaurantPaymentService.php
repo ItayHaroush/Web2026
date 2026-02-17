@@ -72,8 +72,13 @@ class RestaurantPaymentService
             'UserId'  => '000000000',
         ];
 
+        $referer = config('payment.hyp.referer_url', 'https://api.chefsync.co.il');
+
         try {
-            $response = Http::timeout(15)->get($this->baseUrl, $query);
+            $response = Http::timeout(15)
+                ->withHeaders(['Referer' => $referer])
+                ->get($this->baseUrl, $query);
+
             $result = $this->parseResponse($response->body());
 
             if (!empty($result['signature'])) {
@@ -100,7 +105,7 @@ class RestaurantPaymentService
 
     /**
      * אימות עסקת הזמנה (APISign VERIFY)
-     * אימות: KEY + PassP
+     * אימות: KEY + PassP + Referer header
      */
     public function verifyOrderTransaction(Restaurant $restaurant, array $responseParams): array
     {
@@ -115,8 +120,13 @@ class RestaurantPaymentService
             'Amount' => $responseParams['Amount'] ?? '',
         ];
 
+        $referer = config('payment.hyp.referer_url', 'https://api.chefsync.co.il');
+
         try {
-            $response = Http::timeout(15)->get($this->baseUrl, $query);
+            $response = Http::timeout(15)
+                ->withHeaders(['Referer' => $referer])
+                ->get($this->baseUrl, $query);
+
             $result = $this->parseResponse($response->body());
 
             return [
