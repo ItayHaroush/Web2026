@@ -31,7 +31,7 @@ class RestaurantPaymentService
     {
         return $restaurant->hyp_terminal_verified
             && !empty($restaurant->hyp_terminal_id)
-            && !empty($restaurant->hyp_terminal_password)
+            && !empty($restaurant->hyp_api_key)
             && config('payment.credit_card_enabled');
     }
 
@@ -50,33 +50,45 @@ class RestaurantPaymentService
     }
 
     /**
-     * אימות credentials של מסוף (Masof + PassP) בלי חיוב אמיתי
-     * שולח soft request עם סכום 0 — HYP מחזיר שגיאת כרטיס אם Masof תקין, או 901-903 אם לא
+     * אימות credentials של מסוף — שולח APISign SIGN עם סכום קטן
+     * אימות: REFERER header (לא PassP)
+     * HYP מחזיר signature אם credentials תקינים, או CCode 901-903 אם לא
      */
     public function verifyCredentials(Restaurant $restaurant): array
     {
         $query = [
-            'action'  => 'soft',
+            'action'  => 'APISign',
+            'What'    => 'SIGN',
+            'KEY'     => $restaurant->hyp_api_key,
             'Masof'   => $restaurant->hyp_terminal_id,
-            'PassP'   => $restaurant->hyp_terminal_password,
             'Amount'  => '0.01',
-            'CC'      => '0000000000000000000',
-            'Tmonth'  => '01',
-            'Tyear'   => '30',
+            'Order'   => 'verify-' . time(),
             'Info'    => 'Terminal verification',
-            'Coin'    => '1',
+            'Sign'    => 'True',
             'UTF8'    => 'True',
             'UTF8out' => 'True',
+            'UserId'  => '000000000',
         ];
 
+        $referer = config('payment.hyp.referer_url', 'https://api.chefsync.co.il');
+
         try {
-            $response = Http::timeout(15)->get($this->baseUrl, $query);
+            $response = Http::timeout(15)
+                ->withHeaders(['Referer' => $referer])
+                ->get($this->baseUrl, $query);
+
             $result = $this->parseResponse($response->body());
 
-            $ccode = (int) ($result['CCode'] ?? -1);
+            // אם חזר signature — ה-credentials תקינים
+            if (!empty($result['signature'])) {
+                return [
+                    'valid' => true,
+                    'ccode' => 0,
+                    'error' => null,
+                ];
+            }
 
-            // CCode 901-903 = Masof/PassP שגויים
-            // כל CCode אחר (כולל שגיאות כרטיס) = credentials תקינים
+            $ccode = (int) ($result['CCode'] ?? -1);
             $masofValid = !in_array($ccode, [901, 902, 903]);
 
             return [
@@ -92,26 +104,27 @@ class RestaurantPaymentService
 
     /**
      * אימות עסקת הזמנה (APISign VERIFY)
-     * משתמש ב-Masof + KEY של המסעדה (לא של הפלטפורמה!)
+     * אימות: REFERER header (לא PassP) — לפי הגדרת המסוף ב-HYP
      */
     public function verifyOrderTransaction(Restaurant $restaurant, array $responseParams): array
     {
         $query = [
             'action' => 'APISign',
             'What'   => 'VERIFY',
+            'KEY'    => $restaurant->hyp_api_key,
             'Masof'  => $restaurant->hyp_terminal_id,
-            'PassP'  => $restaurant->hyp_terminal_password,
             'Id'     => $responseParams['Id'] ?? '',
             'CCode'  => $responseParams['CCode'] ?? '',
             'Amount' => $responseParams['Amount'] ?? '',
         ];
 
-        if (!empty($restaurant->hyp_api_key)) {
-            $query['KEY'] = $restaurant->hyp_api_key;
-        }
+        $referer = config('payment.hyp.referer_url', 'https://api.chefsync.co.il');
 
         try {
-            $response = Http::timeout(15)->get($this->baseUrl, $query);
+            $response = Http::timeout(15)
+                ->withHeaders(['Referer' => $referer])
+                ->get($this->baseUrl, $query);
+
             $result = $this->parseResponse($response->body());
 
             return [
