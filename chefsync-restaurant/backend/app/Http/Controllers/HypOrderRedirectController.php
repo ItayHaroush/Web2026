@@ -101,6 +101,16 @@ class HypOrderRedirectController extends Controller
 
         $hypActionUrl = config('payment.hyp.base_url', 'https://pay.hyp.co.il/cgi-bin/yaadpay/yaadpay3ds.pl');
 
+        // דיבאג לפני שליחה ל-HYP: וידוא ש-Masof ו-PassP נשלחים (אם PassP ריק → HYP מחזיר Masof Error)
+        Log::info('HYP redirect: params before POST', [
+            'masof'         => $masof,
+            'passp'         => $passp,
+            'passp_empty'   => empty($passp),
+            'passp_null'    => $passp === null,
+            'passp_length'  => strlen($passp ?? ''),
+            'restaurant_id' => $restaurant->id,
+        ]);
+
         return response()->view('hyp.order_redirect', [
             'actionUrl' => rtrim($hypActionUrl, '/'),
             'params'    => $params,
