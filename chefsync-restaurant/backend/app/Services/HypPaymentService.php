@@ -19,6 +19,7 @@ class HypPaymentService
     private string $passp;
     private string $apiKey;
     private string $coin;
+    private string $referer;
 
     public function __construct()
     {
@@ -27,6 +28,7 @@ class HypPaymentService
         $this->passp = config('payment.hyp.passp', '');
         $this->apiKey = config('payment.hyp.api_key', '');
         $this->coin = config('payment.hyp.coin', '1');
+        $this->referer = config('payment.hyp.referer_url', 'https://api.chefsync.co.il');
     }
 
     /**
@@ -34,7 +36,7 @@ class HypPaymentService
      */
     public function isConfigured(): bool
     {
-        return !empty($this->masof) && !empty($this->passp);
+        return !empty($this->masof) && !empty($this->passp) && !empty($this->apiKey);
     }
 
     /**
@@ -98,7 +100,9 @@ class HypPaymentService
         ];
 
         try {
-            $response = Http::timeout(30)->get($this->baseUrl, $query);
+            $response = Http::timeout(30)
+                ->withHeaders(['Referer' => $this->referer])
+                ->get($this->baseUrl, $query);
             $result = $this->parseResponse($response->body());
 
             if (($result['CCode'] ?? '') === '0' && !empty($result['Token'])) {
@@ -159,7 +163,9 @@ class HypPaymentService
         }
 
         try {
-            $response = Http::timeout(30)->get($this->baseUrl, $query);
+            $response = Http::timeout(30)
+                ->withHeaders(['Referer' => $this->referer])
+                ->get($this->baseUrl, $query);
             $result = $this->parseResponse($response->body());
 
             $ccode = (int) ($result['CCode'] ?? -1);
@@ -199,7 +205,9 @@ class HypPaymentService
         ];
 
         try {
-            $response = Http::timeout(30)->get($this->baseUrl, $query);
+            $response = Http::timeout(30)
+                ->withHeaders(['Referer' => $this->referer])
+                ->get($this->baseUrl, $query);
             $result = $this->parseResponse($response->body());
 
             $ccode = (int) ($result['CCode'] ?? -1);
@@ -237,7 +245,9 @@ class HypPaymentService
         ];
 
         try {
-            $response = Http::timeout(15)->get($this->baseUrl, $query);
+            $response = Http::timeout(15)
+                ->withHeaders(['Referer' => $this->referer])
+                ->get($this->baseUrl, $query);
             $result = $this->parseResponse($response->body());
 
             return [
@@ -272,7 +282,9 @@ class HypPaymentService
         }
 
         try {
-            $response = Http::timeout(30)->get($this->baseUrl, $query);
+            $response = Http::timeout(30)
+                ->withHeaders(['Referer' => $this->referer])
+                ->get($this->baseUrl, $query);
             $body = $response->body();
 
             // HYP מחזיר רשימת עסקאות מופרדות ב-newline, כל שורה = query string
@@ -324,6 +336,7 @@ class HypPaymentService
             'ccode'          => $ccode,
             'amount'         => $request->query('Amount', ''),
             'acode'          => $request->query('ACode', ''),
+            'order'          => $request->query('Order', ''),
             'fild1'          => $request->query('Fild1', ''),
             'fild2'          => $request->query('Fild2', ''),
             'fild3'          => $request->query('Fild3', ''),
@@ -334,6 +347,99 @@ class HypPaymentService
             'brand'          => $request->query('Brand', ''),
             'errMsg'         => $request->query('ErrMsg', ''),
         ];
+    }
+
+    /**
+     * קריאה ל-HYP APISign לקבלת חתימה server-to-server (KEY + PassP + Referer)
+     */
+    public function getSignature(array $payParams): array
+    {
+        $signParams = [
+            'action'  => 'APISign',
+            'What'    => 'SIGN',
+            'KEY'     => $this->apiKey,
+            'PassP'   => $this->passp,
+            'Masof'   => $this->masof,
+            'Amount'  => $payParams['Amount'],
+            'Order'   => $payParams['Order'] ?? '',
+            'Info'    => $payParams['Info'] ?? '',
+            'Sign'    => 'True',
+            'UTF8'    => 'True',
+            'UTF8out' => 'True',
+            'UserId'  => $payParams['UserId'] ?? '000000000',
+            'tmp'     => $payParams['tmp'] ?? '5',
+        ];
+
+        if (!empty($payParams['Coin'])) {
+            $signParams['Coin'] = $payParams['Coin'];
+        }
+        if (!empty($payParams['Tash'])) {
+            $signParams['Tash'] = $payParams['Tash'];
+        }
+        if (!empty($payParams['ClientName'])) {
+            $signParams['ClientName'] = $payParams['ClientName'];
+        }
+
+        try {
+            $signUrl = rtrim($this->baseUrl, '/') . '/';
+
+            $response = Http::timeout(15)
+                ->withHeaders(['Referer' => $this->referer])
+                ->get($signUrl, $signParams);
+
+            $body = $response->body();
+
+            Log::info('HYP B2B APISign response', [
+                'http_status'  => $response->status(),
+                'body_preview' => substr($body, 0, 300),
+            ]);
+
+            $result = [];
+            parse_str($body, $result);
+
+            if (!empty($result['signature'])) {
+                return [
+                    'success'   => true,
+                    'signature' => $result['signature'],
+                    'error'     => null,
+                ];
+            }
+
+            $ccode = $result['CCode'] ?? null;
+            $errMsg = $result['ErrMsg'] ?? 'No signature returned';
+
+            return [
+                'success'   => false,
+                'signature' => null,
+                'error'     => "CCode={$ccode}: {$errMsg}",
+            ];
+        } catch (\Exception $e) {
+            return [
+                'success'   => false,
+                'signature' => null,
+                'error'     => $e->getMessage(),
+            ];
+        }
+    }
+
+    public function getMasof(): string
+    {
+        return $this->masof;
+    }
+
+    public function getPassp(): string
+    {
+        return $this->passp;
+    }
+
+    public function getBaseUrl(): string
+    {
+        return $this->baseUrl;
+    }
+
+    public function getCoin(): string
+    {
+        return $this->coin;
     }
 
     /**

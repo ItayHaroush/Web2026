@@ -29,7 +29,7 @@ class HypSubscriptionCallbackController extends Controller
     public function handleSuccess(Request $request)
     {
         $params = $this->hypService->parseRedirectParams($request);
-        $restaurantId = $params['fild1'];
+        $restaurantId = $this->extractRestaurantId($params);
         $transactionId = $params['transaction_id'];
 
         Log::info('HYP subscription payment success redirect', [
@@ -37,6 +37,7 @@ class HypSubscriptionCallbackController extends Controller
             'transaction_id' => $transactionId,
             'ccode'          => $params['ccode'],
             'amount'         => $params['amount'],
+            'order'          => $params['order'] ?? '',
         ]);
 
         if (!$params['success']) {
@@ -122,9 +123,11 @@ class HypSubscriptionCallbackController extends Controller
     public function handleError(Request $request)
     {
         $params = $this->hypService->parseRedirectParams($request);
+        $restaurantId = $this->extractRestaurantId($params);
 
         Log::warning('HYP subscription payment error redirect', [
-            'restaurant_id'  => $params['fild1'],
+            'restaurant_id'  => $restaurantId,
+            'order'          => $params['order'] ?? '',
             'ccode'          => $params['ccode'],
             'error'          => $params['errMsg'],
         ]);
@@ -207,6 +210,25 @@ class HypSubscriptionCallbackController extends Controller
                 ]
             );
         }
+    }
+
+    /**
+     * HYP overwrites Fild1/Fild2/Fild3 with customer data.
+     * Primary: parse restaurant ID from Order param ("sub_{id}").
+     * Fallback: try Fild1 (works if HYP didn't overwrite it).
+     */
+    private function extractRestaurantId(array $params): ?string
+    {
+        $order = $params['order'] ?? '';
+        if (str_starts_with($order, 'sub_')) {
+            return substr($order, 4);
+        }
+
+        if (!empty($params['fild1']) && is_numeric($params['fild1'])) {
+            return $params['fild1'];
+        }
+
+        return null;
     }
 
     private function redirectToFrontend(string $status, string $reason = ''): \Illuminate\Http\RedirectResponse

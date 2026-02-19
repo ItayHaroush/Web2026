@@ -2613,31 +2613,29 @@ class AdminController extends Controller
         $planType = $validated['plan_type'];
         $amount = $prices[$tier][$planType === 'yearly' ? 'yearly' : 'monthly'];
 
-        // שמירת session data ב-cache (15 דקות)
+        $owner = $request->user();
+
+        // שמירת session data ב-cache (15 דקות) — HypSubscriptionRedirectController שולף את זה
         \Illuminate\Support\Facades\Cache::put(
             "hyp_session:{$restaurant->id}",
-            ['tier' => $tier, 'plan_type' => $planType],
+            [
+                'tier'        => $tier,
+                'plan_type'   => $planType,
+                'amount'      => $amount,
+                'client_name' => $owner->name ?? '',
+                'email'       => $owner->email ?? '',
+                'phone'       => $restaurant->phone ?? '',
+            ],
             now()->addMinutes(15)
         );
 
-        $owner = $request->user();
         $backendUrl = rtrim(config('app.url', 'http://localhost:8000'), '/');
-
-        $paymentUrl = $hypService->generatePaymentUrl([
-            'amount'      => $amount,
-            'info'        => "TakeEat - " . ucfirst($tier) . " " . ($planType === 'yearly' ? 'Yearly' : 'Monthly'),
-            'fild1'       => (string) $restaurant->id,
-            'success_url' => "{$backendUrl}/api/payments/hyp/subscription/success",
-            'error_url'   => "{$backendUrl}/api/payments/hyp/subscription/error",
-            'client_name' => $owner->name ?? '',
-            'email'       => $owner->email ?? '',
-            'phone'       => $restaurant->phone ?? '',
-        ]);
+        $redirectUrl = "{$backendUrl}/pay/hyp/subscription/{$restaurant->id}";
 
         return response()->json([
             'success' => true,
             'hyp_ready' => true,
-            'payment_url' => $paymentUrl,
+            'payment_url' => $redirectUrl,
         ]);
     }
 
