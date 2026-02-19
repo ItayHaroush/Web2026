@@ -155,14 +155,12 @@ class HypPaymentService
      */
     public function chargeSoft(float $amount, string $token, string $expiry, string $description, array $clientInfo = []): array
     {
-        // expiry format: MMYY - HYP soft expects Tmonth (MM) and Tyear (YY or YYYY)
+        // expiry format: MMYY - HYP soft expects Tmonth (MM) and Tyear (YYYY per docs)
         $tmonth = substr($expiry, 0, 2);
-        $tyearFull = substr($expiry, 2, 4);
-        if (strlen($tyearFull) === 2) {
-            $tyearFull = '20' . $tyearFull;
+        $tyear = substr($expiry, 2, 4);
+        if (strlen($tyear) === 2) {
+            $tyear = '20' . $tyear;
         }
-        // HYP soft protocol often expects Tyear as 2 digits (YY)
-        $tyear = strlen($tyearFull) === 4 ? substr($tyearFull, 2) : $tyearFull;
 
         $query = [
             'action'     => 'soft',
@@ -172,6 +170,7 @@ class HypPaymentService
             'CC'         => $token,
             'Tmonth'     => $tmonth,
             'Tyear'      => $tyear,
+            'Token'      => 'True',
             'Info'       => $description,
             'Coin'       => $this->coin,
             'UTF8'       => 'True',
