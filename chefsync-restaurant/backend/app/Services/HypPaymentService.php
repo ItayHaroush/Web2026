@@ -23,7 +23,7 @@ class HypPaymentService
 
     public function __construct()
     {
-        $this->baseUrl = rtrim(config('payment.hyp.base_url', 'https://pay.hyp.co.il/p/'), '/');
+        $this->baseUrl = rtrim(config('payment.hyp.base_url', 'https://pay.hyp.co.il/p/'), '/') . '/';
         $this->masof = config('payment.hyp.masof', '');
         $this->passp = config('payment.hyp.passp', '');
         $this->apiKey = config('payment.hyp.api_key', '');
@@ -386,7 +386,7 @@ class HypPaymentService
         }
 
         try {
-            $signUrl = rtrim($this->baseUrl, '/') . '/';
+            $signUrl = $this->baseUrl;
 
             $response = Http::timeout(15)
                 ->withHeaders(['Referer' => $this->referer])
