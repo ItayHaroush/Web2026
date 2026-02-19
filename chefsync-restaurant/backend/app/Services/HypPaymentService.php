@@ -103,6 +103,13 @@ class HypPaymentService
             $response = Http::timeout(30)
                 ->withHeaders(['Referer' => $this->referer])
                 ->get($this->baseUrl, $query);
+
+            Log::info('HYP getToken response', [
+                'http_status'  => $response->status(),
+                'body_preview' => substr($response->body(), 0, 500),
+                'trans_id'     => $transactionId,
+            ]);
+
             $result = $this->parseResponse($response->body());
 
             if (($result['CCode'] ?? '') === '0' && !empty($result['Token'])) {
