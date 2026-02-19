@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\CustomInvoiceController;
 use App\Http\Controllers\HypOrderRedirectController;
+use App\Http\Controllers\HypSubscriptionRedirectController;
 
 Route::get('/', function () {
     return ['message' => 'TakeEat API'];
@@ -17,3 +18,7 @@ Route::post('/custom-invoice/download', [CustomInvoiceController::class, 'downlo
 // Redirect לתשלום HYP (B2C) – קורא APISign לחתימה ומפנה לעמוד תשלום HYP
 Route::get('/pay/hyp/order/{sessionToken}', [HypOrderRedirectController::class, 'redirect'])
     ->name('payments.hyp.order.redirect');
+
+// Redirect לתשלום HYP (B2B) – קורא APISign לחתימה ומפנה לעמוד תשלום מנוי
+Route::get('/pay/hyp/subscription/{restaurantId}', [HypSubscriptionRedirectController::class, 'redirect'])
+    ->name('payments.hyp.subscription.redirect');
