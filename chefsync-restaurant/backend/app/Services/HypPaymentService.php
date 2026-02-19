@@ -355,27 +355,25 @@ class HypPaymentService
     public function getSignature(array $payParams): array
     {
         $signParams = [
-            'action'  => 'APISign',
-            'What'    => 'SIGN',
-            'KEY'     => $this->apiKey,
-            'PassP'   => $this->passp,
-            'Masof'   => $this->masof,
-            'Amount'  => $payParams['Amount'],
-            'Order'   => $payParams['Order'] ?? '',
-            'Info'    => $payParams['Info'] ?? '',
-            'Sign'    => 'True',
-            'UTF8'    => 'True',
-            'UTF8out' => 'True',
-            'UserId'  => $payParams['UserId'] ?? '000000000',
-            'tmp'     => $payParams['tmp'] ?? '5',
+            'action'   => 'APISign',
+            'What'     => 'SIGN',
+            'KEY'      => $this->apiKey,
+            'PassP'    => $this->passp,
+            'Masof'    => $this->masof,
+            'Amount'   => $payParams['Amount'],
+            'Order'    => $payParams['Order'] ?? '',
+            'Info'     => $payParams['Info'] ?? '',
+            'Coin'     => $payParams['Coin'] ?? $this->coin,
+            'Tash'     => $payParams['Tash'] ?? '1',
+            'Sign'     => 'True',
+            'UTF8'     => 'True',
+            'UTF8out'  => 'True',
+            'MoreData' => 'True',
+            'PageLang' => 'HEB',
+            'UserId'   => $payParams['UserId'] ?? '000000000',
+            'tmp'      => $payParams['tmp'] ?? '5',
         ];
 
-        if (!empty($payParams['Coin'])) {
-            $signParams['Coin'] = $payParams['Coin'];
-        }
-        if (!empty($payParams['Tash'])) {
-            $signParams['Tash'] = $payParams['Tash'];
-        }
         if (!empty($payParams['ClientName'])) {
             $signParams['ClientName'] = $payParams['ClientName'];
         }
