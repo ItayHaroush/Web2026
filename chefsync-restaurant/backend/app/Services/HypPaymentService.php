@@ -155,14 +155,14 @@ class HypPaymentService
      */
     public function chargeSoft(float $amount, string $token, string $expiry, string $description, array $clientInfo = []): array
     {
-        // expiry format: MMYY or YYMM - HYP expects Tmonth (MM) and Tyear (YYYY)
+        // expiry format: MMYY - HYP soft expects Tmonth (MM) and Tyear (YY or YYYY)
         $tmonth = substr($expiry, 0, 2);
-        $tyear = substr($expiry, 2, 4);
-
-        // If tyear is 2 digits, prepend 20
-        if (strlen($tyear) === 2) {
-            $tyear = '20' . $tyear;
+        $tyearFull = substr($expiry, 2, 4);
+        if (strlen($tyearFull) === 2) {
+            $tyearFull = '20' . $tyearFull;
         }
+        // HYP soft protocol often expects Tyear as 2 digits (YY)
+        $tyear = strlen($tyearFull) === 4 ? substr($tyearFull, 2) : $tyearFull;
 
         $query = [
             'action'     => 'soft',
@@ -186,9 +186,22 @@ class HypPaymentService
         }
 
         try {
+            Log::info('HYP chargeSoft request', [
+                'amount' => $amount,
+                'tmonth' => $tmonth,
+                'tyear'  => $tyear,
+                'token_preview' => substr($token, 0, 8) . '...',
+            ]);
+
             $response = Http::timeout(30)
                 ->withHeaders(['Referer' => $this->referer])
                 ->get($this->baseUrl, $query);
+
+            Log::info('HYP chargeSoft response', [
+                'http_status' => $response->status(),
+                'body_preview' => substr($response->body(), 0, 300),
+            ]);
+
             $result = $this->parseResponse($response->body());
 
             $ccode = (int) ($result['CCode'] ?? -1);
