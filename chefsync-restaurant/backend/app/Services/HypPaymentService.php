@@ -113,12 +113,28 @@ class HypPaymentService
             $result = $this->parseResponse($response->body());
 
             if (($result['CCode'] ?? '') === '0' && !empty($result['Token'])) {
+                $tmonth = $result['Tmonth'] ?? '';
+                $tyear  = $result['Tyear'] ?? '';
+
+                // HYP may return combined "Tokef" (YYMM) instead of separate Tmonth/Tyear
+                if (empty($tmonth) && !empty($result['Tokef'])) {
+                    $tokef = $result['Tokef'];
+                    $tyear  = '20' . substr($tokef, 0, 2);
+                    $tmonth = substr($tokef, 2, 2);
+                }
+
+                // L4digit fallback: extract last 4 digits from Token
+                $l4digit = $result['L4digit'] ?? '';
+                if (empty($l4digit) && strlen($result['Token']) >= 4) {
+                    $l4digit = substr($result['Token'], -4);
+                }
+
                 return [
                     'success' => true,
                     'token'   => $result['Token'],
-                    'tmonth'  => $result['Tmonth'] ?? '',
-                    'tyear'   => $result['Tyear'] ?? '',
-                    'l4digit' => $result['L4digit'] ?? '',
+                    'tmonth'  => $tmonth,
+                    'tyear'   => $tyear,
+                    'l4digit' => $l4digit,
                     'error'   => null,
                 ];
             }
