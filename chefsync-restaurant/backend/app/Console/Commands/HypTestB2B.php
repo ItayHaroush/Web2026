@@ -11,8 +11,9 @@ class HypTestB2B extends Command
 {
     protected $signature = 'hyp:test-b2b
         {restaurant_id : ID של מסעדה קיימת ב-DB}
-        {--step=pay : שלב: pay | status | charge}
-        {--amount=0.01 : סכום לחיוב (ברירת מחדל 0.01)}';
+        {--step=pay : שלב: pay | status | find | charge}
+        {--amount=0.01 : סכום לחיוב (ברירת מחדל 0.01)}
+        {--trans= : Transaction ID לשליפת טוקן ידנית (עם --step=find)}';
 
     protected $description = 'בדיקת תשלום B2B מול HYP: תשלום ראשוני -> שמירת טוקן -> חיוב חוזר';
 
@@ -39,6 +40,7 @@ class HypTestB2B extends Command
 
         return match ($step) {
             'pay'    => $this->stepPay($restaurant, $amount),
+            'find'   => $this->stepFind($restaurant, $hypService),
             'status' => $this->stepStatus($restaurant),
             'charge' => $this->stepCharge($restaurant, $hypService, $amount),
             default  => $this->invalidStep($step),
@@ -163,6 +165,84 @@ class HypTestB2B extends Command
 
         $this->newLine();
         return $result['success'] ? 0 : 1;
+    }
+
+    /**
+     * שלב 1.5: חיפוש עסקה ב-HYP + שליפת טוקן ושמירה
+     */
+    private function stepFind(Restaurant $restaurant, HypPaymentService $hypService): int
+    {
+        $this->newLine();
+        $this->info('=== שלב Find: חיפוש עסקה ושליפת טוקן ===');
+
+        $transId = $this->option('trans');
+
+        if (empty($transId)) {
+            $today = now()->format('d/m/Y');
+            $this->line("מחפש עסקאות של היום ({$today})...");
+            $this->newLine();
+
+            $result = $hypService->getTransList($today, $today);
+
+            if (!$result['success']) {
+                $this->error("getTransList נכשל: {$result['error']}");
+                return 1;
+            }
+
+            if (empty($result['transactions'])) {
+                $this->warn('לא נמצאו עסקאות היום.');
+                $this->line('אם יש לך Transaction ID מ-HYP, הרץ:');
+                $this->line("  php artisan hyp:test-b2b {$restaurant->id} --step=find --trans=<TRANS_ID>");
+                return 1;
+            }
+
+            $count = count($result['transactions']);
+            $this->info("נמצאו {$count} עסקאות:");
+            $this->newLine();
+
+            foreach ($result['transactions'] as $i => $tx) {
+                $id = $tx['Id'] ?? '?';
+                $amt = $tx['Amount'] ?? '?';
+                $ord = $tx['Order'] ?? '?';
+                $cc = $tx['CCode'] ?? '?';
+                $this->line("  [{$i}] ID={$id}  Amount={$amt}  Order={$ord}  CCode={$cc}");
+            }
+
+            $this->newLine();
+            $choice = $this->ask('הזן מספר עסקה (אינדקס) או Transaction ID ישירות');
+
+            if (is_numeric($choice) && (int) $choice < $count) {
+                $transId = $result['transactions'][(int) $choice]['Id'];
+            } else {
+                $transId = $choice;
+            }
+        }
+
+        $this->line("שולף טוקן עבור Transaction ID: {$transId}");
+        $tokenResult = $hypService->getToken($transId);
+
+        if (!$tokenResult['success']) {
+            $this->error("getToken נכשל: {$tokenResult['error']}");
+            return 1;
+        }
+
+        $restaurant->update([
+            'hyp_card_token'  => $tokenResult['token'],
+            'hyp_card_expiry' => $tokenResult['tmonth'] . $tokenResult['tyear'],
+            'hyp_card_last4'  => $tokenResult['l4digit'],
+        ]);
+
+        $this->newLine();
+        $this->info('טוקן נשמר בהצלחה!');
+        $this->line("טוקן:    {$tokenResult['token']}");
+        $this->line("תוקף:    {$tokenResult['tmonth']}/{$tokenResult['tyear']}");
+        $this->line("4 ספרות: {$tokenResult['l4digit']}");
+        $this->newLine();
+        $this->info('המשך לשלב charge:');
+        $this->line("  php artisan hyp:test-b2b {$restaurant->id} --step=charge --amount=0.01");
+        $this->newLine();
+
+        return 0;
     }
 
     private function invalidStep(string $step): int
