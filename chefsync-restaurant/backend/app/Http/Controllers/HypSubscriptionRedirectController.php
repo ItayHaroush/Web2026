@@ -110,7 +110,7 @@ class HypSubscriptionRedirectController extends Controller
         $payParams['action'] = 'pay';
         $payParams['PassP'] = $this->hypService->getPassp();
 
-        $payUrl = rtrim($this->hypService->getBaseUrl(), '/') . '/?' . http_build_query($payParams);
+        $payUrl = $this->hypService->getBaseUrl() . '?' . http_build_query($payParams);
 
         return response()->view('hyp.order_redirect', [
             'paymentUrl' => $payUrl,
