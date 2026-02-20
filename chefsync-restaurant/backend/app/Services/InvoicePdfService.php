@@ -83,24 +83,22 @@ class InvoicePdfService
         $invoice->loadMissing('restaurant');
         $restaurant = $invoice->restaurant;
 
-        $logoBase64 = null;
-        // לוגו מסעדה אם קיים (נתיב מקומי /storage/)
+        $logoFilePath = null;
         if (!empty($restaurant->logo_url) && str_starts_with($restaurant->logo_url, '/storage/')) {
             $relativePath = str_replace('/storage/', '', $restaurant->logo_url);
-            $logoPath = storage_path('app/public/' . $relativePath);
-            if (file_exists($logoPath)) {
-                $logoBase64 = base64_encode(file_get_contents($logoPath));
+            $candidate = storage_path('app/public/' . $relativePath);
+            if (file_exists($candidate)) {
+                $logoFilePath = $candidate;
             }
         }
-        // ברירת מחדל: לוגו פלטפורמה
-        if (!$logoBase64) {
-            $logoPath = storage_path('app/public/email-logo.png');
-            if (!file_exists($logoPath)) {
-                $logoPath = storage_path('app/public/logo.png');
+        if (!$logoFilePath) {
+            $candidate = storage_path('app/public/email-logo.png');
+            if (!file_exists($candidate)) {
+                $candidate = storage_path('app/public/logo.png');
             }
-            $logoBase64 = file_exists($logoPath)
-                ? base64_encode(file_get_contents($logoPath))
-                : null;
+            if (file_exists($candidate)) {
+                $logoFilePath = $candidate;
+            }
         }
 
         $monthParts = explode('-', $invoice->month);
@@ -174,7 +172,7 @@ class InvoicePdfService
         $data = [
             'invoice' => $invoice,
             'restaurant' => $restaurant,
-            'logoBase64' => $logoBase64,
+            'logoFilePath' => $logoFilePath,
             'invoiceNumber' => sprintf('INV-%d-%s', $restaurant->id, $invoice->month),
             'monthHebrew' => $monthHebrew,
             'issueDate' => $invoice->created_at?->format('d/m/Y') ?? now()->format('d/m/Y'),
