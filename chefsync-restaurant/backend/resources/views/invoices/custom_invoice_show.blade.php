@@ -4,9 +4,12 @@
 <head>
     <meta charset="UTF-8">
     <title>תצוגה מקדימה — חשבונית Itay Solutions</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
     <style>
         * { box-sizing: border-box; }
-        body { direction: rtl; font-family: Arial, sans-serif; color: #222; padding: 24px; margin: 0; background: #f9fafb; }
+        body { direction: rtl; font-family: 'Heebo', Arial, sans-serif; color: #222; padding: 24px; margin: 0; background: #f9fafb; }
         .actions-wrap { position: sticky; top: 0; background: #fff; padding: 16px 0; margin-bottom: 20px; z-index: 9999; box-shadow: 0 1px 3px #0001; border-radius: 12px; }
         .actions-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
         .btn { border: none; padding: 10px 20px; border-radius: 12px; font-size: 14px; font-weight: bold; cursor: pointer; transition: all 0.2s; }
