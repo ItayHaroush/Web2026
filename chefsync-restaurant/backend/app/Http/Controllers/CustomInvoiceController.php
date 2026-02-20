@@ -44,6 +44,12 @@ class CustomInvoiceController extends Controller
     // הורדת PDF
     public function download(Request $request)
     {
+        // #region agent log
+        $logPath = base_path('../.cursor/debug.log');
+        $logData = json_encode(['location' => 'CustomInvoiceController.php:download', 'message' => 'download called', 'data' => ['has_token' => $request->has('_token'), 'session_id' => session()->getId(), 'has_session_cookie' => $request->hasCookie(config('session.cookie')), 'origin' => $request->header('Origin'), 'referer' => $request->header('Referer')], 'timestamp' => round(microtime(true) * 1000), 'hypothesisId' => 'H1_csrf']);
+        file_put_contents($logPath, $logData . "\n", FILE_APPEND);
+        // #endregion
+
         $validated = $request->validate([
             'customer_name' => 'nullable|string|max:255',
             'customer_id' => 'nullable|string|max:255',
@@ -132,6 +138,12 @@ class CustomInvoiceController extends Controller
     // הצגת טופס הפקת חשבונית ידנית
     public function showForm()
     {
+        // #region agent log
+        $logPath = base_path('../.cursor/debug.log');
+        $logData = json_encode(['location' => 'CustomInvoiceController.php:showForm', 'message' => 'showForm loaded', 'data' => ['session_id' => session()->getId(), 'has_session_cookie' => request()->hasCookie(config('session.cookie')), 'origin' => request()->header('Origin'), 'referer' => request()->header('Referer'), 'user_agent' => request()->header('User-Agent')], 'timestamp' => round(microtime(true) * 1000), 'hypothesisId' => 'H1_session']);
+        file_put_contents($logPath, $logData . "\n", FILE_APPEND);
+        // #endregion
+
         return view('invoices.custom_invoice_form');
     }
 
@@ -155,6 +167,12 @@ class CustomInvoiceController extends Controller
     // טיפול בשליחת טופס והצגת חשבונית מותאמת
     public function generate(Request $request)
     {
+        // #region agent log
+        $logPath = base_path('../.cursor/debug.log');
+        $logData = json_encode(['location' => 'CustomInvoiceController.php:generate', 'message' => 'generate called', 'data' => ['has_token' => $request->has('_token'), 'session_id' => session()->getId(), 'has_session_cookie' => $request->hasCookie(config('session.cookie')), 'origin' => $request->header('Origin'), 'referer' => $request->header('Referer')], 'timestamp' => round(microtime(true) * 1000), 'hypothesisId' => 'H1_csrf']);
+        file_put_contents($logPath, $logData . "\n", FILE_APPEND);
+        // #endregion
+
         $validated = $request->validate([
             'customer_name' => 'nullable|string|max:255',
             'customer_id' => 'nullable|string|max:255',
