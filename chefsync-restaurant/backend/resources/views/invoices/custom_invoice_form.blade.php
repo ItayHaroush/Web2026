@@ -82,6 +82,47 @@
                 <input type="file" name="logo" class="form-control" accept="image/*" onchange="previewLogo(event)">
                 <div style="font-size:12px; color:#888; margin-top:2px;">ניתן להעלות לוגו אחר זמנית לחשבונית זו בלבד</div>
             </div>
+            <div class="form-group">
+                <label>תמונות פרסום (לסוף החשבונית):</label>
+                <div id="promotion-images-container">
+                    <div class="promo-img-row" style="margin-bottom:8px; display:flex; flex-wrap:wrap; align-items:center; gap:8px;">
+                        <input type="file" name="promotion_images[]" class="form-control promo-img-input" accept="image/*" onchange="onPromoImageChange(this)" style="flex:1; min-width:120px;">
+                        <input type="url" name="promotion_links[]" class="form-control" placeholder="קישור (אופציונלי)" style="flex:1; min-width:160px;">
+                        <button type="button" class="remove-promo" onclick="removePromoRow(this)" style="display:none; padding:6px 10px; background:#ef4444; color:#fff; border:none; border-radius:6px; cursor:pointer;">✖</button>
+                    </div>
+                </div>
+                <button type="button" class="btn-primary" style="background:#7c3aed; margin-top:8px;" onclick="addPromoImage()">הוסף תמונה</button>
+                <div style="font-size:12px; color:#888; margin-top:6px;">אופציונלי: קישור שיופיע בלחיצה על התמונה</div>
+            </div>
+            <script>
+                function onPromoImageChange(input) {
+                    const row = input.closest('.promo-img-row');
+                    const removeBtn = row.querySelector('.remove-promo');
+                    if (input.files && input.files.length > 0) {
+                        removeBtn.style.display = 'inline-block';
+                        const container = document.getElementById('promotion-images-container');
+                        const lastRow = container.querySelector('.promo-img-row:last-child');
+                        if (lastRow === row && !lastRow.nextElementSibling) {
+                            addPromoImage();
+                        }
+                    } else {
+                        removeBtn.style.display = 'none';
+                    }
+                }
+                function addPromoImage() {
+                    const container = document.getElementById('promotion-images-container');
+                    const newRow = document.createElement('div');
+                    newRow.className = 'promo-img-row';
+                    newRow.style.cssText = 'margin-bottom:8px; display:flex; flex-wrap:wrap; align-items:center; gap:8px;';
+                    newRow.innerHTML = '<input type="file" name="promotion_images[]" class="form-control promo-img-input" accept="image/*" onchange="onPromoImageChange(this)" style="flex:1; min-width:120px;"><input type="url" name="promotion_links[]" class="form-control" placeholder="קישור (אופציונלי)" style="flex:1; min-width:160px;"><button type="button" class="remove-promo" onclick="removePromoRow(this)" style="padding:6px 10px; background:#ef4444; color:#fff; border:none; border-radius:6px; cursor:pointer;">✖</button>';
+                    container.appendChild(newRow);
+                }
+                function removePromoRow(btn) {
+                    const row = btn.closest('.promo-img-row');
+                    const container = document.getElementById('promotion-images-container');
+                    if (container.querySelectorAll('.promo-img-row').length > 1) row.remove();
+                }
+            </script>
             <script>
                 function previewLogo(event) {
                     const [file] = event.target.files;

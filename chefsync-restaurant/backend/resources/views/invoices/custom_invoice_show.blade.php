@@ -3,169 +3,81 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>חשבונית Itay Solutions</title>
+    <title>תצוגה מקדימה — חשבונית Itay Solutions</title>
     <style>
-        .action-bar {
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-            position: sticky;
-            top: 0;
-            left: 0;
-            width: 100%;
-            background: #fff;
-            box-shadow: 0 2px 12px #0002;
-            padding: 12px 8px;
-            z-index: 9999;
-            margin-bottom: 18px;
-        }
-
-        @media (max-width: 600px) {
-            .action-bar {
-                flex-direction: column;
-                gap: 0;
-            }
-
-            .btn-primary {
-                width: 100%;
-                margin-right: 0;
-                margin-bottom: 8px;
-            }
-        }
-
-        body {
-            padding-top: 70px;
-        }
-
-        body {
-            direction: rtl;
-            font-family: Arial, sans-serif;
-            color: #222;
-            padding: 30px;
-        }
-
-        .header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            border-bottom: 2px solid #22c55e;
-            margin-bottom: 20px;
-        }
-
-        .logo {
-            height: 50px;
-        }
-
-        .btn-primary {
-            background: #22c55e;
-            color: #fff;
-            border: none;
-            padding: 10px 24px;
-            border-radius: 6px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            margin-top: 8px;
-            margin-right: 0;
-            display: inline-block;
-            transition: background 0.2s;
-        }
-
-        .btn-primary.print {
-            background: #7c3aed;
-        }
-
-        .btn-primary:hover {
-            background: #16a34a;
-        }
-
-        .btn-primary.print:hover {
-            background: #4c1d95;
-        }
-
-        .action-bar {
-            display: flex;
-            gap: 12px;
-            margin-bottom: 18px;
-            flex-wrap: wrap;
-        }
-
-        @media (max-width: 600px) {
-            .action-bar {
-                flex-direction: column;
-                gap: 0;
-            }
-
-            .btn-primary {
-                width: 100%;
-                margin-right: 0;
-                margin-bottom: 8px;
-            }
-        }
-
-        .info-value {
-            font-weight: bold;
-            font-size: 15px;
-        }
-
-        .amount {
-            font-size: 28px;
-            color: #22c55e;
-            font-weight: bold;
-            margin: 20px 0 10px;
-        }
-
-        .desc {
-            font-size: 16px;
-            margin-bottom: 10px;
-        }
-
-        .row {
-            margin-bottom: 8px;
-        }
-
-        .footer {
-            margin-top: 40px;
-            color: #666;
-            font-size: 13px;
-        }
-
-        .box {
-            background: #f9fafb;
-            border-radius: 7px;
-            padding: 18px 20px;
-            margin-bottom: 18px;
+        * { box-sizing: border-box; }
+        body { direction: rtl; font-family: Arial, sans-serif; color: #222; padding: 24px; margin: 0; background: #f9fafb; }
+        .actions-wrap { position: sticky; top: 0; background: #fff; padding: 16px 0; margin-bottom: 20px; z-index: 9999; box-shadow: 0 1px 3px #0001; border-radius: 12px; }
+        .actions-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+        .btn { border: none; padding: 10px 20px; border-radius: 12px; font-size: 14px; font-weight: bold; cursor: pointer; transition: all 0.2s; }
+        .btn-download { background: #059669; color: #fff; }
+        .btn-download:hover { background: #047857; }
+        .btn-print { background: #7c3aed; color: #fff; }
+        .btn-print:hover { background: #6d28d9; }
+        .btn-email { background: #2563eb; color: #fff; }
+        .btn-email:hover { background: #1d4ed8; }
+        .btn-send { background: #0f766e; color: #fff; }
+        .btn-send:hover { background: #0d5c56; }
+        .invoice-paper { background: #fff; padding: 28px; border-radius: 12px; box-shadow: 0 1px 3px #0001; max-width: 800px; margin: 0 auto; }
+        .email-form { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+        .email-form input { flex: 1; min-width: 200px; padding: 10px 14px; border: 1px solid #e5e7eb; border-radius: 10px; font-size: 14px; }
+        .msg { padding: 10px 14px; border-radius: 10px; margin-bottom: 12px; font-size: 14px; }
+        .msg.success { background: #d1fae5; color: #166534; }
+        .msg.error { background: #fee2e2; color: #991b1b; }
+        @media print {
+            body { padding: 0; background: #fff; }
+            .actions-wrap { display: none !important; }
         }
     </style>
 </head>
 
 <body>
-    <div class="header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px;">
-        <div style="display: flex; align-items: center; gap: 12px;">
-            <form method="POST" action="{{ route('custom-invoice.download') }}" style="margin-bottom: 0;">
+    <div class="actions-wrap">
+        @if(session('success'))
+        <div class="msg success">{{ session('success') }}</div>
+        @endif
+        @if(session('error'))
+        <div class="msg error">{{ session('error') }}</div>
+        @endif
+
+        <form method="POST" action="{{ route('custom-invoice.send-email') }}" class="email-form">
+            @csrf
+            <input type="hidden" name="customer_name" value="{{ $customer_name ?? '' }}">
+            <input type="hidden" name="customer_email" value="{{ $customer_email ?? '' }}">
+            <input type="hidden" name="to_pay" value="{{ isset($toPay) && $toPay ? '1' : '0' }}">
+            @foreach($items as $idx => $item)
+            <input type="hidden" name="items[{{ $idx }}][description]" value="{{ $item['description'] ?? '' }}">
+            <input type="hidden" name="items[{{ $idx }}][quantity]" value="{{ $item['quantity'] ?? 1 }}">
+            <input type="hidden" name="items[{{ $idx }}][unit_price]" value="{{ $item['unit_price'] ?? 0 }}">
+            @endforeach
+            <input type="email" name="email" placeholder="אימייל נמען (ריק = פרטי הלקוח)" value="{{ $customer_email ?? '' }}" dir="ltr">
+            <button type="submit" class="btn btn-send">שלח במייל</button>
+        </form>
+
+        <div class="actions-row">
+            <form method="POST" action="{{ route('custom-invoice.download') }}" style="margin: 0; display: inline;">
                 @csrf
-                <input type="hidden" name="customer_name" value="{{ $customer_name }}">
-                <input type="hidden" name="customer_id" value="{{ $customer_id }}">
-                <input type="hidden" name="customer_email" value="{{ $customer_email }}">
-                <input type="hidden" name="payment_method" value="{{ $payment_method }}">
-                <input type="hidden" name="contact" value="{{ $contact }}">
-                <input type="hidden" name="to_pay" value="{{ $toPay ? '1' : '0' }}">
+                <input type="hidden" name="customer_name" value="{{ $customer_name ?? '' }}">
+                <input type="hidden" name="customer_id" value="{{ $customer_id ?? '' }}">
+                <input type="hidden" name="customer_email" value="{{ $customer_email ?? '' }}">
+                <input type="hidden" name="payment_method" value="{{ $payment_method ?? 'credit' }}">
+                <input type="hidden" name="contact" value="{{ $contact ?? '' }}">
+                <input type="hidden" name="to_pay" value="{{ isset($toPay) && $toPay ? '1' : '0' }}">
                 @foreach($items as $idx => $item)
-                <input type="hidden" name="items[{{ $idx }}][description]" value="{{ $item['description'] }}">
-                <input type="hidden" name="items[{{ $idx }}][quantity]" value="{{ $item['quantity'] }}">
-                <input type="hidden" name="items[{{ $idx }}][unit_price]" value="{{ $item['unit_price'] }}">
+                <input type="hidden" name="items[{{ $idx }}][description]" value="{{ $item['description'] ?? '' }}">
+                <input type="hidden" name="items[{{ $idx }}][quantity]" value="{{ $item['quantity'] ?? 1 }}">
+                <input type="hidden" name="items[{{ $idx }}][unit_price]" value="{{ $item['unit_price'] ?? 0 }}">
                 @endforeach
-                <button type="submit" class="btn-primary" style="background:#22c55e; color:#fff; font-size:15px; padding:8px 18px; border-radius:6px; margin-right:8px;">הורד PDF</button>
+                <button type="submit" class="btn btn-download">הורד PDF</button>
             </form>
-            <button type="button" onclick="window.print()" class="btn-primary print" style="background:#7c3aed; color:#fff; font-size:15px; padding:8px 18px; border-radius:6px; margin-right:8px;">הדפס</button>
+            <button type="button" onclick="window.print()" class="btn btn-print">הדפס</button>
+            <a href="{{ route('custom-invoice.new') }}" class="btn" style="background:#6b7280; color:#fff; text-decoration:none;">צור חשבונית חדשה</a>
         </div>
-        <div>
+    </div>
 
-            {{-- הצגת המסמך מתחת לכפתורים --}}
-            @include('invoices.itay_invoice', get_defined_vars())
-
-
-        </div>
+    <div class="invoice-paper">
+        @include('invoices.itay_invoice_content', get_defined_vars())
+    </div>
 </body>
 
 </html>

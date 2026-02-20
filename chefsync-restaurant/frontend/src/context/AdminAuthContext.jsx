@@ -107,6 +107,10 @@ export function AdminAuthProvider({ children }) {
         Authorization: `Bearer ${token}`
     });
 
+    const refreshUser = async () => {
+        if (token) await checkAuth();
+    };
+
     // Impersonation methods
     const startImpersonation = (restaurantId, tenantId, restaurantName) => {
         // Save original tenantId before switching
@@ -145,6 +149,7 @@ export function AdminAuthProvider({ children }) {
         isDelivery,
         isSuperAdmin,
         getAuthHeaders,
+        refreshUser,
         isAuthenticated: !!user,
         impersonating,
         startImpersonation,

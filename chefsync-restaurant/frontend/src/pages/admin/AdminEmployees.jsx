@@ -20,7 +20,7 @@ import {
 } from 'react-icons/fa';
 
 export default function AdminEmployees() {
-    const { getAuthHeaders, isManager } = useAdminAuth();
+    const { getAuthHeaders, isManager, user: currentUser } = useAdminAuth();
     const [employees, setEmployees] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
@@ -167,8 +167,8 @@ export default function AdminEmployees() {
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-10 px-4">
                     {employees.map((emp) => {
                         const roleInfo = roleMap[emp.role] || { label: emp.role, color: 'bg-gray-50 text-gray-600', icon: null };
-                        const canManage = isManager() && emp.role !== 'owner';
-                        console.log('Employee:', emp.name, 'Role:', emp.role, 'isManager():', isManager(), 'canManage:', canManage);
+                        const isSelf = emp.id === currentUser?.id;
+                        const canManage = isManager() && emp.role !== 'owner' && !isSelf;
                         return (
                             <div
                                 key={emp.id}
@@ -269,10 +269,10 @@ export default function AdminEmployees() {
                                     </div>
                                 )}
 
-                                {emp.role === 'owner' && (
+                                {(emp.role === 'owner' || isSelf) && (
                                     <div className="bg-indigo-50/50 p-6 rounded-[2rem] border border-indigo-100 text-center">
                                         <span className="text-[11px] font-black text-indigo-700 tracking-tight flex items-center justify-center gap-2 italic">
-                                            <FaLock size={10} /> גישת מנהל מערכת ראשית
+                                            <FaLock size={10} /> {isSelf ? 'זה אתה — ערוך דרך הגדרות משתמש' : 'גישת מנהל מערכת ראשית'}
                                         </span>
                                     </div>
                                 )}

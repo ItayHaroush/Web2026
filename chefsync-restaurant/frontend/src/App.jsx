@@ -42,6 +42,7 @@ import KioskViewer from './pages/KioskViewer';
 import AdminKiosks from './pages/admin/AdminKiosks';
 import AdminReports from './pages/admin/AdminReports';
 import AdminPaymentSettings from './pages/admin/AdminPaymentSettings';
+import AdminUserSettings from './pages/admin/AdminUserSettings';
 import PaymentCallback from './pages/PaymentCallback';
 import AdminAuthDebug from './pages/admin/AdminAuthDebug';
 import SuperAdminDashboard from './pages/super-admin/SuperAdminDashboard';
@@ -51,6 +52,7 @@ import SuperAdminInvoices from './pages/super-admin/SuperAdminInvoices';
 import SuperAdminSettings from './pages/super-admin/SuperAdminSettings';
 import SuperAdminOrderDebug from './pages/super-admin/SuperAdminOrderDebug';
 import SuperAdminEmails from './pages/super-admin/SuperAdminEmails';
+import SuperAdminProfile from './pages/super-admin/SuperAdminProfile';
 import RegionalSettings from './pages/super-admin/settings/RegionalSettings';
 import BillingSettings from './pages/super-admin/settings/BillingSettings';
 import SecuritySettings from './pages/super-admin/settings/SecuritySettings';
@@ -368,6 +370,14 @@ function AppRoutes() {
           </AdminRoute>
         }
       />
+      <Route
+        path="/admin/settings"
+        element={
+          <AdminRoute>
+            <AdminUserSettings />
+          </AdminRoute>
+        }
+      />
 
       {/* Super Admin */}
       <Route path="/super-admin/login" element={<Navigate to="/admin/login" replace />} />
@@ -489,6 +499,14 @@ function AppRoutes() {
         element={
           <SuperAdminRoute>
             <SuperAdminEmails />
+          </SuperAdminRoute>
+        }
+      />
+      <Route
+        path="/super-admin/profile"
+        element={
+          <SuperAdminRoute>
+            <SuperAdminProfile />
           </SuperAdminRoute>
         }
       />

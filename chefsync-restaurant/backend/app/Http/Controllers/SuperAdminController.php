@@ -154,18 +154,30 @@ class SuperAdminController extends Controller
             },
             'categories',
             'menuItems',
+            'displayScreens as display_screens_count',
         ])->findOrFail($id);
 
-        // נתוני הכנסות
+        $restaurant->kiosks_count = \App\Models\Kiosk::where('restaurant_id', $restaurant->id)->count();
+        $restaurant->active_kiosks_count = \App\Models\Kiosk::where('restaurant_id', $restaurant->id)->where('is_active', true)->count();
+        $restaurant->active_screens_count = $restaurant->displayScreens()->where('is_active', true)->count();
+
         $restaurant->total_revenue = Order::where('restaurant_id', $restaurant->id)
             ->where('status', '!=', 'cancelled')
             ->where('is_test', false)
             ->sum('total_amount');
 
-        // משתמשים של המסעדה
         $restaurant->users = User::where('restaurant_id', $restaurant->id)
             ->select('id', 'name', 'email', 'phone', 'role', 'is_active')
             ->get();
+
+        $owner = User::where('restaurant_id', $restaurant->id)
+            ->where('role', 'owner')
+            ->first();
+        $restaurant->owner_info = $owner ? [
+            'name' => $owner->name,
+            'email' => $owner->email,
+            'phone' => $owner->phone,
+        ] : null;
 
         return response()->json([
             'success' => true,

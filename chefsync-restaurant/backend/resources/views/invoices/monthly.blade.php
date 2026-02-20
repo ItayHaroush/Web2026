@@ -383,11 +383,6 @@
 
 <body>
 
-
-    <div style="text-align: left; margin-bottom: 20px;">
-        <a href="{{ route('custom-invoice.form') }}" class="btn btn-success" style="background: #22c55e; color: white; padding: 8px 18px; border-radius: 6px; text-decoration: none; font-size: 15px;">הפק חשבונית ידנית ל-Itay Solutions</a>
-    </div>
-
     {{-- ==================== PAGE 1 — INVOICE ==================== --}}
 
     {{-- HEADER --}}

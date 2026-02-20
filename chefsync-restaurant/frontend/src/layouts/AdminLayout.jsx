@@ -28,7 +28,8 @@ import {
     FaClock,
     FaTv,
     FaTabletAlt,
-    FaCreditCard
+    FaCreditCard,
+    FaExclamationTriangle
 } from 'react-icons/fa';
 
 export default function AdminLayout({ children }) {
@@ -53,12 +54,15 @@ export default function AdminLayout({ children }) {
                         is_approved: restaurant.is_approved ?? false,
                         active_orders_count: restaurant.active_orders_count || 0, // ✅ הוספת מונה הזמנות
                     });
-                    // שמור נתוני subscription לתצוגת Trial Banner
+                    // שמור נתוני subscription לתצוגת Trial Banner + Payment Failed Banner
                     setSubscriptionData({
                         subscription_status: restaurant.subscription_status,
                         trial_ends_at: restaurant.trial_ends_at,
                         tier: restaurant.tier,
-                        subscription_plan: restaurant.subscription_plan
+                        subscription_plan: restaurant.subscription_plan,
+                        payment_failed_at: restaurant.payment_failed_at,
+                        payment_failure_grace_days_left: restaurant.payment_failure_grace_days_left ?? 0,
+                        is_in_grace_period: restaurant.is_in_grace_period ?? false,
                     });
                     // שמור גם בקונטקסט גלובלי לשימוש בכל הדפים
                     setSubscriptionInfo({
@@ -237,6 +241,7 @@ export default function AdminLayout({ children }) {
                         endContent={statusBadge}
                         notificationCount={restaurantStatus.active_orders_count || 0}
                         impersonating={!!impersonating}
+                        profilePath="/admin/settings"
                     />
 
                     <main className={`flex-1 p-4 lg:p-8 overflow-x-hidden ${impersonating ? 'mt-[7.5rem]' : 'mt-20'}`}>
@@ -252,12 +257,48 @@ export default function AdminLayout({ children }) {
                             </div>
                         )}
                         {subscriptionData && <TrialBanner {...subscriptionData} navigate={navigate} />}
+                        {subscriptionData && <PaymentFailedBanner {...subscriptionData} navigate={navigate} />}
                         {children}
                     </main>
                 </div>
 
                 {/* סוכן AI ספציפי למסעדה - עם מכסת קרדיטים */}
                 <FloatingRestaurantAssistant isSidebarOpen={sidebarOpen} />
+            </div>
+        </div>
+    );
+}
+
+// Payment Failed Banner - מוצג כשיש כשלון בחיוב והמסעדה עדיין בתוך תקופת חסד
+function PaymentFailedBanner({ subscription_status, payment_failed_at, payment_failure_grace_days_left, is_in_grace_period, navigate }) {
+    if (subscription_status !== 'active' || !payment_failed_at || !is_in_grace_period) return null;
+
+    const daysLeft = payment_failure_grace_days_left ?? 0;
+    const isUrgent = daysLeft <= 1;
+
+    return (
+        <div className={`mb-6 ${isUrgent ? 'bg-gradient-to-r from-red-50 to-amber-50 border-red-300' : 'bg-gradient-to-r from-amber-50 to-orange-50 border-amber-300'} border-2 rounded-3xl p-6 shadow-lg animate-in fade-in zoom-in-95 duration-500`}>
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+                <div className="flex items-center gap-4">
+                    <div className={`w-14 h-14 ${isUrgent ? 'bg-red-500' : 'bg-amber-500'} rounded-2xl flex items-center justify-center text-white shadow-lg`}>
+                        <FaExclamationTriangle size={24} />
+                    </div>
+                    <div>
+                        <h3 className="text-xl font-black text-gray-900">
+                            {isUrgent ? '⚠️ תשלום נכשל – זמן החסד מסתיים!' : '💳 חיוב המנוי לא הצליח'}
+                        </h3>
+                        <p className="text-gray-600 font-medium mt-1">
+                            נותרו <strong className={isUrgent ? 'text-red-600' : 'text-amber-700'}>{daysLeft} ימים</strong>
+                            {' '}לעדכון אמצעי התשלום לפני השעיית החשבון. אנא עדכן את פרטי התשלום כדי להמשיך.
+                        </p>
+                    </div>
+                </div>
+                <button
+                    onClick={() => navigate('/admin/paywall')}
+                    className={`${isUrgent ? 'bg-gradient-to-r from-red-500 to-amber-600' : 'bg-gradient-to-r from-amber-500 to-orange-600'} text-white px-6 py-3 rounded-2xl font-black hover:shadow-xl transition-all whitespace-nowrap`}
+                >
+                    עדכן תשלום
+                </button>
             </div>
         </div>
     );

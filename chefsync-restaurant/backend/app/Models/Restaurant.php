@@ -339,7 +339,7 @@ class Restaurant extends Model
 
         $graceDays = (int) (SystemSetting::get('grace_period_days', 3));
 
-        return $this->payment_failed_at->addDays($graceDays)->isFuture();
+        return $this->payment_failed_at->copy()->addDays($graceDays)->isFuture();
     }
 
     /**

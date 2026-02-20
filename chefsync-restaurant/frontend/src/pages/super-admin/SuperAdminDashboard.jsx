@@ -30,7 +30,16 @@ import {
     FaCog,
     FaUserSecret,
     FaExclamationTriangle,
-    FaCreditCard
+    FaCreditCard,
+    FaEnvelope,
+    FaExternalLinkAlt,
+    FaTv,
+    FaTabletAlt,
+    FaQrcode,
+    FaCrown,
+    FaClipboardList,
+    FaPrint,
+    FaWhatsapp
 } from 'react-icons/fa';
 
 export default function SuperAdminDashboard() {
@@ -43,6 +52,7 @@ export default function SuperAdminDashboard() {
     const [filterStatus, setFilterStatus] = useState('');
     const [demoFilter, setDemoFilter] = useState('all'); // all / demo / real
     const [showAddRestaurant, setShowAddRestaurant] = useState(false);
+    const [selectedRestaurant, setSelectedRestaurant] = useState(null);
 
     useEffect(() => {
         fetchDashboard();
@@ -385,7 +395,7 @@ export default function SuperAdminDashboard() {
                                 return true;
                             })
                             .map((restaurant) => (
-                                <div key={restaurant.id} className="bg-white rounded-2xl border border-gray-100 p-5 hover:border-brand-primary/30 hover:shadow-xl hover:shadow-gray-200/50 transition-all group">
+                                <div key={restaurant.id} className="bg-white rounded-2xl border border-gray-100 p-5 hover:border-brand-primary/30 hover:shadow-xl hover:shadow-gray-200/50 transition-all group cursor-pointer" onClick={() => setSelectedRestaurant(restaurant)}>
                                     <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                                         <div className="flex items-center gap-5 flex-1 min-w-0">
                                             <div className="relative shrink-0">
@@ -456,7 +466,7 @@ export default function SuperAdminDashboard() {
                                                 </p>
                                             </div>
 
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
                                                 {restaurant.is_approved === false ? (
                                                     <button
                                                         onClick={() => approveRestaurant(restaurant.id)}
@@ -507,6 +517,16 @@ export default function SuperAdminDashboard() {
                                 </div>
                             ))}
                     </div>
+                )}
+
+                {/* Modal - פרטי מסעדה */}
+                {selectedRestaurant && (
+                    <RestaurantDetailModal
+                        restaurant={selectedRestaurant}
+                        onClose={() => setSelectedRestaurant(null)}
+                        onImpersonate={handleImpersonate}
+                        navigate={navigate}
+                    />
                 )}
 
                 {/* Modal - הוספת מסעדה חדשה */}
@@ -860,6 +880,280 @@ function AddRestaurantModal({ onClose, onSuccess, getAuthHeaders }) {
                     </div>
                 </form>
             </div>
+        </div>
+    );
+}
+
+const STATUS_LABELS = { trial: 'תקופת ניסיון', active: 'פעיל', suspended: 'מושהה', expired: 'פג תוקף', cancelled: 'מבוטל' };
+const STATUS_COLORS = { trial: 'bg-blue-100 text-blue-700', active: 'bg-green-100 text-green-700', suspended: 'bg-red-100 text-red-700', expired: 'bg-gray-100 text-gray-600', cancelled: 'bg-gray-100 text-gray-600' };
+
+function RestaurantDetailModal({ restaurant: initialRestaurant, onClose, onImpersonate, navigate }) {
+    const { getAuthHeaders } = useAdminAuth();
+    const [restaurant, setRestaurant] = useState(initialRestaurant);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchDetails = async () => {
+            try {
+                const res = await api.get(`/super-admin/restaurants/${initialRestaurant.id}`, {
+                    headers: getAuthHeaders(),
+                });
+                if (res.data.success) setRestaurant(res.data.restaurant);
+            } catch (err) {
+                console.error('Failed to fetch restaurant details:', err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchDetails();
+    }, [initialRestaurant.id]);
+
+    const publicUrl = `/${restaurant.tenant_id}`;
+
+    return (
+        <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
+            <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col border border-white/20" onClick={e => e.stopPropagation()}>
+                {/* Header */}
+                <div className="bg-white px-6 py-5 border-b border-gray-100 flex justify-between items-center shrink-0">
+                    <div className="flex items-center gap-4">
+                        {restaurant.logo_url ? (
+                            <img src={resolveAssetUrl(restaurant.logo_url)} alt={restaurant.name} className="w-14 h-14 rounded-2xl object-cover ring-4 ring-gray-50" />
+                        ) : (
+                            <div className="w-14 h-14 rounded-2xl bg-brand-primary/5 flex items-center justify-center text-2xl text-brand-primary ring-4 ring-gray-50">
+                                <FaUtensils />
+                            </div>
+                        )}
+                        <div>
+                            <h2 className="text-xl font-black text-gray-900 flex items-center gap-2">
+                                {restaurant.name}
+                                {restaurant.is_demo && (
+                                    <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase bg-amber-100 text-amber-600 border border-amber-200">דמו</span>
+                                )}
+                            </h2>
+                            <p className="text-sm text-gray-400 font-bold">@{restaurant.tenant_id}</p>
+                        </div>
+                    </div>
+                    <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-xl text-gray-400 hover:text-gray-600 transition-all">
+                        <FaTimes size={20} />
+                    </button>
+                </div>
+
+                <div className="p-6 overflow-y-auto space-y-6 custom-scrollbar">
+                    {loading ? (
+                        <div className="flex justify-center py-8">
+                            <div className="w-6 h-6 border-2 border-brand-primary/30 border-t-brand-primary rounded-full animate-spin" />
+                        </div>
+                    ) : (
+                        <>
+                            {/* איש קשר בעלים */}
+                            {restaurant.owner_info && (
+                                <div className="bg-gray-50 rounded-2xl p-5 border border-gray-100">
+                                    <h3 className="text-sm font-black text-gray-900 mb-3 flex items-center gap-2">
+                                        <FaUser className="text-brand-primary" size={14} />
+                                        בעל המסעדה
+                                    </h3>
+                                    <div className="flex flex-wrap items-center gap-2 mb-3">
+                                        <span className="font-bold text-gray-700">{restaurant.owner_info.name}</span>
+                                    </div>
+                                    <div className="flex flex-wrap gap-2">
+                                        {restaurant.owner_info.phone && (() => {
+                                            const p = restaurant.owner_info.phone.replace(/\D/g, '').replace(/^0/, '').replace(/^972/, '');
+                                            return (
+                                                <>
+                                                    <a href={`https://wa.me/972${p}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-3 py-2 bg-green-500 text-white rounded-xl text-sm font-bold hover:bg-green-600 transition-colors">
+                                                        <FaWhatsapp size={16} />
+                                                        וואטסאפ
+                                                    </a>
+                                                    <a href={`tel:+972${p}`} className="inline-flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 transition-colors">
+                                                        <FaPhone size={14} />
+                                                        שיחה
+                                                    </a>
+                                                </>
+                                            );
+                                        })()}
+                                        {restaurant.owner_info.email && (
+                                            <a href={`mailto:${restaurant.owner_info.email}`} className="inline-flex items-center gap-2 px-3 py-2 bg-gray-600 text-white rounded-xl text-sm font-bold hover:bg-gray-700 transition-colors">
+                                                <FaEnvelope size={14} />
+                                                מייל
+                                            </a>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* פרטי מסעדה */}
+                            <div className="bg-gray-50 rounded-2xl p-5 border border-gray-100">
+                                <h3 className="text-sm font-black text-gray-900 mb-3 flex items-center gap-2">
+                                    <FaStore className="text-brand-primary" size={14} />
+                                    פרטי מסעדה
+                                </h3>
+                                <div className="grid grid-cols-2 gap-3 text-sm">
+                                    <div>
+                                        <span className="text-xs text-gray-400 font-bold">טלפון</span>
+                                        <p className="font-bold text-gray-700">{restaurant.phone || '—'}</p>
+                                    </div>
+                                    <div>
+                                        <span className="text-xs text-gray-400 font-bold">עיר</span>
+                                        <p className="font-bold text-gray-700">{restaurant.city || '—'}</p>
+                                    </div>
+                                    <div className="col-span-2">
+                                        <span className="text-xs text-gray-400 font-bold">כתובת</span>
+                                        <p className="font-bold text-gray-700">{restaurant.address || '—'}</p>
+                                    </div>
+                                    <div>
+                                        <span className="text-xs text-gray-400 font-bold">סטטוס</span>
+                                        <p className="mt-0.5">
+                                            <span className={`inline-flex items-center gap-1.5 font-bold text-xs ${(restaurant.is_open_now ?? restaurant.is_open) ? 'text-green-600' : 'text-red-500'}`}>
+                                                <div className={`w-2 h-2 rounded-full ${(restaurant.is_open_now ?? restaurant.is_open) ? 'bg-green-500' : 'bg-red-500'}`} />
+                                                {(restaurant.is_open_now ?? restaurant.is_open) ? 'פתוח' : 'סגור'}
+                                            </span>
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <span className="text-xs text-gray-400 font-bold">אישור</span>
+                                        <p className="mt-0.5">
+                                            <span className={`inline-flex items-center gap-1.5 font-bold text-xs ${restaurant.is_approved ? 'text-green-600' : 'text-amber-600'}`}>
+                                                {restaurant.is_approved ? <FaCheckCircle size={10} /> : <FaCog size={10} />}
+                                                {restaurant.is_approved ? 'מאושר' : 'ממתין לאישור'}
+                                            </span>
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* מנוי */}
+                            <div className="bg-gray-50 rounded-2xl p-5 border border-gray-100">
+                                <h3 className="text-sm font-black text-gray-900 mb-3 flex items-center gap-2">
+                                    <FaCreditCard className="text-brand-primary" size={14} />
+                                    מנוי
+                                </h3>
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
+                                    <div>
+                                        <span className="text-xs text-gray-400 font-bold">סטטוס מנוי</span>
+                                        <p className="mt-0.5">
+                                            <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-black ${STATUS_COLORS[restaurant.subscription_status] || 'bg-gray-100 text-gray-600'}`}>
+                                                {STATUS_LABELS[restaurant.subscription_status] || restaurant.subscription_status}
+                                            </span>
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <span className="text-xs text-gray-400 font-bold">תוכנית</span>
+                                        <p className="font-bold text-gray-700 flex items-center gap-1.5 mt-0.5">
+                                            <FaCrown className={restaurant.tier === 'pro' ? 'text-amber-500' : 'text-gray-400'} size={12} />
+                                            {restaurant.tier === 'pro' ? 'Pro' : 'Basic'}
+                                        </p>
+                                    </div>
+                                    {restaurant.monthly_price && (
+                                        <div>
+                                            <span className="text-xs text-gray-400 font-bold">מחיר חודשי</span>
+                                            <p className="font-bold text-gray-700">₪{restaurant.monthly_price}</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* סטטיסטיקות */}
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                <div className="bg-blue-50 rounded-xl p-3 border border-blue-100 text-center">
+                                    <p className="text-lg font-black text-blue-700">{restaurant.orders_count ?? 0}</p>
+                                    <p className="text-[10px] font-bold text-blue-500 mt-0.5">הזמנות</p>
+                                </div>
+                                <div className="bg-green-50 rounded-xl p-3 border border-green-100 text-center">
+                                    <p className="text-lg font-black text-green-700">₪{Number(restaurant.total_revenue || 0).toLocaleString()}</p>
+                                    <p className="text-[10px] font-bold text-green-500 mt-0.5">הכנסה</p>
+                                </div>
+                                <div className="bg-purple-50 rounded-xl p-3 border border-purple-100 text-center">
+                                    <p className="text-lg font-black text-purple-700">{restaurant.menu_items_count ?? 0}</p>
+                                    <p className="text-[10px] font-bold text-purple-500 mt-0.5">פריטי תפריט</p>
+                                </div>
+                                <div className="bg-orange-50 rounded-xl p-3 border border-orange-100 text-center">
+                                    <p className="text-lg font-black text-orange-700">{restaurant.categories_count ?? 0}</p>
+                                    <p className="text-[10px] font-bold text-orange-500 mt-0.5">קטגוריות</p>
+                                </div>
+                            </div>
+
+                            {/* פיצ'רים פעילים */}
+                            <div className="bg-gray-50 rounded-2xl p-5 border border-gray-100">
+                                <h3 className="text-sm font-black text-gray-900 mb-3 flex items-center gap-2">
+                                    <FaCog className="text-brand-primary" size={14} />
+                                    פיצ'רים פעילים
+                                </h3>
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                    <FeatureBadge
+                                        icon={<FaTabletAlt size={16} />}
+                                        label="קיוסקים"
+                                        count={restaurant.kiosks_count ?? 0}
+                                        activeCount={restaurant.active_kiosks_count ?? 0}
+                                        color="indigo"
+                                    />
+                                    <FeatureBadge
+                                        icon={<FaTv size={16} />}
+                                        label="מסכי תצוגה"
+                                        count={restaurant.display_screens_count ?? 0}
+                                        activeCount={restaurant.active_screens_count ?? 0}
+                                        color="teal"
+                                    />
+                                    <FeatureBadge
+                                        icon={<FaShoppingBag size={16} />}
+                                        label="משלוחים"
+                                        active={restaurant.has_delivery}
+                                        color="emerald"
+                                    />
+                                    <FeatureBadge
+                                        icon={<FaStore size={16} />}
+                                        label="איסוף עצמי"
+                                        active={restaurant.has_pickup}
+                                        color="amber"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* הפניות מהירות */}
+                            <div className="flex flex-wrap gap-2">
+                                <button
+                                    onClick={() => window.open(publicUrl, '_blank')}
+                                    className="flex items-center gap-2 px-4 py-2.5 bg-brand-primary text-white rounded-xl text-sm font-bold hover:opacity-90 transition-all"
+                                >
+                                    <FaExternalLinkAlt size={12} />
+                                    צפה בתפריט
+                                </button>
+                                <button
+                                    onClick={() => { onClose(); onImpersonate(restaurant); }}
+                                    className="flex items-center gap-2 px-4 py-2.5 bg-purple-600 text-white rounded-xl text-sm font-bold hover:bg-purple-700 transition-all"
+                                >
+                                    <FaUserSecret size={12} />
+                                    כניסה כמסעדה
+                                </button>
+                            </div>
+                        </>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function FeatureBadge({ icon, label, count, activeCount, active, color }) {
+    const hasCount = count !== undefined;
+    const isActive = hasCount ? count > 0 : active;
+
+    const colorMap = {
+        indigo: { bg: 'bg-indigo-50', border: 'border-indigo-100', text: 'text-indigo-600', icon: 'text-indigo-400' },
+        teal: { bg: 'bg-teal-50', border: 'border-teal-100', text: 'text-teal-600', icon: 'text-teal-400' },
+        emerald: { bg: 'bg-emerald-50', border: 'border-emerald-100', text: 'text-emerald-600', icon: 'text-emerald-400' },
+        amber: { bg: 'bg-amber-50', border: 'border-amber-100', text: 'text-amber-600', icon: 'text-amber-400' },
+    };
+    const c = colorMap[color] || colorMap.indigo;
+
+    return (
+        <div className={`${c.bg} rounded-xl p-3 border ${c.border} text-center`}>
+            <div className={`${isActive ? c.text : 'text-gray-300'} flex justify-center mb-1.5`}>{icon}</div>
+            <p className={`text-[10px] font-bold ${isActive ? c.text : 'text-gray-400'}`}>{label}</p>
+            {hasCount ? (
+                <p className="text-xs font-black text-gray-700 mt-0.5">{activeCount ?? 0}/{count}</p>
+            ) : (
+                <p className={`text-xs font-black mt-0.5 ${isActive ? 'text-green-600' : 'text-gray-400'}`}>{isActive ? 'פעיל' : 'כבוי'}</p>
+            )}
         </div>
     );
 }
