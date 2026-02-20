@@ -393,8 +393,8 @@
                 <div class="invoice-number">{{ $invoiceNumber }}</div>
             </td>
             <td style="width: 40%; text-align: left;">
-                @if($logoBase64)
-                <img src="data:image/png;base64,{{ $logoBase64 }}" class="logo" alt="TakeEat">
+                @if(!empty($logoFilePath))
+                <img src="{{ $logoFilePath }}" class="logo" alt="TakeEat">
                 @else
                 <div class="logo-text">TakeEat</div>
                 @endif
@@ -690,8 +690,8 @@
                 <div class="invoice-number">{{ $restaurant->name }} — {{ $monthHebrew }}</div>
             </td>
             <td style="width: 40%; text-align: left;">
-                @if($logoBase64)
-                <img src="data:image/png;base64,{{ $logoBase64 }}" class="logo" alt="TakeEat">
+                @if(!empty($logoFilePath))
+                <img src="{{ $logoFilePath }}" class="logo" alt="TakeEat">
                 @else
                 <div class="logo-text">TakeEat</div>
                 @endif
