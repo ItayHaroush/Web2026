@@ -229,7 +229,11 @@ class InvoicePdfService
             </div>
         ');
 
-        $mpdf->WriteHTML($html);
+        [$css, $body] = $this->extractCssAndBody($html);
+        if ($css !== '') {
+            $mpdf->WriteHTML($css, \Mpdf\HTMLParserMode::HEADER_CSS);
+        }
+        $mpdf->WriteHTML($body, \Mpdf\HTMLParserMode::HTML_BODY);
 
         return $mpdf;
     }
@@ -262,6 +266,25 @@ class InvoicePdfService
     {
         $mpdf = $this->generatePdf($invoice);
         return $mpdf->Output('', \Mpdf\Output\Destination::STRING_RETURN);
+    }
+
+    /**
+     * Extract CSS and body without regex (avoids pcre.backtrack_limit on large HTML).
+     */
+    private function extractCssAndBody(string $html): array
+    {
+        $styleStart = stripos($html, '<style');
+        if ($styleStart === false) {
+            return ['', $html];
+        }
+        $contentStart = strpos($html, '>', $styleStart) + 1;
+        $styleEnd = stripos($html, '</style>', $contentStart);
+        if ($styleEnd === false) {
+            return ['', $html];
+        }
+        $css = substr($html, $contentStart, $styleEnd - $contentStart);
+        $body = substr($html, 0, $styleStart) . substr($html, $styleEnd + 8);
+        return [$css, $body];
     }
 
     public function getOwnerEmail(Restaurant $restaurant): ?string
