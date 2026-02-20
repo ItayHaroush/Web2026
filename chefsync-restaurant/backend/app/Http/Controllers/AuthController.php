@@ -147,15 +147,21 @@ class AuthController extends Controller
     {
         $user = $request->user();
 
-        $request->validate([
+        $rules = [
             'name' => 'sometimes|string|max:255',
+            'email' => 'sometimes|email|max:255|unique:users,email,' . $user->id,
             'phone' => 'nullable|string|max:20',
             'current_password' => 'required_with:new_password',
             'new_password' => 'sometimes|string|min:6|confirmed',
-        ]);
+        ];
+        $request->validate($rules);
 
         if ($request->has('name')) {
             $user->name = $request->name;
+        }
+
+        if ($request->filled('email') && $request->email !== $user->email) {
+            $user->email = $request->email;
         }
 
         if ($request->has('phone')) {

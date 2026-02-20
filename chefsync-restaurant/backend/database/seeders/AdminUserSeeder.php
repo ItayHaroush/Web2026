@@ -22,7 +22,7 @@ class AdminUserSeeder extends Seeder
                     'name' => 'Admin ' . $restaurant->name,
                     'password' => Hash::make('password'),
                     'restaurant_id' => $restaurant->id,
-                    'role' => 'manager',
+                    'role' => 'owner',
                 ]
             );
         }

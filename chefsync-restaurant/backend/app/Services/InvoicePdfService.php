@@ -83,13 +83,25 @@ class InvoicePdfService
         $invoice->loadMissing('restaurant');
         $restaurant = $invoice->restaurant;
 
-        $logoPath = storage_path('app/public/email-logo.png');
-        if (!file_exists($logoPath)) {
-            $logoPath = storage_path('app/public/logo.png');
+        $logoBase64 = null;
+        // לוגו מסעדה אם קיים (נתיב מקומי /storage/)
+        if (!empty($restaurant->logo_url) && str_starts_with($restaurant->logo_url, '/storage/')) {
+            $relativePath = str_replace('/storage/', '', $restaurant->logo_url);
+            $logoPath = storage_path('app/public/' . $relativePath);
+            if (file_exists($logoPath)) {
+                $logoBase64 = base64_encode(file_get_contents($logoPath));
+            }
         }
-        $logoBase64 = file_exists($logoPath)
-            ? base64_encode(file_get_contents($logoPath))
-            : null;
+        // ברירת מחדל: לוגו פלטפורמה
+        if (!$logoBase64) {
+            $logoPath = storage_path('app/public/email-logo.png');
+            if (!file_exists($logoPath)) {
+                $logoPath = storage_path('app/public/logo.png');
+            }
+            $logoBase64 = file_exists($logoPath)
+                ? base64_encode(file_get_contents($logoPath))
+                : null;
+        }
 
         $monthParts = explode('-', $invoice->month);
         $year = $monthParts[0] ?? '';

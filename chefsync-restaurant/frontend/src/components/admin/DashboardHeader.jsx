@@ -2,6 +2,8 @@ import React from 'react';
 import { FaBars, FaBell, FaUserCircle, FaEye } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 
+const ROLE_LABELS = { owner: 'בעל מסעדה', manager: 'מנהל', employee: 'עובד', delivery: 'שליח' };
+
 const DashboardHeader = ({
     toggleSidebar,
     user,
@@ -9,7 +11,8 @@ const DashboardHeader = ({
     isCollapsed,
     endContent,
     notificationCount = 0,
-    impersonating = false
+    impersonating = false,
+    profilePath,
 }) => {
     const navigate = useNavigate();
 
@@ -71,10 +74,13 @@ const DashboardHeader = ({
                     </button>
 
                     {/* User Profile */}
-                    <div className="flex items-center gap-3 pl-2 border-r border-gray-200 mr-2 pr-4">
+                    <div
+                        onClick={() => profilePath && navigate(profilePath)}
+                        className={`flex items-center gap-3 pl-2 border-r border-gray-200 mr-2 pr-4 ${profilePath ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
+                    >
                         <div className="text-left hidden sm:block">
                             <p className="text-sm font-bold text-gray-900">{user?.name || 'אורח'}</p>
-                            <p className="text-xs text-gray-500">{user?.role === 'owner' ? 'מנהל מסעדה' : user?.role === 'super_admin' ? 'מנהל על' : user?.role}</p>
+                            <p className="text-xs text-gray-500">{user?.is_super_admin ? 'מנהל על' : ROLE_LABELS[user?.role] || user?.role}</p>
                         </div>
                         <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center text-orange-600">
                             {user?.avatar ? (

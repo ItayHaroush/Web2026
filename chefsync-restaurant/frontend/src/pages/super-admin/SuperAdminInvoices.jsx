@@ -6,6 +6,7 @@ import { toast } from 'react-hot-toast';
 import InvoicePreviewModal from '../../components/InvoicePreviewModal';
 import {
     FaFileInvoiceDollar,
+    FaTimes,
     FaSync,
     FaSearch,
     FaStore,
@@ -282,20 +283,36 @@ export default function SuperAdminInvoices() {
                     </div>
                 </div>
 
-                {/* Custom Invoice Modal */}
+                {/* Custom Invoice Modal — עיצוב זהה למודל תצוגה מקדימה */}
                 {showCustomInvoice && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-                        <div className="bg-white rounded-xl shadow-2xl p-0 max-w-2xl w-full relative flex flex-col" style={{ height: '90vh', maxWidth: 600 }}>
-                            <button
-                                onClick={() => setShowCustomInvoice(false)}
-                                className="absolute left-2 top-2 text-gray-400 hover:text-gray-700 text-xl font-bold z-10"
-                                title="סגור"
-                            >✕</button>
-                            <iframe
-                                src="https://api.chefsync.co.il/custom-invoice"
-                                title="הפק חשבונית ידנית ל-Itay Solutions"
-                                style={{ border: 'none', width: '100%', height: '100%', borderRadius: 12, minHeight: 500 }}
-                            />
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setShowCustomInvoice(false)}>
+                        <div
+                            className="bg-white rounded-3xl shadow-2xl w-full max-w-5xl flex flex-col overflow-hidden"
+                            style={{ maxHeight: '95vh', height: '95vh' }}
+                            onClick={(e) => e.stopPropagation()}
+                            dir="rtl"
+                        >
+                            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-white shrink-0">
+                                <div>
+                                    <h2 className="text-lg font-black text-gray-900">תצוגה מקדימה — חשבונית Itay Solutions</h2>
+                                    <p className="text-xs text-gray-500 mt-0.5">הפק חשבונית מותאמת אישית</p>
+                                </div>
+                                <button
+                                    onClick={() => setShowCustomInvoice(false)}
+                                    className="p-2.5 hover:bg-gray-100 rounded-xl transition-colors text-gray-400 hover:text-gray-700"
+                                    aria-label="סגור"
+                                >
+                                    <FaTimes size={18} />
+                                </button>
+                            </div>
+                            <div className="flex-1 min-h-0 bg-gray-100 overflow-hidden flex flex-col">
+                                <iframe
+                                    src={`${((import.meta?.env?.PROD ? import.meta?.env?.VITE_API_URL_PRODUCTION : import.meta?.env?.VITE_API_URL_LOCAL) || 'http://localhost:8000/api').replace(/\/api\/?$/, '')}/custom-invoice`}
+                                    title="הפק חשבונית ידנית ל-Itay Solutions"
+                                    className="w-full flex-1 border-0 min-h-0"
+                                    style={{ minHeight: '450px' }}
+                                />
+                            </div>
                         </div>
                     </div>
                 )}

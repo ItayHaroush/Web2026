@@ -1791,6 +1791,15 @@ class AdminController extends Controller
 
         $restaurant->active_orders_count = $activeOrdersCount;
 
+        $graceDays = (int) \App\Models\SystemSetting::get('grace_period_days', 3);
+        $daysLeftInGrace = 0;
+        if ($restaurant->payment_failed_at) {
+            $graceEndsAt = $restaurant->payment_failed_at->copy()->addDays($graceDays);
+            $daysLeftInGrace = max(0, (int) $graceEndsAt->diffInDays(now(), false));
+        }
+        $restaurant->payment_failure_grace_days_left = $daysLeftInGrace;
+        $restaurant->is_in_grace_period = $restaurant->isInGracePeriod();
+
         return response()->json([
             'success' => true,
             'restaurant' => $restaurant,
@@ -2228,11 +2237,11 @@ class AdminController extends Controller
             ], 400);
         }
 
-        // מנהל לא יכול לשנות בעל מסעדה
-        if ($employee->role === 'owner' && !$currentUser->isOwner()) {
+        // אסור לשנות תפקיד של owner
+        if ($employee->role === 'owner') {
             return response()->json([
                 'success' => false,
-                'message' => 'אין לך הרשאה לעדכן בעל מסעדה',
+                'message' => 'לא ניתן לשנות פרטי בעל המסעדה דרך ממשק זה',
             ], 403);
         }
 
