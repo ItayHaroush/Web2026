@@ -42,6 +42,7 @@
 
         <form method="POST" action="{{ route('custom-invoice.send-email') }}" class="email-form">
             @csrf
+            <input type="hidden" name="invoice_token" value="{{ $invoiceToken ?? '' }}">
             <input type="hidden" name="customer_name" value="{{ $customer_name ?? '' }}">
             <input type="hidden" name="customer_email" value="{{ $customer_email ?? '' }}">
             <input type="hidden" name="to_pay" value="{{ isset($toPay) && $toPay ? '1' : '0' }}">
@@ -57,6 +58,7 @@
         <div class="actions-row">
             <form method="POST" action="{{ route('custom-invoice.download') }}" style="margin: 0; display: inline;">
                 @csrf
+                <input type="hidden" name="invoice_token" value="{{ $invoiceToken ?? '' }}">
                 <input type="hidden" name="customer_name" value="{{ $customer_name ?? '' }}">
                 <input type="hidden" name="customer_id" value="{{ $customer_id ?? '' }}">
                 <input type="hidden" name="customer_email" value="{{ $customer_email ?? '' }}">
