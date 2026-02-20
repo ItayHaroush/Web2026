@@ -1,5 +1,5 @@
 {{-- תוכן חשבונית ללא כפילות - משמש להצגה ו-PDF --}}
-<div class="itay-invoice-content" style="direction: rtl; font-family: DejaVu Sans, Arial, sans-serif; font-size: 15px;">
+<div class="itay-invoice-content" style="direction: rtl; font-family: 'Heebo', DejaVu Sans, Arial, sans-serif; font-size: 15px;">
     <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
         @if(!empty($logoPath))
         <img src="{{ $logoPath }}" alt="לוגו" style="height: 50px; max-width: 180px; object-fit: contain;" />

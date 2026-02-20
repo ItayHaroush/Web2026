@@ -4,11 +4,14 @@
 <head>
     <meta charset="UTF-8">
     <link rel="shortcut icon" href="/images/1.png" type="image/png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
     <title>הפק חשבונית מותאמת ל-Itay Solutions</title>
     <style>
         body {
             direction: rtl;
-            font-family: Arial, sans-serif;
+            font-family: 'Heebo', Arial, sans-serif;
             color: #222;
             padding: 30px;
             background: #f9fafb;

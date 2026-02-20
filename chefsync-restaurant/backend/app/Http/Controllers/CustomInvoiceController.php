@@ -212,17 +212,25 @@ class CustomInvoiceController extends Controller
             $total += $item['quantity'] * $item['unit_price'];
         }
 
-        $logoBase64 = $tokenData['logoBase64'] ?? session('custom_invoice_logo');
-        $promotionImagesBase64 = $tokenData['promotionImagesBase64'] ?? session('custom_invoice_promotion_images', []);
+        $logoBase64 = $tokenData['logoBase64'] ?? null;
+        if (!$logoBase64) {
+            $defaultPath = public_path('images/itay-logo.png');
+            if (file_exists($defaultPath)) {
+                $logoBase64 = base64_encode(file_get_contents($defaultPath));
+            }
+        }
+        $promotionImagesBase64 = $tokenData['promotionImagesBase64'] ?? [];
+        $customerName = $validated['customer_name'] ?? '';
         $invoiceNumber = 'ITAY-' . now()->format('Ymd-His') . '-' . Str::random(4);
+        $toPay = $validated['to_pay'] == '1';
 
         $invoiceData = [
-            'customer_name' => $validated['customer_name'] ?? '',
+            'customer_name' => $customerName,
             'items' => $items,
             'total' => $total,
             'invoiceNumber' => $invoiceNumber,
             'date' => now()->format('d/m/Y'),
-            'toPay' => $validated['to_pay'] == '1',
+            'toPay' => $toPay,
             'logoBase64' => $logoBase64,
             'promotionImagesBase64' => $promotionImagesBase64,
         ];
@@ -236,8 +244,10 @@ class CustomInvoiceController extends Controller
         $pdfContent = $service->getPdfContent($invoiceData);
         $filename = 'ItaySolutions-Invoice-' . $invoiceNumber . '.pdf';
 
+        $emailHtml = $this->buildInvoiceEmailHtml($customerName, $invoiceNumber, $total, $toPay, $items, $logoBase64);
+
         try {
-            Mail::raw('מצורף חשבונית מ-Itay Solutions.', function ($message) use ($email, $pdfContent, $filename) {
+            Mail::html($emailHtml, function ($message) use ($email, $pdfContent, $filename) {
                 $message->to($email)
                     ->subject('חשבונית Itay Solutions')
                     ->attachData($pdfContent, $filename, ['mime' => 'application/pdf']);
@@ -246,6 +256,105 @@ class CustomInvoiceController extends Controller
         } catch (\Exception $e) {
             return back()->with('error', 'שגיאה בשליחת החשבונית: ' . $e->getMessage());
         }
+    }
+
+    private function buildInvoiceEmailHtml(string $customerName, string $invoiceNumber, float $total, bool $toPay, array $items, ?string $logoBase64): string
+    {
+        $logoImg = $logoBase64
+            ? '<img src="data:image/png;base64,' . $logoBase64 . '" alt="Itay Solutions" width="48" height="48" style="display:block; margin:0 auto 8px; border-radius:10px;" />'
+            : '';
+
+        $totalFormatted = number_format($total, 2);
+        $statusLabel = $toPay ? 'לתשלום' : 'שולם';
+        $statusColor = $toPay ? '#f97316' : '#059669';
+        $greeting = $customerName ? "שלום {$customerName}," : 'שלום,';
+
+        $itemRows = '';
+        foreach ($items as $item) {
+            $desc = e($item['description']);
+            $qty = (int) $item['quantity'];
+            $price = number_format($item['unit_price'], 2);
+            $lineTotal = number_format($qty * $item['unit_price'], 2);
+            $itemRows .= <<<HTML
+            <tr>
+                <td style="padding:8px 10px; border-bottom:1px solid #f3f4f6; font-size:13px; color:#374151; text-align:right;">{$desc}</td>
+                <td style="padding:8px 10px; border-bottom:1px solid #f3f4f6; font-size:13px; color:#374151; text-align:center;">{$qty}</td>
+                <td style="padding:8px 10px; border-bottom:1px solid #f3f4f6; font-size:13px; color:#374151; text-align:center;">₪{$price}</td>
+                <td style="padding:8px 10px; border-bottom:1px solid #f3f4f6; font-size:13px; font-weight:bold; color:#1f2937; text-align:center;">₪{$lineTotal}</td>
+            </tr>
+            HTML;
+        }
+
+        return <<<HTML
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>חשבונית Itay Solutions</title>
+</head>
+<body style="margin:0; padding:0; background:#f3f4f6; font-family:Arial, Helvetica, sans-serif; direction:rtl;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f3f4f6;">
+        <tr>
+            <td style="padding:24px 12px;">
+                <table role="presentation" width="600" align="center" cellspacing="0" cellpadding="0" style="max-width:600px; margin:0 auto; background:#fff; border-radius:16px; overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,0.08);">
+                    <!-- Header -->
+                    <tr>
+                        <td style="background:linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%); padding:28px 32px; text-align:center;">
+                            {$logoImg}
+                            <h1 style="margin:0; font-size:24px; font-weight:bold; color:#fff; letter-spacing:0.5px;">Itay Solutions</h1>
+                            <p style="margin:6px 0 0; font-size:12px; color:rgba(255,255,255,0.8);">פיתוח ועיצוב אתרים</p>
+                        </td>
+                    </tr>
+                    <!-- Body -->
+                    <tr>
+                        <td style="padding:28px 32px;">
+                            <p style="margin:0 0 16px; font-size:15px; color:#374151; line-height:1.7;">{$greeting}</p>
+                            <p style="margin:0 0 20px; font-size:14px; color:#6b7280; line-height:1.7;">מצורפת חשבונית מספר <strong style="color:#7c3aed;">{$invoiceNumber}</strong> מ-Itay Solutions.</p>
+
+                            <!-- Amount Box -->
+                            <div style="background:#f5f3ff; border:2px solid #7c3aed; border-radius:14px; padding:20px; margin:0 0 24px; text-align:center;">
+                                <p style="margin:0 0 4px; font-size:12px; color:#7c3aed; font-weight:bold;">{$statusLabel}</p>
+                                <p style="margin:0; font-size:30px; font-weight:bold; color:{$statusColor};">₪{$totalFormatted}</p>
+                                <p style="margin:4px 0 0; font-size:11px; color:#9ca3af;">(עוסק פטור — לא כולל מע"מ)</p>
+                            </div>
+
+                            <!-- Items Table -->
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse; margin:0 0 20px;">
+                                <tr style="background:#f9fafb;">
+                                    <th style="padding:10px; font-size:11px; font-weight:bold; color:#7c3aed; text-align:right; border-bottom:2px solid #e5e7eb;">תיאור</th>
+                                    <th style="padding:10px; font-size:11px; font-weight:bold; color:#7c3aed; text-align:center; border-bottom:2px solid #e5e7eb;">כמות</th>
+                                    <th style="padding:10px; font-size:11px; font-weight:bold; color:#7c3aed; text-align:center; border-bottom:2px solid #e5e7eb;">מחיר</th>
+                                    <th style="padding:10px; font-size:11px; font-weight:bold; color:#7c3aed; text-align:center; border-bottom:2px solid #e5e7eb;">סה"כ</th>
+                                </tr>
+                                {$itemRows}
+                            </table>
+
+                            <p style="margin:0; font-size:13px; color:#9ca3af; line-height:1.6;">החשבונית המלאה מצורפת כקובץ PDF.</p>
+                        </td>
+                    </tr>
+                    <!-- Footer -->
+                    <tr>
+                        <td style="padding:0 32px 24px;">
+                            <div style="border-top:1px solid #e5e7eb; padding-top:18px; text-align:center;">
+                                <p style="margin:0 0 4px; font-size:12px; font-weight:bold; color:#7c3aed;">Itay Solutions</p>
+                                <p style="margin:0 0 4px; font-size:11px; color:#9ca3af;">איתי חרוש | עוסק זעיר | 305300808</p>
+                                <p style="margin:0 0 4px; font-size:11px; color:#9ca3af;">
+                                    <a href="tel:0547466508" style="color:#7c3aed; text-decoration:none;">054-7466508</a> &nbsp;|&nbsp;
+                                    <a href="mailto:itayyharoush@gmail.com" style="color:#7c3aed; text-decoration:none;">itayyharoush@gmail.com</a> &nbsp;|&nbsp;
+                                    <a href="https://itaysolutions.com" style="color:#7c3aed; text-decoration:none;">itaysolutions.com</a>
+                                </p>
+                                <p style="margin:8px 0 0; font-size:10px; color:#d1d5db;">חשבונית זו הופקה אוטומטית ממערכת TakeEat</p>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+HTML;
     }
 
     // תצוגה מקדימה לחשבונית מותאמת (legacy)
