@@ -198,6 +198,7 @@ class KioskController extends Controller
 
         $items = MenuItem::withoutGlobalScopes()
             ->where('restaurant_id', $kiosk->restaurant_id)
+            ->where('is_active', true)
             ->where('is_available', true)
             ->whereHas('category', function ($q) {
                 $q->where('is_active', true);
@@ -440,6 +441,7 @@ class KioskController extends Controller
             foreach ($validated['items'] as $index => $itemData) {
                 $menuItem = MenuItem::withoutGlobalScopes()
                     ->where('restaurant_id', $restaurant->id)
+                    ->where('is_active', true)
                     ->where('is_available', true)
                     ->with([
                         'variants' => function ($q) {
@@ -646,6 +648,7 @@ class KioskController extends Controller
             }
 
             $items = MenuItem::where('category_id', $group->source_category_id)
+                ->where('is_active', true)
                 ->where('is_available', true)
                 ->orderBy('name')
                 ->get();

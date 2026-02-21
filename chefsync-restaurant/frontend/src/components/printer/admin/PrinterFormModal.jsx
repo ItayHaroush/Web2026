@@ -1,4 +1,16 @@
-import { FaTimes, FaWifi, FaUsb } from 'react-icons/fa';
+import { FaTimes, FaWifi, FaUsb, FaUtensils, FaCashRegister, FaGlobe, FaDesktop } from 'react-icons/fa';
+
+const ROLES = [
+    { value: 'kitchen', label: 'מטבח', icon: FaUtensils, desc: 'הדפסת הזמנות למטבח', color: 'orange' },
+    { value: 'receipt', label: 'קופה / קבלות', icon: FaCashRegister, desc: 'קבלות, דוחות Z, שעות עובדים', color: 'blue' },
+    { value: 'general', label: 'כללי', icon: FaGlobe, desc: 'מקבלת הכל — מטבח וקבלות', color: 'emerald' },
+];
+
+const ROLE_COLORS = {
+    kitchen: { selected: 'bg-orange-50 border-orange-400 text-orange-700', icon: 'text-orange-500' },
+    receipt: { selected: 'bg-blue-50 border-blue-400 text-blue-700', icon: 'text-blue-500' },
+    general: { selected: 'bg-emerald-50 border-emerald-400 text-emerald-700', icon: 'text-emerald-500' },
+};
 
 export default function PrinterFormModal({ form, setForm, editPrinter, categories, onSubmit, onClose }) {
     const toggleCategory = (catId) => {
@@ -8,6 +20,8 @@ export default function PrinterFormModal({ form, setForm, editPrinter, categorie
             : [...current, catId];
         setForm({ ...form, category_ids: updated });
     };
+
+    const showCategories = form.role === 'kitchen' || form.role === 'general';
 
     return (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -25,48 +39,87 @@ export default function PrinterFormModal({ form, setForm, editPrinter, categorie
                 </div>
 
                 <form onSubmit={onSubmit} className="p-8 space-y-6">
-                    {/* Name */}
                     <div>
                         <label className="block text-sm font-black text-gray-700 mb-2">שם המדפסת</label>
                         <input
                             type="text"
                             value={form.name}
                             onChange={(e) => setForm({ ...form, name: e.target.value })}
-                            placeholder='למשל: גריל, סלטים, בר'
+                            placeholder='למשל: מטבח ראשי, קופה 1'
                             className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-2xl font-bold text-gray-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"
                             required
                             maxLength={100}
                         />
                     </div>
 
-                    {/* Type */}
+                    <div>
+                        <label className="block text-sm font-black text-gray-700 mb-2">תפקיד המדפסת</label>
+                        <div className="space-y-2">
+                            {ROLES.map(r => {
+                                const isSelected = form.role === r.value;
+                                const colors = ROLE_COLORS[r.value];
+                                const Icon = r.icon;
+                                return (
+                                    <button
+                                        key={r.value}
+                                        type="button"
+                                        onClick={() => setForm({ ...form, role: r.value })}
+                                        className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl font-bold transition-all border-2 text-right ${
+                                            isSelected ? colors.selected : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'
+                                        }`}
+                                    >
+                                        <Icon size={20} className={isSelected ? colors.icon : 'text-gray-400'} />
+                                        <div className="flex-1">
+                                            <p className="font-black text-sm">{r.label}</p>
+                                            <p className="text-xs opacity-70 font-medium">{r.desc}</p>
+                                        </div>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+
                     <div>
                         <label className="block text-sm font-black text-gray-700 mb-2">סוג חיבור</label>
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-3 gap-3">
+                            <button
+                                type="button"
+                                onClick={() => setForm({ ...form, type: 'browser' })}
+                                className={`flex items-center justify-center gap-2 px-4 py-4 rounded-2xl font-black transition-all border-2 text-sm ${form.type === 'browser'
+                                    ? 'bg-emerald-50 border-emerald-400 text-emerald-700'
+                                    : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'
+                                }`}
+                            >
+                                <FaDesktop size={14} /> דפדפן
+                            </button>
                             <button
                                 type="button"
                                 onClick={() => setForm({ ...form, type: 'network' })}
-                                className={`flex items-center justify-center gap-3 px-5 py-4 rounded-2xl font-black transition-all border-2 ${form.type === 'network'
+                                className={`flex items-center justify-center gap-2 px-4 py-4 rounded-2xl font-black transition-all border-2 text-sm ${form.type === 'network'
                                     ? 'bg-blue-50 border-blue-400 text-blue-700'
                                     : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'
-                                    }`}
+                                }`}
                             >
-                                <FaWifi size={16} /> רשת (WiFi)
+                                <FaWifi size={14} /> רשת
                             </button>
                             <button
                                 type="button"
                                 onClick={() => setForm({ ...form, type: 'usb' })}
-                                className={`flex items-center justify-center gap-3 px-5 py-4 rounded-2xl font-black transition-all border-2 ${form.type === 'usb'
+                                className={`flex items-center justify-center gap-2 px-4 py-4 rounded-2xl font-black transition-all border-2 text-sm ${form.type === 'usb'
                                     ? 'bg-purple-50 border-purple-400 text-purple-700'
                                     : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'
-                                    }`}
+                                }`}
                             >
-                                <FaUsb size={16} /> USB
+                                <FaUsb size={14} /> USB
                             </button>
                         </div>
+                        {form.type === 'browser' && (
+                            <p className="text-xs text-emerald-600 font-medium mt-2 bg-emerald-50 rounded-xl p-3">
+                                הדפסה דרך הדפדפן — משתמש במדפסת ברירת המחדל של המחשב. ייפתח חלון הדפסה אוטומטית.
+                            </p>
+                        )}
                     </div>
 
-                    {/* Network fields */}
                     {form.type === 'network' && (
                         <div className="space-y-4 bg-blue-50/50 rounded-2xl p-5 border border-blue-100">
                             <div>
@@ -97,7 +150,6 @@ export default function PrinterFormModal({ form, setForm, editPrinter, categorie
                         </div>
                     )}
 
-                    {/* Paper Width */}
                     <div>
                         <label className="block text-sm font-black text-gray-700 mb-2">רוחב נייר</label>
                         <div className="grid grid-cols-2 gap-3">
@@ -107,7 +159,7 @@ export default function PrinterFormModal({ form, setForm, editPrinter, categorie
                                 className={`px-5 py-4 rounded-2xl font-black transition-all border-2 ${form.paper_width === '80mm'
                                     ? 'bg-emerald-50 border-emerald-400 text-emerald-700'
                                     : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'
-                                    }`}
+                                }`}
                             >
                                 80mm (סטנדרט)
                             </button>
@@ -117,46 +169,46 @@ export default function PrinterFormModal({ form, setForm, editPrinter, categorie
                                 className={`px-5 py-4 rounded-2xl font-black transition-all border-2 ${form.paper_width === '58mm'
                                     ? 'bg-emerald-50 border-emerald-400 text-emerald-700'
                                     : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'
-                                    }`}
+                                }`}
                             >
                                 58mm (קומפקט)
                             </button>
                         </div>
                     </div>
 
-                    {/* Categories */}
-                    <div>
-                        <label className="block text-sm font-black text-gray-700 mb-2">קטגוריות משויכות</label>
-                        <p className="text-xs text-gray-400 font-medium mb-3">
-                            בחרו אילו קטגוריות ידפיסו במדפסת זו. ללא בחירה - הכל יודפס.
-                        </p>
-                        {categories.length === 0 ? (
-                            <div className="bg-gray-50 rounded-2xl p-4 text-center">
-                                <p className="text-sm text-gray-400 font-bold">אין קטגוריות זמינות</p>
-                            </div>
-                        ) : (
-                            <div className="flex flex-wrap gap-2">
-                                {categories.map(cat => {
-                                    const isSelected = (form.category_ids || []).includes(cat.id);
-                                    return (
-                                        <button
-                                            key={cat.id}
-                                            type="button"
-                                            onClick={() => toggleCategory(cat.id)}
-                                            className={`px-4 py-2.5 rounded-xl text-sm font-black transition-all border-2 ${isSelected
-                                                ? 'bg-amber-50 border-amber-400 text-amber-700'
-                                                : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'
+                    {showCategories && (
+                        <div>
+                            <label className="block text-sm font-black text-gray-700 mb-2">קטגוריות משויכות (מטבח)</label>
+                            <p className="text-xs text-gray-400 font-medium mb-3">
+                                בחרו אילו קטגוריות ידפיסו במדפסת זו. ללא בחירה - הכל יודפס.
+                            </p>
+                            {categories.length === 0 ? (
+                                <div className="bg-gray-50 rounded-2xl p-4 text-center">
+                                    <p className="text-sm text-gray-400 font-bold">אין קטגוריות זמינות</p>
+                                </div>
+                            ) : (
+                                <div className="flex flex-wrap gap-2">
+                                    {categories.map(cat => {
+                                        const isSelected = (form.category_ids || []).includes(cat.id);
+                                        return (
+                                            <button
+                                                key={cat.id}
+                                                type="button"
+                                                onClick={() => toggleCategory(cat.id)}
+                                                className={`px-4 py-2.5 rounded-xl text-sm font-black transition-all border-2 ${isSelected
+                                                    ? 'bg-amber-50 border-amber-400 text-amber-700'
+                                                    : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'
                                                 }`}
-                                        >
-                                            {cat.icon || ''} {cat.name}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        )}
-                    </div>
+                                            >
+                                                {cat.icon || ''} {cat.name}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    )}
 
-                    {/* Submit */}
                     <div className="flex gap-3 pt-4">
                         <button
                             type="button"

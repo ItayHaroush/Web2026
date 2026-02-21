@@ -13,9 +13,12 @@ export function PromotionProvider({ children }) {
     const [loading, setLoading] = useState(false);
     const debounceRef = useRef(null);
 
-    // טעינת מבצעים פעילים בפעם הראשונה
+    // טעינת מבצעים פעילים בפעם הראשונה (רק אם יש tenant)
     useEffect(() => {
         let cancelled = false;
+        const tenantId = localStorage.getItem('tenantId') || '';
+        if (!tenantId) return;
+
         const fetchPromotions = async () => {
             try {
                 const res = await promotionService.getActivePromotions();
@@ -90,21 +93,21 @@ export function PromotionProvider({ children }) {
         };
     }, [cartItems]);
 
+    const getEffectiveMax = useCallback((promo) => {
+        const baseMax = promo?.rewards?.[0]?.max_selectable ?? 1;
+        const timesQualified = promo?.progress?.times_qualified ?? 1;
+        return baseMax * timesQualified;
+    }, []);
+
     const selectGift = useCallback((promotionId, menuItemId) => {
         setSelectedGifts(prev => {
             const promoIdStr = String(promotionId);
             const current = prev[promoIdStr] || [];
 
-            // מצא את המבצע כדי לבדוק max_selectable
             const promo = eligiblePromotions.find(p => p.promotion_id === promotionId);
-            const maxSelectable = promo?.rewards?.[0]?.max_selectable ?? 1;
+            const effectiveMax = getEffectiveMax(promo);
 
-            if (current.includes(menuItemId)) {
-                return prev; // כבר נבחר
-            }
-
-            if (current.length >= maxSelectable) {
-                // החלפה - הסר את הראשון, הוסף את החדש
+            if (current.length >= effectiveMax) {
                 return {
                     ...prev,
                     [promoIdStr]: [...current.slice(1), menuItemId],
@@ -116,16 +119,17 @@ export function PromotionProvider({ children }) {
                 [promoIdStr]: [...current, menuItemId],
             };
         });
-    }, [eligiblePromotions]);
+    }, [eligiblePromotions, getEffectiveMax]);
 
     const removeGift = useCallback((promotionId, menuItemId) => {
         setSelectedGifts(prev => {
             const promoIdStr = String(promotionId);
             const current = prev[promoIdStr] || [];
-            return {
-                ...prev,
-                [promoIdStr]: current.filter(id => id !== menuItemId),
-            };
+            const idx = current.indexOf(menuItemId);
+            if (idx === -1) return prev;
+            const updated = [...current];
+            updated.splice(idx, 1);
+            return { ...prev, [promoIdStr]: updated };
         });
     }, []);
 
@@ -180,6 +184,7 @@ export function PromotionProvider({ children }) {
         removeGift,
         declineGift,
         getAppliedPromotions,
+        getEffectiveMax,
         participatingCategoryIds,
     };
 

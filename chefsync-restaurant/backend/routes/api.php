@@ -243,6 +243,8 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'tenant'])->group(function (
         Route::post('/menu-items', [AdminController::class, 'storeMenuItem'])->name('admin.menu.store');
         Route::put('/menu-items/{id}', [AdminController::class, 'updateMenuItem'])->name('admin.menu.update');
         Route::delete('/menu-items/{id}', [AdminController::class, 'deleteMenuItem'])->name('admin.menu.delete');
+        Route::get('/menu-items/archived', [AdminController::class, 'getArchivedMenuItems'])->name('admin.menu.archived');
+        Route::post('/menu-items/{id}/restore', [AdminController::class, 'restoreMenuItem'])->name('admin.menu.restore');
 
         // ניהול סלטים קבועים
         Route::get('/salads', [AdminController::class, 'getSalads'])->name('admin.salads.index');
@@ -318,6 +320,45 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'tenant'])->group(function (
         Route::patch('/printers/{id}/toggle', [PrinterController::class, 'toggle'])->name('admin.printers.toggle');
         Route::post('/printers/{id}/test', [PrinterController::class, 'testPrint'])->name('admin.printers.test');
         Route::post('/orders/{id}/reprint', [PrinterController::class, 'reprint'])->name('admin.orders.reprint');
+
+        // POS Lite - קופה
+        Route::prefix('pos')->group(function () {
+            Route::post('/set-pin', [\App\Http\Controllers\POSController::class, 'setPin'])->name('admin.pos.set-pin');
+            Route::post('/verify-pin', [\App\Http\Controllers\POSController::class, 'verifyPin'])->name('admin.pos.verify-pin');
+            Route::post('/unlock', [\App\Http\Controllers\POSController::class, 'unlockSession'])->name('admin.pos.unlock');
+
+            Route::middleware('pos_session')->group(function () {
+                Route::get('/session', [\App\Http\Controllers\POSController::class, 'getSession'])->name('admin.pos.session');
+                Route::post('/lock', [\App\Http\Controllers\POSController::class, 'lockSession'])->name('admin.pos.lock');
+
+                Route::post('/shift/open', [\App\Http\Controllers\POSController::class, 'openShift'])->name('admin.pos.shift.open');
+                Route::post('/shift/close', [\App\Http\Controllers\POSController::class, 'closeShift'])->name('admin.pos.shift.close');
+                Route::get('/shift/current', [\App\Http\Controllers\POSController::class, 'currentShift'])->name('admin.pos.shift.current');
+                Route::post('/shift/cash-movement', [\App\Http\Controllers\POSController::class, 'cashMovement'])->name('admin.pos.shift.movement');
+                Route::get('/shift/summary', [\App\Http\Controllers\POSController::class, 'shiftSummary'])->name('admin.pos.shift.summary');
+                Route::get('/shift/history', [\App\Http\Controllers\POSController::class, 'shiftHistory'])->name('admin.pos.shift.history');
+                Route::get('/shift/{id}/report', [\App\Http\Controllers\POSController::class, 'shiftReport'])->name('admin.pos.shift.report');
+
+                Route::get('/clocked-in', [\App\Http\Controllers\POSController::class, 'getClockedInEmployees'])->name('admin.pos.clocked-in');
+
+                Route::get('/orders', [\App\Http\Controllers\POSController::class, 'getOrders'])->name('admin.pos.orders');
+                Route::post('/orders', [\App\Http\Controllers\POSController::class, 'createOrder'])->name('admin.pos.orders.create');
+
+                Route::post('/orders/{id}/print-receipt', [\App\Http\Controllers\POSController::class, 'printReceipt'])->name('admin.pos.orders.print-receipt');
+                Route::post('/orders/{id}/print-kitchen', [\App\Http\Controllers\POSController::class, 'printKitchenTicket'])->name('admin.pos.orders.print-kitchen');
+
+                Route::get('/print-jobs/pending', [\App\Http\Controllers\POSController::class, 'getPendingPrintJobs'])->name('admin.pos.print-jobs.pending');
+            });
+        });
+
+        // שעון נוכחות עובדים
+        Route::prefix('time')->group(function () {
+            Route::post('/clock', [\App\Http\Controllers\TimeClockController::class, 'clock'])->name('admin.time.clock');
+            Route::post('/set-pin', [\App\Http\Controllers\TimeClockController::class, 'setPin'])->name('admin.time.set-pin');
+            Route::get('/today', [\App\Http\Controllers\TimeClockController::class, 'today'])->name('admin.time.today');
+            Route::get('/report', [\App\Http\Controllers\TimeClockController::class, 'report'])->name('admin.time.report');
+            Route::get('/my-report', [\App\Http\Controllers\TimeClockController::class, 'myReport'])->name('admin.time.my-report');
+        });
 
         // ניהול מבצעים
         Route::get('/promotions', [PromotionController::class, 'index'])->name('admin.promotions.index');

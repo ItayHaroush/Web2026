@@ -41,6 +41,8 @@ import ScreenViewer from './pages/ScreenViewer';
 import KioskViewer from './pages/KioskViewer';
 import AdminKiosks from './pages/admin/AdminKiosks';
 import AdminReports from './pages/admin/AdminReports';
+import AdminTimeReports from './pages/admin/AdminTimeReports';
+import POSLite from './features/pos/POSLite';
 import AdminPaymentSettings from './pages/admin/AdminPaymentSettings';
 import AdminUserSettings from './pages/admin/AdminUserSettings';
 import PaymentCallback from './pages/PaymentCallback';
@@ -359,6 +361,22 @@ function AppRoutes() {
         element={
           <AdminRoute>
             <AdminReports />
+          </AdminRoute>
+        }
+      />
+      <Route
+        path="/admin/time-reports"
+        element={
+          <AdminRoute>
+            <AdminTimeReports />
+          </AdminRoute>
+        }
+      />
+      <Route
+        path="/admin/pos"
+        element={
+          <AdminRoute>
+            <POSLite />
           </AdminRoute>
         }
       />

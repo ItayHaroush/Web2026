@@ -14,6 +14,7 @@ class Printer extends Model
         'restaurant_id',
         'name',
         'type',
+        'role',
         'ip_address',
         'port',
         'paper_width',

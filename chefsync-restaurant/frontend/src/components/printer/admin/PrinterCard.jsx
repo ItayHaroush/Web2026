@@ -1,7 +1,13 @@
 import {
-    FaPrint, FaEdit, FaTrash, FaWifi, FaUsb,
-    FaToggleOn, FaToggleOff, FaPlay
+    FaPrint, FaEdit, FaTrash, FaWifi, FaUsb, FaDesktop,
+    FaToggleOn, FaToggleOff, FaPlay, FaUtensils, FaCashRegister, FaGlobe,
 } from 'react-icons/fa';
+
+const ROLE_CONFIG = {
+    kitchen: { label: 'מטבח', icon: FaUtensils, bg: 'bg-orange-50 text-orange-600 border-orange-200' },
+    receipt: { label: 'קופה / קבלות', icon: FaCashRegister, bg: 'bg-blue-50 text-blue-600 border-blue-200' },
+    general: { label: 'כללי', icon: FaGlobe, bg: 'bg-emerald-50 text-emerald-600 border-emerald-200' },
+};
 
 export default function PrinterCard({
     printer,
@@ -12,29 +18,36 @@ export default function PrinterCard({
     onTestPrint,
     testingId,
 }) {
+    const role = ROLE_CONFIG[printer.role] || ROLE_CONFIG.kitchen;
+    const RoleIcon = role.icon;
+
     return (
         <div
             className={`group bg-white rounded-[3rem] shadow-sm border p-8 flex flex-col gap-6 hover:shadow-2xl hover:-translate-y-1 transition-all duration-500 relative overflow-hidden ${!printer.is_active ? 'border-gray-200 opacity-60' : 'border-gray-100'}`}
         >
-            {/* Header */}
             <div className="flex items-start justify-between">
                 <div className="flex items-center gap-4">
-                    <div className={`w-16 h-16 rounded-[1.5rem] flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform duration-500 ${printer.type === 'network'
-                        ? 'bg-blue-50 text-blue-600'
+                    <div className={`w-16 h-16 rounded-[1.5rem] flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform duration-500 ${
+                        printer.type === 'browser' ? 'bg-emerald-50 text-emerald-600'
+                        : printer.type === 'network' ? 'bg-blue-50 text-blue-600'
                         : 'bg-purple-50 text-purple-600'
-                        }`}>
-                        {printer.type === 'network' ? <FaWifi size={24} /> : <FaUsb size={24} />}
+                    }`}>
+                        {printer.type === 'browser' ? <FaDesktop size={24} /> : printer.type === 'network' ? <FaWifi size={24} /> : <FaUsb size={24} />}
                     </div>
                     <div>
                         <h3 className="font-black text-gray-900 text-xl leading-tight group-hover:text-blue-600 transition-colors">
                             {printer.name}
                         </h3>
-                        <div className="flex items-center gap-2 mt-1.5">
+                        <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                             <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border ${printer.is_active
                                 ? 'bg-green-50 text-green-600 border-green-100'
                                 : 'bg-gray-100 text-gray-500 border-gray-100'
-                                }`}>
+                            }`}>
                                 {printer.is_active ? 'פעילה' : 'כבויה'}
+                            </span>
+                            <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border flex items-center gap-1 ${role.bg}`}>
+                                <RoleIcon size={10} />
+                                {role.label}
                             </span>
                             <span className="px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border bg-gray-50 text-gray-500 border-gray-100">
                                 {printer.paper_width}
@@ -44,7 +57,6 @@ export default function PrinterCard({
                 </div>
             </div>
 
-            {/* Connection Info */}
             {printer.type === 'network' && printer.ip_address && (
                 <div className="flex items-center gap-2 bg-gray-50 rounded-2xl p-3">
                     <span className="text-sm font-mono text-gray-600 flex-1" dir="ltr">
@@ -53,8 +65,7 @@ export default function PrinterCard({
                 </div>
             )}
 
-            {/* Categories */}
-            {printer.categories && printer.categories.length > 0 && (
+            {printer.categories && printer.categories.length > 0 && (printer.role === 'kitchen' || printer.role === 'general') && (
                 <div>
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">קטגוריות משויכות</p>
                     <div className="flex flex-wrap gap-2">
@@ -70,7 +81,7 @@ export default function PrinterCard({
                 </div>
             )}
 
-            {printer.categories && printer.categories.length === 0 && (
+            {printer.categories && printer.categories.length === 0 && (printer.role === 'kitchen' || printer.role === 'general') && (
                 <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3">
                     <p className="text-xs font-bold text-amber-700">
                         לא שויכו קטגוריות - המדפסת תקבל את כל הפריטים
@@ -78,7 +89,14 @@ export default function PrinterCard({
                 </div>
             )}
 
-            {/* Actions */}
+            {printer.role === 'receipt' && (
+                <div className="bg-blue-50 border border-blue-200 rounded-2xl p-3">
+                    <p className="text-xs font-bold text-blue-700">
+                        מדפסת קופה - קבלות, דוחות Z, סיכום שעות עובדים
+                    </p>
+                </div>
+            )}
+
             {isManager && (
                 <div className="flex flex-wrap gap-2 pt-4 border-t border-gray-50">
                     <button
@@ -92,7 +110,7 @@ export default function PrinterCard({
                         className={`flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all text-sm font-black ${printer.is_active
                             ? 'bg-orange-50 text-orange-600 hover:bg-orange-600 hover:text-white'
                             : 'bg-green-50 text-green-600 hover:bg-green-600 hover:text-white'
-                            }`}
+                        }`}
                     >
                         {printer.is_active ? <FaToggleOff size={14} /> : <FaToggleOn size={14} />}
                         {printer.is_active ? 'השבת' : 'הפעל'}

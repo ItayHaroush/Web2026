@@ -2,19 +2,21 @@ import { usePromotions } from '../context/PromotionContext';
 import { FaGift, FaCheck, FaExchangeAlt, FaPlus } from 'react-icons/fa';
 
 export default function PromotionProgress({ onSelectGift, onNavigateToCategory }) {
-    const { eligiblePromotions, selectedGifts } = usePromotions();
+    const { eligiblePromotions, selectedGifts, getEffectiveMax } = usePromotions();
 
     if (!eligiblePromotions || eligiblePromotions.length === 0) return null;
 
     return (
         <div className="space-y-3">
             {eligiblePromotions.map(promo => {
-                const { met, rules } = promo.progress || {};
+                const { met, rules, times_qualified } = promo.progress || {};
+                const timesQ = times_qualified || 0;
                 const totalRequired = (rules || []).reduce((sum, r) => sum + r.required, 0);
                 const totalCurrent = (rules || []).reduce((sum, r) => sum + Math.min(r.current, r.required), 0);
                 const progressPercent = totalRequired > 0 ? Math.min(100, (totalCurrent / totalRequired) * 100) : 0;
                 const promoGifts = selectedGifts[String(promo.promotion_id)] || [];
                 const hasSelectedGift = promoGifts.length > 0;
+                const effectiveMax = getEffectiveMax(promo);
 
                 return (
                     <div key={promo.promotion_id} className="bg-gradient-to-l from-brand-light to-brand-cream rounded-2xl p-4 border border-brand-primary/20">
@@ -24,7 +26,7 @@ export default function PromotionProgress({ onSelectGift, onNavigateToCategory }
                             {met && (
                                 <span className="bg-brand-light text-brand-primary text-xs font-bold px-2 py-0.5 rounded-full mr-auto flex items-center gap-1">
                                     <FaCheck size={10} />
-                                    עומד בתנאים
+                                    {timesQ > 1 ? `x${timesQ} מבצעים!` : 'עומד בתנאים'}
                                 </span>
                             )}
                         </div>
@@ -49,7 +51,10 @@ export default function PromotionProgress({ onSelectGift, onNavigateToCategory }
                                             : 'bg-white text-gray-600'
                                             }`}
                                     >
-                                        {rule.current}/{rule.required} {rule.category_name}
+                                        {Math.min(rule.current, rule.required)}/{rule.required} {rule.category_name}
+                                        {ruleMet && rule.current > rule.required && (
+                                            <span className="text-brand-primary/70"> (+{rule.current - rule.required})</span>
+                                        )}
                                     </span>
                                 );
                             })}
@@ -74,7 +79,6 @@ export default function PromotionProgress({ onSelectGift, onNavigateToCategory }
                         {/* CTA when met */}
                         {met && onSelectGift && (() => {
                             if (hasSelectedGift) {
-                                // מתנה כבר נבחרה - הצגת אישור + אפשרות שינוי
                                 const freeItemRewards = (promo.rewards || []).filter(r => r.reward_type === 'free_item');
                                 const allSpecific = freeItemRewards.length > 0 && freeItemRewards.every(r => r.reward_menu_item_id);
 
@@ -82,11 +86,13 @@ export default function PromotionProgress({ onSelectGift, onNavigateToCategory }
                                 if (allSpecific) {
                                     giftLabel = freeItemRewards.map(r => {
                                         const name = r.reward_menu_item_name || 'מתנה';
-                                        const qty = r.max_selectable || 1;
+                                        const qty = (r.max_selectable || 1) * timesQ;
                                         return qty > 1 ? `${name} x${qty}` : name;
                                     }).join(', ');
                                 } else {
-                                    giftLabel = 'מתנה נבחרה';
+                                    giftLabel = effectiveMax > 1
+                                        ? `${promoGifts.length}/${effectiveMax} מתנות נבחרו`
+                                        : 'מתנה נבחרה';
                                 }
 
                                 return (
@@ -107,14 +113,13 @@ export default function PromotionProgress({ onSelectGift, onNavigateToCategory }
                                 );
                             }
 
-                            // עדיין לא נבחרה מתנה - כפתור בחירה
                             return (
                                 <button
                                     onClick={() => onSelectGift(promo)}
                                     className="mt-3 w-full bg-gradient-to-r from-brand-primary to-orange-600 text-white py-2.5 rounded-xl font-bold text-sm hover:from-orange-600 hover:to-orange-700 transition-all flex items-center justify-center gap-2"
                                 >
                                     <FaGift size={14} />
-                                    בחר/י מתנה
+                                    {effectiveMax > 1 ? `בחר/י ${effectiveMax} מתנות` : 'בחר/י מתנה'}
                                 </button>
                             );
                         })()}

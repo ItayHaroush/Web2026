@@ -46,6 +46,15 @@ export function AdminAuthProvider({ children }) {
     };
 
     const setTenantFromUser = (userData) => {
+        const activeImpersonation = sessionStorage.getItem('impersonation');
+        if (activeImpersonation) {
+            const { tenantId: impersonatedTenantId } = JSON.parse(activeImpersonation);
+            if (impersonatedTenantId) {
+                localStorage.setItem('tenantId', impersonatedTenantId);
+                return;
+            }
+        }
+
         const tenantId = userData?.tenant_id || userData?.restaurant?.tenant_id;
         if (tenantId) {
             localStorage.setItem('tenantId', tenantId);
