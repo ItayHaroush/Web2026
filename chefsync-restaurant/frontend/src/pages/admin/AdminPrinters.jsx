@@ -16,7 +16,8 @@ import PrinterFormModal from '../../components/printer/admin/PrinterFormModal';
 
 const DEFAULT_FORM = {
     name: '',
-    type: 'network',
+    type: 'browser',
+    role: 'kitchen',
     ip_address: '',
     port: 9100,
     paper_width: '80mm',
@@ -116,6 +117,7 @@ export default function AdminPrinters() {
         setForm({
             name: printer.name,
             type: printer.type || 'network',
+            role: printer.role || 'kitchen',
             ip_address: printer.ip_address || '',
             port: printer.port || 9100,
             paper_width: printer.paper_width || '80mm',
@@ -150,9 +152,9 @@ export default function AdminPrinters() {
                             <FaPrint size={30} />
                         </div>
                         <div>
-                            <h1 className="text-4xl font-black text-gray-900 tracking-tight">מדפסות מטבח</h1>
+                            <h1 className="text-4xl font-black text-gray-900 tracking-tight">מדפסות</h1>
                             <p className="text-gray-500 font-medium mt-1">
-                                {printers.length} מדפסות מוגדרות
+                                {printers.length} מדפסות מוגדרות — מטבח וקופה
                             </p>
                         </div>
                     </div>
@@ -175,7 +177,7 @@ export default function AdminPrinters() {
                         </div>
                         <h3 className="text-3xl font-black text-gray-900 mb-2">אין מדפסות עדיין</h3>
                         <p className="text-gray-500 font-medium mb-12 text-lg leading-relaxed">
-                            הוסיפו מדפסת מטבח כדי שהזמנות ידפיסו אוטומטית לעמדות ההכנה
+                            הוסיפו מדפסת מטבח או קופה כדי להדפיס הזמנות וקבלות אוטומטית
                         </p>
                         {isManager() && (
                             <button

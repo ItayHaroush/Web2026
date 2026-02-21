@@ -29,7 +29,9 @@ import {
     FaTv,
     FaTabletAlt,
     FaCreditCard,
-    FaExclamationTriangle
+    FaExclamationTriangle,
+    FaUserClock,
+    FaCashRegister
 } from 'react-icons/fa';
 
 export default function AdminLayout({ children }) {
@@ -191,6 +193,18 @@ export default function AdminLayout({ children }) {
             path: '/admin/kiosks',
             icon: <FaTabletAlt />,
             label: 'קיוסקים',
+            show: isManager()
+        },
+        {
+            path: '/admin/time-reports',
+            icon: <FaUserClock />,
+            label: 'דוח נוכחות',
+            show: true
+        },
+        {
+            path: '/admin/pos',
+            icon: <FaCashRegister />,
+            label: 'קופה POS',
             show: isManager()
         }
     ].filter(item => item.show);

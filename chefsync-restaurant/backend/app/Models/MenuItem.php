@@ -23,6 +23,7 @@ class MenuItem extends Model
         'price',
         'image_url',
         'is_available',
+        'is_active',
         'use_variants',
         'use_addons',
         'addons_group_scope',
@@ -33,6 +34,7 @@ class MenuItem extends Model
     protected $casts = [
         'price' => 'decimal:2',
         'is_available' => 'boolean',
+        'is_active' => 'boolean',
         'use_variants' => 'boolean',
         'use_addons' => 'boolean',
         'max_addons' => 'integer',

@@ -35,6 +35,10 @@ class CheckRestaurantAccess
         $restaurant = Restaurant::where('tenant_id', $tenantId)->first();
 
         if (!$restaurant) {
+            if ($request->user() && $request->user()->is_super_admin) {
+                return $next($request);
+            }
+
             return response()->json([
                 'success' => false,
                 'message' => 'המסעדה לא נמצאה.',

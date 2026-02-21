@@ -1,15 +1,16 @@
 import { useState, useEffect } from 'react';
 import { usePromotions } from '../context/PromotionContext';
-import { FaGift, FaCheck, FaTimes } from 'react-icons/fa';
+import { FaGift, FaCheck, FaTimes, FaPlus, FaMinus } from 'react-icons/fa';
 import apiClient from '../services/apiClient';
 
 export default function GiftSelectionModal({ promotion, onClose }) {
-    const { selectGift, removeGift, declineGift, selectedGifts } = usePromotions();
+    const { selectGift, removeGift, declineGift, selectedGifts, getEffectiveMax } = usePromotions();
     const [menuItems, setMenuItems] = useState([]);
     const [loading, setLoading] = useState(true);
 
     const reward = promotion?.rewards?.[0];
-    const maxSelectable = reward?.max_selectable ?? 1;
+    const timesQualified = promotion?.progress?.times_qualified ?? 1;
+    const maxSelectable = getEffectiveMax(promotion);
     const rewardCategoryId = reward?.reward_category_id;
     const promoIdStr = String(promotion?.promotion_id);
     const currentGifts = selectedGifts[promoIdStr] || [];
@@ -46,16 +47,20 @@ export default function GiftSelectionModal({ promotion, onClose }) {
         fetchItems();
     }, [rewardCategoryId, isSpecificMode]);
 
-    const handleSelectItem = (itemId) => {
-        if (currentGifts.includes(itemId)) {
-            removeGift(promotion.promotion_id, itemId);
-        } else {
+    const getItemCount = (itemId) => currentGifts.filter(id => id === itemId).length;
+    const totalSelected = currentGifts.length;
+
+    const handleAddItem = (itemId) => {
+        if (totalSelected < maxSelectable) {
             selectGift(promotion.promotion_id, itemId);
         }
     };
 
+    const handleRemoveItem = (itemId) => {
+        removeGift(promotion.promotion_id, itemId);
+    };
+
     const handleAcceptSpecific = () => {
-        // קבלת מוצר ספציפי - הוספת כל ה-menu_item_ids לselectedGifts
         freeItemRewards.forEach(r => {
             if (r.reward_menu_item_id) {
                 selectGift(promotion.promotion_id, r.reward_menu_item_id);
@@ -75,7 +80,7 @@ export default function GiftSelectionModal({ promotion, onClose }) {
     if (isSpecificMode) {
         const giftLabel = freeItemRewards.map(r => {
             const name = r.reward_menu_item_name || 'מתנה';
-            const qty = r.max_selectable || 1;
+            const qty = (r.max_selectable || 1) * timesQualified;
             return qty > 1 ? `${name} x${qty}` : name;
         }).join(', ');
 
@@ -160,14 +165,14 @@ export default function GiftSelectionModal({ promotion, onClose }) {
                         <div className="text-center py-12 text-gray-400 dark:text-brand-dark-muted">אין פריטים זמינים</div>
                     ) : (
                         menuItems.map(item => {
-                            const isSelected = currentGifts.includes(item.id);
+                            const count = getItemCount(item.id);
+                            const isSelected = count > 0;
                             return (
-                                <button
+                                <div
                                     key={item.id}
-                                    onClick={() => handleSelectItem(item.id)}
                                     className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all text-right ${isSelected
                                         ? 'bg-brand-light border-2 border-brand-primary shadow-sm'
-                                        : 'bg-gray-50 dark:bg-brand-dark-bg border-2 border-transparent hover:border-gray-200 dark:hover:border-brand-dark-border'
+                                        : 'bg-gray-50 dark:bg-brand-dark-bg border-2 border-transparent'
                                         }`}
                                 >
                                     {item.image_url && (
@@ -183,10 +188,35 @@ export default function GiftSelectionModal({ promotion, onClose }) {
                                             <p className="text-xs text-gray-500 dark:text-brand-dark-muted truncate">{item.description}</p>
                                         )}
                                     </div>
-                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${isSelected ? 'bg-brand-primary text-white' : 'bg-gray-200 dark:bg-brand-dark-border text-gray-400'}`}>
-                                        {isSelected ? <FaCheck size={14} /> : <FaGift size={12} />}
-                                    </div>
-                                </button>
+                                    {maxSelectable > 1 ? (
+                                        <div className="flex items-center gap-2 shrink-0">
+                                            <button
+                                                onClick={() => handleRemoveItem(item.id)}
+                                                disabled={count === 0}
+                                                className="w-8 h-8 rounded-full flex items-center justify-center bg-gray-200 dark:bg-brand-dark-border text-gray-600 dark:text-gray-300 disabled:opacity-30 hover:bg-red-100 transition-colors"
+                                            >
+                                                <FaMinus size={10} />
+                                            </button>
+                                            <span className={`text-sm font-black min-w-[20px] text-center ${count > 0 ? 'text-brand-primary' : 'text-gray-400'}`}>
+                                                {count}
+                                            </span>
+                                            <button
+                                                onClick={() => handleAddItem(item.id)}
+                                                disabled={totalSelected >= maxSelectable}
+                                                className="w-8 h-8 rounded-full flex items-center justify-center bg-brand-primary/10 text-brand-primary disabled:opacity-30 hover:bg-brand-primary/20 transition-colors"
+                                            >
+                                                <FaPlus size={10} />
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <button
+                                            onClick={() => isSelected ? handleRemoveItem(item.id) : handleAddItem(item.id)}
+                                            className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${isSelected ? 'bg-brand-primary text-white' : 'bg-gray-200 dark:bg-brand-dark-border text-gray-400'}`}
+                                        >
+                                            {isSelected ? <FaCheck size={14} /> : <FaGift size={12} />}
+                                        </button>
+                                    )}
+                                </div>
                             );
                         })
                     )}
@@ -195,11 +225,16 @@ export default function GiftSelectionModal({ promotion, onClose }) {
                 {/* Footer */}
                 <div className="border-t border-gray-100 dark:border-brand-dark-border px-6 py-4 shrink-0 space-y-2">
                     <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm text-gray-500 dark:text-brand-dark-muted">נבחרו {currentGifts.length} מתוך {maxSelectable}</span>
+                        <span className="text-sm text-gray-500 dark:text-brand-dark-muted">נבחרו {totalSelected} מתוך {maxSelectable}</span>
+                        {timesQualified > 1 && (
+                            <span className="text-xs font-bold text-brand-primary bg-brand-light px-2 py-0.5 rounded-full">
+                                x{timesQualified} מבצעים
+                            </span>
+                        )}
                     </div>
                     <button
                         onClick={onClose}
-                        disabled={currentGifts.length === 0}
+                        disabled={totalSelected === 0}
                         className="w-full py-3 rounded-xl bg-gradient-to-r from-brand-primary to-orange-600 text-white font-bold hover:from-orange-600 hover:to-orange-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
                         <FaCheck size={14} />

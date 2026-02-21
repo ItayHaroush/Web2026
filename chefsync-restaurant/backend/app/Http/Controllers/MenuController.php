@@ -80,7 +80,8 @@ class MenuController extends Controller
                 ->orderBy('sort_order')
                 ->with([
                     'items' => function ($query) {
-                        $query->where('is_available', true);
+                        $query->where('is_active', true)
+                              ->where('is_available', true);
                         $query->orderBy('name')
                             ->with([
                                 'variants' => function ($variantQuery) {
@@ -343,6 +344,7 @@ class MenuController extends Controller
         }
 
         $items = MenuItem::where('category_id', $group->source_category_id)
+            ->where('is_active', true)
             ->where('is_available', true)
             ->orderBy('name')
             ->get();

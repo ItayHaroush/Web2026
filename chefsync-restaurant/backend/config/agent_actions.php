@@ -127,8 +127,8 @@ return [
     ],
 
     'menu_item.delete' => [
-        'name_he' => 'מחיקת פריט מהתפריט',
-        'description_he' => 'מחיקה לצמיתות של פריט מהתפריט',
+        'name_he' => 'מחיקת/ארכוב פריט מהתפריט',
+        'description_he' => 'ארכוב פריט שהופיע בהזמנות, או מחיקה לצמיתות של פריט ללא היסטוריית הזמנות',
         'risk' => 'critical',
         'approval_type' => 'modal',
         'controller' => \App\Http\Controllers\AdminController::class,

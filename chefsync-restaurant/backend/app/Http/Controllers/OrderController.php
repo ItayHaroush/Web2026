@@ -1014,6 +1014,7 @@ class OrderController extends Controller
             }
 
             $items = MenuItem::where('category_id', $group->source_category_id)
+                ->where('is_active', true)
                 ->where('is_available', true)
                 ->orderBy('name')
                 ->get();

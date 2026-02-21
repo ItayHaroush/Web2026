@@ -1002,12 +1002,12 @@ function RestaurantDetailModal({ restaurant: initialRestaurant, onClose, onImper
                                     </div>
                                     <div>
                                         <span className="text-xs text-gray-400 font-bold">סטטוס</span>
-                                        <p className="mt-0.5">
+                                        <div className="mt-0.5">
                                             <span className={`inline-flex items-center gap-1.5 font-bold text-xs ${(restaurant.is_open_now ?? restaurant.is_open) ? 'text-green-600' : 'text-red-500'}`}>
-                                                <div className={`w-2 h-2 rounded-full ${(restaurant.is_open_now ?? restaurant.is_open) ? 'bg-green-500' : 'bg-red-500'}`} />
+                                                <span className={`w-2 h-2 rounded-full inline-block ${(restaurant.is_open_now ?? restaurant.is_open) ? 'bg-green-500' : 'bg-red-500'}`} />
                                                 {(restaurant.is_open_now ?? restaurant.is_open) ? 'פתוח' : 'סגור'}
                                             </span>
-                                        </p>
+                                        </div>
                                     </div>
                                     <div>
                                         <span className="text-xs text-gray-400 font-bold">אישור</span>

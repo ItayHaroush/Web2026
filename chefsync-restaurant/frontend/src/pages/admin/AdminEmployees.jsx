@@ -31,6 +31,8 @@ export default function AdminEmployees() {
         role: 'employee',
         password: '',
         password_confirmation: '',
+        hourly_rate: '',
+        pos_pin: '',
     });
 
     useEffect(() => {
@@ -80,25 +82,27 @@ export default function AdminEmployees() {
         e.preventDefault();
         try {
             if (form.id) {
-                // עדכון עובד קיים
                 const updateData = {
                     name: form.name,
                     email: form.email,
                     phone: form.phone,
                     role: form.role,
+                    hourly_rate: form.hourly_rate || null,
                 };
-                // רק אם הוזן סיסמא חדשה
                 if (form.password) {
                     updateData.password = form.password;
                     updateData.password_confirmation = form.password_confirmation;
                 }
                 await api.put(`/admin/employees/${form.id}`, updateData, { headers: getAuthHeaders() });
+                if (form.pos_pin && form.pos_pin.length === 4) {
+                    await api.post('/admin/time/set-pin', { user_id: form.id, pin: form.pos_pin }, { headers: getAuthHeaders() });
+                }
             } else {
                 // יצירת עובד חדש
                 await api.post('/auth/register', form, { headers: getAuthHeaders() });
             }
             setShowModal(false);
-            setForm({ name: '', email: '', phone: '', role: 'employee', password: '', password_confirmation: '' });
+            setForm({ name: '', email: '', phone: '', role: 'employee', password: '', password_confirmation: '', hourly_rate: '', pos_pin: '' });
             fetchEmployees();
         } catch (error) {
             alert(error.response?.data?.message || 'שגיאה בשמירת פרטי עובד');
@@ -205,6 +209,18 @@ export default function AdminEmployees() {
                                     </div>
                                 </div>
 
+                                {/* Wage + PIN badges */}
+                                <div className="flex flex-wrap gap-2 -mt-2">
+                                    {emp.hourly_rate && (
+                                        <span className="px-3 py-1.5 bg-amber-50 text-amber-700 rounded-xl text-[10px] font-black border border-amber-100">
+                                            ₪{emp.hourly_rate}/שעה
+                                        </span>
+                                    )}
+                                    <span className={`px-3 py-1.5 rounded-xl text-[10px] font-black border ${emp.has_pin ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-gray-50 text-gray-400 border-gray-100'}`}>
+                                        {emp.has_pin ? 'PIN מוגדר' : 'ללא PIN'}
+                                    </span>
+                                </div>
+
                                 {/* Contact Details */}
                                 <div className="space-y-4 pt-6 mt-auto border-t border-gray-50 bg-gray-50/30 -mx-10 px-10 pb-6">
                                     <div className="flex items-center gap-4 text-gray-500 group/link">
@@ -250,6 +266,8 @@ export default function AdminEmployees() {
                                                         role: emp.role,
                                                         password: '',
                                                         password_confirmation: '',
+                                                        hourly_rate: emp.hourly_rate || '',
+                                                        pos_pin: '',
                                                     });
                                                     setShowModal(true);
                                                 }}
@@ -318,7 +336,7 @@ export default function AdminEmployees() {
                                 <button
                                     onClick={() => {
                                         setShowModal(false);
-                                        setForm({ name: '', email: '', phone: '', role: 'employee', password: '', password_confirmation: '' });
+                                        setForm({ name: '', email: '', phone: '', role: 'employee', password: '', password_confirmation: '', hourly_rate: '', pos_pin: '' });
                                     }}
                                     className="p-4 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-[1.5rem] transition-all"
                                 >
@@ -415,6 +433,39 @@ export default function AdminEmployees() {
                                                 required={!form.id && form.password}
                                                 className="w-full px-8 py-5 bg-gray-50 border-none rounded-[1.5rem] focus:ring-4 focus:ring-brand-primary/10 text-gray-900 font-black transition-all"
                                                 placeholder="••••••••"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* שכר + PIN */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-10 pt-6">
+                                        <div className="space-y-4">
+                                            <label className="text-xs font-black text-gray-500 mr-2 uppercase tracking-[0.2em] flex items-center gap-2">
+                                                <FaClock className="text-amber-500" /> שכר שעתי (₪)
+                                            </label>
+                                            <input
+                                                type="number"
+                                                step="0.5"
+                                                min="0"
+                                                value={form.hourly_rate}
+                                                onChange={(e) => setForm({ ...form, hourly_rate: e.target.value })}
+                                                className="w-full px-8 py-5 bg-gray-50 border-none rounded-[1.5rem] focus:ring-4 focus:ring-amber-500/10 text-gray-900 font-black transition-all ltr"
+                                                placeholder="0.00"
+                                            />
+                                        </div>
+                                        <div className="space-y-4">
+                                            <label className="text-xs font-black text-gray-500 mr-2 uppercase tracking-[0.2em] flex items-center gap-2">
+                                                <FaLock className="text-amber-500" /> קוד PIN לשעון נוכחות {form.id && '(אופציונלי)'}
+                                            </label>
+                                            <input
+                                                type="text"
+                                                inputMode="numeric"
+                                                pattern="[0-9]{4}"
+                                                maxLength={4}
+                                                value={form.pos_pin}
+                                                onChange={(e) => setForm({ ...form, pos_pin: e.target.value.replace(/\D/g, '').slice(0, 4) })}
+                                                className="w-full px-8 py-5 bg-gray-50 border-none rounded-[1.5rem] focus:ring-4 focus:ring-amber-500/10 text-gray-900 font-black transition-all ltr tracking-[0.5em] text-center text-2xl"
+                                                placeholder="••••"
                                             />
                                         </div>
                                     </div>

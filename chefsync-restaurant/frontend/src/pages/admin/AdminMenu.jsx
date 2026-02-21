@@ -29,7 +29,9 @@ import {
     FaGripVertical,
     FaEyeSlash,
     FaBreadSlice,
-    FaSave
+    FaSave,
+    FaArchive,
+    FaUndo
 } from 'react-icons/fa';
 
 export default function AdminMenu() {
@@ -43,7 +45,8 @@ export default function AdminMenu() {
     const [showModal, setShowModal] = useState(false);
     const [editItem, setEditItem] = useState(null);
     const [filterCategory, setFilterCategory] = useState('');
-    const [activeTab, setActiveTab] = useState('items'); // 'items' או 'categories'
+    const [activeTab, setActiveTab] = useState('items');
+    const [archivedItems, setArchivedItems] = useState([]);
     const [draggedCategory, setDraggedCategory] = useState(null);
     const [categoryBeingSorted, setCategoryBeingSorted] = useState([]);
     const [basePrices, setBasePrices] = useState([]);
@@ -258,7 +261,7 @@ export default function AdminMenu() {
     };
 
     const deleteItem = async (id) => {
-        if (!confirm('האם אתה בטוח שברצונך למחוק פריט זה?')) return;
+        if (!confirm('האם אתה בטוח שברצונך להסיר פריט זה מהתפריט?')) return;
 
         if (isLocked) {
             alert('המסעדה ממתינה לאישור מנהל מערכת. פעולות על התפריט נעולות זמנית.');
@@ -266,10 +269,35 @@ export default function AdminMenu() {
         }
 
         try {
-            await api.delete(`/admin/menu-items/${id}`, { headers: getAuthHeaders() });
+            const res = await api.delete(`/admin/menu-items/${id}`, { headers: getAuthHeaders() });
+            if (res.data.archived) {
+                alert('הפריט הועבר לארכיון כי הופיע בהזמנות קודמות. היסטוריית ההזמנות נשמרה.');
+                fetchArchivedItems();
+            }
             fetchData();
         } catch (error) {
             console.error('Failed to delete item:', error);
+        }
+    };
+
+    const fetchArchivedItems = async () => {
+        try {
+            const res = await api.get('/admin/menu-items/archived', { headers: getAuthHeaders() });
+            if (res.data.success) {
+                setArchivedItems(res.data.items || []);
+            }
+        } catch (error) {
+            console.error('Failed to fetch archived items:', error);
+        }
+    };
+
+    const restoreItem = async (id) => {
+        try {
+            await api.post(`/admin/menu-items/${id}/restore`, {}, { headers: getAuthHeaders() });
+            fetchArchivedItems();
+            fetchData();
+        } catch (error) {
+            console.error('Failed to restore item:', error);
         }
     };
 
@@ -489,6 +517,16 @@ export default function AdminMenu() {
                         <FaLayerGroup className="inline mr-2" size={12} />
                         ניהול קטגוריות
                     </button>
+                    <button
+                        onClick={() => { setActiveTab('archive'); fetchArchivedItems(); }}
+                        className={`flex-1 px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-wider transition-all ${activeTab === 'archive'
+                            ? 'bg-gray-900 text-white shadow-lg'
+                            : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
+                            }`}
+                    >
+                        <FaArchive className="inline mr-2" size={12} />
+                        ארכיון
+                    </button>
                 </div>
             </div>
 
@@ -611,7 +649,7 @@ export default function AdminMenu() {
                                                 onClick={() => deleteItem(item.id)}
                                                 disabled={isLocked}
                                                 className="w-10 h-10 bg-red-50 text-red-400 rounded-xl flex items-center justify-center hover:bg-red-500 hover:text-white transition-all disabled:opacity-50"
-                                                title="מחק פריט"
+                                                title="הסר פריט"
                                             >
                                                 <FaTrash size={12} />
                                             </button>
@@ -634,7 +672,7 @@ export default function AdminMenu() {
                         </div>
                     )}
                 </>
-            ) : (
+            ) : activeTab === 'categories' ? (
                 /* טאב ניהול קטגוריות */
                 <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
                     <h3 className="text-lg font-black text-gray-900 mb-4 flex items-center gap-2">
@@ -692,6 +730,55 @@ export default function AdminMenu() {
                         <div className="mt-4 p-3 bg-blue-50 rounded-xl text-sm text-blue-700 flex items-center gap-2">
                             <FaSync className="animate-spin" size={12} />
                             שומר את הסדר החדש...
+                        </div>
+                    )}
+                </div>
+            ) : (
+                /* טאב ארכיון */
+                <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
+                    <h3 className="text-lg font-black text-gray-900 mb-2 flex items-center gap-2">
+                        <FaArchive />
+                        פריטים בארכיון
+                    </h3>
+                    <p className="text-sm text-gray-500 mb-6">
+                        פריטים שהוסרו מהתפריט אך הופיעו בהזמנות קודמות. ניתן לשחזר אותם חזרה לתפריט.
+                    </p>
+
+                    {archivedItems.length === 0 ? (
+                        <div className="text-center py-16">
+                            <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <FaArchive size={24} className="text-gray-300" />
+                            </div>
+                            <p className="text-sm font-bold text-gray-400">אין פריטים בארכיון</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-3">
+                            {archivedItems.map((item) => (
+                                <div key={item.id} className="flex items-center justify-between bg-gray-50 rounded-2xl p-4 border border-gray-100">
+                                    <div className="flex items-center gap-4">
+                                        {item.image_url ? (
+                                            <img src={resolveAssetUrl(item.image_url)} alt={item.name} className="w-12 h-12 rounded-xl object-cover opacity-60" />
+                                        ) : (
+                                            <div className="w-12 h-12 rounded-xl bg-gray-200 flex items-center justify-center">
+                                                <FaUtensils size={16} className="text-gray-400" />
+                                            </div>
+                                        )}
+                                        <div>
+                                            <h4 className="font-bold text-gray-700">{item.name}</h4>
+                                            <p className="text-xs text-gray-400">
+                                                {item.category?.name || 'ללא קטגוריה'} • ₪{Number(item.price).toFixed(2)}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={() => restoreItem(item.id)}
+                                        className="flex items-center gap-2 px-4 py-2.5 bg-emerald-50 text-emerald-600 rounded-xl font-bold text-xs hover:bg-emerald-100 transition-all"
+                                    >
+                                        <FaUndo size={12} />
+                                        שחזר
+                                    </button>
+                                </div>
+                            ))}
                         </div>
                     )}
                 </div>

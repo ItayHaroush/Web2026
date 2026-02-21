@@ -12,8 +12,8 @@ use Illuminate\Support\Facades\Log;
 class PrintService
 {
     /**
-     * הדפסת הזמנה לכל המדפסות הרלוונטיות
-     * מחזיר את מספר ה-jobs שנוצרו
+     * Print order to kitchen printers (role=kitchen or role=general).
+     * Routes by category: each printer only gets items from its assigned categories.
      */
     public function printOrder(Order $order): int
     {
@@ -21,11 +21,12 @@ class PrintService
 
         $printers = Printer::where('restaurant_id', $order->restaurant_id)
             ->where('is_active', true)
+            ->whereIn('role', ['kitchen', 'general'])
             ->with('categories')
             ->get();
 
         if ($printers->isEmpty()) {
-            Log::info("PrintService: No active printers for restaurant {$order->restaurant_id}");
+            Log::info("PrintService: No active kitchen printers for restaurant {$order->restaurant_id}");
             return 0;
         }
 
@@ -34,7 +35,6 @@ class PrintService
         foreach ($printers as $printer) {
             $categoryIds = $printer->categories->pluck('id')->toArray();
 
-            // סינון פריטים לפי קטגוריות המדפסת
             $relevantItems = $order->items->filter(function ($item) use ($categoryIds) {
                 $categoryId = $item->menuItem?->category_id ?? $item->category_id ?? null;
                 return empty($categoryIds) || in_array($categoryId, $categoryIds);
@@ -44,7 +44,7 @@ class PrintService
                 continue;
             }
 
-            $payload = $this->buildPayload($order, $relevantItems, $printer);
+            $payload = $this->buildKitchenTicket($order, $relevantItems, $printer);
 
             $job = PrintJob::create([
                 'tenant_id' => $order->tenant_id,
@@ -54,11 +54,11 @@ class PrintService
                 'status' => 'pending',
                 'payload' => [
                     'text' => $payload,
+                    'type' => 'kitchen_ticket',
                     'items_count' => $relevantItems->count(),
                 ],
             ]);
 
-            // ניסיון הדפסה (fire-and-forget)
             $this->executeJob($job, $printer, $payload);
             $jobCount++;
         }
@@ -67,12 +67,94 @@ class PrintService
     }
 
     /**
-     * הדפסת ניסיון
+     * Print receipt to POS/receipt printers (role=receipt or role=general).
      */
+    public function printReceipt(Order $order, array $extraData = []): int
+    {
+        $order->loadMissing('items.menuItem', 'restaurant');
+
+        $printers = Printer::where('restaurant_id', $order->restaurant_id)
+            ->where('is_active', true)
+            ->whereIn('role', ['receipt', 'general'])
+            ->get();
+
+        if ($printers->isEmpty()) {
+            Log::info("PrintService: No active receipt printers for restaurant {$order->restaurant_id}");
+            return 0;
+        }
+
+        $jobCount = 0;
+
+        foreach ($printers as $printer) {
+            $payload = $this->buildReceiptPayload($order, $printer, $extraData);
+
+            $job = PrintJob::create([
+                'tenant_id' => $order->tenant_id,
+                'restaurant_id' => $order->restaurant_id,
+                'printer_id' => $printer->id,
+                'order_id' => $order->id,
+                'status' => 'pending',
+                'payload' => [
+                    'text' => $payload,
+                    'type' => 'receipt',
+                ],
+            ]);
+
+            $this->executeJob($job, $printer, $payload);
+            $jobCount++;
+        }
+
+        return $jobCount;
+    }
+
+    /**
+     * Print a generic text payload to printers with a specific role.
+     */
+    public function printToRole(int $restaurantId, string $role, string $payload, ?string $tenantId = null): int
+    {
+        $printers = Printer::where('restaurant_id', $restaurantId)
+            ->where('is_active', true)
+            ->where(function ($q) use ($role) {
+                $q->where('role', $role)->orWhere('role', 'general');
+            })
+            ->get();
+
+        if ($printers->isEmpty()) {
+            return 0;
+        }
+
+        $jobCount = 0;
+
+        foreach ($printers as $printer) {
+            $job = PrintJob::create([
+                'tenant_id' => $tenantId,
+                'restaurant_id' => $restaurantId,
+                'printer_id' => $printer->id,
+                'status' => 'pending',
+                'payload' => [
+                    'text' => $payload,
+                    'type' => 'custom',
+                ],
+            ]);
+
+            $this->executeJob($job, $printer, $payload);
+            $jobCount++;
+        }
+
+        return $jobCount;
+    }
+
     public function testPrint(Printer $printer): bool
     {
         $separator = str_repeat('=', $this->getLineWidth($printer));
         $dash = str_repeat('-', $this->getLineWidth($printer));
+
+        $roleLabel = match ($printer->role) {
+            'kitchen' => 'מטבח',
+            'receipt' => 'קופה / קבלות',
+            'general' => 'כללי',
+            default => $printer->role,
+        };
 
         $lines = [
             $separator,
@@ -84,6 +166,7 @@ class PrintService
             $dash,
             "IP: {$printer->ip_address}:{$printer->port}",
             "רוחב נייר: {$printer->paper_width}",
+            "תפקיד: {$roleLabel}",
             "קטגוריות: " . ($printer->categories->pluck('name')->join(', ') ?: 'הכל'),
             $dash,
             '',
@@ -101,10 +184,9 @@ class PrintService
         ]);
     }
 
-    /**
-     * בניית תוכן ההדפסה
-     */
-    private function buildPayload(Order $order, $items, Printer $printer): string
+    // ─── Kitchen Ticket ───
+
+    private function buildKitchenTicket(Order $order, $items, Printer $printer): string
     {
         $width = $this->getLineWidth($printer);
         $separator = str_repeat('=', $width);
@@ -112,61 +194,49 @@ class PrintService
 
         $lines = [];
 
-        // כותרת
         $lines[] = $separator;
         $lines[] = $this->centerText("הזמנה #{$order->id}", $printer);
         $lines[] = $separator;
 
-        // תאריך ושעה
         $lines[] = $order->created_at->format('d.m.Y') . ' | ' . $order->created_at->format('H:i');
 
-        // מקור ופרטים
         $orderInfo = [];
-
         if ($order->source === 'kiosk') {
             $typeLabel = $order->order_type === 'dine_in' ? 'לשבת' : 'לקחת';
             $orderInfo[] = $typeLabel;
             if ($order->table_number) {
                 $orderInfo[] = "שולחן {$order->table_number}";
             }
+        } elseif ($order->source === 'pos') {
+            $orderInfo[] = 'קופה';
         } elseif ($order->delivery_method === 'delivery') {
             $orderInfo[] = 'משלוח';
         } else {
             $orderInfo[] = 'איסוף עצמי';
         }
-
         $lines[] = implode(' | ', $orderInfo);
 
-        // שם לקוח
         if ($order->customer_name) {
             $lines[] = $order->customer_name;
         }
-
-        // טלפון
-        if ($order->customer_phone) {
+        if ($order->customer_phone && $order->customer_phone !== '0000000000') {
             $lines[] = $order->customer_phone;
         }
-
-        // כתובת למשלוח
         if ($order->delivery_address) {
             $lines[] = "כתובת: {$order->delivery_address}";
         }
 
         $lines[] = $dash;
 
-        // פריטים
         foreach ($items as $item) {
             $name = $item->menuItem?->name ?? $item->name ?? 'פריט';
             $qty = $item->quantity ?? 1;
-            $price = number_format(($item->price_at_order ?? $item->menuItem?->price ?? 0) * $qty, 2);
-            $lines[] = "{$qty}x {$name}              ₪{$price}";
+            $lines[] = "{$qty}x {$name}";
 
-            // וריאציה
             if (!empty($item->variant_name)) {
                 $lines[] = "  סוג: {$item->variant_name}";
             }
 
-            // תוספות
             $addons = is_array($item->addons) ? $item->addons : [];
             foreach ($addons as $addon) {
                 $addonName = is_string($addon) ? $addon : ($addon['name'] ?? $addon['addon_name'] ?? '');
@@ -177,7 +247,6 @@ class PrintService
                 }
             }
 
-            // הערות לפריט
             if (!empty($item->notes)) {
                 $lines[] = "  הערה: {$item->notes}";
             }
@@ -185,37 +254,115 @@ class PrintService
 
         $lines[] = $dash;
 
-        // הערות להזמנה
         if ($order->delivery_notes) {
             $lines[] = "הערות: {$order->delivery_notes}";
             $lines[] = $dash;
         }
-
-        // דמי משלוח
-        if ($order->delivery_fee > 0) {
-            $lines[] = "דמי משלוח: ₪" . number_format($order->delivery_fee, 2);
+        if ($order->notes) {
+            $lines[] = "הערות: {$order->notes}";
+            $lines[] = $dash;
         }
 
-        // סה"כ
-        $lines[] = "סה\"כ: ₪" . number_format($order->total_amount ?? 0, 2);
         $lines[] = $separator;
-
-        // שם מסעדה בתחתית
         $restaurantName = $order->restaurant?->name ?? '';
         if ($restaurantName) {
             $lines[] = $this->centerText($restaurantName, $printer);
         }
-
         $lines[] = '';
 
         return implode("\n", $lines);
     }
 
-    /**
-     * ביצוע ההדפסה בפועל
-     */
+    // ─── Receipt ───
+
+    private function buildReceiptPayload(Order $order, Printer $printer, array $extraData = []): string
+    {
+        $width = $this->getLineWidth($printer);
+        $separator = str_repeat('=', $width);
+        $dash = str_repeat('-', $width);
+
+        $lines = [];
+
+        $restaurantName = $order->restaurant?->name ?? '';
+        if ($restaurantName) {
+            $lines[] = $this->centerText($restaurantName, $printer);
+        }
+
+        $lines[] = $separator;
+        $lines[] = $this->centerText("קבלה — הזמנה #{$order->id}", $printer);
+        $lines[] = $separator;
+        $lines[] = $order->created_at->format('d.m.Y H:i');
+        if ($order->customer_name && $order->customer_name !== 'POS') {
+            $lines[] = "לקוח: {$order->customer_name}";
+        }
+        $lines[] = $dash;
+
+        foreach ($order->items as $item) {
+            $name = $item->menuItem?->name ?? $item->name ?? 'פריט';
+            $qty = $item->quantity ?? 1;
+            $unitPrice = $item->price_at_order ?? $item->menuItem?->price ?? 0;
+            $lineTotal = number_format($unitPrice * $qty, 2);
+            $lines[] = "{$qty}x {$name}";
+            $lines[] = str_pad("  ₪{$lineTotal}", $width, ' ', STR_PAD_LEFT);
+
+            if (!empty($item->variant_name)) {
+                $lines[] = "  סוג: {$item->variant_name}";
+            }
+            $addons = is_array($item->addons) ? $item->addons : [];
+            foreach ($addons as $addon) {
+                $addonName = is_string($addon) ? $addon : ($addon['name'] ?? '');
+                $addonPrice = is_array($addon) ? ($addon['price'] ?? 0) : 0;
+                if ($addonName) {
+                    $priceFmt = $addonPrice > 0 ? " ₪" . number_format($addonPrice, 2) : '';
+                    $lines[] = "  + {$addonName}{$priceFmt}";
+                }
+            }
+        }
+
+        $lines[] = $separator;
+
+        if ($order->delivery_fee > 0) {
+            $lines[] = "דמי משלוח: ₪" . number_format($order->delivery_fee, 2);
+        }
+
+        $totalAmount = $order->total_amount ?? 0;
+        $lines[] = $this->centerText("סה\"כ: ₪" . number_format($totalAmount, 2), $printer);
+
+        $paymentLabel = match ($order->payment_method) {
+            'cash' => 'מזומן',
+            'credit_card' => 'אשראי',
+            default => $order->payment_method ?? '—',
+        };
+        $lines[] = "תשלום: {$paymentLabel}";
+
+        if (!empty($extraData['change']) && $extraData['change'] > 0) {
+            $lines[] = "עודף: ₪" . number_format($extraData['change'], 2);
+        }
+
+        if (!empty($extraData['receipt_number'])) {
+            $lines[] = $dash;
+            $lines[] = "מס׳ קבלה: {$extraData['receipt_number']}";
+        }
+
+        $lines[] = $separator;
+        $lines[] = $this->centerText('תודה שבחרתם בנו!', $printer);
+        $lines[] = '';
+
+        return implode("\n", $lines);
+    }
+
+    // ─── Infrastructure ───
+
     private function executeJob(PrintJob $job, Printer $printer, string $payload): void
     {
+        if ($printer->type === 'browser') {
+            $job->update([
+                'status' => 'pending_browser',
+                'attempts' => $job->attempts + 1,
+            ]);
+            return;
+        }
+
         try {
             $adapter = $this->getAdapter($printer);
             $job->update(['status' => 'printing', 'attempts' => $job->attempts + 1]);
@@ -244,8 +391,34 @@ class PrintService
     }
 
     /**
-     * קבלת adapter מתאים לסוג המדפסת
+     * Get pending browser print jobs for a restaurant and mark them as done.
      */
+    public function getPendingBrowserJobs(int $restaurantId): array
+    {
+        $jobs = PrintJob::where('restaurant_id', $restaurantId)
+            ->where('status', 'pending_browser')
+            ->with('printer')
+            ->orderBy('created_at', 'asc')
+            ->limit(20)
+            ->get();
+
+        $result = [];
+
+        foreach ($jobs as $job) {
+            $result[] = [
+                'id' => $job->id,
+                'type' => $job->payload['type'] ?? 'custom',
+                'role' => $job->printer->role ?? 'kitchen',
+                'text' => $job->payload['text'] ?? '',
+                'order_id' => $job->order_id,
+                'created_at' => $job->created_at->format('H:i'),
+            ];
+            $job->update(['status' => 'done']);
+        }
+
+        return $result;
+    }
+
     private function getAdapter(Printer $printer): PrinterAdapter
     {
         return match ($printer->type) {
@@ -254,17 +427,11 @@ class PrintService
         };
     }
 
-    /**
-     * רוחב שורה לפי גודל נייר
-     */
     private function getLineWidth(Printer $printer): int
     {
         return $printer->paper_width === '58mm' ? 32 : 42;
     }
 
-    /**
-     * מרכוז טקסט
-     */
     private function centerText(string $text, Printer $printer): string
     {
         $width = $this->getLineWidth($printer);

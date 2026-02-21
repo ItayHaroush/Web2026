@@ -108,6 +108,7 @@ class PromotionService
             $rules = $promotion->rules ?? collect();
             $rulesProgress = [];
             $allMet = true;
+            $timesQualified = PHP_INT_MAX;
 
             foreach ($rules as $rule) {
                 $requiredCategoryId = $rule->required_category_id;
@@ -117,14 +118,21 @@ class PromotionService
 
                 if (!$met) {
                     $allMet = false;
+                    $timesQualified = 0;
+                } else {
+                    $timesQualified = min($timesQualified, intdiv($current, $required));
                 }
 
                 $rulesProgress[] = [
                     'category_id' => $requiredCategoryId,
                     'category_name' => $rule->category?->name ?? '',
                     'required' => $required,
-                    'current' => min($current, $required),
+                    'current' => $current,
                 ];
+            }
+
+            if ($rules->isEmpty()) {
+                $timesQualified = 1;
             }
 
             $rewards = ($promotion->rewards ?? collect())->map(function ($reward) {
@@ -150,6 +158,7 @@ class PromotionService
                 'rewards' => $rewards,
                 'progress' => [
                     'met' => $allMet,
+                    'times_qualified' => $allMet ? $timesQualified : 0,
                     'rules' => $rulesProgress,
                 ],
             ];
@@ -200,14 +209,16 @@ class PromotionService
                 continue;
             }
 
-            // ולידציה שהתנאים עדיין מתקיימים
+            // ולידציה שהתנאים עדיין מתקיימים + חישוב כמה פעמים עומד בתנאים
             $allMet = true;
+            $timesQualified = PHP_INT_MAX;
             foreach ($promotion->rules as $rule) {
                 $current = $categoryQuantities[$rule->required_category_id] ?? 0;
                 if ($current < $rule->min_quantity) {
                     $allMet = false;
                     break;
                 }
+                $timesQualified = min($timesQualified, intdiv($current, $rule->min_quantity));
             }
 
             if (!$allMet) {
@@ -215,10 +226,15 @@ class PromotionService
                 continue;
             }
 
-            // עיבוד פרסים
+            if ($promotion->rules->isEmpty()) {
+                $timesQualified = 1;
+            }
+
+            // עיבוד פרסים — כפל לפי מספר הפעמים שעומד בתנאים
             foreach ($promotion->rewards as $reward) {
                 if ($reward->reward_type === 'free_item') {
-                    // מוצר ספציפי - מתווסף אוטומטית
+                    $effectiveMax = ($reward->max_selectable ?? 1) * $timesQualified;
+
                     if ($reward->reward_menu_item_id) {
                         $giftMenuItem = MenuItem::where('tenant_id', $tenantId)
                             ->where('id', $reward->reward_menu_item_id)
@@ -227,8 +243,7 @@ class PromotionService
                             ->first();
 
                         if ($giftMenuItem) {
-                            $qty = $reward->max_selectable ?? 1;
-                            for ($i = 0; $i < $qty; $i++) {
+                            for ($i = 0; $i < $effectiveMax; $i++) {
                                 $giftItems[] = [
                                     'menu_item_id' => $giftMenuItem->id,
                                     'category_id' => $giftMenuItem->category_id,
@@ -246,7 +261,7 @@ class PromotionService
                         $validGifts = 0;
 
                         foreach ($requestedGifts as $giftReq) {
-                            if ($validGifts >= $reward->max_selectable) {
+                            if ($validGifts >= $effectiveMax) {
                                 break;
                             }
 
@@ -262,7 +277,6 @@ class PromotionService
                                 continue;
                             }
 
-                            // ולידציה שהפריט שייך לקטגוריית הפרס
                             if ($reward->reward_category_id && $giftMenuItem->category_id !== $reward->reward_category_id) {
                                 Log::warning('Gift item not in reward category', [
                                     'menu_item_id' => $menuItemId,
@@ -288,9 +302,9 @@ class PromotionService
                         fn($li) => round((float) $li['price_at_order'] * (int) ($li['quantity'] ?? 1), 2),
                         $lineItems
                     ));
-                    $totalDiscount += round($itemsTotal * ((float) $reward->reward_value / 100), 2);
+                    $totalDiscount += round($itemsTotal * ((float) $reward->reward_value / 100), 2) * $timesQualified;
                 } elseif ($reward->reward_type === 'discount_fixed') {
-                    $totalDiscount += (float) $reward->reward_value;
+                    $totalDiscount += (float) $reward->reward_value * $timesQualified;
                 }
             }
 

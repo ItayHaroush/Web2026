@@ -43,7 +43,8 @@ class PrinterController extends Controller
 
         $request->validate([
             'name' => 'required|string|max:100',
-            'type' => 'required|in:network,usb',
+            'type' => 'required|in:network,usb,browser',
+            'role' => 'sometimes|in:kitchen,receipt,general',
             'ip_address' => 'nullable|required_if:type,network|ip',
             'port' => 'nullable|integer|min:1|max:65535',
             'paper_width' => 'required|in:80mm,58mm',
@@ -64,8 +65,9 @@ class PrinterController extends Controller
             'restaurant_id' => $restaurant->id,
             'name' => $request->input('name'),
             'type' => $request->input('type'),
-            'ip_address' => $request->input('ip_address'),
-            'port' => $request->input('port', 9100),
+            'role' => $request->input('role', 'kitchen'),
+            'ip_address' => $request->input('type') === 'network' ? $request->input('ip_address') : null,
+            'port' => $request->input('type') === 'network' ? $request->input('port', 9100) : null,
             'paper_width' => $request->input('paper_width'),
             'is_active' => true,
         ]);
@@ -97,7 +99,8 @@ class PrinterController extends Controller
 
         $request->validate([
             'name' => 'sometimes|string|max:100',
-            'type' => 'sometimes|in:network,usb',
+            'type' => 'sometimes|in:network,usb,browser',
+            'role' => 'sometimes|in:kitchen,receipt,general',
             'ip_address' => 'nullable|ip',
             'port' => 'nullable|integer|min:1|max:65535',
             'paper_width' => 'sometimes|in:80mm,58mm',

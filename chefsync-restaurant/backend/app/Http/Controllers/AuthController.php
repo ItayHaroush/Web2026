@@ -91,6 +91,8 @@ class AuthController extends Controller
                 'restaurant_id' => $user->restaurant_id,
                 'restaurant' => $user->restaurant,
                 'tenant_id' => $user->restaurant->tenant_id ?? null,
+                'hourly_rate' => $user->hourly_rate,
+                'has_pin' => !is_null($user->pos_pin_hash),
             ],
         ]);
     }
@@ -153,6 +155,8 @@ class AuthController extends Controller
             'phone' => 'nullable|string|max:20',
             'current_password' => 'required_with:new_password',
             'new_password' => 'sometimes|string|min:6|confirmed',
+            'hourly_rate' => 'nullable|numeric|min:0|max:9999',
+            'pos_pin' => 'nullable|string|size:4',
         ];
         $request->validate($rules);
 
@@ -177,6 +181,14 @@ class AuthController extends Controller
             $user->password = Hash::make($request->new_password);
         }
 
+        if ($request->has('hourly_rate')) {
+            $user->hourly_rate = $request->hourly_rate;
+        }
+
+        if ($request->filled('pos_pin')) {
+            $user->pos_pin_hash = Hash::make($request->pos_pin);
+        }
+
         $user->save();
 
         return response()->json([
@@ -188,6 +200,8 @@ class AuthController extends Controller
                 'email' => $user->email,
                 'phone' => $user->phone,
                 'role' => $user->role,
+                'hourly_rate' => $user->hourly_rate,
+                'has_pin' => !is_null($user->pos_pin_hash),
             ],
         ]);
     }

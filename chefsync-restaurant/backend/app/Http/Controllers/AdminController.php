@@ -17,6 +17,8 @@ use App\Models\MenuItemAddonGroup;
 use App\Models\MenuItemAddon;
 use App\Models\PriceRule;
 use App\Models\DeliveryZone;
+use App\Models\CashMovement;
+use App\Models\CashRegisterShift;
 use App\Services\BasePriceService;
 use App\Services\HypPaymentService;
 use App\Models\RestaurantPayment;
@@ -467,6 +469,7 @@ class AdminController extends Controller
         ]);
 
         $query = MenuItem::where('restaurant_id', $restaurantId)
+            ->where('is_active', true)
             ->with('category');
 
         if ($request->has('category_id')) {
@@ -645,16 +648,59 @@ class AdminController extends Controller
         $item = MenuItem::where('restaurant_id', $this->resolveRestaurantId($request))
             ->findOrFail($id);
 
-        // מחיקת תמונה
-        if ($item->image_url) {
-            $this->deleteImage($item->image_url);
+        $hasOrders = $item->orderItems()->exists();
+
+        if ($hasOrders) {
+            $item->update(['is_active' => false, 'is_available' => false]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'הפריט הועבר לארכיון (לא ניתן למחוק פריט שהופיע בהזמנות)',
+                'archived' => true,
+            ]);
         }
 
+        $imageUrl = $item->getRawOriginal('image_url');
+
         $item->delete();
+
+        if ($imageUrl) {
+            $this->deleteImage($imageUrl);
+        }
 
         return response()->json([
             'success' => true,
             'message' => 'הפריט נמחק בהצלחה!',
+            'archived' => false,
+        ]);
+    }
+
+    public function getArchivedMenuItems(Request $request)
+    {
+        $items = MenuItem::where('restaurant_id', $this->resolveRestaurantId($request))
+            ->where('is_active', false)
+            ->with('category')
+            ->orderBy('updated_at', 'desc')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'items' => $items,
+        ]);
+    }
+
+    public function restoreMenuItem(Request $request, $id)
+    {
+        $item = MenuItem::where('restaurant_id', $this->resolveRestaurantId($request))
+            ->where('is_active', false)
+            ->findOrFail($id);
+
+        $item->update(['is_active' => true, 'is_available' => true]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'הפריט שוחזר בהצלחה!',
+            'item' => $item->load('category'),
         ]);
     }
 
@@ -2207,7 +2253,12 @@ class AdminController extends Controller
         $employees = User::where('restaurant_id', $this->resolveRestaurantId($request))
             ->orderBy('role')
             ->orderBy('name')
-            ->get(['id', 'name', 'email', 'phone', 'role', 'is_active', 'created_at']);
+            ->get(['id', 'name', 'email', 'phone', 'role', 'is_active', 'created_at', 'hourly_rate', 'pos_pin_hash'])
+            ->map(function ($emp) {
+                $emp->has_pin = !is_null($emp->pos_pin_hash);
+                unset($emp->pos_pin_hash);
+                return $emp;
+            });
 
         return response()->json([
             'success' => true,
@@ -2251,9 +2302,10 @@ class AdminController extends Controller
             'role' => 'sometimes|in:manager,employee,delivery',
             'is_active' => 'sometimes|boolean',
             'password' => 'nullable|string|min:6|confirmed',
+            'hourly_rate' => 'nullable|numeric|min:0|max:9999',
         ]);
 
-        $updateData = $request->only(['name', 'phone', 'role', 'is_active']);
+        $updateData = $request->only(['name', 'phone', 'role', 'is_active', 'hourly_rate']);
 
         // עדכון סיסמה רק אם סופק שדה password
         if ($request->filled('password')) {
@@ -2367,6 +2419,30 @@ class AdminController extends Controller
             $order->payment_status = 'paid';
             if ($order->payment_method === 'cash') {
                 $order->paid_at = now();
+            }
+        }
+
+        // רישום תנועת מזומן במשמרת פתוחה (גם להזמנות שלא נוצרו מהקופה)
+        if ($request->status === 'delivered' && $order->payment_method === 'cash') {
+            $openShift = CashRegisterShift::where('restaurant_id', $order->restaurant_id)
+                ->whereNull('closed_at')
+                ->first();
+            if ($openShift) {
+                $existingMovement = CashMovement::where('shift_id', $openShift->id)
+                    ->where('order_id', $order->id)
+                    ->where('type', 'payment')
+                    ->exists();
+                if (!$existingMovement) {
+                    CashMovement::create([
+                        'shift_id' => $openShift->id,
+                        'order_id' => $order->id,
+                        'user_id' => $user->id,
+                        'type' => 'payment',
+                        'payment_method' => 'cash',
+                        'amount' => (float) $order->total_amount,
+                        'description' => "הזמנה #{$order->id}",
+                    ]);
+                }
             }
         }
 

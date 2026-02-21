@@ -29,11 +29,14 @@ class User extends Authenticatable
         'role',
         'is_active',
         'is_super_admin',
+        'pos_pin_hash',
+        'hourly_rate',
     ];
 
     protected $hidden = [
         'password',
         'remember_token',
+        'pos_pin_hash',
     ];
 
     protected $casts = [
@@ -41,6 +44,7 @@ class User extends Authenticatable
         'password' => 'hashed',
         'is_active' => 'boolean',
         'is_super_admin' => 'boolean',
+        'hourly_rate' => 'decimal:2',
     ];
 
     /**
@@ -77,6 +81,11 @@ class User extends Authenticatable
     public function isDelivery(): bool
     {
         return $this->role === 'delivery';
+    }
+
+    public function timeLogs()
+    {
+        return $this->hasMany(\App\Models\EmployeeTimeLog::class);
     }
 
     /**
