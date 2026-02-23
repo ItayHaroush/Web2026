@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Order;
 use App\Models\Printer;
+use App\Models\PrintDevice;
 use App\Models\PrintJob;
 use App\Services\Printing\PrinterAdapter;
 use App\Services\Printing\NetworkPrinterAdapter;
@@ -51,6 +52,7 @@ class PrintService
                 'restaurant_id' => $order->restaurant_id,
                 'printer_id' => $printer->id,
                 'order_id' => $order->id,
+                'role' => 'kitchen',
                 'status' => 'pending',
                 'payload' => [
                     'text' => $payload,
@@ -93,6 +95,7 @@ class PrintService
                 'restaurant_id' => $order->restaurant_id,
                 'printer_id' => $printer->id,
                 'order_id' => $order->id,
+                'role' => 'receipt',
                 'status' => 'pending',
                 'payload' => [
                     'text' => $payload,
@@ -130,6 +133,7 @@ class PrintService
                 'tenant_id' => $tenantId,
                 'restaurant_id' => $restaurantId,
                 'printer_id' => $printer->id,
+                'role' => $role,
                 'status' => 'pending',
                 'payload' => [
                     'text' => $payload,
@@ -355,6 +359,24 @@ class PrintService
 
     private function executeJob(PrintJob $job, Printer $printer, string $payload): void
     {
+        $role = $job->role ?? $printer->role ?? 'kitchen';
+
+        $hasBridgeDevices = PrintDevice::withoutGlobalScopes()
+            ->where('restaurant_id', $job->restaurant_id)
+            ->where('is_active', true)
+            ->where(function ($q) use ($role) {
+                $q->where('role', $role)->orWhere('role', 'general');
+            })
+            ->exists();
+
+        if ($hasBridgeDevices) {
+            $job->update([
+                'status' => 'pending_bridge',
+                'attempts' => $job->attempts + 1,
+            ]);
+            return;
+        }
+
         if ($printer->type === 'browser') {
             $job->update([
                 'status' => 'pending_browser',
@@ -408,7 +430,7 @@ class PrintService
             $result[] = [
                 'id' => $job->id,
                 'type' => $job->payload['type'] ?? 'custom',
-                'role' => $job->printer->role ?? 'kitchen',
+                'role' => $job->role ?? $job->printer->role ?? 'kitchen',
                 'text' => $job->payload['text'] ?? '',
                 'order_id' => $job->order_id,
                 'created_at' => $job->created_at->format('H:i'),
@@ -417,6 +439,22 @@ class PrintService
         }
 
         return $result;
+    }
+
+    /**
+     * Reset stale "printing" bridge jobs back to pending_bridge (timeout fallback).
+     * Should be called from a scheduled command every minute.
+     */
+    public function retryStaleJobs(int $timeoutMinutes = 2): int
+    {
+        return PrintJob::where('status', 'printing')
+            ->whereNotNull('device_id')
+            ->where('updated_at', '<', now()->subMinutes($timeoutMinutes))
+            ->update([
+                'status' => 'pending_bridge',
+                'device_id' => null,
+                'error_message' => 'Timeout — no ACK received, retrying',
+            ]);
     }
 
     private function getAdapter(Printer $printer): PrinterAdapter

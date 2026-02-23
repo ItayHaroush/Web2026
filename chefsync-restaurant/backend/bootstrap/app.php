@@ -25,6 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'tenant' => \App\Http\Middleware\EnsureTenantId::class,
             'super_admin' => \App\Http\Middleware\EnsureSuperAdmin::class,
             'pos_session' => \App\Http\Middleware\VerifyPosSession::class,
+            'device_token' => \App\Http\Middleware\VerifyDeviceToken::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

@@ -34,6 +34,7 @@ import PaymentError from './pages/admin/PaymentError';
 import AdminDeliveryZones from './pages/admin/AdminDeliveryZones';
 import AdminCoupons from './pages/admin/AdminCoupons';
 import AdminPrinters from './pages/admin/AdminPrinters';
+import AdminPrintDevices from './pages/admin/AdminPrintDevices';
 import AdminSimulator from './pages/admin/AdminSimulator';
 import AdminQrCode from './pages/admin/AdminQrCode';
 import AdminDisplayScreens from './pages/admin/AdminDisplayScreens';
@@ -321,6 +322,14 @@ function AppRoutes() {
         element={
           <AdminRoute>
             <AdminPrinters />
+          </AdminRoute>
+        }
+      />
+      <Route
+        path="/admin/print-devices"
+        element={
+          <AdminRoute>
+            <AdminPrintDevices />
           </AdminRoute>
         }
       />

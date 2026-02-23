@@ -59,6 +59,9 @@ export default function AdminPrinters() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        // #region agent log
+        console.warn('[DEBUG-3267aa] Printer submit', { editPrinter: !!editPrinter, editId: editPrinter?.id, form });
+        // #endregion
         try {
             if (editPrinter) {
                 await updatePrinter(editPrinter.id, form);

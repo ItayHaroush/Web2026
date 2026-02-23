@@ -27,7 +27,27 @@ export default function POSPinLock({ onUnlock, isRelock }) {
         try {
             await onUnlock(code);
         } catch (err) {
-            setError(err?.response?.data?.message || err?.message || 'קוד PIN שגוי');
+            // #region agent log
+            const _dbgPin = {status:err?.response?.status,msg:err?.response?.data?.message,hasResponse:!!err?.response,errMsg:err?.message};
+            console.warn('[DEBUG-3267aa] POSPinLock caught error locally', _dbgPin);
+            fetch('http://127.0.0.1:7242/ingest/e2a84354-28c6-4376-be2a-efdcd59b5972',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'3267aa'},body:JSON.stringify({sessionId:'3267aa',location:'POSPinLock.jsx:catch',message:'PIN error caught locally',data:_dbgPin,timestamp:Date.now(),hypothesisId:'H1'})}).catch(()=>{});
+            // #endregion
+            const status = err?.response?.status;
+            let msg = 'קוד PIN שגוי';
+
+            if (err?.response?.data?.message) {
+                msg = err.response.data.message;
+            } else if (status === 404) {
+                msg = 'המסעדה לא נמצאה — נסה להתחבר מחדש';
+            } else if (status === 401) {
+                msg = 'קוד PIN שגוי';
+            } else if (status >= 500) {
+                msg = 'שגיאת שרת — נסה שוב';
+            } else if (!err?.response) {
+                msg = 'אין חיבור לשרת';
+            }
+
+            setError(msg);
             setPin('');
         } finally {
             setLoading(false);
