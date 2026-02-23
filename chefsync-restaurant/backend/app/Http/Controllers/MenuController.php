@@ -350,14 +350,17 @@ class MenuController extends Controller
             ->get();
 
         $includePrices = (bool) ($group->source_include_prices ?? true);
+        $groupDefaultWeight = (int) ($group->source_selection_weight ?? 1);
 
-        // המר פריטי מנה לפורמט תוספות
-        $syntheticAddons = $items->map(function ($item) use ($includePrices) {
+        // המר פריטי מנה לפורמט תוספות - משקל לכל פריט בנפרד (ברירת מחדל: קבוצה)
+        $syntheticAddons = $items->map(function ($item) use ($includePrices, $groupDefaultWeight) {
+            $weight = $item->addon_selection_weight !== null ? (int) $item->addon_selection_weight : $groupDefaultWeight;
+            $weight = max(1, min(10, $weight));
             $addon = new \stdClass();
             $addon->id = 'cat_item_' . $item->id;
             $addon->name = $item->name;
             $addon->price_delta = $includePrices ? (float) $item->price : 0;
-            $addon->selection_weight = 1;
+            $addon->selection_weight = $weight;
             $addon->is_default = false;
             return $addon;
         });

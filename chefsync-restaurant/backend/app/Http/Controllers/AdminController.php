@@ -507,6 +507,7 @@ class AdminController extends Controller
             'addons_group_scope' => 'nullable|string',  // משנה לקבל JSON string
             'max_addons' => 'nullable|integer|min:1|max:99',
             'dine_in_adjustment' => 'nullable|numeric',
+            'addon_selection_weight' => 'nullable|integer|min:1|max:10',  // משקל בחירה כשמוצג כתוספת מקושרת (null=ברירת מחדל קבוצה)
         ]);
 
         $user = $request->user();
@@ -556,6 +557,7 @@ class AdminController extends Controller
             'addons_group_scope' => $addonsGroupScope,
             'max_addons' => $maxAddons,
             'dine_in_adjustment' => $request->input('dine_in_adjustment'),
+            'addon_selection_weight' => $request->filled('addon_selection_weight') ? max(1, min(10, (int) $request->addon_selection_weight)) : null,
         ]);
 
         return response()->json([
@@ -583,6 +585,7 @@ class AdminController extends Controller
             'addons_group_scope' => 'nullable|string',  // משנה לקבל JSON string
             'max_addons' => 'nullable|integer|min:1|max:99',
             'dine_in_adjustment' => 'nullable|numeric',
+            'addon_selection_weight' => 'nullable|integer|min:1|max:10',
         ]);
 
         if ($request->hasFile('image')) {
@@ -623,6 +626,11 @@ class AdminController extends Controller
         if ($request->has('dine_in_adjustment')) {
             $value = $request->input('dine_in_adjustment');
             $payload['dine_in_adjustment'] = ($value === '' || $value === null) ? null : (float) $value;
+        }
+
+        if ($request->has('addon_selection_weight')) {
+            $v = $request->input('addon_selection_weight');
+            $payload['addon_selection_weight'] = ($v === '' || $v === null) ? null : max(1, min(10, (int) $v));
         }
 
         $item->update($payload);
@@ -1572,6 +1580,7 @@ class AdminController extends Controller
             'source_type' => 'sometimes|in:manual,category',
             'source_category_id' => 'nullable|integer|exists:categories,id',
             'source_include_prices' => 'sometimes|boolean',
+            'source_selection_weight' => 'sometimes|nullable|integer|min:1|max:10',
         ]);
 
         $restaurant = $this->resolveRestaurant($request);
@@ -1586,6 +1595,7 @@ class AdminController extends Controller
         $sourceType = $request->input('source_type', 'manual');
         $sourceCategoryId = null;
         $sourceIncludePrices = $request->boolean('source_include_prices', true);
+        $sourceSelectionWeight = max(1, min(10, (int) ($request->input('source_selection_weight', 1) ?: 1)));
         if ($sourceType === 'category') {
             $sourceCategoryId = $request->input('source_category_id');
             if ($sourceCategoryId) {
@@ -1620,6 +1630,7 @@ class AdminController extends Controller
             'source_type' => $sourceType,
             'source_category_id' => $sourceCategoryId,
             'source_include_prices' => $sourceIncludePrices,
+            'source_selection_weight' => $sourceSelectionWeight,
         ]);
 
         return response()->json([
@@ -1650,6 +1661,7 @@ class AdminController extends Controller
             'source_type' => 'sometimes|in:manual,category',
             'source_category_id' => 'nullable|integer|exists:categories,id',
             'source_include_prices' => 'sometimes|boolean',
+            'source_selection_weight' => 'sometimes|nullable|integer|min:1|max:10',
         ]);
 
         $restaurant = $this->resolveRestaurant($request);
@@ -1681,6 +1693,10 @@ class AdminController extends Controller
 
         if ($request->has('source_include_prices')) {
             $payload['source_include_prices'] = $request->boolean('source_include_prices');
+        }
+
+        if ($request->has('source_selection_weight')) {
+            $payload['source_selection_weight'] = max(1, min(10, (int) ($request->input('source_selection_weight') ?: 1)));
         }
 
         // טיפול ב-max_selections = 0 (ללא הגבלה - יהפך ל-null)
@@ -1788,6 +1804,7 @@ class AdminController extends Controller
             'source_type' => $originalGroup->source_type ?? 'manual',
             'source_category_id' => $originalGroup->source_category_id,
             'source_include_prices' => $originalGroup->source_include_prices ?? true,
+            'source_selection_weight' => $originalGroup->source_selection_weight ?? 1,
         ]);
 
         // העתק את כל הפריטים

@@ -22,6 +22,7 @@ class RestaurantAddonGroup extends Model
         'source_type',
         'source_category_id',
         'source_include_prices',
+        'source_selection_weight',
     ];
 
     protected $casts = [
@@ -32,6 +33,7 @@ class RestaurantAddonGroup extends Model
         'sort_order' => 'integer',
         'source_category_id' => 'integer',
         'source_include_prices' => 'boolean',
+        'source_selection_weight' => 'integer',
     ];
 
     protected static function booted()
