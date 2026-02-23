@@ -31,7 +31,8 @@ import {
     FaCreditCard,
     FaExclamationTriangle,
     FaUserClock,
-    FaCashRegister
+    FaCashRegister,
+    FaNetworkWired
 } from 'react-icons/fa';
 
 export default function AdminLayout({ children }) {
@@ -169,6 +170,12 @@ export default function AdminLayout({ children }) {
             path: '/admin/printers',
             icon: <FaPrint />,
             label: 'מדפסות',
+            show: isManager()
+        },
+        {
+            path: '/admin/print-devices',
+            icon: <FaNetworkWired />,
+            label: 'גשרי הדפסה',
             show: isManager()
         },
         {

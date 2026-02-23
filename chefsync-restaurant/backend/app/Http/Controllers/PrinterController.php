@@ -118,7 +118,12 @@ class PrinterController extends Controller
 
         $printer = Printer::where('restaurant_id', $restaurant->id)->findOrFail($id);
 
-        $printer->update($request->only(['name', 'type', 'ip_address', 'port', 'paper_width']));
+        // #region agent log
+        $updateData = $request->only(['name', 'type', 'role', 'ip_address', 'port', 'paper_width']);
+        Log::info('[DEBUG-3267aa] Printer update', ['id' => $id, 'updateData' => $updateData, 'role_sent' => $request->input('role'), 'all_input' => $request->all()]);
+        file_put_contents('/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/.cursor/debug-3267aa.log', json_encode(['sessionId'=>'3267aa','location'=>'PrinterController.php:update','message'=>'Printer update payload','data'=>['id'=>$id,'updateData'=>$updateData,'role_sent'=>$request->input('role')],'timestamp'=>round(microtime(true)*1000),'hypothesisId'=>'H3'])."\n", FILE_APPEND);
+        // #endregion
+        $printer->update($updateData);
 
         if ($request->has('category_ids')) {
             $printer->categories()->sync($request->input('category_ids', []));

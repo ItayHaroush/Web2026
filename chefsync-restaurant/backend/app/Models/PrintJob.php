@@ -13,6 +13,10 @@ class PrintJob extends Model
         'printer_id',
         'order_id',
         'status',
+        'role',
+        'device_id',
+        'target_ip',
+        'target_port',
         'payload',
         'error_message',
         'attempts',
@@ -21,6 +25,7 @@ class PrintJob extends Model
     protected $casts = [
         'payload' => 'array',
         'attempts' => 'integer',
+        'target_port' => 'integer',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
@@ -42,5 +47,10 @@ class PrintJob extends Model
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);
+    }
+
+    public function device(): BelongsTo
+    {
+        return $this->belongsTo(PrintDevice::class, 'device_id');
     }
 }

@@ -16,6 +16,7 @@ use App\Http\Controllers\ChatController;
 use App\Http\Controllers\DisplayScreenController;
 use App\Http\Controllers\KioskController;
 use App\Http\Controllers\PrinterController;
+use App\Http\Controllers\PrintAgentController;
 use App\Http\Controllers\PaymentSettingsController;
 use App\Http\Controllers\PromotionController;
 use App\Http\Controllers\SuperAdminSettingsController;
@@ -177,6 +178,11 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'tenant'])->group(function (
     Route::post('/subscription/activate', [AdminController::class, 'activateSubscription'])->name('admin.subscription.activate');
     Route::post('/subscription/create-payment-session', [AdminController::class, 'createPaymentSession'])->name('admin.subscription.payment-session');
 
+    // POS auth - מחוץ ל-CheckRestaurantAccess כדי שסיסמא שגויה תחזיר 401 ולא 404
+    Route::post('pos/set-pin', [\App\Http\Controllers\POSController::class, 'setPin'])->name('admin.pos.set-pin');
+    Route::post('pos/verify-pin', [\App\Http\Controllers\POSController::class, 'verifyPin'])->name('admin.pos.verify-pin');
+    Route::post('pos/unlock', [\App\Http\Controllers\POSController::class, 'unlockSession'])->name('admin.pos.unlock');
+
     Route::middleware(\App\Http\Middleware\CheckRestaurantAccess::class)->group(function () {
         // דשבורד
         Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard');
@@ -321,12 +327,15 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'tenant'])->group(function (
         Route::post('/printers/{id}/test', [PrinterController::class, 'testPrint'])->name('admin.printers.test');
         Route::post('/orders/{id}/reprint', [PrinterController::class, 'reprint'])->name('admin.orders.reprint');
 
-        // POS Lite - קופה
-        Route::prefix('pos')->group(function () {
-            Route::post('/set-pin', [\App\Http\Controllers\POSController::class, 'setPin'])->name('admin.pos.set-pin');
-            Route::post('/verify-pin', [\App\Http\Controllers\POSController::class, 'verifyPin'])->name('admin.pos.verify-pin');
-            Route::post('/unlock', [\App\Http\Controllers\POSController::class, 'unlockSession'])->name('admin.pos.unlock');
+        // גשרי הדפסה — ניהול מכשירים
+        Route::get('/print-devices', [PrintAgentController::class, 'index'])->name('admin.print-devices.index');
+        Route::post('/print-devices', [PrintAgentController::class, 'register'])->name('admin.print-devices.register');
+        Route::put('/print-devices/{id}', [PrintAgentController::class, 'update'])->name('admin.print-devices.update');
+        Route::delete('/print-devices/{id}', [PrintAgentController::class, 'destroy'])->name('admin.print-devices.delete');
+        Route::patch('/print-devices/{id}/toggle', [PrintAgentController::class, 'toggle'])->name('admin.print-devices.toggle');
 
+        // POS Lite - קופה (set-pin, verify-pin, unlock מוגדרים למעלה מחוץ ל-CheckRestaurantAccess)
+        Route::prefix('pos')->group(function () {
             Route::middleware('pos_session')->group(function () {
                 Route::get('/session', [\App\Http\Controllers\POSController::class, 'getSession'])->name('admin.pos.session');
                 Route::post('/lock', [\App\Http\Controllers\POSController::class, 'lockSession'])->name('admin.pos.lock');
@@ -456,6 +465,15 @@ Route::prefix('payments/hyp')->group(function () {
     // B2C: תשלום הזמנת לקוח — POST JSON מהפרונט (כש-HYP מפנה ישירות לפרונט)
     Route::post('/order/success-json', [HypOrderCallbackController::class, 'handleSuccessJson'])->name('payments.hyp.order.success-json');
     Route::post('/order/error-json', [HypOrderCallbackController::class, 'handleErrorJson'])->name('payments.hyp.order.error-json');
+});
+
+// ============================================
+// Print Agent API (device-token auth)
+// ============================================
+Route::prefix('agent')->middleware('device_token')->group(function () {
+    Route::get('/jobs', [PrintAgentController::class, 'getJobs'])->name('agent.jobs');
+    Route::post('/jobs/{id}/ack', [PrintAgentController::class, 'ackJob'])->name('agent.jobs.ack');
+    Route::post('/heartbeat', [PrintAgentController::class, 'heartbeat'])->name('agent.heartbeat');
 });
 
 // ============================================

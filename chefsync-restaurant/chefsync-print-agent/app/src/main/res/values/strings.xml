@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ChefSync Print Agent</string>
+    <string name="channel_name">Print Agent Service</string>
+    <string name="channel_description">Foreground service for automatic printing</string>
+</resources>

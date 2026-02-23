@@ -112,6 +112,19 @@ apiClient.interceptors.response.use(
         }
 
         if (error.response?.status === 401) {
+            // #region agent log
+            const _dbg401 = {url:error.config?.url,isPosRoute:!!(error.config?.url||'').includes('/pos/')};
+            console.warn('[DEBUG-3267aa] 401 interceptor fired', _dbg401);
+            fetch('http://127.0.0.1:7242/ingest/e2a84354-28c6-4376-be2a-efdcd59b5972',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'3267aa'},body:JSON.stringify({sessionId:'3267aa',location:'apiClient.js:interceptor-401',message:'401 interceptor fired',data:_dbg401,timestamp:Date.now(),hypothesisId:'H1'})}).catch(()=>{});
+            // #endregion
+            const requestUrl = error.config?.url || '';
+            const isPosAuthRoute = requestUrl.includes('/pos/verify-pin') || requestUrl.includes('/pos/unlock');
+            if (isPosAuthRoute) {
+                // #region agent log
+                console.warn('[DEBUG-3267aa] Bypassing 401 redirect for POS auth route:', requestUrl);
+                // #endregion
+                return Promise.reject(error);
+            }
             // Token לא תקף - נקה מידע רלוונטי והפנה לפי סוג משתמש
             const hasAdminToken = !!localStorage.getItem('admin_token');
             localStorage.removeItem('authToken');

@@ -7,6 +7,7 @@ use App\Models\CashRegisterShift;
 use App\Models\EmployeeTimeLog;
 use App\Models\Order;
 use App\Models\PosSession;
+use App\Models\Printer;
 use App\Models\Restaurant;
 use App\Models\User;
 use App\Services\PrintService;
@@ -38,6 +39,10 @@ class POSController extends Controller
         $user = $request->user();
 
         if (!$user->pos_pin_hash || !Hash::check($request->pin, $user->pos_pin_hash)) {
+            // #region agent log
+            Log::info('[DEBUG-3267aa] verifyPin FAILED', ['user_id' => $user->id, 'has_pin_hash' => !!$user->pos_pin_hash, 'returning' => 401]);
+            file_put_contents('/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/.cursor/debug-3267aa.log', json_encode(['sessionId'=>'3267aa','location'=>'POSController.php:verifyPin','message'=>'PIN check failed, returning 401','data'=>['user_id'=>$user->id,'has_pin_hash'=>!!$user->pos_pin_hash],'timestamp'=>round(microtime(true)*1000),'hypothesisId'=>'H1'])."\n", FILE_APPEND);
+            // #endregion
             return response()->json(['success' => false, 'message' => 'קוד PIN שגוי'], 401);
         }
 
@@ -485,21 +490,47 @@ class POSController extends Controller
 
     public function printReceipt(Request $request, $orderId)
     {
-        $user = $request->user();
-        $order = Order::withoutGlobalScopes()
-            ->where('restaurant_id', $user->restaurant_id)
-            ->with('items.menuItem', 'restaurant')
-            ->findOrFail($orderId);
-
         try {
+            $user = $request->user();
+            $restaurantId = $user->restaurant_id;
+
+            if (!$restaurantId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'לא משויכת מסעדה למשתמש — לא ניתן להדפיס',
+                ], 400);
+            }
+
+            $receiptPrinters = Printer::where('restaurant_id', $restaurantId)
+                ->where('is_active', true)
+                ->whereIn('role', ['receipt', 'general'])
+                ->count();
+
+            if ($receiptPrinters === 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'אין מדפסת קבלות מוגדרת. הגדר מדפסת בהגדרות לפני הדפסה.',
+                ], 422);
+            }
+
+            $order = Order::withoutGlobalScopes()
+                ->where('restaurant_id', $restaurantId)
+                ->with('items.menuItem', 'restaurant')
+                ->findOrFail($orderId);
+
             $printService = app(PrintService::class);
             $jobs = $printService->printReceipt($order);
 
             return response()->json([
                 'success' => true,
-                'message' => $jobs > 0 ? "נשלחו {$jobs} הדפסות" : 'אין מדפסת קבלות פעילה',
+                'message' => $jobs > 0 ? "נשלחו {$jobs} הדפסות" : 'המדפסת מוגדרת אך ההדפסה לא נשלחה',
                 'jobs' => $jobs,
             ]);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ההזמנה לא נמצאה',
+            ], 404);
         } catch (\Exception $e) {
             Log::error('Receipt print failed: ' . $e->getMessage());
             return response()->json([
@@ -511,21 +542,47 @@ class POSController extends Controller
 
     public function printKitchenTicket(Request $request, $orderId)
     {
-        $user = $request->user();
-        $order = Order::withoutGlobalScopes()
-            ->where('restaurant_id', $user->restaurant_id)
-            ->with('items.menuItem.category', 'restaurant')
-            ->findOrFail($orderId);
-
         try {
+            $user = $request->user();
+            $restaurantId = $user->restaurant_id;
+
+            if (!$restaurantId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'לא משויכת מסעדה למשתמש — לא ניתן להדפיס',
+                ], 400);
+            }
+
+            $kitchenPrinters = Printer::where('restaurant_id', $restaurantId)
+                ->where('is_active', true)
+                ->whereIn('role', ['kitchen', 'general'])
+                ->count();
+
+            if ($kitchenPrinters === 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'אין מדפסת מטבח מוגדרת. הגדר מדפסת בהגדרות לפני הדפסה.',
+                ], 422);
+            }
+
+            $order = Order::withoutGlobalScopes()
+                ->where('restaurant_id', $restaurantId)
+                ->with('items.menuItem.category', 'restaurant')
+                ->findOrFail($orderId);
+
             $printService = app(PrintService::class);
             $jobs = $printService->printOrder($order);
 
             return response()->json([
                 'success' => true,
-                'message' => $jobs > 0 ? "נשלחו {$jobs} הדפסות למטבח" : 'אין מדפסת מטבח פעילה',
+                'message' => $jobs > 0 ? "נשלחו {$jobs} הדפסות למטבח" : 'המדפסת מוגדרת אך ההדפסה לא נשלחה',
                 'jobs' => $jobs,
             ]);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ההזמנה לא נמצאה',
+            ], 404);
         } catch (\Exception $e) {
             Log::error('Kitchen print failed: ' . $e->getMessage());
             return response()->json([

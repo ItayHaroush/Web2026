@@ -18,6 +18,11 @@ class EnsureTenantId
             $request->query('tenant_id') ??
             $request->route('tenant_id');
 
+        // עבור נתיבי אימות קופה (verify-pin, unlock) - fallback מ-restaurant של המשתמש
+        if (!$tenantId && $request->user()?->restaurant) {
+            $tenantId = $request->user()->restaurant->tenant_id;
+        }
+
         if (!$tenantId) {
             return response()->json([
                 'message' => 'חובה לציין Tenant ID',

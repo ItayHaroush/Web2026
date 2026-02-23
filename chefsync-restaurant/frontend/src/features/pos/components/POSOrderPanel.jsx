@@ -71,21 +71,28 @@ function normalizeOrder(raw) {
 }
 
 export default function POSOrderPanel({ headers, posToken, mode = 'active' }) {
+    const [printMsg, setPrintMsg] = useState(null);
+
+    const showPrintMsg = (text, isError = false) => {
+        setPrintMsg({ text, isError });
+        setTimeout(() => setPrintMsg(null), 3000);
+    };
+
     const handlePrintReceipt = async (orderId) => {
         try {
             const res = await posApi.printReceipt(orderId, headers, posToken);
-            alert(res.data.message || 'נשלח להדפסה');
+            showPrintMsg(res.data.message || 'נשלח להדפסה', !res.data.success);
         } catch (e) {
-            alert(e.response?.data?.message || 'שגיאה בהדפסה');
+            showPrintMsg(e.response?.data?.message || 'שגיאה בהדפסה', true);
         }
     };
 
     const handlePrintKitchen = async (orderId) => {
         try {
             const res = await posApi.printKitchenTicket(orderId, headers, posToken);
-            alert(res.data.message || 'נשלח להדפסה');
+            showPrintMsg(res.data.message || 'נשלח להדפסה', !res.data.success);
         } catch (e) {
-            alert(e.response?.data?.message || 'שגיאה בהדפסה');
+            showPrintMsg(e.response?.data?.message || 'שגיאה בהדפסה', true);
         }
     };
     const [orders, setOrders] = useState([]);
@@ -151,7 +158,16 @@ export default function POSOrderPanel({ headers, posToken, mode = 'active' }) {
     }
 
     return (
-        <div className="h-full overflow-y-auto p-4 space-y-4 custom-scrollbar">
+        <div className="h-full overflow-y-auto p-4 space-y-4 custom-scrollbar relative">
+            {printMsg && (
+                <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[600] px-6 py-3 rounded-2xl font-bold text-sm shadow-2xl animate-in fade-in slide-in-from-top-4 duration-300 ${
+                    printMsg.isError
+                        ? 'bg-red-500 text-white'
+                        : 'bg-emerald-500 text-white'
+                }`}>
+                    {printMsg.text}
+                </div>
+            )}
             <h3 className="text-slate-400 text-xs font-black uppercase tracking-widest px-2">
                 {mode === 'active'
                     ? `הזמנות פעילות (${filtered.length})`
