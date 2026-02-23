@@ -29,6 +29,7 @@ class MenuItem extends Model
         'addons_group_scope',
         'max_addons',
         'dine_in_adjustment',
+        'addon_selection_weight',  // משקל בחירה כשהפריט מוצג כתוספת מקושרת לקטגוריה (null=ברירת מחדל קבוצה)
     ];
 
     protected $casts = [
@@ -40,6 +41,7 @@ class MenuItem extends Model
         'max_addons' => 'integer',
         'allergen_tags' => 'array',  // JSON array של אלרגנים
         'dine_in_adjustment' => 'decimal:2',
+        'addon_selection_weight' => 'integer',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];

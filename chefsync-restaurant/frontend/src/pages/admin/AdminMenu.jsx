@@ -64,6 +64,7 @@ export default function AdminMenu() {
         use_addons: false,
         addons_group_scope: [],
         dine_in_adjustment: '',
+        addon_selection_weight: '',  // ריק=ברירת מחדל קבוצה. 2=פריט אחד נספר כשתי בחירות (כשמוצג כתוספת מקושרת לקטגוריה)
     });
 
     useEffect(() => {
@@ -203,6 +204,9 @@ export default function AdminMenu() {
         if (form.dine_in_adjustment !== '' && form.dine_in_adjustment !== null) {
             formData.append('dine_in_adjustment', form.dine_in_adjustment);
         }
+        if (form.addon_selection_weight !== '' && form.addon_selection_weight != null) {
+            formData.append('addon_selection_weight', form.addon_selection_weight);
+        }
 
         console.log('📤 Submitting menu item:', {
             name: form.name,
@@ -334,6 +338,7 @@ export default function AdminMenu() {
             use_addons: Boolean(item.use_addons),
             addons_group_scope: groupScope,
             dine_in_adjustment: item.dine_in_adjustment ?? '',
+            addon_selection_weight: item.addon_selection_weight != null ? String(item.addon_selection_weight) : '',
         });
         setShowModal(true);
 
@@ -360,6 +365,7 @@ export default function AdminMenu() {
             use_addons: false,
             addons_group_scope: [],
             dine_in_adjustment: '',
+            addon_selection_weight: '',
         });
         setShowModal(true);
     };
@@ -377,6 +383,7 @@ export default function AdminMenu() {
             use_addons: false,
             addons_group_scope: [],
             dine_in_adjustment: '',
+            addon_selection_weight: '',
         });
     };
 
@@ -1104,6 +1111,23 @@ export default function AdminMenu() {
                                         <p className="text-[9px] text-gray-400 font-medium mt-2">
                                             ריק = שימוש בברירת מחדל מהקטגוריה. הזן 0 לביטול מפורש.
                                         </p>
+                                        <div className="mt-4 pt-4 border-t border-blue-100">
+                                            <label className="text-[10px] font-black text-blue-700 uppercase tracking-wide block mb-2">משקל בחירה כתוספת (כשמוצג מקישור לקטגוריה)</label>
+                                            <div className="flex items-center gap-2">
+                                                <input
+                                                    type="number"
+                                                    min="1"
+                                                    max="10"
+                                                    step="1"
+                                                    value={form.addon_selection_weight}
+                                                    onChange={(e) => setForm({ ...form, addon_selection_weight: e.target.value })}
+                                                    placeholder="ריק=ברירת מחדל"
+                                                    className="w-20 px-3 py-2 rounded-lg text-center font-black text-xs bg-blue-50 border border-blue-200 focus:ring-2 focus:ring-blue-300/50"
+                                                />
+                                                <span className="text-[10px] font-bold text-blue-600">1=בחירה אחת, 2=פריט אחד נספר כשתי בחירות</span>
+                                            </div>
+                                            <p className="text-[9px] text-gray-400 mt-1">ריק = שימוש בברירת מחדל מהקבוצה המקושרת</p>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

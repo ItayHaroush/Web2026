@@ -56,6 +56,7 @@ export default function AdminSalads() {
         source_type: 'manual',
         source_category_id: '',
         source_include_prices: true,
+        source_selection_weight: '1',
     });
 
     useEffect(() => {
@@ -237,6 +238,7 @@ export default function AdminSalads() {
                 source_type: group.source_type || 'manual',
                 source_category_id: group.source_category_id ? String(group.source_category_id) : '',
                 source_include_prices: group.source_include_prices !== undefined ? Boolean(group.source_include_prices) : true,
+                source_selection_weight: typeof group.source_selection_weight === 'number' ? String(group.source_selection_weight) : (group.source_selection_weight || '1'),
             });
         } else {
             setEditingGroup(null);
@@ -249,6 +251,7 @@ export default function AdminSalads() {
                 source_type: 'manual',
                 source_category_id: '',
                 source_include_prices: true,
+                source_selection_weight: '1',
             });
         }
         setGroupModalOpen(true);
@@ -266,6 +269,7 @@ export default function AdminSalads() {
             source_type: 'manual',
             source_category_id: '',
             source_include_prices: true,
+            source_selection_weight: '1',
         });
     };
 
@@ -290,6 +294,9 @@ export default function AdminSalads() {
             source_include_prices: groupForm.source_type === 'category'
                 ? Boolean(groupForm.source_include_prices)
                 : true,
+            source_selection_weight: groupForm.source_type === 'category'
+                ? Math.max(1, Math.min(10, Number(groupForm.source_selection_weight) || 1))
+                : 1,
         };
 
         setSaving(true);
@@ -1081,6 +1088,26 @@ export default function AdminSalads() {
                                                     <span className="text-[9px] opacity-70 font-bold">כלול במנה</span>
                                                 </button>
                                             </div>
+                                        </div>
+
+                                        {/* משקל בחירה לפריטים מהקטגוריה */}
+                                        <div className="mt-4 pt-4 border-t border-blue-100">
+                                            <label className="text-xs font-black text-gray-500 mr-2 uppercase tracking-[0.2em] mb-3 block">משקל בחירה לפריטים</label>
+                                            <div className="flex items-center gap-3">
+                                                <input
+                                                    type="number"
+                                                    min="1"
+                                                    max="10"
+                                                    step="1"
+                                                    value={groupForm.source_selection_weight || '1'}
+                                                    onChange={(e) => setGroupForm({ ...groupForm, source_selection_weight: e.target.value })}
+                                                    className="w-24 px-4 py-3 bg-blue-50 border-2 border-blue-200 rounded-2xl focus:ring-4 focus:ring-blue-300/30 text-gray-900 font-black text-center text-lg"
+                                                />
+                                                <span className="text-sm font-bold text-blue-700">= כמה בחירות נספרות? (1=בחירה אחת, 2=שתי בחירות וכו׳)</span>
+                                            </div>
+                                            <p className="text-[10px] text-blue-500 mt-2 font-bold">
+                                                ברירת מחדל: 1. משקל 2 = בחירת פריט אחד נספרת כשתי בחירות במקסימום
+                                            </p>
                                         </div>
                                     </div>
                                 )}
