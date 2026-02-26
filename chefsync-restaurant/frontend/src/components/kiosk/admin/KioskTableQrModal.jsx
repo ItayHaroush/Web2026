@@ -1,39 +1,75 @@
-import { useState, useRef } from 'react';
-import { FaTimes, FaDownload, FaPlus, FaQrcode } from 'react-icons/fa';
+import { useState, useRef, useEffect } from 'react';
+import { FaTimes, FaDownload, FaPlus, FaQrcode, FaSave, FaTrash } from 'react-icons/fa';
 import { QRCodeCanvas } from 'qrcode.react';
+import { saveKioskTables } from '../../../services/kioskService';
 
 const getKioskTableUrl = (token, tableNumber) =>
     `${window.location.origin}/kiosk/${token}?table=${tableNumber}`;
 
-export default function KioskTableQrModal({ kiosk, onClose }) {
+export default function KioskTableQrModal({ kiosk, maxTables = 10, onClose, onTablesUpdated }) {
     const [tableNumber, setTableNumber] = useState('');
-    const [generatedTables, setGeneratedTables] = useState([]);
+    const [tables, setTables] = useState([]);
+    const [saving, setSaving] = useState(false);
+    const [dirty, setDirty] = useState(false);
     const qrRefs = useRef({});
+
+    useEffect(() => {
+        if (kiosk?.tables && Array.isArray(kiosk.tables)) {
+            setTables(kiosk.tables);
+        }
+    }, [kiosk]);
 
     const addTable = () => {
         const num = tableNumber.trim();
         if (!num) return;
-        if (generatedTables.includes(num)) return;
-        setGeneratedTables(prev => [...prev, num]);
+        if (tables.includes(num)) return;
+        if (tables.length >= maxTables) {
+            alert(`ניתן להגדיר עד ${maxTables} שולחנות לקיוסק.`);
+            return;
+        }
+        setTables(prev => [...prev, num]);
         setTableNumber('');
+        setDirty(true);
     };
 
     const addRange = () => {
-        const from = 1;
         const to = parseInt(tableNumber) || 10;
-        const tables = [];
-        for (let i = from; i <= to; i++) {
+        const newTables = [];
+        for (let i = 1; i <= to; i++) {
             const num = String(i);
-            if (!generatedTables.includes(num)) {
-                tables.push(num);
+            if (!tables.includes(num) && !newTables.includes(num)) {
+                newTables.push(num);
             }
         }
-        setGeneratedTables(prev => [...prev, ...tables]);
+        const combined = [...tables, ...newTables];
+        if (combined.length > maxTables) {
+            alert(`ניתן להגדיר עד ${maxTables} שולחנות לקיוסק.`);
+            const allowed = combined.slice(0, maxTables);
+            setTables(allowed);
+        } else {
+            setTables(combined);
+        }
         setTableNumber('');
+        setDirty(true);
     };
 
     const removeTable = (num) => {
-        setGeneratedTables(prev => prev.filter(t => t !== num));
+        setTables(prev => prev.filter(t => t !== num));
+        setDirty(true);
+    };
+
+    const handleSave = async () => {
+        setSaving(true);
+        try {
+            await saveKioskTables(kiosk.id, tables);
+            setDirty(false);
+            onTablesUpdated?.();
+        } catch (error) {
+            const msg = error.response?.data?.message || 'שגיאה בשמירה';
+            alert(msg);
+        } finally {
+            setSaving(false);
+        }
     };
 
     const downloadQr = (tableNum) => {
@@ -50,7 +86,7 @@ export default function KioskTableQrModal({ kiosk, onClose }) {
     };
 
     const downloadAll = () => {
-        generatedTables.forEach((num, i) => {
+        tables.forEach((num, i) => {
             setTimeout(() => downloadQr(num), i * 200);
         });
     };
@@ -65,14 +101,28 @@ export default function KioskTableQrModal({ kiosk, onClose }) {
                             <FaQrcode className="text-purple-500" />
                             QR שולחנות - {kiosk.name}
                         </h2>
-                        <p className="text-sm text-gray-500 mt-1">צרו QR code לכל שולחן - הלקוח סורק ומזמין</p>
+                        <p className="text-sm text-gray-500 mt-1">
+                            {tables.length} / {maxTables} שולחנות
+                        </p>
                     </div>
-                    <button
-                        onClick={onClose}
-                        className="p-3 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-all"
-                    >
-                        <FaTimes size={20} />
-                    </button>
+                    <div className="flex items-center gap-2">
+                        {dirty && (
+                            <button
+                                onClick={handleSave}
+                                disabled={saving}
+                                className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-xl font-black text-sm hover:bg-green-600 transition-all disabled:opacity-50"
+                            >
+                                <FaSave size={14} />
+                                {saving ? 'שומר...' : 'שמור'}
+                            </button>
+                        )}
+                        <button
+                            onClick={onClose}
+                            className="p-3 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-all"
+                        >
+                            <FaTimes size={20} />
+                        </button>
+                    </div>
                 </div>
 
                 {/* Add Table */}
@@ -89,7 +139,8 @@ export default function KioskTableQrModal({ kiosk, onClose }) {
                         />
                         <button
                             onClick={addTable}
-                            className="px-5 py-3 bg-purple-500 text-white rounded-xl font-black hover:bg-purple-600 transition-all flex items-center gap-2"
+                            disabled={tables.length >= maxTables}
+                            className="px-5 py-3 bg-purple-500 text-white rounded-xl font-black hover:bg-purple-600 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             <FaPlus size={12} /> הוסף
                         </button>
@@ -101,11 +152,16 @@ export default function KioskTableQrModal({ kiosk, onClose }) {
                             1-{tableNumber || '10'}
                         </button>
                     </div>
+                    {tables.length >= maxTables && (
+                        <p className="text-xs text-amber-600 font-bold mt-2">
+                            הגעתם למגבלת {maxTables} שולחנות לקיוסק.
+                        </p>
+                    )}
                 </div>
 
                 {/* QR Codes Grid */}
                 <div className="flex-1 overflow-y-auto p-6">
-                    {generatedTables.length === 0 ? (
+                    {tables.length === 0 ? (
                         <div className="text-center py-16 text-gray-400">
                             <FaQrcode size={48} className="mx-auto mb-4 opacity-30" />
                             <p className="font-bold text-lg">הוסיפו מספרי שולחנות</p>
@@ -113,7 +169,7 @@ export default function KioskTableQrModal({ kiosk, onClose }) {
                         </div>
                     ) : (
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                            {generatedTables.map(num => (
+                            {tables.map(num => (
                                 <div key={num} className="bg-gray-50 rounded-2xl p-4 border border-gray-100 text-center group">
                                     <div className="flex justify-between items-center mb-3">
                                         <span className="text-sm font-black text-gray-700">שולחן {num}</span>
@@ -121,7 +177,7 @@ export default function KioskTableQrModal({ kiosk, onClose }) {
                                             onClick={() => removeTable(num)}
                                             className="text-gray-300 hover:text-red-500 transition-colors"
                                         >
-                                            <FaTimes size={12} />
+                                            <FaTrash size={12} />
                                         </button>
                                     </div>
                                     <div
@@ -151,17 +207,28 @@ export default function KioskTableQrModal({ kiosk, onClose }) {
                 </div>
 
                 {/* Footer */}
-                {generatedTables.length > 0 && (
+                {tables.length > 0 && (
                     <div className="p-6 border-t border-gray-100 shrink-0 flex items-center justify-between">
                         <p className="text-sm text-gray-500 font-bold">
-                            {generatedTables.length} שולחנות
+                            {tables.length} / {maxTables} שולחנות
                         </p>
-                        <button
-                            onClick={downloadAll}
-                            className="px-6 py-3 bg-purple-500 text-white rounded-xl font-black hover:bg-purple-600 transition-all flex items-center gap-2"
-                        >
-                            <FaDownload size={14} /> הורד הכל
-                        </button>
+                        <div className="flex items-center gap-3">
+                            {dirty && (
+                                <button
+                                    onClick={handleSave}
+                                    disabled={saving}
+                                    className="px-6 py-3 bg-green-500 text-white rounded-xl font-black hover:bg-green-600 transition-all flex items-center gap-2 disabled:opacity-50"
+                                >
+                                    <FaSave size={14} /> {saving ? 'שומר...' : 'שמור שולחנות'}
+                                </button>
+                            )}
+                            <button
+                                onClick={downloadAll}
+                                className="px-6 py-3 bg-purple-500 text-white rounded-xl font-black hover:bg-purple-600 transition-all flex items-center gap-2"
+                            >
+                                <FaDownload size={14} /> הורד הכל
+                            </button>
+                        </div>
                     </div>
                 )}
             </div>

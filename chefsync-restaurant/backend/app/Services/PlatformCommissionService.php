@@ -95,12 +95,17 @@ class PlatformCommissionService
 
         $config = $subscription->getEffectiveBillingConfig();
 
-        // Query orders across tenants (exclude cancelled and test orders)
+        // Query orders across tenants — רק הזמנות שהגיעו בפועל למסעדה
+        // (לא סופרים הזמנות אשראי שנתקעו ב-pending ולא אושרו)
         $orderQuery = Order::withoutGlobalScope('tenant')
             ->where('restaurant_id', $restaurant->id)
             ->whereBetween('created_at', [$periodStart, $periodEnd])
             ->where('is_test', false)
-            ->whereNotIn('status', ['cancelled']);
+            ->whereNotIn('status', ['cancelled'])
+            ->where(function ($q) {
+                $q->where('payment_method', '!=', 'credit_card')
+                    ->orWhere('payment_status', '!=', Order::PAYMENT_PENDING);
+            });
 
         $orderRevenue = (float) $orderQuery->sum('total_amount');
         $orderCount = $orderQuery->count();

@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
+import { useRestaurantStatus } from '../../context/RestaurantStatusContext';
 import AdminLayout from '../../layouts/AdminLayout';
+import ProFeatureGate from '../../components/ProFeatureGate';
 import posApi from '../../features/pos/api/posApi';
 import {
     FaClock,
@@ -36,6 +38,7 @@ function formatMinutes(minutes) {
 
 export default function AdminTimeReports() {
     const { getAuthHeaders, isManager } = useAdminAuth();
+    const { subscriptionInfo } = useRestaurantStatus();
     const [tab, setTab] = useState(isManager() ? 'manager' : 'employee');
     const [range, setRange] = useState(getDefaultRange);
     const [managerData, setManagerData] = useState(null);
@@ -44,13 +47,7 @@ export default function AdminTimeReports() {
     const [expandedUser, setExpandedUser] = useState(null);
     const [todayLogs, setTodayLogs] = useState([]);
 
-    useEffect(() => {
-        fetchData();
-    }, [tab, range]);
-
-    useEffect(() => {
-        fetchToday();
-    }, []);
+    const isBasicTier = subscriptionInfo?.tier === 'basic';
 
     const fetchToday = async () => {
         try {
@@ -77,6 +74,18 @@ export default function AdminTimeReports() {
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+        if (!isBasicTier) fetchData();
+    }, [tab, range, isBasicTier]);
+
+    useEffect(() => {
+        if (!isBasicTier) fetchToday();
+    }, [isBasicTier]);
+
+    if (isBasicTier) {
+        return <ProFeatureGate featureName="דוח נוכחות" />;
+    }
 
     const activeClockedIn = todayLogs.filter(l => l.is_active);
 

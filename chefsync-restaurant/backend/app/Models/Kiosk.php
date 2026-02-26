@@ -16,6 +16,7 @@ class Kiosk extends Model
         'is_active',
         'design_options',
         'require_name',
+        'tables',
         'last_seen_at',
     ];
 
@@ -23,6 +24,7 @@ class Kiosk extends Model
         'is_active' => 'boolean',
         'require_name' => 'boolean',
         'design_options' => 'array',
+        'tables' => 'array',
         'last_seen_at' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',

@@ -200,13 +200,15 @@ export default function AdminLayout({ children }) {
             path: '/admin/time-reports',
             icon: <FaUserClock />,
             label: 'דוח נוכחות',
-            show: true
+            show: true,
+            proOnly: true
         },
         {
             path: '/admin/pos',
             icon: <FaCashRegister />,
             label: 'קופה POS',
-            show: isManager()
+            show: isManager(),
+            proOnly: true
         }
     ].filter(item => item.show);
 

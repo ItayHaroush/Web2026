@@ -41,6 +41,12 @@ export const regenerateKioskToken = async (id) => {
     return response.data;
 };
 
+// Admin: שמירת שולחנות
+export const saveKioskTables = async (id, tables) => {
+    const response = await apiClient.post(`/admin/kiosks/${id}/tables`, { tables });
+    return response.data;
+};
+
 // Public: תפריט קיוסק (ללא אימות)
 export const getKioskMenu = async (token) => {
     const baseURL = apiClient.defaults.baseURL;

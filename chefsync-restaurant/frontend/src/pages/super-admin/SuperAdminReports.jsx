@@ -33,7 +33,8 @@ export default function SuperAdminReports() {
     const [activateModal, setActivateModal] = useState(null);
     const [activating, setActivating] = useState(false);
     const [resetting, setResetting] = useState(false);
-    const [activateForm, setActivateForm] = useState({ tier: 'basic', plan_type: 'monthly', note: '', record_payment: false, payment_reference: '', trial_days: 14 });
+    const [grantingFree, setGrantingFree] = useState(false);
+    const [activateForm, setActivateForm] = useState({ tier: 'basic', plan_type: 'monthly', note: '', record_payment: false, payment_reference: '', trial_days: 14, free_months: 1, free_note: '' });
 
     useEffect(() => {
         fetchData();
@@ -120,6 +121,25 @@ export default function SuperAdminReports() {
             toast.error(error.response?.data?.message || 'שגיאה בהחזרה לניסיון');
         } finally {
             setResetting(false);
+        }
+    };
+
+    const handleGrantFreeMonth = async () => {
+        if (!activateModal) return;
+        setGrantingFree(true);
+        try {
+            const headers = getAuthHeaders();
+            const res = await api.post(`/super-admin/billing/restaurants/${activateModal.id}/grant-free-month`, {
+                months: activateForm.free_months ?? 1,
+                note: activateForm.free_note || null,
+            }, { headers });
+            toast.success(res.data.message || 'הוארך בהצלחה!');
+            setActivateModal(null);
+            fetchData();
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'שגיאה בהארכה');
+        } finally {
+            setGrantingFree(false);
         }
     };
 
@@ -508,6 +528,39 @@ export default function SuperAdminReports() {
                             </div>
 
                             <div className="border-t border-gray-200 pt-4 mt-2">
+                                <p className="text-xs font-black text-amber-600 mb-3 flex items-center gap-1.5">
+                                    <FaCoins size={12} />
+                                    הארכה חינם (דחיית תשלום)
+                                </p>
+                                <div className="flex items-center gap-3 mb-3">
+                                    <label className="text-xs font-bold text-gray-600">חודשים:</label>
+                                    <input
+                                        type="number"
+                                        min={1}
+                                        max={12}
+                                        value={activateForm.free_months ?? 1}
+                                        onChange={(e) => setActivateForm(f => ({ ...f, free_months: parseInt(e.target.value) || 1 }))}
+                                        className="w-20 px-2 py-1.5 border border-gray-200 rounded-lg text-sm font-bold"
+                                    />
+                                </div>
+                                <input
+                                    type="text"
+                                    value={activateForm.free_note ?? ''}
+                                    onChange={(e) => setActivateForm(f => ({ ...f, free_note: e.target.value }))}
+                                    placeholder="סיבה (למשל: הביא מסעדה חדשה)..."
+                                    className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-amber-500/20 outline-none mb-3"
+                                />
+                                <button
+                                    onClick={handleGrantFreeMonth}
+                                    disabled={activating || resetting || grantingFree}
+                                    className="w-full px-4 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-black text-sm hover:from-amber-600 hover:to-orange-600 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                                >
+                                    <FaCoins size={12} />
+                                    {grantingFree ? 'מאריך...' : `האריך ${activateForm.free_months ?? 1} חודשים חינם`}
+                                </button>
+                            </div>
+
+                            <div className="border-t border-gray-200 pt-4 mt-2">
                                 <p className="text-xs font-black text-blue-600 mb-2">החזרה לתקופת ניסיון (בדיקת פלואו)</p>
                                 <div className="flex items-center gap-3">
                                     <label className="text-xs font-bold text-gray-600">ימי ניסיון:</label>
@@ -527,7 +580,7 @@ export default function SuperAdminReports() {
                             <div className="flex gap-3">
                                 <button
                                     onClick={handleActivate}
-                                    disabled={activating || resetting}
+                                    disabled={activating || resetting || grantingFree}
                                     className="flex-1 px-4 py-3 bg-green-600 text-white rounded-xl font-black text-sm hover:bg-green-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                                 >
                                     {activating ? 'מפעיל...' : 'הפעל מנוי'}
@@ -541,7 +594,7 @@ export default function SuperAdminReports() {
                             </div>
                             <button
                                 onClick={handleResetToTrial}
-                                disabled={activating || resetting}
+                                disabled={activating || resetting || grantingFree}
                                 className="w-full px-4 py-3 bg-blue-50 text-blue-700 border border-blue-200 rounded-xl font-black text-sm hover:bg-blue-100 transition-all disabled:opacity-50"
                             >
                                 {resetting ? 'מחזיר...' : 'החזר לתקופת ניסיון (אתחול מחדש)'}

@@ -30,6 +30,44 @@ class RestaurantPayment extends Model
         'paid_at' => 'datetime',
     ];
 
+    protected static function booted(): void
+    {
+        static::created(function (self $payment) {
+            if ($payment->status === 'paid') {
+                $payment->markMatchingInvoicePaid();
+            }
+        });
+    }
+
+    /**
+     * כשתשלום נרשם — מסמן את החשבונית התואמת כשולמה
+     */
+    private function markMatchingInvoicePaid(): void
+    {
+        $paidAt = $this->paid_at ?? $this->created_at ?? now();
+        $month = $paidAt->format('Y-m');
+
+        $invoice = MonthlyInvoice::where('restaurant_id', $this->restaurant_id)
+            ->where('month', $month)
+            ->whereIn('status', ['pending', 'overdue', 'draft'])
+            ->first();
+
+        // אם לא נמצאה לחודש הנוכחי, חפש את האחרונה הפתוחה
+        if (!$invoice) {
+            $invoice = MonthlyInvoice::where('restaurant_id', $this->restaurant_id)
+                ->whereIn('status', ['pending', 'overdue'])
+                ->orderByDesc('month')
+                ->first();
+        }
+
+        if ($invoice) {
+            $invoice->update([
+                'status'  => 'paid',
+                'paid_at' => $paidAt,
+            ]);
+        }
+    }
+
     public function restaurant(): BelongsTo
     {
         return $this->belongsTo(Restaurant::class);

@@ -114,10 +114,14 @@ class InvoicePdfService
         $subscription = RestaurantSubscription::where('restaurant_id', $restaurant->id)->first();
         $tierLabel = $restaurant->tier === 'pro' ? 'פרו' : 'בסיסי';
 
-        // Orders for the month
+        // Orders for the month — רק הזמנות שהגיעו בפועל למסעדה
         $orders = Order::where('restaurant_id', $restaurant->id)
             ->whereBetween('created_at', [$periodStart, $periodEnd])
             ->where('is_test', false)
+            ->where(function ($q) {
+                $q->where('payment_method', '!=', 'credit_card')
+                    ->orWhere('payment_status', '!=', Order::PAYMENT_PENDING);
+            })
             ->get();
 
         $activeOrders = $orders->where('status', '!=', 'cancelled');

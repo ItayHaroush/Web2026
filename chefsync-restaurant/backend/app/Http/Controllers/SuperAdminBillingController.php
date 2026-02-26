@@ -365,6 +365,68 @@ class SuperAdminBillingController extends Controller
         }
     }
 
+    public function grantFreeMonth(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'months' => 'nullable|integer|min:1|max:12',
+            'note' => 'nullable|string|max:500',
+        ]);
+
+        $restaurant = Restaurant::findOrFail($id);
+        $months = (int) ($validated['months'] ?? 1);
+
+        if (!in_array($restaurant->subscription_status, ['active', 'trial'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ניתן להאריך רק מנוי פעיל או בתקופת ניסיון.',
+            ], 422);
+        }
+
+        DB::beginTransaction();
+        try {
+            $baseDate = $restaurant->next_payment_at ?? $restaurant->subscription_ends_at ?? now();
+            $newDate = $baseDate->copy()->addMonths($months);
+
+            $restaurant->update([
+                'next_payment_at'      => $newDate,
+                'subscription_ends_at' => $newDate,
+            ]);
+
+            $subscription = RestaurantSubscription::where('restaurant_id', $restaurant->id)->first();
+            if ($subscription) {
+                $subBaseDate = $subscription->next_charge_at ?? $baseDate;
+                $subscription->update([
+                    'next_charge_at' => $subBaseDate->copy()->addMonths($months),
+                    'notes' => trim(
+                        ($subscription->notes ?? '') . "\n"
+                        . now()->format('Y-m-d') . " - הארכה חינם ({$months} חודשים)"
+                        . (($validated['note'] ?? null) ? ': ' . $validated['note'] : '')
+                    ),
+                ]);
+            }
+
+            DB::commit();
+
+            Log::info('Super admin granted free months', [
+                'restaurant_id' => $restaurant->id,
+                'months'        => $months,
+                'new_next_payment' => $newDate->toDateString(),
+                'by_user_id'    => $request->user()->id,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => "הוארך חינם {$months} חודשים למסעדה {$restaurant->name}. תשלום הבא: {$newDate->format('d/m/Y')}",
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'שגיאה: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
     public function chargeRestaurant(Request $request, $id)
     {
         $validated = $request->validate([

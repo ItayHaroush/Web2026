@@ -43,7 +43,8 @@ class KioskController extends Controller
                 'kiosks' => $kiosks,
                 'tier' => $tier,
                 'limits' => [
-                    'max_kiosks' => $tier === 'pro' ? 10 : 1,
+                    'max_kiosks' => $tier === 'pro' ? 5 : 1,
+                    'max_tables' => $tier === 'pro' ? 10 : 0,
                     'custom_design_allowed' => $tier === 'pro',
                 ],
             ],
@@ -62,7 +63,7 @@ class KioskController extends Controller
         $restaurant = Restaurant::withoutGlobalScopes()->find($user->restaurant_id);
         $tier = $restaurant->tier ?? 'basic';
 
-        $maxKiosks = $tier === 'pro' ? 10 : 1;
+        $maxKiosks = $tier === 'pro' ? 5 : 1;
         $currentCount = Kiosk::where('restaurant_id', $user->restaurant_id)->count();
         if ($currentCount >= $maxKiosks) {
             return response()->json([
@@ -126,6 +127,37 @@ class KioskController extends Controller
         ]);
     }
 
+    public function saveTables(Request $request, $id)
+    {
+        $request->validate([
+            'tables' => 'required|array',
+            'tables.*' => 'string|max:20',
+        ]);
+
+        $user = $request->user();
+        $kiosk = Kiosk::where('restaurant_id', $user->restaurant_id)->findOrFail($id);
+        $restaurant = Restaurant::withoutGlobalScopes()->find($user->restaurant_id);
+        $tier = $restaurant->tier ?? 'basic';
+
+        $maxTables = $tier === 'pro' ? 10 : 0;
+        $tables = array_unique(array_values($request->tables));
+
+        if (count($tables) > $maxTables) {
+            return response()->json([
+                'success' => false,
+                'message' => "ניתן להגדיר עד {$maxTables} שולחנות. שדרגו ל-Pro להגדלת המגבלה.",
+            ], 403);
+        }
+
+        $kiosk->update(['tables' => $tables]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'השולחנות נשמרו בהצלחה!',
+            'data' => ['tables' => $tables],
+        ]);
+    }
+
     public function destroy(Request $request, $id)
     {
         $user = $request->user();
@@ -155,11 +187,18 @@ class KioskController extends Controller
     {
         $user = $request->user();
         $kiosk = Kiosk::where('restaurant_id', $user->restaurant_id)->findOrFail($id);
+
+        $hadTables = !empty($kiosk->tables);
         $kiosk->update(['token' => (string) Str::uuid()]);
+
+        $message = 'הקישור חודש בהצלחה!';
+        if ($hadTables) {
+            $message .= ' שימו לב: כל קודי ה-QR של השולחנות שהודפסו לא יעבדו יותר ויש להדפיס חדשים.';
+        }
 
         return response()->json([
             'success' => true,
-            'message' => 'הקישור חודש בהצלחה!',
+            'message' => $message,
             'data' => [
                 'token' => $kiosk->token,
                 'view_url' => url("/kiosk/{$kiosk->token}"),
