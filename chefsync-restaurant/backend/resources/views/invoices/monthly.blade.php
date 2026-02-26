@@ -429,6 +429,9 @@
                         {{ $statusLabels[$invoice->status] ?? $invoice->status }}
                     </span>
                 </p>
+                @if($invoice->status === 'paid' && $invoice->paid_at)
+                <p class="info-line">תאריך תשלום: <span class="info-value">{{ $invoice->paid_at->format('d/m/Y') }}</span></p>
+                @endif
             </td>
         </tr>
     </table>
@@ -495,7 +498,13 @@
 
     <table class="total-box">
         <tr>
-            <td class="total-label">סה״כ לתשלום</td>
+            <td class="total-label">
+                @if($invoice->status === 'paid')
+                    סה״כ שולם
+                @else
+                    סה״כ לתשלום
+                @endif
+            </td>
             <td class="total-amount">{{ number_format($invoice->total_due, 2) }} &#8362;</td>
         </tr>
     </table>

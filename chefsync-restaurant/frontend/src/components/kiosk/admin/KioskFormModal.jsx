@@ -1,6 +1,33 @@
-import { FaTimes } from 'react-icons/fa';
+import { useRef, useState } from 'react';
+import { FaTimes, FaQrcode, FaCopy, FaCheck, FaExternalLinkAlt, FaDownload } from 'react-icons/fa';
+import { QRCodeCanvas } from 'qrcode.react';
 
 export default function KioskFormModal({ form, setForm, editKiosk, onSubmit, onClose }) {
+    const [copied, setCopied] = useState(false);
+    const qrRef = useRef(null);
+
+    const kioskUrl = editKiosk?.token
+        ? `${window.location.origin}/kiosk/${editKiosk.token}`
+        : '';
+
+    const copyLink = () => {
+        navigator.clipboard.writeText(kioskUrl).then(() => {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        });
+    };
+
+    const downloadQr = () => {
+        if (!qrRef.current) return;
+        const canvas = qrRef.current.querySelector('canvas');
+        if (!canvas) return;
+        const url = canvas.toDataURL('image/png');
+        const link = document.createElement('a');
+        link.download = `kiosk-${editKiosk?.name || 'qr'}.png`;
+        link.href = url;
+        link.click();
+    };
+
     return (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             <div className="bg-white rounded-[3rem] shadow-2xl max-w-lg w-full animate-in fade-in zoom-in-95 duration-300">
@@ -17,6 +44,51 @@ export default function KioskFormModal({ form, setForm, editKiosk, onSubmit, onC
                 </div>
 
                 <form onSubmit={onSubmit} className="p-8 space-y-6">
+                    {/* QR Code & Link (edit mode only) */}
+                    {editKiosk?.token && (
+                        <div className="space-y-4">
+                            <div className="flex justify-center p-4 bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl border border-amber-100">
+                                <div className="p-3 bg-white rounded-2xl shadow-md" ref={qrRef}>
+                                    <QRCodeCanvas value={kioskUrl} size={140} includeMargin level="H" />
+                                </div>
+                            </div>
+                            <div className="flex gap-2">
+                                <input
+                                    type="text"
+                                    readOnly
+                                    value={kioskUrl}
+                                    className="flex-1 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-600 font-mono text-xs truncate"
+                                    dir="ltr"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={copyLink}
+                                    className="p-3 bg-amber-50 text-amber-600 rounded-xl hover:bg-amber-100 transition-all"
+                                    title="העתק קישור"
+                                >
+                                    {copied ? <FaCheck size={14} /> : <FaCopy size={14} />}
+                                </button>
+                                <a
+                                    href={kioskUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="p-3 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-all"
+                                    title="פתח בחלון חדש"
+                                >
+                                    <FaExternalLinkAlt size={14} />
+                                </a>
+                                <button
+                                    type="button"
+                                    onClick={downloadQr}
+                                    className="p-3 bg-purple-50 text-purple-600 rounded-xl hover:bg-purple-100 transition-all"
+                                    title="הורד QR"
+                                >
+                                    <FaDownload size={14} />
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Name */}
                     <div>
                         <label className="block text-sm font-black text-gray-700 mb-2">שם הקיוסק</label>

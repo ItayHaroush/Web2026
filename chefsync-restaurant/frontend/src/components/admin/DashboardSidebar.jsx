@@ -60,34 +60,71 @@ export default function DashboardSidebar({
 
                 {/* Navigation Items */}
                 <nav className="flex-1 overflow-y-auto overflow-x-visible py-6 px-3 space-y-1.5 custom-scrollbar">
-                    {menuItems.map((item, index) => (
-                        <NavLink
-                            key={index}
-                            to={item.path}
-                            className={({ isActive }) => `
-                                flex items-center px-3 py-3 rounded-xl transition-all duration-200 group relative
-                                ${isActive
-                                    ? 'bg-orange-50 text-orange-600 font-bold shadow-sm ring-1 ring-orange-100 icon-active'
-                                    : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'}
-                                ${showCollapsed ? 'justify-center' : ''}
-                            `}
-                        >
-                            <span className={`text-xl transition-transform group-hover:scale-110 duration-200 flex-shrink-0 ${showCollapsed ? '' : 'ml-3'}`}>
-                                {item.icon}
-                            </span>
+                    {menuItems.map((item, index) => {
+                        const isLocked = isBasic && item.proOnly;
 
-                            {!showCollapsed && (
-                                <span className="truncate text-sm font-medium">{item.label}</span>
-                            )}
+                        if (isLocked) {
+                            return (
+                                <button
+                                    key={index}
+                                    onClick={() => navigate('/admin/paywall')}
+                                    className={`
+                                        w-full flex items-center px-3 py-3 rounded-xl transition-all duration-200 group relative
+                                        text-gray-400 hover:bg-amber-50 hover:text-amber-600
+                                        ${showCollapsed ? 'justify-center' : ''}
+                                    `}
+                                >
+                                    <span className={`text-xl transition-transform group-hover:scale-110 duration-200 flex-shrink-0 ${showCollapsed ? '' : 'ml-3'}`}>
+                                        {item.icon}
+                                    </span>
 
-                            {/* Tooltip for collapsed state */}
-                            {showCollapsed && (
-                                <div className="absolute left-full ml-2 bg-gray-900 text-white text-xs px-2 py-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none shadow-xl duration-200" style={{ zIndex: 9999 }}>
-                                    {item.label}
-                                </div>
-                            )}
-                        </NavLink>
-                    ))}
+                                    {!showCollapsed && (
+                                        <>
+                                            <span className="truncate text-sm font-medium">{item.label}</span>
+                                            <span className="mr-auto text-[9px] font-black bg-gradient-to-r from-amber-400 to-orange-500 text-white px-1.5 py-0.5 rounded-md uppercase leading-none">
+                                                Pro
+                                            </span>
+                                        </>
+                                    )}
+
+                                    {showCollapsed && (
+                                        <div className="absolute left-full ml-2 bg-gray-900 text-white text-xs px-2 py-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none shadow-xl duration-200 flex items-center gap-1.5" style={{ zIndex: 9999 }}>
+                                            {item.label}
+                                            <span className="text-[9px] font-black bg-amber-500 px-1 py-0.5 rounded text-white">Pro</span>
+                                        </div>
+                                    )}
+                                </button>
+                            );
+                        }
+
+                        return (
+                            <NavLink
+                                key={index}
+                                to={item.path}
+                                className={({ isActive }) => `
+                                    flex items-center px-3 py-3 rounded-xl transition-all duration-200 group relative
+                                    ${isActive
+                                        ? 'bg-orange-50 text-orange-600 font-bold shadow-sm ring-1 ring-orange-100 icon-active'
+                                        : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'}
+                                    ${showCollapsed ? 'justify-center' : ''}
+                                `}
+                            >
+                                <span className={`text-xl transition-transform group-hover:scale-110 duration-200 flex-shrink-0 ${showCollapsed ? '' : 'ml-3'}`}>
+                                    {item.icon}
+                                </span>
+
+                                {!showCollapsed && (
+                                    <span className="truncate text-sm font-medium">{item.label}</span>
+                                )}
+
+                                {showCollapsed && (
+                                    <div className="absolute left-full ml-2 bg-gray-900 text-white text-xs px-2 py-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none shadow-xl duration-200" style={{ zIndex: 9999 }}>
+                                        {item.label}
+                                    </div>
+                                )}
+                            </NavLink>
+                        );
+                    })}
                 </nav>
 
                 {/* Upgrade CTA for basic tier */}

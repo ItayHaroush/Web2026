@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAdminAuth } from '../../context/AdminAuthContext';
+import { useRestaurantStatus } from '../../context/RestaurantStatusContext';
+import ProFeatureGate from '../../components/ProFeatureGate';
 import usePosSession from './hooks/usePosSession';
 import POSPinLock from './components/POSPinLock';
 import POSHeader from './components/POSHeader';
@@ -13,6 +15,7 @@ import useBrowserPrint from './hooks/useBrowserPrint';
 export default function POSLite() {
     const navigate = useNavigate();
     const { isManager: isManagerFn } = useAdminAuth();
+    const { subscriptionInfo } = useRestaurantStatus();
     const isManager = isManagerFn();
     const {
         posToken,
@@ -30,6 +33,8 @@ export default function POSLite() {
     const [shift, setShift] = useState(null);
 
     useBrowserPrint(headers, posToken, isAuthenticated);
+
+    const isBasicTier = subscriptionInfo?.tier === 'basic';
 
     // Fullscreen on enter
     useEffect(() => {
@@ -61,7 +66,10 @@ export default function POSLite() {
         setShift(s);
     }, []);
 
-    // Not authenticated → PIN screen
+    if (isBasicTier) {
+        return <ProFeatureGate featureName="קופה POS" />;
+    }
+
     if (!isAuthenticated) {
         return (
             <POSPinLock

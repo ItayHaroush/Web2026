@@ -108,6 +108,7 @@ Route::prefix('super-admin')->middleware(['auth:sanctum', 'super_admin'])->group
     Route::put('/billing/restaurants/{id}/billing-config', [SuperAdminBillingController::class, 'updateBillingConfig'])->name('super-admin.billing.config.update');
     Route::post('/billing/restaurants/{id}/activate', [SuperAdminBillingController::class, 'manualActivateSubscription'])->name('super-admin.billing.activate');
     Route::post('/billing/restaurants/{id}/reset-trial', [SuperAdminBillingController::class, 'resetToTrial'])->name('super-admin.billing.reset-trial');
+    Route::post('/billing/restaurants/{id}/grant-free-month', [SuperAdminBillingController::class, 'grantFreeMonth'])->name('super-admin.billing.grant-free-month');
 
     // סטטוס סכימת בסיס נתונים ומיגרציות (אבחון)
     Route::get('/schema-status', [SuperAdminController::class, 'schemaStatus'])->name('super-admin.schema.status');
@@ -321,6 +322,7 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'tenant'])->group(function (
         Route::delete('/kiosks/{id}', [KioskController::class, 'destroy'])->name('admin.kiosks.delete');
         Route::post('/kiosks/{id}/toggle', [KioskController::class, 'toggle'])->name('admin.kiosks.toggle');
         Route::post('/kiosks/{id}/regenerate-token', [KioskController::class, 'regenerateToken'])->name('admin.kiosks.regenerate');
+        Route::post('/kiosks/{id}/tables', [KioskController::class, 'saveTables'])->name('admin.kiosks.tables');
 
         // ניהול מדפסות מטבח
         Route::get('/printers', [PrinterController::class, 'index'])->name('admin.printers.index');

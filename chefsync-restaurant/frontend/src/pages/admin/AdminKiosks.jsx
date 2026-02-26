@@ -76,9 +76,19 @@ export default function AdminKiosks() {
     };
 
     const handleRegenerate = async (id) => {
-        if (!confirm('לחדש את הקישור? הקישור הקודם יפסיק לעבוד.')) return;
-        try { await regenerateKioskToken(id); fetchKiosks(); }
-        catch (error) { console.error('Failed to regenerate token:', error); }
+        const kiosk = kiosks.find(k => k.id === id);
+        const hasTables = kiosk?.tables?.length > 0;
+        const msg = hasTables
+            ? 'לחדש את הקישור?\n\n⚠️ שימו לב: כל קודי ה-QR של השולחנות שהודפסו יפסיקו לעבוד ויש להדפיס חדשים!'
+            : 'לחדש את הקישור? הקישור הקודם יפסיק לעבוד.';
+        if (!confirm(msg)) return;
+        try {
+            const res = await regenerateKioskToken(id);
+            if (res.message) alert(res.message);
+            fetchKiosks();
+        } catch (error) {
+            console.error('Failed to regenerate token:', error);
+        }
     };
 
     const copyLink = (kiosk) => {
@@ -160,7 +170,7 @@ export default function AdminKiosks() {
                             <div className="flex-1">
                                 <h3 className="text-xl font-black text-gray-900">שדרגו ל-Pro</h3>
                                 <p className="text-gray-600 font-medium mt-1">
-                                    עד 5 קיוסקים, עיצוב מותאם אישית, ועוד תכונות מתקדמות
+                                    עד 5 קיוסקים, QR שולחנות, עיצוב מותאם אישית ועוד
                                 </p>
                             </div>
                         </div>
@@ -194,6 +204,7 @@ export default function AdminKiosks() {
                                 kiosk={kiosk}
                                 copiedId={copiedId}
                                 isManager={isManager()}
+                                tier={tier}
                                 onEdit={openEdit}
                                 onDelete={handleDelete}
                                 onToggle={handleToggle}
@@ -220,7 +231,9 @@ export default function AdminKiosks() {
                 {qrKiosk && (
                     <KioskTableQrModal
                         kiosk={qrKiosk}
+                        maxTables={limits.max_tables || 10}
                         onClose={() => setQrKiosk(null)}
+                        onTablesUpdated={fetchKiosks}
                     />
                 )}
             </div>

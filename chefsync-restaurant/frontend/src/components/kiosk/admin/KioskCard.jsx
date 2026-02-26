@@ -1,6 +1,7 @@
+import { useNavigate } from 'react-router-dom';
 import {
     FaTabletAlt, FaEdit, FaTrash, FaCopy, FaSync,
-    FaToggleOn, FaToggleOff, FaExternalLinkAlt, FaCheck, FaQrcode
+    FaToggleOn, FaToggleOff, FaExternalLinkAlt, FaCheck, FaQrcode, FaCrown
 } from 'react-icons/fa';
 
 const getKioskViewUrl = (token) => `${window.location.origin}/kiosk/${token}`;
@@ -9,6 +10,7 @@ export default function KioskCard({
     kiosk,
     copiedId,
     isManager,
+    tier = 'basic',
     onEdit,
     onDelete,
     onToggle,
@@ -16,6 +18,8 @@ export default function KioskCard({
     onCopyLink,
     onQrCode,
 }) {
+    const navigate = useNavigate();
+    const isBasic = tier === 'basic';
     return (
         <div
             className={`group bg-white rounded-[3rem] shadow-sm border p-8 flex flex-col gap-6 hover:shadow-2xl hover:-translate-y-1 transition-all duration-500 relative overflow-hidden ${!kiosk.is_active ? 'border-gray-200 opacity-60' : 'border-gray-100'}`}
@@ -30,13 +34,18 @@ export default function KioskCard({
                         <h3 className="font-black text-gray-900 text-xl leading-tight group-hover:text-amber-600 transition-colors">
                             {kiosk.name}
                         </h3>
-                        <div className="flex items-center gap-2 mt-1.5">
+                        <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                             <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border ${kiosk.require_name
                                     ? 'bg-blue-50 text-blue-600 border-blue-100'
                                     : 'bg-gray-100 text-gray-500 border-gray-100'
                                 }`}>
                                 {kiosk.require_name ? 'דורש שם' : 'ללא שם'}
                             </span>
+                            {kiosk.tables?.length > 0 && (
+                                <span className="px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border bg-purple-50 text-purple-600 border-purple-100">
+                                    {kiosk.tables.length} שולחנות
+                                </span>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -100,12 +109,24 @@ export default function KioskCard({
                     >
                         <FaSync size={14} /> חדש קישור
                     </button>
-                    <button
-                        onClick={() => onQrCode(kiosk)}
-                        className="flex items-center gap-2 px-4 py-2.5 bg-purple-50 text-purple-600 rounded-xl hover:bg-purple-600 hover:text-white transition-all text-sm font-black"
-                    >
-                        <FaQrcode size={14} /> QR שולחנות
-                    </button>
+                    {isBasic ? (
+                        <button
+                            onClick={() => navigate('/admin/paywall')}
+                            className="flex items-center gap-2 px-4 py-2.5 bg-gray-100 text-gray-400 rounded-xl hover:bg-amber-50 hover:text-amber-600 transition-all text-sm font-black"
+                        >
+                            <FaQrcode size={14} /> QR שולחנות
+                            <span className="text-[9px] font-black bg-gradient-to-r from-amber-400 to-orange-500 text-white px-1.5 py-0.5 rounded-md uppercase leading-none">
+                                Pro
+                            </span>
+                        </button>
+                    ) : (
+                        <button
+                            onClick={() => onQrCode(kiosk)}
+                            className="flex items-center gap-2 px-4 py-2.5 bg-purple-50 text-purple-600 rounded-xl hover:bg-purple-600 hover:text-white transition-all text-sm font-black"
+                        >
+                            <FaQrcode size={14} /> QR שולחנות
+                        </button>
+                    )}
                     <button
                         onClick={() => onDelete(kiosk.id)}
                         className="flex items-center gap-2 px-4 py-2.5 bg-rose-50 text-rose-600 rounded-xl hover:bg-rose-600 hover:text-white transition-all text-sm font-black"
