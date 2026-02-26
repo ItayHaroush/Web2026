@@ -13,3 +13,7 @@ export const createPaymentSession = (planType = 'monthly', tier = 'pro') =>
         plan_type: planType,
         tier: tier
     });
+
+export const getBillingInfo = () => api.get('/admin/billing/info');
+
+export const checkPendingPayment = () => api.post('/admin/subscription/check-pending');

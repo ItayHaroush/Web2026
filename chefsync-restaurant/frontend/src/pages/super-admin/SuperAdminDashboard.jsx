@@ -1021,11 +1021,11 @@ function RestaurantDetailModal({ restaurant: initialRestaurant, onClose, onImper
                                 </div>
                             </div>
 
-                            {/* מנוי */}
+                            {/* מנוי וחיוב */}
                             <div className="bg-gray-50 rounded-2xl p-5 border border-gray-100">
                                 <h3 className="text-sm font-black text-gray-900 mb-3 flex items-center gap-2">
                                     <FaCreditCard className="text-brand-primary" size={14} />
-                                    מנוי
+                                    מנוי וחיוב
                                 </h3>
                                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
                                     <div>
@@ -1040,7 +1040,7 @@ function RestaurantDetailModal({ restaurant: initialRestaurant, onClose, onImper
                                         <span className="text-xs text-gray-400 font-bold">תוכנית</span>
                                         <p className="font-bold text-gray-700 flex items-center gap-1.5 mt-0.5">
                                             <FaCrown className={restaurant.tier === 'pro' ? 'text-amber-500' : 'text-gray-400'} size={12} />
-                                            {restaurant.tier === 'pro' ? 'Pro' : 'Basic'}
+                                            {restaurant.tier === 'pro' ? 'Pro' : 'Basic'} ({restaurant.subscription_plan === 'yearly' ? 'שנתי' : 'חודשי'})
                                         </p>
                                     </div>
                                     {restaurant.monthly_price && (
@@ -1049,6 +1049,31 @@ function RestaurantDetailModal({ restaurant: initialRestaurant, onClose, onImper
                                             <p className="font-bold text-gray-700">₪{restaurant.monthly_price}</p>
                                         </div>
                                     )}
+                                    <div>
+                                        <span className="text-xs text-gray-400 font-bold">כרטיס אשראי</span>
+                                        <p className="font-bold text-gray-700 mt-0.5">
+                                            {restaurant.hyp_card_last4
+                                                ? <span className="text-green-600">****{restaurant.hyp_card_last4}</span>
+                                                : <span className="text-gray-400">לא הוגדר</span>
+                                            }
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <span className="text-xs text-gray-400 font-bold">תשלום אחרון</span>
+                                        <p className="font-bold text-gray-700 mt-0.5">
+                                            {restaurant.last_payment_at
+                                                ? new Date(restaurant.last_payment_at).toLocaleDateString('he-IL')
+                                                : '—'}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <span className="text-xs text-gray-400 font-bold">חיוב הבא</span>
+                                        <p className="font-bold text-gray-700 mt-0.5">
+                                            {restaurant.next_payment_at
+                                                ? new Date(restaurant.next_payment_at).toLocaleDateString('he-IL')
+                                                : '—'}
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
 

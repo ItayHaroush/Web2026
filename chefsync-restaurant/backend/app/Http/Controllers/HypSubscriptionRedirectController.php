@@ -60,7 +60,12 @@ class HypSubscriptionRedirectController extends Controller
         }
 
         $backendUrl = rtrim(config('app.url', 'http://localhost:8000'), '/');
+        $includesSetupFee = $sessionData['includes_setup_fee'] ?? false;
+        $setupFeeAmount = $sessionData['setup_fee_amount'] ?? 0;
         $info = "TakeEat - " . ucfirst($tier) . " " . ($planType === 'yearly' ? 'Yearly' : 'Monthly');
+        if ($includesSetupFee && $setupFeeAmount > 0) {
+            $info .= " + Setup {$setupFeeAmount}";
+        }
 
         $payParams = [
             'Masof'      => $this->hypService->getMasof(),

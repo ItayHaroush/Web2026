@@ -2528,6 +2528,8 @@ class AdminController extends Controller
 
         $subscription = $restaurant->subscription;
 
+        $tierFeatures = config("tier_features.{$restaurant->tier}", config('tier_features.basic', []));
+
         return response()->json([
             'success' => true,
             'data' => [
@@ -2542,8 +2544,149 @@ class AdminController extends Controller
                 'outstanding_amount' => $subscription?->outstanding_amount,
                 'next_charge_at' => $subscription?->next_charge_at,
                 'last_paid_at' => $subscription?->last_paid_at,
+                'features' => $tierFeatures,
             ],
         ]);
+    }
+
+    /**
+     * בדיקת תשלום שאבד (redirect מ-HYP לא חזר)
+     * נקרא כשמסעדן מגיע ל-paywall — בודק מול HYP אם יש עסקה מוצלחת שלא טופלה
+     */
+    public function checkPendingPayment(Request $request)
+    {
+        $restaurant = $request->user()->restaurant;
+
+        if (!$restaurant) {
+            return response()->json(['success' => false, 'recovered' => false], 404);
+        }
+
+        if ($restaurant->subscription_status === 'active' && $restaurant->hasAccess()) {
+            return response()->json(['success' => true, 'recovered' => false, 'reason' => 'already_active']);
+        }
+
+        $hypService = app(HypPaymentService::class);
+        if (!$hypService->isConfigured()) {
+            return response()->json(['success' => true, 'recovered' => false, 'reason' => 'hyp_not_configured']);
+        }
+
+        try {
+            $fromDate = now()->subDays(7)->format('d/m/Y');
+            $toDate = now()->format('d/m/Y');
+            $result = $hypService->getTransList($fromDate, $toDate);
+
+            if (!$result['success'] || empty($result['transactions'])) {
+                return response()->json(['success' => true, 'recovered' => false, 'reason' => 'no_transactions']);
+            }
+
+            $orderPrefix = "sub_{$restaurant->id}";
+
+            foreach ($result['transactions'] as $tx) {
+                $txOrder = $tx['Order'] ?? '';
+                $txId = $tx['Id'] ?? '';
+                $txCCode = (int) ($tx['CCode'] ?? -1);
+
+                if ($txCCode !== 0 || !str_starts_with($txOrder, $orderPrefix)) {
+                    continue;
+                }
+
+                $existingPayment = RestaurantPayment::where('restaurant_id', $restaurant->id)
+                    ->where('reference', $txId)
+                    ->where('status', 'paid')
+                    ->first();
+
+                if ($existingPayment) {
+                    continue;
+                }
+
+                Log::info('[RECOVERY] Found unprocessed HYP subscription payment', [
+                    'restaurant_id'  => $restaurant->id,
+                    'transaction_id' => $txId,
+                    'amount'         => $tx['Amount'] ?? '',
+                    'order'          => $txOrder,
+                ]);
+
+                $sessionData = \Illuminate\Support\Facades\Cache::pull("hyp_session:{$restaurant->id}");
+                $tier = $sessionData['tier'] ?? ($restaurant->tier ?? 'basic');
+                $planType = $sessionData['plan_type'] ?? 'monthly';
+
+                $prices = SuperAdminSettingsController::getPricingArray();
+                $planAmount = $prices[$tier][$planType === 'yearly' ? 'yearly' : 'monthly'];
+
+                $periodStart = now()->startOfDay();
+                $periodEnd = $planType === 'yearly' ? $periodStart->copy()->addYear() : $periodStart->copy()->addMonth();
+                $monthlyFee = $planType === 'yearly' ? round($planAmount / 12, 2) : $planAmount;
+
+                RestaurantSubscription::updateOrCreate(
+                    ['restaurant_id' => $restaurant->id],
+                    [
+                        'plan_type'      => $planType,
+                        'monthly_fee'    => $monthlyFee,
+                        'billing_day'    => now()->day > 28 ? 28 : now()->day,
+                        'currency'       => 'ILS',
+                        'status'         => 'active',
+                        'outstanding_amount' => 0,
+                        'next_charge_at' => $periodEnd,
+                        'last_paid_at'   => now(),
+                    ]
+                );
+
+                RestaurantPayment::create([
+                    'restaurant_id' => $restaurant->id,
+                    'amount'        => $planAmount,
+                    'currency'      => 'ILS',
+                    'period_start'  => $periodStart,
+                    'period_end'    => $periodEnd,
+                    'paid_at'       => now(),
+                    'method'        => 'hyp_credit_card',
+                    'reference'     => $txId,
+                    'status'        => 'paid',
+                ]);
+
+                $tokenResult = $hypService->getToken($txId);
+                if ($tokenResult['success']) {
+                    $restaurant->update([
+                        'hyp_card_token'  => $tokenResult['token'],
+                        'hyp_card_expiry' => $tokenResult['tmonth'] . $tokenResult['tyear'],
+                        'hyp_card_last4'  => $tokenResult['l4digit'],
+                    ]);
+                }
+
+                $restaurant->update([
+                    'subscription_status'   => 'active',
+                    'subscription_plan'     => $planType,
+                    'tier'                  => $tier,
+                    'ai_credits_monthly'    => $prices[$tier]['ai_credits'] ?? 0,
+                    'subscription_ends_at'  => $periodEnd,
+                    'last_payment_at'       => now(),
+                    'next_payment_at'       => $periodEnd,
+                    'payment_failed_at'     => null,
+                    'payment_failure_count' => 0,
+                ]);
+
+                Log::info('[RECOVERY] Subscription recovered from HYP transaction', [
+                    'restaurant_id'  => $restaurant->id,
+                    'tier'           => $tier,
+                    'plan_type'      => $planType,
+                    'transaction_id' => $txId,
+                ]);
+
+                return response()->json([
+                    'success'   => true,
+                    'recovered' => true,
+                    'tier'      => $tier,
+                    'plan_type' => $planType,
+                ]);
+            }
+
+            return response()->json(['success' => true, 'recovered' => false, 'reason' => 'no_matching_transactions']);
+        } catch (\Exception $e) {
+            Log::error('[RECOVERY] Failed to check HYP transactions', [
+                'restaurant_id' => $restaurant->id,
+                'error'         => $e->getMessage(),
+            ]);
+            return response()->json(['success' => true, 'recovered' => false, 'reason' => 'error']);
+        }
     }
 
     public function activateSubscription(Request $request)
@@ -2564,20 +2707,10 @@ class AdminController extends Controller
 
         $planType = $validated['plan_type'];
         $tier = $validated['tier'];
+        $previousTier = $restaurant->tier;
+        $isDowngrade = ($previousTier === 'pro' && $tier === 'basic');
 
-        // מחירים לפי tier
-        $prices = [
-            'basic' => [
-                'monthly' => 450,
-                'yearly' => 4500,
-                'ai_credits' => 0, // אין AI ב-Basic
-            ],
-            'pro' => [
-                'monthly' => 600,
-                'yearly' => 5000,
-                'ai_credits' => 500, // 500 קרדיטים ב-Pro
-            ],
-        ];
+        $prices = SuperAdminSettingsController::getPricingArray();
 
         $chargeAmount = $prices[$tier][$planType === 'yearly' ? 'yearly' : 'monthly'];
         $monthlyFeeForTracking = $planType === 'yearly'
@@ -2591,6 +2724,14 @@ class AdminController extends Controller
         $periodEnd = $planType === 'yearly'
             ? $periodStart->copy()->addYear()
             : $periodStart->copy()->addMonth();
+
+        if ($isDowngrade) {
+            Log::info('Subscription downgrade', [
+                'restaurant_id' => $restaurant->id,
+                'from'          => $previousTier,
+                'to'            => $tier,
+            ]);
+        }
 
         $subscription = RestaurantSubscription::updateOrCreate(
             ['restaurant_id' => $restaurant->id],
@@ -2619,59 +2760,49 @@ class AdminController extends Controller
         ]);
 
         $restaurant->update([
-            'subscription_status' => 'active',
-            'subscription_plan' => $planType,
-            'tier' => $tier, // שמירת tier
-            'ai_credits_monthly' => $prices[$tier]['ai_credits'], // הגדרת קרדיטים
-            'subscription_ends_at' => $periodEnd,
-            'last_payment_at' => now(),
-            'next_payment_at' => $periodEnd,
+            'subscription_status'   => 'active',
+            'subscription_plan'     => $planType,
+            'tier'                  => $tier,
+            'ai_credits_monthly'    => $prices[$tier]['ai_credits'] ?? 0,
+            'subscription_ends_at'  => $periodEnd,
+            'last_payment_at'       => now(),
+            'next_payment_at'       => $periodEnd,
+            'payment_failed_at'     => null,
+            'payment_failure_count' => 0,
         ]);
 
-        // עדכון/יצירת AI Credits למנוי Pro
-        if ($tier === 'pro' && $prices[$tier]['ai_credits'] > 0) {
-            $aiCredit = \App\Models\AiCredit::where('restaurant_id', $restaurant->id)->first();
-
-            if ($aiCredit) {
-                // עדכון לקרדיטים מלאים (500) אחרי תשלום + עדכון tier
-                $aiCredit->update([
-                    'tier' => $tier, // ✅ עדכון tier ל-pro
-                    'monthly_limit' => $prices[$tier]['ai_credits'],
-                    'credits_remaining' => $prices[$tier]['ai_credits'], // איפוס ל-500
+        // AI Credits
+        if ($tier === 'pro' && ($prices[$tier]['ai_credits'] ?? 0) > 0) {
+            \App\Models\AiCredit::updateOrCreate(
+                ['restaurant_id' => $restaurant->id],
+                [
+                    'tenant_id'           => $restaurant->tenant_id,
+                    'tier'                => $tier,
+                    'monthly_limit'       => $prices[$tier]['ai_credits'],
+                    'credits_remaining'   => $prices[$tier]['ai_credits'],
+                    'credits_used'        => 0,
                     'billing_cycle_start' => now()->startOfMonth(),
-                    'billing_cycle_end' => now()->endOfMonth(),
-                ]);
-            } else {
-                // יצירה חדשה אם לא קיים
-                \App\Models\AiCredit::create([
-                    'tenant_id' => $restaurant->tenant_id,
-                    'restaurant_id' => $restaurant->id,
-                    'tier' => $tier,
-                    'monthly_limit' => $prices[$tier]['ai_credits'],
-                    'credits_remaining' => $prices[$tier]['ai_credits'],
-                    'credits_used' => 0,
-                    'billing_cycle_start' => now()->startOfMonth(),
-                    'billing_cycle_end' => now()->endOfMonth(),
-                ]);
-            }
+                    'billing_cycle_end'   => now()->endOfMonth(),
+                ]
+            );
         } elseif ($tier === 'basic') {
-            // ✅ גם אם עובר ל-Basic, נוודא עדכון
             $aiCredit = \App\Models\AiCredit::where('restaurant_id', $restaurant->id)->first();
             if ($aiCredit) {
                 $aiCredit->update([
-                    'tier' => 'basic',
-                    'monthly_limit' => 0,
+                    'tier'              => 'basic',
+                    'monthly_limit'     => 0,
                     'credits_remaining' => 0,
                 ]);
             }
         }
 
         return response()->json([
-            'success' => true,
-            'message' => 'המנוי הופעל בהצלחה',
+            'success'      => true,
+            'message'      => $isDowngrade ? 'התוכנית עודכנה ל-Basic' : 'המנוי הופעל בהצלחה',
             'subscription' => $subscription,
-            'restaurant' => $restaurant->fresh(),
-            'payment' => $payment,
+            'restaurant'   => $restaurant->fresh(),
+            'payment'      => $payment,
+            'downgraded'   => $isDowngrade,
         ]);
     }
 
@@ -2706,27 +2837,35 @@ class AdminController extends Controller
             ]);
         }
 
-        $prices = [
-            'basic' => ['monthly' => 450, 'yearly' => 4500],
-            'pro'   => ['monthly' => 600, 'yearly' => 5000],
-        ];
+        $prices = SuperAdminSettingsController::getPricingArray();
 
         $tier = $validated['tier'];
         $planType = $validated['plan_type'];
-        $amount = $prices[$tier][$planType === 'yearly' ? 'yearly' : 'monthly'];
+        $planAmount = $prices[$tier][$planType === 'yearly' ? 'yearly' : 'monthly'];
 
+        // דמי הקמה — נוספים לתשלום הראשון אם טרם נגבו
+        $setupFee = 0;
+        $includesSetupFee = false;
+        if (!$restaurant->hyp_setup_fee_charged) {
+            $setupFee = ($tier === 'pro') ? 100 : 200;
+            $includesSetupFee = true;
+        }
+
+        $totalAmount = $planAmount + $setupFee;
         $owner = $request->user();
 
-        // שמירת session data ב-cache (15 דקות) — HypSubscriptionRedirectController שולף את זה
         \Illuminate\Support\Facades\Cache::put(
             "hyp_session:{$restaurant->id}",
             [
-                'tier'        => $tier,
-                'plan_type'   => $planType,
-                'amount'      => $amount,
-                'client_name' => $owner->name ?? '',
-                'email'       => $owner->email ?? '',
-                'phone'       => $restaurant->phone ?? '',
+                'tier'               => $tier,
+                'plan_type'          => $planType,
+                'amount'             => $totalAmount,
+                'plan_amount'        => $planAmount,
+                'includes_setup_fee' => $includesSetupFee,
+                'setup_fee_amount'   => $setupFee,
+                'client_name'        => $owner->name ?? '',
+                'email'              => $owner->email ?? '',
+                'phone'              => $restaurant->phone ?? '',
             ],
             now()->addMinutes(15)
         );
@@ -2735,9 +2874,63 @@ class AdminController extends Controller
         $redirectUrl = "{$backendUrl}/pay/hyp/subscription/{$restaurant->id}";
 
         return response()->json([
+            'success'            => true,
+            'hyp_ready'          => true,
+            'payment_url'        => $redirectUrl,
+            'plan_amount'        => $planAmount,
+            'setup_fee'          => $setupFee,
+            'includes_setup_fee' => $includesSetupFee,
+            'total_amount'       => $totalAmount,
+        ]);
+    }
+
+    /**
+     * מידע על החשבון — חבילה נוכחית, חיובים, שדרוג/שדרוג לאחור
+     */
+    public function billingInfo(Request $request)
+    {
+        $restaurant = $request->user()->restaurant;
+
+        if (!$restaurant) {
+            return response()->json([
+                'success' => false,
+                'message' => 'לא נמצאה מסעדה למשתמש',
+            ], 404);
+        }
+
+        $subscription = $restaurant->subscription;
+        $prices = SuperAdminSettingsController::getPricingArray();
+        $currentTier = $restaurant->tier ?? 'basic';
+        $currentPlan = $restaurant->subscription_plan ?? 'monthly';
+
+        $setupFeeCharged = (bool) $restaurant->hyp_setup_fee_charged;
+        $setupFee = !$setupFeeCharged ? (($currentTier === 'pro') ? 100 : 200) : 0;
+
+        $recentPayments = RestaurantPayment::where('restaurant_id', $restaurant->id)
+            ->orderByDesc('paid_at')
+            ->limit(10)
+            ->get(['amount', 'currency', 'paid_at', 'method', 'reference', 'status']);
+
+        return response()->json([
             'success' => true,
-            'hyp_ready' => true,
-            'payment_url' => $redirectUrl,
+            'data' => [
+                'current_tier'          => $currentTier,
+                'current_plan'          => $currentPlan,
+                'subscription_status'   => $restaurant->subscription_status,
+                'subscription_ends_at'  => $restaurant->subscription_ends_at,
+                'next_payment_at'       => $restaurant->next_payment_at,
+                'last_payment_at'       => $restaurant->last_payment_at,
+                'trial_ends_at'         => $restaurant->trial_ends_at,
+                'has_access'            => $restaurant->hasAccess(),
+                'days_left_in_trial'    => $restaurant->getDaysLeftInTrial(),
+                'setup_fee_charged'     => $setupFeeCharged,
+                'pending_setup_fee'     => $setupFee,
+                'outstanding_amount'    => $subscription?->outstanding_amount ?? 0,
+                'pricing'               => $prices,
+                'recent_payments'       => $recentPayments,
+                'has_card_on_file'      => !empty($restaurant->hyp_card_token),
+                'card_last4'            => $restaurant->hyp_card_last4,
+            ],
         ]);
     }
 
