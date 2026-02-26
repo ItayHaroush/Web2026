@@ -31,6 +31,7 @@ import AdminPaywall from './pages/admin/AdminPaywall';
 import PaymentDemo from './pages/admin/PaymentDemo';
 import PaymentSuccess from './pages/admin/PaymentSuccess';
 import PaymentError from './pages/admin/PaymentError';
+import AdminBilling from './pages/admin/AdminBilling';
 import AdminDeliveryZones from './pages/admin/AdminDeliveryZones';
 import AdminCoupons from './pages/admin/AdminCoupons';
 import AdminPrinters from './pages/admin/AdminPrinters';
@@ -298,6 +299,14 @@ function AppRoutes() {
         element={
           <AdminRoute>
             <PaymentError />
+          </AdminRoute>
+        }
+      />
+      <Route
+        path="/admin/billing"
+        element={
+          <AdminRoute>
+            <AdminBilling />
           </AdminRoute>
         }
       />

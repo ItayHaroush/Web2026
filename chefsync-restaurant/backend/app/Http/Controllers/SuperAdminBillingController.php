@@ -82,6 +82,9 @@ class SuperAdminBillingController extends Controller
             ->withSum(['payments as total_paid_ytd' => function ($q) {
                 $q->whereYear('paid_at', now()->year)->where('status', 'paid');
             }], 'amount')
+            ->withCount(['payments as payments_count' => function ($q) {
+                $q->where('status', 'paid');
+            }])
             ->withCount(['orders as orders_count' => function ($q) {
                 $q->whereNotIn('status', ['cancelled'])->where('is_test', false);
             }])
@@ -97,6 +100,14 @@ class SuperAdminBillingController extends Controller
             });
         }
 
+        if ($request->filled('status')) {
+            $query->where('subscription_status', $request->status);
+        }
+
+        if ($request->filled('tier')) {
+            $query->where('tier', $request->tier);
+        }
+
         $restaurants = $query->orderBy('created_at', 'desc')->paginate(50);
 
         $restaurants->getCollection()->transform(function ($restaurant) {
@@ -110,8 +121,13 @@ class SuperAdminBillingController extends Controller
             $restaurant->total_paid_ytd = $restaurant->total_paid_ytd ?? 0;
             $restaurant->orders_count = $restaurant->orders_count ?? 0;
             $restaurant->order_revenue = $restaurant->order_revenue ?? 0;
+            $restaurant->payments_count = $restaurant->payments_count ?? 0;
             $restaurant->trial_ends_at = $restaurant->trial_ends_at;
             $restaurant->tier = $restaurant->tier;
+            $restaurant->subscription_plan = $restaurant->subscription_plan;
+            $restaurant->has_card = !empty($restaurant->hyp_card_token);
+            $restaurant->card_last4 = $restaurant->hyp_card_last4;
+            $restaurant->setup_fee_charged = (bool) $restaurant->hyp_setup_fee_charged;
             $restaurant->billing_model = $subscription?->billing_model ?? 'flat';
             $restaurant->base_fee = $subscription?->base_fee ?? 0;
             $restaurant->commission_percent = $subscription?->commission_percent ?? 0;
@@ -122,6 +138,101 @@ class SuperAdminBillingController extends Controller
             'success' => true,
             'restaurants' => $restaurants,
         ]);
+    }
+
+    /**
+     * הפעלת מנוי ידנית על ידי סופר אדמין (ללא תשלום)
+     */
+    public function manualActivateSubscription(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'tier' => 'required|in:basic,pro',
+            'plan_type' => 'required|in:monthly,yearly',
+            'note' => 'nullable|string|max:500',
+        ]);
+
+        $restaurant = Restaurant::findOrFail($id);
+        $prices = SuperAdminSettingsController::getPricingArray();
+        $tier = $validated['tier'];
+        $planType = $validated['plan_type'];
+
+        $chargeAmount = $prices[$tier][$planType === 'yearly' ? 'yearly' : 'monthly'];
+        $monthlyFee = $planType === 'yearly' ? round($chargeAmount / 12, 2) : $chargeAmount;
+
+        $periodStart = now()->startOfDay();
+        $periodEnd = $planType === 'yearly' ? $periodStart->copy()->addYear() : $periodStart->copy()->addMonth();
+
+        DB::beginTransaction();
+        try {
+            $subscription = RestaurantSubscription::updateOrCreate(
+                ['restaurant_id' => $restaurant->id],
+                [
+                    'plan_type'          => $planType,
+                    'monthly_fee'        => $monthlyFee,
+                    'billing_day'        => now()->day > 28 ? 28 : now()->day,
+                    'currency'           => 'ILS',
+                    'status'             => 'active',
+                    'outstanding_amount' => 0,
+                    'next_charge_at'     => $periodEnd,
+                    'last_paid_at'       => now(),
+                ]
+            );
+
+            if ($validated['note'] ?? null) {
+                $subscription->update([
+                    'notes' => trim(($subscription->notes ?? '') . "\n" . now()->format('Y-m-d') . " - הפעלה ידנית: " . $validated['note']),
+                ]);
+            }
+
+            $restaurant->update([
+                'subscription_status'   => 'active',
+                'subscription_plan'     => $planType,
+                'tier'                  => $tier,
+                'ai_credits_monthly'    => $prices[$tier]['ai_credits'] ?? 0,
+                'subscription_ends_at'  => $periodEnd,
+                'last_payment_at'       => now(),
+                'next_payment_at'       => $periodEnd,
+                'payment_failed_at'     => null,
+                'payment_failure_count' => 0,
+            ]);
+
+            // AI Credits
+            if ($tier === 'pro' && ($prices[$tier]['ai_credits'] ?? 0) > 0) {
+                \App\Models\AiCredit::updateOrCreate(
+                    ['restaurant_id' => $restaurant->id],
+                    [
+                        'tenant_id'           => $restaurant->tenant_id,
+                        'tier'                => $tier,
+                        'monthly_limit'       => $prices[$tier]['ai_credits'],
+                        'credits_remaining'   => $prices[$tier]['ai_credits'],
+                        'credits_used'        => 0,
+                        'billing_cycle_start' => now()->startOfMonth(),
+                        'billing_cycle_end'   => now()->endOfMonth(),
+                    ]
+                );
+            }
+
+            DB::commit();
+
+            Log::info('Super admin manually activated subscription', [
+                'restaurant_id' => $restaurant->id,
+                'tier'          => $tier,
+                'plan_type'     => $planType,
+                'by_user_id'    => $request->user()->id,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => "המנוי הופעל ידנית למסעדה {$restaurant->name}",
+                'restaurant' => $restaurant->fresh(),
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'שגיאה בהפעלת מנוי: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 
     public function chargeRestaurant(Request $request, $id)
