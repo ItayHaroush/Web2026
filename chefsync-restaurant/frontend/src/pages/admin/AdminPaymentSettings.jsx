@@ -1,10 +1,16 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../../layouts/AdminLayout';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import paymentSettingsService from '../../services/paymentSettingsService';
-import { FaCreditCard, FaMoneyBillWave, FaCheckCircle, FaExclamationTriangle, FaExternalLinkAlt, FaShieldAlt, FaSpinner, FaInfoCircle, FaWrench } from 'react-icons/fa';
+import { getBillingInfo } from '../../services/subscriptionService';
+import { FaCreditCard, FaMoneyBillWave, FaCheckCircle, FaExclamationTriangle, FaExternalLinkAlt, FaShieldAlt, FaSpinner, FaInfoCircle, FaWrench, FaCrown } from 'react-icons/fa';
+
+const STATUS_LABELS = { trial: 'תקופת ניסיון', active: 'פעיל', suspended: 'מושהה', expired: 'פג תוקף', cancelled: 'מבוטל' };
+const STATUS_COLORS = { trial: 'bg-blue-100 text-blue-700', active: 'bg-emerald-100 text-emerald-700', suspended: 'bg-red-100 text-red-700', expired: 'bg-gray-100 text-gray-600', cancelled: 'bg-gray-100 text-gray-600' };
 
 export default function AdminPaymentSettings() {
+    const navigate = useNavigate();
     const { getAuthHeaders, isOwner, isSuperAdmin } = useAdminAuth();
 
     const [loading, setLoading] = useState(true);
@@ -25,10 +31,21 @@ export default function AdminPaymentSettings() {
     const [tier, setTier] = useState('basic');
     const [setupFeeCharged, setSetupFeeCharged] = useState(false);
     const [agreedToFee, setAgreedToFee] = useState(false);
+    const [billing, setBilling] = useState(null);
 
     useEffect(() => {
         fetchSettings();
+        fetchBilling();
     }, []);
+
+    const fetchBilling = async () => {
+        try {
+            const { data } = await getBillingInfo();
+            setBilling(data?.data || {});
+        } catch (e) {
+            // non-fatal for payment settings
+        }
+    };
 
     const fetchSettings = async () => {
         try {
@@ -168,10 +185,63 @@ export default function AdminPaymentSettings() {
                         <FaCreditCard size={32} />
                     </div>
                     <div>
-                        <h1 className="text-4xl font-black text-gray-900 tracking-tight">הגדרות תשלום</h1>
-                        <p className="text-gray-500 font-medium mt-1">ניהול אמצעי תשלום ומסוף סליקה</p>
+                        <h1 className="text-4xl font-black text-gray-900 tracking-tight">הגדרות תשלום וחשבון</h1>
+                        <p className="text-gray-500 font-medium mt-1">ניהול חשבון, אמצעי תשלום ומסוף סליקה</p>
                     </div>
                 </div>
+
+                {/* חשבון וחיוב - תוכנית נוכחית, חיוב, תשלומים */}
+                {billing && (
+                    <div className="bg-white rounded-[2rem] shadow-sm border border-gray-100 p-8 mx-4 space-y-6">
+                        <h2 className="text-xl font-black text-gray-900">חשבון וחיוב</h2>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                            <InfoBox label="תוכנית" value={billing.current_tier === 'pro' ? 'Pro' : 'Basic'} />
+                            <InfoBox label="מחזור" value={billing.current_plan === 'yearly' ? 'שנתי' : 'חודשי'} />
+                            <InfoBox label="חיוב הבא" value={billing.next_payment_at ? new Date(billing.next_payment_at).toLocaleDateString('he-IL') : '-'} />
+                            <InfoBox label="סטטוס" value={STATUS_LABELS[billing.subscription_status] || billing.subscription_status} />
+                        </div>
+                        {billing.subscription_status === 'trial' && billing.days_left_in_trial > 0 && (
+                            <div className="bg-blue-50 rounded-xl p-4 border border-blue-100 text-sm text-blue-700 font-bold">
+                                נותרו {billing.days_left_in_trial} ימים בתקופת הניסיון
+                            </div>
+                        )}
+                        {billing.has_card_on_file ? (
+                            <div className="flex items-center gap-2 text-sm">
+                                <FaCreditCard className="text-gray-500" /> כרטיס: **** {billing.card_last4}
+                            </div>
+                        ) : (
+                            <div className="bg-amber-50 rounded-xl p-4 border border-amber-200 text-sm text-amber-700 font-bold">
+                                לא הוגדר אמצעי תשלום. יש לבצע תשלום כדי לשמור כרטיס.
+                            </div>
+                        )}
+                        {billing.outstanding_amount > 0 && (
+                            <div className="bg-red-50 rounded-xl p-4 border border-red-200">
+                                <p className="font-black text-red-800">יתרת חוב: ₪{billing.outstanding_amount}</p>
+                                <p className="text-red-600 text-xs mt-1">יתרה זו תיגבה בחיוב הבא</p>
+                            </div>
+                        )}
+                        {billing.recent_payments?.length > 0 && (
+                            <div>
+                                <p className="font-bold text-gray-700 mb-2">תשלומים אחרונים</p>
+                                <div className="space-y-2">
+                                    {billing.recent_payments.slice(0, 3).map((p, i) => (
+                                        <div key={i} className="flex justify-between text-sm">
+                                            <span>₪{p.amount} • {p.paid_at ? new Date(p.paid_at).toLocaleDateString('he-IL') : '-'}</span>
+                                            <span className={p.status === 'paid' ? 'text-emerald-600' : 'text-gray-500'}>{p.status === 'paid' ? 'שולם' : p.status}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                        <button
+                            onClick={() => navigate('/admin/paywall')}
+                            className="bg-gradient-to-r from-brand-primary to-brand-secondary text-white px-6 py-3 rounded-xl font-bold text-sm hover:shadow-lg transition-all flex items-center gap-2"
+                        >
+                            <FaCrown size={14} />
+                            {billing.subscription_status === 'trial' ? 'הפעל מנוי' : 'שנה תוכנית'}
+                        </button>
+                    </div>
+                )}
 
                 {/* Message */}
                 {message && (
@@ -241,27 +311,26 @@ export default function AdminPaymentSettings() {
                 {/* HYP Terminal Setup - shown only if credit card is enabled */}
                 {creditCardEnabled && (
                     <div className="bg-white rounded-[2rem] shadow-sm border border-gray-100 p-8 mx-4 space-y-6">
-                        <h2 className="text-xl font-black text-gray-900">הגדרות מסוף HYP</h2>
+                        <h2 className="text-xl font-black text-gray-900">חיבור אשראי והקמת מסוף</h2>
 
-                        {/* Info Banner - HYP Pricing */}
+                        {/* סקשן מאוחד: HYP + דמי חיבור TakeEat */}
                         <div className="p-5 rounded-xl bg-indigo-50 border border-indigo-100 space-y-4">
                             <div className="flex items-start gap-3">
                                 <FaCreditCard className="text-indigo-600 mt-1 flex-shrink-0" size={18} />
                                 <div className="text-sm text-indigo-800">
                                     <p className="font-black text-base mb-2">סליקה באשראי (דרך HYP)</p>
-                                    <p>הסליקה מתבצעת ישירות מול חברת HYP.</p>
-                                    <p className="font-bold">הכסף מכל עסקה נכנס ישירות לחשבון המסעדה.</p>
+                                    <p>הסליקה מתבצעת ישירות מול חברת HYP. הכסף מכל עסקה נכנס ישירות לחשבון המסעדה.</p>
                                 </div>
                             </div>
 
                             <div className="bg-white/60 rounded-lg p-4 space-y-2 text-sm text-indigo-900">
-                                <p className="font-black text-xs uppercase tracking-wider text-indigo-600 mb-2">עלויות מול HYP:</p>
-                                <div className="space-y-1.5">
-                                    <p className="flex items-center gap-2"><span>💳</span> <span>פתיחת מסוף: <strong>200₪ חד-פעמי</strong></span></p>
-                                    <p className="flex items-center gap-2"><span>📦</span> <span>תשלום חודשי: <strong>65₪</strong> (עד 150 פעולות)</span></p>
-                                    <p className="flex items-center gap-2"><span>💰</span> <span>עמלת אשראי: <strong>לפי חברת האשראי</strong></span></p>
-                                </div>
-                                <p className="text-xs text-indigo-600 mt-2">כולל חשבוניות אוטומטיות וסליקה מאובטחת</p>
+                                <p className="font-black text-xs uppercase tracking-wider text-indigo-600 mb-2">חיבור אשראי — עלויות:</p>
+                                <ul className="space-y-1.5">
+                                    <li>פתיחת מסוף ב-HYP: 200₪ חד-פעמי (ישירות ל-HYP)</li>
+                                    <li>תשלום חודשי ל-HYP: 65₪ (עד 150 פעולות)</li>
+                                    <li>דמי חיבור TakeEat: <strong>{setupFee}₪</strong> חד-פעמי — הטמעה, אימות, תמיכה</li>
+                                </ul>
+                                <p className="text-xs text-indigo-600 mt-2">דמי החיבור ייגבו פעם אחת ויתווספו לחיוב החודשי הקרוב</p>
                             </div>
 
                             <a
@@ -273,23 +342,9 @@ export default function AdminPaymentSettings() {
                                 להרשמה ופתיחת מסוף סליקה ב-HYP
                                 <FaExternalLinkAlt size={10} />
                             </a>
-                        </div>
 
-                        {/* TakeEat Connection Fee - Checkbox Agreement */}
-                        {!setupFeeCharged ? (
-                            <div className="p-5 rounded-xl bg-amber-50 border border-amber-200 space-y-3">
-                                <div className="flex items-start gap-3">
-                                    <FaWrench className="text-amber-600 mt-1 flex-shrink-0" size={16} />
-                                    <div className="text-sm text-amber-900">
-                                        <p className="font-black mb-1">דמי הקמה - חיבור אשראי למערכת TakeEat</p>
-                                        <p className="text-amber-700">חיבור המסוף למערכת כולל הטמעה, בדיקות, אימות ותמיכה שוטפת.</p>
-                                    </div>
-                                </div>
-                                <div className="bg-white/70 rounded-lg p-4 space-y-2">
-                                    <p className="text-sm font-bold text-amber-900">דמי הקמה חד-פעמיים: <span className="text-lg">{setupFee}₪</span></p>
-                                    <p className="text-xs text-amber-700">הסכום ייגבה פעם אחת בעת הגדרת החיבור ויתווסף לחיוב החודשי הקרוב.</p>
-                                </div>
-                                <label className="flex items-start gap-3 cursor-pointer select-none">
+                            {!setupFeeCharged ? (
+                                <label className="flex items-start gap-3 cursor-pointer select-none mt-4 p-3 bg-amber-50/80 rounded-xl border border-amber-200">
                                     <input
                                         type="checkbox"
                                         checked={agreedToFee}
@@ -297,16 +352,16 @@ export default function AdminPaymentSettings() {
                                         className="w-5 h-5 rounded accent-amber-600 mt-0.5 flex-shrink-0"
                                     />
                                     <span className="text-sm font-bold text-amber-900">
-                                        קראתי ואני מאשר/ת את דמי ההקמה החד-פעמיים ({setupFee}₪)
+                                        קראתי ואני מאשר/ת את דמי החיבור החד-פעמיים ({setupFee}₪) ל-TakeEat
                                     </span>
                                 </label>
-                            </div>
-                        ) : (
-                            <div className="p-4 rounded-xl bg-green-50 border border-green-200 flex items-center gap-3">
-                                <FaCheckCircle className="text-green-600 flex-shrink-0" size={18} />
-                                <p className="text-sm font-bold text-green-800">דמי הקמה שולמו - החיבור פעיל</p>
-                            </div>
-                        )}
+                            ) : (
+                                <div className="p-3 rounded-xl bg-green-50 border border-green-200 flex items-center gap-3 mt-2">
+                                    <FaCheckCircle className="text-green-600 flex-shrink-0" size={18} />
+                                    <p className="text-sm font-bold text-green-800">דמי חיבור שולמו — החיבור פעיל</p>
+                                </div>
+                            )}
+                        </div>
 
                         {/* Terminal ID */}
                         <div>
@@ -462,5 +517,14 @@ export default function AdminPaymentSettings() {
                 </div>
             </div>
         </AdminLayout>
+    );
+}
+
+function InfoBox({ label, value }) {
+    return (
+        <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+            <p className="text-gray-400 text-xs font-bold mb-1">{label}</p>
+            <p className="font-black text-gray-900 text-sm">{value}</p>
+        </div>
     );
 }

@@ -10,7 +10,6 @@ import {
     FaArrowLeft,
     FaExclamationTriangle,
     FaSpinner,
-    FaInfoCircle,
     FaArrowDown
 } from 'react-icons/fa';
 
@@ -96,8 +95,7 @@ export default function PaymentDemo() {
     }
 
     const displayPlanAmount = planAmount || amount;
-    const displaySetupFee = setupFee || 0;
-    const displayTotal = displayPlanAmount + displaySetupFee;
+    const displayTotal = displayPlanAmount;
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-gray-100 py-12 px-4">
@@ -159,16 +157,6 @@ export default function PaymentDemo() {
                                 חבילת {tier === 'pro' ? 'Pro' : 'Basic'} ({billingCycle === 'yearly' ? 'שנתי' : 'חודשי'})
                             </span>
                         </div>
-
-                        {displaySetupFee > 0 && (
-                            <div className="flex justify-between items-center">
-                                <span className="font-bold text-gray-900">₪{displaySetupFee}</span>
-                                <span className="text-gray-600 font-medium flex items-center gap-1">
-                                    דמי הקמת חיבור מסוף (חד-פעמי)
-                                    <FaInfoCircle className="text-gray-400 text-xs" />
-                                </span>
-                            </div>
-                        )}
 
                         <div className="border-t border-gray-200 pt-3 flex justify-between items-center">
                             <span className="text-3xl font-black text-gray-900">
