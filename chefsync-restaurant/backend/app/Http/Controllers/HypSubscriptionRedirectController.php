@@ -84,8 +84,8 @@ class HypSubscriptionRedirectController extends Controller
             'Fild1'      => (string) $restaurantId,
             'Fild2'      => $tier,
             'Fild3'      => $planType,
-            'SuccessUrl' => "{$backendUrl}/api/payments/hyp/subscription/success",
-            'ErrorUrl'   => "{$backendUrl}/api/payments/hyp/subscription/error",
+            'SuccessUrl' => "{$backendUrl}/api/payments/hyp/subscription/success?rid={$restaurantId}",
+            'ErrorUrl'   => "{$backendUrl}/api/payments/hyp/subscription/error?rid={$restaurantId}",
         ];
 
         if (!empty($sessionData['client_name'])) {

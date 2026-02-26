@@ -372,6 +372,7 @@ class HypPaymentService
             'amount'         => $request->query('Amount', ''),
             'acode'          => $request->query('ACode', ''),
             'order'          => $request->query('Order', ''),
+            'rid'            => $request->query('rid', ''),
             'fild1'          => $request->query('Fild1', ''),
             'fild2'          => $request->query('Fild2', ''),
             'fild3'          => $request->query('Fild3', ''),

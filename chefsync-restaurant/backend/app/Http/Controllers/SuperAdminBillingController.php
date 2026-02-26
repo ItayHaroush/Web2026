@@ -149,6 +149,8 @@ class SuperAdminBillingController extends Controller
             'tier' => 'required|in:basic,pro',
             'plan_type' => 'required|in:monthly,yearly',
             'note' => 'nullable|string|max:500',
+            'record_payment' => 'nullable|boolean',  // true = תשלום בוצע בפועל — לרישום בדוחות
+            'payment_reference' => 'nullable|string|max:100',  // מזהה עסקה מ-HYP אם יש
         ]);
 
         $restaurant = Restaurant::findOrFail($id);
@@ -178,11 +180,27 @@ class SuperAdminBillingController extends Controller
                 ]
             );
 
-            if ($validated['note'] ?? null) {
+            $noteLine = ($validated['record_payment'] ?? false)
+                ? now()->format('Y-m-d') . " - אישור תשלום התקבל (HYP)" . ($validated['note'] ? ": " . $validated['note'] : '')
+                : (($validated['note'] ?? null) ? now()->format('Y-m-d') . " - הפעלה ידנית: " . $validated['note'] : null);
+            if ($noteLine) {
                 $subscription->update([
-                    'notes' => trim(($subscription->notes ?? '') . "\n" . now()->format('Y-m-d') . " - הפעלה ידנית: " . $validated['note']),
+                    'notes' => trim(($subscription->notes ?? '') . "\n" . $noteLine),
                 ]);
             }
+
+            // רישום התשלום — תמיד (למעקב סופר אדמין) — method מציין אם בוצע בפועל
+            RestaurantPayment::create([
+                'restaurant_id' => $restaurant->id,
+                'amount'        => $chargeAmount,
+                'currency'      => 'ILS',
+                'period_start'  => $periodStart,
+                'period_end'    => $periodEnd,
+                'paid_at'       => now(),
+                'method'        => ($validated['record_payment'] ?? false) ? 'hyp_credit_card' : 'manual',
+                'reference'     => $validated['payment_reference'] ?? ('manual_' . now()->format('YmdHis')),
+                'status'        => 'paid',
+            ]);
 
             $restaurant->update([
                 'subscription_status'   => 'active',

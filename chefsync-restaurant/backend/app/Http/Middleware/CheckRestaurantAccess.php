@@ -70,6 +70,9 @@ class CheckRestaurantAccess
         }
 
         if (!$restaurant->hasAccess()) {
+            // #region agent log
+            @file_put_contents(base_path('../.cursor/debug-d93c44.log'), json_encode(['sessionId'=>'d93c44','location'=>'CheckRestaurantAccess.php:402','message'=>'Blocked - hasAccess false','data'=>['tenant_id'=>$tenantId,'restaurant_id'=>$restaurant->id,'subscription_status'=>$restaurant->subscription_status,'subscription_ends_at'=>$restaurant->subscription_ends_at?->toIso8601String()??null,'trial_ends_at'=>$restaurant->trial_ends_at?->toIso8601String()??null],'hypothesisId'=>'H3','timestamp'=>round(microtime(true)*1000)])."\n", FILE_APPEND | LOCK_EX);
+            // #endregion
             $reason = $restaurant->subscription_status === 'suspended'
                 ? 'payment_failed'
                 : 'subscription_inactive';
