@@ -1,10 +1,8 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { FaCheckCircle, FaArrowLeft, FaSpinner } from 'react-icons/fa';
 import { getSubscriptionStatus, checkPendingPayment } from '../../services/subscriptionService';
 
 export default function PaymentSuccess() {
-    const navigate = useNavigate();
     const [verified, setVerified] = useState(false);
     const [verifying, setVerifying] = useState(true);
     const [subData, setSubData] = useState(null);
@@ -94,7 +92,7 @@ export default function PaymentSuccess() {
                     )}
 
                     <button
-                        onClick={() => navigate('/admin/dashboard')}
+                        onClick={() => { window.location.href = '/admin/dashboard'; }}
                         className="w-full bg-gradient-to-r from-brand-primary to-brand-secondary text-white py-4 rounded-xl font-black text-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all flex items-center justify-center gap-3"
                     >
                         כניסה לפאנל

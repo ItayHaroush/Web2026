@@ -139,10 +139,10 @@ apiClient.interceptors.response.use(
 
         if (error.response?.status === 402) {
             const hasAdminToken = !!(localStorage.getItem('authToken') || localStorage.getItem('admin_token'));
-            // Don't auto-redirect for AI endpoints - let components handle it
             const isAiEndpoint = error.config?.url?.includes('/ai/');
-            const isAlreadyOnPaywall = ['/admin/paywall', '/admin/payment'].includes(window.location.pathname);
-            if (hasAdminToken && !isAiEndpoint && !isAlreadyOnPaywall) {
+            const pathname = window.location.pathname;
+            const isPaymentFlow = pathname.startsWith('/admin/paywall') || pathname.startsWith('/admin/payment');
+            if (hasAdminToken && !isAiEndpoint && !isPaymentFlow) {
                 try {
                     localStorage.setItem('paywall_data', JSON.stringify(error.response?.data?.data || {}));
                 } catch { }

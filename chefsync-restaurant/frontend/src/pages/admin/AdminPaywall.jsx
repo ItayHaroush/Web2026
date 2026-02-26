@@ -32,11 +32,15 @@ export default function AdminPaywall() {
         const load = async () => {
             setLoading(true);
             try {
-                // בדיקת תשלום שאבד (redirect מ-HYP לא חזר)
+                // בדיקת תשלום שאבד / מנוי שכבר פעיל
                 try {
                     const recoveryRes = await checkPendingPayment();
                     if (recoveryRes.data?.recovered) {
                         toast.success('נמצא תשלום שלא עובד — המנוי הופעל בהצלחה!');
+                        navigate('/admin/dashboard');
+                        return;
+                    }
+                    if (recoveryRes.data?.reason === 'already_active') {
                         navigate('/admin/dashboard');
                         return;
                     }
