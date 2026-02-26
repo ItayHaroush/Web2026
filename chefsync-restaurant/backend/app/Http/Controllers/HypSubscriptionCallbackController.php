@@ -40,6 +40,9 @@ class HypSubscriptionCallbackController extends Controller
             'order'          => $params['order'] ?? '',
             'all_params'     => array_keys($params),
         ]);
+        // #region agent log
+        @file_put_contents(base_path('../.cursor/debug-d93c44.log'), json_encode(['sessionId'=>'d93c44','location'=>'HypSubscriptionCallbackController.php:callback-entry','message'=>'HYP success redirect','data'=>['restaurantId'=>$restaurantId,'order'=>$params['order']??'','rid'=>$params['rid']??''],'hypothesisId'=>'H1','timestamp'=>round(microtime(true)*1000)])."\n", FILE_APPEND | LOCK_EX);
+        // #endregion
 
         if (!$params['success']) {
             Log::warning('[HYP-SUB] Step 2/7: CCode not 0 — payment not approved', $params);
@@ -70,6 +73,9 @@ class HypSubscriptionCallbackController extends Controller
                 'restaurant_id' => $restaurantId,
                 'transaction_id' => $transactionId,
             ]);
+            // #region agent log
+            @file_put_contents(base_path('../.cursor/debug-d93c44.log'), json_encode(['sessionId'=>'d93c44','location'=>'HypSubscriptionCallbackController.php:idempotent','message'=>'Early exit - idempotent','data'=>['restaurantId'=>$restaurantId],'hypothesisId'=>'H1','timestamp'=>round(microtime(true)*1000)])."\n", FILE_APPEND | LOCK_EX);
+            // #endregion
             return $this->redirectToFrontend('success');
         }
         Log::info('[HYP-SUB] Step 4/7: Not yet processed — continuing');
@@ -132,6 +138,12 @@ class HypSubscriptionCallbackController extends Controller
 
         // הפעלת מנוי
         $this->activateSubscription($restaurant, $tier, $planType, $transactionId, $includesSetupFee, $setupFeeAmount);
+
+        // #region agent log
+        $r = $restaurant->fresh();
+        $paymentsCount = RestaurantPayment::where('restaurant_id', $restaurant->id)->where('status', 'paid')->count();
+        @file_put_contents(base_path('../.cursor/debug-d93c44.log'), json_encode(['sessionId'=>'d93c44','location'=>'HypSubscriptionCallbackController.php:post-activate','message'=>'Subscription activated','data'=>['restaurantId'=>$restaurant->id,'tenantId'=>$r->tenant_id??'','subscription_status'=>$r->subscription_status??'','subscription_ends_at'=>$r->subscription_ends_at?->toIso8601String()??'','payments_paid_count'=>$paymentsCount],'hypothesisId'=>'H1','timestamp'=>round(microtime(true)*1000)])."\n", FILE_APPEND | LOCK_EX);
+        // #endregion
 
         Log::info('[HYP-SUB] Step 7/7: Subscription activated — redirecting to frontend', [
             'restaurant_id'  => $restaurant->id,
@@ -286,7 +298,7 @@ class HypSubscriptionCallbackController extends Controller
     /**
      * HYP overwrites Fild1/Fild2/Fild3 with customer data.
      * Primary: parse restaurant ID from Order param ("sub_{id}").
-     * Fallback: try Fild1 (works if HYP didn't overwrite it).
+     * Fallback: Fild1, then rid (our param in SuccessUrl).
      */
     private function extractRestaurantId(array $params): ?string
     {
@@ -297,6 +309,10 @@ class HypSubscriptionCallbackController extends Controller
 
         if (!empty($params['fild1']) && is_numeric($params['fild1'])) {
             return $params['fild1'];
+        }
+
+        if (!empty($params['rid']) && is_numeric($params['rid'])) {
+            return $params['rid'];
         }
 
         return null;

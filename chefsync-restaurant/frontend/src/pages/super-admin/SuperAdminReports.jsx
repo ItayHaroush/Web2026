@@ -32,7 +32,7 @@ export default function SuperAdminReports() {
     const [tierFilter, setTierFilter] = useState('');
     const [activateModal, setActivateModal] = useState(null);
     const [activating, setActivating] = useState(false);
-    const [activateForm, setActivateForm] = useState({ tier: 'basic', plan_type: 'monthly', note: '' });
+    const [activateForm, setActivateForm] = useState({ tier: 'basic', plan_type: 'monthly', note: '', record_payment: false, payment_reference: '' });
 
     useEffect(() => {
         fetchData();
@@ -443,13 +443,33 @@ export default function SuperAdminReports() {
                                     <option value="yearly">שנתי</option>
                                 </select>
                             </div>
+                            <label className="flex items-center gap-3 cursor-pointer p-3 rounded-xl bg-amber-50 border border-amber-100">
+                                <input
+                                    type="checkbox"
+                                    checked={activateForm.record_payment ?? false}
+                                    onChange={(e) => setActivateForm(f => ({ ...f, record_payment: e.target.checked }))}
+                                    className="w-4 h-4 rounded accent-amber-600"
+                                />
+                                <span className="text-sm font-bold text-amber-900">תשלום בוצע בפועל — לרישום בדוחות (מסומן = תשלום HYP מאושר)</span>
+                            </label>
+                            <div>
+                                <label className="text-xs font-black text-gray-500 mb-1 block">מזהה עסקה מ-HYP (אופציונלי)</label>
+                                <input
+                                    type="text"
+                                    value={activateForm.payment_reference ?? ''}
+                                    onChange={(e) => setActivateForm(f => ({ ...f, payment_reference: e.target.value }))}
+                                    placeholder="מזהה עסקה מתקבל HYP"
+                                    className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-primary/20 outline-none"
+                                    dir="ltr"
+                                />
+                            </div>
                             <div>
                                 <label className="text-xs font-black text-gray-500 mb-1 block">הערה (אופציונלי)</label>
                                 <input
                                     type="text"
-                                    value={activateForm.note}
+                                    value={activateForm.note ?? ''}
                                     onChange={(e) => setActivateForm(f => ({ ...f, note: e.target.value }))}
-                                    placeholder="סיבת הפעלה ידנית..."
+                                    placeholder="סיבת הפעלה / פרטים נוספים..."
                                     className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-primary/20 outline-none"
                                 />
                             </div>
