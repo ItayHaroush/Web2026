@@ -54,6 +54,8 @@ class AuthController extends Controller
                 'restaurant_name' => $restaurant?->name,
                 'tenant_id' => $restaurant?->tenant_id,
                 'restaurant' => $restaurant,
+                'has_access' => $restaurant?->hasAccess() ?? true,
+                'subscription_status' => $restaurant?->subscription_status,
             ],
             'token' => $token,
         ]);

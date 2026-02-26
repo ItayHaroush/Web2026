@@ -1,13 +1,30 @@
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useEffect } from 'react';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { FaTimesCircle, FaArrowLeft, FaArrowRight } from 'react-icons/fa';
+
+const getEnv = (key, fallback) => {
+    try { return import.meta?.env?.[key] ?? fallback; } catch { return fallback; }
+};
+const PROD_API = (getEnv('VITE_API_URL_PRODUCTION', 'https://api.chefsync.co.il/api')).trim();
+const API = getEnv('PROD', false) ? PROD_API : (getEnv('VITE_API_URL_LOCAL', PROD_API)).trim();
 
 /**
  * דף שגיאת תשלום - HYP redirect חזרה
  */
 export default function PaymentError() {
     const navigate = useNavigate();
+    const location = useLocation();
     const [searchParams] = useSearchParams();
     const reason = searchParams.get('reason') || 'payment_declined';
+
+    useEffect(() => {
+        // HYP מפנה ישירות לפרונט במקום לבקאנד — מעבירים את הפרמטרים לבקאנד (לתיעוד)
+        const params = new URLSearchParams(location.search);
+        const hasHypParams = params.has('Id') || params.has('CCode') || (params.has('Order') && params.get('Order')?.startsWith('sub_')) || params.has('rid');
+        if (hasHypParams) {
+            window.location.href = `${API}/payments/hyp/subscription/error${location.search}`;
+        }
+    }, [location.search]);
 
     const reasonText = {
         payment_declined: 'התשלום נדחה על ידי חברת האשראי.',
