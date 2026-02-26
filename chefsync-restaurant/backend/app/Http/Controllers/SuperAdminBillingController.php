@@ -32,15 +32,18 @@ class SuperAdminBillingController extends Controller
                 ->sum('monthly_price');
         }
 
-        // Order-based revenue data
-        $orderRevenueMonth = Order::whereBetween('created_at', [now()->startOfMonth(), now()->endOfMonth()])
+        // Order-based revenue data — רק הזמנות שהגיעו למסעדה (לא תקועות בתשלום)
+        $orderRevenueMonth = Order::visibleToRestaurant()
+            ->whereBetween('created_at', [now()->startOfMonth(), now()->endOfMonth()])
             ->whereNotIn('status', ['cancelled'])
             ->where('is_test', false)
             ->sum('total_amount');
-        $orderRevenueTotal = Order::whereNotIn('status', ['cancelled'])
+        $orderRevenueTotal = Order::visibleToRestaurant()
+            ->whereNotIn('status', ['cancelled'])
             ->where('is_test', false)
             ->sum('total_amount');
-        $ordersThisMonth = Order::whereBetween('created_at', [now()->startOfMonth(), now()->endOfMonth()])
+        $ordersThisMonth = Order::visibleToRestaurant()
+            ->whereBetween('created_at', [now()->startOfMonth(), now()->endOfMonth()])
             ->whereNotIn('status', ['cancelled'])
             ->where('is_test', false)
             ->count();
@@ -86,10 +89,18 @@ class SuperAdminBillingController extends Controller
                 $q->where('status', 'paid');
             }])
             ->withCount(['orders as orders_count' => function ($q) {
-                $q->whereNotIn('status', ['cancelled'])->where('is_test', false);
+                $q->whereNotIn('status', ['cancelled'])->where('is_test', false)
+                    ->where(function ($q2) {
+                        $q2->where('payment_method', '!=', 'credit_card')
+                            ->orWhere('payment_status', '!=', \App\Models\Order::PAYMENT_PENDING);
+                    });
             }])
             ->withSum(['orders as order_revenue' => function ($q) {
-                $q->whereNotIn('status', ['cancelled'])->where('is_test', false);
+                $q->whereNotIn('status', ['cancelled'])->where('is_test', false)
+                    ->where(function ($q2) {
+                        $q2->where('payment_method', '!=', 'credit_card')
+                            ->orWhere('payment_status', '!=', \App\Models\Order::PAYMENT_PENDING);
+                    });
             }], 'total_amount');
 
         if ($request->filled('search')) {
@@ -249,6 +260,107 @@ class SuperAdminBillingController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'שגיאה בהפעלת מנוי: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * החזרה לתקופת ניסיון — אתחול מחדש לבדיקת פלואו
+     * POST /super-admin/billing/restaurants/{id}/reset-trial
+     */
+    public function resetToTrial(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'tier' => 'required|in:basic,pro',
+            'trial_days' => 'nullable|integer|min:1|max:90',
+            'note' => 'nullable|string|max:500',
+        ]);
+
+        $restaurant = Restaurant::findOrFail($id);
+        $prices = SuperAdminSettingsController::getPricingArray();
+        $tier = $validated['tier'];
+        $trialDays = (int) ($validated['trial_days'] ?? 14);
+        $trialEndsAt = now()->addDays($trialDays)->endOfDay();
+
+        DB::beginTransaction();
+        try {
+            $aiCredits = $tier === 'pro' ? ($prices[$tier]['trial_ai_credits'] ?? 50) : 0;
+
+            $restaurant->update([
+                'subscription_status'   => 'trial',
+                'subscription_plan'     => null,
+                'tier'                  => $tier,
+                'ai_credits_monthly'    => $tier === 'pro' ? ($prices[$tier]['ai_credits'] ?? 500) : 0,
+                'trial_ends_at'         => $trialEndsAt,
+                'subscription_ends_at'  => null,
+                'last_payment_at'       => null,
+                'next_payment_at'       => null,
+                'payment_failed_at'     => null,
+                'payment_failure_count' => 0,
+            ]);
+
+            RestaurantSubscription::updateOrCreate(
+                ['restaurant_id' => $restaurant->id],
+                [
+                    'plan_type'          => 'monthly',
+                    'monthly_fee'        => 0,
+                    'billing_day'        => 1,
+                    'currency'           => 'ILS',
+                    'status'             => 'trial',
+                    'outstanding_amount' => 0,
+                    'next_charge_at'     => $trialEndsAt,
+                    'last_paid_at'       => null,
+                ]
+            );
+
+            if ($validated['note'] ?? null) {
+                $sub = RestaurantSubscription::where('restaurant_id', $restaurant->id)->first();
+                if ($sub) {
+                    $sub->update([
+                        'notes' => trim(($sub->notes ?? '') . "\n" . now()->format('Y-m-d') . " - החזרה לניסיון: " . $validated['note']),
+                    ]);
+                }
+            }
+
+            if ($tier === 'pro' && $aiCredits > 0) {
+                \App\Models\AiCredit::updateOrCreate(
+                    ['restaurant_id' => $restaurant->id],
+                    [
+                        'tenant_id'           => $restaurant->tenant_id,
+                        'tier'                => $tier,
+                        'monthly_limit'       => $aiCredits,
+                        'credits_remaining'   => $aiCredits,
+                        'credits_used'        => 0,
+                        'billing_cycle_start' => now()->startOfMonth(),
+                        'billing_cycle_end'   => now()->endOfMonth(),
+                    ]
+                );
+            } elseif ($tier === 'basic') {
+                $ac = \App\Models\AiCredit::where('restaurant_id', $restaurant->id)->first();
+                if ($ac) {
+                    $ac->update(['tier' => 'basic', 'monthly_limit' => 0, 'credits_remaining' => 0]);
+                }
+            }
+
+            DB::commit();
+
+            Log::info('Super admin reset restaurant to trial', [
+                'restaurant_id' => $restaurant->id,
+                'tier'          => $tier,
+                'trial_days'    => $trialDays,
+                'by_user_id'    => $request->user()->id,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => "המסעדה הוחזרה לתקופת ניסיון של {$trialDays} ימים (מסלול {$tier})",
+                'restaurant' => $restaurant->fresh(),
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'שגיאה: ' . $e->getMessage(),
             ], 500);
         }
     }
