@@ -107,6 +107,7 @@ Route::prefix('super-admin')->middleware(['auth:sanctum', 'super_admin'])->group
     // הגדרות חיוב פר-מסעדה
     Route::put('/billing/restaurants/{id}/billing-config', [SuperAdminBillingController::class, 'updateBillingConfig'])->name('super-admin.billing.config.update');
     Route::post('/billing/restaurants/{id}/activate', [SuperAdminBillingController::class, 'manualActivateSubscription'])->name('super-admin.billing.activate');
+    Route::post('/billing/restaurants/{id}/reset-trial', [SuperAdminBillingController::class, 'resetToTrial'])->name('super-admin.billing.reset-trial');
 
     // סטטוס סכימת בסיס נתונים ומיגרציות (אבחון)
     Route::get('/schema-status', [SuperAdminController::class, 'schemaStatus'])->name('super-admin.schema.status');

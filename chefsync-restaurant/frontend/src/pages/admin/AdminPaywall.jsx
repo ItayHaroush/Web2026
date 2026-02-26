@@ -41,8 +41,12 @@ export default function AdminPaywall() {
                         return;
                     }
                     if (recoveryRes.data?.reason === 'already_active') {
-                        navigate('/admin/dashboard');
-                        return;
+                        const { data: billingData } = await getBillingInfo().catch(() => ({}));
+                        const currentTier = billingData?.data?.current_tier;
+                        if (currentTier === 'pro') {
+                            navigate('/admin/dashboard');
+                            return;
+                        }
                     }
                 } catch { }
 

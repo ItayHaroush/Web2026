@@ -32,7 +32,8 @@ export default function SuperAdminReports() {
     const [tierFilter, setTierFilter] = useState('');
     const [activateModal, setActivateModal] = useState(null);
     const [activating, setActivating] = useState(false);
-    const [activateForm, setActivateForm] = useState({ tier: 'basic', plan_type: 'monthly', note: '', record_payment: false, payment_reference: '' });
+    const [resetting, setResetting] = useState(false);
+    const [activateForm, setActivateForm] = useState({ tier: 'basic', plan_type: 'monthly', note: '', record_payment: false, payment_reference: '', trial_days: 14 });
 
     useEffect(() => {
         fetchData();
@@ -99,6 +100,26 @@ export default function SuperAdminReports() {
             toast.error(error.response?.data?.message || 'שגיאה בהפעלת מנוי');
         } finally {
             setActivating(false);
+        }
+    };
+
+    const handleResetToTrial = async () => {
+        if (!activateModal) return;
+        setResetting(true);
+        try {
+            const headers = getAuthHeaders();
+            await api.post(`/super-admin/billing/restaurants/${activateModal.id}/reset-trial`, {
+                tier: activateForm.tier,
+                trial_days: activateForm.trial_days ?? 14,
+                note: activateForm.note,
+            }, { headers });
+            toast.success(`המסעדה הוחזרה לתקופת ניסיון (${activateForm.trial_days ?? 14} ימים)`);
+            setActivateModal(null);
+            fetchData();
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'שגיאה בהחזרה לניסיון');
+        } finally {
+            setResetting(false);
         }
     };
 
@@ -383,18 +404,30 @@ export default function SuperAdminReports() {
                                                 </div>
                                             </td>
                                             <td className="px-4 py-4 text-center">
-                                                {r.billing_status !== 'active' && (
+                                                <div className="flex justify-center gap-1">
+                                                    {r.billing_status !== 'active' && (
+                                                        <button
+                                                            onClick={() => {
+                                                                setActivateModal(r);
+                                                                setActivateForm({ tier: r.tier || 'basic', plan_type: r.subscription_plan || 'monthly', note: '', record_payment: false, payment_reference: '', trial_days: 14 });
+                                                            }}
+                                                            className="px-3 py-1.5 bg-green-50 text-green-600 border border-green-200 rounded-lg text-[10px] font-black hover:bg-green-600 hover:text-white transition-all"
+                                                            title="הפעל מנוי ידנית"
+                                                        >
+                                                            <FaPlay size={10} />
+                                                        </button>
+                                                    )}
                                                     <button
                                                         onClick={() => {
                                                             setActivateModal(r);
-                                                            setActivateForm({ tier: r.tier || 'basic', plan_type: r.subscription_plan || 'monthly', note: '' });
+                                                            setActivateForm({ tier: r.tier || 'basic', plan_type: r.subscription_plan || 'monthly', note: '', record_payment: false, payment_reference: '', trial_days: 14 });
                                                         }}
-                                                        className="px-3 py-1.5 bg-green-50 text-green-600 border border-green-200 rounded-lg text-[10px] font-black hover:bg-green-600 hover:text-white transition-all"
-                                                        title="הפעל מנוי ידנית"
+                                                        className="px-3 py-1.5 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg text-[10px] font-black hover:bg-blue-600 hover:text-white transition-all"
+                                                        title="החזר לתקופת ניסיון"
                                                     >
-                                                        <FaPlay size={10} />
+                                                        🔄
                                                     </button>
-                                                )}
+                                                </div>
                                             </td>
                                         </tr>
                                     ))}
@@ -473,21 +506,45 @@ export default function SuperAdminReports() {
                                     className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-primary/20 outline-none"
                                 />
                             </div>
+
+                            <div className="border-t border-gray-200 pt-4 mt-2">
+                                <p className="text-xs font-black text-blue-600 mb-2">החזרה לתקופת ניסיון (בדיקת פלואו)</p>
+                                <div className="flex items-center gap-3">
+                                    <label className="text-xs font-bold text-gray-600">ימי ניסיון:</label>
+                                    <input
+                                        type="number"
+                                        min={1}
+                                        max={90}
+                                        value={activateForm.trial_days ?? 14}
+                                        onChange={(e) => setActivateForm(f => ({ ...f, trial_days: parseInt(e.target.value) || 14 }))}
+                                        className="w-20 px-2 py-1.5 border border-gray-200 rounded-lg text-sm font-bold"
+                                    />
+                                </div>
+                            </div>
                         </div>
 
-                        <div className="flex gap-3">
+                        <div className="flex flex-col gap-3">
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={handleActivate}
+                                    disabled={activating || resetting}
+                                    className="flex-1 px-4 py-3 bg-green-600 text-white rounded-xl font-black text-sm hover:bg-green-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                                >
+                                    {activating ? 'מפעיל...' : 'הפעל מנוי'}
+                                </button>
+                                <button
+                                    onClick={() => setActivateModal(null)}
+                                    className="px-4 py-3 bg-gray-100 text-gray-600 rounded-xl font-bold text-sm hover:bg-gray-200 transition-all"
+                                >
+                                    ביטול
+                                </button>
+                            </div>
                             <button
-                                onClick={handleActivate}
-                                disabled={activating}
-                                className="flex-1 px-4 py-3 bg-green-600 text-white rounded-xl font-black text-sm hover:bg-green-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                                onClick={handleResetToTrial}
+                                disabled={activating || resetting}
+                                className="w-full px-4 py-3 bg-blue-50 text-blue-700 border border-blue-200 rounded-xl font-black text-sm hover:bg-blue-100 transition-all disabled:opacity-50"
                             >
-                                {activating ? 'מפעיל...' : 'הפעל מנוי'}
-                            </button>
-                            <button
-                                onClick={() => setActivateModal(null)}
-                                className="px-4 py-3 bg-gray-100 text-gray-600 rounded-xl font-bold text-sm hover:bg-gray-200 transition-all"
-                            >
-                                ביטול
+                                {resetting ? 'מחזיר...' : 'החזר לתקופת ניסיון (אתחול מחדש)'}
                             </button>
                         </div>
                     </div>
