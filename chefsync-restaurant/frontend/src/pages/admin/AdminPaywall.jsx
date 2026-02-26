@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
+import { useAdminAuth } from '../../context/AdminAuthContext';
 import { getBillingInfo, checkPendingPayment } from '../../services/subscriptionService';
 import {
     FaLock,
@@ -11,7 +12,8 @@ import {
     FaCrown,
     FaBrain,
     FaExclamationTriangle,
-    FaArrowDown
+    FaArrowDown,
+    FaShieldAlt
 } from 'react-icons/fa';
 
 const PRO_ONLY_FEATURES = [
@@ -22,11 +24,40 @@ const PRO_ONLY_FEATURES = [
 
 export default function AdminPaywall() {
     const navigate = useNavigate();
+    const { user, isOwner, isManager } = useAdminAuth();
     const [billing, setBilling] = useState(null);
     const [loading, setLoading] = useState(true);
     const [selectedTier, setSelectedTier] = useState('pro');
     const [billingCycle, setBillingCycle] = useState('monthly');
     const [showDowngradeWarning, setShowDowngradeWarning] = useState(false);
+
+    // עובד רגיל (לא owner/manager) — לא מראים דף תשלום אלא הודעה מתאימה
+    if (user && !isOwner() && !isManager()) {
+        return (
+            <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center px-6 py-12">
+                <div className="max-w-md w-full text-center">
+                    <div className="bg-white rounded-3xl shadow-2xl p-10">
+                        <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <FaShieldAlt className="text-blue-500 text-4xl" />
+                        </div>
+                        <h1 className="text-3xl font-black text-gray-900 mb-3">המערכת בהשהיה זמנית</h1>
+                        <p className="text-gray-600 mb-6 leading-relaxed">
+                            מנהל המסעדה מטפל בעדכון חשבון התשלום.
+                            <br />
+                            ניתן להמשיך לעבוד כרגיל — חוזרים לפעילות מלאה בקרוב.
+                        </p>
+                        <button
+                            onClick={() => navigate('/admin/dashboard')}
+                            className="w-full bg-gradient-to-r from-brand-primary to-brand-secondary text-white py-4 rounded-xl font-black text-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all flex items-center justify-center gap-3"
+                        >
+                            חזור לפאנל
+                            <FaArrowLeft />
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     useEffect(() => {
         const load = async () => {

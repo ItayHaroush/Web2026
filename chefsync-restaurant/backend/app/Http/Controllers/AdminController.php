@@ -1862,6 +1862,7 @@ class AdminController extends Controller
         }
         $restaurant->payment_failure_grace_days_left = $daysLeftInGrace;
         $restaurant->is_in_grace_period = $restaurant->isInGracePeriod();
+        $restaurant->subscription_paused = !$restaurant->hasAccess();
 
         return response()->json([
             'success' => true,

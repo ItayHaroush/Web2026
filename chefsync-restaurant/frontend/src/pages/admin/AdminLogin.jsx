@@ -21,12 +21,13 @@ export default function AdminLogin() {
         const result = await loginWithCredentials(email, password);
 
         if (result.success) {
-            // בדיקה אם זה Super Admin
             const user = JSON.parse(localStorage.getItem('user') || '{}');
 
             if (user.is_super_admin) {
-                toast.success('ברוכים הבאים, מנהל מערכת! 👋');
+                toast.success('ברוכים הבאים, מנהל מערכת!');
                 navigate('/super-admin/dashboard');
+            } else if (user.has_access === false && ['owner', 'manager'].includes(user.role)) {
+                navigate('/admin/paywall');
             } else {
                 navigate('/admin/dashboard');
             }

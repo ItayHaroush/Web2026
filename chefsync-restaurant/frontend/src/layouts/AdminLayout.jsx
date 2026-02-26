@@ -65,6 +65,7 @@ export default function AdminLayout({ children }) {
                         payment_failed_at: restaurant.payment_failed_at,
                         payment_failure_grace_days_left: restaurant.payment_failure_grace_days_left ?? 0,
                         is_in_grace_period: restaurant.is_in_grace_period ?? false,
+                        subscription_paused: restaurant.subscription_paused ?? false,
                     });
                     // שמור גם בקונטקסט גלובלי לשימוש בכל הדפים
                     setSubscriptionInfo({
@@ -270,6 +271,9 @@ export default function AdminLayout({ children }) {
                                 </div>
                             </div>
                         )}
+                        {subscriptionData?.subscription_paused && !isOwner() && !isManager() && (
+                            <SubscriptionPausedBanner />
+                        )}
                         {subscriptionData && <TrialBanner {...subscriptionData} navigate={navigate} />}
                         {subscriptionData && <PaymentFailedBanner {...subscriptionData} navigate={navigate} />}
                         {children}
@@ -313,6 +317,27 @@ function PaymentFailedBanner({ subscription_status, payment_failed_at, payment_f
                 >
                     עדכן תשלום
                 </button>
+            </div>
+        </div>
+    );
+}
+
+// Subscription Paused Banner — מוצג לעובדים שאינם בעלים/מנהלים כשהמנוי לא פעיל
+function SubscriptionPausedBanner() {
+    return (
+        <div className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-3xl p-6 shadow-lg">
+            <div className="flex items-center gap-4">
+                <div className="w-14 h-14 bg-blue-500 rounded-2xl flex items-center justify-center text-white shadow-lg">
+                    <FaShieldAlt size={24} />
+                </div>
+                <div>
+                    <h3 className="text-xl font-black text-gray-900">
+                        המערכת בהשהיה זמנית
+                    </h3>
+                    <p className="text-gray-600 font-medium mt-1">
+                        מנהל המסעדה מטפל בעדכון החשבון. ניתן להמשיך לעבוד כרגיל — חוזרים לפעילות מלאה בקרוב.
+                    </p>
+                </div>
             </div>
         </div>
     );

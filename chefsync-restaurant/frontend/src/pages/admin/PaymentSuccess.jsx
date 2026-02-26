@@ -1,13 +1,30 @@
 import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { FaCheckCircle, FaArrowLeft, FaSpinner } from 'react-icons/fa';
 import { getSubscriptionStatus, checkPendingPayment } from '../../services/subscriptionService';
 
+const getEnv = (key, fallback) => {
+    try { return import.meta?.env?.[key] ?? fallback; } catch { return fallback; }
+};
+const PROD_API = (getEnv('VITE_API_URL_PRODUCTION', 'https://api.chefsync.co.il/api')).trim();
+const API = getEnv('PROD', false) ? PROD_API : (getEnv('VITE_API_URL_LOCAL', PROD_API)).trim();
+
 export default function PaymentSuccess() {
+    const location = useLocation();
     const [verified, setVerified] = useState(false);
     const [verifying, setVerifying] = useState(true);
     const [subData, setSubData] = useState(null);
 
     useEffect(() => {
+        // HYP מפנה ישירות לפרונט במקום לבקאנד — מעבירים את הפרמטרים לבקאנד לעיבוד
+        const params = new URLSearchParams(location.search);
+        const hasHypParams = params.has('Id') || params.has('CCode') || (params.has('Order') && params.get('Order')?.startsWith('sub_')) || params.has('rid');
+        if (hasHypParams) {
+            const endpoint = `${API}/payments/hyp/subscription/success`;
+            window.location.href = `${endpoint}${location.search}`;
+            return;
+        }
+
         const verify = async () => {
             try {
                 const { data } = await getSubscriptionStatus();
@@ -38,7 +55,7 @@ export default function PaymentSuccess() {
 
         const timer = setTimeout(verify, 1500);
         return () => clearTimeout(timer);
-    }, []);
+    }, [location.search]);
 
     if (verifying) {
         return (

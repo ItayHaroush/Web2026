@@ -142,12 +142,13 @@ apiClient.interceptors.response.use(
             const isAiEndpoint = error.config?.url?.includes('/ai/');
             const pathname = window.location.pathname;
             const isPaymentFlow = pathname.startsWith('/admin/paywall') || pathname.startsWith('/admin/payment');
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/e2a84354-28c6-4376-be2a-efdcd59b5972',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'d93c44'},body:JSON.stringify({sessionId:'d93c44',location:'apiClient.js:402',message:'402 received',data:{pathname,isPaymentFlow,willRedirect:hasAdminToken&&!isAiEndpoint&&!isPaymentFlow,url:error.config?.url},hypothesisId:'H4',timestamp:Date.now()})}).catch(()=>{});
-            // #endregion
-            if (hasAdminToken && !isAiEndpoint && !isPaymentFlow) {
+            const responseData = error.response?.data?.data || {};
+            const userRole = responseData.user_role || '';
+            const isEmployee = userRole === 'employee' || userRole === 'delivery';
+
+            if (hasAdminToken && !isAiEndpoint && !isPaymentFlow && !isEmployee) {
                 try {
-                    localStorage.setItem('paywall_data', JSON.stringify(error.response?.data?.data || {}));
+                    localStorage.setItem('paywall_data', JSON.stringify(responseData));
                 } catch { }
                 window.location.href = '/admin/paywall';
             }
