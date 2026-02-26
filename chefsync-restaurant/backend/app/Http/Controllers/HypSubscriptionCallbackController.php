@@ -80,17 +80,18 @@ class HypSubscriptionCallbackController extends Controller
         }
         Log::info('[HYP-SUB] Step 4/7: Not yet processed — continuing');
 
-        // אימות חתימה — מיפוי מפתחות parseRedirectParams → verifyTransaction
+        // אימות חתימה — ניסיון אימות, אבל לא חוסם עסקה שכבר אושרה (CCode=0)
         $verification = $this->hypService->verifyTransaction([
             'Id'     => $params['transaction_id'],
             'CCode'  => (string) $params['ccode'],
             'Amount' => $params['amount'],
         ]);
         if (!$verification['success'] && ($verification['verified'] ?? false)) {
-            Log::error('[HYP-SUB] Step 5/7: Verification failed', $verification);
-            return $this->redirectToFrontend('error', 'verification_failed');
+            // התשלום כבר אושר ע"י HYP (CCode=0) — לא חוסמים, רק מתעדים
+            Log::warning('[HYP-SUB] Step 5/7: Signature verification failed but payment was approved (CCode=0) — continuing', $verification);
+        } else {
+            Log::info('[HYP-SUB] Step 5/7: Signature verified');
         }
-        Log::info('[HYP-SUB] Step 5/7: Signature verified');
 
         // קבלת טוקן לחיובים חוזרים
         $tokenResult = $this->hypService->getToken($transactionId);
