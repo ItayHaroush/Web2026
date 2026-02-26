@@ -2,28 +2,41 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { activateSubscription, createPaymentSession } from '../../services/subscriptionService';
-import { FaCreditCard, FaCheckCircle, FaArrowRight, FaShieldAlt, FaArrowLeft, FaExclamationTriangle, FaSpinner } from 'react-icons/fa';
+import {
+    FaCreditCard,
+    FaCheckCircle,
+    FaArrowRight,
+    FaShieldAlt,
+    FaArrowLeft,
+    FaExclamationTriangle,
+    FaSpinner,
+    FaInfoCircle,
+    FaArrowDown
+} from 'react-icons/fa';
 
-/**
- * דף תשלום - Phase 2: בודק אם HYP מוגדר ומפנה לדף תשלום
- * אם HYP לא מוגדר: מציג V page (הפעלה ידנית ללא חיוב)
- */
 export default function PaymentDemo() {
     const navigate = useNavigate();
     const location = useLocation();
-    const { tier, billingCycle, amount } = location.state || {};
+    const {
+        tier,
+        billingCycle,
+        amount,
+        planAmount,
+        setupFee = 0,
+        isDowngrade,
+        previousTier
+    } = location.state || {};
 
     const [processing, setProcessing] = useState(false);
     const [checkingHyp, setCheckingHyp] = useState(true);
     const [hypReady, setHypReady] = useState(false);
+    const [hypBillingData, setHypBillingData] = useState(null);
 
-    // אם אין פרטי הזמנה, חזור לדף המנויים
     if (!tier || !billingCycle || !amount) {
         navigate('/admin/paywall');
         return null;
     }
 
-    // בדיקת זמינות HYP בעלייה
     useEffect(() => {
         const checkHyp = async () => {
             try {
@@ -31,13 +44,17 @@ export default function PaymentDemo() {
                 const data = res.data;
 
                 if (data.hyp_ready && data.payment_url) {
-                    // HYP מוגדר – redirect ישיר לדף תשלום
                     setHypReady(true);
+                    setHypBillingData({
+                        planAmount: data.plan_amount,
+                        setupFee: data.setup_fee,
+                        totalAmount: data.total_amount,
+                        includesSetupFee: data.includes_setup_fee,
+                    });
                     window.location.href = data.payment_url;
                     return;
                 }
 
-                // HYP לא מוגדר – V page
                 setHypReady(false);
             } catch (error) {
                 console.error('Failed to check HYP:', error);
@@ -65,7 +82,6 @@ export default function PaymentDemo() {
         }
     };
 
-    // מסך טעינה בזמן בדיקת HYP
     if (checkingHyp || hypReady) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-gray-100 flex items-center justify-center">
@@ -79,51 +95,88 @@ export default function PaymentDemo() {
         );
     }
 
-    // V page – HYP לא מוגדר
+    const displayPlanAmount = planAmount || amount;
+    const displaySetupFee = setupFee || 0;
+    const displayTotal = displayPlanAmount + displaySetupFee;
+
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-gray-100 py-12 px-4">
             <div className="max-w-xl mx-auto">
-                {/* Header */}
                 <div className="text-center mb-8">
                     <div className="inline-flex items-center gap-2 bg-brand-primary/10 text-brand-primary px-6 py-3 rounded-full mb-4">
                         <FaShieldAlt />
-                        <span className="font-bold">הפעלת מנוי</span>
+                        <span className="font-bold">
+                            {isDowngrade ? 'שדרוג לאחור' : 'הפעלת מנוי'}
+                        </span>
                     </div>
                     <h1 className="text-4xl font-black text-gray-900 mb-2">אישור והפעלה</h1>
                 </div>
 
-                {/* Order Summary */}
+                {/* Downgrade warning */}
+                {isDowngrade && (
+                    <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-5 mb-6">
+                        <div className="flex items-start gap-3">
+                            <FaArrowDown className="text-amber-500 mt-1 flex-shrink-0" />
+                            <div>
+                                <p className="font-black text-amber-800 mb-1">מעבר מ-{previousTier === 'pro' ? 'Pro' : 'Basic'} ל-{tier === 'pro' ? 'Pro' : 'Basic'}</p>
+                                <p className="text-amber-700 text-sm font-medium">
+                                    לאחר האישור, תכונות Pro כמו AI, דו"חות מתקדמים ותמיכה עדיפות לא יהיו זמינות.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 <div className="bg-white rounded-3xl shadow-2xl p-8 mb-6">
-                    <h3 className="text-xl font-black text-gray-900 mb-6">סיכום המנוי</h3>
+                    <h3 className="text-xl font-black text-gray-900 mb-6">סיכום חשבון</h3>
 
                     <div className="space-y-4 mb-6 pb-6 border-b">
                         <div className="flex justify-between items-center">
-                            <span className="text-gray-600 font-medium">תוכנית</span>
                             <span className="font-bold text-gray-900">
                                 {tier === 'pro' ? 'Pro' : 'Basic'}
                             </span>
+                            <span className="text-gray-600 font-medium">תוכנית</span>
                         </div>
                         <div className="flex justify-between items-center">
-                            <span className="text-gray-600 font-medium">מחזור חיוב</span>
                             <span className="font-bold text-gray-900">
                                 {billingCycle === 'yearly' ? 'שנתי' : 'חודשי'}
                             </span>
+                            <span className="text-gray-600 font-medium">מחזור חיוב</span>
                         </div>
                         {tier === 'pro' && (
                             <div className="flex justify-between items-center">
-                                <span className="text-gray-600 font-medium">קרדיטי AI</span>
                                 <span className="font-bold text-brand-primary">500/חודש</span>
+                                <span className="text-gray-600 font-medium">קרדיטי AI</span>
                             </div>
                         )}
                     </div>
 
-                    <div className="space-y-2 mb-6">
+                    {/* Billing breakdown */}
+                    <div className="space-y-3 mb-6">
                         <div className="flex justify-between items-center">
-                            <span className="text-xl font-black text-gray-900">סה"כ</span>
-                            <span className="text-3xl font-black text-gray-900">
-                                ₪{amount.toLocaleString()}
+                            <span className="font-bold text-gray-900">₪{displayPlanAmount.toLocaleString()}</span>
+                            <span className="text-gray-600 font-medium">
+                                חבילת {tier === 'pro' ? 'Pro' : 'Basic'} ({billingCycle === 'yearly' ? 'שנתי' : 'חודשי'})
                             </span>
                         </div>
+
+                        {displaySetupFee > 0 && (
+                            <div className="flex justify-between items-center">
+                                <span className="font-bold text-gray-900">₪{displaySetupFee}</span>
+                                <span className="text-gray-600 font-medium flex items-center gap-1">
+                                    דמי הקמת חיבור מסוף (חד-פעמי)
+                                    <FaInfoCircle className="text-gray-400 text-xs" />
+                                </span>
+                            </div>
+                        )}
+
+                        <div className="border-t border-gray-200 pt-3 flex justify-between items-center">
+                            <span className="text-3xl font-black text-gray-900">
+                                ₪{displayTotal.toLocaleString()}
+                            </span>
+                            <span className="text-xl font-black text-gray-900">סה"כ</span>
+                        </div>
+
                         <p className="text-sm text-gray-500 font-medium text-left">
                             {billingCycle === 'yearly'
                                 ? 'תשלום חד-פעמי לשנה מלאה'
@@ -132,7 +185,7 @@ export default function PaymentDemo() {
                         </p>
                     </div>
 
-                    {/* Temporary notice – V page */}
+                    {/* V page notice */}
                     <div className="bg-amber-50 border-2 border-amber-200 rounded-xl p-4 mb-6">
                         <div className="flex items-start gap-3">
                             <FaExclamationTriangle className="text-amber-500 mt-0.5 flex-shrink-0" />
@@ -142,21 +195,23 @@ export default function PaymentDemo() {
                         </div>
                     </div>
 
-                    {/* Activate Button */}
                     <button
                         onClick={handleActivate}
                         disabled={processing}
-                        className="w-full bg-gradient-to-r from-brand-primary to-brand-secondary text-white py-4 rounded-xl font-black text-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+                        className={`w-full text-white py-4 rounded-xl font-black text-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 ${isDowngrade
+                            ? 'bg-gradient-to-r from-amber-500 to-orange-600'
+                            : 'bg-gradient-to-r from-brand-primary to-brand-secondary'
+                            }`}
                     >
                         {processing ? (
                             <>
-                                <div className="w-5 h-5 border-3 border-white border-t-transparent rounded-full animate-spin"></div>
+                                <div className="w-5 h-5 border-3 border-white border-t-transparent rounded-full animate-spin" />
                                 מפעיל מנוי...
                             </>
                         ) : (
                             <>
                                 <FaCheckCircle />
-                                הפעל מנוי
+                                {isDowngrade ? 'אישור שדרוג לאחור' : 'הפעל מנוי'}
                                 <FaArrowLeft />
                             </>
                         )}
@@ -174,7 +229,6 @@ export default function PaymentDemo() {
                     </div>
                 </div>
 
-                {/* Back Button */}
                 <div className="text-center">
                     <button
                         onClick={() => navigate('/admin/paywall')}

@@ -106,6 +106,7 @@ Route::prefix('super-admin')->middleware(['auth:sanctum', 'super_admin'])->group
 
     // הגדרות חיוב פר-מסעדה
     Route::put('/billing/restaurants/{id}/billing-config', [SuperAdminBillingController::class, 'updateBillingConfig'])->name('super-admin.billing.config.update');
+    Route::post('/billing/restaurants/{id}/activate', [SuperAdminBillingController::class, 'manualActivateSubscription'])->name('super-admin.billing.activate');
 
     // סטטוס סכימת בסיס נתונים ומיגרציות (אבחון)
     Route::get('/schema-status', [SuperAdminController::class, 'schemaStatus'])->name('super-admin.schema.status');
@@ -177,6 +178,8 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'tenant'])->group(function (
     Route::get('/subscription/status', [AdminController::class, 'subscriptionStatus'])->name('admin.subscription.status');
     Route::post('/subscription/activate', [AdminController::class, 'activateSubscription'])->name('admin.subscription.activate');
     Route::post('/subscription/create-payment-session', [AdminController::class, 'createPaymentSession'])->name('admin.subscription.payment-session');
+    Route::post('/subscription/check-pending', [AdminController::class, 'checkPendingPayment'])->name('admin.subscription.check-pending');
+    Route::get('/billing/info', [AdminController::class, 'billingInfo'])->name('admin.billing.info');
 
     // POS auth - מחוץ ל-CheckRestaurantAccess כדי שסיסמא שגויה תחזיר 401 ולא 404
     Route::post('pos/set-pin', [\App\Http\Controllers\POSController::class, 'setPin'])->name('admin.pos.set-pin');
