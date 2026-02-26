@@ -74,8 +74,12 @@ class HypSubscriptionCallbackController extends Controller
         }
         Log::info('[HYP-SUB] Step 4/7: Not yet processed — continuing');
 
-        // אימות חתימה
-        $verification = $this->hypService->verifyTransaction($params);
+        // אימות חתימה — מיפוי מפתחות parseRedirectParams → verifyTransaction
+        $verification = $this->hypService->verifyTransaction([
+            'Id'     => $params['transaction_id'],
+            'CCode'  => (string) $params['ccode'],
+            'Amount' => $params['amount'],
+        ]);
         if (!$verification['success'] && ($verification['verified'] ?? false)) {
             Log::error('[HYP-SUB] Step 5/7: Verification failed', $verification);
             return $this->redirectToFrontend('error', 'verification_failed');
