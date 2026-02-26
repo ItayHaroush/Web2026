@@ -32,7 +32,8 @@ import {
     FaExclamationTriangle,
     FaUserClock,
     FaCashRegister,
-    FaNetworkWired
+    FaNetworkWired,
+    FaFileInvoiceDollar
 } from 'react-icons/fa';
 
 export default function AdminLayout({ children }) {
@@ -141,6 +142,12 @@ export default function AdminLayout({ children }) {
             icon: <FaStore />,
             label: 'פרטי מסעדה',
             show: isManager() || isOwner()
+        },
+        {
+            path: '/admin/billing',
+            icon: <FaFileInvoiceDollar />,
+            label: 'חשבון וחיוב',
+            show: isOwner()
         },
         {
             path: '/admin/payment-settings',

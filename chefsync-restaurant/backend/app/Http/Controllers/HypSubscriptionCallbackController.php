@@ -32,46 +32,55 @@ class HypSubscriptionCallbackController extends Controller
         $restaurantId = $this->extractRestaurantId($params);
         $transactionId = $params['transaction_id'];
 
-        Log::info('HYP subscription payment success redirect', [
+        Log::info('[HYP-SUB] Step 1/7: Success redirect received', [
             'restaurant_id'  => $restaurantId,
             'transaction_id' => $transactionId,
             'ccode'          => $params['ccode'],
             'amount'         => $params['amount'],
             'order'          => $params['order'] ?? '',
+            'all_params'     => array_keys($params),
         ]);
 
         if (!$params['success']) {
-            Log::warning('HYP subscription callback: CCode not 0', $params);
+            Log::warning('[HYP-SUB] Step 2/7: CCode not 0 — payment not approved', $params);
             return $this->redirectToFrontend('error', 'payment_not_approved');
         }
+        Log::info('[HYP-SUB] Step 2/7: CCode OK');
 
         $restaurant = Restaurant::withoutGlobalScope('tenant')->find($restaurantId);
 
         if (!$restaurant) {
-            Log::error('HYP subscription callback: restaurant not found', ['id' => $restaurantId]);
+            Log::error('[HYP-SUB] Step 3/7: Restaurant not found', ['id' => $restaurantId]);
             return $this->redirectToFrontend('error', 'restaurant_not_found');
         }
+        Log::info('[HYP-SUB] Step 3/7: Restaurant found', [
+            'restaurant_id'   => $restaurant->id,
+            'current_tier'    => $restaurant->tier,
+            'current_status'  => $restaurant->subscription_status,
+        ]);
 
-        // Idempotency: אם כבר הופעל מנוי עם אותו transaction — פשוט redirect
+        // Idempotency
         $existingPayment = RestaurantPayment::where('restaurant_id', $restaurant->id)
             ->where('reference', $transactionId)
             ->where('status', 'paid')
             ->first();
 
         if ($existingPayment) {
-            Log::info('HYP subscription callback: already processed (idempotent)', [
+            Log::info('[HYP-SUB] Step 4/7: Already processed (idempotent)', [
                 'restaurant_id' => $restaurantId,
                 'transaction_id' => $transactionId,
             ]);
             return $this->redirectToFrontend('success');
         }
+        Log::info('[HYP-SUB] Step 4/7: Not yet processed — continuing');
 
         // אימות חתימה
         $verification = $this->hypService->verifyTransaction($params);
         if (!$verification['success'] && ($verification['verified'] ?? false)) {
-            Log::error('HYP subscription callback: verification failed', $verification);
+            Log::error('[HYP-SUB] Step 5/7: Verification failed', $verification);
             return $this->redirectToFrontend('error', 'verification_failed');
         }
+        Log::info('[HYP-SUB] Step 5/7: Signature verified');
 
         // קבלת טוקן לחיובים חוזרים
         $tokenResult = $this->hypService->getToken($transactionId);
@@ -82,35 +91,50 @@ class HypSubscriptionCallbackController extends Controller
                 'hyp_card_expiry' => $tokenResult['tmonth'] . $tokenResult['tyear'],
                 'hyp_card_last4'  => $tokenResult['l4digit'],
             ]);
+            Log::info('[HYP-SUB] Step 6/7: Token saved from getToken API');
         } else {
-            // גם אם getToken נכשל, ננסה מ-redirect params (MoreData)
             if (!empty($params['token'])) {
                 $restaurant->update([
                     'hyp_card_token'  => $params['token'],
                     'hyp_card_expiry' => $params['tmonth'] . $params['tyear'],
                     'hyp_card_last4'  => $params['l4digit'],
                 ]);
+                Log::warning('[HYP-SUB] Step 6/7: Token saved from redirect params (getToken failed)', [
+                    'token_result' => $tokenResult,
+                ]);
+            } else {
+                Log::error('[HYP-SUB] Step 6/7: No token available!', [
+                    'token_result' => $tokenResult,
+                    'has_redirect_token' => false,
+                ]);
             }
-
-            Log::warning('HYP getToken failed, using redirect params', [
-                'token_result' => $tokenResult,
-                'has_redirect_token' => !empty($params['token']),
-            ]);
         }
 
         // שליפת session data (tier, plan_type) מ-cache
         $sessionData = Cache::pull("hyp_session:{$restaurantId}");
         $tier = $sessionData['tier'] ?? ($restaurant->tier ?? 'basic');
         $planType = $sessionData['plan_type'] ?? 'monthly';
+        $includesSetupFee = $sessionData['includes_setup_fee'] ?? false;
+        $setupFeeAmount = $sessionData['setup_fee_amount'] ?? 0;
+
+        Log::info('[HYP-SUB] Session data retrieved', [
+            'session_found'     => $sessionData !== null,
+            'tier'              => $tier,
+            'plan_type'         => $planType,
+            'includes_setup_fee' => $includesSetupFee,
+            'setup_fee_amount'  => $setupFeeAmount,
+            'previous_tier'     => $restaurant->tier,
+        ]);
 
         // הפעלת מנוי
-        $this->activateSubscription($restaurant, $tier, $planType, $transactionId);
+        $this->activateSubscription($restaurant, $tier, $planType, $transactionId, $includesSetupFee, $setupFeeAmount);
 
-        Log::info('HYP subscription activated', [
+        Log::info('[HYP-SUB] Step 7/7: Subscription activated — redirecting to frontend', [
             'restaurant_id'  => $restaurant->id,
             'tier'           => $tier,
             'plan_type'      => $planType,
             'transaction_id' => $transactionId,
+            'frontend_url'   => config('app.frontend_url'),
         ]);
 
         return $this->redirectToFrontend('success');
@@ -140,14 +164,21 @@ class HypSubscriptionCallbackController extends Controller
     /**
      * הפעלת מנוי (לוגיקה דומה ל-AdminController::activateSubscription)
      */
-    private function activateSubscription(Restaurant $restaurant, string $tier, string $planType, string $transactionId): void
-    {
+    private function activateSubscription(
+        Restaurant $restaurant,
+        string $tier,
+        string $planType,
+        string $transactionId,
+        bool $includesSetupFee = false,
+        float $setupFeeAmount = 0
+    ): void {
         $prices = SuperAdminSettingsController::getPricingArray();
 
-        $chargeAmount = $prices[$tier][$planType === 'yearly' ? 'yearly' : 'monthly'];
+        $planAmount = $prices[$tier][$planType === 'yearly' ? 'yearly' : 'monthly'];
+        $totalCharged = $planAmount + ($includesSetupFee ? $setupFeeAmount : 0);
         $monthlyFeeForTracking = $planType === 'yearly'
-            ? round($chargeAmount / 12, 2)
-            : $chargeAmount;
+            ? round($planAmount / 12, 2)
+            : $planAmount;
 
         $periodStart = $restaurant->trial_ends_at && now()->lt($restaurant->trial_ends_at)
             ? $restaurant->trial_ends_at->copy()->startOfDay()
@@ -157,7 +188,7 @@ class HypSubscriptionCallbackController extends Controller
             ? $periodStart->copy()->addYear()
             : $periodStart->copy()->addMonth();
 
-        RestaurantSubscription::updateOrCreate(
+        $subscription = RestaurantSubscription::updateOrCreate(
             ['restaurant_id' => $restaurant->id],
             [
                 'plan_type'          => $planType,
@@ -171,9 +202,10 @@ class HypSubscriptionCallbackController extends Controller
             ]
         );
 
+        // תשלום עבור המנוי
         RestaurantPayment::create([
             'restaurant_id' => $restaurant->id,
-            'amount'        => $chargeAmount,
+            'amount'        => $planAmount,
             'currency'      => 'ILS',
             'period_start'  => $periodStart,
             'period_end'    => $periodEnd,
@@ -183,15 +215,41 @@ class HypSubscriptionCallbackController extends Controller
             'status'        => 'paid',
         ]);
 
+        // תשלום נפרד עבור דמי הקמה (אם כלול)
+        if ($includesSetupFee && $setupFeeAmount > 0) {
+            RestaurantPayment::create([
+                'restaurant_id' => $restaurant->id,
+                'amount'        => $setupFeeAmount,
+                'currency'      => 'ILS',
+                'period_start'  => now(),
+                'period_end'    => now(),
+                'paid_at'       => now(),
+                'method'        => 'hyp_credit_card',
+                'reference'     => $transactionId . '_setup',
+                'status'        => 'paid',
+            ]);
+
+            $restaurant->hyp_setup_fee_charged = true;
+
+            $subscription->update([
+                'notes' => trim(($subscription->notes ?? '') . "\n" . now()->format('Y-m-d') . " - דמי הקמת חיבור אשראי: ₪{$setupFeeAmount} (נגבו בתשלום ראשון)"),
+            ]);
+
+            Log::info('[HYP-SUB] Setup fee charged', [
+                'restaurant_id' => $restaurant->id,
+                'setup_fee'     => $setupFeeAmount,
+            ]);
+        }
+
         $restaurant->update([
-            'subscription_status'  => 'active',
-            'subscription_plan'    => $planType,
-            'tier'                 => $tier,
-            'ai_credits_monthly'   => $prices[$tier]['ai_credits'],
-            'subscription_ends_at' => $periodEnd,
-            'last_payment_at'      => now(),
-            'next_payment_at'      => $periodEnd,
-            'payment_failed_at'    => null,
+            'subscription_status'   => 'active',
+            'subscription_plan'     => $planType,
+            'tier'                  => $tier,
+            'ai_credits_monthly'    => $prices[$tier]['ai_credits'],
+            'subscription_ends_at'  => $periodEnd,
+            'last_payment_at'       => now(),
+            'next_payment_at'       => $periodEnd,
+            'payment_failed_at'     => null,
             'payment_failure_count' => 0,
         ]);
 
@@ -209,6 +267,15 @@ class HypSubscriptionCallbackController extends Controller
                     'billing_cycle_end'   => now()->endOfMonth(),
                 ]
             );
+        } elseif ($tier === 'basic') {
+            $aiCredit = \App\Models\AiCredit::where('restaurant_id', $restaurant->id)->first();
+            if ($aiCredit) {
+                $aiCredit->update([
+                    'tier'              => 'basic',
+                    'monthly_limit'     => 0,
+                    'credits_remaining' => 0,
+                ]);
+            }
         }
     }
 

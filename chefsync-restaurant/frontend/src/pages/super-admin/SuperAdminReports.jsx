@@ -15,7 +15,11 @@ import {
     FaExclamationCircle,
     FaCoins,
     FaShoppingCart,
-    FaReceipt
+    FaReceipt,
+    FaCrown,
+    FaPlay,
+    FaTimes,
+    FaFilter
 } from 'react-icons/fa';
 
 export default function SuperAdminReports() {
@@ -24,19 +28,28 @@ export default function SuperAdminReports() {
     const [restaurants, setRestaurants] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [statusFilter, setStatusFilter] = useState('');
+    const [tierFilter, setTierFilter] = useState('');
+    const [activateModal, setActivateModal] = useState(null);
+    const [activating, setActivating] = useState(false);
+    const [activateForm, setActivateForm] = useState({ tier: 'basic', plan_type: 'monthly', note: '' });
 
     useEffect(() => {
         fetchData();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [statusFilter, tierFilter]);
 
     const fetchData = async () => {
         setLoading(true);
         try {
             const headers = getAuthHeaders();
+            const params = {};
+            if (searchTerm) params.search = searchTerm;
+            if (statusFilter) params.status = statusFilter;
+            if (tierFilter) params.tier = tierFilter;
+
             const [summaryRes, restaurantsRes] = await Promise.all([
                 api.get('/super-admin/billing/summary', { headers }),
-                api.get('/super-admin/billing/restaurants', { headers, params: searchTerm ? { search: searchTerm } : {} })
+                api.get('/super-admin/billing/restaurants', { headers, params })
             ]);
 
             setSummary(summaryRes.data.data);
@@ -63,13 +76,30 @@ export default function SuperAdminReports() {
         const outstanding = filteredRestaurants.reduce((sum, r) => sum + Number(r.outstanding_amount || 0), 0);
         const orderRevenue = filteredRestaurants.reduce((sum, r) => sum + Number(r.order_revenue || 0), 0);
         const totalOrders = filteredRestaurants.reduce((sum, r) => sum + Number(r.orders_count || 0), 0);
-        return { monthly, outstanding, orderRevenue, totalOrders };
+        const totalPaidYtd = filteredRestaurants.reduce((sum, r) => sum + Number(r.total_paid_ytd || 0), 0);
+        return { monthly, outstanding, orderRevenue, totalOrders, totalPaidYtd };
     }, [filteredRestaurants]);
 
     const formatDate = (value) => {
         if (!value) return '—';
         const d = new Date(value);
         return isNaN(d.getTime()) ? '—' : d.toLocaleDateString('he-IL');
+    };
+
+    const handleActivate = async () => {
+        if (!activateModal) return;
+        setActivating(true);
+        try {
+            const headers = getAuthHeaders();
+            await api.post(`/super-admin/billing/restaurants/${activateModal.id}/activate`, activateForm, { headers });
+            toast.success(`המנוי הופעל למסעדה ${activateModal.name}`);
+            setActivateModal(null);
+            fetchData();
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'שגיאה בהפעלת מנוי');
+        } finally {
+            setActivating(false);
+        }
     };
 
     const StatusBadge = ({ status }) => {
@@ -142,7 +172,7 @@ export default function SuperAdminReports() {
                             </div>
                             דוחות פיננסיים
                         </h1>
-                        <p className="text-sm text-gray-500 mt-1">מעקב תשלומים, הכנסות והזמנות מסעדות</p>
+                        <p className="text-sm text-gray-500 mt-1">מעקב תשלומים, הכנסות, מצב חשבון מסעדות</p>
                     </div>
                     <button
                         onClick={fetchData}
@@ -156,7 +186,6 @@ export default function SuperAdminReports() {
 
                 {summary && (
                     <>
-                        {/* Billing Stats Row */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                             <StatCard
                                 title="חיוב חודשי צפוי"
@@ -182,13 +211,12 @@ export default function SuperAdminReports() {
                             <StatCard
                                 title="מסעדות במערכת"
                                 value={summary.total_restaurants || 0}
-                                subtitle={`${summary.active_restaurants || 0} פעילות • ${summary.trial_restaurants || 0} ניסיון`}
+                                subtitle={`${summary.active_restaurants || 0} פעילות · ${summary.trial_restaurants || 0} ניסיון`}
                                 accent="purple"
                                 icon={<FaStore size={18} />}
                             />
                         </div>
 
-                        {/* Order Revenue Stats Row */}
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
                             <StatCard
                                 title="הכנסות הזמנות החודש"
@@ -205,9 +233,9 @@ export default function SuperAdminReports() {
                                 icon={<FaReceipt size={18} />}
                             />
                             <StatCard
-                                title="ממוצע למסעדה"
-                                value={`₪${summary.active_restaurants > 0 ? Math.round(Number(summary.order_revenue_total || 0) / summary.active_restaurants).toLocaleString() : '0'}`}
-                                subtitle="הכנסות הזמנות ממוצע"
+                                title="שולם ב-YTD"
+                                value={`₪${totals.totalPaidYtd.toLocaleString()}`}
+                                subtitle="סך תשלומי מנויים השנה"
                                 accent="green"
                                 icon={<FaCoins size={18} />}
                             />
@@ -215,22 +243,44 @@ export default function SuperAdminReports() {
                     </>
                 )}
 
+                {/* Filters */}
                 <div className="mb-6 flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between">
-                    <div className="relative flex-1 max-w-md">
-                        <FaSearch className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                        <input
-                            type="text"
-                            placeholder="חיפוש לפי שם מסעדה או מזהה..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pr-10 pl-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none transition-all text-sm"
-                        />
+                    <div className="flex gap-3 items-center flex-1">
+                        <div className="relative flex-1 max-w-md">
+                            <FaSearch className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                            <input
+                                type="text"
+                                placeholder="חיפוש לפי שם מסעדה או מזהה..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="w-full pr-10 pl-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none transition-all text-sm"
+                            />
+                        </div>
+                        <select
+                            value={statusFilter}
+                            onChange={(e) => setStatusFilter(e.target.value)}
+                            className="px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-brand-primary/20 outline-none"
+                        >
+                            <option value="">כל הסטטוסים</option>
+                            <option value="active">פעילה</option>
+                            <option value="trial">ניסיון</option>
+                            <option value="suspended">מושהית</option>
+                            <option value="cancelled">מבוטלת</option>
+                        </select>
+                        <select
+                            value={tierFilter}
+                            onChange={(e) => setTierFilter(e.target.value)}
+                            className="px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-brand-primary/20 outline-none"
+                        >
+                            <option value="">כל התוכניות</option>
+                            <option value="basic">Basic</option>
+                            <option value="pro">Pro</option>
+                        </select>
                     </div>
                     <div className="flex items-center gap-4 text-xs font-bold text-gray-400 bg-gray-50 px-4 py-2.5 rounded-xl border border-gray-100 overflow-x-auto whitespace-nowrap">
                         <span className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-blue-400" /> חודשי: <span className="text-gray-900 font-black">₪{totals.monthly.toLocaleString()}</span></span>
                         <span className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-orange-400" /> חוב: <span className="text-gray-900 font-black">₪{totals.outstanding.toLocaleString()}</span></span>
                         <span className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-green-400" /> הכנסות: <span className="text-gray-900 font-black">₪{totals.orderRevenue.toLocaleString()}</span></span>
-                        <span className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-purple-400" /> הזמנות: <span className="text-gray-900 font-black">{totals.totalOrders.toLocaleString()}</span></span>
                     </div>
                 </div>
 
@@ -252,67 +302,99 @@ export default function SuperAdminReports() {
                             <table className="w-full text-right border-collapse">
                                 <thead className="bg-gray-50/50 border-b border-gray-100">
                                     <tr>
-                                        <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest">מסעדה</th>
-                                        <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest hidden md:table-cell">TENANT</th>
-                                        <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-left">חיוב חודשי</th>
-                                        <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-left">חוב פתוח</th>
-                                        <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-center hidden lg:table-cell">הזמנות</th>
-                                        <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-center hidden lg:table-cell">הכנסות הזמנות</th>
-                                        <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-center hidden xl:table-cell">תשלום אחרון</th>
-                                        <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-center">סטטוס</th>
+                                        <th className="px-5 py-4 text-xs font-black text-gray-400 uppercase tracking-widest">מסעדה</th>
+                                        <th className="px-4 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-center">תוכנית</th>
+                                        <th className="px-4 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-left">חיוב חודשי</th>
+                                        <th className="px-4 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-left">שולם YTD</th>
+                                        <th className="px-4 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-center hidden lg:table-cell">אשראי</th>
+                                        <th className="px-4 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-center hidden lg:table-cell">דמי הקמה</th>
+                                        <th className="px-4 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-center hidden xl:table-cell">תשלום אחרון</th>
+                                        <th className="px-4 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-center">סטטוס</th>
+                                        <th className="px-4 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-center">פעולות</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-50">
                                     {filteredRestaurants.map((r) => (
                                         <tr key={r.id} className="hover:bg-gray-50/50 transition-colors group">
-                                            <td className="px-6 py-4">
+                                            <td className="px-5 py-4">
                                                 <div className="flex items-center gap-3">
                                                     <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400 group-hover:bg-brand-primary/10 group-hover:text-brand-primary transition-colors">
                                                         <FaStore size={14} />
                                                     </div>
                                                     <div>
                                                         <span className="text-sm font-black text-gray-900 block">{r.name}</span>
-                                                        {r.tier && (
-                                                            <span className="text-[10px] text-gray-400 font-bold">{r.tier === 'basic' ? 'Basic' : 'Pro'}</span>
-                                                        )}
+                                                        <span className="text-[10px] text-gray-400 font-mono">@{r.tenant_id}</span>
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-4 hidden md:table-cell">
-                                                <span className="text-xs font-bold text-gray-400 font-mono">@{r.tenant_id}</span>
-                                            </td>
-                                            <td className="px-6 py-4 text-left">
-                                                <span className="text-sm font-black text-gray-900 border-b-2 border-transparent group-hover:border-brand-primary/20 transition-all">
-                                                    ₪{Number(r.monthly_fee || 0).toLocaleString()}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 text-left">
-                                                <span className={`text-sm font-black ${Number(r.outstanding_amount || 0) > 0 ? 'text-orange-600 bg-orange-50 px-2 py-1 rounded-lg' : 'text-gray-400'}`}>
-                                                    ₪{Number(r.outstanding_amount || 0).toLocaleString()}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 text-center hidden lg:table-cell">
-                                                <span className="text-sm font-bold text-gray-700">
-                                                    {Number(r.orders_count || 0).toLocaleString()}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 text-center hidden lg:table-cell">
-                                                <span className="text-sm font-bold text-brand-primary bg-brand-primary/5 px-3 py-1 rounded-full border border-brand-primary/10">
-                                                    ₪{Number(r.order_revenue || 0).toLocaleString()}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 text-center hidden xl:table-cell">
-                                                <div className="flex flex-col items-center">
-                                                    <span className="text-xs font-bold text-gray-700">{formatDate(r.last_paid_at)}</span>
-                                                    <span className="text-[10px] font-black text-gray-400 uppercase mt-0.5 flex items-center gap-1">
-                                                        <FaClock size={8} /> חיוב הבא: {formatDate(r.next_charge_at)}
+                                            <td className="px-4 py-4 text-center">
+                                                <div className="flex flex-col items-center gap-1">
+                                                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black ${r.tier === 'pro' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600'}`}>
+                                                        <FaCrown size={8} />
+                                                        {r.tier === 'pro' ? 'Pro' : 'Basic'}
+                                                    </span>
+                                                    <span className="text-[9px] text-gray-400 font-bold">
+                                                        {r.subscription_plan === 'yearly' ? 'שנתי' : 'חודשי'}
                                                     </span>
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-4 text-center">
+                                            <td className="px-4 py-4 text-left">
+                                                <span className="text-sm font-black text-gray-900">
+                                                    ₪{Number(r.monthly_fee || 0).toLocaleString()}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-4 text-left">
+                                                <div>
+                                                    <span className="text-sm font-black text-green-700">
+                                                        ₪{Number(r.total_paid_ytd || 0).toLocaleString()}
+                                                    </span>
+                                                    <span className="text-[10px] text-gray-400 font-bold block">
+                                                        {r.payments_count || 0} תשלומים
+                                                    </span>
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-4 text-center hidden lg:table-cell">
+                                                {r.has_card ? (
+                                                    <span className="text-[10px] font-black text-green-600 bg-green-50 px-2 py-1 rounded-lg border border-green-100">
+                                                        ****{r.card_last4}
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-[10px] font-bold text-gray-400">—</span>
+                                                )}
+                                            </td>
+                                            <td className="px-4 py-4 text-center hidden lg:table-cell">
+                                                {r.setup_fee_charged ? (
+                                                    <FaCheckCircle className="text-green-500 mx-auto" size={14} />
+                                                ) : (
+                                                    <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded-lg">ממתין</span>
+                                                )}
+                                            </td>
+                                            <td className="px-4 py-4 text-center hidden xl:table-cell">
+                                                <div className="flex flex-col items-center">
+                                                    <span className="text-xs font-bold text-gray-700">{formatDate(r.last_paid_at)}</span>
+                                                    <span className="text-[10px] font-black text-gray-400 uppercase mt-0.5 flex items-center gap-1">
+                                                        <FaClock size={8} /> הבא: {formatDate(r.next_charge_at)}
+                                                    </span>
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-4 text-center">
                                                 <div className="flex justify-center">
                                                     <StatusBadge status={r.billing_status} />
                                                 </div>
+                                            </td>
+                                            <td className="px-4 py-4 text-center">
+                                                {r.billing_status !== 'active' && (
+                                                    <button
+                                                        onClick={() => {
+                                                            setActivateModal(r);
+                                                            setActivateForm({ tier: r.tier || 'basic', plan_type: r.subscription_plan || 'monthly', note: '' });
+                                                        }}
+                                                        className="px-3 py-1.5 bg-green-50 text-green-600 border border-green-200 rounded-lg text-[10px] font-black hover:bg-green-600 hover:text-white transition-all"
+                                                        title="הפעל מנוי ידנית"
+                                                    >
+                                                        <FaPlay size={10} />
+                                                    </button>
+                                                )}
                                             </td>
                                         </tr>
                                     ))}
@@ -322,6 +404,75 @@ export default function SuperAdminReports() {
                     </div>
                 )}
             </div>
+
+            {/* Manual Activate Modal */}
+            {activateModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setActivateModal(null)}>
+                    <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="text-lg font-black text-gray-900">הפעלת מנוי ידנית</h3>
+                            <button onClick={() => setActivateModal(null)} className="p-2 hover:bg-gray-100 rounded-xl transition-colors text-gray-400">
+                                <FaTimes size={16} />
+                            </button>
+                        </div>
+
+                        <p className="text-sm text-gray-600 mb-4 font-medium">
+                            מסעדה: <strong>{activateModal.name}</strong>
+                        </p>
+
+                        <div className="space-y-4 mb-6">
+                            <div>
+                                <label className="text-xs font-black text-gray-500 mb-1 block">תוכנית</label>
+                                <select
+                                    value={activateForm.tier}
+                                    onChange={(e) => setActivateForm(f => ({ ...f, tier: e.target.value }))}
+                                    className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-brand-primary/20 outline-none"
+                                >
+                                    <option value="basic">Basic</option>
+                                    <option value="pro">Pro</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="text-xs font-black text-gray-500 mb-1 block">מחזור חיוב</label>
+                                <select
+                                    value={activateForm.plan_type}
+                                    onChange={(e) => setActivateForm(f => ({ ...f, plan_type: e.target.value }))}
+                                    className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-brand-primary/20 outline-none"
+                                >
+                                    <option value="monthly">חודשי</option>
+                                    <option value="yearly">שנתי</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="text-xs font-black text-gray-500 mb-1 block">הערה (אופציונלי)</label>
+                                <input
+                                    type="text"
+                                    value={activateForm.note}
+                                    onChange={(e) => setActivateForm(f => ({ ...f, note: e.target.value }))}
+                                    placeholder="סיבת הפעלה ידנית..."
+                                    className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-primary/20 outline-none"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex gap-3">
+                            <button
+                                onClick={handleActivate}
+                                disabled={activating}
+                                className="flex-1 px-4 py-3 bg-green-600 text-white rounded-xl font-black text-sm hover:bg-green-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                            >
+                                {activating ? 'מפעיל...' : 'הפעל מנוי'}
+                            </button>
+                            <button
+                                onClick={() => setActivateModal(null)}
+                                className="px-4 py-3 bg-gray-100 text-gray-600 rounded-xl font-bold text-sm hover:bg-gray-200 transition-all"
+                            >
+                                ביטול
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </SuperAdminLayout>
     );
 }
