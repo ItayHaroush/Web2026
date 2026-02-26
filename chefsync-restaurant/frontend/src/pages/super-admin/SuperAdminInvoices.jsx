@@ -53,7 +53,33 @@ export default function SuperAdminInvoices() {
                 headers: getAuthHeaders(),
                 params,
             });
-            setInvoices(res.data.invoices?.data || res.data.invoices || []);
+            const fetched = res.data.invoices?.data || res.data.invoices || [];
+            setInvoices(fetched);
+            // Fetch per-restaurant billing info (to know about setup fees)
+            try {
+                const tenantIds = Array.from(new Set(fetched.map(i => i.restaurant?.tenant_id).filter(Boolean)));
+                if (tenantIds.length > 0) {
+                    const billingMap = {};
+                    await Promise.all(tenantIds.map(async (tenant) => {
+                        try {
+                            const billRes = await api.get('/admin/billing/info', {
+                                headers: { ...getAuthHeaders(), 'X-Tenant-ID': tenant },
+                            });
+                            billingMap[tenant] = billRes.data.data || billRes.data;
+                        } catch (e) {
+                            console.debug('Failed to fetch billing for', tenant, e?.response?.data || e);
+                        }
+                    }));
+
+                    // merge billing info into invoices for easy rendering
+                    setInvoices(prev => prev.map(inv => ({
+                        ...inv,
+                        _billing: inv.restaurant?.tenant_id ? billingMap[inv.restaurant.tenant_id] : null,
+                    })));
+                }
+            } catch (e) {
+                console.debug('Error fetching per-restaurant billing info', e);
+            }
             setStats(res.data.stats);
         } catch (error) {
             console.error('Failed to load invoices', error);
@@ -431,6 +457,7 @@ export default function SuperAdminInvoices() {
                                         <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-center hidden md:table-cell">מודל</th>
                                         <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-left">בסיס</th>
                                         <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-left">עמלה</th>
+                                        <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-left">דמי הקמה</th>
                                         <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-left">סה״כ</th>
                                         <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-center hidden lg:table-cell">הזמנות</th>
                                         <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-center hidden lg:table-cell">מחזור</th>
@@ -470,6 +497,13 @@ export default function SuperAdminInvoices() {
                                                 </span>
                                                 {Number(inv.commission_percent || 0) > 0 && (
                                                     <span className="text-[10px] text-gray-400 block">{inv.commission_percent}%</span>
+                                                )}
+                                            </td>
+                                            <td className="px-6 py-4 text-left">
+                                                {inv._billing && inv._billing.setup_fee_charged && Number(inv._billing.pending_setup_fee || 0) > 0 ? (
+                                                    <span className="text-sm font-black text-gray-900">₪{Number(inv._billing.pending_setup_fee || 0).toLocaleString()}</span>
+                                                ) : (
+                                                    <span className="text-sm text-gray-400">—</span>
                                                 )}
                                             </td>
                                             <td className="px-6 py-4 text-left">
