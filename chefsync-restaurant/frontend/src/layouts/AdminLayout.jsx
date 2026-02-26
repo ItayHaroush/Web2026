@@ -31,9 +31,7 @@ import {
     FaCreditCard,
     FaExclamationTriangle,
     FaUserClock,
-    FaCashRegister,
-    FaNetworkWired,
-    FaFileInvoiceDollar
+    FaCashRegister
 } from 'react-icons/fa';
 
 export default function AdminLayout({ children }) {
@@ -144,15 +142,9 @@ export default function AdminLayout({ children }) {
             show: isManager() || isOwner()
         },
         {
-            path: '/admin/billing',
-            icon: <FaFileInvoiceDollar />,
-            label: 'חשבון וחיוב',
-            show: isOwner()
-        },
-        {
             path: '/admin/payment-settings',
             icon: <FaCreditCard />,
-            label: 'הגדרות תשלום',
+            label: 'הגדרות תשלום וחשבון',
             show: isOwner()
         },
         {
@@ -177,12 +169,6 @@ export default function AdminLayout({ children }) {
             path: '/admin/printers',
             icon: <FaPrint />,
             label: 'מדפסות',
-            show: isManager()
-        },
-        {
-            path: '/admin/print-devices',
-            icon: <FaNetworkWired />,
-            label: 'גשרי הדפסה',
             show: isManager()
         },
         {

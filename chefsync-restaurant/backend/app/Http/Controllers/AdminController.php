@@ -2843,15 +2843,12 @@ class AdminController extends Controller
         $planType = $validated['plan_type'];
         $planAmount = $prices[$tier][$planType === 'yearly' ? 'yearly' : 'monthly'];
 
-        // דמי הקמה — נוספים לתשלום הראשון אם טרם נגבו
+        // דמי הקמה — נגבים רק לאחר אישור בדף הגדרות תשלום (בחירת אשראי + אישור דמי הקמה)
+        // לא לכלול בתשלום ראשון של מנוי — הדמי הקמה מתווספים ל-outstanding כשמאשרים בהגדרות
         $setupFee = 0;
         $includesSetupFee = false;
-        if (!$restaurant->hyp_setup_fee_charged) {
-            $setupFee = ($tier === 'pro') ? 100 : 200;
-            $includesSetupFee = true;
-        }
 
-        $totalAmount = $planAmount + $setupFee;
+        $totalAmount = $planAmount;
         $owner = $request->user();
 
         \Illuminate\Support\Facades\Cache::put(

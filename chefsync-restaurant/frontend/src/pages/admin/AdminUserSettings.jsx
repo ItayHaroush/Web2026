@@ -372,7 +372,7 @@ export default function AdminUserSettings() {
                             )}
 
                             <button
-                                onClick={() => navigate(restaurant.subscription_status === 'trial' ? '/admin/paywall' : '/admin/billing')}
+                                onClick={() => navigate(restaurant.subscription_status === 'trial' ? '/admin/paywall' : '/admin/payment-settings')}
                                 className="flex items-center gap-2 px-5 py-2.5 bg-brand-primary text-white rounded-xl font-bold hover:opacity-90"
                             >
                                 <FaCreditCard size={14} />

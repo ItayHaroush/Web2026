@@ -11,8 +11,7 @@ import {
     FaCrown,
     FaBrain,
     FaExclamationTriangle,
-    FaArrowDown,
-    FaInfoCircle
+    FaArrowDown
 } from 'react-icons/fa';
 
 const PRO_ONLY_FEATURES = [
@@ -75,9 +74,9 @@ export default function AdminPaywall() {
     const isUpgrade = billing?.current_tier === 'basic' && selectedTier === 'pro';
     const isTrialActive = billing?.subscription_status === 'trial' && billing?.days_left_in_trial > 0;
     const isActive = billing?.subscription_status === 'active';
-    const setupFee = billing?.pending_setup_fee || 0;
     const planPrice = pricing[selectedTier]?.[billingCycle] || 0;
-    const totalAmount = planPrice + (billing?.setup_fee_charged ? 0 : setupFee);
+    // דמי הקמת חיבור מסוף — נגבים רק לאחר אישור בדף הגדרות תשלום (בחירת אשראי + אישור)
+    const totalAmount = planPrice;
 
     const handleTierSelect = (tier) => {
         if (billing?.current_tier === 'pro' && tier === 'basic') {
@@ -95,7 +94,7 @@ export default function AdminPaywall() {
                 billingCycle,
                 amount: totalAmount,
                 planAmount: planPrice,
-                setupFee: billing?.setup_fee_charged ? 0 : setupFee,
+                setupFee: 0,
                 isDowngrade,
                 isUpgrade,
                 previousTier: billing?.current_tier,
@@ -275,16 +274,6 @@ export default function AdminPaywall() {
                                         חבילת {selectedTier === 'pro' ? 'Pro' : 'Basic'} ({billingCycle === 'yearly' ? 'שנתי' : 'חודשי'})
                                     </span>
                                 </div>
-
-                                {!billing?.setup_fee_charged && setupFee > 0 && (
-                                    <div className="flex justify-between items-center">
-                                        <span className="font-bold text-gray-900">₪{setupFee}</span>
-                                        <span className="text-gray-600 font-medium flex items-center gap-1">
-                                            דמי הקמת חיבור מסוף (חד-פעמי)
-                                            <FaInfoCircle className="text-gray-400 text-xs" />
-                                        </span>
-                                    </div>
-                                )}
 
                                 <div className="border-t border-gray-200 pt-3 flex justify-between items-center">
                                     <span className="text-2xl font-black text-gray-900">

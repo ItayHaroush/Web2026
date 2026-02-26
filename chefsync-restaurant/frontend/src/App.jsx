@@ -31,11 +31,9 @@ import AdminPaywall from './pages/admin/AdminPaywall';
 import PaymentDemo from './pages/admin/PaymentDemo';
 import PaymentSuccess from './pages/admin/PaymentSuccess';
 import PaymentError from './pages/admin/PaymentError';
-import AdminBilling from './pages/admin/AdminBilling';
 import AdminDeliveryZones from './pages/admin/AdminDeliveryZones';
 import AdminCoupons from './pages/admin/AdminCoupons';
 import AdminPrinters from './pages/admin/AdminPrinters';
-import AdminPrintDevices from './pages/admin/AdminPrintDevices';
 import AdminSimulator from './pages/admin/AdminSimulator';
 import AdminQrCode from './pages/admin/AdminQrCode';
 import AdminDisplayScreens from './pages/admin/AdminDisplayScreens';
@@ -302,14 +300,7 @@ function AppRoutes() {
           </AdminRoute>
         }
       />
-      <Route
-        path="/admin/billing"
-        element={
-          <AdminRoute>
-            <AdminBilling />
-          </AdminRoute>
-        }
-      />
+      <Route path="/admin/billing" element={<Navigate to="/admin/payment-settings" replace />} />
       <Route
         path="/admin/terminal"
         element={
@@ -334,14 +325,7 @@ function AppRoutes() {
           </AdminRoute>
         }
       />
-      <Route
-        path="/admin/print-devices"
-        element={
-          <AdminRoute>
-            <AdminPrintDevices />
-          </AdminRoute>
-        }
-      />
+      <Route path="/admin/print-devices" element={<Navigate to="/admin/printers?tab=devices" replace />} />
       <Route
         path="/admin/simulator"
         element={
