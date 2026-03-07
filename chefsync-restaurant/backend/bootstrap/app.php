@@ -19,6 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->validateCsrfTokens(except: [
             'custom-invoice',
             'custom-invoice/*',
+            'appointed-pay/*',
         ]);
 
         $middleware->alias([

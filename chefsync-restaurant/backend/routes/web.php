@@ -25,3 +25,9 @@ Route::get('/pay/hyp/order/{sessionToken}', [HypOrderRedirectController::class, 
 // Redirect לתשלום HYP (B2B) – קורא APISign לחתימה ומפנה לעמוד תשלום מנוי
 Route::get('/pay/hyp/subscription/{restaurantId}', [HypSubscriptionRedirectController::class, 'redirect'])
     ->name('payments.hyp.subscription.redirect');
+
+// ── Appointed.cloud payment proxy (same HYP masof) ──
+use App\Http\Controllers\AppointedPaymentProxyController;
+Route::post('/appointed-pay/sign', [AppointedPaymentProxyController::class, 'sign']);
+Route::get('/appointed-pay/redirect', [AppointedPaymentProxyController::class, 'redirect']);
+Route::post("/appointed-pay/proxy", [AppointedPaymentProxyController::class, "proxy"]);
