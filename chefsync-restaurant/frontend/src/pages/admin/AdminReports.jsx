@@ -403,8 +403,8 @@ export default function AdminReports() {
                                     key={page}
                                     onClick={() => fetchReports(page)}
                                     className={`w-9 h-9 rounded-lg text-sm font-bold transition-all ${page === pagination.current_page
-                                            ? 'bg-brand-primary text-white'
-                                            : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                                        ? 'bg-brand-primary text-white'
+                                        : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
                                         }`}
                                 >
                                     {page}

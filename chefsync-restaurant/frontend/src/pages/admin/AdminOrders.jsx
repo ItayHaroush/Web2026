@@ -569,9 +569,9 @@ export default function AdminOrders() {
                                                             </div>
                                                             {order.payment_status && order.payment_status !== 'not_required' && (
                                                                 <div className={`px-2.5 py-0.5 rounded-lg text-[9px] font-black uppercase border flex items-center gap-1.5 ${order.payment_status === 'paid' ? 'bg-green-50 text-green-700 border-green-200' :
-                                                                        order.payment_status === 'pending' ? 'bg-orange-50 text-orange-700 border-orange-200' :
-                                                                            order.payment_status === 'failed' ? 'bg-red-50 text-red-700 border-red-200' :
-                                                                                'bg-gray-50 text-gray-600 border-gray-200'
+                                                                    order.payment_status === 'pending' ? 'bg-orange-50 text-orange-700 border-orange-200' :
+                                                                        order.payment_status === 'failed' ? 'bg-red-50 text-red-700 border-red-200' :
+                                                                            'bg-gray-50 text-gray-600 border-gray-200'
                                                                     }`}>
                                                                     {order.payment_method === 'credit_card' ? <FaCreditCard size={9} /> : <FaMoneyBillWave size={9} />}
                                                                     {order.payment_status === 'paid'
@@ -1076,9 +1076,9 @@ export default function AdminOrders() {
                                                     {selectedOrder.payment_method === 'credit_card' ? 'כרטיס אשראי' : 'מזומן'}
                                                 </div>
                                                 <div className={`px-2.5 py-1 rounded-lg text-[10px] font-black border ${selectedOrder.payment_status === 'paid' ? 'bg-green-50 text-green-700 border-green-200' :
-                                                        selectedOrder.payment_status === 'pending' ? 'bg-orange-50 text-orange-700 border-orange-200' :
-                                                            selectedOrder.payment_status === 'failed' ? 'bg-red-50 text-red-700 border-red-200' :
-                                                                'bg-gray-50 text-gray-500 border-gray-200'
+                                                    selectedOrder.payment_status === 'pending' ? 'bg-orange-50 text-orange-700 border-orange-200' :
+                                                        selectedOrder.payment_status === 'failed' ? 'bg-red-50 text-red-700 border-red-200' :
+                                                            'bg-gray-50 text-gray-500 border-gray-200'
                                                     }`}>
                                                     {selectedOrder.payment_status === 'paid'
                                                         ? (selectedOrder.payment_method === 'credit_card' ? 'שולם באשראי' : 'שולם במזומן')

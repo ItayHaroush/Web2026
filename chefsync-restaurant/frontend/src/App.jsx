@@ -555,11 +555,11 @@ export default function App() {
               <ToastProvider>
                 <CartProvider>
                   <PromotionProvider>
-                  <AppRoutes />
-                  <Toaster position="bottom-right" />
-                  <FacebookInAppWarning />
-                  <DevModeBanner />
-                  <CookieConsent />
+                    <AppRoutes />
+                    <Toaster position="bottom-right" />
+                    <FacebookInAppWarning />
+                    <DevModeBanner />
+                    <CookieConsent />
                   </PromotionProvider>
                 </CartProvider>
               </ToastProvider>
