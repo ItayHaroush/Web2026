@@ -5,6 +5,8 @@ import { useAdminAuth } from '../../context/AdminAuthContext';
 import { useRestaurantStatus } from '../../context/RestaurantStatusContext';
 import AdminLayout from '../../layouts/AdminLayout';
 import api from '../../services/apiClient';
+import reportService from '../../services/reportService';
+import reportService from '../../services/reportService';
 import RatingWidget from '../../components/RatingWidget';
 import {
     FaReceipt,
@@ -446,7 +448,10 @@ export default function AdminOrders() {
                                         const today = new Date().toLocaleDateString('en-CA');
                                         const res = await api.post('/admin/reports/generate', { date: today }, { headers: getAuthHeaders() });
                                         if (res.data?.success) {
-                                            alert('דוח יומי נוצר בהצלחה! ניתן לצפות בדף דוחות.');
+                                            const reportId = res.data?.data?.id;
+                                            if (reportId) {
+                                                await reportService.downloadPdf(reportId);
+                                            }
                                         } else {
                                             alert(res.data?.message || 'לא נמצאו הזמנות להיום');
                                         }

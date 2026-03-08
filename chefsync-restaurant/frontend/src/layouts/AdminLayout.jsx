@@ -137,6 +137,12 @@ export default function AdminLayout({ children }) {
             show: isManager()
         },
         {
+            path: '/admin/reports',
+            icon: <FaChartBar />,
+            label: 'דוחות יומיים',
+            show: isManager()
+        },
+        {
             path: '/admin/restaurant',
             icon: <FaStore />,
             label: 'פרטי מסעדה',
@@ -202,12 +208,6 @@ export default function AdminLayout({ children }) {
             label: 'דוח נוכחות',
             show: true,
             proOnly: true
-        },
-        {
-            path: '/admin/reports',
-            icon: <FaChartBar />,
-            label: 'דוחות יומיים',
-            show: isManager()
         },
         {
             path: '/admin/pos',
