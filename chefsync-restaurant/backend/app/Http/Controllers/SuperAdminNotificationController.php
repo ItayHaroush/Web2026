@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\City;
 use App\Models\FcmToken;
+use App\Models\NotificationLog;
 use App\Models\Restaurant;
 use App\Services\FcmService;
 use Illuminate\Http\Request;
@@ -95,6 +96,34 @@ class SuperAdminNotificationController extends Controller
             }
         }
 
+        // שמירת לוג
+        NotificationLog::create([
+            'channel' => 'push',
+            'type' => 'broadcast',
+            'title' => $payload['title'],
+            'body' => $payload['body'],
+            'sender_id' => $request->user()?->id,
+            'target_restaurant_ids' => $restaurantIds->values()->toArray(),
+            'tokens_targeted' => $tokens->count(),
+            'sent_ok' => $sent,
+        ]);
+
+        // יצירת התראות למסעדות המקבלות
+        foreach ($restaurantIds as $rId) {
+            $rest = Restaurant::find($rId);
+            if ($rest) {
+                \App\Models\MonitoringAlert::create([
+                    'tenant_id' => $rest->tenant_id,
+                    'restaurant_id' => $rId,
+                    'alert_type' => 'super_admin_broadcast',
+                    'title' => $payload['title'],
+                    'body' => $payload['body'],
+                    'severity' => 'info',
+                    'is_read' => false,
+                ]);
+            }
+        }
+
         return response()->json([
             'success' => true,
             'data' => [
@@ -102,6 +131,33 @@ class SuperAdminNotificationController extends Controller
                 'tokens_targeted' => $tokens->count(),
                 'sent_ok' => $sent,
             ],
+        ]);
+    }
+
+    /**
+     * היסטוריית התראות שנשלחו
+     * GET /super-admin/notifications/log
+     */
+    public function log(Request $request)
+    {
+        $request->validate([
+            'type' => 'nullable|string',
+            'page' => 'nullable|integer|min:1',
+            'per_page' => 'nullable|integer|min:1|max:100',
+        ]);
+
+        $query = NotificationLog::with('sender:id,name')
+            ->orderBy('created_at', 'desc');
+
+        if ($request->filled('type')) {
+            $query->where('type', $request->input('type'));
+        }
+
+        $logs = $query->paginate($request->integer('per_page', 30));
+
+        return response()->json([
+            'success' => true,
+            'data' => $logs,
         ]);
     }
 }

@@ -11,3 +11,5 @@ if (config('payment.subscription_billing_enabled')) {
 Schedule::command('payments:reconcile')->everyTenMinutes();
 Schedule::command('emails:trial')->dailyAt('09:00');
 Schedule::command('emails:monthly-report')->monthlyOn(1, '08:00');
+Schedule::command('reports:generate-daily')->dailyAt('02:00');
+Schedule::command('reports:send-notifications')->dailyAt('02:15');

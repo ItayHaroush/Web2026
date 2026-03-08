@@ -49,6 +49,7 @@ import PaymentCallback from './pages/PaymentCallback';
 import AdminAuthDebug from './pages/admin/AdminAuthDebug';
 import SuperAdminDashboard from './pages/super-admin/SuperAdminDashboard';
 import SuperAdminNotifications from './pages/super-admin/SuperAdminNotifications';
+import SuperAdminNotificationLog from './pages/super-admin/SuperAdminNotificationLog';
 import SuperAdminReports from './pages/super-admin/SuperAdminReports';
 import SuperAdminInvoices from './pages/super-admin/SuperAdminInvoices';
 import SuperAdminSettings from './pages/super-admin/SuperAdminSettings';
@@ -419,6 +420,14 @@ function AppRoutes() {
         }
       />
       <Route
+        path="/super-admin/notification-log"
+        element={
+          <SuperAdminRoute>
+            <SuperAdminNotificationLog />
+          </SuperAdminRoute>
+        }
+      />
+      <Route
         path="/super-admin/reports"
         element={
           <SuperAdminRoute>
@@ -546,11 +555,11 @@ export default function App() {
               <ToastProvider>
                 <CartProvider>
                   <PromotionProvider>
-                  <AppRoutes />
-                  <Toaster position="bottom-right" />
-                  <FacebookInAppWarning />
-                  <DevModeBanner />
-                  <CookieConsent />
+                    <AppRoutes />
+                    <Toaster position="bottom-right" />
+                    <FacebookInAppWarning />
+                    <DevModeBanner />
+                    <CookieConsent />
                   </PromotionProvider>
                 </CartProvider>
               </ToastProvider>

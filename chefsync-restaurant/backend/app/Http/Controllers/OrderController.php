@@ -16,6 +16,7 @@ use App\Services\OrderEventService;
 use App\Services\RestaurantPaymentService;
 use App\Models\PaymentSession;
 use App\Models\SystemError;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
@@ -460,6 +461,9 @@ class OrderController extends Controller
                         'url' => '/admin/orders'
                     ]
                 );
+
+                // התראת סופר אדמין על הזמנה חדשה
+                $this->sendSuperAdminOrderAlert($order, $tenantId);
             }
 
             // Event Log - רישום אירוע יצירת הזמנה
@@ -786,6 +790,39 @@ class OrderController extends Controller
             Log::warning('Failed to send FCM notification', [
                 'error' => $e->getMessage(),
             ]);
+        }
+    }
+
+    private function sendSuperAdminOrderAlert(Order $order, string $tenantId): void
+    {
+        try {
+            $superAdmins = User::where('is_super_admin', true)->pluck('id');
+            if ($superAdmins->isEmpty()) return;
+
+            $tokens = FcmToken::withoutGlobalScopes()
+                ->whereIn('user_id', $superAdmins)
+                ->pluck('token');
+
+            if ($tokens->isEmpty()) return;
+
+            $restaurant = Restaurant::where('tenant_id', $tenantId)->first();
+            $restaurantName = $restaurant?->name ?? $tenantId;
+
+            $fcm = app(FcmService::class);
+            foreach ($tokens as $token) {
+                $fcm->sendToToken(
+                    $token,
+                    "הזמנה חדשה - {$restaurantName}",
+                    "#{$order->id} | {$order->customer_name} | ₪{$order->total_amount}",
+                    [
+                        'type' => 'super_admin_order_alert',
+                        'orderId' => (string) $order->id,
+                        'tenantId' => $tenantId,
+                    ]
+                );
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Failed to send super admin order alert', ['error' => $e->getMessage()]);
         }
     }
 
