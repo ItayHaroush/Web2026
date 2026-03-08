@@ -1,5 +1,5 @@
 import React from 'react';
-import { FaBars, FaBell, FaUserCircle, FaEye } from 'react-icons/fa';
+import { FaBars, FaUserCircle, FaEye } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import NotificationPopup from './NotificationPopup';
 
@@ -61,17 +61,7 @@ const DashboardHeader = ({
                     </button>
 
                     {/* Notifications */}
-                    {user?.is_super_admin ? (
-                        <button
-                            onClick={() => navigate('/super-admin/notifications')}
-                            className="p-2 text-gray-400 hover:text-orange-600 transition-colors"
-                            title="מרכז התראות"
-                        >
-                            <FaBell size={20} />
-                        </button>
-                    ) : (
-                        <NotificationPopup notificationCount={notificationCount} />
-                    )}
+                    <NotificationPopup notificationCount={notificationCount} />
 
                     {/* User Profile */}
                     <div
