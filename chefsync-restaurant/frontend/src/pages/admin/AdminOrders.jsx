@@ -29,7 +29,8 @@ import {
     FaEye,
     FaTabletAlt,
     FaCreditCard,
-    FaMoneyBillWave
+    FaMoneyBillWave,
+    FaFileAlt
 } from 'react-icons/fa';
 import { SiWaze, SiGooglemaps } from 'react-icons/si';
 
@@ -46,6 +47,7 @@ export default function AdminOrders() {
     const [etaExtraMinutes, setEtaExtraMinutes] = useState('');
     const [etaNote, setEtaNote] = useState('');
     const [etaUpdating, setEtaUpdating] = useState(false);
+    const [generatingReport, setGeneratingReport] = useState(false);
     const [etaSectionOpen, setEtaSectionOpen] = useState(false);
     const [customerSectionOpen, setCustomerSectionOpen] = useState(false);
     const previousOrdersCount = useRef(0);
@@ -435,6 +437,31 @@ export default function AdminOrders() {
                             <p className="text-2xl font-black text-brand-primary leading-none mt-1">
                                 {getTodayOrders(allOrders.length ? allOrders : orders).length}
                             </p>
+                        </div>
+                        <div className="border-r border-gray-200 pr-4">
+                            <button
+                                onClick={async () => {
+                                    setGeneratingReport(true);
+                                    try {
+                                        const today = new Date().toLocaleDateString('en-CA');
+                                        const res = await api.post('/admin/reports/generate', { date: today }, { headers: getAuthHeaders() });
+                                        if (res.data?.success) {
+                                            alert('דוח יומי נוצר בהצלחה! ניתן לצפות בדף דוחות.');
+                                        } else {
+                                            alert(res.data?.message || 'לא נמצאו הזמנות להיום');
+                                        }
+                                    } catch (e) {
+                                        alert(e.response?.data?.message || 'שגיאה ביצירת דוח');
+                                    } finally {
+                                        setGeneratingReport(false);
+                                    }
+                                }}
+                                disabled={generatingReport}
+                                className="flex items-center gap-2 px-3 py-2 bg-brand-primary/10 text-brand-primary hover:bg-brand-primary hover:text-white rounded-xl text-xs font-black transition-all disabled:opacity-50"
+                            >
+                                {generatingReport ? <FaSpinner className="animate-spin" size={14} /> : <FaFileAlt size={14} />}
+                                צור דוח יומי
+                            </button>
                         </div>
                     </div>
                 </div>

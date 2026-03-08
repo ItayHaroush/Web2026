@@ -22,6 +22,7 @@ use App\Http\Controllers\PromotionController;
 use App\Http\Controllers\SuperAdminSettingsController;
 use App\Http\Controllers\SuperAdminEmailController;
 use App\Http\Controllers\OrderEventController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\HypSubscriptionCallbackController;
 use App\Http\Controllers\HypOrderCallbackController;
 
@@ -119,6 +120,7 @@ Route::prefix('super-admin')->middleware(['auth:sanctum', 'super_admin'])->group
     // התראות (Broadcast) לפי פילטרים
     Route::get('/notifications/filters', [SuperAdminNotificationController::class, 'filters'])->name('super-admin.notifications.filters');
     Route::post('/notifications/send', [SuperAdminNotificationController::class, 'send'])->name('super-admin.notifications.send');
+    Route::get('/notifications/log', [SuperAdminNotificationController::class, 'log'])->name('super-admin.notifications.log');
 
     // עוזר AI לסופר אדמין
     Route::post('/ai/chat', [ChatController::class, 'chat'])->name('super-admin.ai.chat');
@@ -167,6 +169,9 @@ Route::prefix('super-admin')->middleware(['auth:sanctum', 'super_admin'])->group
     Route::get('/order-events/{orderId}/timeline', [OrderEventController::class, 'timeline'])->name('super-admin.order-events.timeline');
     Route::get('/system-errors', [OrderEventController::class, 'getSystemErrors'])->name('super-admin.system-errors');
     Route::post('/system-errors/{id}/resolve', [OrderEventController::class, 'resolveError'])->name('super-admin.system-errors.resolve');
+
+    // דוחות יומיים - סופר אדמין
+    Route::get('/reports/summary', [ReportController::class, 'superAdminSummary'])->name('super-admin.reports.summary');
 
     // Impersonation - כניסה כמסעדה
     Route::post('/impersonate/{restaurantId}', [SuperAdminController::class, 'impersonate'])->name('super-admin.impersonate');
@@ -382,6 +387,15 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'tenant'])->group(function (
         Route::put('/promotions/{id}', [PromotionController::class, 'update'])->name('admin.promotions.update');
         Route::delete('/promotions/{id}', [PromotionController::class, 'destroy'])->name('admin.promotions.destroy');
         Route::patch('/promotions/{id}/toggle', [PromotionController::class, 'toggle'])->name('admin.promotions.toggle');
+
+        // דוחות יומיים
+        Route::get('/reports', [ReportController::class, 'index'])->name('admin.reports.index');
+        Route::get('/reports/csv', [ReportController::class, 'csv'])->name('admin.reports.csv');
+        Route::get('/reports/tax-csv', [ReportController::class, 'taxCsv'])->name('admin.reports.tax-csv');
+        Route::get('/reports/zip', [ReportController::class, 'zip'])->name('admin.reports.zip');
+        Route::post('/reports/generate', [ReportController::class, 'generate'])->name('admin.reports.generate');
+        Route::get('/reports/{id}', [ReportController::class, 'show'])->name('admin.reports.show');
+        Route::get('/reports/{id}/pdf', [ReportController::class, 'pdf'])->name('admin.reports.pdf');
     });
 });
 

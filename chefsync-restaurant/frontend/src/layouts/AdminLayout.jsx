@@ -204,6 +204,12 @@ export default function AdminLayout({ children }) {
             proOnly: true
         },
         {
+            path: '/admin/reports',
+            icon: <FaChartBar />,
+            label: 'דוחות יומיים',
+            show: isManager()
+        },
+        {
             path: '/admin/pos',
             icon: <FaCashRegister />,
             label: 'קופה POS',

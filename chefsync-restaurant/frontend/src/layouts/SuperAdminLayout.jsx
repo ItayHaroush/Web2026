@@ -14,7 +14,8 @@ import {
     FaUserShield,
     FaClipboardList,
     FaReceipt,
-    FaEnvelope
+    FaEnvelope,
+    FaHistory
 } from 'react-icons/fa';
 
 export default function SuperAdminLayout({ children }) {
@@ -39,6 +40,11 @@ export default function SuperAdminLayout({ children }) {
             label: 'התראות',
             path: '/super-admin/notifications',
             icon: <FaBell />,
+        },
+        {
+            label: 'לוג התראות',
+            path: '/super-admin/notification-log',
+            icon: <FaHistory />,
         },
         {
             label: 'דוחות',

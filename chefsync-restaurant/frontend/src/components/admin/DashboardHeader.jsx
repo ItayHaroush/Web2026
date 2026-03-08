@@ -1,6 +1,7 @@
 import React from 'react';
 import { FaBars, FaBell, FaUserCircle, FaEye } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
+import NotificationPopup from './NotificationPopup';
 
 const ROLE_LABELS = { owner: 'בעל מסעדה', manager: 'מנהל', employee: 'עובד', delivery: 'שליח' };
 
@@ -60,18 +61,17 @@ const DashboardHeader = ({
                     </button>
 
                     {/* Notifications */}
-                    <button
-                        onClick={() => navigate('/admin/orders')}
-                        className={`p-2 transition-colors relative ${notificationCount > 0 ? 'text-orange-600 animate-pulse-slow' : 'text-gray-400 hover:text-orange-600'}`}
-                        title={notificationCount > 0 ? `${notificationCount} הזמנות פעילות` : 'אין התראות חדשות'}
-                    >
-                        <FaBell size={20} />
-                        {notificationCount > 0 && (
-                            <span className="absolute top-1 right-1 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full border-2 border-white flex items-center justify-center">
-                                {notificationCount > 9 ? '9+' : notificationCount}
-                            </span>
-                        )}
-                    </button>
+                    {user?.is_super_admin ? (
+                        <button
+                            onClick={() => navigate('/super-admin/notifications')}
+                            className="p-2 text-gray-400 hover:text-orange-600 transition-colors"
+                            title="מרכז התראות"
+                        >
+                            <FaBell size={20} />
+                        </button>
+                    ) : (
+                        <NotificationPopup notificationCount={notificationCount} />
+                    )}
 
                     {/* User Profile */}
                     <div

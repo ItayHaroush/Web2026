@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import SuperAdminLayout from '../../layouts/SuperAdminLayout';
 import api from '../../services/apiClient';
+import reportService from '../../services/reportService';
 import { toast } from 'react-hot-toast';
 import {
     FaChartLine,
@@ -19,11 +20,16 @@ import {
     FaCrown,
     FaPlay,
     FaTimes,
-    FaFilter
+    FaFilter,
+    FaChartBar
 } from 'react-icons/fa';
+import {
+    BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
+} from 'recharts';
 
 export default function SuperAdminReports() {
     const { getAuthHeaders } = useAdminAuth();
+    const [activeTab, setActiveTab] = useState('billing');
     const [summary, setSummary] = useState(null);
     const [restaurants, setRestaurants] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -225,7 +231,27 @@ export default function SuperAdminReports() {
                     </button>
                 </div>
 
-                {summary && (
+                {/* Tabs */}
+                <div className="flex gap-2 mb-6">
+                    <button
+                        onClick={() => setActiveTab('billing')}
+                        className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'billing' ? 'bg-brand-primary text-white shadow-md' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+                    >
+                        <FaReceipt className="inline ml-2" size={14} />
+                        חיובים ומנויים
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('daily')}
+                        className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'daily' ? 'bg-brand-primary text-white shadow-md' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+                    >
+                        <FaChartBar className="inline ml-2" size={14} />
+                        דוחות יומיים
+                    </button>
+                </div>
+
+                {activeTab === 'daily' && <DailyReportsSummaryTab />}
+
+                {activeTab === 'billing' && summary && (
                     <>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                             <StatCard
@@ -284,177 +310,181 @@ export default function SuperAdminReports() {
                     </>
                 )}
 
-                {/* Filters */}
-                <div className="mb-6 flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between">
-                    <div className="flex gap-3 items-center flex-1">
-                        <div className="relative flex-1 max-w-md">
-                            <FaSearch className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                            <input
-                                type="text"
-                                placeholder="חיפוש לפי שם מסעדה או מזהה..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pr-10 pl-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none transition-all text-sm"
-                            />
+                {activeTab === 'billing' && (
+                    <>
+                        {/* Filters */}
+                        <div className="mb-6 flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between">
+                            <div className="flex gap-3 items-center flex-1">
+                                <div className="relative flex-1 max-w-md">
+                                    <FaSearch className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                    <input
+                                        type="text"
+                                        placeholder="חיפוש לפי שם מסעדה או מזהה..."
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        className="w-full pr-10 pl-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none transition-all text-sm"
+                                    />
+                                </div>
+                                <select
+                                    value={statusFilter}
+                                    onChange={(e) => setStatusFilter(e.target.value)}
+                                    className="px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-brand-primary/20 outline-none"
+                                >
+                                    <option value="">כל הסטטוסים</option>
+                                    <option value="active">פעילה</option>
+                                    <option value="trial">ניסיון</option>
+                                    <option value="suspended">מושהית</option>
+                                    <option value="cancelled">מבוטלת</option>
+                                </select>
+                                <select
+                                    value={tierFilter}
+                                    onChange={(e) => setTierFilter(e.target.value)}
+                                    className="px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-brand-primary/20 outline-none"
+                                >
+                                    <option value="">כל התוכניות</option>
+                                    <option value="basic">Basic</option>
+                                    <option value="pro">Pro</option>
+                                </select>
+                            </div>
+                            <div className="flex items-center gap-4 text-xs font-bold text-gray-400 bg-gray-50 px-4 py-2.5 rounded-xl border border-gray-100 overflow-x-auto whitespace-nowrap">
+                                <span className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-blue-400" /> חודשי: <span className="text-gray-900 font-black">₪{totals.monthly.toLocaleString()}</span></span>
+                                <span className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-orange-400" /> חוב: <span className="text-gray-900 font-black">₪{totals.outstanding.toLocaleString()}</span></span>
+                                <span className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-green-400" /> הכנסות: <span className="text-gray-900 font-black">₪{totals.orderRevenue.toLocaleString()}</span></span>
+                            </div>
                         </div>
-                        <select
-                            value={statusFilter}
-                            onChange={(e) => setStatusFilter(e.target.value)}
-                            className="px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-brand-primary/20 outline-none"
-                        >
-                            <option value="">כל הסטטוסים</option>
-                            <option value="active">פעילה</option>
-                            <option value="trial">ניסיון</option>
-                            <option value="suspended">מושהית</option>
-                            <option value="cancelled">מבוטלת</option>
-                        </select>
-                        <select
-                            value={tierFilter}
-                            onChange={(e) => setTierFilter(e.target.value)}
-                            className="px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-brand-primary/20 outline-none"
-                        >
-                            <option value="">כל התוכניות</option>
-                            <option value="basic">Basic</option>
-                            <option value="pro">Pro</option>
-                        </select>
-                    </div>
-                    <div className="flex items-center gap-4 text-xs font-bold text-gray-400 bg-gray-50 px-4 py-2.5 rounded-xl border border-gray-100 overflow-x-auto whitespace-nowrap">
-                        <span className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-blue-400" /> חודשי: <span className="text-gray-900 font-black">₪{totals.monthly.toLocaleString()}</span></span>
-                        <span className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-orange-400" /> חוב: <span className="text-gray-900 font-black">₪{totals.outstanding.toLocaleString()}</span></span>
-                        <span className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-green-400" /> הכנסות: <span className="text-gray-900 font-black">₪{totals.orderRevenue.toLocaleString()}</span></span>
-                    </div>
-                </div>
 
-                {loading ? (
-                    <div className="bg-white rounded-3xl border border-gray-100 p-20 text-center shadow-sm">
-                        <div className="w-12 h-12 border-4 border-brand-primary/20 border-t-brand-primary rounded-full animate-spin mx-auto mb-4" />
-                        <p className="text-gray-500 font-bold">טוען נתונים...</p>
-                    </div>
-                ) : filteredRestaurants.length === 0 ? (
-                    <div className="bg-gray-50 rounded-3xl p-12 text-center border-2 border-dashed border-gray-200">
-                        <div className="w-16 h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center mx-auto mb-4 text-gray-300">
-                            <FaSearch size={24} />
-                        </div>
-                        <p className="text-gray-500 font-bold">לא נמצאו מסעדות התואמות לחיפוש</p>
-                    </div>
-                ) : (
-                    <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-right border-collapse">
-                                <thead className="bg-gray-50/50 border-b border-gray-100">
-                                    <tr>
-                                        <th className="px-5 py-4 text-xs font-black text-gray-400 uppercase tracking-widest">מסעדה</th>
-                                        <th className="px-4 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-center">תוכנית</th>
-                                        <th className="px-4 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-left">חיוב חודשי</th>
-                                        <th className="px-4 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-left">שולם YTD</th>
-                                        <th className="px-4 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-center hidden lg:table-cell">אשראי</th>
-                                        <th className="px-4 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-center hidden lg:table-cell">דמי הקמה</th>
-                                        <th className="px-4 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-center hidden xl:table-cell">תשלום אחרון</th>
-                                        <th className="px-4 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-center">סטטוס</th>
-                                        <th className="px-4 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-center">פעולות</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-50">
-                                    {filteredRestaurants.map((r) => (
-                                        <tr key={r.id} className="hover:bg-gray-50/50 transition-colors group">
-                                            <td className="px-5 py-4">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400 group-hover:bg-brand-primary/10 group-hover:text-brand-primary transition-colors">
-                                                        <FaStore size={14} />
-                                                    </div>
-                                                    <div>
-                                                        <span className="text-sm font-black text-gray-900 block">{r.name}</span>
-                                                        <span className="text-[10px] text-gray-400 font-mono">@{r.tenant_id}</span>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-4 text-center">
-                                                <div className="flex flex-col items-center gap-1">
-                                                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black ${r.tier === 'pro' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600'}`}>
-                                                        <FaCrown size={8} />
-                                                        {r.tier === 'pro' ? 'Pro' : 'Basic'}
-                                                    </span>
-                                                    <span className="text-[9px] text-gray-400 font-bold">
-                                                        {r.subscription_plan === 'yearly' ? 'שנתי' : 'חודשי'}
-                                                    </span>
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-4 text-left">
-                                                <span className="text-sm font-black text-gray-900">
-                                                    ₪{Number(r.monthly_fee || 0).toLocaleString()}
-                                                </span>
-                                            </td>
-                                            <td className="px-4 py-4 text-left">
-                                                <div>
-                                                    <span className="text-sm font-black text-green-700">
-                                                        ₪{Number(r.total_paid_ytd || 0).toLocaleString()}
-                                                    </span>
-                                                    <span className="text-[10px] text-gray-400 font-bold block">
-                                                        {r.payments_count || 0} תשלומים
-                                                    </span>
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-4 text-center hidden lg:table-cell">
-                                                {r.has_card ? (
-                                                    <span className="text-[10px] font-black text-green-600 bg-green-50 px-2 py-1 rounded-lg border border-green-100">
-                                                        ****{r.card_last4}
-                                                    </span>
-                                                ) : (
-                                                    <span className="text-[10px] font-bold text-gray-400">—</span>
-                                                )}
-                                            </td>
-                                            <td className="px-4 py-4 text-center hidden lg:table-cell">
-                                                {r.setup_fee_charged ? (
-                                                    <FaCheckCircle className="text-green-500 mx-auto" size={14} />
-                                                ) : (
-                                                    <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded-lg">ממתין</span>
-                                                )}
-                                            </td>
-                                            <td className="px-4 py-4 text-center hidden xl:table-cell">
-                                                <div className="flex flex-col items-center">
-                                                    <span className="text-xs font-bold text-gray-700">{formatDate(r.last_paid_at)}</span>
-                                                    <span className="text-[10px] font-black text-gray-400 uppercase mt-0.5 flex items-center gap-1">
-                                                        <FaClock size={8} /> הבא: {formatDate(r.next_charge_at)}
-                                                    </span>
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-4 text-center">
-                                                <div className="flex justify-center">
-                                                    <StatusBadge status={r.billing_status} />
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-4 text-center">
-                                                <div className="flex justify-center gap-1">
-                                                    {r.billing_status !== 'active' && (
-                                                        <button
-                                                            onClick={() => {
-                                                                setActivateModal(r);
-                                                                setActivateForm({ tier: r.tier || 'basic', plan_type: r.subscription_plan || 'monthly', note: '', record_payment: false, payment_reference: '', trial_days: 14 });
-                                                            }}
-                                                            className="px-3 py-1.5 bg-green-50 text-green-600 border border-green-200 rounded-lg text-[10px] font-black hover:bg-green-600 hover:text-white transition-all"
-                                                            title="הפעל מנוי ידנית"
-                                                        >
-                                                            <FaPlay size={10} />
-                                                        </button>
-                                                    )}
-                                                    <button
-                                                        onClick={() => {
-                                                            setActivateModal(r);
-                                                            setActivateForm({ tier: r.tier || 'basic', plan_type: r.subscription_plan || 'monthly', note: '', record_payment: false, payment_reference: '', trial_days: 14 });
-                                                        }}
-                                                        className="px-3 py-1.5 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg text-[10px] font-black hover:bg-blue-600 hover:text-white transition-all"
-                                                        title="החזר לתקופת ניסיון"
-                                                    >
-                                                        🔄
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+                        {loading ? (
+                            <div className="bg-white rounded-3xl border border-gray-100 p-20 text-center shadow-sm">
+                                <div className="w-12 h-12 border-4 border-brand-primary/20 border-t-brand-primary rounded-full animate-spin mx-auto mb-4" />
+                                <p className="text-gray-500 font-bold">טוען נתונים...</p>
+                            </div>
+                        ) : filteredRestaurants.length === 0 ? (
+                            <div className="bg-gray-50 rounded-3xl p-12 text-center border-2 border-dashed border-gray-200">
+                                <div className="w-16 h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center mx-auto mb-4 text-gray-300">
+                                    <FaSearch size={24} />
+                                </div>
+                                <p className="text-gray-500 font-bold">לא נמצאו מסעדות התואמות לחיפוש</p>
+                            </div>
+                        ) : (
+                            <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-right border-collapse">
+                                        <thead className="bg-gray-50/50 border-b border-gray-100">
+                                            <tr>
+                                                <th className="px-5 py-4 text-xs font-black text-gray-400 uppercase tracking-widest">מסעדה</th>
+                                                <th className="px-4 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-center">תוכנית</th>
+                                                <th className="px-4 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-left">חיוב חודשי</th>
+                                                <th className="px-4 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-left">שולם YTD</th>
+                                                <th className="px-4 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-center hidden lg:table-cell">אשראי</th>
+                                                <th className="px-4 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-center hidden lg:table-cell">דמי הקמה</th>
+                                                <th className="px-4 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-center hidden xl:table-cell">תשלום אחרון</th>
+                                                <th className="px-4 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-center">סטטוס</th>
+                                                <th className="px-4 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-center">פעולות</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-50">
+                                            {filteredRestaurants.map((r) => (
+                                                <tr key={r.id} className="hover:bg-gray-50/50 transition-colors group">
+                                                    <td className="px-5 py-4">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400 group-hover:bg-brand-primary/10 group-hover:text-brand-primary transition-colors">
+                                                                <FaStore size={14} />
+                                                            </div>
+                                                            <div>
+                                                                <span className="text-sm font-black text-gray-900 block">{r.name}</span>
+                                                                <span className="text-[10px] text-gray-400 font-mono">@{r.tenant_id}</span>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-4 py-4 text-center">
+                                                        <div className="flex flex-col items-center gap-1">
+                                                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black ${r.tier === 'pro' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600'}`}>
+                                                                <FaCrown size={8} />
+                                                                {r.tier === 'pro' ? 'Pro' : 'Basic'}
+                                                            </span>
+                                                            <span className="text-[9px] text-gray-400 font-bold">
+                                                                {r.subscription_plan === 'yearly' ? 'שנתי' : 'חודשי'}
+                                                            </span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-4 py-4 text-left">
+                                                        <span className="text-sm font-black text-gray-900">
+                                                            ₪{Number(r.monthly_fee || 0).toLocaleString()}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-4 py-4 text-left">
+                                                        <div>
+                                                            <span className="text-sm font-black text-green-700">
+                                                                ₪{Number(r.total_paid_ytd || 0).toLocaleString()}
+                                                            </span>
+                                                            <span className="text-[10px] text-gray-400 font-bold block">
+                                                                {r.payments_count || 0} תשלומים
+                                                            </span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-4 py-4 text-center hidden lg:table-cell">
+                                                        {r.has_card ? (
+                                                            <span className="text-[10px] font-black text-green-600 bg-green-50 px-2 py-1 rounded-lg border border-green-100">
+                                                                ****{r.card_last4}
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-[10px] font-bold text-gray-400">—</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-4 py-4 text-center hidden lg:table-cell">
+                                                        {r.setup_fee_charged ? (
+                                                            <FaCheckCircle className="text-green-500 mx-auto" size={14} />
+                                                        ) : (
+                                                            <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded-lg">ממתין</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-4 py-4 text-center hidden xl:table-cell">
+                                                        <div className="flex flex-col items-center">
+                                                            <span className="text-xs font-bold text-gray-700">{formatDate(r.last_paid_at)}</span>
+                                                            <span className="text-[10px] font-black text-gray-400 uppercase mt-0.5 flex items-center gap-1">
+                                                                <FaClock size={8} /> הבא: {formatDate(r.next_charge_at)}
+                                                            </span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-4 py-4 text-center">
+                                                        <div className="flex justify-center">
+                                                            <StatusBadge status={r.billing_status} />
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-4 py-4 text-center">
+                                                        <div className="flex justify-center gap-1">
+                                                            {r.billing_status !== 'active' && (
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setActivateModal(r);
+                                                                        setActivateForm({ tier: r.tier || 'basic', plan_type: r.subscription_plan || 'monthly', note: '', record_payment: false, payment_reference: '', trial_days: 14 });
+                                                                    }}
+                                                                    className="px-3 py-1.5 bg-green-50 text-green-600 border border-green-200 rounded-lg text-[10px] font-black hover:bg-green-600 hover:text-white transition-all"
+                                                                    title="הפעל מנוי ידנית"
+                                                                >
+                                                                    <FaPlay size={10} />
+                                                                </button>
+                                                            )}
+                                                            <button
+                                                                onClick={() => {
+                                                                    setActivateModal(r);
+                                                                    setActivateForm({ tier: r.tier || 'basic', plan_type: r.subscription_plan || 'monthly', note: '', record_payment: false, payment_reference: '', trial_days: 14 });
+                                                                }}
+                                                                className="px-3 py-1.5 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg text-[10px] font-black hover:bg-blue-600 hover:text-white transition-all"
+                                                                title="החזר לתקופת ניסיון"
+                                                            >
+                                                                🔄
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        )}
+                    </>
                 )}
             </div>
 
@@ -604,5 +634,122 @@ export default function SuperAdminReports() {
                 </div>
             )}
         </SuperAdminLayout>
+    );
+}
+
+function DailyReportsSummaryTab() {
+    const [data, setData] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [from, setFrom] = useState(() => {
+        const d = new Date();
+        d.setDate(d.getDate() - 7);
+        return d.toISOString().split('T')[0];
+    });
+    const [to, setTo] = useState(() => new Date().toISOString().split('T')[0]);
+
+    const fetchSummary = async () => {
+        setLoading(true);
+        try {
+            const res = await reportService.getSuperAdminSummary({ from, to });
+            setData(res.data);
+        } catch (err) {
+            toast.error('שגיאה בטעינת דוחות יומיים');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => { fetchSummary(); }, [from, to]);
+
+    if (loading) return <div className="text-center py-16 text-gray-400">טוען דוחות יומיים...</div>;
+    if (!data) return <div className="text-center py-16 text-gray-400">אין נתונים</div>;
+
+    const chartData = (data.daily_breakdown || []).map(d => ({
+        date: d.date?.substring(5) || '',
+        הזמנות: d.orders || 0,
+        הכנסות: d.revenue || 0,
+        מסעדות: d.restaurants || 0,
+    }));
+
+    return (
+        <div className="space-y-6">
+            {/* Filters */}
+            <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-wrap items-center gap-4">
+                <FaCalendarAlt className="text-brand-primary" />
+                <input type="date" value={from} onChange={e => setFrom(e.target.value)} className="border border-gray-200 rounded-xl px-3 py-2 text-sm" />
+                <span className="text-gray-400">עד</span>
+                <input type="date" value={to} onChange={e => setTo(e.target.value)} className="border border-gray-200 rounded-xl px-3 py-2 text-sm" />
+            </div>
+
+            {/* KPIs */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
+                    <p className="text-xs font-bold text-gray-500 mb-1">מסעדות פעילות</p>
+                    <h3 className="text-2xl font-black text-gray-900">{data.total_restaurants}</h3>
+                </div>
+                <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
+                    <p className="text-xs font-bold text-gray-500 mb-1">סה״כ הזמנות</p>
+                    <h3 className="text-2xl font-black text-blue-600">{data.total_orders?.toLocaleString()}</h3>
+                </div>
+                <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
+                    <p className="text-xs font-bold text-gray-500 mb-1">סה״כ הכנסות</p>
+                    <h3 className="text-2xl font-black text-emerald-600">₪{data.total_revenue?.toLocaleString()}</h3>
+                </div>
+                <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
+                    <p className="text-xs font-bold text-gray-500 mb-1">ממוצע להזמנה</p>
+                    <h3 className="text-2xl font-black text-orange-600">₪{data.avg_order_value}</h3>
+                </div>
+            </div>
+
+            {/* Daily Chart */}
+            {chartData.length > 0 && (
+                <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
+                    <h3 className="text-lg font-black text-gray-900 mb-4 flex items-center gap-2">
+                        <FaChartBar className="text-blue-500" /> הכנסות יומיות מערכתיות
+                    </h3>
+                    <ResponsiveContainer width="100%" height={300}>
+                        <BarChart data={chartData}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                            <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                            <YAxis tick={{ fontSize: 11 }} />
+                            <Tooltip formatter={(value, name) => [name === 'הכנסות' ? `₪${value.toLocaleString()}` : value, name]} />
+                            <Bar dataKey="הכנסות" fill="#f97316" radius={[4, 4, 0, 0]} />
+                            <Bar dataKey="הזמנות" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                        </BarChart>
+                    </ResponsiveContainer>
+                </div>
+            )}
+
+            {/* Restaurant breakdown */}
+            {data.restaurant_breakdown?.length > 0 && (
+                <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+                    <div className="p-4 border-b border-gray-100">
+                        <h3 className="text-lg font-black text-gray-900">סיכום לפי מסעדה</h3>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                            <thead className="bg-gray-50">
+                                <tr>
+                                    <th className="text-right p-3 font-bold text-gray-500">מסעדה</th>
+                                    <th className="text-right p-3 font-bold text-gray-500">הזמנות</th>
+                                    <th className="text-right p-3 font-bold text-gray-500">הכנסות</th>
+                                    <th className="text-right p-3 font-bold text-gray-500">ימים</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-50">
+                                {data.restaurant_breakdown.map((r, i) => (
+                                    <tr key={i} className="hover:bg-gray-50">
+                                        <td className="p-3 font-bold">{r.name}</td>
+                                        <td className="p-3">{r.orders?.toLocaleString()}</td>
+                                        <td className="p-3 font-bold text-emerald-600">₪{r.revenue?.toLocaleString()}</td>
+                                        <td className="p-3 text-gray-500">{r.days}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+        </div>
     );
 }

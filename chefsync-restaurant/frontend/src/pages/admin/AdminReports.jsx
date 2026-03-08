@@ -1,177 +1,580 @@
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import AdminLayout from '../../layouts/AdminLayout';
 import UpgradeBanner from '../../components/UpgradeBanner';
+import { useToast } from '../../context/ToastContext';
+import reportService from '../../services/reportService';
 import {
     FaChartLine,
     FaShoppingBag,
-    FaUsers,
     FaTimesCircle,
-    FaArrowUp,
-    FaArrowDown,
     FaCalendarAlt,
     FaDownload,
-    FaChartPie,
     FaMoneyBillWave,
-    FaInfoCircle
+    FaFileExcel,
+    FaFilePdf,
+    FaFileArchive,
+    FaTimes,
+    FaSync,
+    FaEye,
+    FaChevronDown,
+    FaChevronUp,
+    FaTruck,
+    FaStore
 } from 'react-icons/fa';
+import {
+    BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+    PieChart, Pie, Cell
+} from 'recharts';
+
+const COLORS = ['#f97316', '#3b82f6', '#8b5cf6', '#22c55e', '#ef4444', '#eab308'];
 
 export default function AdminReports() {
-    const stats = [
-        {
-            title: 'הכנסות היום',
-            value: '₪2,450',
-            change: '+12.5%',
-            isPositive: true,
-            icon: <FaMoneyBillWave />,
-            color: 'emerald'
-        },
-        {
-            title: 'הזמנות היום',
-            value: '45',
-            change: '+5.2%',
-            isPositive: true,
-            icon: <FaShoppingBag />,
-            color: 'blue'
-        },
-        {
-            title: 'לקוחות חדשים',
-            value: '12',
-            change: '+20.1%',
-            isPositive: true,
-            icon: <FaUsers />,
-            color: 'purple'
-        },
-        {
-            title: 'ביטולים',
-            value: '1',
-            change: '-50.0%',
-            isPositive: true, // שיפור זה ירידה בביטולים
-            icon: <FaTimesCircle />,
-            color: 'rose'
-        },
-    ];
+    const { addToast } = useToast();
+    const [reports, setReports] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [selectedReport, setSelectedReport] = useState(null);
+    const [modalOpen, setModalOpen] = useState(false);
+    const [generating, setGenerating] = useState(false);
+    const [exporting, setExporting] = useState(null);
+    const [generateDate, setGenerateDate] = useState('');
+    const [pagination, setPagination] = useState({ current_page: 1, last_page: 1 });
+
+    // פילטרים
+    const [from, setFrom] = useState(() => {
+        const d = new Date();
+        d.setDate(d.getDate() - 30);
+        return d.toISOString().split('T')[0];
+    });
+    const [to, setTo] = useState(() => new Date().toISOString().split('T')[0]);
+
+    const fetchReports = useCallback(async (page = 1) => {
+        setLoading(true);
+        try {
+            const res = await reportService.getReports({ from, to, page, per_page: 30 });
+            setReports(res.data?.data || []);
+            setPagination({
+                current_page: res.data?.current_page || 1,
+                last_page: res.data?.last_page || 1,
+            });
+        } catch (err) {
+            addToast('שגיאה בטעינת דוחות', 'error');
+        } finally {
+            setLoading(false);
+        }
+    }, [from, to, addToast]);
+
+    useEffect(() => {
+        fetchReports();
+    }, [fetchReports]);
+
+    // KPIs מחושבים
+    const totalOrders = reports.reduce((s, r) => s + (r.total_orders || 0), 0);
+    const totalRevenue = reports.reduce((s, r) => s + parseFloat(r.total_revenue || 0), 0);
+    const totalCancelled = reports.reduce((s, r) => s + (r.cancelled_orders || 0), 0);
+    const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+
+    // Chart data
+    const chartData = [...reports].reverse().map(r => ({
+        date: r.date?.split('T')[0]?.substring(5) || '',
+        הכנסות: parseFloat(r.total_revenue || 0),
+        הזמנות: r.total_orders || 0,
+    }));
+
+    const pieData = [
+        { name: 'איסוף', value: reports.reduce((s, r) => s + (r.pickup_orders || 0), 0) },
+        { name: 'משלוח', value: reports.reduce((s, r) => s + (r.delivery_orders || 0), 0) },
+    ].filter(d => d.value > 0);
+
+    const paymentPieData = [
+        { name: 'מזומן', value: reports.reduce((s, r) => s + parseFloat(r.cash_total || 0), 0) },
+        { name: 'אשראי', value: reports.reduce((s, r) => s + parseFloat(r.credit_total || 0), 0) },
+    ].filter(d => d.value > 0);
+
+    const sourcePieData = [
+        { name: 'אונליין', value: reports.reduce((s, r) => s + (r.web_orders || 0), 0) },
+        { name: 'קיוסק', value: reports.reduce((s, r) => s + (r.kiosk_orders || 0), 0) },
+        { name: 'קופה', value: reports.reduce((s, r) => s + (r.pos_orders || 0), 0) },
+    ].filter(d => d.value > 0);
+
+    // Handlers
+    const handleGenerate = async () => {
+        if (!generateDate) return addToast('יש לבחור תאריך', 'error');
+        setGenerating(true);
+        try {
+            await reportService.generateReport(generateDate);
+            addToast('דוח נוצר בהצלחה', 'success');
+            fetchReports();
+            setGenerateDate('');
+        } catch (err) {
+            addToast(err.response?.data?.message || 'שגיאה ביצירת דוח', 'error');
+        } finally {
+            setGenerating(false);
+        }
+    };
+
+    const handleExport = async (type) => {
+        setExporting(type);
+        try {
+            if (type === 'csv') await reportService.downloadCsv({ from, to });
+            else if (type === 'tax-csv') await reportService.downloadTaxCsv(from, to);
+            else if (type === 'zip') await reportService.downloadZip(from, to);
+            addToast('הקובץ ירד בהצלחה', 'success');
+        } catch (err) {
+            addToast('שגיאה בייצוא', 'error');
+        } finally {
+            setExporting(null);
+        }
+    };
+
+    const openReport = async (report) => {
+        try {
+            const res = await reportService.getReport(report.id);
+            setSelectedReport(res.data);
+            setModalOpen(true);
+        } catch {
+            addToast('שגיאה בטעינת דוח', 'error');
+        }
+    };
 
     return (
         <AdminLayout>
-            <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
+            <div className="max-w-7xl mx-auto space-y-6 animate-in fade-in duration-500">
                 {/* Header */}
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div>
-                        <h1 className="text-4xl font-black text-gray-900 flex items-center gap-3">
+                        <h1 className="text-3xl font-black text-gray-900 flex items-center gap-3">
                             <span className="p-3 bg-brand-primary/10 rounded-2xl text-brand-primary">
-                                <FaChartLine size={32} />
+                                <FaChartLine size={28} />
                             </span>
                             דוחות וביצועים
                         </h1>
-                        <p className="text-gray-500 mt-2 mr-16 font-medium">
-                            ניתוח נתוני מכירות, לקוחות ופריטים פופולריים בזמן אמת
-                        </p>
+                        <p className="text-gray-500 mt-1 mr-16 text-sm">דוחות יומיים, ייצוא וניתוח נתונים</p>
                     </div>
 
-                    <div className="flex gap-3 w-full md:w-auto">
-                        <button className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-white border border-gray-100 rounded-2xl font-black text-gray-700 hover:bg-gray-50 transition-all shadow-sm">
-                            <FaCalendarAlt className="text-brand-primary" />
-                            <span>בחר תאריכים</span>
+                    {/* Export buttons */}
+                    <div className="flex flex-wrap gap-2">
+                        <button
+                            onClick={() => handleExport('csv')}
+                            disabled={!!exporting}
+                            className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-50 transition-all disabled:opacity-50"
+                        >
+                            <FaFileExcel className="text-green-600" />
+                            {exporting === 'csv' ? '...' : 'CSV'}
                         </button>
-                        <button className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-gray-900 text-white rounded-2xl font-black hover:bg-black transition-all shadow-lg">
-                            <FaDownload />
-                            <span>ייצוא PDF</span>
+                        <button
+                            onClick={() => handleExport('tax-csv')}
+                            disabled={!!exporting}
+                            className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-50 transition-all disabled:opacity-50"
+                        >
+                            <FaFileExcel className="text-amber-600" />
+                            {exporting === 'tax-csv' ? '...' : 'מס'}
+                        </button>
+                        <button
+                            onClick={() => handleExport('zip')}
+                            disabled={!!exporting}
+                            className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-50 transition-all disabled:opacity-50"
+                        >
+                            <FaFileArchive className="text-purple-600" />
+                            {exporting === 'zip' ? '...' : 'ZIP'}
                         </button>
                     </div>
                 </div>
 
-                {/* Quick Stats */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {stats.map((stat, index) => (
-                        <div key={index} className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
-                            <div className={`absolute top-0 left-0 w-2 h-full bg-${stat.color}-500 opacity-20`} />
+                {/* Filters */}
+                <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-wrap items-center gap-4">
+                    <FaCalendarAlt className="text-brand-primary" />
+                    <input
+                        type="date"
+                        value={from}
+                        onChange={e => setFrom(e.target.value)}
+                        className="border border-gray-200 rounded-xl px-3 py-2 text-sm"
+                    />
+                    <span className="text-gray-400">עד</span>
+                    <input
+                        type="date"
+                        value={to}
+                        onChange={e => setTo(e.target.value)}
+                        className="border border-gray-200 rounded-xl px-3 py-2 text-sm"
+                    />
+                    <button
+                        onClick={() => fetchReports()}
+                        className="flex items-center gap-2 px-4 py-2 bg-brand-primary text-white rounded-xl text-sm font-bold hover:bg-brand-primary/90 transition-all"
+                    >
+                        <FaSync size={12} /> סנן
+                    </button>
 
-                            <div className="flex items-start justify-between mb-4">
-                                <div className={`p-3 rounded-2xl bg-${stat.color}-50 text-${stat.color}-600 group-hover:scale-110 transition-transform`}>
-                                    {stat.icon}
-                                </div>
-                                <div className={`flex items-center gap-1 text-[11px] font-black px-2 py-1 rounded-full ${stat.isPositive ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
-                                    {stat.isPositive ? <FaArrowUp size={8} /> : <FaArrowDown size={8} />}
-                                    {stat.change}
-                                </div>
-                            </div>
-
-                            <p className="text-gray-500 text-xs font-black uppercase tracking-wider mb-1">{stat.title}</p>
-                            <h3 className="text-3xl font-black text-gray-900">{stat.value}</h3>
-                        </div>
-                    ))}
+                    <div className="mr-auto flex items-center gap-2">
+                        <input
+                            type="date"
+                            value={generateDate}
+                            onChange={e => setGenerateDate(e.target.value)}
+                            max={new Date().toISOString().split('T')[0]}
+                            className="border border-gray-200 rounded-xl px-3 py-2 text-sm"
+                        />
+                        <button
+                            onClick={handleGenerate}
+                            disabled={generating}
+                            className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-xl text-sm font-bold hover:bg-black transition-all disabled:opacity-50"
+                        >
+                            {generating ? '...' : 'צור דוח ידני'}
+                        </button>
+                    </div>
                 </div>
 
-                {/* Main Charts area */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    <section className="bg-white rounded-[2.5rem] p-8 border border-gray-100 shadow-sm hover:shadow-md transition-shadow min-h-[450px] flex flex-col">
-                        <div className="flex items-center justify-between mb-8">
-                            <h3 className="text-xl font-black text-gray-900 flex items-center gap-2">
-                                <FaChartLine className="text-blue-500" /> גרף מכירות יומי
-                            </h3>
-                            <div className="flex gap-2">
-                                <span className="w-3 h-3 rounded-full bg-blue-500" />
-                                <span className="w-3 h-3 rounded-full bg-gray-100" />
-                            </div>
-                        </div>
-                        <div className="flex-1 bg-gray-50 rounded-3xl border border-gray-100 border-dashed flex flex-col items-center justify-center p-8 text-center">
-                            <div className="w-20 h-20 bg-white rounded-[2rem] shadow-sm flex items-center justify-center mb-4 text-blue-100">
-                                <FaChartLine size={32} />
-                            </div>
-                            <h4 className="font-black text-gray-800 text-lg mb-2">נתוני מכירות בטעינה...</h4>
-                            <p className="text-gray-500 text-sm max-w-xs font-medium">כאן יופיע גרף המכירות של ה-30 ימים האחרונים עם השוואה לתקופה קודמת</p>
-                        </div>
-                    </section>
+                {/* KPI Cards */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <KpiCard
+                        label="הכנסות"
+                        value={`₪${totalRevenue.toLocaleString('he-IL', { maximumFractionDigits: 0 })}`}
+                        icon={<FaMoneyBillWave />}
+                        color="emerald"
+                    />
+                    <KpiCard
+                        label="הזמנות"
+                        value={totalOrders.toLocaleString()}
+                        icon={<FaShoppingBag />}
+                        color="blue"
+                    />
+                    <KpiCard
+                        label="ממוצע להזמנה"
+                        value={`₪${avgOrderValue.toLocaleString('he-IL', { maximumFractionDigits: 0 })}`}
+                        icon={<FaChartLine />}
+                        color="orange"
+                    />
+                    <KpiCard
+                        label="ביטולים"
+                        value={totalCancelled.toLocaleString()}
+                        icon={<FaTimesCircle />}
+                        color="rose"
+                    />
+                </div>
 
-                    <section className="bg-white rounded-[2.5rem] p-8 border border-gray-100 shadow-sm hover:shadow-md transition-shadow min-h-[450px] flex flex-col">
-                        <div className="flex items-center justify-between mb-8">
-                            <h3 className="text-xl font-black text-gray-900 flex items-center gap-2">
-                                <FaChartPie className="text-purple-500" /> פריטים פופולריים
+                {/* Charts */}
+                {!loading && reports.length > 0 && (
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        {/* Revenue bar chart */}
+                        <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                            <h3 className="text-lg font-black text-gray-900 mb-4 flex items-center gap-2">
+                                <FaChartLine className="text-blue-500" /> הכנסות יומיות
                             </h3>
-                            <button className="text-xs font-black text-brand-primary hover:underline">ראה הכל</button>
+                            <ResponsiveContainer width="100%" height={300}>
+                                <BarChart data={chartData}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                                    <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                                    <YAxis tick={{ fontSize: 11 }} />
+                                    <Tooltip
+                                        formatter={(value, name) => [
+                                            name === 'הכנסות' ? `₪${value.toLocaleString()}` : value,
+                                            name
+                                        ]}
+                                    />
+                                    <Bar dataKey="הכנסות" fill="#f97316" radius={[4, 4, 0, 0]} />
+                                </BarChart>
+                            </ResponsiveContainer>
                         </div>
-                        <div className="flex-1 space-y-4">
-                            {[1, 2, 3, 4, 5].map((i) => (
-                                <div key={i} className="flex items-center gap-4 p-4 hover:bg-gray-50 rounded-2xl transition-colors border border-transparent hover:border-gray-100">
-                                    <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center text-sm font-black text-gray-400">#{i}</div>
-                                    <div className="flex-1">
-                                        <div className="flex justify-between items-center mb-1">
-                                            <span className="font-black text-gray-800">פיצה מרגריטה קלאסי</span>
-                                            <span className="text-xs font-black text-brand-primary">142 הזמנות</span>
-                                        </div>
-                                        <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-                                            <div
-                                                className="h-full bg-brand-primary transition-all duration-1000"
-                                                style={{ width: `${100 - (i * 15)}%`, transitionDelay: `${i * 100}ms` }}
-                                            />
-                                        </div>
-                                    </div>
+
+                        {/* Pie charts */}
+                        <div className="space-y-6">
+                            <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                                <h3 className="text-sm font-black text-gray-900 mb-3 flex items-center gap-2">
+                                    <FaTruck className="text-purple-500" /> איסוף / משלוח
+                                </h3>
+                                {pieData.length > 0 ? (
+                                    <ResponsiveContainer width="100%" height={140}>
+                                        <PieChart>
+                                            <Pie data={pieData} dataKey="value" cx="50%" cy="50%" outerRadius={55} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                                                {pieData.map((_, i) => <Cell key={i} fill={COLORS[i]} />)}
+                                            </Pie>
+                                            <Tooltip formatter={v => v.toLocaleString()} />
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                ) : <p className="text-gray-400 text-sm text-center py-6">אין נתונים</p>}
+                            </div>
+
+                            <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                                <h3 className="text-sm font-black text-gray-900 mb-3 flex items-center gap-2">
+                                    <FaMoneyBillWave className="text-green-500" /> אמצעי תשלום
+                                </h3>
+                                {paymentPieData.length > 0 ? (
+                                    <ResponsiveContainer width="100%" height={140}>
+                                        <PieChart>
+                                            <Pie data={paymentPieData} dataKey="value" cx="50%" cy="50%" outerRadius={55} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                                                {paymentPieData.map((_, i) => <Cell key={i} fill={COLORS[i + 2]} />)}
+                                            </Pie>
+                                            <Tooltip formatter={v => `₪${v.toLocaleString()}`} />
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                ) : <p className="text-gray-400 text-sm text-center py-6">אין נתונים</p>}
+                            </div>
+
+                            {sourcePieData.length > 0 && (
+                                <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                                    <h3 className="text-sm font-black text-gray-900 mb-3 flex items-center gap-2">
+                                        <FaStore className="text-orange-500" /> מקור הזמנה
+                                    </h3>
+                                    <ResponsiveContainer width="100%" height={140}>
+                                        <PieChart>
+                                            <Pie data={sourcePieData} dataKey="value" cx="50%" cy="50%" outerRadius={55} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                                                {sourcePieData.map((_, i) => <Cell key={i} fill={COLORS[i + 3]} />)}
+                                            </Pie>
+                                            <Tooltip formatter={v => v.toLocaleString()} />
+                                        </PieChart>
+                                    </ResponsiveContainer>
                                 </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {/* Reports Table */}
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                    <div className="p-4 border-b border-gray-100">
+                        <h3 className="text-lg font-black text-gray-900">דוחות יומיים</h3>
+                    </div>
+
+                    {loading ? (
+                        <div className="p-16 text-center text-gray-400">טוען דוחות...</div>
+                    ) : reports.length === 0 ? (
+                        <div className="p-16 text-center text-gray-400">אין דוחות בטווח התאריכים שנבחר</div>
+                    ) : (
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                                <thead className="bg-gray-50">
+                                    <tr>
+                                        <th className="text-right p-3 font-bold text-gray-500">תאריך</th>
+                                        <th className="text-right p-3 font-bold text-gray-500">הזמנות</th>
+                                        <th className="text-right p-3 font-bold text-gray-500">הכנסות</th>
+                                        <th className="text-right p-3 font-bold text-gray-500">איסוף</th>
+                                        <th className="text-right p-3 font-bold text-gray-500">משלוח</th>
+                                        <th className="text-right p-3 font-bold text-gray-500">אונליין</th>
+                                        <th className="text-right p-3 font-bold text-gray-500">קיוסק</th>
+                                        <th className="text-right p-3 font-bold text-gray-500">קופה</th>
+                                        <th className="text-right p-3 font-bold text-gray-500">ממוצע</th>
+                                        <th className="text-right p-3 font-bold text-gray-500">ביטולים</th>
+                                        <th className="text-right p-3 font-bold text-gray-500">פעולות</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-50">
+                                    {reports.map(r => (
+                                        <tr key={r.id} className="hover:bg-gray-50 transition-colors">
+                                            <td className="p-3 font-bold">{r.date?.split('T')[0]}</td>
+                                            <td className="p-3">{r.total_orders}</td>
+                                            <td className="p-3 font-bold text-emerald-600">₪{parseFloat(r.total_revenue || 0).toLocaleString()}</td>
+                                            <td className="p-3">{r.pickup_orders}</td>
+                                            <td className="p-3">{r.delivery_orders}</td>
+                                            <td className="p-3">{r.web_orders || 0}</td>
+                                            <td className="p-3">{r.kiosk_orders || 0}</td>
+                                            <td className="p-3">{r.pos_orders || 0}</td>
+                                            <td className="p-3">₪{parseFloat(r.avg_order_value || 0).toFixed(0)}</td>
+                                            <td className="p-3">
+                                                {r.cancelled_orders > 0 && (
+                                                    <span className="text-rose-600 font-bold">{r.cancelled_orders}</span>
+                                                )}
+                                                {!r.cancelled_orders && <span className="text-gray-300">0</span>}
+                                            </td>
+                                            <td className="p-3 flex gap-2">
+                                                <button
+                                                    onClick={() => openReport(r)}
+                                                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                    title="צפייה"
+                                                >
+                                                    <FaEye size={14} />
+                                                </button>
+                                                <button
+                                                    onClick={() => reportService.downloadPdf(r.id)}
+                                                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                    title="PDF"
+                                                >
+                                                    <FaFilePdf size={14} />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+
+                    {/* Pagination */}
+                    {pagination.last_page > 1 && (
+                        <div className="p-4 border-t border-gray-100 flex justify-center gap-2">
+                            {Array.from({ length: pagination.last_page }, (_, i) => i + 1).map(page => (
+                                <button
+                                    key={page}
+                                    onClick={() => fetchReports(page)}
+                                    className={`w-9 h-9 rounded-lg text-sm font-bold transition-all ${page === pagination.current_page
+                                            ? 'bg-brand-primary text-white'
+                                            : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                                        }`}
+                                >
+                                    {page}
+                                </button>
                             ))}
                         </div>
-                    </section>
+                    )}
                 </div>
 
-                {/* Insights Footer */}
-                <div className="bg-gray-900 rounded-[2.5rem] p-8 text-white relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-brand-primary/20 blur-[100px] -translate-y-1/2 translate-x-1/2" />
-                    <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
-                        <div className="p-5 bg-white/10 rounded-[2rem] backdrop-blur-md">
-                            <FaInfoCircle size={40} className="text-brand-primary" />
-                        </div>
-                        <div className="text-center md:text-right flex-1">
-                            <h3 className="text-2xl font-black mb-2">תובנות מהשבוע האחרון</h3>
-                            <p className="text-white/60 font-medium">המכירות שלך גדלו ב-12% לעומת שבוע שעבר. השעות הכי חזקות שלך הן בין 19:00 ל-21:00.</p>
-                        </div>
-                        <button className="bg-white text-gray-900 px-8 py-4 rounded-2xl font-black hover:bg-brand-primary hover:text-white transition-all shadow-xl active:scale-95">
-                            קבל דוח מלא במייל
+                <UpgradeBanner variant="inline" context="reports" />
+
+                {/* Detail Modal */}
+                {modalOpen && selectedReport && (
+                    <ReportDetailModal
+                        report={selectedReport}
+                        onClose={() => { setModalOpen(false); setSelectedReport(null); }}
+                        onDownloadPdf={() => reportService.downloadPdf(selectedReport.id)}
+                    />
+                )}
+            </div>
+        </AdminLayout>
+    );
+}
+
+function KpiCard({ label, value, icon, color }) {
+    const colorMap = {
+        emerald: 'bg-emerald-50 text-emerald-600',
+        blue: 'bg-blue-50 text-blue-600',
+        orange: 'bg-orange-50 text-orange-600',
+        rose: 'bg-rose-50 text-rose-600',
+    };
+    return (
+        <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
+            <div className={`inline-flex p-2.5 rounded-xl ${colorMap[color] || colorMap.blue} mb-3`}>
+                {icon}
+            </div>
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">{label}</p>
+            <h3 className="text-2xl font-black text-gray-900">{value}</h3>
+        </div>
+    );
+}
+
+function ReportDetailModal({ report, onClose, onDownloadPdf }) {
+    const json = report.report_json || {};
+    const topItems = json.top_items || [];
+    const hourly = json.hourly_breakdown || {};
+    const [showHourly, setShowHourly] = useState(false);
+
+    const hourlyData = Object.entries(hourly)
+        .filter(([, d]) => (d.orders || 0) > 0)
+        .map(([h, d]) => ({
+            hour: `${String(h).padStart(2, '0')}:00`,
+            הזמנות: d.orders || 0,
+            הכנסות: d.revenue || 0,
+        }));
+
+    return (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
+            <div
+                className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
+                onClick={e => e.stopPropagation()}
+            >
+                <div className="p-6 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white rounded-t-3xl z-10">
+                    <h2 className="text-xl font-black text-gray-900">דוח יומי — {report.date?.split('T')[0]}</h2>
+                    <div className="flex items-center gap-2">
+                        <button onClick={onDownloadPdf} className="p-2 text-red-600 hover:bg-red-50 rounded-xl transition-colors">
+                            <FaFilePdf size={18} />
+                        </button>
+                        <button onClick={onClose} className="p-2 text-gray-400 hover:bg-gray-100 rounded-xl transition-colors">
+                            <FaTimes size={18} />
                         </button>
                     </div>
                 </div>
 
-                {/* Upgrade Banner */}
-                <UpgradeBanner variant="inline" context="reports" />
+                <div className="p-6 space-y-6">
+                    {/* KPIs */}
+                    <div className="grid grid-cols-3 gap-3">
+                        <div className="bg-emerald-50 rounded-xl p-4 text-center">
+                            <p className="text-xs text-emerald-700 font-bold mb-1">הכנסות</p>
+                            <p className="text-xl font-black text-emerald-800">₪{parseFloat(report.total_revenue || 0).toLocaleString()}</p>
+                        </div>
+                        <div className="bg-blue-50 rounded-xl p-4 text-center">
+                            <p className="text-xs text-blue-700 font-bold mb-1">הזמנות</p>
+                            <p className="text-xl font-black text-blue-800">{report.total_orders}</p>
+                        </div>
+                        <div className="bg-orange-50 rounded-xl p-4 text-center">
+                            <p className="text-xs text-orange-700 font-bold mb-1">ממוצע</p>
+                            <p className="text-xl font-black text-orange-800">₪{parseFloat(report.avg_order_value || 0).toFixed(0)}</p>
+                        </div>
+                    </div>
+
+                    {/* Details */}
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                        <InfoRow label="איסוף" value={report.pickup_orders} icon={<FaStore className="text-blue-500" />} />
+                        <InfoRow label="משלוח" value={report.delivery_orders} icon={<FaTruck className="text-purple-500" />} />
+                        <InfoRow label="מזומן" value={`₪${parseFloat(report.cash_total || 0).toLocaleString()}`} icon={<FaMoneyBillWave className="text-green-500" />} />
+                        <InfoRow label="אשראי" value={`₪${parseFloat(report.credit_total || 0).toLocaleString()}`} icon={<FaMoneyBillWave className="text-blue-500" />} />
+                        {(report.web_orders > 0 || report.kiosk_orders > 0 || report.pos_orders > 0) && (
+                            <>
+                                <InfoRow label="אונליין" value={`${report.web_orders || 0} (₪${parseFloat(report.web_revenue || 0).toLocaleString()})`} icon={<FaStore className="text-blue-500" />} />
+                                <InfoRow label="קיוסק" value={`${report.kiosk_orders || 0} (₪${parseFloat(report.kiosk_revenue || 0).toLocaleString()})`} icon={<FaStore className="text-orange-500" />} />
+                                <InfoRow label="קופה" value={`${report.pos_orders || 0} (₪${parseFloat(report.pos_revenue || 0).toLocaleString()})`} icon={<FaStore className="text-green-500" />} />
+                                {(report.dine_in_orders > 0 || report.takeaway_orders > 0) && (
+                                    <>
+                                        <InfoRow label="לשבת (קיוסק)" value={report.dine_in_orders || 0} icon={<FaStore className="text-purple-500" />} />
+                                        <InfoRow label="לקחת (קיוסק)" value={report.takeaway_orders || 0} icon={<FaStore className="text-amber-500" />} />
+                                    </>
+                                )}
+                            </>
+                        )}
+                        {report.cancelled_orders > 0 && (
+                            <>
+                                <InfoRow label="ביטולים" value={report.cancelled_orders} icon={<FaTimesCircle className="text-red-500" />} />
+                                <InfoRow label="סכום ביטולים" value={`₪${parseFloat(report.cancelled_total || 0).toLocaleString()}`} icon={<FaTimesCircle className="text-red-500" />} />
+                            </>
+                        )}
+                    </div>
+
+                    {/* Top items */}
+                    {topItems.length > 0 && (
+                        <div>
+                            <h3 className="text-sm font-black text-gray-900 mb-3">פריטים מובילים</h3>
+                            <div className="space-y-2">
+                                {topItems.slice(0, 10).map((item, i) => (
+                                    <div key={i} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                                        <span className="text-xs font-black text-gray-400 w-6">#{i + 1}</span>
+                                        <span className="flex-1 font-bold text-gray-800">{item.name}</span>
+                                        <span className="text-xs text-gray-500">{item.quantity} יח׳</span>
+                                        <span className="text-xs font-bold text-brand-primary">₪{parseFloat(item.revenue || 0).toLocaleString()}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Hourly breakdown */}
+                    {hourlyData.length > 0 && (
+                        <div>
+                            <button
+                                onClick={() => setShowHourly(!showHourly)}
+                                className="flex items-center gap-2 text-sm font-black text-gray-900 mb-3"
+                            >
+                                פירוט שעתי
+                                {showHourly ? <FaChevronUp size={10} /> : <FaChevronDown size={10} />}
+                            </button>
+                            {showHourly && (
+                                <ResponsiveContainer width="100%" height={200}>
+                                    <BarChart data={hourlyData}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                                        <XAxis dataKey="hour" tick={{ fontSize: 10 }} />
+                                        <YAxis tick={{ fontSize: 10 }} />
+                                        <Tooltip />
+                                        <Bar dataKey="הזמנות" fill="#3b82f6" radius={[3, 3, 0, 0]} />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            )}
+                        </div>
+                    )}
+                </div>
             </div>
-        </AdminLayout>
+        </div>
+    );
+}
+
+function InfoRow({ label, value, icon }) {
+    return (
+        <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+            {icon}
+            <span className="text-gray-500">{label}</span>
+            <span className="mr-auto font-bold text-gray-900">{value}</span>
+        </div>
     );
 }
