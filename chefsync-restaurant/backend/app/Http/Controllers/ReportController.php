@@ -68,31 +68,50 @@ class ReportController extends Controller
      */
     public function pdf(int $id)
     {
-        $report = DailyReport::with('restaurant')->findOrFail($id);
+        try {
+            $report = DailyReport::with('restaurant')->findOrFail($id);
 
-        $html = view('reports.daily-pdf', ['report' => $report])->render();
+            $html = view('reports.daily-pdf', ['report' => $report])->render();
 
-        $mpdf = new Mpdf([
-            'mode' => 'utf-8',
-            'format' => 'A4',
-            'default_font' => 'arial',
-            'directionality' => 'rtl',
-            'margin_left' => 15,
-            'margin_right' => 15,
-            'margin_top' => 15,
-            'margin_bottom' => 15,
-        ]);
+            $tempDir = storage_path('app/mpdf-temp');
+            if (!is_dir($tempDir)) {
+                mkdir($tempDir, 0755, true);
+            }
 
-        $mpdf->WriteHTML($html);
+            $mpdf = new Mpdf([
+                'mode' => 'utf-8',
+                'format' => 'A4',
+                'default_font' => 'arial',
+                'directionality' => 'rtl',
+                'margin_left' => 15,
+                'margin_right' => 15,
+                'margin_top' => 15,
+                'margin_bottom' => 15,
+                'tempDir' => $tempDir,
+            ]);
 
-        $date = $report->date->format('Y-m-d');
-        $name = $report->restaurant?->name ?? 'report';
-        $filename = "daily-report-{$name}-{$date}.pdf";
+            $mpdf->WriteHTML($html);
 
-        return response($mpdf->Output($filename, 'S'), 200, [
-            'Content-Type' => 'application/pdf',
-            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
-        ]);
+            $date = $report->date instanceof \Carbon\Carbon ? $report->date->format('Y-m-d') : $report->date;
+            $name = $report->restaurant?->name ?? 'report';
+            $filename = "daily-report-{$name}-{$date}.pdf";
+
+            return response($mpdf->Output($filename, 'S'), 200, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+            ]);
+        } catch (\Exception $e) {
+            Log::error('PDF generation failed', [
+                'report_id' => $id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'שגיאה ביצירת PDF: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**
