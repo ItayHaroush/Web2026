@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import SuperAdminLayout from '../../layouts/SuperAdminLayout';
 import api from '../../services/apiClient';
 import { resolveAssetUrl } from '../../utils/assets';
 import { toast } from 'react-hot-toast';
+import { clearStoredFcmToken, disableFcm, getStoredFcmToken, listenForegroundMessages, requestFcmToken } from '../../services/fcm';
 import {
     FaMask,
     FaStore,
@@ -39,7 +40,9 @@ import {
     FaCrown,
     FaClipboardList,
     FaPrint,
-    FaWhatsapp
+    FaWhatsapp,
+    FaBell,
+    FaBellSlash
 } from 'react-icons/fa';
 
 export default function SuperAdminDashboard() {
@@ -54,10 +57,68 @@ export default function SuperAdminDashboard() {
     const [showAddRestaurant, setShowAddRestaurant] = useState(false);
     const [selectedRestaurant, setSelectedRestaurant] = useState(null);
 
+    // Push notifications state
+    const [pushState, setPushState] = useState({ status: 'idle', message: '' });
+    const permission = typeof Notification !== 'undefined' ? Notification.permission : 'unsupported';
+    const storedToken = useMemo(() => getStoredFcmToken(), [pushState.status]);
+    const isPushEnabled = permission === 'granted' && !!storedToken;
+    const lastMessageIdsRef = useRef(new Set());
+    const notifCountRef = useRef(0);
+
     useEffect(() => {
         fetchDashboard();
         fetchRestaurants();
     }, [filterStatus, searchTerm]);
+
+    // Foreground FCM listener
+    useEffect(() => {
+        const unsubscribe = listenForegroundMessages((payload) => {
+            const msgId = payload?.messageId || payload?.data?.messageId || payload?.data?.google?.message_id;
+            if (msgId) {
+                if (lastMessageIdsRef.current.has(msgId)) return;
+                lastMessageIdsRef.current.add(msgId);
+                setTimeout(() => lastMessageIdsRef.current.delete(msgId), 30_000);
+            }
+
+            const title = payload?.notification?.title || payload?.data?.title || 'TakeEat';
+            const body = payload?.notification?.body || payload?.data?.body || 'התראה חדשה';
+
+            if (Notification?.permission === 'granted') {
+                try {
+                    const n = new Notification(title, { body, icon: '/icon-192.png' });
+                    n.onclick = () => {
+                        n.close();
+                        window.focus();
+                        notifCountRef.current = Math.max(0, notifCountRef.current - 1);
+                        if (notifCountRef.current > 0) {
+                            if (navigator.setAppBadge) navigator.setAppBadge(notifCountRef.current).catch(() => {});
+                        } else {
+                            if (navigator.clearAppBadge) navigator.clearAppBadge().catch(() => {});
+                        }
+                    };
+                    notifCountRef.current += 1;
+                    if (navigator.setAppBadge) navigator.setAppBadge(notifCountRef.current).catch(() => {});
+                } catch (e) {
+                    console.warn('[FCM] Notification() failed', e);
+                }
+            }
+        });
+
+        return () => { if (typeof unsubscribe === 'function') unsubscribe(); };
+    }, []);
+
+    // Clear PWA badge on visibility
+    useEffect(() => {
+        const clearBadge = () => {
+            if (document.visibilityState === 'visible') {
+                notifCountRef.current = 0;
+                if (navigator.clearAppBadge) navigator.clearAppBadge().catch(() => {});
+            }
+        };
+        clearBadge();
+        document.addEventListener('visibilitychange', clearBadge);
+        return () => document.removeEventListener('visibilitychange', clearBadge);
+    }, []);
 
     const fetchDashboard = async () => {
         try {
@@ -95,6 +156,59 @@ export default function SuperAdminDashboard() {
             toast.error(error.response?.data?.message || 'שגיאה בטעינת מסעדות');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const enablePush = async () => {
+        try {
+            setPushState({ status: 'loading', message: 'מבקש הרשאה להתראות...' });
+            const token = await requestFcmToken();
+            if (!token) {
+                const perm = typeof Notification !== 'undefined' ? Notification.permission : 'unsupported';
+                setPushState({
+                    status: 'error',
+                    message: perm === 'denied'
+                        ? 'ההתראות חסומות בדפדפן. יש לאפשר דרך ההגדרות.'
+                        : 'הרשאה נדחתה. יש לאשר התראות.',
+                });
+                return;
+            }
+
+            await api.post('/super-admin/fcm/register', { token, device_label: 'super_admin' }, { headers: getAuthHeaders() });
+            setPushState({ status: 'success', message: 'התראות הופעלו למכשיר הזה.' });
+        } catch (error) {
+            console.error('Failed to enable push', error);
+            setPushState({ status: 'error', message: 'שגיאה בהפעלת התראות. נסו שוב.' });
+        }
+    };
+
+    const disablePush = async () => {
+        try {
+            setPushState({ status: 'loading', message: 'מכבה התראות...' });
+
+            const token = getStoredFcmToken();
+            if (token) {
+                try {
+                    await api.post('/super-admin/fcm/unregister', { token }, { headers: getAuthHeaders() });
+                } catch (e) {
+                    console.warn('[FCM] backend unregister failed', e);
+                }
+            }
+
+            try {
+                await disableFcm();
+            } catch (e) {
+                console.warn('[FCM] deleteToken failed', e);
+                clearStoredFcmToken();
+            }
+
+            setPushState({
+                status: 'success',
+                message: 'התראות כובו עבור המכשיר הזה.',
+            });
+        } catch (error) {
+            console.error('Failed to disable push', error);
+            setPushState({ status: 'error', message: 'שגיאה בכיבוי התראות. נסו שוב.' });
         }
     };
 
@@ -242,6 +356,54 @@ export default function SuperAdminDashboard() {
                         <FaPlus size={14} />
                         הוספת מסעדה חדשה
                     </button>
+                </div>
+
+                {/* באנר התראות מערכת */}
+                <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-4 sm:p-5 mb-6">
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                        <div className="flex items-start gap-4">
+                            <div className={`p-3 rounded-2xl ${isPushEnabled ? 'bg-green-50 text-green-600' : 'bg-brand-primary/5 text-brand-primary'}`}>
+                                {isPushEnabled ? <FaBell size={20} /> : <FaBellSlash size={20} />}
+                            </div>
+                            <div>
+                                <p className="text-base font-black text-gray-900 leading-tight">התראות מערכת למכשיר</p>
+                                <p className="text-xs text-gray-500 font-bold mt-0.5">קבל התראה על כל הזמנה חדשה בכל המסעדות</p>
+                                {pushState.message && (
+                                    <p className={`text-[11px] mt-1 font-black uppercase ${pushState.status === 'success' ? 'text-green-600' : pushState.status === 'error' ? 'text-red-500' : 'text-gray-400'}`}>
+                                        • {pushState.message}
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={enablePush}
+                                disabled={pushState.status === 'loading' || permission === 'denied' || isPushEnabled}
+                                className={`flex-1 lg:flex-none px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-sm flex items-center justify-center gap-2 ${isPushEnabled
+                                    ? 'bg-green-50 text-green-700 border border-green-100 cursor-default'
+                                    : 'bg-brand-primary text-white hover:shadow-brand-primary/20 hover:shadow-lg disabled:opacity-50'
+                                    }`}
+                            >
+                                {pushState.status === 'loading' ? (
+                                    <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                ) : isPushEnabled ? (
+                                    <><FaCheck size={10} /> מחובר</>
+                                ) : (
+                                    'הפעל התראות'
+                                )}
+                            </button>
+
+                            {isPushEnabled && (
+                                <button
+                                    onClick={disablePush}
+                                    disabled={pushState.status === 'loading'}
+                                    className="px-5 py-2.5 bg-white border border-gray-100 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-sm flex items-center justify-center gap-2"
+                                >
+                                    כבה
+                                </button>
+                            )}
+                        </div>
+                    </div>
                 </div>
 
                 {/* סטטיסטיקות */}
