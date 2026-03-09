@@ -160,11 +160,10 @@ export default function POSOrderPanel({ headers, posToken, mode = 'active' }) {
     return (
         <div className="h-full overflow-y-auto p-4 space-y-4 custom-scrollbar relative">
             {printMsg && (
-                <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[600] px-6 py-3 rounded-2xl font-bold text-sm shadow-2xl animate-in fade-in slide-in-from-top-4 duration-300 ${
-                    printMsg.isError
+                <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[600] px-6 py-3 rounded-2xl font-bold text-sm shadow-2xl animate-in fade-in slide-in-from-top-4 duration-300 ${printMsg.isError
                         ? 'bg-red-500 text-white'
                         : 'bg-emerald-500 text-white'
-                }`}>
+                    }`}>
                     {printMsg.text}
                 </div>
             )}
@@ -227,9 +226,8 @@ function OrderCard({ order, expanded, onToggle, onUpdateStatus, showActions = tr
                     <p className="text-white font-black text-lg flex items-center gap-1">
                         <FaShekelSign className="text-sm" />{order.total_price.toFixed(2)}
                     </p>
-                    <span className={`text-xs font-black px-2 py-0.5 rounded-lg ${
-                        order.payment_status === 'paid' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'
-                    }`}>
+                    <span className={`text-xs font-black px-2 py-0.5 rounded-lg ${order.payment_status === 'paid' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'
+                        }`}>
                         {order.payment_status === 'paid' ? 'שולם' : 'ממתין'}
                     </span>
                 </div>

@@ -41,7 +41,7 @@ class POSController extends Controller
         if (!$user->pos_pin_hash || !Hash::check($request->pin, $user->pos_pin_hash)) {
             // #region agent log
             Log::info('[DEBUG-3267aa] verifyPin FAILED', ['user_id' => $user->id, 'has_pin_hash' => !!$user->pos_pin_hash, 'returning' => 401]);
-            file_put_contents('/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/.cursor/debug-3267aa.log', json_encode(['sessionId'=>'3267aa','location'=>'POSController.php:verifyPin','message'=>'PIN check failed, returning 401','data'=>['user_id'=>$user->id,'has_pin_hash'=>!!$user->pos_pin_hash],'timestamp'=>round(microtime(true)*1000),'hypothesisId'=>'H1'])."\n", FILE_APPEND);
+            file_put_contents('/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/.cursor/debug-3267aa.log', json_encode(['sessionId' => '3267aa', 'location' => 'POSController.php:verifyPin', 'message' => 'PIN check failed, returning 401', 'data' => ['user_id' => $user->id, 'has_pin_hash' => !!$user->pos_pin_hash], 'timestamp' => round(microtime(true) * 1000), 'hypothesisId' => 'H1']) . "\n", FILE_APPEND);
             // #endregion
             return response()->json(['success' => false, 'message' => 'קוד PIN שגוי'], 401);
         }

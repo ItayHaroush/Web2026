@@ -81,7 +81,7 @@ class MenuController extends Controller
                 ->with([
                     'items' => function ($query) {
                         $query->where('is_active', true)
-                              ->where('is_available', true);
+                            ->where('is_available', true);
                         $query->orderBy('name')
                             ->with([
                                 'variants' => function ($variantQuery) {

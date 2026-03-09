@@ -119,11 +119,10 @@ export default function POSNewOrder({ headers, posToken, onOrderCreated }) {
                             <button
                                 key={cat.id}
                                 onClick={() => { setActiveCategory(cat.id); setSearch(''); }}
-                                className={`px-4 py-2 rounded-xl text-sm font-black whitespace-nowrap transition-all shrink-0 ${
-                                    activeCategory === cat.id && !search
+                                className={`px-4 py-2 rounded-xl text-sm font-black whitespace-nowrap transition-all shrink-0 ${activeCategory === cat.id && !search
                                         ? 'bg-orange-500 text-white'
                                         : 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700'
-                                }`}
+                                    }`}
                             >
                                 {cat.name}
                             </button>
