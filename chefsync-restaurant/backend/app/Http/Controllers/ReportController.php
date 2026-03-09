@@ -362,7 +362,7 @@ class ReportController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'אין הזמנות ביום שנבחר',
-            ], 404);
+            ]);
         }
 
         return response()->json([
