@@ -58,4 +58,54 @@ class FcmTokenController extends Controller
 
         return response()->json(['success' => true]);
     }
+
+    /**
+     * רישום FCM token עבור סופר אדמין (ללא tenant)
+     */
+    public function storeSuperAdmin(Request $request)
+    {
+        $data = $request->validate([
+            'token' => 'required|string',
+            'device_label' => 'nullable|string|max:100',
+        ]);
+
+        $userId = $request->user()->id;
+        $deviceLabel = $data['device_label'] ?? 'super_admin';
+
+        // מחיקת טוקנים ישנים מאותו מכשיר
+        FcmToken::withoutGlobalScopes()
+            ->where('tenant_id', '__super_admin__')
+            ->where('user_id', $userId)
+            ->where('device_label', $deviceLabel)
+            ->where('token', '!=', $data['token'])
+            ->delete();
+
+        FcmToken::withoutGlobalScopes()->updateOrCreate(
+            ['token' => $data['token']],
+            [
+                'tenant_id' => '__super_admin__',
+                'user_id' => $userId,
+                'device_label' => $deviceLabel,
+            ]
+        );
+
+        return response()->json(['success' => true]);
+    }
+
+    /**
+     * הסרת FCM token עבור סופר אדמין
+     */
+    public function unregisterSuperAdmin(Request $request)
+    {
+        $data = $request->validate([
+            'token' => 'required|string',
+        ]);
+
+        FcmToken::withoutGlobalScopes()
+            ->where('tenant_id', '__super_admin__')
+            ->where('token', $data['token'])
+            ->delete();
+
+        return response()->json(['success' => true]);
+    }
 }

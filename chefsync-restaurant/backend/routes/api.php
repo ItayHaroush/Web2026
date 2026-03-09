@@ -122,6 +122,10 @@ Route::prefix('super-admin')->middleware(['auth:sanctum', 'super_admin'])->group
     Route::post('/notifications/send', [SuperAdminNotificationController::class, 'send'])->name('super-admin.notifications.send');
     Route::get('/notifications/log', [SuperAdminNotificationController::class, 'log'])->name('super-admin.notifications.log');
 
+    // רישום FCM למכשיר סופר אדמין (ללא tenant)
+    Route::post('/fcm/register', [FcmTokenController::class, 'storeSuperAdmin'])->name('super-admin.fcm.register');
+    Route::post('/fcm/unregister', [FcmTokenController::class, 'unregisterSuperAdmin'])->name('super-admin.fcm.unregister');
+
     // עוזר AI לסופר אדמין
     Route::post('/ai/chat', [ChatController::class, 'chat'])->name('super-admin.ai.chat');
 
