@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+  <head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-LDRG3SC1VE"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-LDRG3SC1VE');
+    </script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#1f2c38" />
+    
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="TakeEat - מערכת הזמנות חכמה למסעדות. הזמן אוכל בקלות ובמהירות מהמסעדות האהובות עליך" />
+    <meta name="keywords" content="הזמנת אוכל, משלוחי אוכל, מסעדות, TakeEat, ChefSync" />
+    <meta name="author" content="TakeEat" />
+    
+    <!-- Open Graph / Facebook Meta Tags -->
+    <meta property="fb:app_id" content="922866133608375" />
+    <meta property="og:app_id" content="922866133608375" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="TakeEat" />
+    <meta property="og:title" content="TakeEat - מערכת הזמנות למסעדה" />
+    <meta property="og:description" content="הזמן אוכל בקלות ובמהירות מהמסעדות האהובות עליך. מערכת הזמנות חכמה ופשוטה" />
+    <meta property="og:image" content="https://www.takeeat.co.il/icons/chefsync-logo-v2-512.png" />
+    <meta property="og:image:secure_url" content="https://www.takeeat.co.il/icons/chefsync-logo-v2-512.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="512" />
+    <meta property="og:image:height" content="512" />
+    <meta property="og:image:alt" content="TakeEat Logo" />
+    <meta property="og:url" content="https://www.takeeat.co.il/" />
+    <meta property="og:locale" content="he_IL" />
+    
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="TakeEat - מערכת הזמנות למסעדה" />
+    <meta name="twitter:description" content="הזמן אוכל בקלות ובמהירות מהמסעדות האהובות עליך" />
+    <meta name="twitter:image" content="https://www.takeeat.co.il/icons/chefsync-logo-v2-512.png" />
+    
+    <!-- WhatsApp Meta Tags -->
+    <meta property="og:image:width" content="512" />
+    <meta property="og:image:height" content="512" />
+    
+    <!-- PWA Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="TakeEat" />
+    
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="/icons/chefsync-logo-v2-192.png" />
+    <link rel="apple-touch-icon" href="/icons/chefsync-logo-v2-180.png" />
+    <link rel="manifest" href="/manifest.json" />
+    <title>TakeEat - הזמנות למסעדה</title>
+    <script type="module" crossorigin src="/assets/index-BZ-31A9U.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-DZd_2efE.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
