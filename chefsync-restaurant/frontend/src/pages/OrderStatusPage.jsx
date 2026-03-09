@@ -695,13 +695,13 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
                                         <>
                                             {addons.filter(a => !a.on_side).length > 0 && (
                                                 <div className="text-sm text-gray-700 dark:text-gray-300">
-                                                    תוספות: {addons.filter(a => !a.on_side).map(a => a.name).join(' · ')}
+                                                    תוספות: {addons.filter(a => !a.on_side).map(a => (a.quantity || 1) > 1 ? `${a.name} ×${a.quantity}` : a.name).join(' · ')}
                                                 </div>
                                             )}
                                             {addons.filter(a => a.on_side).length > 0 && (
                                                 <div className="text-sm text-orange-600 font-medium flex items-center gap-1">
                                                     <FaBoxOpen />
-                                                    <span>בצד: {addons.filter(a => a.on_side).map(a => a.name).join(' · ')}</span>
+                                                    <span>בצד: {addons.filter(a => a.on_side).map(a => (a.quantity || 1) > 1 ? `${a.name} ×${a.quantity}` : a.name).join(' · ')}</span>
                                                 </div>
                                             )}
                                         </>

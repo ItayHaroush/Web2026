@@ -210,7 +210,8 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                     variant_id: item.variant?.id ?? null,
                     addons: (item.addons || []).map((addon) => ({
                         addon_id: addon.id,
-                        on_side: addon.on_side || false
+                        on_side: addon.on_side || false,
+                        quantity: addon.quantity || 1,
                     })),
                     qty: item.qty,
                 })),
@@ -448,8 +449,8 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                 {/* פריטים בסל */}
                 <div className="space-y-2">
                     {cartItems.map((item) => {
-                        const addonsInside = (item.addons || []).filter(a => !a.on_side).map(a => a.name);
-                        const addonsOnSide = (item.addons || []).filter(a => a.on_side).map(a => a.name);
+                        const addonsInside = (item.addons || []).filter(a => !a.on_side).map(a => (a.quantity || 1) > 1 ? `${a.name} ×${a.quantity}` : a.name);
+                        const addonsOnSide = (item.addons || []).filter(a => a.on_side).map(a => (a.quantity || 1) > 1 ? `${a.name} ×${a.quantity}` : a.name);
 
                         return (
                             <div

@@ -53,7 +53,12 @@ export default function KioskCart({ items, totalPrice, requireName, onUpdateQty,
                                         )}
                                         {item.addons.length > 0 && (
                                             <p className="text-xs text-gray-400 mt-0.5">
-                                                {item.addons.map(a => a.name + (a.on_side ? ' (בצד)' : '')).join(', ')}
+                                                {item.addons.map(a => {
+                                                    let text = a.name;
+                                                    if ((a.quantity || 1) > 1) text += ` ×${a.quantity}`;
+                                                    if (a.on_side) text += ' (בצד)';
+                                                    return text;
+                                                }).join(', ')}
                                             </p>
                                         )}
                                         <p className="font-black text-amber-600 text-sm mt-1">{item.totalPrice.toFixed(2)} ₪</p>

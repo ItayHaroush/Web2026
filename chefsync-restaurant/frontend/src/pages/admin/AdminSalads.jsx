@@ -39,6 +39,7 @@ export default function AdminSalads() {
         name: '',
         price_delta: '0',
         selection_weight: '1',
+        max_quantity: '1',
         is_active: true,
         group_id: '',
         category_ids: [],
@@ -110,6 +111,7 @@ export default function AdminSalads() {
                 name: salad.name,
                 price_delta: typeof salad.price_delta === 'number' ? salad.price_delta.toString() : salad.price_delta || '0',
                 selection_weight: typeof salad.selection_weight === 'number' ? salad.selection_weight.toString() : salad.selection_weight || '1',
+                max_quantity: typeof salad.max_quantity === 'number' ? salad.max_quantity.toString() : salad.max_quantity || '1',
                 is_active: Boolean(salad.is_active),
                 group_id: String(salad.addon_group_id || selectedGroupId || ''),
                 category_ids: Array.isArray(salad.category_ids) ? salad.category_ids.map(String) : [],
@@ -120,6 +122,7 @@ export default function AdminSalads() {
                 name: '',
                 price_delta: '0',
                 selection_weight: '1',
+                max_quantity: '1',
                 is_active: true,
                 group_id: String(selectedGroupId || ''),
                 category_ids: [],
@@ -135,6 +138,7 @@ export default function AdminSalads() {
             name: '',
             price_delta: '0',
             selection_weight: '1',
+            max_quantity: '1',
             is_active: true,
             group_id: String(selectedGroupId || ''),
             category_ids: [],
@@ -149,6 +153,7 @@ export default function AdminSalads() {
             name: form.name.trim(),
             price_delta: Number(form.price_delta) || 0,
             selection_weight: Number(form.selection_weight) || 1,
+            max_quantity: Math.max(1, Number(form.max_quantity) || 1),
             is_active: form.is_active,
             group_id: form.group_id || null,
             category_ids: form.category_ids?.length ? form.category_ids.map(Number) : [],
@@ -883,6 +888,25 @@ export default function AdminSalads() {
                                                 />
                                             </div>
                                             <p className="text-[10px] text-gray-400 mr-2 font-bold italic">כמה בחירות נספרות? (ברירת מחדל: 1)</p>
+                                        </div>
+                                    </div>
+
+                                    {/* Max Quantity */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                                        <div className="space-y-4">
+                                            <label className="text-xs font-black text-gray-500 mr-2 uppercase tracking-[0.2em]">כמות מקסימלית לבחירה</label>
+                                            <div className="relative">
+                                                <input
+                                                    type="number"
+                                                    min="1"
+                                                    max="99"
+                                                    step="1"
+                                                    value={form.max_quantity || 1}
+                                                    onChange={(e) => setForm({ ...form, max_quantity: e.target.value })}
+                                                    className="w-full px-8 py-5 bg-gray-50 border-none rounded-[1.5rem] focus:ring-4 focus:ring-brand-primary/10 text-gray-900 font-black text-xl"
+                                                />
+                                            </div>
+                                            <p className="text-[10px] text-gray-400 mr-2 font-bold italic">כמה יחידות מאותו פריט הלקוח יכול לבחור? (1 = ללא כמות)</p>
                                         </div>
                                     </div>
 

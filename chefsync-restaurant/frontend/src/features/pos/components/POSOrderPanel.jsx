@@ -47,7 +47,7 @@ function normalizeOrder(raw) {
         unit_price: parseFloat(i.price_at_order || i.unit_price || i.price || 0),
         variant_name: i.variant_name || null,
         addons_text: Array.isArray(i.addons) && i.addons.length
-            ? i.addons.map(a => a.name || a).filter(Boolean).join(', ')
+            ? i.addons.map(a => { const name = a.name || a; const qty = a.quantity || 1; return qty > 1 ? `${name} ×${qty}` : name; }).filter(Boolean).join(', ')
             : (i.addons_text || null),
     }));
 

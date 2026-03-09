@@ -733,7 +733,11 @@ class POSController extends Controller
                 'unit_price' => (float) $i->price_at_order,
                 'variant_name' => $i->variant_name,
                 'addons_text' => $i->addons
-                    ? collect($i->addons)->pluck('name')->filter()->join(', ')
+                    ? collect($i->addons)->map(function ($a) {
+                        $name = $a['name'] ?? '';
+                        $qty = (int) ($a['quantity'] ?? 1);
+                        return $qty > 1 ? "{$name} ×{$qty}" : $name;
+                    })->filter()->join(', ')
                     : null,
             ])->toArray(),
         ];

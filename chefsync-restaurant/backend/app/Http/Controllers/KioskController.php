@@ -311,6 +311,8 @@ class KioskController extends Controller
                             'id' => $a->id,
                             'name' => $a->name,
                             'price_delta' => (float) $a->price_delta,
+                            'selection_weight' => (int) ($a->selection_weight ?? 1),
+                            'max_quantity' => (int) ($a->max_quantity ?? 1),
                         ])->toArray(),
                     ])->toArray();
                 } else {
@@ -325,6 +327,8 @@ class KioskController extends Controller
                             'id' => $a->id,
                             'name' => $a->name,
                             'price_delta' => (float) $a->price_delta,
+                            'selection_weight' => (int) ($a->selection_weight ?? 1),
+                            'max_quantity' => (int) ($a->max_quantity ?? 1),
                         ])->toArray(),
                     ])->toArray();
                 }

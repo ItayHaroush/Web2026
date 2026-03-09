@@ -14,6 +14,7 @@ class RestaurantAddon extends Model
         'name',
         'price_delta',
         'selection_weight',
+        'max_quantity',
         'is_active',
         'category_ids',
         'sort_order',
@@ -25,6 +26,7 @@ class RestaurantAddon extends Model
         'category_ids' => 'array',
         'sort_order' => 'integer',
         'selection_weight' => 'integer',
+        'max_quantity' => 'integer',
     ];
 
     protected static function booted()
