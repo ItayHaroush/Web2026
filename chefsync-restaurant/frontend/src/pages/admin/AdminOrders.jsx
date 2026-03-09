@@ -6,7 +6,6 @@ import { useRestaurantStatus } from '../../context/RestaurantStatusContext';
 import AdminLayout from '../../layouts/AdminLayout';
 import api from '../../services/apiClient';
 import reportService from '../../services/reportService';
-import reportService from '../../services/reportService';
 import RatingWidget from '../../components/RatingWidget';
 import {
     FaReceipt,
