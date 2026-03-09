@@ -91,13 +91,13 @@ export default function SuperAdminDashboard() {
                         window.focus();
                         notifCountRef.current = Math.max(0, notifCountRef.current - 1);
                         if (notifCountRef.current > 0) {
-                            if (navigator.setAppBadge) navigator.setAppBadge(notifCountRef.current).catch(() => {});
+                            if (navigator.setAppBadge) navigator.setAppBadge(notifCountRef.current).catch(() => { });
                         } else {
-                            if (navigator.clearAppBadge) navigator.clearAppBadge().catch(() => {});
+                            if (navigator.clearAppBadge) navigator.clearAppBadge().catch(() => { });
                         }
                     };
                     notifCountRef.current += 1;
-                    if (navigator.setAppBadge) navigator.setAppBadge(notifCountRef.current).catch(() => {});
+                    if (navigator.setAppBadge) navigator.setAppBadge(notifCountRef.current).catch(() => { });
                 } catch (e) {
                     console.warn('[FCM] Notification() failed', e);
                 }
@@ -112,7 +112,7 @@ export default function SuperAdminDashboard() {
         const clearBadge = () => {
             if (document.visibilityState === 'visible') {
                 notifCountRef.current = 0;
-                if (navigator.clearAppBadge) navigator.clearAppBadge().catch(() => {});
+                if (navigator.clearAppBadge) navigator.clearAppBadge().catch(() => { });
             }
         };
         clearBadge();
