@@ -37,6 +37,7 @@ export const normalizeAddon = (addon) => {
         name: addon.name ?? '',
         price_delta: sanitizeNumber(addon.price_delta ?? addon.priceDelta ?? addon.price ?? 0),
         on_side: addon.on_side ?? false,
+        quantity: Math.max(1, Math.round(sanitizeNumber(addon.quantity ?? 1, 1))),
     };
 };
 
@@ -44,7 +45,7 @@ export const buildCartKey = (menuItemId, variant, addons = []) => {
     const variantKey = variant?.id ?? 'base';
     const addonsKey = addons.length
         ? addons
-            .map((addon) => `${addon?.id}${addon?.on_side ? '-side' : ''}`)
+            .map((addon) => `${addon?.id}${addon?.on_side ? '-side' : ''}${(addon?.quantity || 1) > 1 ? `-x${addon.quantity}` : ''}`)
             .filter((key) => key)
             .sort()
             .join('|')
@@ -56,7 +57,11 @@ export const buildCartKey = (menuItemId, variant, addons = []) => {
 export const calculateUnitPrice = (basePrice, variant, addons = [], dineInAdjustment = 0) => {
     const normalizedBase = sanitizeNumber(basePrice);
     const variantDelta = sanitizeNumber(variant?.price_delta ?? 0);
-    const addonsTotal = addons.reduce((sum, addon) => sum + sanitizeNumber(addon?.price_delta ?? 0), 0);
+    const addonsTotal = addons.reduce((sum, addon) => {
+        const delta = sanitizeNumber(addon?.price_delta ?? 0);
+        const addonQty = Math.max(1, sanitizeNumber(addon?.quantity ?? 1, 1));
+        return sum + (delta * addonQty);
+    }, 0);
     const adjustment = sanitizeNumber(dineInAdjustment);
     return Number((normalizedBase + variantDelta + addonsTotal + adjustment).toFixed(2));
 };

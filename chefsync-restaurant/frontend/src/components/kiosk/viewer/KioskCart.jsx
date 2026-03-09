@@ -53,7 +53,12 @@ export default function KioskCart({ items, totalPrice, requireName, onUpdateQty,
                                         )}
                                         {item.addons.length > 0 && (
                                             <p className="text-xs text-gray-400 mt-0.5">
-                                                {item.addons.map(a => a.name + (a.on_side ? ' (בצד)' : '')).join(', ')}
+                                                {item.addons.map(a => {
+                                                    let text = a.name;
+                                                    if ((a.quantity || 1) > 1) text += ` ×${a.quantity}`;
+                                                    if (a.on_side) text += ' (בצד)';
+                                                    return text;
+                                                }).join(', ')}
                                             </p>
                                         )}
                                         <p className="font-black text-amber-600 text-sm mt-1">{item.totalPrice.toFixed(2)} ₪</p>
@@ -113,8 +118,8 @@ export default function KioskCart({ items, totalPrice, requireName, onUpdateQty,
                                 <button
                                     onClick={() => setSelectedPayment('cash')}
                                     className={`flex flex-col items-center gap-2 p-3 sm:p-4 rounded-xl border-2 transition-all active:scale-95 ${selectedPayment === 'cash'
-                                            ? 'border-amber-500 bg-amber-50 text-amber-700 shadow-md shadow-amber-500/10'
-                                            : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300 hover:bg-gray-50'
+                                        ? 'border-amber-500 bg-amber-50 text-amber-700 shadow-md shadow-amber-500/10'
+                                        : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300 hover:bg-gray-50'
                                         }`}
                                 >
                                     <FaMoneyBillWave size={22} />
@@ -124,8 +129,8 @@ export default function KioskCart({ items, totalPrice, requireName, onUpdateQty,
                                     <button
                                         onClick={() => setSelectedPayment('credit_card')}
                                         className={`flex flex-col items-center gap-2 p-3 sm:p-4 rounded-xl border-2 transition-all active:scale-95 ${selectedPayment === 'credit_card'
-                                                ? 'border-amber-500 bg-amber-50 text-amber-700 shadow-md shadow-amber-500/10'
-                                                : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300 hover:bg-gray-50'
+                                            ? 'border-amber-500 bg-amber-50 text-amber-700 shadow-md shadow-amber-500/10'
+                                            : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300 hover:bg-gray-50'
                                             }`}
                                     >
                                         <FaCreditCard size={22} />

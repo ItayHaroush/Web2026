@@ -119,11 +119,10 @@ export default function POSNewOrder({ headers, posToken, onOrderCreated }) {
                             <button
                                 key={cat.id}
                                 onClick={() => { setActiveCategory(cat.id); setSearch(''); }}
-                                className={`px-4 py-2 rounded-xl text-sm font-black whitespace-nowrap transition-all shrink-0 ${
-                                    activeCategory === cat.id && !search
+                                className={`px-4 py-2 rounded-xl text-sm font-black whitespace-nowrap transition-all shrink-0 ${activeCategory === cat.id && !search
                                         ? 'bg-orange-500 text-white'
                                         : 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700'
-                                }`}
+                                    }`}
                             >
                                 {cat.name}
                             </button>
@@ -181,7 +180,7 @@ export default function POSNewOrder({ headers, posToken, onOrderCreated }) {
                                 <p className="text-slate-500 text-xs mb-1">{item.variant_name}</p>
                             )}
                             {item.addons.length > 0 && (
-                                <p className="text-slate-500 text-xs mb-1">{item.addons.map(a => a.name).join(', ')}</p>
+                                <p className="text-slate-500 text-xs mb-1">{item.addons.map(a => (a.quantity || 1) > 1 ? `${a.name} ×${a.quantity}` : a.name).join(', ')}</p>
                             )}
                             <div className="flex items-center justify-between mt-2">
                                 <div className="flex items-center gap-2">

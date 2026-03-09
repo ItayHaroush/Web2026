@@ -41,12 +41,18 @@ export default function AdminTerminal() {
     const formatAddons = (addons) => {
         if (!Array.isArray(addons) || addons.length === 0) return { inside: '', onSide: '' };
 
+        const formatName = (addon) => {
+            const name = typeof addon === 'string' ? addon : (addon?.name ?? addon?.addon_name);
+            const qty = typeof addon === 'object' ? (addon?.quantity || 1) : 1;
+            return qty > 1 ? `${name} ×${qty}` : name;
+        };
+
         const inside = addons
             .filter(addon => {
                 const onSide = typeof addon === 'object' ? addon?.on_side : false;
                 return !onSide;
             })
-            .map(addon => typeof addon === 'string' ? addon : (addon?.name ?? addon?.addon_name))
+            .map(formatName)
             .filter(Boolean)
             .join(' · ');
 
@@ -55,7 +61,7 @@ export default function AdminTerminal() {
                 const onSide = typeof addon === 'object' ? addon?.on_side : false;
                 return onSide;
             })
-            .map(addon => typeof addon === 'string' ? addon : (addon?.name ?? addon?.addon_name))
+            .map(formatName)
             .filter(Boolean)
             .join(' · ');
 
@@ -161,11 +167,19 @@ export default function AdminTerminal() {
             const addons = Array.isArray(item.addons) ? item.addons : [];
             const insideAddons = addons
                 .filter(a => !(typeof a === 'object' && a?.on_side))
-                .map(a => typeof a === 'string' ? a : (a?.name ?? a?.addon_name))
+                .map(a => {
+                    const name = typeof a === 'string' ? a : (a?.name ?? a?.addon_name);
+                    const addonQty = typeof a === 'object' ? (a?.quantity || 1) : 1;
+                    return addonQty > 1 ? `${name} ×${addonQty}` : name;
+                })
                 .filter(Boolean);
             const sideAddons = addons
                 .filter(a => typeof a === 'object' && a?.on_side)
-                .map(a => a?.name ?? a?.addon_name)
+                .map(a => {
+                    const name = a?.name ?? a?.addon_name;
+                    const addonQty = a?.quantity || 1;
+                    return addonQty > 1 ? `${name} ×${addonQty}` : name;
+                })
                 .filter(Boolean);
 
             let html = `<tr><td style="padding:6px 0;font-weight:bold">${qty}x ${name}</td><td style="padding:6px 0;text-align:left;white-space:nowrap">₪${price}</td></tr>`;
@@ -365,9 +379,9 @@ export default function AdminTerminal() {
                                             </div>
                                             {order.payment_status && order.payment_status !== 'not_required' && (
                                                 <div className={`px-4 py-1.5 rounded-2xl text-[10px] font-black uppercase tracking-wider shadow-sm flex items-center gap-1.5 ${order.payment_status === 'paid' ? 'bg-green-100 text-green-700 border border-green-200' :
-                                                        order.payment_status === 'pending' ? 'bg-orange-100 text-orange-700 border border-orange-200' :
-                                                            order.payment_status === 'failed' ? 'bg-red-100 text-red-700 border border-red-200' :
-                                                                'bg-gray-100 text-gray-600 border border-gray-200'
+                                                    order.payment_status === 'pending' ? 'bg-orange-100 text-orange-700 border border-orange-200' :
+                                                        order.payment_status === 'failed' ? 'bg-red-100 text-red-700 border border-red-200' :
+                                                            'bg-gray-100 text-gray-600 border border-gray-200'
                                                     }`}>
                                                     {order.payment_method === 'credit_card' ? <FaCreditCard size={10} /> : null}
                                                     {order.payment_status === 'paid'

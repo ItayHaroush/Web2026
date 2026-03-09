@@ -63,6 +63,7 @@ class OrderController extends Controller
                 'items.*.addons' => 'nullable|array',
                 'items.*.addons.*.addon_id' => 'required',  // integer or 'cat_item_X' for category-based addons
                 'items.*.addons.*.on_side' => 'nullable|boolean',
+                'items.*.addons.*.quantity' => 'nullable|integer|min:1|max:99',
                 'items.*.qty' => 'nullable|integer|min:1',
                 'items.*.quantity' => 'nullable|integer|min:1',
                 'is_test' => 'nullable|boolean',        // הזמנת בדיקה (מצב preview)
@@ -280,6 +281,7 @@ class OrderController extends Controller
                         'addon' => $matchedAddon,
                         'group' => $matchedGroup,
                         'on_side' => $addonEntry['on_side'] ?? false,
+                        'quantity' => max(1, min(99, (int) ($addonEntry['quantity'] ?? 1))),
                     ];
                 }
 
@@ -288,13 +290,19 @@ class OrderController extends Controller
 
                 foreach ($availableAddonGroups as $group) {
                     $selectedForGroup = collect($selectedAddonsByGroup[$group->id] ?? []);
-                    $count = $selectedForGroup->count();
+
+                    // ספירה משוקללת: כמות * משקל
+                    $weightedCount = $selectedForGroup->sum(function ($sel) {
+                        $weight = (int) ($sel['addon']->selection_weight ?? 1);
+                        $qty = (int) ($sel['quantity'] ?? 1);
+                        return $weight * $qty;
+                    });
 
                     $minRequired = $group->min_selections ?? 0;
                     if ($group->is_required && $minRequired < 1) {
                         $minRequired = 1;
                     }
-                    if ($count < $minRequired) {
+                    if ($weightedCount < $minRequired) {
                         throw ValidationException::withMessages([
                             "items.$index.addons" => [sprintf('יש לבחור לפחות %d תוספות בקבוצה "%s"', $minRequired, $group->name)],
                         ]);
@@ -312,25 +320,39 @@ class OrderController extends Controller
                             $maxAllowed = $menuItem->max_addons;
                         }
                     }
-                    if ($maxAllowed !== null && $count > $maxAllowed) {
+                    if ($maxAllowed !== null && $weightedCount > $maxAllowed) {
                         throw ValidationException::withMessages([
                             "items.$index.addons" => [sprintf('ניתן לבחור עד %d תוספות בקבוצה "%s"', $maxAllowed, $group->name)],
                         ]);
                     }
 
-                    if ($group->selection_type === 'single' && $count > 1) {
+                    if ($group->selection_type === 'single' && $selectedForGroup->count() > 1) {
                         throw ValidationException::withMessages([
                             "items.$index.addons" => [sprintf('ניתן לבחור תוספת אחת בלבד בקבוצה "%s"', $group->name)],
                         ]);
                     }
 
+                    // ולידציה: כמות מול max_quantity לכל תוספת
+                    $selectedForGroup->each(function ($selection) use ($index) {
+                        $addonModel = $selection['addon'];
+                        $qty = (int) ($selection['quantity'] ?? 1);
+                        $maxQty = (int) ($addonModel->max_quantity ?? 1);
+                        if ($qty > $maxQty) {
+                            throw ValidationException::withMessages([
+                                "items.$index.addons" => [sprintf('ניתן לבחור עד %d מ"%s"', $maxQty, $addonModel->name)],
+                            ]);
+                        }
+                    });
+
                     $selectedForGroup->each(function ($selection) use (&$addonsDetails, &$addonsTotal, $group) {
                         $addonModel = $selection['addon'];
-                        $addonPrice = round((float) $addonModel->price_delta, 2);
+                        $qty = (int) ($selection['quantity'] ?? 1);
+                        $addonPrice = round((float) $addonModel->price_delta * $qty, 2);
                         $addonsDetails[] = [
                             'id' => $addonModel->id,
                             'name' => $addonModel->name,
-                            'price_delta' => $addonPrice,
+                            'price_delta' => round((float) $addonModel->price_delta, 2),
+                            'quantity' => $qty,
                             'group_id' => $group->id,
                             'group_name' => $group->name,
                             'on_side' => $selection['on_side'] ?? false,

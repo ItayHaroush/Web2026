@@ -37,12 +37,14 @@ export default function MenuItemModal({
     const [selectedVariantId, setSelectedVariantId] = useState(defaultVariantId);
     const [selectedAddons, setSelectedAddons] = useState(defaultAddonState);
     const [addonOnSide, setAddonOnSide] = useState({}); // { addonId: true/false }
+    const [addonQuantities, setAddonQuantities] = useState({}); // { addonId: quantity }
     const [qty, setQty] = useState(1);
 
     useEffect(() => {
         setSelectedVariantId(defaultVariantId);
         setSelectedAddons(defaultAddonState);
         setAddonOnSide({});
+        setAddonQuantities({});
         setQty(1);
     }, [defaultVariantId, defaultAddonState, item?.id]);
 
@@ -60,6 +62,7 @@ export default function MenuItemModal({
     const normalizedAddons = selectedAddonObjects.map(addon => ({
         ...normalizeAddon(addon),
         on_side: addonOnSide[addon.id] || false,
+        quantity: addonQuantities[addon.id] || 1,
     }));
 
     const unitPrice = calculateUnitPrice(basePrice, normalizedVariant, normalizedAddons);
@@ -93,12 +96,13 @@ export default function MenuItemModal({
     const getGroupSelectionLabel = (group, selectionCount) => {
         const maxAllowed = group.max_select || (group.selection_type === 'single' ? 1 : null);
 
-        // Calculate weighted selection count
+        // Calculate weighted selection count (quantity * weight)
         const selected = getGroupSelection(group.id);
         const weightedCount = selected.reduce((sum, addonId) => {
             const addon = group.addons?.find(a => a.id === addonId);
             const weight = addon?.selection_weight || 1;
-            return sum + weight;
+            const addonQty = addonQuantities[addonId] || 1;
+            return sum + (weight * addonQty);
         }, 0);
 
         if (maxAllowed) {
@@ -111,11 +115,12 @@ export default function MenuItemModal({
         const selected = getGroupSelection(group.id);
         const minRequired = group.min_select ?? (group.is_required ? 1 : 0);
 
-        // Calculate weighted selection count
+        // Calculate weighted selection count (quantity * weight)
         const weightedCount = selected.reduce((sum, addonId) => {
             const addon = group.addons?.find(a => a.id === addonId);
             const weight = addon?.selection_weight || 1;
-            return sum + weight;
+            const addonQty = addonQuantities[addonId] || 1;
+            return sum + (weight * addonQty);
         }, 0);
 
         if (minRequired && weightedCount < minRequired) {
@@ -136,14 +141,17 @@ export default function MenuItemModal({
 
             if (isSelected) {
                 nextSelection = current.filter((id) => id !== addonId);
+                // Reset quantity when deselecting
+                setAddonQuantities(q => { const next = { ...q }; delete next[addonId]; return next; });
             } else {
                 const maxAllowed = group.max_select || (group.selection_type === 'single' ? 1 : null);
 
-                // Calculate current weighted count
+                // Calculate current weighted count (factoring quantity)
                 const currentWeightedCount = current.reduce((sum, id) => {
                     const addon = group.addons?.find(a => a.id === id);
                     const weight = addon?.selection_weight || 1;
-                    return sum + weight;
+                    const addonQty = addonQuantities[id] || 1;
+                    return sum + (weight * addonQty);
                 }, 0);
 
                 // Get weight of addon being added
@@ -175,11 +183,12 @@ export default function MenuItemModal({
             return false;
         }
 
-        // Calculate current weighted count
+        // Calculate current weighted count (factoring quantity)
         const currentWeightedCount = current.reduce((sum, id) => {
             const addon = group.addons?.find(a => a.id === id);
             const weight = addon?.selection_weight || 1;
-            return sum + weight;
+            const addonQty = addonQuantities[id] || 1;
+            return sum + (weight * addonQty);
         }, 0);
 
         // Get weight of addon being checked
@@ -326,14 +335,69 @@ export default function MenuItemModal({
                                                             <div>
                                                                 <p className="font-medium text-brand-dark dark:text-brand-dark-text">{addon.name}</p>
                                                                 {addon.price_delta !== 0 && (
-                                                                    <p className="text-sm text-gray-500">{addon.price_delta > 0 ? `+₪${addon.price_delta}` : `₪${addon.price_delta}`}</p>
+                                                                    <p className="text-sm text-gray-500">
+                                                                        {addon.price_delta > 0 ? `+₪${addon.price_delta}` : `₪${addon.price_delta}`}
+                                                                        {(addonQuantities[addon.id] || 1) > 1 && ` × ${addonQuantities[addon.id]}`}
+                                                                    </p>
                                                                 )}
                                                             </div>
                                                         </div>
-                                                        {isAddonDisabled(group, addon.id) && !selection.includes(addon.id) && (
-                                                            <span className="text-xs text-gray-400">מקסימום הושג</span>
-                                                        )}
+                                                        <div className="flex items-center gap-2">
+                                                            {isAddonDisabled(group, addon.id) && !selection.includes(addon.id) && (
+                                                                <span className="text-xs text-gray-400">מקסימום הושג</span>
+                                                            )}
+                                                        </div>
                                                     </label>
+                                                    {/* Quantity selector for addons with max_quantity > 1 */}
+                                                    {(addon.max_quantity || 1) > 1 && selection.includes(addon.id) && (
+                                                        <div className="flex items-center gap-2 px-4 py-1.5 mr-8" onClick={(e) => e.stopPropagation()}>
+                                                            <span className="text-sm text-gray-500 font-medium">כמות:</span>
+                                                            <div className="flex items-center border dark:border-brand-dark-border rounded-full overflow-hidden">
+                                                                <button
+                                                                    type="button"
+                                                                    className="px-3 py-1 text-sm hover:bg-gray-100 dark:hover:bg-brand-dark-border transition"
+                                                                    onClick={() => {
+                                                                        const currentQty = addonQuantities[addon.id] || 1;
+                                                                        if (currentQty <= 1) return;
+                                                                        setAddonQuantities(prev => ({ ...prev, [addon.id]: currentQty - 1 }));
+                                                                    }}
+                                                                    disabled={(addonQuantities[addon.id] || 1) <= 1}
+                                                                >
+                                                                    −
+                                                                </button>
+                                                                <span className="px-3 font-semibold text-sm text-brand-dark dark:text-brand-dark-text min-w-[28px] text-center">
+                                                                    {addonQuantities[addon.id] || 1}
+                                                                </span>
+                                                                <button
+                                                                    type="button"
+                                                                    className="px-3 py-1 text-sm hover:bg-gray-100 dark:hover:bg-brand-dark-border transition"
+                                                                    onClick={() => {
+                                                                        const currentQty = addonQuantities[addon.id] || 1;
+                                                                        const maxQty = addon.max_quantity || 1;
+                                                                        // Check group max constraint
+                                                                        const maxAllowed = group.max_select || (group.selection_type === 'single' ? 1 : null);
+                                                                        if (maxAllowed) {
+                                                                            const currentGroupSelected = (getGroupSelection(group.id) || []);
+                                                                            const currentWeightedTotal = currentGroupSelected.reduce((sum, id) => {
+                                                                                const a = group.addons?.find(x => x.id === id);
+                                                                                const w = a?.selection_weight || 1;
+                                                                                const q = addonQuantities[id] || 1;
+                                                                                return sum + (w * q);
+                                                                            }, 0);
+                                                                            const addonWeight = addon.selection_weight || 1;
+                                                                            if (currentWeightedTotal + addonWeight > maxAllowed) return;
+                                                                        }
+                                                                        if (currentQty >= maxQty) return;
+                                                                        setAddonQuantities(prev => ({ ...prev, [addon.id]: currentQty + 1 }));
+                                                                    }}
+                                                                    disabled={(addonQuantities[addon.id] || 1) >= (addon.max_quantity || 1)}
+                                                                >
+                                                                    +
+                                                                </button>
+                                                            </div>
+                                                            <span className="text-xs text-gray-400">מתוך {addon.max_quantity}</span>
+                                                        </div>
+                                                    )}
                                                     {group.placement === 'side' && selection.includes(addon.id) && (
                                                         <label
                                                             className="flex items-center gap-2 px-4 py-1.5 mr-8 cursor-pointer text-sm"

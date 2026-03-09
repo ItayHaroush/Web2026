@@ -98,8 +98,8 @@ export default function OrderConfirmationSheet({
                         <h3 className="text-sm font-bold text-gray-500 dark:text-brand-dark-muted uppercase tracking-wide mb-3">פריטים בהזמנה</h3>
                         <div className="space-y-3">
                             {cartItems.map((item) => {
-                                const addonsInside = (item.addons || []).filter(a => !a.on_side).map(a => a.name);
-                                const addonsOnSide = (item.addons || []).filter(a => a.on_side).map(a => a.name);
+                                const addonsInside = (item.addons || []).filter(a => !a.on_side).map(a => (a.quantity || 1) > 1 ? `${a.name} ×${a.quantity}` : a.name);
+                                const addonsOnSide = (item.addons || []).filter(a => a.on_side).map(a => (a.quantity || 1) > 1 ? `${a.name} ×${a.quantity}` : a.name);
 
                                 return (
                                     <div key={item.cartKey} className="flex justify-between items-start gap-3 py-2 border-b border-gray-50 dark:border-brand-dark-border/50 last:border-0">

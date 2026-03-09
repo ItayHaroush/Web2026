@@ -81,7 +81,7 @@ class MenuController extends Controller
                 ->with([
                     'items' => function ($query) {
                         $query->where('is_active', true)
-                              ->where('is_available', true);
+                            ->where('is_available', true);
                         $query->orderBy('name')
                             ->with([
                                 'variants' => function ($variantQuery) {
@@ -159,6 +159,7 @@ class MenuController extends Controller
                                                 'name' => $addon->name,
                                                 'price_delta' => (float) $addon->price_delta,
                                                 'selection_weight' => (int) ($addon->selection_weight ?? 1),
+                                                'max_quantity' => (int) ($addon->max_quantity ?? 1),
                                                 'is_default' => false,
                                             ];
                                         })->values()->toArray(),
@@ -179,6 +180,7 @@ class MenuController extends Controller
                                                 'name' => $addon->name,
                                                 'price_delta' => (float) $addon->price_delta,
                                                 'selection_weight' => (int) ($addon->selection_weight ?? 1),
+                                                'max_quantity' => (int) ($addon->max_quantity ?? 1),
                                                 'is_default' => (bool) $addon->is_default,
                                             ];
                                         })->values()->toArray(),

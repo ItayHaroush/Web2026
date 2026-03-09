@@ -58,12 +58,18 @@ export default function AdminOrders() {
     const formatAddons = (addons) => {
         if (!Array.isArray(addons) || addons.length === 0) return { inside: '', onSide: '' };
 
+        const formatName = (addon) => {
+            const name = typeof addon === 'string' ? addon : (addon?.name ?? addon?.addon_name);
+            const qty = typeof addon === 'object' ? (addon?.quantity || 1) : 1;
+            return qty > 1 ? `${name} ×${qty}` : name;
+        };
+
         const inside = addons
             .filter(addon => {
                 const onSide = typeof addon === 'object' ? addon?.on_side : false;
                 return !onSide;
             })
-            .map(addon => typeof addon === 'string' ? addon : (addon?.name ?? addon?.addon_name))
+            .map(formatName)
             .filter(Boolean)
             .join(' · ');
 
@@ -72,7 +78,7 @@ export default function AdminOrders() {
                 const onSide = typeof addon === 'object' ? addon?.on_side : false;
                 return onSide;
             })
-            .map(addon => typeof addon === 'string' ? addon : (addon?.name ?? addon?.addon_name))
+            .map(formatName)
             .filter(Boolean)
             .join(' · ');
 
