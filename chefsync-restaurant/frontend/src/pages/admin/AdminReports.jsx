@@ -251,9 +251,9 @@ export default function AdminReports() {
 
                 {/* Charts */}
                 {!loading && reports.length > 0 && (
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="space-y-6">
                         {/* Revenue bar chart */}
-                        <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
                             <h3 className="text-lg font-black text-gray-900 mb-4 flex items-center gap-2">
                                 <FaChartLine className="text-blue-500" /> הכנסות יומיות
                             </h3>
@@ -274,53 +274,31 @@ export default function AdminReports() {
                         </div>
 
                         {/* Pie charts */}
-                        <div className="space-y-6">
-                            <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-                                <h3 className="text-sm font-black text-gray-900 mb-3 flex items-center gap-2">
-                                    <FaTruck className="text-purple-500" /> איסוף / משלוח
-                                </h3>
-                                {pieData.length > 0 ? (
-                                    <ResponsiveContainer width="100%" height={140}>
-                                        <PieChart>
-                                            <Pie data={pieData} dataKey="value" cx="50%" cy="50%" outerRadius={55} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
-                                                {pieData.map((_, i) => <Cell key={i} fill={COLORS[i]} />)}
-                                            </Pie>
-                                            <Tooltip formatter={v => v.toLocaleString()} />
-                                        </PieChart>
-                                    </ResponsiveContainer>
-                                ) : <p className="text-gray-400 text-sm text-center py-6">אין נתונים</p>}
-                            </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <PieSection
+                                title="איסוף / משלוח"
+                                icon={<FaTruck className="text-purple-500" />}
+                                data={pieData}
+                                colors={COLORS.slice(0)}
+                                tooltipFormatter={v => v.toLocaleString()}
+                            />
 
-                            <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-                                <h3 className="text-sm font-black text-gray-900 mb-3 flex items-center gap-2">
-                                    <FaMoneyBillWave className="text-green-500" /> אמצעי תשלום
-                                </h3>
-                                {paymentPieData.length > 0 ? (
-                                    <ResponsiveContainer width="100%" height={140}>
-                                        <PieChart>
-                                            <Pie data={paymentPieData} dataKey="value" cx="50%" cy="50%" outerRadius={55} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
-                                                {paymentPieData.map((_, i) => <Cell key={i} fill={COLORS[i + 2]} />)}
-                                            </Pie>
-                                            <Tooltip formatter={v => `₪${v.toLocaleString()}`} />
-                                        </PieChart>
-                                    </ResponsiveContainer>
-                                ) : <p className="text-gray-400 text-sm text-center py-6">אין נתונים</p>}
-                            </div>
+                            <PieSection
+                                title="אמצעי תשלום"
+                                icon={<FaMoneyBillWave className="text-green-500" />}
+                                data={paymentPieData}
+                                colors={COLORS.slice(2)}
+                                tooltipFormatter={v => `₪${v.toLocaleString()}`}
+                            />
 
                             {sourcePieData.length > 0 && (
-                                <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-                                    <h3 className="text-sm font-black text-gray-900 mb-3 flex items-center gap-2">
-                                        <FaStore className="text-orange-500" /> מקור הזמנה
-                                    </h3>
-                                    <ResponsiveContainer width="100%" height={140}>
-                                        <PieChart>
-                                            <Pie data={sourcePieData} dataKey="value" cx="50%" cy="50%" outerRadius={55} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
-                                                {sourcePieData.map((_, i) => <Cell key={i} fill={COLORS[i + 3]} />)}
-                                            </Pie>
-                                            <Tooltip formatter={v => v.toLocaleString()} />
-                                        </PieChart>
-                                    </ResponsiveContainer>
-                                </div>
+                                <PieSection
+                                    title="מקור הזמנה"
+                                    icon={<FaStore className="text-orange-500" />}
+                                    data={sourcePieData}
+                                    colors={COLORS.slice(3)}
+                                    tooltipFormatter={v => v.toLocaleString()}
+                                />
                             )}
                         </div>
                     </div>
@@ -564,6 +542,46 @@ function ReportDetailModal({ report, onClose, onDownloadPdf }) {
                         </div>
                     )}
                 </div>
+            </div>
+        </div>
+    );
+}
+
+function PieSection({ title, icon, data, colors, tooltipFormatter }) {
+    if (!data || data.length === 0) {
+        return (
+            <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                <h3 className="text-sm font-black text-gray-900 mb-3 flex items-center gap-2">
+                    {icon} {title}
+                </h3>
+                <p className="text-gray-400 text-sm text-center py-6">אין נתונים</p>
+            </div>
+        );
+    }
+
+    const total = data.reduce((s, d) => s + d.value, 0);
+
+    return (
+        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+            <h3 className="text-sm font-black text-gray-900 mb-3 flex items-center gap-2">
+                {icon} {title}
+            </h3>
+            <ResponsiveContainer width="100%" height={120}>
+                <PieChart>
+                    <Pie data={data} dataKey="value" cx="50%" cy="50%" outerRadius={50} label={false}>
+                        {data.map((_, i) => <Cell key={i} fill={colors[i % colors.length]} />)}
+                    </Pie>
+                    <Tooltip formatter={tooltipFormatter} />
+                </PieChart>
+            </ResponsiveContainer>
+            <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 mt-2">
+                {data.map((d, i) => (
+                    <div key={i} className="flex items-center gap-1.5 text-xs">
+                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: colors[i % colors.length] }} />
+                        <span className="text-gray-700 font-bold">{d.name}</span>
+                        <span className="text-gray-400">{total > 0 ? `${((d.value / total) * 100).toFixed(0)}%` : '0%'}</span>
+                    </div>
+                ))}
             </div>
         </div>
     );
