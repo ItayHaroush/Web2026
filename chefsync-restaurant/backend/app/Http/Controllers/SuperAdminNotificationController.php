@@ -135,6 +135,50 @@ class SuperAdminNotificationController extends Controller
     }
 
     /**
+     * שליחת הודעת בדיקה לסופר אדמין עצמו
+     * POST /super-admin/notifications/send-test
+     */
+    public function sendTest(Request $request)
+    {
+        $payload = $request->validate([
+            'title' => 'nullable|string|max:80',
+            'body'  => 'nullable|string|max:200',
+        ]);
+
+        $title = $payload['title'] ?? 'בדיקת התראות';
+        $body  = $payload['body'] ?? 'זו הודעת בדיקה ממרכז ההתראות. אם קיבלת אותה – המערכת עובדת תקין.';
+
+        $tokens = FcmToken::withoutGlobalScopes()
+            ->where('tenant_id', '__super_admin__')
+            ->where('user_id', $request->user()->id)
+            ->pluck('token');
+
+        if ($tokens->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'לא נמצא מכשיר רשום. היכנס לדשבורד סופר אדמין והפעל "התראות" כדי לרשום את המכשיר.',
+                'data' => ['tokens_targeted' => 0],
+            ], 422);
+        }
+
+        $fcm = app(FcmService::class);
+        $sent = 0;
+        foreach ($tokens as $token) {
+            if ($fcm->sendToToken($token, $title, $body, ['type' => 'super_admin_test', 'url' => '/super-admin/dashboard'])) {
+                $sent++;
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'tokens_targeted' => $tokens->count(),
+                'sent_ok' => $sent,
+            ],
+        ]);
+    }
+
+    /**
      * היסטוריית התראות שנשלחו
      * GET /super-admin/notifications/log
      */

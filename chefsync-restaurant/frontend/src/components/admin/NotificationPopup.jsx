@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { FaBell, FaTimes, FaCheck, FaCheckDouble, FaInfoCircle, FaExclamationTriangle, FaClipboardList } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/apiClient';
+import { TENANT_HEADER } from '../../constants/api';
 
 const SEVERITY_STYLES = {
     info: { bg: 'bg-blue-50', border: 'border-blue-200', icon: <FaInfoCircle className="text-blue-500" size={14} /> },
@@ -9,17 +10,22 @@ const SEVERITY_STYLES = {
     critical: { bg: 'bg-red-50', border: 'border-red-200', icon: <FaExclamationTriangle className="text-red-500" size={14} /> },
 };
 
-export default function NotificationPopup({ notificationCount = 0 }) {
+export default function NotificationPopup({ notificationCount = 0, tenantId = null }) {
     const [open, setOpen] = useState(false);
     const [alerts, setAlerts] = useState([]);
     const [loading, setLoading] = useState(false);
     const ref = useRef(null);
     const navigate = useNavigate();
 
+    const getHeaders = useCallback(() => {
+        const tid = tenantId || (typeof localStorage !== 'undefined' ? localStorage.getItem('tenantId') : '');
+        return tid ? { [TENANT_HEADER]: tid } : {};
+    }, [tenantId]);
+
     const fetchAlerts = useCallback(async () => {
         try {
             setLoading(true);
-            const res = await api.get('/admin/ai/agent/alerts');
+            const res = await api.get('/admin/ai/agent/alerts', { headers: getHeaders() });
             if (res.data?.success) {
                 setAlerts(res.data.alerts || []);
             }
@@ -28,7 +34,7 @@ export default function NotificationPopup({ notificationCount = 0 }) {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [getHeaders]);
 
     // Close on click outside
     useEffect(() => {
@@ -46,7 +52,7 @@ export default function NotificationPopup({ notificationCount = 0 }) {
 
     const markRead = async (id) => {
         try {
-            await api.patch(`/admin/ai/agent/alerts/${id}/read`);
+            await api.patch(`/admin/ai/agent/alerts/${id}/read`, {}, { headers: getHeaders() });
             setAlerts((prev) => prev.filter((a) => a.id !== id));
         } catch {
             // silent
@@ -54,7 +60,7 @@ export default function NotificationPopup({ notificationCount = 0 }) {
     };
 
     const markAllRead = async () => {
-        await Promise.all(alerts.map((a) => api.patch(`/admin/ai/agent/alerts/${a.id}/read`)));
+        await Promise.all(alerts.map((a) => api.patch(`/admin/ai/agent/alerts/${a.id}/read`, {}, { headers: getHeaders() })));
         setAlerts([]);
     };
 

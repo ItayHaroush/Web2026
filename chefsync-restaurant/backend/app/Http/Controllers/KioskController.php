@@ -8,6 +8,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Restaurant;
 use App\Models\FcmToken;
+use App\Models\MonitoringAlert;
 use App\Services\FcmService;
 use App\Services\PromotionService;
 use Illuminate\Http\Request;
@@ -640,10 +641,11 @@ class KioskController extends Controller
 
             // Send FCM notification to tablets
             $tableInfo = $order->table_number ? " | שולחן {$order->table_number}" : '';
+            $notificationBody = "הזמנה מהקיוסק בסך ₪{$order->total_amount}{$tableInfo}";
             $this->sendOrderNotification(
                 tenantId: $tenantId,
                 title: "הזמנת קיוסק חדשה #{$order->id}",
-                body: "הזמנה מהקיוסק בסך ₪{$order->total_amount}{$tableInfo}",
+                body: $notificationBody,
                 data: [
                     'orderId' => (string) $order->id,
                     'type' => 'new_order',
@@ -651,6 +653,22 @@ class KioskController extends Controller
                     'url' => '/admin/orders',
                 ]
             );
+
+            // יצירת התראה לפופאפ
+            try {
+                MonitoringAlert::create([
+                    'tenant_id'     => $tenantId,
+                    'restaurant_id' => $restaurant->id,
+                    'alert_type'    => 'new_order',
+                    'title'         => "הזמנת קיוסק חדשה #{$order->id}",
+                    'body'          => $notificationBody,
+                    'severity'      => 'info',
+                    'metadata'      => ['order_id' => $order->id, 'source' => 'kiosk'],
+                    'is_read'       => false,
+                ]);
+            } catch (\Throwable $e) {
+                Log::warning('Failed to create MonitoringAlert for kiosk order', ['error' => $e->getMessage()]);
+            }
 
             return response()->json([
                 'success' => true,

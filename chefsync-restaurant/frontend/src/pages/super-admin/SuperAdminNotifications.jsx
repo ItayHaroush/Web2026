@@ -244,7 +244,9 @@ export default function SuperAdminNotifications() {
                             </div>
                         </div>
 
-                        <div className="flex flex-col sm:flex-row gap-4">
+                        <div className="flex flex-col gap-4">
+                            {/* שורת כפתורי שליחה עיקריים */}
+                            <div className="flex flex-col sm:flex-row gap-4">
                             <button
                                 onClick={() => send(true)}
                                 disabled={submitting || !title || !body || !selectedRestaurantIds.length}
@@ -275,6 +277,34 @@ export default function SuperAdminNotifications() {
                             >
                                 <FaUndo size={14} />
                                 אפס הכל
+                            </button>
+                            </div>
+                            {/* כפתור בדיקה - שלח לי לבדיקה */}
+                            <button
+                                type="button"
+                                onClick={async () => {
+                                    setSubmitting(true);
+                                    try {
+                                        const res = await api.post('/super-admin/notifications/send-test', {
+                                            title: 'בדיקת התראות',
+                                            body: 'זו הודעת בדיקה. אם קיבלת אותה – המערכת עובדת תקין.',
+                                        }, { headers: getAuthHeaders() });
+                                        if (res.data?.success) {
+                                            toast.success(`נשלחה הודעת בדיקה (${res.data.data?.sent_ok || 0} מכשירים)`);
+                                        } else {
+                                            toast.error(res.data?.message || 'שליחת בדיקה נכשלה');
+                                        }
+                                    } catch (e) {
+                                        toast.error(e.response?.data?.message || 'שליחת בדיקה נכשלה');
+                                    } finally {
+                                        setSubmitting(false);
+                                    }
+                                }}
+                                disabled={submitting}
+                                className="px-6 py-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-2xl font-bold text-xs uppercase tracking-wider hover:bg-amber-100 transition-all flex items-center justify-center gap-2"
+                            >
+                                <FaVial size={14} />
+                                שלח לי לבדיקה (למכשיר שלי)
                             </button>
                         </div>
                     </div>

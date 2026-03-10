@@ -120,6 +120,7 @@ Route::prefix('super-admin')->middleware(['auth:sanctum', 'super_admin'])->group
     // התראות (Broadcast) לפי פילטרים
     Route::get('/notifications/filters', [SuperAdminNotificationController::class, 'filters'])->name('super-admin.notifications.filters');
     Route::post('/notifications/send', [SuperAdminNotificationController::class, 'send'])->name('super-admin.notifications.send');
+    Route::post('/notifications/send-test', [SuperAdminNotificationController::class, 'sendTest'])->name('super-admin.notifications.send-test');
     Route::get('/notifications/log', [SuperAdminNotificationController::class, 'log'])->name('super-admin.notifications.log');
 
     // רישום FCM למכשיר סופר אדמין (ללא tenant)
