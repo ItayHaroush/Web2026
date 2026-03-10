@@ -10,7 +10,7 @@ const SEVERITY_STYLES = {
     critical: { bg: 'bg-red-50', border: 'border-red-200', icon: <FaExclamationTriangle className="text-red-500" size={14} /> },
 };
 
-export default function NotificationPopup({ notificationCount = 0, tenantId = null }) {
+export default function NotificationPopup({ notificationCount = 0, tenantId = null, isSuperAdmin = false }) {
     const [open, setOpen] = useState(false);
     const [alerts, setAlerts] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -25,7 +25,9 @@ export default function NotificationPopup({ notificationCount = 0, tenantId = nu
     const fetchAlerts = useCallback(async () => {
         try {
             setLoading(true);
-            const res = await api.get('/admin/ai/agent/alerts', { headers: getHeaders() });
+            const url = isSuperAdmin ? '/super-admin/notifications/alerts' : '/admin/ai/agent/alerts';
+            const opts = isSuperAdmin ? {} : { headers: getHeaders() };
+            const res = await api.get(url, opts);
             if (res.data?.success) {
                 setAlerts(res.data.alerts || []);
             }
@@ -34,7 +36,7 @@ export default function NotificationPopup({ notificationCount = 0, tenantId = nu
         } finally {
             setLoading(false);
         }
-    }, [getHeaders]);
+    }, [getHeaders, isSuperAdmin]);
 
     // Close on click outside
     useEffect(() => {
@@ -51,6 +53,7 @@ export default function NotificationPopup({ notificationCount = 0, tenantId = nu
     };
 
     const markRead = async (id) => {
+        if (isSuperAdmin) return; // סופר אדמין – אין API ל-mark read
         try {
             await api.patch(`/admin/ai/agent/alerts/${id}/read`, {}, { headers: getHeaders() });
             setAlerts((prev) => prev.filter((a) => a.id !== id));
@@ -60,8 +63,16 @@ export default function NotificationPopup({ notificationCount = 0, tenantId = nu
     };
 
     const markAllRead = async () => {
-        await Promise.all(alerts.map((a) => api.patch(`/admin/ai/agent/alerts/${a.id}/read`, {}, { headers: getHeaders() })));
-        setAlerts([]);
+        if (isSuperAdmin) {
+            setAlerts([]);
+            return;
+        }
+        try {
+            await Promise.all(alerts.map((a) => api.patch(`/admin/ai/agent/alerts/${a.id}/read`, {}, { headers: getHeaders() })));
+            setAlerts([]);
+        } catch {
+            // silent
+        }
     };
 
     // Bell shows active orders badge (preserving original behavior)
@@ -106,7 +117,7 @@ export default function NotificationPopup({ notificationCount = 0, tenantId = nu
                     <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50/50">
                         <h3 className="text-sm font-black text-gray-800">התראות מערכת</h3>
                         <div className="flex items-center gap-2">
-                            {alerts.length > 0 && (
+                            {alerts.length > 0 && !isSuperAdmin && (
                                 <button onClick={markAllRead} className="text-[10px] font-bold text-brand-primary hover:underline flex items-center gap-1">
                                     <FaCheckDouble size={10} /> סמן הכל כנקרא
                                 </button>
@@ -142,6 +153,7 @@ export default function NotificationPopup({ notificationCount = 0, tenantId = nu
                                                 {new Date(alert.created_at).toLocaleString('he-IL')}
                                             </p>
                                         </div>
+                                        {!isSuperAdmin && (
                                         <button
                                             onClick={() => markRead(alert.id)}
                                             className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
@@ -149,6 +161,7 @@ export default function NotificationPopup({ notificationCount = 0, tenantId = nu
                                         >
                                             <FaCheck size={12} />
                                         </button>
+                                        )}
                                     </div>
                                 );
                             })

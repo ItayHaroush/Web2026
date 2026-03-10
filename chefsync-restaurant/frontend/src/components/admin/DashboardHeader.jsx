@@ -64,6 +64,7 @@ const DashboardHeader = ({
                     <NotificationPopup
                         notificationCount={notificationCount}
                         tenantId={user?.restaurant?.tenant_id || user?.tenant_id}
+                        isSuperAdmin={user?.is_super_admin}
                     />
 
                     {/* User Profile */}

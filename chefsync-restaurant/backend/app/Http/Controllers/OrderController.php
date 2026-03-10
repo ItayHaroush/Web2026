@@ -18,6 +18,7 @@ use App\Models\PaymentSession;
 use App\Models\SystemError;
 use App\Models\User;
 use App\Models\MonitoringAlert;
+use App\Models\NotificationLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
@@ -847,12 +848,15 @@ class OrderController extends Controller
             $restaurant = Restaurant::where('tenant_id', $tenantId)->first();
             $restaurantName = $restaurant?->name ?? $tenantId;
 
+            $title = "הזמנה חדשה - {$restaurantName}";
+            $body = "#{$order->id} | {$order->customer_name} | ₪{$order->total_amount}";
+
             $fcm = app(FcmService::class);
             foreach ($tokens as $token) {
                 $fcm->sendToToken(
                     $token,
-                    "הזמנה חדשה - {$restaurantName}",
-                    "#{$order->id} | {$order->customer_name} | ₪{$order->total_amount}",
+                    $title,
+                    $body,
                     [
                         'type' => 'super_admin_order_alert',
                         'orderId' => (string) $order->id,
@@ -860,6 +864,19 @@ class OrderController extends Controller
                     ]
                 );
             }
+
+            // רישום בלוג היסטוריה + לתצוגה בפופאפ
+            NotificationLog::create([
+                'channel' => 'push',
+                'type' => 'order_alert',
+                'title' => $title,
+                'body' => $body,
+                'sender_id' => null,
+                'target_restaurant_ids' => [],
+                'tokens_targeted' => $tokens->count(),
+                'sent_ok' => $tokens->count(),
+                'metadata' => ['order_id' => $order->id, 'tenant_id' => $tenantId],
+            ]);
         } catch (\Throwable $e) {
             Log::warning('Failed to send super admin order alert', ['error' => $e->getMessage()]);
         }

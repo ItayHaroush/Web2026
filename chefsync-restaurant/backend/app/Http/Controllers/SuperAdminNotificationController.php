@@ -179,6 +179,33 @@ class SuperAdminNotificationController extends Controller
     }
 
     /**
+     * התראות לפופאפ סופר אדמין (הזמנות חדשות, שידורים וכו')
+     * GET /super-admin/notifications/alerts
+     */
+    public function alerts(Request $request)
+    {
+        $logs = NotificationLog::query()
+            ->whereIn('type', ['order_alert', 'broadcast'])
+            ->orderBy('created_at', 'desc')
+            ->limit(20)
+            ->get();
+
+        $alerts = $logs->map(fn ($log) => [
+            'id' => $log->id,
+            'title' => $log->title,
+            'body' => $log->body,
+            'severity' => 'info',
+            'created_at' => $log->created_at?->toIso8601String(),
+            'is_read' => false,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'alerts' => $alerts,
+        ]);
+    }
+
+    /**
      * היסטוריית התראות שנשלחו
      * GET /super-admin/notifications/log
      */
