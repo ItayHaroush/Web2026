@@ -89,12 +89,22 @@ class AgentActionController extends Controller
     public function getAlerts(Request $request): JsonResponse
     {
         $user = $request->user();
+        // #region agent log
+        $logPath = base_path('../.cursor/debug-38053a.log');
+        $payload = ['sessionId' => '38053a', 'location' => 'AgentActionController::getAlerts', 'message' => 'getAlerts called', 'data' => ['user_id' => $user->id, 'restaurant_id' => $user->restaurant_id, 'is_super_admin' => $user->is_super_admin ?? false], 'timestamp' => (int) (microtime(true) * 1000), 'hypothesisId' => 'A'];
+        @file_put_contents($logPath, json_encode($payload) . "\n", FILE_APPEND);
+        // #endregion
 
         $alerts = MonitoringAlert::where('restaurant_id', $user->restaurant_id)
             ->where('is_read', false)
             ->orderBy('created_at', 'desc')
             ->limit(20)
             ->get();
+
+        // #region agent log
+        $payload2 = ['sessionId' => '38053a', 'location' => 'AgentActionController::getAlerts', 'message' => 'getAlerts result', 'data' => ['alerts_count' => $alerts->count()], 'timestamp' => (int) (microtime(true) * 1000), 'hypothesisId' => 'A'];
+        @file_put_contents($logPath, json_encode($payload2) . "\n", FILE_APPEND);
+        // #endregion
 
         return response()->json([
             'success' => true,

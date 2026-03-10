@@ -6,6 +6,7 @@ use App\Models\Order;
 use App\Models\PaymentSession;
 use App\Models\Restaurant;
 use App\Models\FcmToken;
+use App\Models\MonitoringAlert;
 use App\Services\RestaurantPaymentService;
 use App\Services\FcmService;
 use Illuminate\Http\Request;
@@ -185,16 +186,29 @@ class HypOrderCallbackController extends Controller
 
         // FCM push
         try {
+            $notificationBody = "{$order->customer_name} - ₪{$expectedAmount}";
             $this->sendOrderNotification(
                 tenantId: $restaurant->tenant_id,
                 title: "הזמנה חדשה #{$order->id}",
-                body: "{$order->customer_name} - ₪{$expectedAmount}",
+                body: $notificationBody,
                 data: [
                     'orderId' => (string) $order->id,
                     'type'    => 'new_order',
                     'url'     => '/admin/orders',
                 ]
             );
+
+            // יצירת התראה לפופאפ (רשימת התראות למנהל מסעדה)
+            MonitoringAlert::create([
+                'tenant_id'     => $restaurant->tenant_id,
+                'restaurant_id' => $restaurant->id,
+                'alert_type'    => 'new_order',
+                'title'         => "הזמנה חדשה #{$order->id}",
+                'body'          => $notificationBody,
+                'severity'      => 'info',
+                'metadata'      => ['order_id' => $order->id],
+                'is_read'       => false,
+            ]);
         } catch (\Throwable $e) {
             Log::warning('Failed to send FCM notification after HYP payment', [
                 'order_id' => $order->id,
