@@ -20,16 +20,10 @@ export default function NotificationPopup({ notificationCount = 0 }) {
         try {
             setLoading(true);
             const res = await api.get('/admin/ai/agent/alerts');
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/8df4a825-2af7-44b5-b28d-f1fe14cba861',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'38053a'},body:JSON.stringify({sessionId:'38053a',location:'NotificationPopup:fetchAlerts',message:'alerts API response',data:{success:res?.data?.success,alertsCount:(res?.data?.alerts||[]).length,status:res?.status},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
-            // #endregion
             if (res.data?.success) {
                 setAlerts(res.data.alerts || []);
             }
-        } catch (err) {
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/8df4a825-2af7-44b5-b28d-f1fe14cba861',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'38053a'},body:JSON.stringify({sessionId:'38053a',location:'NotificationPopup:fetchAlerts',message:'alerts API error',data:{error:String(err?.message),status:err?.response?.status,message:err?.response?.data?.message},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
-            // #endregion
+        } catch {
             // silent — don't let API errors affect page
         } finally {
             setLoading(false);

@@ -836,19 +836,12 @@ class OrderController extends Controller
     {
         try {
             $superAdmins = User::where('is_super_admin', true)->pluck('id');
-            // #region agent log
-            $logPath = base_path('../.cursor/debug-38053a.log');
-            @file_put_contents($logPath, json_encode(['sessionId' => '38053a', 'location' => 'OrderController::sendSuperAdminOrderAlert', 'message' => 'super admin alert start', 'data' => ['order_id' => $order->id, 'tenant_id' => $tenantId, 'super_admin_ids' => $superAdmins->toArray()], 'timestamp' => (int) (microtime(true) * 1000), 'hypothesisId' => 'B']) . "\n", FILE_APPEND);
-            // #endregion
             if ($superAdmins->isEmpty()) return;
 
             $tokens = FcmToken::withoutGlobalScopes()
                 ->whereIn('user_id', $superAdmins)
                 ->pluck('token');
 
-            // #region agent log
-            @file_put_contents($logPath, json_encode(['sessionId' => '38053a', 'location' => 'OrderController::sendSuperAdminOrderAlert', 'message' => 'tokens found', 'data' => ['tokens_count' => $tokens->count()], 'timestamp' => (int) (microtime(true) * 1000), 'hypothesisId' => 'B']) . "\n", FILE_APPEND);
-            // #endregion
             if ($tokens->isEmpty()) return;
 
             $restaurant = Restaurant::where('tenant_id', $tenantId)->first();
