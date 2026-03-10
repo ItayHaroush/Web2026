@@ -7,6 +7,8 @@ use App\Models\PaymentSession;
 use App\Models\Restaurant;
 use App\Models\FcmToken;
 use App\Models\MonitoringAlert;
+use App\Models\NotificationLog;
+use App\Models\User;
 use App\Services\RestaurantPaymentService;
 use App\Services\FcmService;
 use Illuminate\Http\Request;
@@ -209,6 +211,9 @@ class HypOrderCallbackController extends Controller
                 'metadata'      => ['order_id' => $order->id],
                 'is_read'       => false,
             ]);
+
+            // התראת סופר אדמין (הזמנה בתשלום אשראי)
+            $this->sendSuperAdminOrderAlert($order, $restaurant);
         } catch (\Throwable $e) {
             Log::warning('Failed to send FCM notification after HYP payment', [
                 'order_id' => $order->id,
@@ -299,6 +304,50 @@ class HypOrderCallbackController extends Controller
         }
 
         return null;
+    }
+
+    /**
+     * התראת סופר אדמין על הזמנה חדשה (אשראי)
+     */
+    private function sendSuperAdminOrderAlert(Order $order, Restaurant $restaurant): void
+    {
+        try {
+            $superAdmins = User::where('is_super_admin', true)->pluck('id');
+            if ($superAdmins->isEmpty()) return;
+
+            $tokens = FcmToken::withoutGlobalScopes()
+                ->where('tenant_id', '__super_admin__')
+                ->whereIn('user_id', $superAdmins)
+                ->pluck('token');
+
+            if ($tokens->isEmpty()) return;
+
+            $title = "הזמנה חדשה (אשראי) - {$restaurant->name}";
+            $body = "#{$order->id} | {$order->customer_name} | ₪{$order->total_amount}";
+
+            $fcm = app(FcmService::class);
+            foreach ($tokens as $token) {
+                $fcm->sendToToken($token, $title, $body, [
+                    'type' => 'super_admin_order_alert',
+                    'orderId' => (string) $order->id,
+                    'tenantId' => $restaurant->tenant_id,
+                ]);
+            }
+
+            NotificationLog::create([
+                'channel' => 'push',
+                'type' => 'order_alert',
+                'title' => $title,
+                'body' => $body,
+                'sender_id' => null,
+                'target_restaurant_ids' => [],
+                'tokens_targeted' => $tokens->count(),
+                'sent_ok' => $tokens->count(),
+                'metadata' => ['order_id' => $order->id, 'tenant_id' => $restaurant->tenant_id, 'source' => 'credit_card'],
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('Failed to send super admin order alert (HYP)', ['error' => $e->getMessage()]);
+        }
     }
 
     /**

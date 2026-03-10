@@ -8,6 +8,7 @@ use App\Models\Restaurant;
 use App\Models\User;
 use App\Models\FcmToken;
 use App\Models\MonitoringAlert;
+use App\Models\NotificationLog;
 use App\Services\FcmService;
 use App\Mail\DailyReportMail;
 use Carbon\Carbon;
@@ -136,23 +137,36 @@ class SendDailyReportNotificationsJob extends Command
 
             // אין tenant_id לסופר אדמין, מחפשים tokens לפי user
             $tokens = FcmToken::withoutGlobalScopes()
+                ->where('tenant_id', '__super_admin__')
                 ->whereIn('user_id', $superAdmins)
                 ->pluck('token');
 
-            // fallback: אם אין user_id בטוקנים, ננסה לפי tenant_id ריק
-            if ($tokens->isEmpty()) {
-                return;
-            }
+            if ($tokens->isEmpty()) return;
 
             $title = "דוח יומי מערכת - {$date}";
             $body = "{$restaurants} מסעדות פעילות | {$orders} הזמנות | ₪" . number_format($revenue, 0);
 
+            $sent = 0;
             foreach ($tokens as $token) {
-                $fcm->sendToToken($token, $title, $body, [
+                if ($fcm->sendToToken($token, $title, $body, [
                     'type' => 'system_daily_report',
                     'date' => $date,
-                ]);
+                ])) {
+                    $sent++;
+                }
             }
+
+            NotificationLog::create([
+                'channel' => 'push',
+                'type' => 'daily_summary',
+                'title' => $title,
+                'body' => $body,
+                'sender_id' => null,
+                'target_restaurant_ids' => [],
+                'tokens_targeted' => $tokens->count(),
+                'sent_ok' => $sent,
+                'metadata' => ['date' => $date, 'restaurants' => $restaurants, 'orders' => $orders, 'revenue' => $revenue],
+            ]);
         } catch (\Throwable $e) {
             Log::warning('Failed to send super admin daily summary', ['error' => $e->getMessage()]);
         }

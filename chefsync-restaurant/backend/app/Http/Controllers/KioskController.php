@@ -9,6 +9,8 @@ use App\Models\OrderItem;
 use App\Models\Restaurant;
 use App\Models\FcmToken;
 use App\Models\MonitoringAlert;
+use App\Models\NotificationLog;
+use App\Models\User;
 use App\Services\FcmService;
 use App\Services\PromotionService;
 use Illuminate\Http\Request;
@@ -670,6 +672,9 @@ class KioskController extends Controller
                 Log::warning('Failed to create MonitoringAlert for kiosk order', ['error' => $e->getMessage()]);
             }
 
+            // התראת סופר אדמין (הזמנת קיוסק)
+            $this->sendSuperAdminKioskOrderAlert($order, $restaurant, $notificationBody);
+
             return response()->json([
                 'success' => true,
                 'message' => 'ההזמנה נקלטה בהצלחה!',
@@ -748,6 +753,48 @@ class KioskController extends Controller
         }
 
         return $groups;
+    }
+
+    private function sendSuperAdminKioskOrderAlert(Order $order, Restaurant $restaurant, string $notificationBody): void
+    {
+        try {
+            $superAdmins = User::where('is_super_admin', true)->pluck('id');
+            if ($superAdmins->isEmpty()) return;
+
+            $tokens = FcmToken::withoutGlobalScopes()
+                ->where('tenant_id', '__super_admin__')
+                ->whereIn('user_id', $superAdmins)
+                ->pluck('token');
+
+            if ($tokens->isEmpty()) return;
+
+            $title = "הזמנת קיוסק חדשה - {$restaurant->name}";
+            $body = $notificationBody;
+
+            $fcm = app(FcmService::class);
+            foreach ($tokens as $token) {
+                $fcm->sendToToken($token, $title, $body, [
+                    'type' => 'super_admin_order_alert',
+                    'orderId' => (string) $order->id,
+                    'tenantId' => $restaurant->tenant_id,
+                    'source' => 'kiosk',
+                ]);
+            }
+
+            NotificationLog::create([
+                'channel' => 'push',
+                'type' => 'order_alert',
+                'title' => $title,
+                'body' => $body,
+                'sender_id' => null,
+                'target_restaurant_ids' => [],
+                'tokens_targeted' => $tokens->count(),
+                'sent_ok' => $tokens->count(),
+                'metadata' => ['order_id' => $order->id, 'tenant_id' => $restaurant->tenant_id, 'source' => 'kiosk'],
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('Failed to send super admin kiosk order alert', ['error' => $e->getMessage()]);
+        }
     }
 
     private function sendOrderNotification(string $tenantId, string $title, string $body, array $data = []): void

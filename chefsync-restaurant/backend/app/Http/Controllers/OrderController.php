@@ -840,6 +840,7 @@ class OrderController extends Controller
             if ($superAdmins->isEmpty()) return;
 
             $tokens = FcmToken::withoutGlobalScopes()
+                ->where('tenant_id', '__super_admin__')
                 ->whereIn('user_id', $superAdmins)
                 ->pluck('token');
 
