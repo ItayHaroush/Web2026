@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { FaCheckCircle, FaFire, FaBell, FaTruck, FaBan, FaClock, FaShekelSign, FaClipboardList, FaMotorcycle, FaPrint, FaUtensils } from 'react-icons/fa';
+import { FaCheckCircle, FaFire, FaBell, FaTruck, FaBan, FaClock, FaShekelSign, FaClipboardList, FaMotorcycle, FaPrint, FaUtensils, FaUndo } from 'react-icons/fa';
 import posApi from '../api/posApi';
+import POSManagerAuth from './POSManagerAuth';
 
 const STATUS_CONFIG = {
     pending: { label: 'ממתינה', color: 'bg-amber-500', bg: 'bg-amber-500/10 border-amber-500/30', icon: FaClock },
@@ -61,10 +62,11 @@ function normalizeOrder(raw) {
         total_price: parseFloat(raw.total_amount || raw.total_price || raw.total || 0),
         source: raw.source || 'website',
         notes: raw.notes,
+        table_number: raw.table_number,
         created_at: raw.created_at
             ? (typeof raw.created_at === 'string' && raw.created_at.length <= 5
                 ? raw.created_at
-                : new Date(raw.created_at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }))
+                : new Date(raw.created_at).toLocaleString('he-IL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }))
             : '',
         items,
     };
@@ -72,6 +74,8 @@ function normalizeOrder(raw) {
 
 export default function POSOrderPanel({ headers, posToken, mode = 'active' }) {
     const [printMsg, setPrintMsg] = useState(null);
+    const [refunding, setRefunding] = useState(null); // orderId being refunded
+    const [pendingRefundId, setPendingRefundId] = useState(null); // orderId awaiting manager PIN
 
     const showPrintMsg = (text, isError = false) => {
         setPrintMsg({ text, isError });
@@ -95,13 +99,39 @@ export default function POSOrderPanel({ headers, posToken, mode = 'active' }) {
             showPrintMsg(e.response?.data?.message || 'שגיאה בהדפסה', true);
         }
     };
+
+    const handleRefund = async (orderId) => {
+        // Gate refund behind manager PIN
+        setPendingRefundId(orderId);
+    };
+
+    const executeRefund = async () => {
+        const orderId = pendingRefundId;
+        setPendingRefundId(null);
+        if (!orderId) return;
+        if (!confirm('האם אתה בטוח שברצונך לבצע החזר כספי להזמנה זו?')) return;
+        setRefunding(orderId);
+        try {
+            const res = await posApi.refundOrder(orderId, headers, posToken);
+            if (res.data.success) {
+                showPrintMsg('החזר כספי בוצע בהצלחה');
+                fetchOrders();
+            }
+        } catch (e) {
+            showPrintMsg(e.response?.data?.message || 'שגיאה בביצוע החזר כספי', true);
+        } finally {
+            setRefunding(null);
+        }
+    };
     const [orders, setOrders] = useState([]);
     const [expandedId, setExpandedId] = useState(null);
     const [loading, setLoading] = useState(true);
 
     const fetchOrders = useCallback(async () => {
         try {
-            const res = await posApi.getOrders(headers);
+            const res = mode === 'history'
+                ? await posApi.getOrderHistory(headers, posToken)
+                : await posApi.getOrders(headers, posToken);
             if (res.data.success) {
                 const rawOrders = res.data.orders?.data || res.data.orders || [];
                 const list = Array.isArray(rawOrders) ? rawOrders : [];
@@ -112,7 +142,7 @@ export default function POSOrderPanel({ headers, posToken, mode = 'active' }) {
         } finally {
             setLoading(false);
         }
-    }, [headers]);
+    }, [headers, posToken, mode]);
 
     useEffect(() => {
         fetchOrders();
@@ -161,8 +191,8 @@ export default function POSOrderPanel({ headers, posToken, mode = 'active' }) {
         <div className="h-full overflow-y-auto p-4 space-y-4 custom-scrollbar relative">
             {printMsg && (
                 <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[600] px-6 py-3 rounded-2xl font-bold text-sm shadow-2xl animate-in fade-in slide-in-from-top-4 duration-300 ${printMsg.isError
-                        ? 'bg-red-500 text-white'
-                        : 'bg-emerald-500 text-white'
+                    ? 'bg-red-500 text-white'
+                    : 'bg-emerald-500 text-white'
                     }`}>
                     {printMsg.text}
                 </div>
@@ -183,14 +213,26 @@ export default function POSOrderPanel({ headers, posToken, mode = 'active' }) {
                         showActions={mode === 'active'}
                         onPrintReceipt={handlePrintReceipt}
                         onPrintKitchen={handlePrintKitchen}
+                        onRefund={handleRefund}
+                        refunding={refunding}
                     />
                 ))}
             </div>
+
+            {pendingRefundId && (
+                <POSManagerAuth
+                    title="אישור מנהל"
+                    subtitle="נדרש קוד מנהל לביצוע החזר כספי"
+                    headers={headers}
+                    onVerified={executeRefund}
+                    onClose={() => setPendingRefundId(null)}
+                />
+            )}
         </div>
     );
 }
 
-function OrderCard({ order, expanded, onToggle, onUpdateStatus, showActions = true, onPrintReceipt, onPrintKitchen }) {
+function OrderCard({ order, expanded, onToggle, onUpdateStatus, showActions = true, onPrintReceipt, onPrintKitchen, onRefund, refunding }) {
     const config = STATUS_CONFIG[order.status] || STATUS_CONFIG.pending;
     const Icon = config.icon;
 
@@ -290,6 +332,15 @@ function OrderCard({ order, expanded, onToggle, onUpdateStatus, showActions = tr
                         >
                             <FaUtensils size={11} /> מטבח
                         </button>
+                        {order.payment_status === 'paid' && order.payment_method === 'credit_card' && (
+                            <button
+                                onClick={() => onRefund?.(order.id)}
+                                disabled={refunding === order.id}
+                                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-red-500/10 text-red-400 text-xs font-bold transition-all active:scale-95 hover:bg-red-500/20 disabled:opacity-50"
+                            >
+                                <FaUndo size={11} /> {refunding === order.id ? 'מעבד...' : 'החזר כספי'}
+                            </button>
+                        )}
                     </div>
                 </div>
             )}

@@ -255,6 +255,41 @@ class HypOrderCallbackController extends Controller
             }
 
             $restaurant = Restaurant::withoutGlobalScope('tenant')->find($order->restaurant_id);
+
+            // --- Notification for payment failure ---
+            $tenantId = $restaurant?->tenant_id;
+            if ($tenantId) {
+                try {
+                    MonitoringAlert::create([
+                        'tenant_id' => $tenantId,
+                        'restaurant_id' => $order->restaurant_id,
+                        'alert_type' => 'payment_failed',
+                        'title' => "תשלום נכשל — הזמנה #{$order->id}",
+                        'body' => "תשלום באשראי נכשל עבור הזמנה #{$order->id} ({$order->customer_name}, ₪{$order->total_amount}). " . ($params['errMsg'] ?: 'סיבה לא ידועה'),
+                        'severity' => 'critical',
+                        'metadata' => ['order_id' => $order->id, 'error' => $params['errMsg']],
+                        'is_read' => false,
+                    ]);
+                } catch (\Throwable $e) {
+                    Log::warning('Failed to create MonitoringAlert for payment failure', ['error' => $e->getMessage()]);
+                }
+                try {
+                    NotificationLog::create([
+                        'channel' => 'system',
+                        'type' => 'order_alert',
+                        'title' => "תשלום נכשל: " . ($restaurant->name ?? $tenantId) . " — #{$order->id}",
+                        'body' => "תשלום באשראי נכשל עבור הזמנה #{$order->id} (₪{$order->total_amount}). " . ($params['errMsg'] ?: ''),
+                        'sender_id' => null,
+                        'target_restaurant_ids' => [$order->restaurant_id],
+                        'tokens_targeted' => 0,
+                        'sent_ok' => 0,
+                        'metadata' => ['order_id' => $order->id, 'action' => 'payment_failed', 'error' => $params['errMsg']],
+                    ]);
+                } catch (\Throwable $e) {
+                    Log::warning('Failed to create NotificationLog for payment failure', ['error' => $e->getMessage()]);
+                }
+            }
+
             return [
                 'restaurant_id' => $restaurant?->id ?? '',
                 'order_id'      => $order->id,

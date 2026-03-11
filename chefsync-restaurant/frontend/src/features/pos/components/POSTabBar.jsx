@@ -1,8 +1,9 @@
-import { FaClipboardList, FaPlusCircle, FaCashRegister, FaHistory } from 'react-icons/fa';
+import { FaClipboardList, FaPlusCircle, FaCashRegister, FaHistory, FaUtensils } from 'react-icons/fa';
 
 const tabs = [
     { id: 'orders', label: 'הזמנות', icon: FaClipboardList },
     { id: 'new-order', label: 'הזמנה חדשה', icon: FaPlusCircle },
+    { id: 'tables', label: 'שולחנות', icon: FaUtensils },
     { id: 'cash-register', label: 'קופה', icon: FaCashRegister },
     { id: 'history', label: 'היסטוריה', icon: FaHistory, managerOnly: true },
 ];
@@ -19,11 +20,10 @@ export default function POSTabBar({ activeTab, onTabChange, isManager }) {
                     <button
                         key={tab.id}
                         onClick={() => onTabChange(tab.id)}
-                        className={`flex flex-col items-center gap-1 px-6 py-2.5 rounded-2xl transition-all ${
-                            active
+                        className={`flex flex-col items-center gap-1 px-6 py-2.5 rounded-2xl transition-all ${active
                                 ? 'bg-orange-500/15 text-orange-400'
                                 : 'text-slate-500 hover:text-slate-300'
-                        }`}
+                            }`}
                     >
                         <Icon size={22} />
                         <span className="text-[11px] font-black">{tab.label}</span>

@@ -48,14 +48,54 @@ export const posApi = {
     getClockedIn: (headers, token) =>
         api.get('/admin/pos/clocked-in', { headers: posHeaders(headers, token) }),
 
-    // Orders — reuse the same endpoint as admin panel, today only
-    getOrders: (headers) =>
+    // Orders — POS endpoint, today only
+    getOrders: (headers, token) =>
+        api.get('/admin/pos/orders', {
+            headers: posHeaders(headers, token),
+        }),
+    getOrderHistory: (headers, token) =>
         api.get('/admin/orders', {
             headers,
-            params: { per_page: 100, date: new Date().toISOString().slice(0, 10) },
+            params: { per_page: 50, date: new Date().toISOString().slice(0, 10) },
         }),
     createOrder: (orderData, headers, token) =>
         api.post('/admin/pos/orders', orderData, { headers: posHeaders(headers, token) }),
+    createOrderCredit: (orderData, headers, token) =>
+        api.post('/admin/pos/orders/credit', orderData, { headers: posHeaders(headers, token), timeout: 90000 }),
+    chargeOrderCredit: (orderId, headers, token) =>
+        api.post(`/admin/pos/orders/${orderId}/charge-credit`, {}, { headers: posHeaders(headers, token), timeout: 90000 }),
+
+    // הזמנות ממתינות לתשלום
+    getPendingPaymentOrders: (headers, token) =>
+        api.get('/admin/pos/orders/pending-payment', { headers: posHeaders(headers, token) }),
+    payPendingOrderCash: (orderId, amountTendered, headers, token) =>
+        api.post(`/admin/pos/orders/${orderId}/pay-cash`, { amount_tendered: amountTendered }, { headers: posHeaders(headers, token) }),
+
+    // תשלום מפוצל
+    splitPayment: (orderId, cashAmount, creditAmount, headers, token) =>
+        api.post(`/admin/pos/orders/${orderId}/split-payment`, { cash_amount: cashAmount, credit_amount: creditAmount }, { headers: posHeaders(headers, token), timeout: 90000 }),
+
+    // החזר כספי
+    refundOrder: (orderId, headers, token) =>
+        api.post(`/admin/pos/orders/${orderId}/refund`, {}, { headers: posHeaders(headers, token), timeout: 30000 }),
+
+    // ניהול שולחנות / טאבים
+    openTab: (tableNumber, items, headers, token) =>
+        api.post('/admin/pos/tabs/open', { table_number: tableNumber, items }, { headers: posHeaders(headers, token) }),
+    getOpenTabs: (headers, token) =>
+        api.get('/admin/pos/tabs', { headers: posHeaders(headers, token) }),
+    getTab: (tabId, headers, token) =>
+        api.get(`/admin/pos/tabs/${tabId}`, { headers: posHeaders(headers, token) }),
+    addItemsToTab: (tabId, items, headers, token) =>
+        api.post(`/admin/pos/tabs/${tabId}/items`, { items }, { headers: posHeaders(headers, token) }),
+    closeTab: (tabId, headers, token) =>
+        api.post(`/admin/pos/tabs/${tabId}/close`, {}, { headers: posHeaders(headers, token) }),
+    removeTabItem: (tabId, itemId, headers, token) =>
+        api.delete(`/admin/pos/tabs/${tabId}/items/${itemId}`, { headers: posHeaders(headers, token) }),
+
+    // אימות מנהל (ללא יצירת סשן)
+    verifyManagerPin: (pin, headers) =>
+        api.post('/admin/pos/verify-manager', { pin }, { headers }),
 
     // Menu (reuse kiosk endpoint)
     getMenu: (kioskToken) =>

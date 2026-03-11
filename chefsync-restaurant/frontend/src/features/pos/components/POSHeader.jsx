@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { FaLock, FaSignOutAlt, FaCashRegister } from 'react-icons/fa';
+import { FaLock, FaSignOutAlt, FaCashRegister, FaClock } from 'react-icons/fa';
 import POSTimeClock from './POSTimeClock';
 
-export default function POSHeader({ posUser, shift, onLock, onExit, headers, posToken }) {
+export default function POSHeader({ posUser, shift, onLock, onExit, headers, posToken, pendingCount = 0, onPendingClick }) {
     const [time, setTime] = useState(new Date());
 
     useEffect(() => {
@@ -11,7 +11,7 @@ export default function POSHeader({ posUser, shift, onLock, onExit, headers, pos
     }, []);
 
     return (
-        <header className="bg-slate-800 border-b border-slate-700/50 px-6 py-3 flex items-center justify-between shrink-0">
+        <header className="bg-slate-800 border-b border-slate-700/50 px-6 py-3 flex items-center justify-between shrink-0 relative">
             <div className="flex items-center gap-4">
                 <div className="bg-gradient-to-br from-orange-500 to-amber-500 p-2.5 rounded-xl">
                     <FaCashRegister className="text-white text-lg" />
@@ -28,6 +28,23 @@ export default function POSHeader({ posUser, shift, onLock, onExit, headers, pos
                     </div>
                 )}
             </div>
+
+            {/* Pending payment button - absolute center */}
+            <button
+                onClick={onPendingClick}
+                className={`absolute left-1/2 -translate-x-1/2 flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-black transition-all active:scale-95 border ${pendingCount > 0
+                        ? 'bg-amber-500/15 border-amber-500/40 text-amber-400 hover:bg-amber-500/25'
+                        : 'bg-slate-700/50 border-slate-600/50 text-slate-400 hover:text-slate-200 hover:bg-slate-700'
+                    }`}
+            >
+                <FaClock size={14} />
+                <span>ממתינות לתשלום</span>
+                {pendingCount > 0 && (
+                    <span className="min-w-[22px] h-[22px] flex items-center justify-center bg-red-500 text-white text-[11px] font-black rounded-full px-1 animate-pulse">
+                        {pendingCount}
+                    </span>
+                )}
+            </button>
 
             <div className="flex items-center gap-4">
                 {/* Clock */}

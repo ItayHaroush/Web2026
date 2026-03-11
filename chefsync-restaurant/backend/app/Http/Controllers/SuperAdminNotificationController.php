@@ -185,12 +185,12 @@ class SuperAdminNotificationController extends Controller
     public function alerts(Request $request)
     {
         $logs = NotificationLog::query()
-            ->whereIn('type', ['order_alert', 'broadcast', 'daily_summary'])
+            ->whereIn('type', ['order_alert', 'broadcast', 'daily_summary', 'system'])
             ->orderBy('created_at', 'desc')
             ->limit(20)
             ->get();
 
-        $alerts = $logs->map(fn ($log) => [
+        $alerts = $logs->map(fn($log) => [
             'id' => $log->id,
             'title' => $log->title,
             'body' => $log->body,

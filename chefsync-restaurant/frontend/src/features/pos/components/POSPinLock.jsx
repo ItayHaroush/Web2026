@@ -7,6 +7,7 @@ export default function POSPinLock({ onUnlock, isRelock }) {
     const [pin, setPin] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [bypassHours, setBypassHours] = useState(0); // 0 = no bypass
 
     const handleDigit = (d) => {
         if (pin.length >= 4 || loading) return;
@@ -25,22 +26,17 @@ export default function POSPinLock({ onUnlock, isRelock }) {
     const submit = async (code) => {
         setLoading(true);
         try {
-            await onUnlock(code);
+            await onUnlock(code, bypassHours);
         } catch (err) {
-            // #region agent log
-            const _dbgPin = {status:err?.response?.status,msg:err?.response?.data?.message,hasResponse:!!err?.response,errMsg:err?.message};
-            console.warn('[DEBUG-3267aa] POSPinLock caught error locally', _dbgPin);
-            fetch('http://127.0.0.1:7242/ingest/e2a84354-28c6-4376-be2a-efdcd59b5972',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'3267aa'},body:JSON.stringify({sessionId:'3267aa',location:'POSPinLock.jsx:catch',message:'PIN error caught locally',data:_dbgPin,timestamp:Date.now(),hypothesisId:'H1'})}).catch(()=>{});
-            // #endregion
             const status = err?.response?.status;
             let msg = 'קוד PIN שגוי';
 
             if (err?.response?.data?.message) {
                 msg = err.response.data.message;
+            } else if (status === 422 || status === 401) {
+                msg = 'קוד PIN שגוי';
             } else if (status === 404) {
                 msg = 'המסעדה לא נמצאה — נסה להתחבר מחדש';
-            } else if (status === 401) {
-                msg = 'קוד PIN שגוי';
             } else if (status >= 500) {
                 msg = 'שגיאת שרת — נסה שוב';
             } else if (!err?.response) {
@@ -86,11 +82,10 @@ export default function POSPinLock({ onUnlock, isRelock }) {
                     {[0, 1, 2, 3].map((i) => (
                         <div
                             key={i}
-                            className={`w-5 h-5 rounded-full transition-all duration-200 ${
-                                i < pin.length
+                            className={`w-5 h-5 rounded-full transition-all duration-200 ${i < pin.length
                                     ? 'bg-orange-400 scale-125 shadow-lg shadow-orange-400/40'
                                     : 'bg-slate-700 border-2 border-slate-600'
-                            }`}
+                                }`}
                         />
                     ))}
                 </div>
@@ -132,6 +127,30 @@ export default function POSPinLock({ onUnlock, isRelock }) {
                         );
                     })}
                 </div>
+
+                {/* Bypass option — only on initial login, not relock */}
+                {!isRelock && (
+                    <div className="mt-6 flex justify-center">
+                        <label className="flex items-center gap-3 cursor-pointer select-none">
+                            <div
+                                onClick={() => setBypassHours(bypassHours > 0 ? 0 : 4)}
+                                className={`w-5 h-5 rounded-md border-2 transition-all flex items-center justify-center ${bypassHours > 0
+                                        ? 'bg-orange-500 border-orange-500'
+                                        : 'border-slate-600 hover:border-slate-500'
+                                    }`}
+                            >
+                                {bypassHours > 0 && (
+                                    <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                )}
+                            </div>
+                            <span className="text-slate-400 text-sm font-semibold">
+                                זכור אותי ל-4 שעות
+                            </span>
+                        </label>
+                    </div>
+                )}
             </div>
         </div>
     );

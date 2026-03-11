@@ -21,7 +21,12 @@ import {
     FaPlay,
     FaTimes,
     FaFilter,
-    FaChartBar
+    FaChartBar,
+    FaArrowRight,
+    FaArrowLeft,
+    FaGift,
+    FaCheck,
+    FaTag
 } from 'react-icons/fa';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
@@ -40,7 +45,9 @@ export default function SuperAdminReports() {
     const [activating, setActivating] = useState(false);
     const [resetting, setResetting] = useState(false);
     const [grantingFree, setGrantingFree] = useState(false);
-    const [activateForm, setActivateForm] = useState({ tier: 'basic', plan_type: 'monthly', note: '', record_payment: false, payment_reference: '', trial_days: 14, free_months: 1, free_note: '' });
+    const [activateForm, setActivateForm] = useState({ tier: 'basic', plan_type: 'monthly', note: '', record_payment: false, payment_reference: '', trial_days: 14, free_months: 1, free_note: '', custom_price_enabled: false, custom_monthly_price: '', custom_yearly_price: '' });
+    const [wizardStep, setWizardStep] = useState(1);
+    const [wizardAction, setWizardAction] = useState('activate'); // 'activate' | 'free' | 'trial'
 
     useEffect(() => {
         fetchData();
@@ -99,7 +106,19 @@ export default function SuperAdminReports() {
         setActivating(true);
         try {
             const headers = getAuthHeaders();
-            await api.post(`/super-admin/billing/restaurants/${activateModal.id}/activate`, activateForm, { headers });
+            const payload = { ...activateForm };
+            // שלח מחירים מותאמים רק אם הופעלה דריסת מחיר
+            if (!payload.custom_price_enabled) {
+                delete payload.custom_monthly_price;
+                delete payload.custom_yearly_price;
+            } else {
+                if (payload.custom_monthly_price !== '') payload.custom_monthly_price = parseFloat(payload.custom_monthly_price);
+                else delete payload.custom_monthly_price;
+                if (payload.custom_yearly_price !== '') payload.custom_yearly_price = parseFloat(payload.custom_yearly_price);
+                else delete payload.custom_yearly_price;
+            }
+            delete payload.custom_price_enabled;
+            await api.post(`/super-admin/billing/restaurants/${activateModal.id}/activate`, payload, { headers });
             toast.success(`המנוי הופעל למסעדה ${activateModal.name}`);
             setActivateModal(null);
             fetchData();
@@ -457,7 +476,10 @@ export default function SuperAdminReports() {
                                                                 <button
                                                                     onClick={() => {
                                                                         setActivateModal(r);
-                                                                        setActivateForm({ tier: r.tier || 'basic', plan_type: r.subscription_plan || 'monthly', note: '', record_payment: false, payment_reference: '', trial_days: 14 });
+                                                                        const hasCustom = r.monthly_price && r.monthly_price != 600;
+                                                                        setActivateForm({ tier: r.tier || 'basic', plan_type: r.subscription_plan || 'monthly', note: '', record_payment: false, payment_reference: '', trial_days: 14, free_months: 1, free_note: '', custom_price_enabled: !!hasCustom, custom_monthly_price: hasCustom ? r.monthly_price : '', custom_yearly_price: r.yearly_price && r.yearly_price != 5000 ? r.yearly_price : '' });
+                                                                        setWizardStep(1);
+                                                                        setWizardAction('activate');
                                                                     }}
                                                                     className="px-3 py-1.5 bg-green-50 text-green-600 border border-green-200 rounded-lg text-[10px] font-black hover:bg-green-600 hover:text-white transition-all"
                                                                     title="הפעל מנוי ידנית"
@@ -468,7 +490,9 @@ export default function SuperAdminReports() {
                                                             <button
                                                                 onClick={() => {
                                                                     setActivateModal(r);
-                                                                    setActivateForm({ tier: r.tier || 'basic', plan_type: r.subscription_plan || 'monthly', note: '', record_payment: false, payment_reference: '', trial_days: 14 });
+                                                                    setActivateForm({ tier: r.tier || 'basic', plan_type: r.subscription_plan || 'monthly', note: '', record_payment: false, payment_reference: '', trial_days: 14, free_months: 1, free_note: '', custom_price_enabled: false, custom_monthly_price: '', custom_yearly_price: '' });
+                                                                    setWizardStep(1);
+                                                                    setWizardAction('activate');
                                                                 }}
                                                                 className="px-3 py-1.5 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg text-[10px] font-black hover:bg-blue-600 hover:text-white transition-all"
                                                                 title="החזר לתקופת ניסיון"
@@ -488,147 +512,421 @@ export default function SuperAdminReports() {
                 )}
             </div>
 
-            {/* Manual Activate Modal */}
+            {/* Manual Activate Wizard */}
             {activateModal && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setActivateModal(null)}>
-                    <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-between mb-6">
-                            <h3 className="text-lg font-black text-gray-900">הפעלת מנוי ידנית</h3>
-                            <button onClick={() => setActivateModal(null)} className="p-2 hover:bg-gray-100 rounded-xl transition-colors text-gray-400">
-                                <FaTimes size={16} />
-                            </button>
-                        </div>
-
-                        <p className="text-sm text-gray-600 mb-4 font-medium">
-                            מסעדה: <strong>{activateModal.name}</strong>
-                        </p>
-
-                        <div className="space-y-4 mb-6">
-                            <div>
-                                <label className="text-xs font-black text-gray-500 mb-1 block">תוכנית</label>
-                                <select
-                                    value={activateForm.tier}
-                                    onChange={(e) => setActivateForm(f => ({ ...f, tier: e.target.value }))}
-                                    className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-brand-primary/20 outline-none"
-                                >
-                                    <option value="basic">Basic</option>
-                                    <option value="pro">Pro</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label className="text-xs font-black text-gray-500 mb-1 block">מחזור חיוב</label>
-                                <select
-                                    value={activateForm.plan_type}
-                                    onChange={(e) => setActivateForm(f => ({ ...f, plan_type: e.target.value }))}
-                                    className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-brand-primary/20 outline-none"
-                                >
-                                    <option value="monthly">חודשי</option>
-                                    <option value="yearly">שנתי</option>
-                                </select>
-                            </div>
-                            <label className="flex items-center gap-3 cursor-pointer p-3 rounded-xl bg-amber-50 border border-amber-100">
-                                <input
-                                    type="checkbox"
-                                    checked={activateForm.record_payment ?? false}
-                                    onChange={(e) => setActivateForm(f => ({ ...f, record_payment: e.target.checked }))}
-                                    className="w-4 h-4 rounded accent-amber-600"
-                                />
-                                <span className="text-sm font-bold text-amber-900">תשלום בוצע בפועל — לרישום בדוחות (מסומן = תשלום HYP מאושר)</span>
-                            </label>
-                            <div>
-                                <label className="text-xs font-black text-gray-500 mb-1 block">מזהה עסקה מ-HYP (אופציונלי)</label>
-                                <input
-                                    type="text"
-                                    value={activateForm.payment_reference ?? ''}
-                                    onChange={(e) => setActivateForm(f => ({ ...f, payment_reference: e.target.value }))}
-                                    placeholder="מזהה עסקה מתקבל HYP"
-                                    className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-primary/20 outline-none"
-                                    dir="ltr"
-                                />
-                            </div>
-                            <div>
-                                <label className="text-xs font-black text-gray-500 mb-1 block">הערה (אופציונלי)</label>
-                                <input
-                                    type="text"
-                                    value={activateForm.note ?? ''}
-                                    onChange={(e) => setActivateForm(f => ({ ...f, note: e.target.value }))}
-                                    placeholder="סיבת הפעלה / פרטים נוספים..."
-                                    className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-primary/20 outline-none"
-                                />
-                            </div>
-
-                            <div className="border-t border-gray-200 pt-4 mt-2">
-                                <p className="text-xs font-black text-amber-600 mb-3 flex items-center gap-1.5">
-                                    <FaCoins size={12} />
-                                    הארכה חינם (דחיית תשלום)
-                                </p>
-                                <div className="flex items-center gap-3 mb-3">
-                                    <label className="text-xs font-bold text-gray-600">חודשים:</label>
-                                    <input
-                                        type="number"
-                                        min={1}
-                                        max={12}
-                                        value={activateForm.free_months ?? 1}
-                                        onChange={(e) => setActivateForm(f => ({ ...f, free_months: parseInt(e.target.value) || 1 }))}
-                                        className="w-20 px-2 py-1.5 border border-gray-200 rounded-lg text-sm font-bold"
-                                    />
-                                </div>
-                                <input
-                                    type="text"
-                                    value={activateForm.free_note ?? ''}
-                                    onChange={(e) => setActivateForm(f => ({ ...f, free_note: e.target.value }))}
-                                    placeholder="סיבה (למשל: הביא מסעדה חדשה)..."
-                                    className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-amber-500/20 outline-none mb-3"
-                                />
-                                <button
-                                    onClick={handleGrantFreeMonth}
-                                    disabled={activating || resetting || grantingFree}
-                                    className="w-full px-4 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-black text-sm hover:from-amber-600 hover:to-orange-600 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-                                >
-                                    <FaCoins size={12} />
-                                    {grantingFree ? 'מאריך...' : `האריך ${activateForm.free_months ?? 1} חודשים חינם`}
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm" onClick={() => setActivateModal(null)}>
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                        {/* Wizard Header */}
+                        <div className="px-5 py-4 border-b border-gray-100 shrink-0">
+                            <div className="flex items-center justify-between mb-3">
+                                <h3 className="text-base sm:text-lg font-black text-gray-900">ניהול מנוי</h3>
+                                <button onClick={() => setActivateModal(null)} className="p-2 hover:bg-gray-100 rounded-xl transition-colors text-gray-400">
+                                    <FaTimes size={16} />
                                 </button>
                             </div>
-
-                            <div className="border-t border-gray-200 pt-4 mt-2">
-                                <p className="text-xs font-black text-blue-600 mb-2">החזרה לתקופת ניסיון (בדיקת פלואו)</p>
-                                <div className="flex items-center gap-3">
-                                    <label className="text-xs font-bold text-gray-600">ימי ניסיון:</label>
-                                    <input
-                                        type="number"
-                                        min={1}
-                                        max={90}
-                                        value={activateForm.trial_days ?? 14}
-                                        onChange={(e) => setActivateForm(f => ({ ...f, trial_days: parseInt(e.target.value) || 14 }))}
-                                        className="w-20 px-2 py-1.5 border border-gray-200 rounded-lg text-sm font-bold"
-                                    />
-                                </div>
+                            <div className="flex items-center gap-2 text-sm text-gray-600">
+                                <FaStore size={12} className="text-gray-400" />
+                                <span className="font-bold truncate">{activateModal.name}</span>
+                                <StatusBadge status={activateModal.billing_status} />
+                            </div>
+                            {/* Step indicators */}
+                            <div className="flex items-center gap-1.5 mt-3">
+                                {(() => {
+                                    const totalSteps = wizardAction === 'activate' ? 4 : wizardAction === 'free' ? 3 : 3;
+                                    const stepLabels = wizardAction === 'activate'
+                                        ? ['פעולה', 'תוכנית', 'תשלום', 'סיכום']
+                                        : wizardAction === 'free'
+                                            ? ['פעולה', 'הגדרות', 'סיכום']
+                                            : ['פעולה', 'הגדרות', 'סיכום'];
+                                    return Array.from({ length: totalSteps }, (_, i) => {
+                                        const step = i + 1;
+                                        const isActive = step === wizardStep;
+                                        const isDone = step < wizardStep;
+                                        return (
+                                            <div key={step} className="flex items-center gap-1.5 flex-1">
+                                                <div className={`
+                                                    w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 transition-all
+                                                    ${isActive ? 'bg-brand-primary text-white shadow-sm ring-2 ring-brand-primary/20' : isDone ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-400'}
+                                                `}>
+                                                    {isDone ? <FaCheck size={10} /> : step}
+                                                </div>
+                                                <span className={`text-[10px] font-bold hidden sm:block truncate ${isActive ? 'text-gray-800' : 'text-gray-400'}`}>
+                                                    {stepLabels[i]}
+                                                </span>
+                                                {step < totalSteps && <div className={`h-0.5 flex-1 rounded-full ${isDone ? 'bg-green-400' : 'bg-gray-100'}`} />}
+                                            </div>
+                                        );
+                                    });
+                                })()}
                             </div>
                         </div>
 
-                        <div className="flex flex-col gap-3">
-                            <div className="flex gap-3">
+                        {/* Wizard Body */}
+                        <div className="flex-1 overflow-y-auto px-5 py-4">
+                            {/* Step 1: Choose Action */}
+                            {wizardStep === 1 && (
+                                <div className="space-y-3">
+                                    <p className="text-sm font-bold text-gray-700 mb-4">בחר את הפעולה הרצויה:</p>
+                                    {[
+                                        { key: 'activate', icon: <FaPlay size={16} />, label: 'הפעלת מנוי', desc: 'הפעל מנוי חדש או חדש מנוי קיים', color: 'green' },
+                                        { key: 'free', icon: <FaGift size={16} />, label: 'הארכה חינם', desc: 'הארך מנוי ללא חיוב (מבצע / הטבה)', color: 'amber' },
+                                        { key: 'trial', icon: <FaClock size={16} />, label: 'החזר לניסיון', desc: 'אתחל תקופת ניסיון מחדש', color: 'blue' },
+                                    ].map(action => {
+                                        const isSelected = wizardAction === action.key;
+                                        const colorMap = {
+                                            green: { bg: 'bg-green-50', border: 'border-green-300', icon: 'bg-green-100 text-green-600', ring: 'ring-green-200' },
+                                            amber: { bg: 'bg-amber-50', border: 'border-amber-300', icon: 'bg-amber-100 text-amber-600', ring: 'ring-amber-200' },
+                                            blue: { bg: 'bg-blue-50', border: 'border-blue-300', icon: 'bg-blue-100 text-blue-600', ring: 'ring-blue-200' },
+                                        };
+                                        const c = colorMap[action.color];
+                                        return (
+                                            <button
+                                                key={action.key}
+                                                onClick={() => setWizardAction(action.key)}
+                                                className={`w-full flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-right
+                                                    ${isSelected ? `${c.bg} ${c.border} ring-2 ${c.ring}` : 'border-gray-100 hover:border-gray-200 hover:bg-gray-50'}`}
+                                            >
+                                                <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${isSelected ? c.icon : 'bg-gray-100 text-gray-400'}`}>
+                                                    {action.icon}
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <p className="text-sm font-black text-gray-800">{action.label}</p>
+                                                    <p className="text-xs text-gray-500 mt-0.5">{action.desc}</p>
+                                                </div>
+                                                {isSelected && <FaCheck size={14} className={`mr-auto shrink-0 ${c.icon.split(' ')[1]}`} />}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            )}
+
+                            {/* Step 2 for 'activate': Plan + Custom Price */}
+                            {wizardStep === 2 && wizardAction === 'activate' && (
+                                <div className="space-y-5">
+                                    <div>
+                                        <label className="text-xs font-black text-gray-500 mb-2 block">תוכנית</label>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            {[{ value: 'basic', label: 'Basic', desc: 'תכונות בסיסיות' }, { value: 'pro', label: 'Pro', desc: 'כל התכונות' }].map(t => (
+                                                <button
+                                                    key={t.value}
+                                                    onClick={() => setActivateForm(f => ({ ...f, tier: t.value }))}
+                                                    className={`p-4 rounded-xl border-2 transition-all text-center
+                                                        ${activateForm.tier === t.value ? 'border-brand-primary bg-brand-primary/5 ring-2 ring-brand-primary/20' : 'border-gray-100 hover:border-gray-200'}`}
+                                                >
+                                                    <p className="text-sm font-black text-gray-800">{t.label}</p>
+                                                    <p className="text-[10px] text-gray-500 mt-0.5">{t.desc}</p>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-black text-gray-500 mb-2 block">מחזור חיוב</label>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            {[{ value: 'monthly', label: 'חודשי' }, { value: 'yearly', label: 'שנתי' }].map(p => (
+                                                <button
+                                                    key={p.value}
+                                                    onClick={() => setActivateForm(f => ({ ...f, plan_type: p.value }))}
+                                                    className={`p-3 rounded-xl border-2 transition-all text-center
+                                                        ${activateForm.plan_type === p.value ? 'border-brand-primary bg-brand-primary/5 ring-2 ring-brand-primary/20' : 'border-gray-100 hover:border-gray-200'}`}
+                                                >
+                                                    <p className="text-sm font-bold text-gray-800">{p.label}</p>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Custom price override */}
+                                    <div>
+                                        <label className="flex items-center gap-3 cursor-pointer p-3 rounded-xl bg-purple-50 border border-purple-100">
+                                            <input
+                                                type="checkbox"
+                                                checked={activateForm.custom_price_enabled ?? false}
+                                                onChange={(e) => setActivateForm(f => ({ ...f, custom_price_enabled: e.target.checked }))}
+                                                className="w-4 h-4 rounded accent-purple-600"
+                                            />
+                                            <div className="flex items-center gap-1.5">
+                                                <FaTag size={11} className="text-purple-500" />
+                                                <span className="text-sm font-bold text-purple-900">מחיר לחיוב מותאם (לא נרשם כתשלום)</span>
+                                            </div>
+                                        </label>
+                                        {activateForm.custom_price_enabled && (
+                                            <div className="mt-3 bg-purple-50/50 border border-purple-100 rounded-xl p-4 space-y-3">
+                                                <p className="text-xs text-purple-600 font-bold">קובע את מחיר החיוב למסעדה זו — המחיר הפומבי לא ישתנה</p>
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <div>
+                                                        <label className="text-xs font-black text-gray-500 mb-1 block">חודשי (₪)</label>
+                                                        <input
+                                                            type="number"
+                                                            min="0"
+                                                            step="1"
+                                                            value={activateForm.custom_monthly_price}
+                                                            onChange={(e) => setActivateForm(f => ({ ...f, custom_monthly_price: e.target.value }))}
+                                                            placeholder="ברירת מחדל"
+                                                            className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-purple-500/20 outline-none"
+                                                            dir="ltr"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-xs font-black text-gray-500 mb-1 block">שנתי (₪)</label>
+                                                        <input
+                                                            type="number"
+                                                            min="0"
+                                                            step="1"
+                                                            value={activateForm.custom_yearly_price}
+                                                            onChange={(e) => setActivateForm(f => ({ ...f, custom_yearly_price: e.target.value }))}
+                                                            placeholder="ברירת מחדל"
+                                                            className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-purple-500/20 outline-none"
+                                                            dir="ltr"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Step 2 for 'free': Free months settings */}
+                            {wizardStep === 2 && wizardAction === 'free' && (
+                                <div className="space-y-5">
+                                    <div>
+                                        <label className="text-xs font-black text-gray-500 mb-2 block">מספר חודשים להארכה</label>
+                                        <div className="flex flex-wrap gap-2">
+                                            {[1, 2, 3, 6, 12].map(m => (
+                                                <button
+                                                    key={m}
+                                                    onClick={() => setActivateForm(f => ({ ...f, free_months: m }))}
+                                                    className={`px-4 py-2.5 rounded-xl border-2 text-sm font-bold transition-all
+                                                        ${activateForm.free_months === m ? 'border-amber-400 bg-amber-50 text-amber-700 ring-2 ring-amber-200' : 'border-gray-100 text-gray-600 hover:border-gray-200'}`}
+                                                >
+                                                    {m} {m === 1 ? 'חודש' : 'חודשים'}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-black text-gray-500 mb-1 block">סיבה / הערה</label>
+                                        <input
+                                            type="text"
+                                            value={activateForm.free_note ?? ''}
+                                            onChange={(e) => setActivateForm(f => ({ ...f, free_note: e.target.value }))}
+                                            placeholder="למשל: הביא מסעדה חדשה, מבצע השקה..."
+                                            className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-amber-500/20 outline-none"
+                                        />
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Step 2 for 'trial': Trial settings */}
+                            {wizardStep === 2 && wizardAction === 'trial' && (
+                                <div className="space-y-5">
+                                    <div>
+                                        <label className="text-xs font-black text-gray-500 mb-2 block">תוכנית</label>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            {[{ value: 'basic', label: 'Basic' }, { value: 'pro', label: 'Pro' }].map(t => (
+                                                <button
+                                                    key={t.value}
+                                                    onClick={() => setActivateForm(f => ({ ...f, tier: t.value }))}
+                                                    className={`p-3 rounded-xl border-2 transition-all text-center
+                                                        ${activateForm.tier === t.value ? 'border-blue-400 bg-blue-50 ring-2 ring-blue-200' : 'border-gray-100 hover:border-gray-200'}`}
+                                                >
+                                                    <p className="text-sm font-bold text-gray-800">{t.label}</p>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-black text-gray-500 mb-2 block">ימי ניסיון</label>
+                                        <div className="flex flex-wrap gap-2">
+                                            {[7, 14, 30, 60, 90].map(d => (
+                                                <button
+                                                    key={d}
+                                                    onClick={() => setActivateForm(f => ({ ...f, trial_days: d }))}
+                                                    className={`px-4 py-2.5 rounded-xl border-2 text-sm font-bold transition-all
+                                                        ${activateForm.trial_days === d ? 'border-blue-400 bg-blue-50 text-blue-700 ring-2 ring-blue-200' : 'border-gray-100 text-gray-600 hover:border-gray-200'}`}
+                                                >
+                                                    {d} ימים
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-black text-gray-500 mb-1 block">הערה (אופציונלי)</label>
+                                        <input
+                                            type="text"
+                                            value={activateForm.note ?? ''}
+                                            onChange={(e) => setActivateForm(f => ({ ...f, note: e.target.value }))}
+                                            placeholder="סיבה / פרטים..."
+                                            className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 outline-none"
+                                        />
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Step 3 for 'activate': Payment details */}
+                            {wizardStep === 3 && wizardAction === 'activate' && (
+                                <div className="space-y-5">
+                                    <label className="flex items-center gap-3 cursor-pointer p-4 rounded-xl bg-amber-50 border border-amber-100">
+                                        <input
+                                            type="checkbox"
+                                            checked={activateForm.record_payment ?? false}
+                                            onChange={(e) => setActivateForm(f => ({ ...f, record_payment: e.target.checked }))}
+                                            className="w-5 h-5 rounded accent-amber-600"
+                                        />
+                                        <div>
+                                            <span className="text-sm font-bold text-amber-900 block">תשלום בוצע בפועל</span>
+                                            <span className="text-xs text-amber-700">לרישום בדוחות — מסומן = תשלום HYP מאושר</span>
+                                        </div>
+                                    </label>
+                                    <div>
+                                        <label className="text-xs font-black text-gray-500 mb-1 block">מזהה עסקה מ-HYP (אופציונלי)</label>
+                                        <input
+                                            type="text"
+                                            value={activateForm.payment_reference ?? ''}
+                                            onChange={(e) => setActivateForm(f => ({ ...f, payment_reference: e.target.value }))}
+                                            placeholder="מזהה עסקה"
+                                            className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-primary/20 outline-none"
+                                            dir="ltr"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-black text-gray-500 mb-1 block">הערה (אופציונלי)</label>
+                                        <input
+                                            type="text"
+                                            value={activateForm.note ?? ''}
+                                            onChange={(e) => setActivateForm(f => ({ ...f, note: e.target.value }))}
+                                            placeholder="סיבת הפעלה / פרטים נוספים..."
+                                            className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-primary/20 outline-none"
+                                        />
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Final Step: Summary & Confirm */}
+                            {((wizardAction === 'activate' && wizardStep === 4) || (wizardAction !== 'activate' && wizardStep === 3)) && (
+                                <div className="space-y-4">
+                                    <p className="text-sm font-bold text-gray-700 mb-2">אישור פעולה:</p>
+                                    <div className="bg-gray-50 rounded-xl p-4 space-y-3 text-sm">
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-gray-500 font-bold">מסעדה</span>
+                                            <span className="font-black text-gray-800">{activateModal.name}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-gray-500 font-bold">פעולה</span>
+                                            <span className={`font-black ${wizardAction === 'activate' ? 'text-green-600' : wizardAction === 'free' ? 'text-amber-600' : 'text-blue-600'}`}>
+                                                {wizardAction === 'activate' ? 'הפעלת מנוי' : wizardAction === 'free' ? 'הארכה חינם' : 'החזרה לניסיון'}
+                                            </span>
+                                        </div>
+                                        {wizardAction === 'activate' && (
+                                            <>
+                                                <div className="border-t border-gray-200 pt-2 flex justify-between items-center">
+                                                    <span className="text-gray-500 font-bold">תוכנית</span>
+                                                    <span className="font-black text-gray-800">{activateForm.tier === 'pro' ? 'Pro' : 'Basic'} — {activateForm.plan_type === 'yearly' ? 'שנתי' : 'חודשי'}</span>
+                                                </div>
+                                                {activateForm.custom_price_enabled && (activateForm.custom_monthly_price || activateForm.custom_yearly_price) && (
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-purple-500 font-bold flex items-center gap-1"><FaTag size={10} /> מחיר מותאם</span>
+                                                        <span className="font-black text-purple-700">
+                                                            {activateForm.custom_monthly_price ? `₪${activateForm.custom_monthly_price}/חודש` : ''}
+                                                            {activateForm.custom_monthly_price && activateForm.custom_yearly_price ? ' | ' : ''}
+                                                            {activateForm.custom_yearly_price ? `₪${activateForm.custom_yearly_price}/שנה` : ''}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                                {activateForm.record_payment && (
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-amber-600 font-bold">רישום תשלום</span>
+                                                        <span className="font-bold text-amber-700">כן{activateForm.payment_reference ? ` (${activateForm.payment_reference})` : ''}</span>
+                                                    </div>
+                                                )}
+                                            </>
+                                        )}
+                                        {wizardAction === 'free' && (
+                                            <div className="border-t border-gray-200 pt-2 flex justify-between items-center">
+                                                <span className="text-gray-500 font-bold">תקופה</span>
+                                                <span className="font-black text-amber-600">{activateForm.free_months} {activateForm.free_months === 1 ? 'חודש' : 'חודשים'} חינם</span>
+                                            </div>
+                                        )}
+                                        {wizardAction === 'trial' && (
+                                            <>
+                                                <div className="border-t border-gray-200 pt-2 flex justify-between items-center">
+                                                    <span className="text-gray-500 font-bold">תוכנית</span>
+                                                    <span className="font-black text-gray-800">{activateForm.tier === 'pro' ? 'Pro' : 'Basic'}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-gray-500 font-bold">ימי ניסיון</span>
+                                                    <span className="font-black text-blue-600">{activateForm.trial_days} ימים</span>
+                                                </div>
+                                            </>
+                                        )}
+                                        {((wizardAction === 'activate' && activateForm.note) || (wizardAction === 'free' && activateForm.free_note) || (wizardAction === 'trial' && activateForm.note)) && (
+                                            <div className="border-t border-gray-200 pt-2 flex justify-between items-start">
+                                                <span className="text-gray-500 font-bold">הערה</span>
+                                                <span className="font-medium text-gray-600 text-left max-w-[60%]">
+                                                    {wizardAction === 'free' ? activateForm.free_note : activateForm.note}
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Wizard Footer */}
+                        <div className="px-5 py-4 border-t border-gray-100 shrink-0 flex flex-col sm:flex-row gap-2">
+                            {wizardStep > 1 && (
                                 <button
-                                    onClick={handleActivate}
-                                    disabled={activating || resetting || grantingFree}
-                                    className="flex-1 px-4 py-3 bg-green-600 text-white rounded-xl font-black text-sm hover:bg-green-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                                    onClick={() => setWizardStep(s => s - 1)}
+                                    className="flex items-center justify-center gap-1.5 px-4 py-2.5 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl font-bold text-sm transition-all order-2 sm:order-1"
                                 >
-                                    {activating ? 'מפעיל...' : 'הפעל מנוי'}
+                                    <FaArrowRight size={11} />
+                                    חזרה
                                 </button>
+                            )}
+                            {wizardStep === 1 && (
                                 <button
                                     onClick={() => setActivateModal(null)}
-                                    className="px-4 py-3 bg-gray-100 text-gray-600 rounded-xl font-bold text-sm hover:bg-gray-200 transition-all"
+                                    className="flex items-center justify-center gap-1.5 px-4 py-2.5 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl font-bold text-sm transition-all order-2 sm:order-1"
                                 >
                                     ביטול
                                 </button>
-                            </div>
-                            <button
-                                onClick={handleResetToTrial}
-                                disabled={activating || resetting || grantingFree}
-                                className="w-full px-4 py-3 bg-blue-50 text-blue-700 border border-blue-200 rounded-xl font-black text-sm hover:bg-blue-100 transition-all disabled:opacity-50"
-                            >
-                                {resetting ? 'מחזיר...' : 'החזר לתקופת ניסיון (אתחול מחדש)'}
-                            </button>
+                            )}
+
+                            {/* Next / Submit button */}
+                            {(() => {
+                                const totalSteps = wizardAction === 'activate' ? 4 : 3;
+                                const isFinal = wizardStep === totalSteps;
+                                const isProcessing = activating || resetting || grantingFree;
+
+                                if (isFinal) {
+                                    const actionConfig = {
+                                        activate: { label: 'הפעל מנוי', loading: 'מפעיל...', handler: handleActivate, color: 'bg-green-600 hover:bg-green-700' },
+                                        free: { label: `האריך ${activateForm.free_months} חודשים חינם`, loading: 'מאריך...', handler: handleGrantFreeMonth, color: 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600' },
+                                        trial: { label: 'החזר לתקופת ניסיון', loading: 'מחזיר...', handler: handleResetToTrial, color: 'bg-blue-600 hover:bg-blue-700' },
+                                    };
+                                    const cfg = actionConfig[wizardAction];
+                                    return (
+                                        <button
+                                            onClick={cfg.handler}
+                                            disabled={isProcessing}
+                                            className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-white rounded-xl font-black text-sm transition-all disabled:opacity-50 order-1 sm:order-2 ${cfg.color}`}
+                                        >
+                                            <FaCheckCircle size={14} />
+                                            {isProcessing ? cfg.loading : cfg.label}
+                                        </button>
+                                    );
+                                }
+
+                                return (
+                                    <button
+                                        onClick={() => setWizardStep(s => s + 1)}
+                                        className="flex-1 flex items-center justify-center gap-1.5 px-4 py-3 bg-brand-primary text-white rounded-xl font-black text-sm hover:bg-brand-primary/90 transition-all order-1 sm:order-2"
+                                    >
+                                        המשך
+                                        <FaArrowLeft size={11} />
+                                    </button>
+                                );
+                            })()}
                         </div>
                     </div>
                 </div>

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { FaCashRegister, FaPlus, FaMinus, FaLock, FaShekelSign, FaArrowDown, FaArrowUp, FaReceipt, FaHistory, FaTimesCircle, FaPrint, FaCheckCircle, FaExclamationTriangle, FaUsers } from 'react-icons/fa';
 import posApi from '../api/posApi';
+import POSManagerAuth from './POSManagerAuth';
 
 function formatDuration(totalMinutes) {
     const mins = Math.round(totalMinutes);
@@ -81,24 +82,24 @@ ${(r.clocked_in_employees || []).length > 0 ? `
 <div class="divider"></div>
 <p class="section-title" style="color:#f59e0b">⚠ עובדים שלא יצאו מהמשמרת (${r.clocked_in_employees.length})</p>
 <table>${(r.clocked_in_employees || []).map(e =>
-    '<tr style="color:#f59e0b"><td>' + e.name + '</td><td style="text-align:left">מ-' + e.clock_in + '</td></tr>'
-).join('')}</table>
+        '<tr style="color:#f59e0b"><td>' + e.name + '</td><td style="text-align:left">מ-' + e.clock_in + '</td></tr>'
+    ).join('')}</table>
 ` : ''}
 
 ${(r.untracked_cash_orders || []).length > 0 ? `
 <div style="border:2px solid #ef4444;border-radius:8px;padding:10px;margin:12px 0;">
 <p class="section-title" style="color:#ef4444">⚠ הזמנות מזומן שלא נרשמו בקופה</p>
 <table>${(r.untracked_cash_orders || []).map(o =>
-    `<tr style="color:#ef4444"><td>#${o.id}</td><td>${o.customer_name} (${o.time})</td><td style="text-align:left">₪${o.total.toFixed(2)}</td></tr>`
-).join('')}</table>
+        `<tr style="color:#ef4444"><td>#${o.id}</td><td>${o.customer_name} (${o.time})</td><td style="text-align:left">₪${o.total.toFixed(2)}</td></tr>`
+    ).join('')}</table>
 </div>` : ''}
 
 ${(r.orders || []).length > 0 ? `
 <div class="divider"></div>
 <p class="section-title">כל הזמנות המשמרת (${r.orders.length})</p>
 <table>${(r.orders || []).map(o =>
-    `<tr${!o.tracked && o.payment_method === 'מזומן' && o.payment_status === 'שולם' ? ' style="color:#ef4444"' : ''}><td>#${o.id}</td><td>${o.customer_name}</td><td>${o.payment_method}</td><td>${o.payment_status}</td><td style="text-align:left">₪${o.total.toFixed(2)}</td></tr>`
-).join('')}</table>
+        `<tr${!o.tracked && o.payment_method === 'מזומן' && o.payment_status === 'שולם' ? ' style="color:#ef4444"' : ''}><td>#${o.id}</td><td>${o.customer_name}</td><td>${o.payment_method}</td><td>${o.payment_status}</td><td style="text-align:left">₪${o.total.toFixed(2)}</td></tr>`
+    ).join('')}</table>
 ` : ''}
 
 ${(r.movements || []).length > 0 ? `
@@ -136,6 +137,8 @@ export default function POSCashRegister({ headers, posToken, isManager, onShiftC
     const [historyShifts, setHistoryShifts] = useState([]);
     const [historyLoading, setHistoryLoading] = useState(false);
     const [clockedInWarning, setClockedInWarning] = useState(null);
+    const [pendingWarning, setPendingWarning] = useState(null);
+    const [managerAuthAction, setManagerAuthAction] = useState(null); // 'history' | null
 
     const fetchData = useCallback(async () => {
         try {
@@ -169,6 +172,14 @@ export default function POSCashRegister({ headers, posToken, isManager, onShiftC
 
     const checkClockedInBeforeClose = async () => {
         try {
+            // בדוק הזמנות ממתינות לתשלום
+            const pendingRes = await posApi.getPendingPaymentOrders(headers, posToken);
+            const pendingOrders = pendingRes.data.orders || pendingRes.data || [];
+            if (pendingOrders.length > 0) {
+                setPendingWarning(pendingOrders.length);
+                return;
+            }
+
             const res = await posApi.getClockedIn(headers, posToken);
             const emps = res.data.employees || [];
             if (emps.length > 0) {
@@ -209,6 +220,17 @@ export default function POSCashRegister({ headers, posToken, isManager, onShiftC
             fetchData();
         } catch (e) {
             alert(e.response?.data?.message || 'שגיאה');
+        }
+    };
+
+    const requestHistory = () => {
+        setManagerAuthAction('history');
+    };
+
+    const handleManagerAuthVerified = () => {
+        setManagerAuthAction(null);
+        if (managerAuthAction === 'history') {
+            loadHistory();
         }
     };
 
@@ -281,7 +303,7 @@ export default function POSCashRegister({ headers, posToken, isManager, onShiftC
                     </div>
 
                     <button
-                        onClick={loadHistory}
+                        onClick={requestHistory}
                         className="w-full py-4 bg-blue-500/10 border border-blue-500/30 rounded-2xl text-blue-400 font-black text-base flex items-center justify-center gap-3 transition-all active:scale-95 hover:bg-blue-500/20"
                     >
                         <FaHistory size={18} />
@@ -296,6 +318,16 @@ export default function POSCashRegister({ headers, posToken, isManager, onShiftC
                         loading={historyLoading}
                         onClose={() => setShowHistory(false)}
                         onViewReport={loadShiftReport}
+                    />
+                )}
+
+                {managerAuthAction && (
+                    <POSManagerAuth
+                        title="אישור מנהל"
+                        subtitle="נדרש קוד מנהל לצפייה בדוחות Z"
+                        headers={headers}
+                        onVerified={handleManagerAuthVerified}
+                        onClose={() => setManagerAuthAction(null)}
                     />
                 )}
             </div>
@@ -337,7 +369,7 @@ export default function POSCashRegister({ headers, posToken, isManager, onShiftC
                         הוצאת מזומן
                     </button>
                     <button
-                        onClick={loadHistory}
+                        onClick={requestHistory}
                         className="flex flex-col items-center gap-2 py-4 bg-blue-500/10 border border-blue-500/30 rounded-2xl text-blue-400 font-black text-sm transition-all active:scale-95 hover:bg-blue-500/20"
                     >
                         <FaHistory size={20} />
@@ -364,12 +396,11 @@ export default function POSCashRegister({ headers, posToken, isManager, onShiftC
                         {summary.movements.map(m => (
                             <div key={m.id} className="flex items-center justify-between px-5 py-3">
                                 <div className="flex items-center gap-3">
-                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm ${
-                                        m.type === 'payment' ? 'bg-emerald-500/20 text-emerald-400' :
-                                        m.type === 'cash_in' ? 'bg-blue-500/20 text-blue-400' :
-                                        m.type === 'cash_out' ? 'bg-red-500/20 text-red-400' :
-                                        'bg-amber-500/20 text-amber-400'
-                                    }`}>
+                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm ${m.type === 'payment' ? 'bg-emerald-500/20 text-emerald-400' :
+                                            m.type === 'cash_in' ? 'bg-blue-500/20 text-blue-400' :
+                                                m.type === 'cash_out' ? 'bg-red-500/20 text-red-400' :
+                                                    'bg-amber-500/20 text-amber-400'
+                                        }`}>
                                         {m.type === 'payment' ? <FaPlus /> : m.type === 'cash_in' ? <FaArrowDown /> : m.type === 'cash_out' ? <FaArrowUp /> : <FaMinus />}
                                     </div>
                                     <div>
@@ -451,6 +482,29 @@ export default function POSCashRegister({ headers, posToken, isManager, onShiftC
                 </Modal>
             )}
 
+            {pendingWarning && (
+                <Modal onClose={() => setPendingWarning(null)}>
+                    <div className="text-center mb-4">
+                        <div className="w-16 h-16 mx-auto bg-red-500/20 rounded-full flex items-center justify-center mb-3">
+                            <FaExclamationTriangle className="text-red-400 text-2xl" />
+                        </div>
+                        <h3 className="text-xl font-black text-white">לא ניתן לסגור משמרת</h3>
+                        <p className="text-slate-400 text-sm mt-1">
+                            {pendingWarning} הזמנות ממתינות לתשלום
+                        </p>
+                    </div>
+                    <p className="text-slate-500 text-xs text-center mb-4">
+                        יש לטפל בכל ההזמנות הממתינות לתשלום לפני סגירת המשמרת
+                    </p>
+                    <button
+                        onClick={() => setPendingWarning(null)}
+                        className="w-full py-3 bg-slate-700 text-white font-black rounded-2xl active:scale-95 transition-all text-sm"
+                    >
+                        הבנתי
+                    </button>
+                </Modal>
+            )}
+
             {clockedInWarning && (
                 <Modal onClose={() => setClockedInWarning(null)}>
                     <div className="text-center mb-4">
@@ -500,6 +554,16 @@ export default function POSCashRegister({ headers, posToken, isManager, onShiftC
                     loading={historyLoading}
                     onClose={() => setShowHistory(false)}
                     onViewReport={loadShiftReport}
+                />
+            )}
+
+            {managerAuthAction && (
+                <POSManagerAuth
+                    title="אישור מנהל"
+                    subtitle="נדרש קוד מנהל לצפייה בדוחות Z"
+                    headers={headers}
+                    onVerified={handleManagerAuthVerified}
+                    onClose={() => setManagerAuthAction(null)}
                 />
             )}
         </div>
@@ -568,13 +632,12 @@ function ZReportModal({ report, onClose }) {
                         </div>
                     </div>
 
-                    <div className={`rounded-2xl p-5 text-center space-y-2 ${
-                        r.variance === 0
+                    <div className={`rounded-2xl p-5 text-center space-y-2 ${r.variance === 0
                             ? 'bg-emerald-500/10 border border-emerald-500/30'
                             : r.variance > 0
                                 ? 'bg-blue-500/10 border border-blue-500/30'
                                 : 'bg-red-500/10 border border-red-500/30'
-                    }`}>
+                        }`}>
                         <div className="flex items-center justify-center gap-2 text-lg">
                             {varianceIcon}
                             <span className="text-white font-black">

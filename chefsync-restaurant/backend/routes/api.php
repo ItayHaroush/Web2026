@@ -198,6 +198,8 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'tenant'])->group(function (
     Route::post('pos/set-pin', [\App\Http\Controllers\POSController::class, 'setPin'])->name('admin.pos.set-pin');
     Route::post('pos/verify-pin', [\App\Http\Controllers\POSController::class, 'verifyPin'])->name('admin.pos.verify-pin');
     Route::post('pos/unlock', [\App\Http\Controllers\POSController::class, 'unlockSession'])->name('admin.pos.unlock');
+    Route::post('pos/lock', [\App\Http\Controllers\POSController::class, 'lockSession'])->name('admin.pos.lock');
+    Route::post('pos/verify-manager', [\App\Http\Controllers\POSController::class, 'verifyManagerPin'])->name('admin.pos.verify-manager');
 
     Route::middleware(\App\Http\Middleware\CheckRestaurantAccess::class)->group(function () {
         // דשבורד
@@ -355,7 +357,6 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'tenant'])->group(function (
         Route::prefix('pos')->group(function () {
             Route::middleware('pos_session')->group(function () {
                 Route::get('/session', [\App\Http\Controllers\POSController::class, 'getSession'])->name('admin.pos.session');
-                Route::post('/lock', [\App\Http\Controllers\POSController::class, 'lockSession'])->name('admin.pos.lock');
 
                 Route::post('/shift/open', [\App\Http\Controllers\POSController::class, 'openShift'])->name('admin.pos.shift.open');
                 Route::post('/shift/close', [\App\Http\Controllers\POSController::class, 'closeShift'])->name('admin.pos.shift.close');
@@ -369,6 +370,28 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'tenant'])->group(function (
 
                 Route::get('/orders', [\App\Http\Controllers\POSController::class, 'getOrders'])->name('admin.pos.orders');
                 Route::post('/orders', [\App\Http\Controllers\POSController::class, 'createOrder'])->name('admin.pos.orders.create');
+
+                // תשלום אשראי PinPad
+                Route::post('/orders/credit', [\App\Http\Controllers\POSController::class, 'createOrderCredit'])->name('admin.pos.orders.credit');
+                Route::post('/orders/{id}/charge-credit', [\App\Http\Controllers\POSController::class, 'chargeOrderCredit'])->name('admin.pos.orders.charge-credit');
+
+                // הזמנות ממתינות לתשלום
+                Route::get('/orders/pending-payment', [\App\Http\Controllers\POSController::class, 'getPendingPaymentOrders'])->name('admin.pos.orders.pending-payment');
+                Route::post('/orders/{id}/pay-cash', [\App\Http\Controllers\POSController::class, 'payPendingOrderCash'])->name('admin.pos.orders.pay-cash');
+
+                // תשלום מפוצל
+                Route::post('/orders/{id}/split-payment', [\App\Http\Controllers\POSController::class, 'splitPayment'])->name('admin.pos.orders.split-payment');
+
+                // החזר כספי
+                Route::post('/orders/{id}/refund', [\App\Http\Controllers\POSController::class, 'refundOrder'])->name('admin.pos.orders.refund');
+
+                // ניהול שולחנות / טאבים
+                Route::post('/tabs/open', [\App\Http\Controllers\POSController::class, 'openTab'])->name('admin.pos.tabs.open');
+                Route::get('/tabs', [\App\Http\Controllers\POSController::class, 'getOpenTabs'])->name('admin.pos.tabs.index');
+                Route::get('/tabs/{id}', [\App\Http\Controllers\POSController::class, 'getTab'])->name('admin.pos.tabs.show');
+                Route::post('/tabs/{id}/items', [\App\Http\Controllers\POSController::class, 'addItemsToTab'])->name('admin.pos.tabs.add-items');
+                Route::post('/tabs/{id}/close', [\App\Http\Controllers\POSController::class, 'closeTab'])->name('admin.pos.tabs.close');
+                Route::delete('/tabs/{tabId}/items/{itemId}', [\App\Http\Controllers\POSController::class, 'removeTabItem'])->name('admin.pos.tabs.remove-item');
 
                 Route::post('/orders/{id}/print-receipt', [\App\Http\Controllers\POSController::class, 'printReceipt'])->name('admin.pos.orders.print-receipt');
                 Route::post('/orders/{id}/print-kitchen', [\App\Http\Controllers\POSController::class, 'printKitchenTicket'])->name('admin.pos.orders.print-kitchen');

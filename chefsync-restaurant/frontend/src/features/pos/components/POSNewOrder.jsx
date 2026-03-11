@@ -1,9 +1,31 @@
 import { useState, useEffect, useCallback } from 'react';
-import { FaPlus, FaMinus, FaTrash, FaShekelSign, FaShoppingCart, FaSearch } from 'react-icons/fa';
+import { FaPlus, FaMinus, FaTrash, FaShekelSign, FaShoppingCart, FaSearch, FaPercent, FaTag } from 'react-icons/fa';
 import api from '../../../services/apiClient';
+import posApi from '../api/posApi';
 import POSPaymentModal from './POSPaymentModal';
+import POSCreditPaymentModal from './POSCreditPaymentModal';
+import POSPaymentMethodModal from './POSPaymentMethodModal';
+import { FaCashRegister } from 'react-icons/fa';
+import POSSplitPaymentModal from './POSSplitPaymentModal';
 
-export default function POSNewOrder({ headers, posToken, onOrderCreated }) {
+export default function POSNewOrder({ headers, posToken, onOrderCreated, shift }) {
+    // Require open shift
+    if (!shift) {
+        return (
+            <div className="flex flex-col items-center justify-center h-full text-center p-8">
+                <div className="w-20 h-20 mx-auto bg-amber-500/10 rounded-2xl flex items-center justify-center mb-4">
+                    <FaCashRegister className="text-amber-400 text-3xl" />
+                </div>
+                <p className="text-white text-xl font-black mb-2">יש לפתוח משמרת</p>
+                <p className="text-slate-400 text-sm">לא ניתן ליצור הזמנה ללא קופה פתוחה</p>
+            </div>
+        );
+    }
+
+    return <POSNewOrderInner headers={headers} posToken={posToken} onOrderCreated={onOrderCreated} />;
+}
+
+function POSNewOrderInner({ headers, posToken, onOrderCreated }) {
     const [categories, setCategories] = useState([]);
     const [items, setItems] = useState([]);
     const [activeCategory, setActiveCategory] = useState(null);
@@ -11,6 +33,16 @@ export default function POSNewOrder({ headers, posToken, onOrderCreated }) {
     const [search, setSearch] = useState('');
     const [loading, setLoading] = useState(true);
     const [showPayment, setShowPayment] = useState(false);
+    const [paymentMethod, setPaymentMethod] = useState(null); // 'cash' | 'credit' | 'hold' | 'split'
+    const [holdLoading, setHoldLoading] = useState(false);
+    const [holdOrderId, setHoldOrderId] = useState(null);
+    const [splitOrderId, setSplitOrderId] = useState(null); // order created for split payment
+
+    // Discount state
+    const [showDiscount, setShowDiscount] = useState(false);
+    const [discountType, setDiscountType] = useState('percentage'); // 'percentage' | 'fixed'
+    const [discountValue, setDiscountValue] = useState('');
+    const [discountReason, setDiscountReason] = useState('');
 
     useEffect(() => {
         fetchMenu();
@@ -75,7 +107,7 @@ export default function POSNewOrder({ headers, posToken, onOrderCreated }) {
         setCart(prev => prev.filter((_, i) => i !== index));
     };
 
-    const cartTotal = cart.reduce((sum, item) => {
+    const cartSubtotal = cart.reduce((sum, item) => {
         let itemTotal = item.price * item.quantity;
         if (item.addons) {
             item.addons.forEach(a => { itemTotal += (a.price || 0) * item.quantity; });
@@ -83,10 +115,83 @@ export default function POSNewOrder({ headers, posToken, onOrderCreated }) {
         return sum + itemTotal;
     }, 0);
 
+    const discVal = parseFloat(discountValue) || 0;
+    const discountAmount = discVal > 0
+        ? (discountType === 'percentage' ? Math.round(cartSubtotal * (discVal / 100) * 100) / 100 : Math.min(discVal, cartSubtotal))
+        : 0;
+    const cartTotal = Math.max(0, cartSubtotal - discountAmount);
+
+    const clearDiscount = () => {
+        setDiscountValue('');
+        setDiscountReason('');
+        setShowDiscount(false);
+    };
+
     const handleOrderSuccess = () => {
         setCart([]);
         setShowPayment(false);
+        setPaymentMethod(null);
+        clearDiscount();
+        setHoldOrderId(null);
+        setSplitOrderId(null);
         onOrderCreated?.();
+    };
+
+    const handlePaymentMethodSelect = async (method) => {
+        setShowPayment(false);
+        if (method === 'hold') {
+            // Create order with hold
+            setHoldLoading(true);
+            try {
+                const orderData = {
+                    items: cart,
+                    payment_method: 'hold',
+                    ...(discountAmount > 0 && {
+                        discount_type: discountType,
+                        discount_value: discVal,
+                        discount_reason: discountReason || undefined,
+                    }),
+                };
+                const res = await posApi.createOrder(orderData, headers, posToken);
+                if (res.data.success) {
+                    setHoldOrderId(res.data.order?.id);
+                    setTimeout(() => handleOrderSuccess(), 1500);
+                }
+            } catch (e) {
+                alert(e.response?.data?.message || 'שגיאה ביצירת הזמנה');
+            } finally {
+                setHoldLoading(false);
+            }
+        } else if (method === 'split') {
+            // Create order as hold first, then open split modal
+            setHoldLoading(true);
+            try {
+                const orderData = {
+                    items: cart,
+                    payment_method: 'hold',
+                    ...(discountAmount > 0 && {
+                        discount_type: discountType,
+                        discount_value: discVal,
+                        discount_reason: discountReason || undefined,
+                    }),
+                };
+                const res = await posApi.createOrder(orderData, headers, posToken);
+                if (res.data.success) {
+                    setSplitOrderId(res.data.order?.id);
+                    setPaymentMethod('split');
+                }
+            } catch (e) {
+                alert(e.response?.data?.message || 'שגיאה ביצירת הזמנה');
+            } finally {
+                setHoldLoading(false);
+            }
+        } else {
+            setPaymentMethod(method);
+        }
+    };
+
+    const handlePaymentClose = () => {
+        setPaymentMethod(null);
     };
 
     if (loading) {
@@ -120,8 +225,8 @@ export default function POSNewOrder({ headers, posToken, onOrderCreated }) {
                                 key={cat.id}
                                 onClick={() => { setActiveCategory(cat.id); setSearch(''); }}
                                 className={`px-4 py-2 rounded-xl text-sm font-black whitespace-nowrap transition-all shrink-0 ${activeCategory === cat.id && !search
-                                        ? 'bg-orange-500 text-white'
-                                        : 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700'
+                                    ? 'bg-orange-500 text-white'
+                                    : 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700'
                                     }`}
                             >
                                 {cat.name}
@@ -157,12 +262,68 @@ export default function POSNewOrder({ headers, posToken, onOrderCreated }) {
 
             {/* Cart side */}
             <div className="w-80 lg:w-96 bg-slate-800 border-r border-slate-700 flex flex-col shrink-0">
-                <div className="px-5 py-4 border-b border-slate-700 flex items-center gap-3">
-                    <FaShoppingCart className="text-orange-400" />
-                    <h3 className="text-white font-black">
-                        סל ({cart.reduce((s, c) => s + c.quantity, 0)})
-                    </h3>
+                <div className="px-5 py-4 border-b border-slate-700 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <FaShoppingCart className="text-orange-400" />
+                        <h3 className="text-white font-black">
+                            סל ({cart.reduce((s, c) => s + c.quantity, 0)})
+                        </h3>
+                    </div>
+                    {cart.length > 0 && (
+                        <button
+                            onClick={() => setShowDiscount(!showDiscount)}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black transition-all active:scale-95 ${discountAmount > 0
+                                    ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                                    : 'bg-slate-700 text-slate-400 hover:text-white'
+                                }`}
+                        >
+                            <FaTag size={10} />
+                            {discountAmount > 0 ? `הנחה ₪${discountAmount.toFixed(2)}` : 'הנחה'}
+                        </button>
+                    )}
                 </div>
+
+                {/* Discount panel */}
+                {showDiscount && (
+                    <div className="px-4 py-3 border-b border-slate-700 bg-slate-900/50 space-y-2 animate-in slide-in-from-top-2 duration-200">
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => setDiscountType('percentage')}
+                                className={`flex-1 py-2 rounded-lg text-xs font-black flex items-center justify-center gap-1 ${discountType === 'percentage' ? 'bg-orange-500 text-white' : 'bg-slate-700 text-slate-400'}`}
+                            >
+                                <FaPercent size={10} /> אחוז
+                            </button>
+                            <button
+                                onClick={() => setDiscountType('fixed')}
+                                className={`flex-1 py-2 rounded-lg text-xs font-black flex items-center justify-center gap-1 ${discountType === 'fixed' ? 'bg-orange-500 text-white' : 'bg-slate-700 text-slate-400'}`}
+                            >
+                                <FaShekelSign size={10} /> סכום קבוע
+                            </button>
+                        </div>
+                        <input
+                            type="number"
+                            dir="ltr"
+                            value={discountValue}
+                            onChange={e => setDiscountValue(e.target.value)}
+                            className="w-full px-3 py-2 bg-slate-800 text-white rounded-lg border border-slate-700 focus:border-orange-500 focus:outline-none text-sm text-left"
+                            placeholder={discountType === 'percentage' ? '10' : '20.00'}
+                            min="0"
+                        />
+                        <input
+                            type="text"
+                            value={discountReason}
+                            onChange={e => setDiscountReason(e.target.value)}
+                            className="w-full px-3 py-2 bg-slate-800 text-white rounded-lg border border-slate-700 focus:border-orange-500 focus:outline-none text-sm"
+                            placeholder="סיבה (אופציונלי)"
+                        />
+                        {discountAmount > 0 && (
+                            <div className="flex items-center justify-between">
+                                <span className="text-green-400 text-xs font-bold">הנחה: ₪{discountAmount.toFixed(2)}</span>
+                                <button onClick={clearDiscount} className="text-red-400 text-xs font-bold hover:text-red-300">הסר</button>
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
                     {cart.length === 0 && (
@@ -202,6 +363,18 @@ export default function POSNewOrder({ headers, posToken, onOrderCreated }) {
 
                 {/* Total + Pay button */}
                 <div className="border-t border-slate-700 p-4 space-y-3">
+                    {discountAmount > 0 && (
+                        <div className="flex justify-between items-center text-sm">
+                            <span className="text-slate-500">סה״כ לפני הנחה</span>
+                            <span className="text-slate-500 line-through">₪{cartSubtotal.toFixed(2)}</span>
+                        </div>
+                    )}
+                    {discountAmount > 0 && (
+                        <div className="flex justify-between items-center text-sm">
+                            <span className="text-green-400 font-bold flex items-center gap-1"><FaTag size={10} /> הנחה</span>
+                            <span className="text-green-400 font-bold">-₪{discountAmount.toFixed(2)}</span>
+                        </div>
+                    )}
                     <div className="flex justify-between items-center">
                         <span className="text-slate-400 font-black">סה״כ</span>
                         <span className="text-white font-black text-2xl flex items-center gap-1">
@@ -220,14 +393,67 @@ export default function POSNewOrder({ headers, posToken, onOrderCreated }) {
             </div>
 
             {showPayment && (
+                <POSPaymentMethodModal
+                    total={cartTotal}
+                    onSelect={handlePaymentMethodSelect}
+                    onClose={() => setShowPayment(false)}
+                />
+            )}
+
+            {paymentMethod === 'cash' && (
                 <POSPaymentModal
                     cart={cart}
                     total={cartTotal}
                     headers={headers}
                     posToken={posToken}
-                    onClose={() => setShowPayment(false)}
+                    onClose={handlePaymentClose}
+                    onSuccess={handleOrderSuccess}
+                    discountData={discountAmount > 0 ? { discount_type: discountType, discount_value: discVal, discount_reason: discountReason } : null}
+                />
+            )}
+
+            {paymentMethod === 'credit' && (
+                <POSCreditPaymentModal
+                    cart={cart}
+                    total={cartTotal}
+                    headers={headers}
+                    posToken={posToken}
+                    onClose={handlePaymentClose}
                     onSuccess={handleOrderSuccess}
                 />
+            )}
+
+            {paymentMethod === 'split' && splitOrderId && (
+                <POSSplitPaymentModal
+                    orderId={splitOrderId}
+                    total={cartTotal}
+                    headers={headers}
+                    posToken={posToken}
+                    onClose={() => { setPaymentMethod(null); setSplitOrderId(null); }}
+                    onSuccess={handleOrderSuccess}
+                />
+            )}
+
+            {/* Hold loading overlay */}
+            {holdLoading && (
+                <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[300] flex items-center justify-center">
+                    <div className="text-center space-y-4">
+                        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-amber-500 mx-auto" />
+                        <p className="text-white text-xl font-black">יוצר הזמנה...</p>
+                    </div>
+                </div>
+            )}
+
+            {holdOrderId && !holdLoading && (
+                <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[300] flex items-center justify-center">
+                    <div className="text-center space-y-4 animate-in fade-in zoom-in-95">
+                        <div className="w-20 h-20 mx-auto rounded-full bg-amber-500/20 flex items-center justify-center">
+                            <FaShoppingCart className="text-amber-400 text-3xl" />
+                        </div>
+                        <p className="text-white text-2xl font-black">הזמנה #{holdOrderId} הושהתה</p>
+                        <p className="text-amber-400 font-bold">ההזמנה תופיע ברשימת הממתינות לתשלום</p>
+                    </div>
+                </div>
             )}
         </div>
     );

@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\MonthlyInvoice;
+use App\Models\MonitoringAlert;
+use App\Models\NotificationLog;
 use App\Models\Order;
 use App\Models\Restaurant;
 use App\Models\RestaurantPayment;
@@ -162,6 +164,8 @@ class SuperAdminBillingController extends Controller
             'note' => 'nullable|string|max:500',
             'record_payment' => 'nullable|boolean',  // true = תשלום בוצע בפועל — לרישום בדוחות
             'payment_reference' => 'nullable|string|max:100',  // מזהה עסקה מ-HYP אם יש
+            'custom_monthly_price' => 'nullable|numeric|min:0',  // דריסת מחיר חודשי
+            'custom_yearly_price' => 'nullable|numeric|min:0',   // דריסת מחיר שנתי
         ]);
 
         $restaurant = Restaurant::findOrFail($id);
@@ -169,7 +173,17 @@ class SuperAdminBillingController extends Controller
         $tier = $validated['tier'];
         $planType = $validated['plan_type'];
 
-        $chargeAmount = $prices[$tier][$planType === 'yearly' ? 'yearly' : 'monthly'];
+        // דריסת מחיר — מאפשר הנחות נקודתיות פר מסעדה בלי לשנות את המחיר הפומבי
+        $customMonthly = $validated['custom_monthly_price'] ?? null;
+        $customYearly = $validated['custom_yearly_price'] ?? null;
+
+        $defaultMonthly = $prices[$tier]['monthly'];
+        $defaultYearly = $prices[$tier]['yearly'];
+
+        $effectiveMonthly = $customMonthly !== null ? (float) $customMonthly : $defaultMonthly;
+        $effectiveYearly = $customYearly !== null ? (float) $customYearly : $defaultYearly;
+
+        $chargeAmount = $planType === 'yearly' ? $effectiveYearly : $effectiveMonthly;
         $monthlyFee = $planType === 'yearly' ? round($chargeAmount / 12, 2) : $chargeAmount;
 
         $periodStart = now()->startOfDay();
@@ -200,20 +214,22 @@ class SuperAdminBillingController extends Controller
                 ]);
             }
 
-            // רישום התשלום — תמיד (למעקב סופר אדמין) — method מציין אם בוצע בפועל
-            RestaurantPayment::create([
-                'restaurant_id' => $restaurant->id,
-                'amount'        => $chargeAmount,
-                'currency'      => 'ILS',
-                'period_start'  => $periodStart,
-                'period_end'    => $periodEnd,
-                'paid_at'       => now(),
-                'method'        => ($validated['record_payment'] ?? false) ? 'hyp_credit_card' : 'manual',
-                'reference'     => $validated['payment_reference'] ?? ('manual_' . now()->format('YmdHis')),
-                'status'        => 'paid',
-            ]);
+            // רישום התשלום — רק אם תשלום בוצע בפועל
+            if ($validated['record_payment'] ?? false) {
+                RestaurantPayment::create([
+                    'restaurant_id' => $restaurant->id,
+                    'amount'        => $chargeAmount,
+                    'currency'      => 'ILS',
+                    'period_start'  => $periodStart,
+                    'period_end'    => $periodEnd,
+                    'paid_at'       => now(),
+                    'method'        => 'hyp_credit_card',
+                    'reference'     => $validated['payment_reference'] ?? ('manual_' . now()->format('YmdHis')),
+                    'status'        => 'paid',
+                ]);
+            }
 
-            $restaurant->update([
+            $restaurantUpdate = [
                 'subscription_status'   => 'active',
                 'subscription_plan'     => $planType,
                 'tier'                  => $tier,
@@ -223,7 +239,17 @@ class SuperAdminBillingController extends Controller
                 'next_payment_at'       => $periodEnd,
                 'payment_failed_at'     => null,
                 'payment_failure_count' => 0,
-            ]);
+            ];
+
+            // שמור מחיר מותאם אישית פר מסעדה
+            if ($customMonthly !== null) {
+                $restaurantUpdate['monthly_price'] = $effectiveMonthly;
+            }
+            if ($customYearly !== null) {
+                $restaurantUpdate['yearly_price'] = $effectiveYearly;
+            }
+
+            $restaurant->update($restaurantUpdate);
 
             // AI Credits
             if ($tier === 'pro' && ($prices[$tier]['ai_credits'] ?? 0) > 0) {
@@ -242,6 +268,61 @@ class SuperAdminBillingController extends Controller
             }
 
             DB::commit();
+
+            // --- Notifications ---
+            $tierLabel = $tier === 'pro' ? 'Pro' : 'Basic';
+            $planLabel = $planType === 'yearly' ? 'שנתי' : 'חודשי';
+            $priceInfo = $customMonthly !== null || $customYearly !== null
+                ? " (מחיר מותאם: ₪{$chargeAmount})"
+                : " (₪{$chargeAmount})";
+
+            // Restaurant owner alert
+            try {
+                MonitoringAlert::create([
+                    'tenant_id'     => $restaurant->tenant_id,
+                    'restaurant_id' => $restaurant->id,
+                    'alert_type'    => 'subscription_activated',
+                    'title'         => "המנוי הופעל — {$tierLabel} {$planLabel}",
+                    'body'          => "המנוי שלך הופעל בהצלחה! תוכנית {$tierLabel}, מחזור {$planLabel}{$priceInfo}. תוקף עד {$periodEnd->format('d/m/Y')}.",
+                    'severity'      => 'info',
+                    'metadata'      => [
+                        'action' => 'activate',
+                        'tier' => $tier,
+                        'plan_type' => $planType,
+                        'amount' => $chargeAmount,
+                        'period_end' => $periodEnd->toDateString(),
+                        'custom_price' => $customMonthly !== null || $customYearly !== null,
+                    ],
+                    'is_read'       => false,
+                ]);
+            } catch (\Throwable $e) {
+                Log::warning('Failed to create restaurant alert for activation', ['error' => $e->getMessage()]);
+            }
+
+            // Super admin notification log
+            try {
+                NotificationLog::create([
+                    'channel'  => 'system',
+                    'type'     => 'system',
+                    'title'    => "הפעלת מנוי: {$restaurant->name}",
+                    'body'     => "הופעל מנוי {$tierLabel} {$planLabel}{$priceInfo} למסעדה {$restaurant->name}." . (($validated['note'] ?? null) ? " הערה: {$validated['note']}" : ''),
+                    'sender_id' => $request->user()->id,
+                    'target_restaurant_ids' => [$restaurant->id],
+                    'tokens_targeted' => 0,
+                    'sent_ok' => 0,
+                    'metadata' => [
+                        'action' => 'manual_activate',
+                        'restaurant_id' => $restaurant->id,
+                        'tier' => $tier,
+                        'plan_type' => $planType,
+                        'amount' => $chargeAmount,
+                        'record_payment' => $validated['record_payment'] ?? false,
+                        'custom_price' => $customMonthly !== null || $customYearly !== null,
+                    ],
+                ]);
+            } catch (\Throwable $e) {
+                Log::warning('Failed to create notification log for activation', ['error' => $e->getMessage()]);
+            }
 
             Log::info('Super admin manually activated subscription', [
                 'restaurant_id' => $restaurant->id,
@@ -344,6 +425,50 @@ class SuperAdminBillingController extends Controller
 
             DB::commit();
 
+            // --- Notifications ---
+            $tierLabel = $tier === 'pro' ? 'Pro' : 'Basic';
+
+            try {
+                MonitoringAlert::create([
+                    'tenant_id'     => $restaurant->tenant_id,
+                    'restaurant_id' => $restaurant->id,
+                    'alert_type'    => 'subscription_trial_reset',
+                    'title'         => "תקופת ניסיון חדשה — {$trialDays} ימים",
+                    'body'          => "החשבון שלך הוחזר לתקופת ניסיון של {$trialDays} ימים, תוכנית {$tierLabel}. תוקף עד {$trialEndsAt->format('d/m/Y')}.",
+                    'severity'      => 'info',
+                    'metadata'      => [
+                        'action' => 'trial_reset',
+                        'tier' => $tier,
+                        'trial_days' => $trialDays,
+                        'trial_ends_at' => $trialEndsAt->toDateString(),
+                    ],
+                    'is_read'       => false,
+                ]);
+            } catch (\Throwable $e) {
+                Log::warning('Failed to create restaurant alert for trial reset', ['error' => $e->getMessage()]);
+            }
+
+            try {
+                NotificationLog::create([
+                    'channel'  => 'system',
+                    'type'     => 'system',
+                    'title'    => "החזרה לניסיון: {$restaurant->name}",
+                    'body'     => "המסעדה {$restaurant->name} הוחזרה לתקופת ניסיון של {$trialDays} ימים, תוכנית {$tierLabel}." . (($validated['note'] ?? null) ? " הערה: {$validated['note']}" : ''),
+                    'sender_id' => $request->user()->id,
+                    'target_restaurant_ids' => [$restaurant->id],
+                    'tokens_targeted' => 0,
+                    'sent_ok' => 0,
+                    'metadata' => [
+                        'action' => 'trial_reset',
+                        'restaurant_id' => $restaurant->id,
+                        'tier' => $tier,
+                        'trial_days' => $trialDays,
+                    ],
+                ]);
+            } catch (\Throwable $e) {
+                Log::warning('Failed to create notification log for trial reset', ['error' => $e->getMessage()]);
+            }
+
             Log::info('Super admin reset restaurant to trial', [
                 'restaurant_id' => $restaurant->id,
                 'tier'          => $tier,
@@ -399,13 +524,56 @@ class SuperAdminBillingController extends Controller
                     'next_charge_at' => $subBaseDate->copy()->addMonths($months),
                     'notes' => trim(
                         ($subscription->notes ?? '') . "\n"
-                        . now()->format('Y-m-d') . " - הארכה חינם ({$months} חודשים)"
-                        . (($validated['note'] ?? null) ? ': ' . $validated['note'] : '')
+                            . now()->format('Y-m-d') . " - הארכה חינם ({$months} חודשים)"
+                            . (($validated['note'] ?? null) ? ': ' . $validated['note'] : '')
                     ),
                 ]);
             }
 
             DB::commit();
+
+            // --- Notifications ---
+            $monthsLabel = $months === 1 ? 'חודש אחד' : "{$months} חודשים";
+
+            try {
+                MonitoringAlert::create([
+                    'tenant_id'     => $restaurant->tenant_id,
+                    'restaurant_id' => $restaurant->id,
+                    'alert_type'    => 'subscription_free_extension',
+                    'title'         => "הטבה — {$monthsLabel} חינם!",
+                    'body'          => "קיבלת הארכת מנוי חינם ל-{$monthsLabel}! התשלום הבא נדחה ל-{$newDate->format('d/m/Y')}." . (($validated['note'] ?? null) ? " סיבה: {$validated['note']}" : ''),
+                    'severity'      => 'info',
+                    'metadata'      => [
+                        'action' => 'free_extension',
+                        'months' => $months,
+                        'new_payment_date' => $newDate->toDateString(),
+                    ],
+                    'is_read'       => false,
+                ]);
+            } catch (\Throwable $e) {
+                Log::warning('Failed to create restaurant alert for free extension', ['error' => $e->getMessage()]);
+            }
+
+            try {
+                NotificationLog::create([
+                    'channel'  => 'system',
+                    'type'     => 'system',
+                    'title'    => "הארכה חינם: {$restaurant->name}",
+                    'body'     => "הוארך {$monthsLabel} חינם למסעדה {$restaurant->name}. תשלום הבא: {$newDate->format('d/m/Y')}." . (($validated['note'] ?? null) ? " סיבה: {$validated['note']}" : ''),
+                    'sender_id' => $request->user()->id,
+                    'target_restaurant_ids' => [$restaurant->id],
+                    'tokens_targeted' => 0,
+                    'sent_ok' => 0,
+                    'metadata' => [
+                        'action' => 'free_extension',
+                        'restaurant_id' => $restaurant->id,
+                        'months' => $months,
+                        'new_payment_date' => $newDate->toDateString(),
+                    ],
+                ]);
+            } catch (\Throwable $e) {
+                Log::warning('Failed to create notification log for free extension', ['error' => $e->getMessage()]);
+            }
 
             Log::info('Super admin granted free months', [
                 'restaurant_id' => $restaurant->id,

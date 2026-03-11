@@ -5,6 +5,8 @@ namespace App\Console\Commands;
 use App\Mail\PaymentFailedMail;
 use App\Mail\PaymentSuccessMail;
 use App\Mail\SubscriptionSuspendedMail;
+use App\Models\MonitoringAlert;
+use App\Models\NotificationLog;
 use App\Models\Restaurant;
 use App\Models\RestaurantPayment;
 use App\Models\RestaurantSubscription;
@@ -151,6 +153,37 @@ class ChargeSubscriptions extends Command
                 Log::error('PaymentSuccessMail failed', ['restaurant_id' => $restaurant->id, 'error' => $e->getMessage()]);
             }
         }
+
+        // --- Notifications ---
+        try {
+            MonitoringAlert::create([
+                'tenant_id' => $restaurant->tenant_id,
+                'restaurant_id' => $restaurant->id,
+                'alert_type' => 'payment_success',
+                'title' => "תשלום חודשי התקבל — ₪{$amount}",
+                'body' => "התשלום החודשי בסך ₪{$amount} חויב בהצלחה. התוקף עודכן עד {$periodEnd->format('d/m/Y')}.",
+                'severity' => 'info',
+                'metadata' => ['amount' => $amount, 'period_end' => $periodEnd->toDateString()],
+                'is_read' => false,
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('Failed to create MonitoringAlert for charge success', ['error' => $e->getMessage()]);
+        }
+        try {
+            NotificationLog::create([
+                'channel' => 'system',
+                'type' => 'system',
+                'title' => "חיוב חודשי: {$restaurant->name} — ₪{$amount}",
+                'body' => "חיוב אוטומטי ₪{$amount} למסעדה {$restaurant->name} הצליח.",
+                'sender_id' => null,
+                'target_restaurant_ids' => [$restaurant->id],
+                'tokens_targeted' => 0,
+                'sent_ok' => 0,
+                'metadata' => ['action' => 'auto_charge_success', 'restaurant_id' => $restaurant->id, 'amount' => $amount],
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('Failed to create NotificationLog for charge success', ['error' => $e->getMessage()]);
+        }
     }
 
     private function handleChargeFailure(Restaurant $restaurant, RestaurantSubscription $subscription, string $reason): void
@@ -183,6 +216,37 @@ class ChargeSubscriptions extends Command
             } catch (\Exception $e) {
                 Log::error('PaymentFailedMail failed', ['restaurant_id' => $restaurant->id, 'error' => $e->getMessage()]);
             }
+        }
+
+        // --- Notifications ---
+        try {
+            MonitoringAlert::create([
+                'tenant_id' => $restaurant->tenant_id,
+                'restaurant_id' => $restaurant->id,
+                'alert_type' => 'payment_failed',
+                'title' => "חיוב חודשי נכשל (ניסיון #{$failureCount})",
+                'body' => "התשלום האוטומטי נכשל. סיבה: {$reason}. נותרו {$daysLeft} ימי ארכה לעדכון אמצעי תשלום.",
+                'severity' => $failureCount >= 3 ? 'critical' : 'warning',
+                'metadata' => ['reason' => $reason, 'failure_count' => $failureCount, 'days_left' => $daysLeft],
+                'is_read' => false,
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('Failed to create MonitoringAlert for charge failure', ['error' => $e->getMessage()]);
+        }
+        try {
+            NotificationLog::create([
+                'channel' => 'system',
+                'type' => 'system',
+                'title' => "חיוב נכשל: {$restaurant->name} (ניסיון #{$failureCount})",
+                'body' => "חיוב אוטומטי למסעדה {$restaurant->name} נכשל. סיבה: {$reason}. ארכה: {$daysLeft} ימים.",
+                'sender_id' => null,
+                'target_restaurant_ids' => [$restaurant->id],
+                'tokens_targeted' => 0,
+                'sent_ok' => 0,
+                'metadata' => ['action' => 'auto_charge_failed', 'restaurant_id' => $restaurant->id, 'reason' => $reason, 'failure_count' => $failureCount],
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('Failed to create NotificationLog for charge failure', ['error' => $e->getMessage()]);
         }
     }
 
@@ -218,6 +282,37 @@ class ChargeSubscriptions extends Command
                 } catch (\Exception $e) {
                     Log::error('SubscriptionSuspendedMail failed', ['restaurant_id' => $restaurant->id, 'error' => $e->getMessage()]);
                 }
+            }
+
+            // --- Suspension notifications ---
+            try {
+                MonitoringAlert::create([
+                    'tenant_id'     => $restaurant->tenant_id,
+                    'restaurant_id' => $restaurant->id,
+                    'alert_type'    => 'subscription_suspended',
+                    'title'         => 'המנוי הושעה',
+                    'body'          => "המנוי של {$restaurant->name} הושעה עקב אי-תשלום. יש לעדכן אמצעי תשלום לחידוש השירות.",
+                    'severity'      => 'critical',
+                    'metadata'      => ['restaurant_id' => $restaurant->id, 'failed_at' => $restaurant->payment_failed_at],
+                    'is_read'       => false,
+                ]);
+            } catch (\Throwable $e) {
+                Log::warning('Failed to create MonitoringAlert for suspension', ['error' => $e->getMessage()]);
+            }
+            try {
+                NotificationLog::create([
+                    'channel'               => 'system',
+                    'type'                  => 'system',
+                    'title'                 => "מנוי הושעה: {$restaurant->name}",
+                    'body'                  => "מנוי {$restaurant->name} הושעה אוטומטית עקב אי-תשלום (grace period הסתיים).",
+                    'sender_id'             => null,
+                    'target_restaurant_ids' => [$restaurant->id],
+                    'tokens_targeted'       => 0,
+                    'sent_ok'               => 0,
+                    'metadata'              => ['action' => 'subscription_suspended', 'restaurant_id' => $restaurant->id],
+                ]);
+            } catch (\Throwable $e) {
+                Log::warning('Failed to create NotificationLog for suspension', ['error' => $e->getMessage()]);
             }
 
             $this->warn("  מסעדה #{$restaurant->id} ({$restaurant->name}) – הושעתה (grace period עבר).");

@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { FaTimes, FaSignOutAlt, FaChevronRight, FaChevronLeft, FaUtensils, FaStar } from 'react-icons/fa';
+import { FaTimes, FaSignOutAlt, FaChevronRight, FaChevronLeft, FaUtensils, FaStar, FaCashRegister } from 'react-icons/fa';
 import { useRestaurantStatus } from '../../context/RestaurantStatusContext';
 
 export default function DashboardSidebar({
@@ -159,6 +159,21 @@ export default function DashboardSidebar({
 
                 {/* Footer Actions */}
                 <div className="p-4 border-t border-gray-100 bg-gray-50/50 shrink-0 space-y-2">
+                    {!isBasic && (
+                        <button
+                            onClick={() => navigate('/admin/pos')}
+                            className={`w-full flex items-center ${showCollapsed ? 'justify-center' : 'px-3'} py-2.5 text-orange-500 hover:bg-orange-50 hover:text-orange-600 rounded-xl transition-all duration-200 group relative`}
+                        >
+                            <span className={`text-xl ${showCollapsed ? '' : 'ml-3'}`}><FaCashRegister /></span>
+                            {!showCollapsed && <span className="font-bold text-sm">קופה POS</span>}
+                            {showCollapsed && (
+                                <div className="absolute left-full ml-2 bg-gray-900 text-white text-xs px-2 py-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none shadow-xl duration-200" style={{ zIndex: 9999 }}>
+                                    קופה POS
+                                </div>
+                            )}
+                        </button>
+                    )}
+
                     <button
                         onClick={toggleCollapse}
                         className={`w-full flex items-center ${isCollapsed ? 'justify-center' : 'justify-between px-2'} py-2 text-gray-400 hover:text-orange-600 transition-colors hidden lg:flex rounded-lg hover:bg-white`}
