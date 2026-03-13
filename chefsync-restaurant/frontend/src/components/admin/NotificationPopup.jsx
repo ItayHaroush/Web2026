@@ -97,7 +97,7 @@ export default function NotificationPopup({ notificationCount = 0, tenantId = nu
 
             {/* Dropdown panel */}
             {open && (
-                <div className="absolute left-0 top-full mt-2 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden">
+                <div className="fixed left-4 right-4 top-16 sm:absolute sm:left-0 sm:right-auto sm:top-full sm:mt-2 sm:w-96 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden">
                     {/* Orders shortcut */}
                     {hasActiveOrders && (
                         <button

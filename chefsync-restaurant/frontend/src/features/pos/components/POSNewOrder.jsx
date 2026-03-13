@@ -36,7 +36,6 @@ function POSNewOrderInner({ headers, posToken, onOrderCreated }) {
     const [paymentMethod, setPaymentMethod] = useState(null); // 'cash' | 'credit' | 'hold' | 'split'
     const [holdLoading, setHoldLoading] = useState(false);
     const [holdOrderId, setHoldOrderId] = useState(null);
-    const [splitOrderId, setSplitOrderId] = useState(null); // order created for split payment
 
     // Discount state
     const [showDiscount, setShowDiscount] = useState(false);
@@ -133,7 +132,6 @@ function POSNewOrderInner({ headers, posToken, onOrderCreated }) {
         setPaymentMethod(null);
         clearDiscount();
         setHoldOrderId(null);
-        setSplitOrderId(null);
         onOrderCreated?.();
     };
 
@@ -163,28 +161,8 @@ function POSNewOrderInner({ headers, posToken, onOrderCreated }) {
                 setHoldLoading(false);
             }
         } else if (method === 'split') {
-            // Create order as hold first, then open split modal
-            setHoldLoading(true);
-            try {
-                const orderData = {
-                    items: cart,
-                    payment_method: 'hold',
-                    ...(discountAmount > 0 && {
-                        discount_type: discountType,
-                        discount_value: discVal,
-                        discount_reason: discountReason || undefined,
-                    }),
-                };
-                const res = await posApi.createOrder(orderData, headers, posToken);
-                if (res.data.success) {
-                    setSplitOrderId(res.data.order?.id);
-                    setPaymentMethod('split');
-                }
-            } catch (e) {
-                alert(e.response?.data?.message || 'שגיאה ביצירת הזמנה');
-            } finally {
-                setHoldLoading(false);
-            }
+            // רק פתיחת מודל פיצול — יצירת הזמנה תתבצע רק בעת אישור תשלום
+            setPaymentMethod('split');
         } else {
             setPaymentMethod(method);
         }
@@ -423,13 +401,14 @@ function POSNewOrderInner({ headers, posToken, onOrderCreated }) {
                 />
             )}
 
-            {paymentMethod === 'split' && splitOrderId && (
+            {paymentMethod === 'split' && (
                 <POSSplitPaymentModal
-                    orderId={splitOrderId}
+                    cart={cart}
                     total={cartTotal}
                     headers={headers}
                     posToken={posToken}
-                    onClose={() => { setPaymentMethod(null); setSplitOrderId(null); }}
+                    discountData={discountAmount > 0 ? { discount_type: discountType, discount_value: discVal, discount_reason: discountReason } : null}
+                    onClose={() => { setPaymentMethod(null); }}
                     onSuccess={handleOrderSuccess}
                 />
             )}

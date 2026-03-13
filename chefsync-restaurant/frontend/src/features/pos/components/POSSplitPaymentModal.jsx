@@ -1,17 +1,29 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { FaShekelSign, FaCreditCard, FaMoneyBillWave, FaTimes, FaCheckCircle, FaExclamationTriangle } from 'react-icons/fa';
 import posApi from '../api/posApi';
 
-export default function POSSplitPaymentModal({ orderId, total, headers, posToken, onClose, onSuccess }) {
+export default function POSSplitPaymentModal({ cart, total, headers, posToken, discountData, onClose, onSuccess }) {
     const [cashAmount, setCashAmount] = useState('');
     const [creditAmount, setCreditAmount] = useState('');
     const [loading, setLoading] = useState(false);
+    const [loadingText, setLoadingText] = useState('');
     const [result, setResult] = useState(null);
+    // שומר orderId שנוצר כדי למנוע יצירה כפולה
+    const createdOrderIdRef = useRef(null);
 
     const cash = parseFloat(cashAmount) || 0;
     const credit = parseFloat(creditAmount) || 0;
     const remaining = Math.max(0, total - cash - credit);
     const canPay = cash + credit >= total && (cash > 0 || credit > 0);
+
+    // אם הזמנה כבר נוצרה (hold), סגירה צריכה לרענן את הסל והרשימה
+    const handleClose = () => {
+        if (createdOrderIdRef.current) {
+            onSuccess();
+        } else {
+            onClose();
+        }
+    };
 
     const handleCashChange = (val) => {
         setCashAmount(val);
@@ -39,6 +51,29 @@ export default function POSSplitPaymentModal({ orderId, total, headers, posToken
     const handlePay = async () => {
         setLoading(true);
         try {
+            // שלב 1: יצירת הזמנה (רק אם לא נוצרה כבר)
+            let orderId = createdOrderIdRef.current;
+            if (!orderId) {
+                setLoadingText('יוצר הזמנה...');
+                const orderData = {
+                    items: cart,
+                    payment_method: 'hold',
+                    ...(discountData && {
+                        discount_type: discountData.discount_type,
+                        discount_value: discountData.discount_value,
+                        discount_reason: discountData.discount_reason || undefined,
+                    }),
+                };
+                const orderRes = await posApi.createOrder(orderData, headers, posToken);
+                if (!orderRes.data.success) {
+                    throw new Error(orderRes.data.message || 'שגיאה ביצירת הזמנה');
+                }
+                orderId = orderRes.data.order?.id;
+                createdOrderIdRef.current = orderId;
+            }
+
+            // שלב 2: ביצוע תשלום מפוצל
+            setLoadingText('ממתין ל-PinPad...');
             const res = await posApi.splitPayment(orderId, cash, credit, headers, posToken);
             if (res.data.success) {
                 setResult({ type: 'success', data: res.data });
@@ -46,15 +81,16 @@ export default function POSSplitPaymentModal({ orderId, total, headers, posToken
         } catch (e) {
             setResult({
                 type: 'error',
-                message: e.response?.data?.message || 'שגיאה בביצוע תשלום מפוצל',
+                message: e.response?.data?.message || e.message || 'שגיאה בביצוע תשלום מפוצל',
             });
         } finally {
             setLoading(false);
+            setLoadingText('');
         }
     };
 
     return (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[300] flex items-center justify-center p-4" onClick={onClose}>
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[300] flex items-center justify-center p-4" onClick={handleClose}>
             <div className="bg-slate-800 rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-700 animate-in zoom-in-95 duration-300" onClick={e => e.stopPropagation()}>
 
                 {result?.type === 'success' ? (
@@ -94,7 +130,7 @@ export default function POSSplitPaymentModal({ orderId, total, headers, posToken
                         <p className="text-red-400 font-bold">{result.message}</p>
                         <div className="flex gap-3">
                             <button onClick={() => { setResult(null); handlePay(); }} className="flex-1 py-4 bg-blue-500 text-white font-black rounded-2xl active:scale-95">נסה שוב</button>
-                            <button onClick={onClose} className="px-6 py-4 bg-slate-700 text-slate-300 font-black rounded-2xl active:scale-95">ביטול</button>
+                            <button onClick={handleClose} className="px-6 py-4 bg-slate-700 text-slate-300 font-black rounded-2xl active:scale-95">ביטול</button>
                         </div>
                     </div>
 
@@ -109,7 +145,7 @@ export default function POSSplitPaymentModal({ orderId, total, headers, posToken
                                 </p>
                             </div>
                             {!loading && (
-                                <button onClick={onClose} className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-700 transition-all">
+                                <button onClick={handleClose} className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-700 transition-all">
                                     <FaTimes size={18} />
                                 </button>
                             )}
@@ -124,8 +160,10 @@ export default function POSSplitPaymentModal({ orderId, total, headers, posToken
                                         <FaCreditCard className="text-blue-400 text-2xl" />
                                     </div>
                                 </div>
-                                <p className="text-white text-lg font-black">ממתין ל-PinPad...</p>
-                                <p className="text-blue-300 text-sm">בקש מהלקוח להעביר/להכניס כרטיס</p>
+                                <p className="text-white text-lg font-black">{loadingText || 'ממתין...'}</p>
+                                {loadingText === 'ממתין ל-PinPad...' && (
+                                    <p className="text-blue-300 text-sm">בקש מהלקוח להעביר/להכניס כרטיס</p>
+                                )}
                             </div>
                         ) : (
                             <>

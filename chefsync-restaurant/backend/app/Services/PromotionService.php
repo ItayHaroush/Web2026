@@ -250,7 +250,8 @@ class PromotionService
                                     'category_name' => $giftMenuItem->category?->name ?? '',
                                     'promotion_id' => $promotionId,
                                 ];
-                                $totalDiscount += (float) $giftMenuItem->price;
+                                // פריט מתנה נוסף להזמנה עם price_at_order=0,
+                                // אין צורך להוסיף את מחירו ל-totalDiscount כי הוא לא חלק מסכום הפריטים
                             }
                         } else {
                             Log::warning('Specific gift item not found or unavailable', ['menu_item_id' => $reward->reward_menu_item_id]);
@@ -293,7 +294,8 @@ class PromotionService
                                 'promotion_id' => $promotionId,
                             ];
 
-                            $totalDiscount += (float) $giftMenuItem->price;
+                            // פריט מתנה נוסף להזמנה עם price_at_order=0,
+                            // אין צורך להוסיף את מחירו ל-totalDiscount כי הוא לא חלק מסכום הפריטים
                             $validGifts++;
                         }
                     }
@@ -312,6 +314,12 @@ class PromotionService
                 $appliedNonStackable = true;
             }
         }
+
+        Log::info('PromotionService::validateAndApply result', [
+            'promotion_discount' => round($totalDiscount, 2),
+            'gift_items_count' => count($giftItems),
+            'applied_promotions_count' => count($appliedPromotions),
+        ]);
 
         return [
             'promotion_discount' => round($totalDiscount, 2),

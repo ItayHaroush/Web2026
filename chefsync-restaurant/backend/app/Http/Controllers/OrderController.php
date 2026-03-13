@@ -398,6 +398,16 @@ class OrderController extends Controller
                 $giftLineItems = $result['gift_items'];
             }
 
+            // לוג חישוב הזמנה
+            $finalTotal = $totalAmount + $deliveryFee - $promotionDiscount;
+            Log::info('Order total calculation', [
+                'items_total' => $totalAmount,
+                'delivery_fee' => $deliveryFee,
+                'promotion_discount' => $promotionDiscount,
+                'final_total' => $finalTotal,
+                'gift_items_count' => count($giftLineItems),
+            ]);
+
             // צור את ההזמנה עם סכום סופי
             $paymentMethod = $validated['payment_method'];
             $paymentStatus = Order::PAYMENT_PENDING;
