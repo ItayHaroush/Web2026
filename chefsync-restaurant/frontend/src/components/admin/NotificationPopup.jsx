@@ -154,13 +154,13 @@ export default function NotificationPopup({ notificationCount = 0, tenantId = nu
                                             </p>
                                         </div>
                                         {!isSuperAdmin && (
-                                        <button
-                                            onClick={() => markRead(alert.id)}
-                                            className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                                            title="סמן כנקרא"
-                                        >
-                                            <FaCheck size={12} />
-                                        </button>
+                                            <button
+                                                onClick={() => markRead(alert.id)}
+                                                className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                                                title="סמן כנקרא"
+                                            >
+                                                <FaCheck size={12} />
+                                            </button>
                                         )}
                                     </div>
                                 );
