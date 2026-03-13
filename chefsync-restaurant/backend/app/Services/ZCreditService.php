@@ -52,14 +52,13 @@ class ZCreditService
         $amountInAgorot = (int) round($amount * 100);
 
         $payload = [
-            'TerminalNumber'    => $this->terminalNumber,
-            'Password'          => $this->terminalPassword,
-            'TransactionType'   => 1,
-            'TransactionSum'    => $amountInAgorot,
-            'Currency'          => 'ILS',
-            'CreditType'        => 1,
-            'NumberOfPayments'  => 1,
-            'Track2'            => $this->pinpadId,  // חייב להיות PINPAD11002 (עם prefix)
+            'TerminalNumber'   => $this->terminalNumber,
+            'Password'         => $this->terminalPassword,
+            'TransactionSum'   => $amountInAgorot,
+            'NumberOfPayments' => 1,
+            'CreditType'       => 1,
+            'Currency'         => 'ILS',
+            'Track2'           => $this->pinpadId,
         ];
 
         if ($uniqueId) {
