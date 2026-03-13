@@ -45,7 +45,7 @@ class PosPaymentService
         ]);
 
         // שליחה ל-ZCredit PinPad
-        $result = $this->zcredit->chargePinPad($amount);
+        $result = $this->zcredit->chargePinPad($amount, 'order_' . $orderId);
 
         if ($result['success']) {
             $data = $result['data'];

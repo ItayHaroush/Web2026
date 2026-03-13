@@ -895,8 +895,9 @@ class POSController extends Controller
         // חיוב אשראי אם יש
         $paymentResult = null;
         if ($creditAmount > 0) {
-            $zcredit = app(ZCreditService::class);
-            $result = $zcredit->chargePinPad($creditAmount);
+            $restaurant = Restaurant::find($restaurantId);
+            $zcredit = $restaurant ? ZCreditService::forRestaurant($restaurant) : app(ZCreditService::class);
+            $result = $zcredit->chargePinPad($creditAmount, 'split_' . $order->id);
 
             if (!$result['success']) {
                 return response()->json([

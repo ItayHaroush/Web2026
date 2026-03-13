@@ -2,54 +2,67 @@
 
 namespace App\Services;
 
+use App\Models\Restaurant;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class ZCreditService
 {
     private string $apiUrl = 'https://pci.zcredit.co.il/ZCreditWS/api/Transaction/CommitFullTransaction';
+    private string $refundUrl = 'https://pci.zcredit.co.il/ZCreditWS/api/Transaction/RefundTransaction';
 
     private string $terminalNumber;
     private string $terminalPassword;
     private string $pinpadId;
 
-    public function __construct()
+    public function __construct(
+        ?string $terminalNumber = null,
+        ?string $terminalPassword = null,
+        ?string $pinpadId = null
+    ) {
+        $this->terminalNumber  = $terminalNumber  ?? config('services.zcredit.terminal_number');
+        $this->terminalPassword = $terminalPassword ?? config('services.zcredit.terminal_password');
+        $this->pinpadId         = $pinpadId         ?? config('services.zcredit.pinpad_id', '11002');
+    }
+
+    /**
+     * Factory: יצירת שירות ZCredit עם credentials של מסעדה ספציפית.
+     * אם למסעדה אין הגדרות ZCredit, נופל חזרה ל-config הגלובלי.
+     */
+    public static function forRestaurant(Restaurant $restaurant): self
     {
-        $this->terminalNumber = config('services.zcredit.terminal_number');
-        $this->terminalPassword = config('services.zcredit.terminal_password');
-        $this->pinpadId = config('services.zcredit.pinpad_id', 'PINPAD11002');
+        return new self(
+            $restaurant->zcredit_terminal_number,
+            $restaurant->zcredit_terminal_password,
+            $restaurant->zcredit_pinpad_id
+        );
     }
 
     /**
      * חיוב כרטיס אשראי דרך PinPad
      *
-     * @param float $amount סכום העסקה
-     * @param string $currency מטבע (1 = ILS)
+     * @param float $amount סכום העסקה בשקלים
+     * @param string|null $uniqueId מזהה ייחודי למניעת חיוב כפול (לדוגמה: order_123)
      * @return array ['success' => bool, 'data' => [...]]
      */
-    public function chargePinPad(float $amount, string $currency = '1'): array
+    public function chargePinPad(float $amount, ?string $uniqueId = null): array
     {
+        $amountInAgorot = (int) round($amount * 100);
+
         $payload = [
-            'TerminalNumber'        => $this->terminalNumber,
-            'Password'              => $this->terminalPassword,
-            'TransactionSum'        => $amount,
-            'CurrencyType'          => $currency, // 1 = ILS
-            'TransactionType'       => '01',      // 01 = Regular charge
-            'CreditType'            => '1',       // 1 = Regular credit
-            // PinPad integration
-            'Track2'                => $this->pinpadId,
-            'CardNumber'            => '',
-            'ExpDate_MMYY'          => '',
-            'CVV'                   => '',
-            'HolderID'              => '',
-            'NumberOfPayments'      => '1',
-            'J'                     => '0',       // 0 = Regular (full charge)
-            'CustomerName'          => '',
-            'PhoneNumber'           => '',
-            'CustomerEmail'         => '',
-            'ObeligoAction'         => '0',
-            'AuthNum'               => '',
+            'TerminalNumber'   => $this->terminalNumber,
+            'Password'         => $this->terminalPassword,
+            'TransactionType'  => 1,
+            'TransactionSum'   => $amountInAgorot,
+            'Currency'         => 'ILS',
+            'CreditType'       => 1,
+            'NumberOfPayments' => 1,
+            'Track2'           => 'PINPAD' . $this->pinpadId,
         ];
+
+        if ($uniqueId) {
+            $payload['TransactionUniqueID'] = $uniqueId;
+        }
 
         try {
             $response = Http::timeout(90) // PinPad interaction can take up to 60s
@@ -59,6 +72,9 @@ class ZCreditService
 
             Log::info('[ZCredit] Transaction response', [
                 'amount' => $amount,
+                'amount_agorot' => $amountInAgorot,
+                'terminal' => $this->terminalNumber,
+                'pinpad' => $this->pinpadId,
                 'ReturnCode' => $data['ReturnCode'] ?? null,
                 'HasError' => $data['HasError'] ?? null,
             ]);
@@ -105,7 +121,7 @@ class ZCreditService
      * ביטול / החזר עסקה
      *
      * @param string $referenceNumber מזהה העסקה המקורית מ-ZCredit
-     * @param float|null $amount סכום להחזר (null = מלא)
+     * @param float|null $amount סכום להחזר בשקלים (null = מלא)
      * @return array ['success' => bool, 'data' => [...]]
      */
     public function refundTransaction(string $referenceNumber, ?float $amount = null): array
@@ -117,12 +133,12 @@ class ZCreditService
         ];
 
         if ($amount !== null) {
-            $payload['TransactionSum'] = $amount;
+            $payload['TransactionSum'] = (int) round($amount * 100);
         }
 
         try {
             $response = Http::timeout(30)
-                ->post('https://pci.zcredit.co.il/ZCreditWS/api/Transaction/RefundTransaction', $payload);
+                ->post($this->refundUrl, $payload);
 
             $data = $response->json();
 
