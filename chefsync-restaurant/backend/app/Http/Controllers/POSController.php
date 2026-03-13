@@ -654,7 +654,7 @@ class POSController extends Controller
     /**
      * יצירת הזמנה חדשה + חיוב אשראי דרך PinPad
      */
-    public function createOrderCredit(Request $request, PosPaymentService $paymentService)
+    public function createOrderCredit(Request $request)
     {
         $request->validate([
             'items' => 'required|array|min:1',
@@ -672,6 +672,9 @@ class POSController extends Controller
         $restaurantId = $user->restaurant_id;
         $restaurant = Restaurant::find($restaurantId);
         $tenantId = $restaurant?->tenant_id ?? '';
+
+        $zcredit = $restaurant ? ZCreditService::forRestaurant($restaurant) : app(ZCreditService::class);
+        $paymentService = new PosPaymentService($zcredit);
 
         $result = $paymentService->createOrderAndCharge(
             $request->only(['items', 'customer_name', 'notes']),
@@ -1001,7 +1004,8 @@ class POSController extends Controller
 
         if ($order->payment_method === 'credit_card' && $referenceNumber) {
             // החזר דרך ZCredit
-            $zcredit = app(ZCreditService::class);
+            $restaurant = Restaurant::find($restaurantId);
+            $zcredit = $restaurant ? ZCreditService::forRestaurant($restaurant) : app(ZCreditService::class);
             $result = $zcredit->refundTransaction($referenceNumber, (float) $order->total_amount);
 
             if (!$result['success']) {
