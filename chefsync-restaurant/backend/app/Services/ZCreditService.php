@@ -22,9 +22,9 @@ class ZCreditService
     ) {
         $this->terminalNumber  = $terminalNumber  ?? config('services.zcredit.terminal_number');
         $this->terminalPassword = $terminalPassword ?? config('services.zcredit.terminal_password');
-        $raw = $pinpadId ?? config('services.zcredit.pinpad_id', '11002');
-        // רק המספר – ללא prefix PINPAD (נוסיף בשליחה)
-        $this->pinpadId = preg_replace('/^PINPAD/i', '', (string) $raw) ?: '11002';
+        $raw = (string) ($pinpadId ?? config('services.zcredit.pinpad_id', '11002'));
+        // שמירת הערך המלא ל־Track2 – חייב להכיל PINPAD (למשל PINPAD11002)
+        $this->pinpadId = preg_match('/^PINPAD/i', $raw) ? $raw : ('PINPAD' . trim($raw));
     }
 
     /**
@@ -59,7 +59,7 @@ class ZCreditService
             'Currency'          => 'ILS',
             'CreditType'        => 1,
             'NumberOfPayments'  => 1,
-            'Track2'            => 'PINPAD' . $this->pinpadId,
+            'Track2'            => $this->pinpadId,  // חייב להיות PINPAD11002 (עם prefix)
         ];
 
         if ($uniqueId) {
@@ -76,7 +76,7 @@ class ZCreditService
                 'amount' => $amount,
                 'amount_agorot' => $amountInAgorot,
                 'terminal' => $this->terminalNumber,
-                'pinpad' => $this->pinpadId,
+                'Track2_sent' => $this->pinpadId,
                 'ReturnCode' => $data['ReturnCode'] ?? null,
                 'HasError' => $data['HasError'] ?? null,
             ]);
