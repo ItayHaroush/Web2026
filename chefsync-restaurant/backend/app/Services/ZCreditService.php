@@ -55,8 +55,8 @@ class ZCreditService
             'TerminalNumber'   => $this->terminalNumber,
             'Password'         => $this->terminalPassword,
             'TransactionSum'   => $amountInAgorot,
-            'NumberOfPayments' => 1,
             'CreditType'       => 1,
+            'NumOfPayments'    => 1,  // בתיעוד: NumOfPayments (לא NumberOfPayments)
             'Currency'         => 'ILS',
             'Track2'           => $this->pinpadId,
         ];
@@ -65,8 +65,13 @@ class ZCreditService
             $payload['TransactionUniqueID'] = $uniqueId;
         }
 
+        $payloadForLog = $payload;
+        $payloadForLog['Password'] = '***';
+        Log::info('[ZCredit] Payload sent', $payloadForLog);
+
         try {
-            $response = Http::timeout(90) // PinPad interaction can take up to 60s
+            $response = Http::timeout(90)
+                ->withHeaders(['Content-Type' => 'application/json'])
                 ->post($this->apiUrl, $payload);
 
             $data = $response->json();
