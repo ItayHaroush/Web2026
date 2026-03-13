@@ -144,7 +144,7 @@ class PosPaymentService
             'correlation_id' => \Illuminate\Support\Str::uuid()->toString(),
             'customer_name'  => $orderData['customer_name'] ?? 'POS',
             'customer_phone' => '0000000000',
-            'delivery_method'=> 'pickup',
+            'delivery_method' => 'pickup',
             'payment_method' => 'credit_card',
             'payment_status' => 'pending',
             'status'         => 'received',
@@ -169,7 +169,7 @@ class PosPaymentService
             $order->items()->create([
                 'menu_item_id'  => $item['menu_item_id'],
                 'quantity'      => $item['quantity'],
-                'price_at_order'=> $item['price'],
+                'price_at_order' => $item['price'],
                 'variant_name'  => $item['variant_name'] ?? null,
                 'addons'        => !empty($addonsArray) ? $addonsArray : null,
                 'addons_total'  => $addonTotal,
