@@ -1108,39 +1108,39 @@ export default function MenuPage({ isPreviewMode = false }) {
                                             {suggestion.items.map((item) => {
                                                 const itemQty = cartItems.filter(ci => ci.menuItemId === item.id).reduce((s, ci) => s + ci.qty, 0);
                                                 return (
-                                                <div
-                                                    key={item.id}
-                                                    className="flex-shrink-0 w-28 bg-white dark:bg-brand-dark-surface rounded-xl border border-gray-100 dark:border-brand-dark-border overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer relative"
-                                                    onClick={() => handleSuggestionQuickAdd(item)}
-                                                >
-                                                    {itemQty > 0 && (
-                                                        <div className="absolute top-1 right-1 bg-brand-primary text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center z-10 shadow-md">
-                                                            {itemQty}
-                                                        </div>
-                                                    )}
-                                                    <div className="h-20 bg-gray-50 dark:bg-brand-dark-border/50 overflow-hidden relative">
-                                                        {item.image_url ? (
-                                                            <img src={resolveAssetUrl(item.image_url)} alt="" className="w-full h-full object-cover" />
-                                                        ) : restaurant?.logo_url ? (
-                                                            <div className="absolute inset-0 flex items-center justify-center p-3">
-                                                                <img src={resolveAssetUrl(restaurant.logo_url)} alt="" className="w-full h-full object-contain opacity-15" />
+                                                    <div
+                                                        key={item.id}
+                                                        className="flex-shrink-0 w-28 bg-white dark:bg-brand-dark-surface rounded-xl border border-gray-100 dark:border-brand-dark-border overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer relative"
+                                                        onClick={() => handleSuggestionQuickAdd(item)}
+                                                    >
+                                                        {itemQty > 0 && (
+                                                            <div className="absolute top-1 right-1 bg-brand-primary text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center z-10 shadow-md">
+                                                                {itemQty}
                                                             </div>
-                                                        ) : null}
-                                                        <button
-                                                            className="absolute bottom-1 left-1 bg-brand-primary text-white w-6 h-6 rounded-full flex items-center justify-center shadow-md"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleSuggestionQuickAdd(item);
-                                                            }}
-                                                        >
-                                                            <FaPlus size={10} />
-                                                        </button>
+                                                        )}
+                                                        <div className="h-20 bg-gray-50 dark:bg-brand-dark-border/50 overflow-hidden relative">
+                                                            {item.image_url ? (
+                                                                <img src={resolveAssetUrl(item.image_url)} alt="" className="w-full h-full object-cover" />
+                                                            ) : restaurant?.logo_url ? (
+                                                                <div className="absolute inset-0 flex items-center justify-center p-3">
+                                                                    <img src={resolveAssetUrl(restaurant.logo_url)} alt="" className="w-full h-full object-contain opacity-15" />
+                                                                </div>
+                                                            ) : null}
+                                                            <button
+                                                                className="absolute bottom-1 left-1 bg-brand-primary text-white w-6 h-6 rounded-full flex items-center justify-center shadow-md"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleSuggestionQuickAdd(item);
+                                                                }}
+                                                            >
+                                                                <FaPlus size={10} />
+                                                            </button>
+                                                        </div>
+                                                        <div className="p-2">
+                                                            <p className="text-xs font-bold text-gray-800 dark:text-gray-200 truncate">{item.name}</p>
+                                                            <p className="text-xs text-brand-primary font-bold">{item.price} ₪</p>
+                                                        </div>
                                                     </div>
-                                                    <div className="p-2">
-                                                        <p className="text-xs font-bold text-gray-800 dark:text-gray-200 truncate">{item.name}</p>
-                                                        <p className="text-xs text-brand-primary font-bold">{item.price} ₪</p>
-                                                    </div>
-                                                </div>
                                                 );
                                             })}
                                         </div>
@@ -1175,11 +1175,10 @@ export default function MenuPage({ isPreviewMode = false }) {
                                                             <button
                                                                 key={addon.id}
                                                                 onClick={() => toggleSuggestionAddon(group, addon.id)}
-                                                                className={`px-2 py-0.5 rounded-md text-[11px] font-bold border transition-all ${
-                                                                    isSel
+                                                                className={`px-2 py-0.5 rounded-md text-[11px] font-bold border transition-all ${isSel
                                                                         ? 'bg-brand-primary text-white border-brand-primary'
                                                                         : 'bg-gray-50 dark:bg-brand-dark-border text-gray-600 dark:text-brand-dark-text border-gray-200 dark:border-brand-dark-border'
-                                                                }`}
+                                                                    }`}
                                                             >
                                                                 {addon.name}{addon.price_delta > 0 && ` +₪${addon.price_delta}`}
                                                             </button>
