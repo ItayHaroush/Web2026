@@ -71,6 +71,9 @@ class RestaurantController extends Controller
             'common_allergens' => $restaurant->common_allergens ?? [],
             'allergen_notes' => $restaurant->allergen_notes ?? null,
             'available_payment_methods' => $restaurant->getPublicPaymentMethods(),
+            'accepts_credit_card' => $restaurant->acceptsCreditCard(),
+            'delivery_minimum' => $restaurant->delivery_minimum ?? 0,
+            'allow_future_orders' => (bool) ($restaurant->allow_future_orders ?? false),
         ];
     }
 

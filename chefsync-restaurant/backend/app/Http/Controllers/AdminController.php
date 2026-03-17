@@ -1930,6 +1930,8 @@ class AdminController extends Controller
             'operating_hours' => 'nullable|string',
             'logo' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
             'enable_dine_in_pricing' => 'sometimes|boolean',
+            'delivery_minimum' => 'nullable|numeric|min:0',
+            'allow_future_orders' => 'sometimes|boolean',
         ]);
 
         if ($request->hasFile('logo')) {
@@ -2039,6 +2041,15 @@ class AdminController extends Controller
 
         if ($request->has('enable_dine_in_pricing')) {
             $updateData['enable_dine_in_pricing'] = $request->boolean('enable_dine_in_pricing');
+        }
+
+        if ($request->has('delivery_minimum')) {
+            $value = $request->input('delivery_minimum');
+            $updateData['delivery_minimum'] = $value === '' ? 0 : (float) $value;
+        }
+
+        if ($request->has('allow_future_orders')) {
+            $updateData['allow_future_orders'] = $request->boolean('allow_future_orders');
         }
 
         if ($request->has('common_allergens')) {

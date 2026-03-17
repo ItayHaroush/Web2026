@@ -217,6 +217,8 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'tenant'])->group(function (
                 ->name('admin.ai.usage-stats');
             Route::get('/dashboard-insights', [\App\Http\Controllers\AiController::class, 'getDashboardInsights'])
                 ->name('admin.ai.dashboard-insights');
+            Route::get('/smart-insights', [\App\Http\Controllers\AiController::class, 'getSmartInsights'])
+                ->name('admin.ai.smart-insights');
             Route::post('/recommend-price', [\App\Http\Controllers\AiController::class, 'recommendPrice'])
                 ->name('admin.ai.recommend-price');
             Route::post('/recommend-dine-in', [\App\Http\Controllers\AiController::class, 'recommendDineInAdjustments'])

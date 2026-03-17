@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { FaWhatsapp, FaPhoneAlt, FaMask, FaShoppingBag, FaTruck, FaClock, FaShieldAlt, FaExclamationTriangle, FaInfoCircle, FaCreditCard, FaMoneyBillWave, FaGift, FaTimes, FaPlus, FaArrowLeft } from 'react-icons/fa';
+import { FaWhatsapp, FaPhoneAlt, FaMask, FaShoppingBag, FaTruck, FaClock, FaShieldAlt, FaExclamationTriangle, FaInfoCircle, FaCreditCard, FaMoneyBillWave, FaGift, FaTimes, FaPlus, FaArrowLeft, FaChevronLeft, FaTag, FaMapMarkerAlt } from 'react-icons/fa';
 import { SiWaze } from 'react-icons/si';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
@@ -38,8 +38,13 @@ export default function MenuPage({ isPreviewMode = false }) {
     const [showInfoModal, setShowInfoModal] = useState(false);
     const [activePromotions, setActivePromotions] = useState([]);
     const [showSuggestionModal, setShowSuggestionModal] = useState(false);
+    const [frozenSuggestions, setFrozenSuggestions] = useState([]);
     const [suggestionMenuItem, setSuggestionMenuItem] = useState(null);
+    const [suggestionAddonPicker, setSuggestionAddonPicker] = useState(null);
+    const [suggestionSelectedAddons, setSuggestionSelectedAddons] = useState({});
+    const [showPromoPopup, setShowPromoPopup] = useState(false);
     const categoryRefs = useRef({});
+    const tabRefs = useRef({});
 
     const effectiveTenantId = useMemo(() => {
         const fromUrl = params?.tenantId;
@@ -95,6 +100,13 @@ export default function MenuPage({ isPreviewMode = false }) {
         window.addEventListener('scroll', handleScroll, { passive: true });
         return () => window.removeEventListener('scroll', handleScroll);
     }, [menu]);
+
+    // גלילת טאב פעיל למרכז בר הקטגוריות
+    useEffect(() => {
+        if (activeCategory && tabRefs.current[activeCategory]) {
+            tabRefs.current[activeCategory].scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+        }
+    }, [activeCategory]);
 
     // הגדרת header למצב preview + ניקוי defense-in-depth
     useEffect(() => {
@@ -180,7 +192,13 @@ export default function MenuPage({ isPreviewMode = false }) {
     const loadPromotions = async () => {
         try {
             const result = await promotionService.getActivePromotions();
-            setActivePromotions(result?.data || []);
+            const promos = result?.data || [];
+            setActivePromotions(promos);
+            const key = `promoPopupShown_${effectiveTenantId}`;
+            if (promos.length > 0 && !localStorage.getItem(key)) {
+                localStorage.setItem(key, '1');
+                setShowPromoPopup(true);
+            }
         } catch (err) {
             // silently fail — promotions are non-critical
         }
@@ -213,9 +231,11 @@ export default function MenuPage({ isPreviewMode = false }) {
     const isOpenNow = restaurant?.is_open_now ?? restaurant?.is_open;
     // במצב פריוויו - תמיד לאפשר הזמנה (להתעלם מסטטוס פתיחה)
     const canOrder = isPreviewMode ? true : (isOpenNow !== false);
+    // האם ניתן להזמין מראש (מסעדה סגורה אבל מקבלת אשראי)
+    const canPreOrder = !canOrder && restaurant?.accepts_credit_card;
 
     const handleOpenItemModal = (menuItem) => {
-        if (!canOrder) {
+        if (!canOrder && !canPreOrder) {
             addToast('המסעדה סגורה כרגע', 'error');
             return;
         }
@@ -235,13 +255,25 @@ export default function MenuPage({ isPreviewMode = false }) {
 
     const handleCartClick = () => {
         if (currentSuggestions.length > 0) {
+            setFrozenSuggestions(currentSuggestions);
             setShowSuggestionModal(true);
         } else {
             navigate(`/${effectiveTenantId || tenantId || ''}/cart`);
         }
     };
 
+    const hasRequiredAddonGroups = (item) => {
+        return (item.addon_groups || []).some(g => g.is_required || (g.min_select && g.min_select > 0));
+    };
+
     const handleSuggestionQuickAdd = (item) => {
+        if (hasRequiredAddonGroups(item)) {
+            setSuggestionAddonPicker(item);
+            const defaults = {};
+            (item.addon_groups || []).forEach(g => { defaults[g.id] = []; });
+            setSuggestionSelectedAddons(defaults);
+            return;
+        }
         const category = menu.find(cat => (cat.items || []).some(i => i.id === item.id));
         addToCart({
             menuItemId: item.id,
@@ -251,6 +283,48 @@ export default function MenuPage({ isPreviewMode = false }) {
             variant: null,
             addons: [],
             qty: 1,
+        });
+    };
+
+    const handleAddonPickerConfirm = () => {
+        if (!suggestionAddonPicker) return;
+        const item = suggestionAddonPicker;
+        const category = menu.find(cat => (cat.items || []).some(i => i.id === item.id));
+        const addons = [];
+        (item.addon_groups || []).forEach(g => {
+            (suggestionSelectedAddons[g.id] || []).forEach(addonId => {
+                const addon = (g.addons || []).find(a => a.id === addonId);
+                if (addon) addons.push({ id: addon.id, name: addon.name, price_delta: addon.price_delta || 0, quantity: 1 });
+            });
+        });
+        addToCart({
+            menuItemId: item.id,
+            categoryId: category?.id,
+            name: item.name,
+            price: item.price,
+            variant: null,
+            addons,
+            qty: 1,
+        });
+        setSuggestionAddonPicker(null);
+        setSuggestionSelectedAddons({});
+    };
+
+    const toggleSuggestionAddon = (group, addonId) => {
+        setSuggestionSelectedAddons(prev => {
+            const current = prev[group.id] || [];
+            const isSelected = current.includes(addonId);
+            const maxAllowed = group.max_select || (group.selection_type === 'single' ? 1 : null);
+            if (isSelected) {
+                return { ...prev, [group.id]: current.filter(id => id !== addonId) };
+            }
+            if (maxAllowed && maxAllowed === 1) {
+                return { ...prev, [group.id]: [addonId] };
+            }
+            if (maxAllowed && current.length >= maxAllowed) {
+                return prev;
+            }
+            return { ...prev, [group.id]: [...current, addonId] };
         });
     };
 
@@ -288,8 +362,35 @@ export default function MenuPage({ isPreviewMode = false }) {
     return (
         <CustomerLayout>
             {!canOrder && restaurant && (
-                <div className="mb-6 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 text-red-800 dark:text-red-400 px-4 py-3 rounded-xl">
-                    המסעדה סגורה כרגע. אפשר לעיין בתפריט, אך לא ניתן לבצע הזמנה.
+                <div className="mb-6 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-xl overflow-hidden">
+                    <div className="px-4 py-3 flex items-center gap-3">
+                        <span className="w-3 h-3 bg-red-500 rounded-full animate-pulse shrink-0" />
+                        <p className="text-red-800 dark:text-red-400 font-bold flex-1">
+                            המסעדה סגורה כרגע
+                        </p>
+                    </div>
+                    {canPreOrder && (
+                        <div className="px-4 py-3 bg-amber-50 dark:bg-amber-900/20 border-t border-amber-200 dark:border-amber-500/30">
+                            <p className="text-amber-800 dark:text-amber-300 text-sm font-medium mb-2">
+                                אפשר להזמין מראש — ההזמנה תטופל כשנפתח
+                            </p>
+                            <button
+                                onClick={() => {
+                                    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+                                }}
+                                className="bg-brand-primary text-white px-5 py-2 rounded-xl font-bold text-sm hover:bg-brand-secondary transition-colors"
+                            >
+                                הזמן מראש
+                            </button>
+                        </div>
+                    )}
+                    {!canPreOrder && (
+                        <div className="px-4 py-2 bg-gray-50 dark:bg-gray-800/30 border-t border-gray-200 dark:border-gray-700">
+                            <p className="text-gray-600 dark:text-gray-400 text-sm">
+                                אפשר לעיין בתפריט, אך לא ניתן לבצע הזמנה כרגע.
+                            </p>
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -298,11 +399,14 @@ export default function MenuPage({ isPreviewMode = false }) {
                 <div className="mb-6 p-4 bg-gradient-to-r from-brand-primary to-brand-secondary rounded-2xl shadow-lg text-white cursor-pointer hover:shadow-xl transition-shadow"
                     onClick={() => navigate(isPreviewMode ? `/admin/preview-order-status/${activeOrderId}` : `/${effectiveTenantId || tenantId || ''}/order-status/${activeOrderId}`)}>
                     <div className="flex items-center justify-between">
-                        <div>
-                            <p className="font-semibold mb-1">📍 הזמנה בעיצומה</p>
-                            <p className="text-sm opacity-90">הזמנה #{activeOrderId}</p>
+                        <div className="flex items-center gap-2">
+                            <FaMapMarkerAlt className="text-xl shrink-0" />
+                            <div>
+                                <p className="font-semibold mb-0.5">הזמנה בעיצומה</p>
+                                <p className="text-sm opacity-90">הזמנה #{activeOrderId}</p>
+                            </div>
                         </div>
-                        <div className="text-2xl">👉</div>
+                        <FaChevronLeft className="text-xl opacity-80 shrink-0" />
                     </div>
                     <p className="text-xs opacity-75 mt-2">לחץ כדי לראות סטטוס מלא</p>
                 </div>
@@ -447,9 +551,14 @@ export default function MenuPage({ isPreviewMode = false }) {
 
                                     {/* משלוחים/איסוף */}
                                     {restaurant.has_delivery && (
-                                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 dark:bg-orange-900/20 text-brand-primary rounded-full text-xs font-bold">
-                                            <FaTruck className="w-3 h-3" />
-                                            <span>משלוחים</span>
+                                        <div className="flex flex-col items-center px-3 py-1.5 bg-orange-50 dark:bg-orange-900/20 text-brand-primary rounded-xl text-xs font-bold">
+                                            <div className="flex items-center gap-1.5">
+                                                <FaTruck className="w-3 h-3" />
+                                                <span>משלוחים</span>
+                                            </div>
+                                            {parseFloat(restaurant.delivery_minimum) > 0 && (
+                                                <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">מינימום ₪{parseFloat(restaurant.delivery_minimum).toFixed(0)}</span>
+                                            )}
                                         </div>
                                     )}
                                     {restaurant.has_pickup && (
@@ -512,9 +621,14 @@ export default function MenuPage({ isPreviewMode = false }) {
                                     {(restaurant.has_delivery || restaurant.has_pickup) && (
                                         <div className="flex items-center gap-2 text-xs text-gray-600 font-bold">
                                             {restaurant.has_delivery && (
-                                                <div className="flex items-center gap-1.5 px-3 py-2 bg-orange-50 dark:bg-orange-900/20 text-brand-primary rounded-full">
-                                                    <FaTruck className="w-3 h-3" />
-                                                    <span>משלוחים</span>
+                                                <div className="flex flex-col items-center px-3 py-1.5 bg-orange-50 dark:bg-orange-900/20 text-brand-primary rounded-xl">
+                                                    <div className="flex items-center gap-1.5">
+                                                        <FaTruck className="w-3 h-3" />
+                                                        <span>משלוחים</span>
+                                                    </div>
+                                                    {parseFloat(restaurant.delivery_minimum) > 0 && (
+                                                        <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">מינימום ₪{parseFloat(restaurant.delivery_minimum).toFixed(0)}</span>
+                                                    )}
                                                 </div>
                                             )}
                                             {restaurant.has_pickup && (
@@ -567,13 +681,13 @@ export default function MenuPage({ isPreviewMode = false }) {
                                 className="w-full bg-gradient-to-l from-amber-500 to-orange-500 rounded-2xl p-4 flex items-center gap-3 text-white shadow-lg shadow-orange-500/20 hover:shadow-xl hover:from-amber-400 hover:to-orange-400 transition-all active:scale-[0.98]"
                             >
                                 <div className="bg-white/20 backdrop-blur-sm p-2.5 rounded-xl shrink-0">
-                                    <FaGift className="text-lg" />
+                                    <FaTag className="text-lg" />
                                 </div>
                                 <div className="flex-1 text-right min-w-0">
                                     <p className="font-black text-sm sm:text-base truncate">{promo.name}</p>
                                     <p className="text-xs sm:text-sm opacity-90 truncate">{rewardText}</p>
                                 </div>
-                                <span className="text-white/80 text-lg shrink-0">👈</span>
+                                <FaChevronLeft className="text-white/80 text-lg shrink-0" />
                             </button>
                         );
                     })}
@@ -588,6 +702,7 @@ export default function MenuPage({ isPreviewMode = false }) {
                             {menu.map((category) => (
                                 <button
                                     key={category.id}
+                                    ref={el => tabRefs.current[category.id] = el}
                                     onClick={() => scrollToCategory(category.id)}
                                     className={`
                                         flex items-center gap-2 px-3 py-2 rounded-full whitespace-nowrap text-sm font-medium transition-all duration-300
@@ -663,7 +778,7 @@ export default function MenuPage({ isPreviewMode = false }) {
                                             onClick={() => {
                                                 handleOpenItemModal(item);
                                             }}
-                                            className={`bg-white dark:bg-brand-dark-surface rounded-2xl shadow-sm transition-all duration-300 overflow-hidden group border border-gray-100 dark:border-brand-dark-border ${canOrder ? 'cursor-pointer hover:shadow-xl hover:border-brand-primary/30' : 'cursor-not-allowed opacity-80'}`}
+                                            className={`bg-white dark:bg-brand-dark-surface rounded-2xl shadow-sm transition-all duration-300 overflow-hidden group border border-gray-100 dark:border-brand-dark-border ${(canOrder || canPreOrder) ? 'cursor-pointer hover:shadow-xl hover:border-brand-primary/30' : 'cursor-not-allowed opacity-80'}`}
                                         >
                                             {/* תמונה / לוגו placeholder */}
                                             <div className="relative h-44 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-brand-dark-border/50 dark:to-brand-dark-bg overflow-hidden">
@@ -690,8 +805,8 @@ export default function MenuPage({ isPreviewMode = false }) {
                                                             e.stopPropagation();
                                                             handleOpenItemModal(item);
                                                         }}
-                                                        disabled={!canOrder}
-                                                        className={`w-full text-white py-2.5 rounded-xl font-bold shadow-lg transform translate-y-2 opacity-0 transition-all duration-300 flex items-center justify-center gap-2 ${canOrder ? 'bg-brand-primary hover:bg-brand-secondary group-hover:translate-y-0 group-hover:opacity-100' : 'bg-gray-400 cursor-not-allowed'}`}
+                                                        disabled={!canOrder && !canPreOrder}
+                                                        className={`w-full text-white py-2.5 rounded-xl font-bold shadow-lg transform translate-y-2 opacity-0 transition-all duration-300 flex items-center justify-center gap-2 ${(canOrder || canPreOrder) ? 'bg-brand-primary hover:bg-brand-secondary group-hover:translate-y-0 group-hover:opacity-100' : 'bg-gray-400 cursor-not-allowed'}`}
                                                     >
                                                         <span>הוסף</span>
                                                         <span className="bg-white/20 px-2 py-0.5 rounded-lg text-sm">₪{item.price}</span>
@@ -817,6 +932,32 @@ export default function MenuPage({ isPreviewMode = false }) {
                                             <p className="text-xs text-gray-500 dark:text-brand-dark-muted leading-relaxed">
                                                 {restaurant.allergen_notes}
                                             </p>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* משלוח ואיסוף */}
+                            {(restaurant.has_delivery || restaurant.has_pickup) && (
+                                <div className="space-y-3">
+                                    <div className="flex items-center gap-2">
+                                        <FaTruck className="text-gray-400 dark:text-gray-500" size={14} />
+                                        <h4 className="text-sm font-bold text-gray-900 dark:text-brand-dark-text">משלוח ואיסוף</h4>
+                                    </div>
+                                    <div className="pl-6 space-y-1.5">
+                                        {restaurant.has_delivery && (
+                                            <div className="flex items-center justify-between text-sm">
+                                                <span className="text-gray-600 dark:text-brand-dark-muted">מינימום הזמנה למשלוח:</span>
+                                                <span className="font-bold text-brand-primary">
+                                                    {parseFloat(restaurant.delivery_minimum) > 0 ? `₪${parseFloat(restaurant.delivery_minimum).toFixed(0)}` : 'ללא מינימום'}
+                                                </span>
+                                            </div>
+                                        )}
+                                        {restaurant.has_pickup && (
+                                            <div className="flex items-center justify-between text-sm">
+                                                <span className="text-gray-600 dark:text-brand-dark-muted">מינימום הזמנה לאיסוף:</span>
+                                                <span className="font-bold text-gray-500 dark:text-gray-400">אין</span>
+                                            </div>
                                         )}
                                     </div>
                                 </div>
@@ -949,7 +1090,7 @@ export default function MenuPage({ isPreviewMode = false }) {
 
                         {/* Suggestions */}
                         <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                            {currentSuggestions.map((suggestion) => {
+                            {frozenSuggestions.map((suggestion) => {
                                 const Icon = suggestion.icon;
                                 return (
                                     <div key={suggestion.type} className="bg-gradient-to-l from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-2xl p-4 border border-blue-100 dark:border-blue-800/30">
@@ -964,18 +1105,19 @@ export default function MenuPage({ isPreviewMode = false }) {
                                         </div>
 
                                         <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-1">
-                                            {suggestion.items.map((item) => (
+                                            {suggestion.items.map((item) => {
+                                                const itemQty = cartItems.filter(ci => ci.menuItemId === item.id).reduce((s, ci) => s + ci.qty, 0);
+                                                return (
                                                 <div
                                                     key={item.id}
-                                                    className="flex-shrink-0 w-28 bg-white dark:bg-brand-dark-surface rounded-xl border border-gray-100 dark:border-brand-dark-border overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-                                                    onClick={() => {
-                                                        if (item.use_variants || item.use_addons) {
-                                                            setSuggestionMenuItem(item);
-                                                        } else {
-                                                            handleSuggestionQuickAdd(item);
-                                                        }
-                                                    }}
+                                                    className="flex-shrink-0 w-28 bg-white dark:bg-brand-dark-surface rounded-xl border border-gray-100 dark:border-brand-dark-border overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer relative"
+                                                    onClick={() => handleSuggestionQuickAdd(item)}
                                                 >
+                                                    {itemQty > 0 && (
+                                                        <div className="absolute top-1 right-1 bg-brand-primary text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center z-10 shadow-md">
+                                                            {itemQty}
+                                                        </div>
+                                                    )}
                                                     <div className="h-20 bg-gray-50 dark:bg-brand-dark-border/50 overflow-hidden relative">
                                                         {item.image_url ? (
                                                             <img src={resolveAssetUrl(item.image_url)} alt="" className="w-full h-full object-cover" />
@@ -988,11 +1130,7 @@ export default function MenuPage({ isPreviewMode = false }) {
                                                             className="absolute bottom-1 left-1 bg-brand-primary text-white w-6 h-6 rounded-full flex items-center justify-center shadow-md"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
-                                                                if (item.use_variants || item.use_addons) {
-                                                                    setSuggestionMenuItem(item);
-                                                                } else {
-                                                                    handleSuggestionQuickAdd(item);
-                                                                }
+                                                                handleSuggestionQuickAdd(item);
                                                             }}
                                                         >
                                                             <FaPlus size={10} />
@@ -1003,12 +1141,66 @@ export default function MenuPage({ isPreviewMode = false }) {
                                                         <p className="text-xs text-brand-primary font-bold">{item.price} ₪</p>
                                                     </div>
                                                 </div>
-                                            ))}
+                                                );
+                                            })}
                                         </div>
                                     </div>
                                 );
                             })}
                         </div>
+
+                        {/* Inline Addon Picker */}
+                        {suggestionAddonPicker && (
+                            <div className="mx-3 mb-2 bg-white dark:bg-brand-dark-surface border border-brand-primary/30 rounded-xl shadow-md overflow-hidden">
+                                <div className="px-3 py-2 bg-brand-primary/10 flex items-center justify-between">
+                                    <span className="font-black text-gray-900 dark:text-brand-dark-text text-xs">{suggestionAddonPicker.name} · <span className="text-brand-primary">₪{suggestionAddonPicker.price}</span></span>
+                                    <button onClick={() => { setSuggestionAddonPicker(null); setSuggestionSelectedAddons({}); }} className="text-gray-400 p-0.5">
+                                        <FaTimes size={12} />
+                                    </button>
+                                </div>
+                                <div className="px-3 py-2 space-y-2">
+                                    {(suggestionAddonPicker.addon_groups || []).filter(g => g.is_required || (g.min_select && g.min_select > 0)).map(group => {
+                                        const selected = suggestionSelectedAddons[group.id] || [];
+                                        const minReq = group.min_select || 1;
+                                        const isValid = selected.length >= minReq;
+                                        return (
+                                            <div key={group.id}>
+                                                <p className={`text-[11px] font-bold mb-1 ${isValid ? 'text-green-600' : 'text-red-500'}`}>
+                                                    {group.name} <span className="font-normal">(בחר {minReq})</span>
+                                                </p>
+                                                <div className="flex flex-wrap gap-1">
+                                                    {(group.addons || []).map(addon => {
+                                                        const isSel = selected.includes(addon.id);
+                                                        return (
+                                                            <button
+                                                                key={addon.id}
+                                                                onClick={() => toggleSuggestionAddon(group, addon.id)}
+                                                                className={`px-2 py-0.5 rounded-md text-[11px] font-bold border transition-all ${
+                                                                    isSel
+                                                                        ? 'bg-brand-primary text-white border-brand-primary'
+                                                                        : 'bg-gray-50 dark:bg-brand-dark-border text-gray-600 dark:text-brand-dark-text border-gray-200 dark:border-brand-dark-border'
+                                                                }`}
+                                                            >
+                                                                {addon.name}{addon.price_delta > 0 && ` +₪${addon.price_delta}`}
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                                <div className="px-3 pb-2">
+                                    <button
+                                        onClick={handleAddonPickerConfirm}
+                                        disabled={(suggestionAddonPicker.addon_groups || []).filter(g => g.is_required || (g.min_select && g.min_select > 0)).some(g => (suggestionSelectedAddons[g.id] || []).length < (g.min_select || 1))}
+                                        className="w-full py-1.5 rounded-lg font-black text-xs transition-all disabled:bg-gray-200 disabled:text-gray-400 dark:disabled:bg-brand-dark-border dark:disabled:text-brand-dark-muted bg-brand-primary text-white active:scale-95"
+                                    >
+                                        הוסף לסל ·  ₪{(() => { const extras = (suggestionAddonPicker.addon_groups || []).flatMap(g => (suggestionSelectedAddons[g.id] || []).map(id => (g.addons || []).find(a => a.id === id)?.price_delta || 0)); return (suggestionAddonPicker.price + extras.reduce((s, v) => s + v, 0)).toFixed(2); })()}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
 
                         {/* Footer */}
                         <div className="p-4 border-t border-gray-100 dark:border-brand-dark-border shrink-0">
@@ -1024,19 +1216,67 @@ export default function MenuPage({ isPreviewMode = false }) {
                 </div>
             )}
 
-            {/* MenuItemModal for suggestion items */}
-            {suggestionMenuItem && (
-                <MenuItemModal
-                    item={suggestionMenuItem}
-                    isOpen={true}
-                    onClose={() => setSuggestionMenuItem(null)}
-                    onAdd={(itemData) => {
-                        addToCart(itemData);
-                        setSuggestionMenuItem(null);
-                    }}
-                    isOrderingEnabled={true}
-                />
+            {/* פופאפ מבצע בכניסה לתפריט */}
+            {showPromoPopup && activePromotions.length > 0 && (
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setShowPromoPopup(false)}>
+                    <div className="bg-white dark:bg-brand-dark-card rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-fade-in" onClick={e => e.stopPropagation()}>
+                        {/* Header */}
+                        <div className="bg-gradient-to-l from-amber-500 to-orange-500 p-4 flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-white">
+                                <FaTag className="text-xl" />
+                                <h3 className="font-black text-lg">מבצעים פעילים</h3>
+                            </div>
+                            <button onClick={() => setShowPromoPopup(false)} className="text-white/80 hover:text-white p-1">
+                                <FaTimes size={20} />
+                            </button>
+                        </div>
+
+                        {/* Promotions list */}
+                        <div className="max-h-[60vh] overflow-y-auto p-4 space-y-4">
+                            {activePromotions.map((promo) => {
+                                const rewardText = promo.rewards?.map(r => {
+                                    if (r.reward_type === 'free_item' && r.reward_menu_item_name) return `${r.reward_menu_item_name} במתנה`;
+                                    if (r.reward_type === 'free_item' && r.reward_category_name) return `${r.reward_category_name} במתנה`;
+                                    if (r.reward_type === 'discount_percent') return `${r.reward_value}% הנחה`;
+                                    if (r.reward_type === 'discount_fixed') return `₪${r.reward_value} הנחה`;
+                                    if (r.reward_type === 'fixed_price') return `במחיר מיוחד ₪${r.reward_value}`;
+                                    return 'הטבה מיוחדת';
+                                }).join(' + ') || 'הטבה מיוחדת';
+
+                                return (
+                                    <div key={promo.id} className="rounded-2xl border border-orange-100 dark:border-brand-dark-border overflow-hidden">
+                                        {promo.image_url && (
+                                            <img
+                                                src={resolveAssetUrl(promo.image_url)}
+                                                alt={promo.name}
+                                                className="w-full h-44 object-cover"
+                                            />
+                                        )}
+                                        <div className="p-4">
+                                            <h4 className="font-black text-base text-gray-800 dark:text-white">{promo.name}</h4>
+                                            <p className="text-sm text-orange-600 dark:text-orange-400 font-bold mt-1">{rewardText}</p>
+                                            {promo.description && (
+                                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">{promo.description}</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        {/* Footer */}
+                        <div className="p-4 border-t border-gray-100 dark:border-brand-dark-border">
+                            <button
+                                onClick={() => setShowPromoPopup(false)}
+                                className="w-full bg-gradient-to-r from-brand-primary to-orange-600 text-white font-black py-3 rounded-xl shadow-lg hover:shadow-xl active:scale-95 transition-all text-base"
+                            >
+                                לצפייה בתפריט
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
+
         </CustomerLayout>
     );
 }

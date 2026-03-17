@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\AiService;
+use App\Services\InsightsService;
 use App\Models\Restaurant;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -400,6 +401,55 @@ class AiController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
+            ], 200);
+        }
+    }
+
+    /**
+     * Get smart daily insights (data-driven, no AI credits needed)
+     * 
+     * GET /admin/ai/smart-insights
+     */
+    public function getSmartInsights(Request $request)
+    {
+        try {
+            $tenantId = app('tenant_id');
+            $restaurant = Restaurant::where('tenant_id', $tenantId)->firstOrFail();
+
+            // Cache per tenant per day
+            $cacheKey = "insights:smart:{$tenantId}:" . now()->format('Y-m-d');
+
+            if (!$request->boolean('force_regenerate')) {
+                $cached = Cache::get($cacheKey);
+                if ($cached) {
+                    return response()->json([
+                        'success' => true,
+                        'data' => $cached,
+                        'cached' => true,
+                    ]);
+                }
+            }
+
+            $service = new InsightsService($restaurant);
+            $insights = $service->generateDailyInsights();
+
+            // Cache for 6 hours
+            Cache::put($cacheKey, $insights, 21600);
+
+            return response()->json([
+                'success' => true,
+                'data' => $insights,
+                'cached' => false,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Smart Insights Failed', [
+                'tenant_id' => app('tenant_id'),
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'data' => ['insights' => [], 'error' => $e->getMessage()],
             ], 200);
         }
     }

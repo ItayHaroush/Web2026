@@ -80,13 +80,7 @@ export default function SuggestionCards({ suggestions, onQuickAdd, onOpenItem, r
                                 <div
                                     key={item.id}
                                     className="flex-shrink-0 w-28 bg-white dark:bg-brand-dark-surface rounded-xl border border-gray-100 dark:border-brand-dark-border overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-                                    onClick={() => {
-                                        if (item.use_variants || item.use_addons) {
-                                            onOpenItem?.(item);
-                                        } else {
-                                            onQuickAdd?.(item);
-                                        }
-                                    }}
+                                    onClick={() => onQuickAdd?.(item)}
                                 >
                                     <div className="h-20 bg-gray-50 dark:bg-brand-dark-border/50 overflow-hidden relative">
                                         {item.image_url ? (
@@ -100,11 +94,7 @@ export default function SuggestionCards({ suggestions, onQuickAdd, onOpenItem, r
                                             className="absolute bottom-1 left-1 bg-brand-primary text-white w-6 h-6 rounded-full flex items-center justify-center shadow-md"
                                             onClick={(e) => {
                                                 e.stopPropagation();
-                                                if (item.use_variants || item.use_addons) {
-                                                    onOpenItem?.(item);
-                                                } else {
-                                                    onQuickAdd?.(item);
-                                                }
+                                                onQuickAdd?.(item);
                                             }}
                                         >
                                             <FaPlus size={10} />

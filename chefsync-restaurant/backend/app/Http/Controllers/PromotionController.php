@@ -9,6 +9,8 @@ use App\Services\PromotionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 /**
  * PromotionController - ניהול מבצעים
@@ -55,6 +57,7 @@ class PromotionController extends Controller
             $validated = $request->validate([
                 'name' => 'required|string|max:100',
                 'description' => 'nullable|string|max:500',
+                'image' => 'nullable|image|max:2048',
                 'start_at' => 'nullable|date',
                 'end_at' => 'nullable|date|after_or_equal:start_at',
                 'active_hours_start' => 'nullable|date_format:H:i',
@@ -84,12 +87,21 @@ class PromotionController extends Controller
                 return response()->json(['success' => false, 'message' => 'מסעדה לא נמצאה'], 404);
             }
 
-            $promotion = DB::transaction(function () use ($validated, $tenantId, $restaurant) {
+            $imageUrl = null;
+            if ($request->hasFile('image')) {
+                $file = $request->file('image');
+                $filename = Str::uuid() . '.' . $file->getClientOriginalExtension();
+                $file->storeAs('public/promotions', $filename);
+                $imageUrl = Storage::url('public/promotions/' . $filename);
+            }
+
+            $promotion = DB::transaction(function () use ($validated, $tenantId, $restaurant, $imageUrl) {
                 $promotion = Promotion::create([
                     'tenant_id' => $tenantId,
                     'restaurant_id' => $restaurant->id,
                     'name' => $validated['name'],
                     'description' => $validated['description'] ?? null,
+                    'image_url' => $imageUrl,
                     'start_at' => $validated['start_at'] ?? null,
                     'end_at' => $validated['end_at'] ?? null,
                     'active_hours_start' => $validated['active_hours_start'] ?? null,
@@ -174,6 +186,8 @@ class PromotionController extends Controller
             $validated = $request->validate([
                 'name' => 'required|string|max:100',
                 'description' => 'nullable|string|max:500',
+                'image' => 'nullable|image|max:2048',
+                'remove_image' => 'nullable|boolean',
                 'start_at' => 'nullable|date',
                 'end_at' => 'nullable|date|after_or_equal:start_at',
                 'active_hours_start' => 'nullable|date_format:H:i',
@@ -198,10 +212,30 @@ class PromotionController extends Controller
 
             $promotion = Promotion::findOrFail($id);
 
-            DB::transaction(function () use ($promotion, $validated) {
+            $imageUrl = $promotion->image_url;
+            if ($request->hasFile('image')) {
+                // Delete old image
+                if ($promotion->image_url) {
+                    $oldPath = str_replace('/storage/', 'public/', $promotion->image_url);
+                    Storage::delete($oldPath);
+                }
+                $file = $request->file('image');
+                $filename = Str::uuid() . '.' . $file->getClientOriginalExtension();
+                $file->storeAs('public/promotions', $filename);
+                $imageUrl = Storage::url('public/promotions/' . $filename);
+            } elseif ($request->boolean('remove_image')) {
+                if ($promotion->image_url) {
+                    $oldPath = str_replace('/storage/', 'public/', $promotion->image_url);
+                    Storage::delete($oldPath);
+                }
+                $imageUrl = null;
+            }
+
+            DB::transaction(function () use ($promotion, $validated, $imageUrl) {
                 $promotion->update([
                     'name' => $validated['name'],
                     'description' => $validated['description'] ?? null,
+                    'image_url' => $imageUrl,
                     'start_at' => $validated['start_at'] ?? null,
                     'end_at' => $validated['end_at'] ?? null,
                     'active_hours_start' => $validated['active_hours_start'] ?? null,
@@ -318,6 +352,7 @@ class PromotionController extends Controller
                     'id' => $promotion->id,
                     'name' => $promotion->name,
                     'description' => $promotion->description,
+                    'image_url' => $promotion->image_url,
                     'gift_required' => $promotion->gift_required,
                     'stackable' => $promotion->stackable,
                     'auto_apply' => $promotion->auto_apply,

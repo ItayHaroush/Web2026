@@ -39,6 +39,8 @@ class Order extends Model
         'eta_minutes',
         'eta_note',
         'eta_updated_at',
+        'scheduled_for',
+        'is_future_order',
         'status',
         'is_test',              // הזמנת בדיקה
         'test_note',            // הערה להזמנת בדיקה
@@ -63,6 +65,8 @@ class Order extends Model
         'delivery_lng' => 'decimal:7',
         'payment_amount' => 'decimal:2',
         'is_test' => 'boolean',          // הזמנת בדיקה
+        'is_future_order' => 'boolean',
+        'scheduled_for' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'eta_updated_at' => 'datetime',

@@ -70,6 +70,7 @@ class OrderController extends Controller
                 'items.*.quantity' => 'nullable|integer|min:1',
                 'is_test' => 'nullable|boolean',        // הזמנת בדיקה (מצב preview)
                 'test_note' => 'nullable|string|max:255', // הערה להזמנת בדיקה
+                'scheduled_for' => 'nullable|date|after:now', // הזמנה עתידית
                 'applied_promotions' => 'nullable|array',
                 'applied_promotions.*.promotion_id' => 'required|integer',
                 'applied_promotions.*.gift_items' => 'nullable|array',
@@ -135,14 +136,41 @@ class OrderController extends Controller
             }
 
             if (!($restaurant->is_open_now ?? false)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'המסעדה סגורה כרגע ולא ניתן לבצע הזמנה',
-                    'data' => [
-                        'is_open_now' => false,
-                        'is_override_status' => (bool) ($restaurant->is_override_status ?? false),
-                    ],
-                ], 403);
+                // הזמנה עתידית מותרת גם אם המסעדה סגורה (רק באשראי)
+                $isFutureOrder = !empty($validated['scheduled_for']);
+                $isCreditPayment = ($validated['payment_method'] ?? 'cash') === 'credit_card';
+
+                if (!$isFutureOrder || !$isCreditPayment || !$restaurant->allow_future_orders) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'המסעדה סגורה כרגע ולא ניתן לבצע הזמנה',
+                        'data' => [
+                            'is_open_now' => false,
+                            'is_override_status' => (bool) ($restaurant->is_override_status ?? false),
+                            'allow_future_orders' => (bool) $restaurant->allow_future_orders,
+                        ],
+                    ], 403);
+                }
+            }
+
+            // ולידציה: מינימום הזמנה למשלוח
+            if ($validated['delivery_method'] === 'delivery' && $restaurant->delivery_minimum > 0) {
+                // חשב סכום מוצרים בלבד (בלי עמלת משלוח)
+                $itemsTotal = 0;
+                foreach ($validated['items'] as $item) {
+                    $mi = MenuItem::find($item['menu_item_id']);
+                    if ($mi) {
+                        $qty = $item['qty'] ?? $item['quantity'] ?? 1;
+                        $itemsTotal += $mi->price * $qty;
+                    }
+                }
+                if ($itemsTotal < $restaurant->delivery_minimum) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => "מינימום הזמנה למשלוח: ₪{$restaurant->delivery_minimum}",
+                        'data' => ['delivery_minimum' => $restaurant->delivery_minimum, 'current_total' => $itemsTotal],
+                    ], 422);
+                }
             }
 
             // ולידציה: אם בחרו אשראי, לוודא שהמסעדה תומכת (מסוף מאומת + שיטה מופעלת)
@@ -434,6 +462,8 @@ class OrderController extends Controller
                 'status' => Order::STATUS_PENDING,
                 'is_test' => $validated['is_test'] ?? false,           // הזמנת בדיקה
                 'test_note' => $validated['test_note'] ?? null,         // הערה להזמנת בדיקה
+                'scheduled_for' => $validated['scheduled_for'] ?? null,
+                'is_future_order' => !empty($validated['scheduled_for']),
                 'promotion_discount' => $promotionDiscount,
                 'total_amount' => $totalAmount + $deliveryFee - $promotionDiscount,
             ]);

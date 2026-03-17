@@ -103,7 +103,7 @@ class RestaurantSeeder extends Seeder
             'name' => 'פיצה מרגריטה',
             'description' => 'רוטב עגבניות סאן מרזאנו, מוצרלה טרייה ובזיליקום',
             'price' => 45.00,
-            'image_url' => 'https://images.unsplash.com/photo-1548365328-5b76c2f9f911?auto=format&fit=crop&w=800&q=80',
+            'image_url' => 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?auto=format&fit=crop&w=800&q=80',
             'sort_order' => 1,
         ]);
 
@@ -130,7 +130,7 @@ class RestaurantSeeder extends Seeder
             'name' => 'קולה קרה',
             'description' => 'בקבוק 330 מ"ל',
             'price' => 12.00,
-            'image_url' => 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=800&q=80',
+            'image_url' => 'https://images.unsplash.com/photo-1629203851122-3726ecdf080e?auto=format&fit=crop&w=800&q=80',
             'sort_order' => 1,
         ]);
 
@@ -139,7 +139,7 @@ class RestaurantSeeder extends Seeder
             'name' => 'בירה איטלקית',
             'description' => 'לאגר קראפט צוננת',
             'price' => 24.00,
-            'image_url' => 'https://images.unsplash.com/photo-1514361892635-6e122620e4d1?auto=format&fit=crop&w=800&q=80',
+            'image_url' => 'https://images.unsplash.com/photo-1535958636474-b021ee887b13?auto=format&fit=crop&w=800&q=80',
             'sort_order' => 2,
         ]);
 
@@ -157,7 +157,7 @@ class RestaurantSeeder extends Seeder
             'name' => 'ברוסקטה עגבניות',
             'description' => 'עגבניות שרי, בזיליקום, בלסמי ומוצרלה טרייה',
             'price' => 28.00,
-            'image_url' => 'https://images.unsplash.com/photo-1604908554164-3c5b265b5c01?auto=format&fit=crop&w=800&q=80',
+            'image_url' => 'https://images.unsplash.com/photo-1572695157366-5e585ab2b69f?auto=format&fit=crop&w=800&q=80',
             'sort_order' => 2,
         ]);
 
@@ -268,7 +268,7 @@ class RestaurantSeeder extends Seeder
             'name' => 'בירה בוטיק',
             'description' => 'IPA מקומית מרעננת',
             'price' => 26.00,
-            'image_url' => 'https://images.unsplash.com/photo-1514361892635-6e122620e4d1?auto=format&fit=crop&w=800&q=80',
+            'image_url' => 'https://images.unsplash.com/photo-1535958636474-b021ee887b13?auto=format&fit=crop&w=800&q=80',
             'sort_order' => 2,
         ]);
 
@@ -325,7 +325,7 @@ class RestaurantSeeder extends Seeder
             'name' => 'רול סלמון אבוקדו',
             'description' => '8 יחידות עם סלמון טרי ואבוקדו',
             'price' => 54.00,
-            'image_url' => 'https://images.unsplash.com/photo-1544378730-8b5104b1da6e?auto=format&fit=crop&w=800&q=80',
+            'image_url' => 'https://images.unsplash.com/photo-1579871494447-9811cf80d66c?auto=format&fit=crop&w=800&q=80',
             'sort_order' => 1,
         ]);
 
@@ -334,7 +334,7 @@ class RestaurantSeeder extends Seeder
             'name' => 'רול טמפורה שרימפס',
             'description' => '8 יחידות עם שרימפס טמפורה ומיונז יפני',
             'price' => 62.00,
-            'image_url' => 'https://images.unsplash.com/photo-1604908177225-2f53b59a29e1?auto=format&fit=crop&w=800&q=80',
+            'image_url' => 'https://images.unsplash.com/photo-1617196034796-73dfa7b1fd56?auto=format&fit=crop&w=800&q=80',
             'sort_order' => 2,
         ]);
 
@@ -352,7 +352,7 @@ class RestaurantSeeder extends Seeder
             'name' => 'אדממה ים',
             'description' => 'פולי סויה מאודים עם מלח ים',
             'price' => 22.00,
-            'image_url' => 'https://images.unsplash.com/photo-1591754053654-8b37e7cfd014?auto=format&fit=crop&w=800&q=80',
+            'image_url' => 'https://images.unsplash.com/photo-1536304929831-ee1ca9d44906?auto=format&fit=crop&w=800&q=80',
             'sort_order' => 1,
         ]);
 
@@ -481,7 +481,7 @@ class RestaurantSeeder extends Seeder
             'name' => 'קולה זירו',
             'description' => 'בקבוק 330 מ"ל קר',
             'price' => 12.00,
-            'image_url' => 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=800&q=80',
+            'image_url' => 'https://images.unsplash.com/photo-1629203851122-3726ecdf080e?auto=format&fit=crop&w=800&q=80',
             'sort_order' => 2,
         ]);
 

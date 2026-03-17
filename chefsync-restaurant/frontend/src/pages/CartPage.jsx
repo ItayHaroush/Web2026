@@ -6,7 +6,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { CustomerLayout } from '../layouts/CustomerLayout';
-import { FaMask, FaBoxOpen, FaStickyNote, FaTimes, FaShoppingCart, FaUser, FaPhone, FaMapMarkerAlt, FaMoneyBillWave, FaCreditCard, FaTruck, FaStore, FaHome, FaEdit, FaComment, FaExclamationTriangle, FaGift, FaSearch } from 'react-icons/fa';
+import { FaMask, FaBoxOpen, FaStickyNote, FaTimes, FaShoppingCart, FaUser, FaPhone, FaMapMarkerAlt, FaMoneyBillWave, FaCreditCard, FaTruck, FaStore, FaHome, FaEdit, FaComment, FaExclamationTriangle, FaGift, FaSearch, FaClock, FaPlus, FaMinus } from 'react-icons/fa';
 import orderService from '../services/orderService';
 import menuService from '../services/menuService';
 import { UI_TEXT } from '../constants/ui';
@@ -43,12 +43,17 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
     const [checkingZone, setCheckingZone] = useState(false);
     const [restaurant, setRestaurant] = useState(null);
     const [showNotesModal, setShowNotesModal] = useState(false);
+    const [showMinimumModal, setShowMinimumModal] = useState(false);
     const [tempNotes, setTempNotes] = useState('');
     const [giftPromotion, setGiftPromotion] = useState(null);
     const { getAppliedPromotions, eligiblePromotions, selectedGifts } = usePromotions();
     const [menuCategories, setMenuCategories] = useState([]);
     const [promoCategoryModal, setPromoCategoryModal] = useState(null);
     const [promoMenuItem, setPromoMenuItem] = useState(null);
+    const [scheduledFor, setScheduledFor] = useState('');
+
+    // האם המסעדה מאפשרת הזמנה עתידית (כשהיא סגורה)
+    const canFutureOrder = !restaurant?.is_open_now && restaurant?.allow_future_orders && restaurant?.accepts_credit_card;
 
     // Fetch menu for category quick-add modal
     useEffect(() => {
@@ -146,6 +151,18 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
             return;
         }
 
+        // בדיקת מינימום הזמנה למשלוח
+        if (isBelowMinimum) {
+            setShowMinimumModal(true);
+            return;
+        }
+
+        // בדיקת הזמנה עתידית — חובה לבחור זמן
+        if (canFutureOrder && !scheduledFor) {
+            setError('המסעדה סגורה. יש לבחור תאריך ושעה להזמנה עתידית.');
+            return;
+        }
+
         if (!isValidIsraeliMobile(customerInfo.phone)) {
             setError('מספר טלפון לא תקין (נייד ישראלי בלבד)');
             return;
@@ -220,6 +237,8 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                 test_note: isPreviewMode ? 'הזמנה מתצוגה מקדימה - Admin' : undefined,
                 // מבצעים שהלקוח עומד בתנאים שלהם
                 applied_promotions: getAppliedPromotions(),
+                // הזמנה עתידית
+                scheduled_for: scheduledFor || undefined,
             };
             console.log('📦 Sending order data:', orderData);
             console.log('📞 Customer info for SMS:', customerInfo);
@@ -292,6 +311,8 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
 
     const total = getTotal();
     const totalWithDelivery = total + deliveryFee;
+    const deliveryMinimum = parseFloat(restaurant?.delivery_minimum) || 0;
+    const isBelowMinimum = customerInfo.delivery_method === 'delivery' && deliveryMinimum > 0 && total < deliveryMinimum;
 
     // מבצעים שעומדים בתנאים
     const metPromotions = eligiblePromotions.filter(p => p.progress?.met);
@@ -567,6 +588,18 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                         <span className="text-brand-primary">₪{totalWithDelivery.toFixed(2)}</span>
                     </div>
 
+                    {isBelowMinimum && (
+                        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-3 space-y-1">
+                            <div className="flex items-center gap-2 text-red-700 dark:text-red-400 text-sm font-medium">
+                                <FaExclamationTriangle className="shrink-0" />
+                                <span>מינימום הזמנה למשלוח: ₪{deliveryMinimum.toFixed(2)}</span>
+                            </div>
+                            <p className="text-red-600 dark:text-red-400 font-black text-base text-center">
+                                חסרים ₪{(deliveryMinimum - total).toFixed(2)} להזמנה
+                            </p>
+                        </div>
+                    )}
+
                     {/* כפתור הערות קטן וחמוד */}
                     <div className="flex justify-center mt-4">
                         <button
@@ -825,6 +858,36 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                         </div>
                     </div>
 
+                    {/* הזמנה עתידית - כשהמסעדה סגורה */}
+                    {canFutureOrder && (
+                        <div className="border-2 border-amber-300 dark:border-amber-700 rounded-xl p-4 bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20">
+                            <div className="flex items-center gap-2 mb-2">
+                                <FaClock className="text-amber-600" />
+                                <p className="text-xs font-bold text-amber-800 dark:text-amber-400 uppercase tracking-wide">המסעדה סגורה — הזמנה עתידית</p>
+                            </div>
+                            <p className="text-sm text-amber-700 dark:text-amber-300 mb-3">
+                                ניתן להזמין מראש — ההזמנה תתקבל לזמן שתבחר. תשלום באשראי בלבד.
+                            </p>
+                            <label className="block text-xs font-bold text-gray-600 dark:text-brand-dark-muted mb-1">
+                                בחר תאריך ושעה
+                            </label>
+                            <input
+                                type="datetime-local"
+                                value={scheduledFor}
+                                onChange={(e) => {
+                                    setScheduledFor(e.target.value);
+                                    setCustomerInfo(prev => ({ ...prev, payment_method: 'credit_card' }));
+                                }}
+                                min={new Date(Date.now() + 30 * 60000).toISOString().slice(0, 16)}
+                                className="w-full px-4 py-3 border-2 border-amber-200 dark:border-amber-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all dark:bg-brand-dark-bg dark:text-brand-dark-text"
+                                required
+                            />
+                            <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                                💳 הזמנה עתידית מחייבת תשלום באשראי
+                            </p>
+                        </div>
+                    )}
+
                     {/* כפתורים */}
                     <div className="flex flex-col sm:flex-row gap-3 mt-6">
                         <button
@@ -836,9 +899,9 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                         </button>
                         <a
                             href={tenantId ? `/${tenantId}/menu` : '/'}
-                            className="flex-1 bg-gray-200 dark:bg-brand-dark-border text-gray-800 dark:text-brand-dark-text font-bold py-4 rounded-xl text-center hover:bg-gray-300 dark:hover:bg-gray-600 transition-all"
+                            className={`flex-1 font-bold py-4 rounded-xl text-center transition-all ${isBelowMinimum ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 shadow-lg' : 'bg-gray-200 dark:bg-brand-dark-border text-gray-800 dark:text-brand-dark-text hover:bg-gray-300 dark:hover:bg-gray-600'}`}
                         >
-                            {UI_TEXT.BTN_CANCEL}
+                            {isBelowMinimum ? 'הוסף מוצר' : UI_TEXT.BTN_CANCEL}
                         </a>
                     </div>
 
@@ -877,6 +940,51 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                     giftItems={selectedGiftItems}
                     metPromotions={metPromotions}
                 />
+
+                {/* מודל מינימום הזמנה */}
+                {showMinimumModal && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                        <div className="bg-white dark:bg-brand-dark-surface rounded-2xl shadow-2xl max-w-md w-full animate-fade-in">
+                            <div className="bg-gradient-to-r from-red-500 to-orange-500 p-6 rounded-t-2xl relative">
+                                <button
+                                    onClick={() => setShowMinimumModal(false)}
+                                    className="absolute top-4 left-4 text-white hover:bg-white hover:bg-opacity-20 rounded-full p-2 transition-all"
+                                >
+                                    <FaTimes className="text-xl" />
+                                </button>
+                                <div className="flex items-center gap-3 justify-center">
+                                    <FaExclamationTriangle className="text-white text-3xl" />
+                                    <h3 className="text-2xl font-bold text-white">מינימום הזמנה</h3>
+                                </div>
+                            </div>
+                            <div className="p-6 space-y-4 text-center">
+                                <p className="text-gray-700 dark:text-gray-300 text-lg">
+                                    מינימום הזמנה למשלוח: <span className="font-black text-brand-primary">₪{deliveryMinimum.toFixed(2)}</span>
+                                </p>
+                                <p className="text-red-600 dark:text-red-400 font-black text-xl">
+                                    חסרים ₪{(deliveryMinimum - total).toFixed(2)} להזמנה
+                                </p>
+                                <p className="text-gray-500 dark:text-brand-dark-muted text-sm">
+                                    הוסף עוד מוצרים לסל כדי להגיע למינימום
+                                </p>
+                                <div className="flex gap-3 pt-2">
+                                    <button
+                                        onClick={() => setShowMinimumModal(false)}
+                                        className="flex-1 py-3 px-4 bg-gray-100 dark:bg-brand-dark-border text-gray-700 dark:text-gray-300 font-semibold rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                                    >
+                                        חזור לסל
+                                    </button>
+                                    <button
+                                        onClick={() => navigate(`/${tenantId}/menu`)}
+                                        className="flex-1 py-3 px-4 bg-gradient-to-r from-brand-primary to-orange-600 text-white font-bold rounded-lg hover:from-orange-600 hover:to-orange-700 transition-all shadow-md hover:shadow-lg"
+                                    >
+                                        חזור לתפריט
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* מודל הערות למנה */}
                 {showNotesModal && (
@@ -974,30 +1082,84 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                                     }
                                     return (
                                         <div className="grid grid-cols-2 gap-3">
-                                            {categoryItems.map(item => (
-                                                <button
-                                                    key={item.id}
-                                                    onClick={() => setPromoMenuItem(item)}
-                                                    className="bg-gray-50 dark:bg-brand-dark-border/50 rounded-xl border border-gray-100 dark:border-brand-dark-border overflow-hidden shadow-sm hover:shadow-lg hover:border-brand-primary/30 active:scale-[0.98] transition-all text-right"
-                                                >
-                                                    {item.image_url ? (
-                                                        <img src={resolveAssetUrl(item.image_url)} alt={item.name} className="w-full h-28 object-cover" />
-                                                    ) : (
-                                                        <div className="w-full h-28 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-brand-dark-border dark:to-brand-dark-bg flex items-center justify-center">
-                                                            <span className="text-3xl opacity-30">🍽</span>
+                                            {categoryItems.map(item => {
+                                                const itemCount = cartItems.filter(ci => ci.menuItemId === item.id).reduce((sum, ci) => sum + ci.qty, 0);
+                                                const hasVariantsOrAddons = item.variants?.length > 0 || item.addon_groups?.length > 0;
+                                                return (
+                                                    <div
+                                                        key={item.id}
+                                                        className="bg-gray-50 dark:bg-brand-dark-border/50 rounded-xl border border-gray-100 dark:border-brand-dark-border overflow-hidden shadow-sm hover:shadow-lg hover:border-brand-primary/30 transition-all text-right relative"
+                                                    >
+                                                        {itemCount > 0 && (
+                                                            <div className="absolute top-2 right-2 bg-brand-primary text-white text-xs font-black w-6 h-6 rounded-full flex items-center justify-center z-10 shadow-md">
+                                                                {itemCount}
+                                                            </div>
+                                                        )}
+                                                        <div className="cursor-pointer" onClick={() => hasVariantsOrAddons ? setPromoMenuItem(item) : null}>
+                                                            {item.image_url ? (
+                                                                <img src={resolveAssetUrl(item.image_url)} alt={item.name} className="w-full h-28 object-cover" />
+                                                            ) : (
+                                                                <div className="w-full h-28 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-brand-dark-border dark:to-brand-dark-bg flex items-center justify-center">
+                                                                    <span className="text-3xl opacity-30">🍽</span>
+                                                                </div>
+                                                            )}
                                                         </div>
-                                                    )}
-                                                    <div className="p-3">
-                                                        <h3 className="font-black text-gray-900 dark:text-brand-dark-text text-sm truncate">{item.name}</h3>
-                                                        <div className="mt-1 font-black text-brand-primary text-base">
-                                                            {item.price?.toFixed(2)} ₪
+                                                        <div className="p-3">
+                                                            <h3 className="font-black text-gray-900 dark:text-brand-dark-text text-sm truncate">{item.name}</h3>
+                                                            <div className="flex items-center justify-between mt-2">
+                                                                <span className="font-black text-brand-primary text-base">₪{item.price?.toFixed(2)}</span>
+                                                                {hasVariantsOrAddons ? (
+                                                                    <button
+                                                                        onClick={() => setPromoMenuItem(item)}
+                                                                        className="bg-brand-primary text-white w-8 h-8 rounded-full flex items-center justify-center shadow-md hover:bg-orange-600 active:scale-90 transition-all"
+                                                                    >
+                                                                        <FaPlus size={12} />
+                                                                    </button>
+                                                                ) : (
+                                                                    <div className="flex items-center gap-1">
+                                                                        {itemCount > 0 && (
+                                                                            <button
+                                                                                onClick={() => {
+                                                                                    const cartItem = cartItems.find(ci => ci.menuItemId === item.id);
+                                                                                    if (cartItem) handleQuantityChange(cartItem.cartKey, cartItem.qty - 1);
+                                                                                }}
+                                                                                className="w-7 h-7 flex items-center justify-center rounded-full bg-red-50 text-red-600 hover:bg-red-100 transition-all"
+                                                                            >
+                                                                                <FaMinus size={10} />
+                                                                            </button>
+                                                                        )}
+                                                                        <button
+                                                                            onClick={() => addToCart({
+                                                                                menuItemId: item.id,
+                                                                                categoryId: item._catId,
+                                                                                name: item.name,
+                                                                                price: item.price,
+                                                                                variant: null,
+                                                                                addons: [],
+                                                                                qty: 1,
+                                                                            })}
+                                                                            className="bg-brand-primary text-white w-8 h-8 rounded-full flex items-center justify-center shadow-md hover:bg-orange-600 active:scale-90 transition-all"
+                                                                        >
+                                                                            <FaPlus size={12} />
+                                                                        </button>
+                                                                    </div>
+                                                                )}
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                </button>
-                                            ))}
+                                                );
+                                            })}
                                         </div>
                                     );
                                 })()}
+                            </div>
+                            <div className="p-4 border-t border-gray-100 dark:border-brand-dark-border shrink-0">
+                                <button
+                                    onClick={() => setPromoCategoryModal(null)}
+                                    className="w-full bg-gradient-to-r from-brand-primary to-orange-600 text-white font-black py-3.5 rounded-xl shadow-lg hover:shadow-xl active:scale-95 transition-all text-lg"
+                                >
+                                    סיימתי
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -1012,7 +1174,6 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                         onAdd={(itemData) => {
                             addToCart(itemData);
                             setPromoMenuItem(null);
-                            setPromoCategoryModal(null);
                         }}
                         isOrderingEnabled={true}
                     />

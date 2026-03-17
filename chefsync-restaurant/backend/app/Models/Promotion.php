@@ -16,6 +16,7 @@ class Promotion extends Model
         'restaurant_id',
         'name',
         'description',
+        'image_url',
         'start_at',
         'end_at',
         'active_hours_start',

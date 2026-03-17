@@ -273,6 +273,7 @@ export default function AdminRestaurant() {
 
             // שלח את דגל תמחור ישיבה
             formData.append('enable_dine_in_pricing', restaurant.enable_dine_in_pricing ? '1' : '0');
+            formData.append('allow_future_orders', restaurant.allow_future_orders ? '1' : '0');
 
             // ✅ שלח את כל השדות בלי לדלג על ריקים
             const fieldsToSend = [
@@ -292,6 +293,7 @@ export default function AdminRestaurant() {
                 'kosher_notes',
                 'common_allergens',
                 'allergen_notes',
+                'delivery_minimum',
             ];
             fieldsToSend.forEach((field) => {
                 const value = restaurant[field];
@@ -682,6 +684,43 @@ export default function AdminRestaurant() {
                                             />
                                         </div>
                                     </div>
+                                </div>
+                            </div>
+
+                            {/* הגדרות הזמנה נוספות */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-6">
+                                <div className="space-y-2 p-5 bg-gray-50 rounded-3xl border border-gray-100">
+                                    <h4 className="font-black text-gray-800 flex items-center gap-2">
+                                        💰 מינימום הזמנה למשלוח
+                                    </h4>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xl font-black text-gray-500">₪</span>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            step="1"
+                                            value={restaurant.delivery_minimum ?? 0}
+                                            onChange={(e) => handleChange('delivery_minimum', e.target.value)}
+                                            className="w-full px-4 py-3 bg-white border-2 border-transparent focus:border-brand-primary rounded-xl focus:outline-none text-gray-900 font-black text-center text-xl"
+                                        />
+                                    </div>
+                                    <p className="text-xs text-gray-500">0 = ללא מינימום</p>
+                                </div>
+
+                                <div className="space-y-2 p-5 bg-gray-50 rounded-3xl border border-gray-100">
+                                    <h4 className="font-black text-gray-800 flex items-center gap-2">
+                                        🕐 הזמנות עתידיות
+                                    </h4>
+                                    <label className="flex items-center gap-3 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={!!restaurant.allow_future_orders}
+                                            onChange={(e) => handleChange('allow_future_orders', e.target.checked)}
+                                            className="w-5 h-5 rounded accent-brand-primary"
+                                        />
+                                        <span className="font-bold text-gray-700">אפשר הזמנה מראש כשהמסעדה סגורה</span>
+                                    </label>
+                                    <p className="text-xs text-gray-500">לקוחות יוכלו להזמין מראש ולשלם באשראי גם כשהמסעדה סגורה</p>
                                 </div>
                             </div>
                         </section>

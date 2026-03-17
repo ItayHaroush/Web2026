@@ -20,9 +20,38 @@ class PromotionService {
         }
     }
 
+    _buildFormData(data) {
+        const fd = new FormData();
+        const { image, rules, rewards, active_days, ...scalars } = data;
+        Object.entries(scalars).forEach(([k, v]) => {
+            if (v === null || v === undefined || v === '') return;
+            fd.append(k, typeof v === 'boolean' ? (v ? '1' : '0') : v);
+        });
+        if (image instanceof File) fd.append('image', image);
+        if (data.remove_image) fd.append('remove_image', '1');
+        if (active_days && Array.isArray(active_days)) {
+            active_days.forEach((d, i) => fd.append(`active_days[${i}]`, d));
+        }
+        (rules || []).forEach((r, i) => {
+            fd.append(`rules[${i}][required_category_id]`, r.required_category_id);
+            fd.append(`rules[${i}][min_quantity]`, r.min_quantity);
+        });
+        (rewards || []).forEach((r, i) => {
+            fd.append(`rewards[${i}][reward_type]`, r.reward_type);
+            if (r.reward_category_id) fd.append(`rewards[${i}][reward_category_id]`, r.reward_category_id);
+            if (r.reward_menu_item_id) fd.append(`rewards[${i}][reward_menu_item_id]`, r.reward_menu_item_id);
+            if (r.reward_value !== '' && r.reward_value !== null && r.reward_value !== undefined) fd.append(`rewards[${i}][reward_value]`, r.reward_value);
+            if (r.max_selectable) fd.append(`rewards[${i}][max_selectable]`, r.max_selectable);
+        });
+        return fd;
+    }
+
     async createPromotion(data) {
         try {
-            const response = await apiClient.post('/admin/promotions', data);
+            const fd = this._buildFormData(data);
+            const response = await apiClient.post('/admin/promotions', fd, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            });
             return response.data;
         } catch (error) {
             console.error('שגיאה ביצירת מבצע:', error);
@@ -42,7 +71,11 @@ class PromotionService {
 
     async updatePromotion(id, data) {
         try {
-            const response = await apiClient.put(`/admin/promotions/${id}`, data);
+            const fd = this._buildFormData(data);
+            fd.append('_method', 'PUT');
+            const response = await apiClient.post(`/admin/promotions/${id}`, fd, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            });
             return response.data;
         } catch (error) {
             console.error('שגיאה בעדכון מבצע:', error);

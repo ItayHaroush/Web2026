@@ -4,6 +4,7 @@ import { FaTicketAlt, FaPlus, FaEdit, FaTrash, FaToggleOn, FaToggleOff, FaTimes 
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import promotionService from '../../services/promotionService';
 import apiClient from '../../services/apiClient';
+import { resolveAssetUrl } from '../../utils/assets';
 
 const DAY_NAMES = ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳'];
 
@@ -17,6 +18,9 @@ const REWARD_TYPE_LABELS = {
 const emptyForm = () => ({
     name: '',
     description: '',
+    image: null,
+    imagePreview: null,
+    removeImage: false,
     start_at: '',
     end_at: '',
     active_hours_start: '',
@@ -110,6 +114,9 @@ export default function AdminCoupons() {
         setForm({
             name: promo.name || '',
             description: promo.description || '',
+            image: null,
+            imagePreview: null,
+            removeImage: false,
             start_at: promo.start_at ? promo.start_at.slice(0, 16) : '',
             end_at: promo.end_at ? promo.end_at.slice(0, 16) : '',
             active_hours_start: promo.active_hours_start || '',
@@ -141,14 +148,16 @@ export default function AdminCoupons() {
     const handleSave = async () => {
         try {
             setSaving(true);
+            const { imagePreview, removeImage, ...rest } = form;
             const payload = {
-                ...form,
+                ...rest,
                 start_at: form.start_at || null,
                 end_at: form.end_at || null,
                 active_hours_start: form.active_hours_start || null,
                 active_hours_end: form.active_hours_end || null,
                 active_days: form.active_days,
-                rewards: form.rewards.map(({ _mode, ...rest }) => rest),
+                rewards: form.rewards.map(({ _mode, ...r }) => r),
+                remove_image: removeImage || false,
             };
             if (editingPromo) {
                 await promotionService.updatePromotion(editingPromo.id, payload);
@@ -370,6 +379,38 @@ export default function AdminCoupons() {
                                         className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none"
                                         rows={2}
                                         placeholder="תיאור קצר שיופיע ללקוח"
+                                    />
+                                </div>
+
+                                {/* תמונת מבצע */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">תמונת מבצע</label>
+                                    {(form.imagePreview || (editingPromo?.image_url && !form.removeImage)) && (
+                                        <div className="relative inline-block mb-2">
+                                            <img
+                                                src={form.imagePreview || resolveAssetUrl(editingPromo?.image_url)}
+                                                alt="תמונת מבצע"
+                                                className="w-32 h-20 object-cover rounded-xl border border-gray-200"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setForm(f => ({ ...f, image: null, imagePreview: null, removeImage: true }))}
+                                                className="absolute -top-2 -right-2 bg-red-500 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs"
+                                            >
+                                                <FaTimes size={8} />
+                                            </button>
+                                        </div>
+                                    )}
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={e => {
+                                            const file = e.target.files?.[0];
+                                            if (file) {
+                                                setForm(f => ({ ...f, image: file, imagePreview: URL.createObjectURL(file), removeImage: false }));
+                                            }
+                                        }}
+                                        className="w-full text-sm text-gray-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-bold file:bg-brand-primary/10 file:text-brand-primary hover:file:bg-brand-primary/20"
                                     />
                                 </div>
 

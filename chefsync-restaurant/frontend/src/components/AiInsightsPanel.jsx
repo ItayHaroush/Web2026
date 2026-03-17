@@ -1,19 +1,51 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaChartLine, FaStar, FaClock, FaLightbulb, FaExclamationTriangle, FaSync, FaChevronDown, FaChevronUp } from 'react-icons/fa';
+import { FaChartLine, FaStar, FaClock, FaLightbulb, FaExclamationTriangle, FaSync, FaChevronDown, FaChevronUp, FaCheckCircle, FaInfoCircle, FaBolt } from 'react-icons/fa';
 import apiClient from '../services/apiClient';
 import { useRestaurantStatus } from '../context/RestaurantStatusContext';
+
+const PRIORITY_COLORS = {
+    critical: 'border-red-300 bg-red-50',
+    high: 'border-amber-300 bg-amber-50',
+    medium: 'border-blue-200 bg-blue-50',
+    low: 'border-green-200 bg-green-50',
+};
+
+const TYPE_ICONS = {
+    success: <FaCheckCircle className="text-green-500" />,
+    warning: <FaExclamationTriangle className="text-amber-500" />,
+    alert: <FaExclamationTriangle className="text-red-500" />,
+    info: <FaInfoCircle className="text-blue-500" />,
+};
 
 const AiInsightsPanel = () => {
     const navigate = useNavigate();
     const { subscriptionInfo } = useRestaurantStatus();
     const isBasic = subscriptionInfo?.tier === 'basic';
     const [insights, setInsights] = useState(null);
+    const [smartInsights, setSmartInsights] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [smartLoading, setSmartLoading] = useState(true);
     const [error, setError] = useState(null);
     const [cached, setCached] = useState(false);
     const [isOpen, setIsOpen] = useState(false);
     const hasFetchedRef = useRef(false);
+
+    const fetchSmartInsights = async (force = false) => {
+        try {
+            setSmartLoading(true);
+            const { data } = await apiClient.get('/admin/ai/smart-insights', {
+                params: { ...(force ? { force_regenerate: '1' } : {}), _t: Date.now() }
+            });
+            if (data.success && data.data?.insights) {
+                setSmartInsights(data.data);
+            }
+        } catch (err) {
+            console.error('Failed to fetch smart insights:', err);
+        } finally {
+            setSmartLoading(false);
+        }
+    };
 
     const fetchInsights = async (force = false) => {
         try {
@@ -23,12 +55,11 @@ const AiInsightsPanel = () => {
             const { data } = await apiClient.get('/admin/ai/dashboard-insights', {
                 params: {
                     ...(force ? { force_regenerate: '1' } : {}),
-                    _t: Date.now() // Prevent browser caching
+                    _t: Date.now()
                 }
             });
 
             if (data.success) {
-                // Handle graceful degradation where backend sends success:true but includes inner error
                 if (data.data?.error) {
                     setError(data.data.error);
                     setInsights(null);
@@ -48,17 +79,18 @@ const AiInsightsPanel = () => {
     };
 
     useEffect(() => {
-        // ✅ LAZY LOAD: Only fetch when panel is opened
         if (!isOpen) return;
         if (hasFetchedRef.current) return;
 
         hasFetchedRef.current = true;
+        fetchSmartInsights();
         fetchInsights();
     }, [isOpen]);
 
     const toggleOpen = () => setIsOpen(!isOpen);
 
     const { sales_trend, top_performers, peak_times, recommendations, alert } = insights || {};
+    const smartList = smartInsights?.insights || [];
 
     return (
         <div className="bg-white rounded-2xl shadow-sm border border-purple-100 overflow-hidden transition-all duration-300">
@@ -92,12 +124,13 @@ const AiInsightsPanel = () => {
                 </div>
 
                 <div className="flex items-center gap-3">
-                    {/* Refresh Button - Only visible when open or hovered? Let's keep it visible but subtle */}
+                    {/* Refresh Button */}
                     {!loading && !error && (
                         <button
                             onClick={(e) => {
                                 e.stopPropagation();
                                 fetchInsights(true);
+                                fetchSmartInsights(true);
                             }}
                             className="p-2 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-full transition-all"
                             title="רענן ניתוח"
@@ -135,14 +168,60 @@ const AiInsightsPanel = () => {
                             </div>
                             <p className="text-gray-600 mb-4">{error}</p>
                             <button
-                                onClick={fetchInsights}
+                                onClick={() => { fetchInsights(); fetchSmartInsights(); }}
                                 className="px-5 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 font-medium text-sm"
                             >
                                 נסה שוב
                             </button>
                         </div>
-                    ) : insights && (
+                    ) : (
                         <>
+                            {/* Smart Insights - Data Driven */}
+                            {smartList.length > 0 && (
+                                <div className="mb-6">
+                                    <h4 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
+                                        <FaBolt className="text-amber-500" />
+                                        תובנות יומיות
+                                    </h4>
+                                    <div className="space-y-3">
+                                        {smartList.map((insight, idx) => (
+                                            <div key={idx} className={`p-4 rounded-xl border-r-4 ${PRIORITY_COLORS[insight.priority] || 'border-gray-200 bg-gray-50'}`}>
+                                                <div className="flex items-start gap-3">
+                                                    <div className="mt-0.5 shrink-0">
+                                                        {TYPE_ICONS[insight.type] || TYPE_ICONS.info}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-gray-800 text-sm font-medium leading-relaxed">{insight.text}</p>
+                                                        {insight.action && (
+                                                            <p className="text-gray-500 text-xs mt-2 flex items-start gap-1.5">
+                                                                <FaLightbulb className="text-amber-400 shrink-0 mt-0.5" size={12} />
+                                                                <span>{insight.action}</span>
+                                                            </p>
+                                                        )}
+                                                        {insight.cta && (
+                                                            <button
+                                                                onClick={() => navigate(insight.cta.link)}
+                                                                className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors shadow-sm"
+                                                            >
+                                                                <FaBolt size={10} />
+                                                                {insight.cta.label}
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {smartLoading && smartList.length === 0 && (
+                                <div className="mb-6 space-y-3 animate-pulse">
+                                    <div className="h-16 bg-gray-100 rounded-xl"></div>
+                                    <div className="h-16 bg-gray-100 rounded-xl"></div>
+                                </div>
+                            )}
+
                             {/* Alert Section */}
                             {alert && (
                                 <div className="mb-6 p-4 bg-amber-50 border border-amber-100 rounded-xl flex items-start gap-4 shadow-sm">

@@ -46,6 +46,8 @@ class Restaurant extends Model
         'has_delivery',
         'has_pickup',
         'is_override_status',
+        'delivery_minimum',
+        'allow_future_orders',
         'description',
         'logo_url',
         'operating_days',
@@ -116,6 +118,8 @@ class Restaurant extends Model
         'pickup_time_minutes' => 'integer',
         'ai_credits_monthly' => 'integer', // קרדיטים חודשיים
         'enable_dine_in_pricing' => 'boolean',
+        'allow_future_orders' => 'boolean',
+        'delivery_minimum' => 'decimal:2',
         'hyp_terminal_verified' => 'boolean',
         'hyp_terminal_verified_at' => 'datetime',
         'hyp_terminal_password' => 'encrypted',
