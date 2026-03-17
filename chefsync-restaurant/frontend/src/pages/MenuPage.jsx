@@ -103,8 +103,13 @@ export default function MenuPage({ isPreviewMode = false }) {
 
     // גלילת טאב פעיל למרכז בר הקטגוריות
     useEffect(() => {
-        if (activeCategory && tabRefs.current[activeCategory]) {
-            tabRefs.current[activeCategory].scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+        const tab = tabRefs.current[activeCategory];
+        if (activeCategory && tab) {
+            const container = tab.parentElement;
+            if (container) {
+                const scrollLeft = tab.offsetLeft - container.offsetWidth / 2 + tab.offsetWidth / 2;
+                container.scrollTo({ left: scrollLeft, behavior: 'smooth' });
+            }
         }
     }, [activeCategory]);
 
