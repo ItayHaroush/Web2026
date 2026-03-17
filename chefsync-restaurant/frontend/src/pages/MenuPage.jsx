@@ -1181,8 +1181,8 @@ export default function MenuPage({ isPreviewMode = false }) {
                                                                 key={addon.id}
                                                                 onClick={() => toggleSuggestionAddon(group, addon.id)}
                                                                 className={`px-2 py-0.5 rounded-md text-[11px] font-bold border transition-all ${isSel
-                                                                        ? 'bg-brand-primary text-white border-brand-primary'
-                                                                        : 'bg-gray-50 dark:bg-brand-dark-border text-gray-600 dark:text-brand-dark-text border-gray-200 dark:border-brand-dark-border'
+                                                                    ? 'bg-brand-primary text-white border-brand-primary'
+                                                                    : 'bg-gray-50 dark:bg-brand-dark-border text-gray-600 dark:text-brand-dark-text border-gray-200 dark:border-brand-dark-border'
                                                                     }`}
                                                             >
                                                                 {addon.name}{addon.price_delta > 0 && ` +₪${addon.price_delta}`}
