@@ -13,6 +13,8 @@ return new class extends Migration
             $table->string('phone', 15)->unique();
             $table->string('name');
             $table->string('email')->nullable();
+            $table->timestamp('email_verified_at')->nullable();
+            $table->string('email_verification_token', 64)->nullable();
             $table->string('google_id')->nullable()->unique();
             $table->string('pin_hash')->nullable();
             $table->string('default_delivery_address')->nullable();
