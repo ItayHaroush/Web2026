@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { FaCheckCircle, FaFire, FaBell, FaTruck, FaBan, FaClock, FaShekelSign, FaClipboardList, FaMotorcycle, FaPrint, FaUtensils, FaUndo } from 'react-icons/fa';
 import posApi from '../api/posApi';
+import CancelOrderModal from '../../../components/CancelOrderModal';
 import POSManagerAuth from './POSManagerAuth';
 
 const STATUS_CONFIG = {
@@ -74,8 +75,9 @@ function normalizeOrder(raw) {
 
 export default function POSOrderPanel({ headers, posToken, mode = 'active' }) {
     const [printMsg, setPrintMsg] = useState(null);
-    const [refunding, setRefunding] = useState(null); // orderId being refunded
-    const [pendingRefundId, setPendingRefundId] = useState(null); // orderId awaiting manager PIN
+    const [refunding, setRefunding] = useState(null);
+    const [pendingRefundId, setPendingRefundId] = useState(null);
+    const [cancelModal, setCancelModal] = useState({ isOpen: false, orderId: null });
 
     const showPrintMsg = (text, isError = false) => {
         setPrintMsg({ text, isError });
@@ -150,9 +152,13 @@ export default function POSOrderPanel({ headers, posToken, mode = 'active' }) {
         return () => clearInterval(interval);
     }, [fetchOrders]);
 
-    const updateStatus = async (orderId, newStatus) => {
+    const updateStatus = async (orderId, newStatus, cancellationReason) => {
         try {
-            await posApi.updateOrderStatus(orderId, newStatus, headers);
+            const payload = { status: newStatus };
+            if (newStatus === 'cancelled' && cancellationReason) {
+                payload.cancellation_reason = cancellationReason;
+            }
+            await posApi.updateOrderStatus(orderId, payload, headers);
             fetchOrders();
         } catch (e) {
             const msg = e.response?.data?.message || 'שגיאה בעדכון סטטוס';
@@ -210,6 +216,7 @@ export default function POSOrderPanel({ headers, posToken, mode = 'active' }) {
                         expanded={expandedId === order.id}
                         onToggle={() => setExpandedId(expandedId === order.id ? null : order.id)}
                         onUpdateStatus={updateStatus}
+                        onCancel={(orderId) => setCancelModal({ isOpen: true, orderId })}
                         showActions={mode === 'active'}
                         onPrintReceipt={handlePrintReceipt}
                         onPrintKitchen={handlePrintKitchen}
@@ -228,11 +235,18 @@ export default function POSOrderPanel({ headers, posToken, mode = 'active' }) {
                     onClose={() => setPendingRefundId(null)}
                 />
             )}
+
+            <CancelOrderModal
+                isOpen={cancelModal.isOpen}
+                orderId={cancelModal.orderId}
+                onClose={() => setCancelModal({ isOpen: false, orderId: null })}
+                onConfirm={(orderId, reason) => updateStatus(orderId, 'cancelled', reason)}
+            />
         </div>
     );
 }
 
-function OrderCard({ order, expanded, onToggle, onUpdateStatus, showActions = true, onPrintReceipt, onPrintKitchen, onRefund, refunding }) {
+function OrderCard({ order, expanded, onToggle, onUpdateStatus, onCancel, showActions = true, onPrintReceipt, onPrintKitchen, onRefund, refunding }) {
     const config = STATUS_CONFIG[order.status] || STATUS_CONFIG.pending;
     const Icon = config.icon;
 
@@ -310,7 +324,7 @@ function OrderCard({ order, expanded, onToggle, onUpdateStatus, showActions = tr
                             })}
                             {canCancel && (
                                 <button
-                                    onClick={() => onUpdateStatus(order.id, 'cancelled')}
+                                    onClick={() => onCancel(order.id)}
                                     className="px-4 py-3 rounded-xl bg-red-500/20 text-red-400 font-black text-sm transition-all active:scale-95 hover:bg-red-500/30"
                                 >
                                     ביטול

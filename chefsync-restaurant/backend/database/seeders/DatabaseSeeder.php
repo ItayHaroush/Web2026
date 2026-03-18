@@ -12,6 +12,7 @@ class DatabaseSeeder extends Seeder
             CitiesSeeder::class,
             RestaurantSeeder::class,
             AdminUserSeeder::class,
+            DemoDataSeeder::class,
         ]);
     }
 }

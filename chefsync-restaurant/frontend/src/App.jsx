@@ -6,13 +6,16 @@ import { CartProvider } from './context/CartContext';
 import { PromotionProvider } from './context/PromotionContext';
 import { ToastProvider } from './context/ToastContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { CustomerProvider } from './context/CustomerContext';
 import DevModeBanner from './components/DevModeBanner';
 import CookieConsent from './components/CookieConsent';
 import FacebookInAppWarning from './components/FacebookInAppWarning';
+import PWAInstallBanner from './components/PWAInstallBanner';
 import HomePage from './pages/HomePage';
 import MenuPage from './pages/MenuPage';
 import CartPage from './pages/CartPage';
 import OrderStatusPage from './pages/OrderStatusPage';
+import CustomerOrderHistory from './pages/CustomerOrderHistory';
 import NotFoundPage from './pages/NotFoundPage';
 import AdminLogin from './pages/admin/AdminLogin';
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -68,6 +71,7 @@ import DebugAPI from './pages/DebugAPI';
 import RegisterRestaurant from './pages/RegisterRestaurant';
 import LandingPage from './pages/LandingPage';
 import RestaurantSharePage from './pages/RestaurantSharePage';
+import VerifyEmailPage from './pages/VerifyEmailPage';
 import TermsEndUser from './pages/legal/TermsEndUser';
 import TermsRestaurant from './pages/legal/TermsRestaurant';
 import PrivacyPolicy from './pages/legal/PrivacyPolicy';
@@ -142,6 +146,8 @@ function AppRoutes() {
       <Route path="/menu" element={tenantId ? <MenuPage /> : <Navigate to="/" />} />
       <Route path="/cart" element={tenantId ? <CartPage /> : <Navigate to="/" />} />
       <Route path="/order-status/:orderId" element={tenantId ? <OrderStatusPage /> : <Navigate to="/" />} />
+      <Route path="/my-orders" element={<CustomerOrderHistory />} />
+      <Route path="/verify-email" element={<VerifyEmailPage />} />
 
       {/* callback חזרה מ-HYP אחרי תשלום הזמנה */}
       <Route path="/payment/success" element={<PaymentCallback />} />
@@ -554,13 +560,16 @@ export default function App() {
             <AuthProvider>
               <ToastProvider>
                 <CartProvider>
-                  <PromotionProvider>
-                    <AppRoutes />
-                    <Toaster position="bottom-right" />
-                    <FacebookInAppWarning />
-                    <DevModeBanner />
-                    <CookieConsent />
-                  </PromotionProvider>
+                  <CustomerProvider>
+                    <PromotionProvider>
+                      <AppRoutes />
+                      <Toaster position="bottom-right" />
+                      <FacebookInAppWarning />
+                      <DevModeBanner />
+                      <CookieConsent />
+                      <PWAInstallBanner />
+                    </PromotionProvider>
+                  </CustomerProvider>
                 </CartProvider>
               </ToastProvider>
             </AuthProvider>

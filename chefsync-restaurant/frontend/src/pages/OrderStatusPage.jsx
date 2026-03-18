@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useCustomer } from '../context/CustomerContext';
 import { CustomerLayout } from '../layouts/CustomerLayout';
-import { FaMask, FaBoxOpen, FaUser, FaPhone, FaClock, FaInfoCircle, FaUtensils, FaShoppingBag, FaCheckCircle, FaExclamationTriangle, FaMapMarkerAlt, FaCreditCard, FaMoneyBillWave, FaGift, FaHeart } from 'react-icons/fa';
+import { FaMask, FaBoxOpen, FaUser, FaPhone, FaClock, FaInfoCircle, FaUtensils, FaShoppingBag, FaCheckCircle, FaExclamationTriangle, FaMapMarkerAlt, FaCreditCard, FaMoneyBillWave, FaGift, FaHeart, FaRedo } from 'react-icons/fa';
 import orderService from '../services/orderService';
 import { ORDER_STATUS, ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from '../constants/api';
 import RatingWidget from '../components/RatingWidget';
@@ -51,11 +52,17 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
     const statusRef = useRef(null);
     const initialLoadRef = useRef(true);
 
+    // ניסיון תשלום חוזר
+    const [retryingPayment, setRetryingPayment] = useState(false);
+
     // מצב דירוג
     const [selectedRating, setSelectedRating] = useState(null);
     const [reviewText, setReviewText] = useState('');
     const [submittingReview, setSubmittingReview] = useState(false);
     const [reviewSuccess, setReviewSuccess] = useState(false);
+
+    // הרשמת לקוח
+    const { isRecognized, isRegistered, loginWithPhone, customer } = useCustomer();
 
     // קביעת effectiveTenantId - מה-URL או מ-localStorage במצב preview
     const effectiveTenantId = isPreviewMode
@@ -140,12 +147,20 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
             const isCancelled = nextOrder?.status === 'cancelled';
 
             if (isCancelled) {
-                setCancelNotice('ההזמנה בוטלה על ידי המסעדה. ניתן לבצע הזמנה חדשה או לפנות למסעדה.');
+                const reason = nextOrder?.cancellation_reason;
+                setCancelNotice(reason
+                    ? `ההזמנה בוטלה: ${reason}`
+                    : 'ההזמנה בוטלה על ידי המסעדה. ניתן לבצע הזמנה חדשה או לפנות למסעדה.');
                 setShouldPoll(false);
 
                 const tenantKey = urlTenantId || tenantId || localStorage.getItem('tenantId');
                 if (tenantKey) {
-                    localStorage.removeItem(`activeOrder_${tenantKey}`);
+                    const arrKey = `activeOrders_${tenantKey}`;
+                    try {
+                        let arr = JSON.parse(localStorage.getItem(arrKey)) || [];
+                        arr = arr.filter(id => String(id) !== String(orderId));
+                        arr.length ? localStorage.setItem(arrKey, JSON.stringify(arr)) : localStorage.removeItem(arrKey);
+                    } catch { localStorage.removeItem(arrKey); }
                 }
             } else if (!shouldPoll) {
                 setShouldPoll(true);
@@ -174,7 +189,25 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
             if (data.data?.status === ORDER_STATUS.DELIVERED) {
                 const tenantKey = effectiveTenantId;
                 if (tenantKey) {
-                    localStorage.removeItem(`activeOrder_${tenantKey}`);
+                    // הסר מהזמנות פעילות
+                    const arrKey = `activeOrders_${tenantKey}`;
+                    try {
+                        let arr = JSON.parse(localStorage.getItem(arrKey)) || [];
+                        arr = arr.filter(id => String(id) !== String(orderId));
+                        arr.length ? localStorage.setItem(arrKey, JSON.stringify(arr)) : localStorage.removeItem(arrKey);
+                    } catch { localStorage.removeItem(arrKey); }
+
+                    // הוסף לרשימת ממתינות לביקורת (אם אין דירוג עדיין)
+                    if (!data.data?.rating) {
+                        const prKey = `pendingReviewOrders_${tenantKey}`;
+                        try {
+                            let pr = JSON.parse(localStorage.getItem(prKey)) || [];
+                            if (!pr.includes(String(orderId))) {
+                                pr.push(String(orderId));
+                                localStorage.setItem(prKey, JSON.stringify(pr));
+                            }
+                        } catch { /* ignore */ }
+                    }
                 }
             }
         } catch (err) {
@@ -296,6 +329,26 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
     }
 
     // פונקציה לשליחת דירוג
+    const handleRetryPayment = async () => {
+        try {
+            setRetryingPayment(true);
+            const res = await api.post(`/orders/${orderId}/retry-payment`, {}, {
+                headers: { 'X-Tenant-ID': effectiveTenantId }
+            });
+            if (res.data?.payment_url) {
+                window.location.href = res.data.payment_url;
+            } else {
+                alert('לא ניתן ליצור קישור תשלום כרגע. נסה שוב מאוחר יותר.');
+            }
+        } catch (err) {
+            console.error('Retry payment failed:', err);
+            const msg = err.response?.data?.message || 'שגיאה ביצירת קישור תשלום';
+            alert(msg);
+        } finally {
+            setRetryingPayment(false);
+        }
+    };
+
     const handleSubmitReview = async () => {
         if (!selectedRating) {
             alert('אנא בחר דירוג');
@@ -318,6 +371,16 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
                     review_text: reviewText.trim() || null,
                     reviewed_at: new Date().toISOString(),
                 }));
+                // הסר מרשימת ממתינות לביקורת
+                const tenantKey = effectiveTenantId;
+                if (tenantKey) {
+                    const prKey = `pendingReviewOrders_${tenantKey}`;
+                    try {
+                        let pr = JSON.parse(localStorage.getItem(prKey)) || [];
+                        pr = pr.filter(id => String(id) !== String(orderId));
+                        pr.length ? localStorage.setItem(prKey, JSON.stringify(pr)) : localStorage.removeItem(prKey);
+                    } catch { /* ignore */ }
+                }
             }
         } catch (error) {
             console.error('❌ שגיאה בשליחת דירוג:', error);
@@ -348,8 +411,20 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
 
     const currentStepIndex = statusSteps.findIndex((s) => s.value === order.status);
     const isCancelled = order.status === 'cancelled';
-    const statusLabel = ORDER_STATUS_LABELS[order.status] ?? 'בוטל';
-    const statusColor = ORDER_STATUS_COLORS[order.status] ?? 'bg-red-100 text-red-700';
+    const isFutureOrder = !!order.scheduled_for;
+    const isPendingPayment = order.payment_status === 'pending' && order.payment_method === 'credit_card';
+    const isFutureAwaitingPayment = isFutureOrder && isPendingPayment;
+
+    const statusLabel = isFutureAwaitingPayment
+        ? 'הזמנה עתידית — ממתין לתשלום'
+        : isFutureOrder && order.status === 'pending'
+            ? 'הזמנה עתידית — התקבלה'
+            : ORDER_STATUS_LABELS[order.status] ?? 'בוטל';
+    const statusColor = isFutureAwaitingPayment
+        ? 'bg-teal-100 text-teal-800'
+        : isFutureOrder && order.status === 'pending'
+            ? 'bg-teal-100 text-teal-700'
+            : ORDER_STATUS_COLORS[order.status] ?? 'bg-red-100 text-red-700';
 
     const content = (
         <div className="space-y-8">
@@ -364,7 +439,9 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
             )}
 
             <div className="text-center">
-                <h1 className="text-2xl sm:text-3xl font-bold text-brand-primary mb-2">סטטוס הזמנה</h1>
+                <h1 className="text-2xl sm:text-3xl font-bold text-brand-primary mb-2">
+                    {isFutureOrder ? 'הזמנה עתידית' : 'סטטוס הזמנה'}
+                </h1>
                 <p className="text-sm sm:text-base text-gray-600 dark:text-brand-dark-muted">הזמנה #{order.id}</p>
             </div>
 
@@ -454,6 +531,21 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
                         </div>
                     </div>
 
+                    {/* באנר הזמנה עתידית */}
+                    {order.scheduled_for && (
+                        <div className="flex items-start gap-3 bg-teal-50 dark:bg-teal-900/20 rounded-xl p-4 border border-teal-200 dark:border-teal-800">
+                            <FaClock className="text-teal-600 text-lg flex-shrink-0 mt-0.5" />
+                            <div>
+                                <p className="text-xs font-semibold text-teal-700 dark:text-teal-400 uppercase tracking-wide mb-1">הזמנה עתידית</p>
+                                <p className="font-bold text-teal-800 dark:text-teal-300">
+                                    {new Date(order.scheduled_for).toLocaleDateString('he-IL', { weekday: 'long', day: 'numeric', month: 'long' })}
+                                    {' בשעה '}
+                                    {new Date(order.scheduled_for).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}
+                                </p>
+                            </div>
+                        </div>
+                    )}
+
                     {/* באנר תוצאת תשלום (B2C - redirect חזרה מ-HYP) */}
                     {paymentResult === 'success' && (
                         <div className="flex items-center gap-3 bg-green-50 dark:bg-green-900/20 rounded-xl p-4 border border-green-200 dark:border-green-800">
@@ -462,9 +554,19 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
                         </div>
                     )}
                     {paymentResult === 'failed' && (
-                        <div className="flex items-center gap-3 bg-red-50 dark:bg-red-900/20 rounded-xl p-4 border border-red-200 dark:border-red-800">
-                            <FaExclamationTriangle className="text-red-500 text-lg flex-shrink-0" />
-                            <p className="font-bold text-red-700 dark:text-red-400">התשלום נכשל. ניתן לנסות שוב מדף ההזמנה.</p>
+                        <div className="bg-red-50 dark:bg-red-900/20 rounded-xl p-4 border border-red-200 dark:border-red-800 space-y-3">
+                            <div className="flex items-center gap-3">
+                                <FaExclamationTriangle className="text-red-500 text-lg flex-shrink-0" />
+                                <p className="font-bold text-red-700 dark:text-red-400">התשלום נכשל.</p>
+                            </div>
+                            <button
+                                onClick={handleRetryPayment}
+                                disabled={retryingPayment}
+                                className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition disabled:opacity-50"
+                            >
+                                <FaRedo className={retryingPayment ? 'animate-spin' : ''} />
+                                {retryingPayment ? 'מעבד...' : 'נסה לשלם שוב'}
+                            </button>
                         </div>
                     )}
 
@@ -490,15 +592,17 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
                                     {order.payment_status === 'paid'
                                         ? (order.payment_method === 'credit_card' ? 'שולם באשראי' : 'שולם במזומן')
                                         : order.payment_status === 'pending'
-                                            ? (order.payment_method === 'credit_card' ? 'ממתין לתשלום באשראי' : 'תשלום במזומן בעת קבלה')
+                                            ? (order.payment_method === 'credit_card'
+                                                ? (isFutureOrder ? 'ממתין לתשלום — ההזמנה תטופל לאחר התשלום' : 'ממתין לתשלום באשראי')
+                                                : 'תשלום במזומן בעת קבלה')
                                             : order.payment_status === 'failed' ? 'תשלום נכשל' : ''}
                                 </p>
                             </div>
                         </div>
                     )}
 
-                    {/* שעון ספירה לאחור */}
-                    {!isCancelled && (
+                    {/* שעון ספירה לאחור – מוסתר בהזמנה עתידית שממתינה */}
+                    {!isCancelled && !isFutureAwaitingPayment && !(isFutureOrder && order.status === 'pending') && (
                         <div className="my-6">
                             <CountdownTimer
                                 startTime={order.created_at}
@@ -577,7 +681,7 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
                         </div>
                     )}
 
-                    {!isCancelled && (
+                    {!isCancelled && !isFutureAwaitingPayment && (
                         <>
                             {/* סטטוס סרגל */}
                             <div className="bg-gray-50 dark:bg-brand-dark-border/50 rounded-xl p-6 space-y-4">
@@ -622,6 +726,48 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
                                 </p>
                             </div>
                         </>
+                    )}
+
+                    {/* מצב הזמנה עתידית ממתינה לתשלום */}
+                    {isFutureAwaitingPayment && (
+                        <div className="mt-6 p-6 rounded-xl text-center bg-teal-50 dark:bg-teal-900/20 border-2 border-teal-300 dark:border-teal-700">
+                            <div className="flex flex-col items-center gap-4">
+                                <div className="w-16 h-16 rounded-full bg-teal-100 dark:bg-teal-800 flex items-center justify-center">
+                                    <FaClock className="text-3xl text-teal-600 dark:text-teal-300" />
+                                </div>
+                                <div>
+                                    <p className="text-2xl font-black text-teal-900 dark:text-teal-200">הזמנה עתידית</p>
+                                    <p className="text-lg font-bold text-teal-700 dark:text-teal-300 mt-1">
+                                        {new Date(order.scheduled_for).toLocaleDateString('he-IL', { weekday: 'long', day: 'numeric', month: 'long' })}
+                                        {' בשעה '}
+                                        {new Date(order.scheduled_for).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}
+                                    </p>
+                                    <p className="text-sm mt-3 text-teal-600 dark:text-teal-400">ממתין לתשלום — ההזמנה תטופל לאחר השלמת התשלום</p>
+                                </div>
+                                <button
+                                    onClick={handleRetryPayment}
+                                    disabled={retryingPayment}
+                                    className="w-full max-w-xs flex items-center justify-center gap-2 py-3.5 px-6 bg-teal-600 hover:bg-teal-700 text-white font-black text-lg rounded-xl shadow-lg transition disabled:opacity-50"
+                                >
+                                    <FaCreditCard />
+                                    {retryingPayment ? 'מעבד...' : 'שלם עכשיו'}
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* כפתור תשלום להזמנה רגילה שממתינה */}
+                    {isPendingPayment && !isFutureOrder && paymentResult !== 'failed' && (
+                        <div className="mt-4">
+                            <button
+                                onClick={handleRetryPayment}
+                                disabled={retryingPayment}
+                                className="w-full flex items-center justify-center gap-2 py-3.5 px-6 bg-blue-600 hover:bg-blue-700 text-white font-black text-lg rounded-xl shadow-lg transition disabled:opacity-50"
+                            >
+                                <FaCreditCard />
+                                {retryingPayment ? 'מעבד...' : 'שלם עכשיו'}
+                            </button>
+                        </div>
                     )}
 
                     {isCancelled && (
@@ -768,6 +914,7 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
                     <span>חזור לתפריט</span>
                 </button>
             </div>
+
         </div>
     );
 

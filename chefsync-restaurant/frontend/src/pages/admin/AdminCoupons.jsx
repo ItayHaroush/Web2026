@@ -119,8 +119,8 @@ export default function AdminCoupons() {
             removeImage: false,
             start_at: promo.start_at ? promo.start_at.slice(0, 16) : '',
             end_at: promo.end_at ? promo.end_at.slice(0, 16) : '',
-            active_hours_start: promo.active_hours_start || '',
-            active_hours_end: promo.active_hours_end || '',
+            active_hours_start: (promo.active_hours_start || '').slice(0, 5),
+            active_hours_end: (promo.active_hours_end || '').slice(0, 5),
             active_days: promo.active_days || null,
             is_active: promo.is_active,
             priority: promo.priority || 0,
@@ -414,29 +414,37 @@ export default function AdminCoupons() {
                                     />
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">מתאריך</label>
-                                        <input type="datetime-local" value={form.start_at} onChange={e => setForm(f => ({ ...f, start_at: e.target.value }))}
-                                            className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none text-sm" />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">עד תאריך</label>
-                                        <input type="datetime-local" value={form.end_at} onChange={e => setForm(f => ({ ...f, end_at: e.target.value }))}
-                                            className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none text-sm" />
+                                {/* תקופת המבצע */}
+                                <div className="bg-gray-50 rounded-xl p-4 space-y-3">
+                                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">תקופת המבצע</p>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">מתאריך</label>
+                                            <input type="datetime-local" dir="ltr" value={form.start_at} onChange={e => setForm(f => ({ ...f, start_at: e.target.value }))}
+                                                className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none text-sm bg-white" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">עד תאריך</label>
+                                            <input type="datetime-local" dir="ltr" value={form.end_at} onChange={e => setForm(f => ({ ...f, end_at: e.target.value }))}
+                                                className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none text-sm bg-white" />
+                                        </div>
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">משעה</label>
-                                        <input type="time" value={form.active_hours_start} onChange={e => setForm(f => ({ ...f, active_hours_start: e.target.value }))}
-                                            className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none" />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">עד שעה</label>
-                                        <input type="time" value={form.active_hours_end} onChange={e => setForm(f => ({ ...f, active_hours_end: e.target.value }))}
-                                            className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none" />
+                                {/* שעות פעילות יומיות */}
+                                <div className="bg-blue-50 rounded-xl p-4 space-y-3">
+                                    <p className="text-xs font-bold text-blue-600 uppercase tracking-wide">שעות פעילות יומיות</p>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">משעה</label>
+                                            <input type="time" dir="ltr" value={form.active_hours_start} onChange={e => setForm(f => ({ ...f, active_hours_start: e.target.value }))}
+                                                className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none bg-white" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">עד שעה</label>
+                                            <input type="time" dir="ltr" value={form.active_hours_end} onChange={e => setForm(f => ({ ...f, active_hours_end: e.target.value }))}
+                                                className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none bg-white" />
+                                        </div>
                                     </div>
                                 </div>
 

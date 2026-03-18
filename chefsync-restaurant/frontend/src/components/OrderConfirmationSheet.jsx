@@ -187,14 +187,14 @@ export default function OrderConfirmationSheet({
                                 </span>
                             </div>
                         )}
-                        {!promotionDiscount && giftItems.length > 0 && (
+                        {!promotionDiscount && metPromotions.length > 0 && (
                             <div className="flex justify-between items-center text-sm">
                                 <span className="text-brand-primary dark:text-orange-400 flex items-center gap-1">
                                     <FaGift size={12} />
-                                    מבצע פעיל
+                                    {metPromotions.map(p => p.name).join(', ')}
                                 </span>
                                 <span className="font-bold text-brand-primary dark:text-orange-400 text-sm">
-                                    ההנחה תחושב בהזמנה
+                                    מתנה
                                 </span>
                             </div>
                         )}

@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { FaWhatsapp, FaPhoneAlt, FaMask, FaShoppingBag, FaTruck, FaClock, FaShieldAlt, FaExclamationTriangle, FaInfoCircle, FaCreditCard, FaMoneyBillWave, FaGift, FaTimes, FaPlus, FaArrowLeft, FaChevronLeft, FaTag, FaMapMarkerAlt } from 'react-icons/fa';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { FaWhatsapp, FaPhoneAlt, FaMask, FaShoppingBag, FaTruck, FaClock, FaShieldAlt, FaExclamationTriangle, FaInfoCircle, FaCreditCard, FaMoneyBillWave, FaGift, FaTimes, FaPlus, FaArrowLeft, FaChevronLeft, FaTag, FaMapMarkerAlt, FaCheckCircle } from 'react-icons/fa';
 import { SiWaze } from 'react-icons/si';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useToast } from '../context/ToastContext';
+import { useCustomer } from '../context/CustomerContext';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { CustomerLayout } from '../layouts/CustomerLayout';
 import menuService from '../services/menuService';
@@ -13,6 +14,9 @@ import apiClient from '../services/apiClient';
 import { resolveAssetUrl } from '../utils/assets';
 import { API_BASE_URL, TENANT_HEADER } from '../constants/api';
 import MenuItemModal from '../components/MenuItemModal';
+import FutureOrderModal from '../components/FutureOrderModal';
+import ActiveOrdersModal from '../components/ActiveOrdersModal';
+import orderService from '../services/orderService';
 import { getSuggestions } from '../components/SuggestionCards';
 
 /**
@@ -25,16 +29,21 @@ export default function MenuPage({ isPreviewMode = false }) {
     const navigate = useNavigate();
     const params = useParams();
     const [searchParams] = useSearchParams();
-    const { addToCart, setCustomerInfo, getItemCount, cartItems } = useCart();
+    const { addToCart, clearCart, setCustomerInfo, getItemCount, cartItems, setScheduledFor, scheduledFor } = useCart();
     const { addToast } = useToast();
+    const { customer, isRecognized, openOrderHistory } = useCustomer();
     const [menu, setMenu] = useState([]);
     const [restaurant, setRestaurant] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [activeCategory, setActiveCategory] = useState(null);
-    const [activeOrderId, setActiveOrderId] = useState(null);
+    const [activeOrders, setActiveOrders] = useState([]);
+    const [activeOrdersData, setActiveOrdersData] = useState([]);
+    const [showActiveOrdersModal, setShowActiveOrdersModal] = useState(false);
     const [selectedMenuItem, setSelectedMenuItem] = useState(null);
     const [isPWA, setIsPWA] = useState(false);
+    const [showFutureOrderModal, setShowFutureOrderModal] = useState(false);
+    const [futureOrderApproved, setFutureOrderApproved] = useState(!!scheduledFor);
     const [showInfoModal, setShowInfoModal] = useState(false);
     const [activePromotions, setActivePromotions] = useState([]);
     const [showSuggestionModal, setShowSuggestionModal] = useState(false);
@@ -43,8 +52,83 @@ export default function MenuPage({ isPreviewMode = false }) {
     const [suggestionAddonPicker, setSuggestionAddonPicker] = useState(null);
     const [suggestionSelectedAddons, setSuggestionSelectedAddons] = useState({});
     const [showPromoPopup, setShowPromoPopup] = useState(false);
+    const [reorderDialog, setReorderDialog] = useState(null);
+    const [pendingReorderItems, setPendingReorderItems] = useState(null);
     const categoryRefs = useRef({});
     const tabRefs = useRef({});
+
+    const loadReorderItems = useCallback((items, shouldClear) => {
+        if (shouldClear) clearCart();
+
+        items.forEach((item) => {
+            const cartItem = {
+                menu_item_id: item.menu_item_id,
+                name: item.name,
+                price: item.price,
+                image_url: item.image_url,
+                quantity: item.quantity || 1,
+                variant: item.variant_id ? { id: item.variant_id, name: item.variant_name || '' } : null,
+                addons: item.addons || [],
+            };
+            addToCart(cartItem);
+        });
+
+        const unavailable = localStorage.getItem('reorder_unavailable');
+        if (unavailable) {
+            try {
+                const names = JSON.parse(unavailable);
+                if (names.length > 0) {
+                    addToast(`פריטים לא זמינים: ${names.join(', ')}`, 'warning');
+                }
+            } catch {}
+            localStorage.removeItem('reorder_unavailable');
+        }
+
+        addToast(`${items.length} פריטים ${shouldClear ? 'נטענו' : 'נוספו'} לסל`, 'success');
+    }, [clearCart, addToCart, addToast]);
+
+    // שלב 1: קריאת פריטי הזמנה חוזרת מ-localStorage ושמירה ב-state
+    const pickupReorderItems = useCallback(() => {
+        const raw = localStorage.getItem('reorder_items');
+        if (!raw) return;
+        try {
+            const items = JSON.parse(raw);
+            if (Array.isArray(items) && items.length > 0) {
+                setPendingReorderItems(items);
+            }
+        } catch {}
+        localStorage.removeItem('reorder_items');
+        localStorage.removeItem('reorder_tenant');
+    }, []);
+
+    useEffect(() => {
+        pickupReorderItems();
+        window.addEventListener('reorder_items_ready', pickupReorderItems);
+        return () => window.removeEventListener('reorder_items_ready', pickupReorderItems);
+    }, [pickupReorderItems]);
+
+    // שלב 2: עיבוד פריטי הזמנה חוזרת אחרי שמידע המסעדה נטען
+    useEffect(() => {
+        if (!pendingReorderItems || !restaurant) return;
+
+        const isOpen = isPreviewMode ? true : ((restaurant.is_open_now ?? restaurant.is_open) !== false);
+        const allowsFuture = restaurant.allow_future_orders && (restaurant.accepts_credit_card || (isRecognized && !!customer?.id));
+
+        if (isOpen || (allowsFuture && futureOrderApproved)) {
+            if (cartItems.length > 0) {
+                setReorderDialog({ items: pendingReorderItems });
+            } else {
+                loadReorderItems(pendingReorderItems, false);
+            }
+            setPendingReorderItems(null);
+        } else if (!isOpen && allowsFuture && !futureOrderApproved) {
+            setShowFutureOrderModal(true);
+        } else {
+            addToast('המסעדה סגורה כרגע — נסה שוב בשעות הפעילות', 'error');
+            setPendingReorderItems(null);
+            localStorage.removeItem('reorder_unavailable');
+        }
+    }, [pendingReorderItems, restaurant, futureOrderApproved]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const effectiveTenantId = useMemo(() => {
         const fromUrl = params?.tenantId;
@@ -146,8 +230,10 @@ export default function MenuPage({ isPreviewMode = false }) {
         loadMenu();
         loadPromotions();
 
-        const savedOrderId = localStorage.getItem(`activeOrder_${effectiveTenantId}`);
-        setActiveOrderId(savedOrderId || null);
+        // Multi-order: טוען מערך הזמנות פעילות
+        let savedOrders = [];
+        try { savedOrders = JSON.parse(localStorage.getItem(`activeOrders_${effectiveTenantId}`)) || []; } catch { savedOrders = []; }
+        setActiveOrders(savedOrders);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [effectiveTenantId, searchParams, setCustomerInfo]);
 
@@ -234,14 +320,19 @@ export default function MenuPage({ isPreviewMode = false }) {
     }, [restaurant?.common_allergens]);
 
     const isOpenNow = restaurant?.is_open_now ?? restaurant?.is_open;
-    // במצב פריוויו - תמיד לאפשר הזמנה (להתעלם מסטטוס פתיחה)
     const canOrder = isPreviewMode ? true : (isOpenNow !== false);
-    // האם ניתן להזמין מראש (מסעדה סגורה אבל מקבלת אשראי)
-    const canPreOrder = !canOrder && restaurant?.accepts_credit_card;
+    const isRegisteredCustomer = isRecognized && !!customer?.id;
+    // לקוח רשום יכול להזמין מראש גם במזומן, אורח — רק אשראי
+    const canPreOrder = !canOrder && restaurant?.allow_future_orders && (restaurant?.accepts_credit_card || isRegisteredCustomer);
 
     const handleOpenItemModal = (menuItem) => {
         if (!canOrder && !canPreOrder) {
             addToast('המסעדה סגורה כרגע', 'error');
+            return;
+        }
+        // הזמנה עתידית — חייב לאשר תאריך/שעה לפני הוספה לסל
+        if (canPreOrder && !futureOrderApproved) {
+            setShowFutureOrderModal(true);
             return;
         }
         setSelectedMenuItem(menuItem);
@@ -366,6 +457,21 @@ export default function MenuPage({ isPreviewMode = false }) {
 
     return (
         <CustomerLayout>
+            {/* באנר לקוח חוזר */}
+            {isRecognized && customer?.name && !isPreviewMode && (
+                <div className="mb-4 bg-gradient-to-r from-brand-primary/10 to-orange-50 dark:from-brand-primary/20 dark:to-orange-900/10 border border-brand-primary/20 dark:border-brand-primary/30 rounded-xl px-4 py-3 flex items-center justify-between">
+                    <span className="text-sm font-bold text-gray-800 dark:text-brand-dark-text">
+                        {customer.name} :) רוצה לראות את ההזמנות הקודמות?
+                    </span>
+                    <button
+                        onClick={openOrderHistory}
+                        className="bg-brand-primary text-white px-4 py-1.5 rounded-lg text-sm font-bold hover:bg-brand-secondary transition whitespace-nowrap"
+                    >
+                        ההזמנות שלי
+                    </button>
+                </div>
+            )}
+
             {!canOrder && restaurant && (
                 <div className="mb-6 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-xl overflow-hidden">
                     <div className="px-4 py-3 flex items-center gap-3">
@@ -374,19 +480,26 @@ export default function MenuPage({ isPreviewMode = false }) {
                             המסעדה סגורה כרגע
                         </p>
                     </div>
-                    {canPreOrder && (
+                    {canPreOrder && !futureOrderApproved && (
                         <div className="px-4 py-3 bg-amber-50 dark:bg-amber-900/20 border-t border-amber-200 dark:border-amber-500/30">
                             <p className="text-amber-800 dark:text-amber-300 text-sm font-medium mb-2">
-                                אפשר להזמין מראש — ההזמנה תטופל כשנפתח
+                                ניתן להזמין מראש — בחר תאריך ושעה להזמנה עתידית
                             </p>
                             <button
-                                onClick={() => {
-                                    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-                                }}
-                                className="bg-brand-primary text-white px-5 py-2 rounded-xl font-bold text-sm hover:bg-brand-secondary transition-colors"
+                                onClick={() => setShowFutureOrderModal(true)}
+                                className="bg-brand-primary text-white px-5 py-2 rounded-xl font-bold text-sm hover:bg-brand-secondary transition-colors flex items-center gap-2"
                             >
-                                הזמן מראש
+                                <FaClock />
+                                הזמנה עתידית
                             </button>
+                        </div>
+                    )}
+                    {canPreOrder && futureOrderApproved && (
+                        <div className="px-4 py-3 bg-green-50 dark:bg-green-900/20 border-t border-green-200 dark:border-green-500/30 flex items-center gap-2">
+                            <FaCheckCircle className="text-green-600 dark:text-green-400 shrink-0" />
+                            <p className="text-green-800 dark:text-green-300 text-sm font-medium">
+                                הזמנה עתידית אושרה — ניתן להוסיף מוצרים לסל.{isRegisteredCustomer ? '' : ' התשלום יתבצע באשראי.'}
+                            </p>
                         </div>
                     )}
                     {!canPreOrder && (
@@ -399,23 +512,51 @@ export default function MenuPage({ isPreviewMode = false }) {
                 </div>
             )}
 
-            {/* כרטיסייה של הזמנה פעילה */}
-            {activeOrderId && (
+            {/* כרטיסייה של הזמנות פעילות */}
+            {activeOrders.length > 0 && (
                 <div className="mb-6 p-4 bg-gradient-to-r from-brand-primary to-brand-secondary rounded-2xl shadow-lg text-white cursor-pointer hover:shadow-xl transition-shadow"
-                    onClick={() => navigate(isPreviewMode ? `/admin/preview-order-status/${activeOrderId}` : `/${effectiveTenantId || tenantId || ''}/order-status/${activeOrderId}`)}>
+                    onClick={() => {
+                        if (activeOrders.length === 1) {
+                            navigate(isPreviewMode ? `/admin/preview-order-status/${activeOrders[0]}` : `/${effectiveTenantId || tenantId || ''}/order-status/${activeOrders[0]}`);
+                        } else {
+                            // טוען פרטי הזמנות ופותח מודל
+                            Promise.all(activeOrders.map(id => orderService.getOrder(id).then(r => r.data).catch(() => null)))
+                                .then(results => {
+                                    setActiveOrdersData(results.filter(Boolean));
+                                    setShowActiveOrdersModal(true);
+                                });
+                        }
+                    }}>
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                            <FaMapMarkerAlt className="text-xl shrink-0" />
+                            <div className="relative">
+                                <FaMapMarkerAlt className="text-xl shrink-0" />
+                                {activeOrders.length > 1 && (
+                                    <span className="absolute -top-2 -right-2 bg-white text-brand-primary text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center shadow">
+                                        {activeOrders.length}
+                                    </span>
+                                )}
+                            </div>
                             <div>
-                                <p className="font-semibold mb-0.5">הזמנה בעיצומה</p>
-                                <p className="text-sm opacity-90">הזמנה #{activeOrderId}</p>
+                                <p className="font-semibold mb-0.5">{activeOrders.length > 1 ? `${activeOrders.length} הזמנות פעילות` : 'הזמנה בעיצומה'}</p>
+                                {activeOrders.length === 1 && <p className="text-sm opacity-90">הזמנה #{activeOrders[0]}</p>}
                             </div>
                         </div>
                         <FaChevronLeft className="text-xl opacity-80 shrink-0" />
                     </div>
-                    <p className="text-xs opacity-75 mt-2">לחץ כדי לראות סטטוס מלא</p>
+                    <p className="text-xs opacity-75 mt-2">{activeOrders.length > 1 ? 'לחץ לצפייה בכל ההזמנות' : 'לחץ כדי לראות סטטוס מלא'}</p>
                 </div>
             )}
+
+            <ActiveOrdersModal
+                isOpen={showActiveOrdersModal}
+                onClose={() => setShowActiveOrdersModal(false)}
+                orders={activeOrdersData}
+                onOrderClick={(id) => {
+                    setShowActiveOrdersModal(false);
+                    navigate(isPreviewMode ? `/admin/preview-order-status/${id}` : `/${effectiveTenantId || tenantId || ''}/order-status/${id}`);
+                }}
+            />
 
             {/* באנר דמו */}
             {restaurant?.is_demo && (
@@ -849,7 +990,7 @@ export default function MenuPage({ isPreviewMode = false }) {
                 isOpen={Boolean(selectedMenuItem)}
                 onClose={handleCloseModal}
                 onAdd={handleAddFromModal}
-                isOrderingEnabled={canOrder}
+                isOrderingEnabled={canOrder || (canPreOrder && futureOrderApproved)}
             />
 
             {/* מודל מידע נוסף */}
@@ -1280,6 +1421,80 @@ export default function MenuPage({ isPreviewMode = false }) {
                     </div>
                 </div>
             )}
+
+            {/* דיאלוג הזמנה חוזרת כשיש פריטים בסל */}
+            {reorderDialog && (
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" dir="rtl">
+                    <div className="bg-white dark:bg-brand-dark-surface rounded-2xl shadow-2xl max-w-sm w-full overflow-hidden">
+                        <div className="p-5 space-y-3 text-center">
+                            <div className="w-14 h-14 mx-auto bg-brand-primary/10 rounded-full flex items-center justify-center">
+                                <FaShoppingBag className="text-brand-primary text-2xl" />
+                            </div>
+                            <h3 className="text-lg font-black text-gray-900 dark:text-brand-dark-text">יש פריטים בסל</h3>
+                            <p className="text-sm text-gray-500 dark:text-brand-dark-muted leading-relaxed">
+                                בסל שלך יש כבר {cartItems.length} פריטים.
+                                <br />מה תרצה לעשות עם ההזמנה הקודמת?
+                            </p>
+                        </div>
+                        <div className="border-t border-gray-100 dark:border-brand-dark-border p-4 space-y-2">
+                            <button
+                                onClick={() => {
+                                    const items = reorderDialog.items;
+                                    setReorderDialog(null);
+                                    loadReorderItems(items, true);
+                                }}
+                                className="w-full py-3 rounded-xl font-bold text-sm bg-brand-primary text-white hover:bg-brand-secondary active:scale-95 transition-all"
+                            >
+                                נקה סל וטען הזמנה חדשה
+                            </button>
+                            <button
+                                onClick={() => {
+                                    const items = reorderDialog.items;
+                                    setReorderDialog(null);
+                                    loadReorderItems(items, false);
+                                }}
+                                className="w-full py-3 rounded-xl font-bold text-sm bg-gray-100 dark:bg-brand-dark-border text-gray-700 dark:text-brand-dark-text hover:bg-gray-200 dark:hover:bg-gray-600 active:scale-95 transition-all"
+                            >
+                                הוסף לסל הקיים
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setReorderDialog(null);
+                                    localStorage.removeItem('reorder_items');
+                                    localStorage.removeItem('reorder_tenant');
+                                    localStorage.removeItem('reorder_unavailable');
+                                }}
+                                className="w-full py-2 text-xs text-gray-400 hover:text-gray-600 transition"
+                            >
+                                ביטול
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* מודל הזמנה עתידית */}
+            <FutureOrderModal
+                isOpen={showFutureOrderModal}
+                onClose={() => {
+                    setShowFutureOrderModal(false);
+                    if (pendingReorderItems) {
+                        addToast('ההזמנה החוזרת בוטלה', 'info');
+                        setPendingReorderItems(null);
+                        localStorage.removeItem('reorder_unavailable');
+                    }
+                }}
+                onConfirm={(isoString) => {
+                    setScheduledFor(isoString);
+                    if (!isRegisteredCustomer) {
+                        setCustomerInfo(prev => ({ ...prev, payment_method: 'credit_card' }));
+                    }
+                    setFutureOrderApproved(true);
+                    setShowFutureOrderModal(false);
+                    addToast('הזמנה עתידית אושרה — ניתן להוסיף מוצרים', 'success');
+                }}
+                restaurant={restaurant}
+            />
 
         </CustomerLayout>
     );

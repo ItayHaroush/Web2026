@@ -102,8 +102,8 @@ export const posApi = {
         api.get(`/kiosk/${kioskToken}/menu`),
 
     // Order status (reuse admin endpoint)
-    updateOrderStatus: (orderId, status, headers) =>
-        api.patch(`/admin/orders/${orderId}/status`, { status }, { headers }),
+    updateOrderStatus: (orderId, payload, headers) =>
+        api.patch(`/admin/orders/${orderId}/status`, typeof payload === 'string' ? { status: payload } : payload, { headers }),
     markOrderPaid: (orderId, headers) =>
         api.post(`/admin/orders/${orderId}/mark-paid`, {}, { headers }),
 

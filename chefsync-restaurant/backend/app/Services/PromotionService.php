@@ -52,7 +52,8 @@ class PromotionService
             })
             ->where(function ($q) use ($currentDay) {
                 $q->whereNull('active_days')
-                    ->orWhereJsonContains('active_days', $currentDay);
+                    ->orWhereJsonContains('active_days', $currentDay)
+                    ->orWhereJsonContains('active_days', (string) $currentDay);
             })
             ->with(['rules.category', 'rewards.rewardCategory', 'rewards.rewardMenuItem'])
             ->orderBy('priority', 'desc')

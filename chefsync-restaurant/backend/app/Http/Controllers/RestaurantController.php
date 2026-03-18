@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Restaurant;
 use App\Models\City;
+use App\Models\MenuItem;
 use Illuminate\Http\Request;
 
 /**
@@ -113,9 +114,16 @@ class RestaurantController extends Controller
 
             $restaurants = $query->orderBy('name')->get();
 
-            // סנן בזמן אמת לפי שעות פתיחה (או כפייה, אם קיימת)
+            // מיון: פתוחות קודם, בתוך כל קבוצה - הזמנה מראש קודם
             $restaurants = $restaurants
-                ->filter(fn($restaurant) => (bool) ($restaurant->is_open_now ?? false))
+                ->sort(function ($a, $b) {
+                    $aOpen = (bool) ($a->is_open_now ?? false);
+                    $bOpen = (bool) ($b->is_open_now ?? false);
+                    if ($aOpen !== $bOpen) return $bOpen <=> $aOpen;
+                    $aFuture = (bool) ($a->allow_future_orders ?? false);
+                    $bFuture = (bool) ($b->allow_future_orders ?? false);
+                    return $bFuture <=> $aFuture;
+                })
                 ->values();
 
             return response()->json([
@@ -131,8 +139,72 @@ class RestaurantController extends Controller
         }
     }
 
-    /**
-     * קבל פרטי מסעדה לפי tenant/slug (ציבורי)
+    /**     * חיפוש מנות בתפריטים של מסעדות מאושרות (לפי עיר)
+     */
+    public function searchMenuItems(Request $request)
+    {
+        try {
+            $q = trim($request->input('q', ''));
+            if (mb_strlen($q) < 2) {
+                return response()->json(['success' => true, 'data' => []]);
+            }
+
+            // מצא מסעדות מאושרות בעיר הנבחרת
+            $restaurantQuery = Restaurant::where('is_approved', true);
+            if ($request->filled('city')) {
+                $cityInput = $request->city;
+                $cityModel = City::where('hebrew_name', $cityInput)
+                    ->orWhere('name', $cityInput)->first();
+                if ($cityModel) {
+                    $restaurantQuery->whereIn('city', [
+                        $cityModel->hebrew_name ?? $cityInput,
+                        $cityModel->name ?? $cityInput,
+                    ]);
+                } else {
+                    $restaurantQuery->where('city', $cityInput);
+                }
+            }
+            $restaurantIds = $restaurantQuery->pluck('id');
+
+            // חפש מנות פעילות — ללא global scope של tenant
+            $items = MenuItem::withoutGlobalScope('tenant')
+                ->whereIn('restaurant_id', $restaurantIds)
+                ->where('is_active', true)
+                ->where('is_available', true)
+                ->where(function ($query) use ($q) {
+                    $query->where('name', 'LIKE', "%{$q}%")
+                          ->orWhere('description', 'LIKE', "%{$q}%");
+                })
+                ->with('restaurant:id,name,tenant_id,logo_url,city,is_open,is_override_status,is_demo,operating_hours')
+                ->select('id', 'restaurant_id', 'name', 'description', 'price', 'image_url')
+                ->limit(30)
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $items->map(fn(MenuItem $item) => [
+                    'id' => $item->id,
+                    'name' => $item->name,
+                    'description' => $item->description,
+                    'price' => (float) $item->price,
+                    'image_url' => $item->image_url,
+                    'restaurant_name' => $item->restaurant?->name,
+                    'restaurant_tenant_id' => $item->restaurant?->tenant_id,
+                    'restaurant_logo' => $item->restaurant?->logo_url,
+                    'is_open_now' => (bool) ($item->restaurant?->is_open_now ?? false),
+                    'is_demo' => (bool) ($item->restaurant?->is_demo ?? false),
+                ]),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'שגיאה בחיפוש',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**     * קבל פרטי מסעדה לפי tenant/slug (ציבורי)
      * מיועד לעמודי תפריט ציבוריים: /:tenantId/menu
      * לא מסנן לפי is_open כדי שמשתמש חדש יראה את דף המסעדה המלא גם אם היא סגורה.
      */

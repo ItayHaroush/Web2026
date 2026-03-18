@@ -188,14 +188,24 @@ class HypOrderCallbackController extends Controller
 
         // FCM push
         try {
-            $notificationBody = "{$order->customer_name} - ₪{$expectedAmount}";
+            $isFutureOrder = (bool) $order->is_future_order;
+            if ($isFutureOrder && $order->scheduled_for) {
+                $scheduledTime = \Carbon\Carbon::parse($order->scheduled_for)->timezone('Asia/Jerusalem')->format('d/m H:i');
+                $notificationTitle = "הזמנה עתידית #{$order->id}";
+                $notificationBody = "{$order->customer_name} - ₪{$expectedAmount} — מתוכנן ל-{$scheduledTime}";
+                $notificationType = 'future_order';
+            } else {
+                $notificationTitle = "הזמנה חדשה #{$order->id}";
+                $notificationBody = "{$order->customer_name} - ₪{$expectedAmount}";
+                $notificationType = 'new_order';
+            }
             $this->sendOrderNotification(
                 tenantId: $restaurant->tenant_id,
-                title: "הזמנה חדשה #{$order->id}",
+                title: $notificationTitle,
                 body: $notificationBody,
                 data: [
                     'orderId' => (string) $order->id,
-                    'type'    => 'new_order',
+                    'type'    => $notificationType,
                     'url'     => '/admin/orders',
                 ]
             );

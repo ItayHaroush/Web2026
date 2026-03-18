@@ -18,7 +18,14 @@ import {
     FaWhatsapp,
     FaUtensils,
     FaDesktop,
-    FaTabletScreenButton
+    FaTabletScreenButton,
+    FaListCheck,
+    FaTags,
+    FaCashRegister,
+    FaTv,
+    FaPuzzlePiece,
+    FaChartPie,
+    FaImage
 } from "react-icons/fa6";
 import { PRODUCT_BYLINE_HE, PRODUCT_NAME } from '../constants/brand';
 
@@ -101,6 +108,73 @@ export default function LandingPage() {
             highlight: true,
             badge: 'סוכן חכם מלא'
         }
+    ];
+
+    const features = [
+        {
+            title: 'ניהול תפריט מתקדם',
+            desc: 'ממשק ניהול אינטואיטיבי לבניית תפריט מלא – קטגוריות, מנות, וריאציות, תמונות ותיאורים. עדכן את התפריט בזמן אמת ללא צורך במתכנת.',
+            screenshot: '/screenshots/menu-management.png',
+            icon: <FaBurger className="w-6 h-6" />,
+            color: 'text-orange-500',
+            bg: 'bg-orange-50 dark:bg-orange-900/20',
+        },
+        {
+            title: 'לוח הזמנות חי',
+            desc: 'מעקב אחרי כל ההזמנות בזמן אמת – סטטוסים, זמנים, פרטי לקוח ופריטים. קבל התראות על הזמנות חדשות וטפל בהן ישירות מהמסך.',
+            screenshot: '/screenshots/order-dashboard.png',
+            icon: <FaListCheck className="w-6 h-6" />,
+            color: 'text-blue-500',
+            bg: 'bg-blue-50 dark:bg-blue-900/20',
+        },
+        {
+            title: 'אזורי משלוח חכמים',
+            desc: 'הגדר אזורי חלוקה על המפה עם תמחור דינמי – עלות קבועה, לפי קילומטר או מדורג. קבע מינימום הזמנה וזמני אספקה לכל אזור.',
+            screenshot: '/screenshots/delivery-zones.png',
+            icon: <FaMapLocationDot className="w-6 h-6" />,
+            color: 'text-emerald-500',
+            bg: 'bg-emerald-50 dark:bg-emerald-900/20',
+        },
+        {
+            title: 'מבצעים והטבות',
+            desc: 'צור מבצעים מורכבים עם כללים ותגמולים – אחוז הנחה, מוצר במתנה, מחיר קבוע ועוד. קבע שעות פעילות, ימים ותנאי סף אוטומטיים.',
+            screenshot: '/screenshots/promotions.png',
+            icon: <FaTags className="w-6 h-6" />,
+            color: 'text-purple-500',
+            bg: 'bg-purple-50 dark:bg-purple-900/20',
+        },
+        {
+            title: 'מסוף הזמנות (POS)',
+            desc: 'מסוף ניהול ייעודי לטאבלט – קבל הזמנות, עדכן סטטוסים, הדפס קבלות. ממשק נקי ומהיר שמתאים לסביבת עבודה עמוסה.',
+            screenshot: '/screenshots/pos-terminal.png',
+            icon: <FaCashRegister className="w-6 h-6" />,
+            color: 'text-rose-500',
+            bg: 'bg-rose-50 dark:bg-rose-900/20',
+        },
+        {
+            title: 'דוחות וניתוח ביצועים',
+            desc: 'תובנות עסקיות חכמות – מכירות יומיות, מנות פופולריות, שעות שיא ומגמות. כל הנתונים שצריך כדי לקבל החלטות מבוססות.',
+            screenshot: '/screenshots/reports.png',
+            icon: <FaChartPie className="w-6 h-6" />,
+            color: 'text-cyan-500',
+            bg: 'bg-cyan-50 dark:bg-cyan-900/20',
+        },
+        {
+            title: 'קבוצות תוספות',
+            desc: 'הגדר תוספות גמישות לכל מנה – גודל, רטבים, סלטים, סוג לחמנייה. קבע חובה/אופציונלי, מקסימום בחירות ומחיר לכל תוספת.',
+            screenshot: '/screenshots/addon-groups.png',
+            icon: <FaPuzzlePiece className="w-6 h-6" />,
+            color: 'text-amber-500',
+            bg: 'bg-amber-50 dark:bg-amber-900/20',
+        },
+        {
+            title: 'מסך תצוגה למטבח',
+            desc: 'מסך תצוגה חי שמציג את ההזמנות הפעילות לצוות המטבח. מעבר חלק בין הזמנות, סימון פריטים מוכנים ועדכון סטטוס בלחיצה.',
+            screenshot: '/screenshots/display-screen.png',
+            icon: <FaTv className="w-6 h-6" />,
+            color: 'text-indigo-500',
+            bg: 'bg-indigo-50 dark:bg-indigo-900/20',
+        },
     ];
 
     return (
@@ -348,6 +422,70 @@ export default function LandingPage() {
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </section>
+
+                {/* Feature Showcase */}
+                <section className="max-w-7xl mx-auto px-4 sm:px-6">
+                    <div className="text-center mb-20">
+                        <span className="text-brand-primary font-bold tracking-wider text-sm uppercase">הצצה למערכת</span>
+                        <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mt-3 mb-4 text-gray-900 dark:text-brand-dark-text">
+                            הכלים שמנהלים את המסעדה שלך
+                        </h2>
+                        <p className="text-xl text-gray-500 dark:text-brand-dark-muted max-w-2xl mx-auto">
+                            כל מה שצריך בלוח בקרה אחד – תפריט, הזמנות, משלוחים, מבצעים ועוד
+                        </p>
+                    </div>
+
+                    <div className="space-y-24 lg:space-y-32">
+                        {features.map((feature, i) => (
+                            <div
+                                key={i}
+                                className={`flex flex-col ${i % 2 === 0 ? 'lg:flex-row' : 'lg:flex-row-reverse'} gap-10 lg:gap-16 items-center`}
+                            >
+                                {/* Screenshot */}
+                                <div className="w-full lg:w-3/5 relative group">
+                                    <div className="relative rounded-2xl overflow-hidden shadow-2xl shadow-gray-200/60 dark:shadow-black/30 border border-gray-100 dark:border-brand-dark-border bg-white dark:bg-brand-dark-surface">
+                                        {/* Browser Chrome */}
+                                        <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 dark:bg-brand-dark-bg border-b border-gray-100 dark:border-brand-dark-border">
+                                            <div className="flex gap-1.5">
+                                                <div className="w-3 h-3 rounded-full bg-red-400" />
+                                                <div className="w-3 h-3 rounded-full bg-yellow-400" />
+                                                <div className="w-3 h-3 rounded-full bg-green-400" />
+                                            </div>
+                                            <div className="flex-1 bg-white dark:bg-brand-dark-surface rounded-lg px-3 py-1 text-xs text-gray-400 dark:text-brand-dark-muted mr-2">
+                                                takeeat.co.il/admin
+                                            </div>
+                                        </div>
+                                        <div className="w-full aspect-[16/10] bg-gradient-to-br from-gray-100 to-gray-50 dark:from-brand-dark-bg dark:to-brand-dark-surface flex flex-col items-center justify-center gap-3">
+                                            <div className={`w-16 h-16 rounded-2xl ${feature.bg} flex items-center justify-center`}>
+                                                <FaImage className={`w-7 h-7 ${feature.color}`} />
+                                            </div>
+                                            <div className="text-center">
+                                                <p className="text-sm font-bold text-gray-400 dark:text-brand-dark-muted">בקרוב</p>
+                                                <p className="text-xs text-gray-300 dark:text-brand-dark-muted/60">עובדים על זה</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {/* Glow Effect */}
+                                    <div className={`absolute -inset-4 ${feature.bg} rounded-3xl blur-2xl opacity-0 group-hover:opacity-40 transition-opacity duration-500 -z-10`} />
+                                </div>
+
+                                {/* Text */}
+                                <div className="w-full lg:w-2/5 space-y-5">
+                                    <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl ${feature.bg} ${feature.color} font-bold text-sm`}>
+                                        {feature.icon}
+                                        <span>0{i + 1}</span>
+                                    </div>
+                                    <h3 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-brand-dark-text">
+                                        {feature.title}
+                                    </h3>
+                                    <p className="text-gray-600 dark:text-brand-dark-muted leading-relaxed text-lg">
+                                        {feature.desc}
+                                    </p>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </section>
 

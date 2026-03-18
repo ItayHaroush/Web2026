@@ -2428,6 +2428,7 @@ class AdminController extends Controller
 
         $request->validate([
             'status' => 'required|in:pending,received,preparing,ready,delivering,delivered,cancelled',
+            'cancellation_reason' => 'nullable|string|max:500',
         ]);
 
         // ולידציה: בדיקה שהמעבר מותר לפי transition map
@@ -2480,9 +2481,14 @@ class AdminController extends Controller
             }
         }
 
-        // כשהזמנה מבוטלת - בטל המתנה לתשלום
-        if ($request->status === 'cancelled' && $order->payment_status === 'pending') {
-            $order->payment_status = 'cancelled';
+        // כשהזמנה מבוטלת - בטל המתנה לתשלום ושמור סיבת ביטול
+        if ($request->status === 'cancelled') {
+            if ($order->payment_status === 'pending') {
+                $order->payment_status = 'cancelled';
+            }
+            if ($request->filled('cancellation_reason')) {
+                $order->cancellation_reason = $request->cancellation_reason;
+            }
         }
 
         $order->save();
@@ -2495,6 +2501,9 @@ class AdminController extends Controller
                 Log::error('Print failed: ' . $e->getMessage());
             }
         }
+
+        // שליחת מייל ללקוח בסיום הזמנה (נמסרה / בוטלה)
+        \App\Services\CustomerOrderMailService::sendOnStatusChange($order, $request->status);
 
         return response()->json([
             'success' => true,

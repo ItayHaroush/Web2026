@@ -78,13 +78,15 @@ apiClient.interceptors.request.use((config) => {
 
     const urlPath = (config.url || '').toString();
     const isSuperAdminCall = urlPath.startsWith('/super-admin/');
+    const isCustomerEndpoint = urlPath.startsWith('/customer/') || urlPath === '/customer';
 
     // Don't clobber an explicit header; skip tenant header for super-admin routes
     if (!isSuperAdminCall && tenantId && !config.headers?.[TENANT_HEADER]) {
         config.headers[TENANT_HEADER] = tenantId;
     }
 
-    if (token) {
+    // Customer endpoints manage their own Authorization header — never inject admin token
+    if (token && !isCustomerEndpoint) {
         config.headers.Authorization = `Bearer ${token}`;
     }
 
@@ -114,10 +116,13 @@ apiClient.interceptors.response.use(
         if (error.response?.status === 401) {
             const requestUrl = error.config?.url || '';
             const isPosRoute = requestUrl.includes('/pos/');
-            if (isPosRoute) {
+            const isCustomerRoute = requestUrl.startsWith('/customer/') || requestUrl.startsWith('/customer');
+
+            // Customer and POS routes handle their own 401 logic
+            if (isPosRoute || isCustomerRoute) {
                 return Promise.reject(error);
             }
-            // Token לא תקף - נקה מידע רלוונטי והפנה לפי סוג משתמש
+
             const hasAdminToken = !!localStorage.getItem('admin_token');
             localStorage.removeItem('authToken');
             localStorage.removeItem('tenantId');
@@ -125,8 +130,9 @@ apiClient.interceptors.response.use(
                 localStorage.removeItem('admin_token');
                 window.location.href = '/admin/login';
             } else {
-                window.location.href = '/login';
+                window.location.href = '/';
             }
+            return new Promise(() => {});
         }
 
         if (error.response?.status === 402) {

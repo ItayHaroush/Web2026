@@ -76,24 +76,32 @@ export default function PromotionProgress({ onSelectGift, onNavigateToCategory }
                             </div>
                         )}
 
-                        {/* CTA when met */}
-                        {met && onSelectGift && (() => {
-                            if (hasSelectedGift) {
-                                const freeItemRewards = (promo.rewards || []).filter(r => r.reward_type === 'free_item');
-                                const allSpecific = freeItemRewards.length > 0 && freeItemRewards.every(r => r.reward_menu_item_id);
+                        {/* CTA when met — only for promotions with free_item rewards */}
+                        {met && onSelectGift && (promo.rewards || []).some(r => r.reward_type === 'free_item') && (() => {
+                            const freeItemRewards = (promo.rewards || []).filter(r => r.reward_type === 'free_item');
+                            const allSpecific = freeItemRewards.length > 0 && freeItemRewards.every(r => r.reward_menu_item_id);
 
-                                let giftLabel = '';
-                                if (allSpecific) {
-                                    giftLabel = freeItemRewards.map(r => {
-                                        const name = r.reward_menu_item_name || 'מתנה';
-                                        const qty = (r.max_selectable || 1) * timesQ;
-                                        return qty > 1 ? `${name} x${qty}` : name;
-                                    }).join(', ');
-                                } else {
-                                    giftLabel = effectiveMax > 1
-                                        ? `${promoGifts.length}/${effectiveMax} מתנות נבחרו`
-                                        : 'מתנה נבחרה';
-                                }
+                            // פריטים ספציפיים — מוצגים אוטומטית ללא צורך בבחירה
+                            if (allSpecific) {
+                                const giftLabel = freeItemRewards.map(r => {
+                                    const name = r.reward_menu_item_name || 'מתנה';
+                                    const qty = (r.max_selectable || 1) * timesQ;
+                                    return qty > 1 ? `${name} x${qty}` : name;
+                                }).join(', ');
+
+                                return (
+                                    <div className="mt-3 flex-1 bg-brand-primary text-white py-2.5 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2">
+                                        <FaGift size={14} />
+                                        <span>{giftLabel}</span>
+                                        <FaCheck size={12} />
+                                    </div>
+                                );
+                            }
+
+                            if (hasSelectedGift) {
+                                const giftLabel = effectiveMax > 1
+                                    ? `${promoGifts.length}/${effectiveMax} מתנות נבחרו`
+                                    : 'מתנה נבחרה';
 
                                 return (
                                     <div className="mt-3 flex gap-2">

@@ -896,6 +896,7 @@ export default function AdminRestaurant() {
                                         <label className="text-xs font-black text-gray-500 mr-2">פתיחה</label>
                                         <input
                                             type="time"
+                                            dir="ltr"
                                             value={restaurant.operating_hours?.default?.open || restaurant.operating_hours?.open || '09:00'}
                                             onChange={(e) => handleOperatingHoursChange('open', e.target.value)}
                                             className="w-full px-5 py-3 bg-white border-none rounded-2xl text-gray-900 font-black text-center text-lg shadow-sm"
@@ -905,6 +906,7 @@ export default function AdminRestaurant() {
                                         <label className="text-xs font-black text-gray-500 mr-2">סגירה</label>
                                         <input
                                             type="time"
+                                            dir="ltr"
                                             value={restaurant.operating_hours?.default?.close || restaurant.operating_hours?.close || '23:00'}
                                             onChange={(e) => handleOperatingHoursChange('close', e.target.value)}
                                             className="w-full px-5 py-3 bg-white border-none rounded-2xl text-gray-900 font-black text-center text-lg shadow-sm"
@@ -955,20 +957,22 @@ export default function AdminRestaurant() {
                                                             <label className="text-[10px] font-black text-gray-400 mr-2">פתיחה</label>
                                                             <input
                                                                 type="time"
+                                                                dir="ltr"
                                                                 value={dayCfg.open || restaurant.operating_hours?.default?.open || '09:00'}
                                                                 onChange={(e) => handleDayHoursChange(day, 'open', e.target.value)}
                                                                 disabled={!isOpenDay}
-                                                                className="w-full px-2 py-2 bg-gray-50 border-none rounded-xl text-center font-black text-sm ltr"
+                                                                className="w-full px-2 py-2 bg-gray-50 border-none rounded-xl text-center font-black text-sm"
                                                             />
                                                         </div>
                                                         <div className="space-y-1">
                                                             <label className="text-[10px] font-black text-gray-400 mr-2">סגירה</label>
                                                             <input
                                                                 type="time"
+                                                                dir="ltr"
                                                                 value={dayCfg.close || restaurant.operating_hours?.default?.close || '23:00'}
                                                                 onChange={(e) => handleDayHoursChange(day, 'close', e.target.value)}
                                                                 disabled={!isOpenDay}
-                                                                className="w-full px-2 py-2 bg-gray-50 border-none rounded-xl text-center font-black text-sm ltr"
+                                                                className="w-full px-2 py-2 bg-gray-50 border-none rounded-xl text-center font-black text-sm"
                                                             />
                                                         </div>
                                                     </div>

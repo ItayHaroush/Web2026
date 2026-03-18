@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { CustomerLayout } from '../layouts/CustomerLayout';
 import { Link, useNavigate } from 'react-router-dom';
 import { getAllRestaurants, getCities } from '../services/restaurantService';
 import LocationPickerModal from '../components/LocationPickerModal';
+import apiClient from '../services/apiClient';
 import logo from '../images/ChefSyncLogoIcon.png';
 import { resolveAssetUrl } from '../utils/assets';
 import { PRODUCT_BYLINE_HE, PRODUCT_NAME } from '../constants/brand';
@@ -20,7 +21,9 @@ import {
     FaClock,
     FaCircle,
     FaTruck,
-    FaShoppingBag
+    FaShoppingBag,
+    FaCalendarAlt,
+    FaSearch
 } from 'react-icons/fa';
 import { HiGlobeAlt, HiLocationMarker } from 'react-icons/hi';
 
@@ -42,10 +45,54 @@ export default function HomePage() {
     const [activeOrderId, setActiveOrderId] = useState(null);
     const [showLocationModal, setShowLocationModal] = useState(false);
     const [deliveryLocation, setDeliveryLocation] = useState(null);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchResults, setSearchResults] = useState([]);
+    const [searchLoading, setSearchLoading] = useState(false);
+    const [searchOpen, setSearchOpen] = useState(false);
+    const searchRef = useRef(null);
+    const debounceRef = useRef(null);
     const navigate = useNavigate();
 
     // Feature Carousel Logic
     const [activeFeature, setActiveFeature] = useState(0);
+
+    // חיפוש מנות
+    const doMenuSearch = useCallback(async (q) => {
+        if (q.trim().length < 2) { setSearchResults([]); return; }
+        setSearchLoading(true);
+        try {
+            const params = { q: q.trim() };
+            if (selectedCity) params.city = selectedCity;
+            const res = await apiClient.get('/menu-search', { params });
+            setSearchResults(res.data?.data || []);
+        } catch { setSearchResults([]); } finally { setSearchLoading(false); }
+    }, [selectedCity]);
+
+    const handleSearchInput = (e) => {
+        const val = e.target.value;
+        setSearchQuery(val);
+        setSearchOpen(true);
+        clearTimeout(debounceRef.current);
+        debounceRef.current = setTimeout(() => doMenuSearch(val), 350);
+    };
+
+    const handleSearchItemClick = (item) => {
+        if (item.restaurant_tenant_id) {
+            loginAsCustomer(item.restaurant_tenant_id);
+            setTimeout(() => navigate(`/${item.restaurant_tenant_id}/menu`), 100);
+        }
+        setSearchOpen(false);
+        setSearchQuery('');
+    };
+
+    // סגור דרופדאון בלחיצה מחוץ
+    useEffect(() => {
+        const handler = (e) => {
+            if (searchRef.current && !searchRef.current.contains(e.target)) setSearchOpen(false);
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, []);
     const features = [
         {
             icon: FaRocket,
@@ -353,17 +400,18 @@ export default function HomePage() {
                 </div>
 
                 {/* חיפוש/סינון צף */}
-                <div className="mx-3 sm:mx-6 lg:mx-8 -mt-6 sm:-mt-8 relative z-10">
+                <div className="mx-3 sm:mx-6 lg:mx-8 -mt-6 sm:-mt-8 relative z-10" ref={searchRef}>
                     <div className="bg-white dark:bg-brand-dark-surface rounded-xl sm:rounded-2xl shadow-xl p-3 sm:p-4">
-                        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 items-center">
-                            <div className="flex-1 w-full relative group">
-                                <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-gray-400 dark:text-gray-500 group-focus-within:text-brand-primary transition-colors">
-                                    <HiGlobeAlt className="w-5 h-5" />
+                        <div className="flex gap-2 items-center">
+                            {/* בחירת עיר */}
+                            <div className="relative shrink-0 w-[120px] sm:w-[150px]">
+                                <div className="absolute inset-y-0 right-2.5 flex items-center pointer-events-none text-gray-400 dark:text-gray-500">
+                                    <HiGlobeAlt className="w-4 h-4" />
                                 </div>
                                 <select
                                     value={selectedCity}
                                     onChange={(e) => setSelectedCity(e.target.value)}
-                                    className="w-full pr-10 pl-4 py-2.5 sm:py-3 bg-gray-50 dark:bg-brand-dark-border/50 border border-gray-200 dark:border-brand-dark-border rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary text-gray-700 dark:text-gray-300 font-semibold text-sm sm:text-base transition-all appearance-none cursor-pointer"
+                                    className="w-full pr-8 pl-2 py-2.5 sm:py-3 bg-gray-50 dark:bg-brand-dark-border/50 border border-gray-200 dark:border-brand-dark-border rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary text-gray-700 dark:text-gray-300 font-semibold text-xs sm:text-sm transition-all appearance-none cursor-pointer"
                                 >
                                     <option value="">כל הערים</option>
                                     {cities.filter(Boolean).map((city, index) => (
@@ -372,15 +420,106 @@ export default function HomePage() {
                                         </option>
                                     ))}
                                 </select>
-                                <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-gray-400 dark:text-gray-500">
-                                    <FaChevronLeft className="w-3 h-3 -rotate-90" />
-                                </div>
                             </div>
-                            <div className="text-center sm:text-right px-4">
-                                <p className="text-xl sm:text-2xl font-black text-brand-primary leading-tight">{restaurants.length}</p>
-                                <p className="text-[10px] sm:text-xs uppercase tracking-wider font-bold text-gray-400 dark:text-gray-500">מסעדות</p>
+
+                            {/* שדה חיפוש */}
+                            <div className="relative flex-1">
+                                <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-gray-400 dark:text-gray-500 z-10">
+                                    <FaSearch className="w-3.5 h-3.5" />
+                                </div>
+                                <input
+                                    type="text"
+                                    value={searchQuery}
+                                    onChange={handleSearchInput}
+                                    onFocus={() => searchQuery.trim().length >= 2 && setSearchOpen(true)}
+                                    placeholder="מה בא לך לאכול?"
+                                    className="w-full pr-9 pl-4 py-2.5 sm:py-3 bg-gray-50 dark:bg-brand-dark-border/50 border border-gray-200 dark:border-brand-dark-border rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary text-gray-700 dark:text-gray-300 font-semibold text-sm sm:text-base transition-all placeholder:text-gray-400 dark:placeholder:text-gray-500"
+                                />
+                            </div>
+
+                            {/* כמות מסעדות */}
+                            <div className="text-center shrink-0 px-2">
+                                <p className="text-lg sm:text-xl font-black text-brand-primary leading-tight">{restaurants.length}</p>
+                                <p className="text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-gray-400 dark:text-gray-500">מסעדות</p>
                             </div>
                         </div>
+
+                        {/* דרופדאון תוצאות חיפוש */}
+                        {searchOpen && searchQuery.trim().length >= 2 && (
+                            <div className="mt-2 bg-white dark:bg-brand-dark-surface rounded-xl shadow-2xl border border-gray-100 dark:border-brand-dark-border max-h-[50vh] overflow-y-auto">
+                                {searchLoading && (
+                                    <div className="flex items-center justify-center py-8">
+                                        <div className="animate-spin rounded-full h-7 w-7 border-b-2 border-brand-primary" />
+                                    </div>
+                                )}
+                                {!searchLoading && searchResults.length === 0 && (
+                                    <div className="text-center py-8 px-4">
+                                        <FaUtensils className="text-2xl text-gray-300 mx-auto mb-2" />
+                                        <p className="text-gray-500 font-semibold text-sm">לא נמצאו מנות</p>
+                                    </div>
+                                )}
+                                {!searchLoading && searchResults.length > 0 && (() => {
+                                    const openItems = searchResults.filter(i => i.is_open_now);
+                                    const closedItems = searchResults.filter(i => !i.is_open_now);
+                                    const showClosed = openItems.length === 0;
+                                    const displayItems = openItems.length > 0 ? openItems : closedItems;
+                                    return (
+                                        <div className="divide-y divide-gray-50 dark:divide-brand-dark-border">
+                                            {showClosed && closedItems.length > 0 && (
+                                                <div className="px-4 py-2 bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 text-xs font-bold flex items-center gap-1.5">
+                                                    <FaClock className="w-3 h-3" />
+                                                    המסעדות סגורות כרגע — מציג תוצאות להשראה
+                                                </div>
+                                            )}
+                                            {displayItems.map((item) => (
+                                                <div
+                                                    key={`${item.restaurant_tenant_id}-${item.id}`}
+                                                    onClick={() => handleSearchItemClick(item)}
+                                                    className={`flex items-center gap-3 p-3 cursor-pointer transition-colors ${!item.is_open_now ? 'opacity-70 hover:bg-rose-50/50 dark:hover:bg-rose-900/10' : 'hover:bg-gray-50 dark:hover:bg-brand-dark-border/50'}`}
+                                                >
+                                                    <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 dark:bg-brand-dark-border flex-shrink-0 flex items-center justify-center relative">
+                                                        {item.image_url ? (
+                                                            <img src={resolveAssetUrl(item.image_url)} alt={item.name} className="w-full h-full object-cover" />
+                                                        ) : item.restaurant_logo ? (
+                                                            <img src={resolveAssetUrl(item.restaurant_logo)} alt="" className="w-7 h-7 object-contain opacity-40" />
+                                                        ) : (
+                                                            <FaUtensils className="text-gray-300" />
+                                                        )}
+                                                        {!item.is_open_now && (
+                                                            <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                                                                <FaClock className="text-white w-4 h-4" />
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="font-bold text-gray-800 dark:text-gray-200 text-sm truncate">{item.name}</p>
+                                                        {item.description && <p className="text-xs text-gray-400 truncate">{item.description}</p>}
+                                                        <div className="flex items-center gap-1.5 mt-0.5">
+                                                            <span className="text-[11px] text-brand-primary font-semibold">{item.restaurant_name}</span>
+                                                            {item.is_demo && (
+                                                                <span className="text-[9px] font-bold bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                                                                    <FaMask className="w-2 h-2" />
+                                                                    להמחשה
+                                                                </span>
+                                                            )}
+                                                            {!item.is_open_now && (
+                                                                <span className="text-[9px] font-bold bg-rose-100 dark:bg-rose-900/30 text-rose-500 dark:text-rose-400 px-1.5 py-0.5 rounded">
+                                                                    סגור
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-2 flex-shrink-0">
+                                                        <span className="text-sm font-black text-gray-700 dark:text-gray-300">₪{item.price}</span>
+                                                        <FaArrowLeft className="w-3 h-3 text-gray-300" />
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    );
+                                })()}
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
@@ -467,6 +606,12 @@ export default function HomePage() {
                                     <div className={`absolute top-3 right-3 px-3 py-1.5 rounded-full text-[10px] font-black shadow-lg flex items-center gap-1.5 border border-white/20 uppercase tracking-wider ${(restaurant.is_open_now ?? restaurant.is_open) ? 'bg-emerald-500/90 backdrop-blur-md text-white' : 'bg-rose-500/90 backdrop-blur-md text-white'}`}>
                                         <FaCircle className={`w-1.5 h-1.5 ${(restaurant.is_open_now ?? restaurant.is_open) ? 'animate-pulse' : ''}`} />
                                         {(restaurant.is_open_now ?? restaurant.is_open) ? 'פתוח עכשיו' : 'סגור כרגע'}
+                                    </div>
+
+                                    {/* תג הזמנה עתידית */}
+                                    <div className={`absolute bottom-3 right-3 px-2.5 py-1 rounded-full text-[10px] font-bold shadow-md flex items-center gap-1 border border-white/20 ${restaurant.allow_future_orders ? 'bg-teal-500/90 backdrop-blur-md text-white' : 'bg-gray-500/80 backdrop-blur-md text-white/90'}`}>
+                                        <FaCalendarAlt className="w-2.5 h-2.5" />
+                                        {restaurant.allow_future_orders ? 'הזמנה מראש' : 'ללא הזמנה מראש'}
                                     </div>
                                 </div>
 

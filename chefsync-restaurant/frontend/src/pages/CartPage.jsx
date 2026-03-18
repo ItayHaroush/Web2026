@@ -5,8 +5,9 @@ import OrderConfirmationSheet from '../components/OrderConfirmationSheet';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
+import { useCustomer } from '../context/CustomerContext';
 import { CustomerLayout } from '../layouts/CustomerLayout';
-import { FaMask, FaBoxOpen, FaStickyNote, FaTimes, FaShoppingCart, FaUser, FaPhone, FaMapMarkerAlt, FaMoneyBillWave, FaCreditCard, FaTruck, FaStore, FaHome, FaEdit, FaComment, FaExclamationTriangle, FaGift, FaSearch, FaClock, FaPlus, FaMinus } from 'react-icons/fa';
+import { FaMask, FaBoxOpen, FaStickyNote, FaTimes, FaShoppingCart, FaUser, FaPhone, FaMapMarkerAlt, FaMoneyBillWave, FaCreditCard, FaTruck, FaStore, FaHome, FaEdit, FaComment, FaExclamationTriangle, FaGift, FaSearch, FaClock, FaPlus, FaMinus, FaStar } from 'react-icons/fa';
 import orderService from '../services/orderService';
 import menuService from '../services/menuService';
 import { UI_TEXT } from '../constants/ui';
@@ -27,7 +28,7 @@ import { resolveAssetUrl } from '../utils/assets';
 export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
     const navigate = useNavigate();
     const { tenantId } = useAuth();
-    const { cartItems, removeFromCart, updateQuantity, getTotal, clearCart, customerInfo, setCustomerInfo, phoneVerified, setPhoneVerified, addToCart } = useCart();
+    const { cartItems, removeFromCart, updateQuantity, getTotal, clearCart, customerInfo, setCustomerInfo, phoneVerified, setPhoneVerified, addToCart, scheduledFor, setScheduledFor } = useCart();
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState(null);
     const [showPhoneModal, setShowPhoneModal] = useState(false);
@@ -50,10 +51,12 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
     const [menuCategories, setMenuCategories] = useState([]);
     const [promoCategoryModal, setPromoCategoryModal] = useState(null);
     const [promoMenuItem, setPromoMenuItem] = useState(null);
-    const [scheduledFor, setScheduledFor] = useState('');
+    const { isRecognized, customerToken, customer } = useCustomer();
+    const [savedAddresses, setSavedAddresses] = useState([]);
 
-    // האם המסעדה מאפשרת הזמנה עתידית (כשהיא סגורה)
-    const canFutureOrder = !restaurant?.is_open_now && restaurant?.allow_future_orders && restaurant?.accepts_credit_card;
+    const isRegisteredCustomer = isRecognized && !!customer?.id;
+    // לקוח רשום יכול להזמין מראש גם במזומן
+    const canFutureOrder = !restaurant?.is_open_now && restaurant?.allow_future_orders && (restaurant?.accepts_credit_card || isRegisteredCustomer);
 
     // Fetch menu for category quick-add modal
     useEffect(() => {
@@ -61,6 +64,16 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
             .then(data => setMenuCategories(data || []))
             .catch(() => { });
     }, []);
+
+    // Fetch saved addresses for logged-in users
+    useEffect(() => {
+        if (!customerToken) return;
+        apiClient.get('/customer/addresses', {
+            headers: { Authorization: `Bearer ${customerToken}` },
+        }).then(res => {
+            if (res.data?.success) setSavedAddresses(res.data.data || []);
+        }).catch(() => { });
+    }, [customerToken]);
 
     const handlePromoCategoryAdd = (item) => {
         const category = menuCategories.find(cat => (cat.items || []).some(i => i.id === item.id));
@@ -197,8 +210,13 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
             }
         }
 
+        // דילוג OTP אם יש טוקן לקוח (כבר אומת בהרשמה)
+        if (!phoneVerified && localStorage.getItem('customer_token')) {
+            setPhoneVerified(true);
+        }
+
         // אם הטלפון לא אומת, פתח modal
-        if (!phoneVerified) {
+        if (!phoneVerified && !localStorage.getItem('customer_token')) {
             setShowPhoneModal(true);
             return;
         }
@@ -245,11 +263,36 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
             const response = await orderService.createOrder(orderData);
             const resolvedTenantSlug = tenantId || localStorage.getItem('tenantId');
             if (resolvedTenantSlug) {
-                localStorage.setItem(`activeOrder_${resolvedTenantSlug}`, response.data.id);
+                // Multi-order: שומר מערך של הזמנות פעילות
+                const key = `activeOrders_${resolvedTenantSlug}`;
+                let activeOrders = [];
+                try { activeOrders = JSON.parse(localStorage.getItem(key)) || []; } catch { activeOrders = []; }
+                if (!activeOrders.includes(response.data.id)) {
+                    activeOrders.push(response.data.id);
+                }
+                localStorage.setItem(key, JSON.stringify(activeOrders));
                 localStorage.setItem(`order_tenant_${response.data.id}`, resolvedTenantSlug);
             }
             clearCart();
             setShowConfirmation(false);
+
+            // התחברות אוטומטית של הלקוח אחרי הזמנה (אם לא מחובר)
+            try {
+                const { loginWithPhone, isRecognized } = window.__customerContext || {};
+                // Alternative: use localStorage directly since context might not be available here
+                if (!localStorage.getItem('customer_token') && customerInfo.phone && customerInfo.name) {
+                    // נסה ליצור טוקן לקוח — כשלון שקט
+                    apiClient.post('/customer/auth/phone', {
+                        phone: customerInfo.phone,
+                        name: customerInfo.name,
+                    }).then(res => {
+                        if (res.data?.success) {
+                            localStorage.setItem('customer_token', res.data.data.token);
+                            localStorage.setItem('customer_data', JSON.stringify(res.data.data.customer));
+                        }
+                    }).catch(() => { /* כשלון שקט */ });
+                }
+            } catch { /* ignore */ }
 
             // B2C: אם יש payment_url — redirect לדף תשלום HYP
             if (response.payment_url) {
@@ -310,12 +353,25 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
     }
 
     const total = getTotal();
-    const totalWithDelivery = total + deliveryFee;
     const deliveryMinimum = parseFloat(restaurant?.delivery_minimum) || 0;
-    const isBelowMinimum = customerInfo.delivery_method === 'delivery' && deliveryMinimum > 0 && total < deliveryMinimum;
 
     // מבצעים שעומדים בתנאים
     const metPromotions = eligiblePromotions.filter(p => p.progress?.met);
+
+    // חישוב הנחת מבצעים בצד הלקוח (לתצוגה — הבקאנד מחשב סופית)
+    const promotionDiscount = metPromotions.reduce((sum, promo) => {
+        const times = promo.progress?.times_qualified || 1;
+        for (const reward of (promo.rewards || [])) {
+            if (reward.reward_type === 'discount_percent') {
+                sum += Math.round(total * (parseFloat(reward.reward_value) / 100) * 100) / 100 * times;
+            } else if (reward.reward_type === 'discount_fixed') {
+                sum += parseFloat(reward.reward_value) * times;
+            }
+        }
+        return sum;
+    }, 0);
+    const totalWithDelivery = total + deliveryFee - promotionDiscount;
+    const isBelowMinimum = customerInfo.delivery_method === 'delivery' && deliveryMinimum > 0 && total < deliveryMinimum;
     // בניית רשימת מתנות נבחרות (עם שמות) מ-selectedGifts
     const selectedGiftItems = [];
     for (const promo of metPromotions) {
@@ -572,14 +628,29 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                         </div>
                     )}
 
-                    {selectedGiftItems.length > 0 && (
-                        <div className="flex justify-between items-center text-lg">
-                            <span className="font-medium text-brand-primary dark:text-orange-400 flex items-center gap-1">
-                                <FaGift size={14} /> מבצע פעיל
-                            </span>
-                            <span className="font-bold text-brand-primary dark:text-orange-400 text-sm">
-                                ההנחה תחושב בהזמנה
-                            </span>
+                    {metPromotions.map((promo) => {
+                        const discountText = (promo.rewards || []).map(r => {
+                            if (r.reward_type === 'discount_percent') return `${r.reward_value}% הנחה`;
+                            if (r.reward_type === 'discount_fixed') return `₪${r.reward_value} הנחה`;
+                            if (r.reward_type === 'free_item') return 'מתנה';
+                            return 'הטבה';
+                        }).join(' + ');
+                        return (
+                            <div key={promo.promotion_id} className="flex justify-between items-center text-base">
+                                <span className="font-medium text-brand-primary dark:text-orange-400 flex items-center gap-1">
+                                    <FaGift size={14} /> {promo.name}
+                                </span>
+                                <span className="font-bold text-brand-primary dark:text-orange-400 text-sm">
+                                    {discountText}
+                                </span>
+                            </div>
+                        );
+                    })}
+
+                    {promotionDiscount > 0 && (
+                        <div className="flex justify-between items-center text-lg text-green-600 dark:text-green-400">
+                            <span className="font-medium flex items-center gap-1"><FaGift size={14} /> הנחת מבצעים</span>
+                            <span className="font-bold">-₪{promotionDiscount.toFixed(2)}</span>
                         </div>
                     )}
 
@@ -727,6 +798,42 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                             </div>
                             {customerInfo.delivery_method === 'delivery' && (
                                 <div className="mt-3 space-y-2">
+                                    {/* כתובות שמורות */}
+                                    {savedAddresses.length > 0 && (
+                                        <div className="space-y-1.5">
+                                            <p className="text-xs font-bold text-gray-500 dark:text-brand-dark-muted">כתובות שמורות</p>
+                                            {savedAddresses.map(addr => (
+                                                <button
+                                                    key={addr.id}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const fullAddress = `${addr.street} ${addr.house_number}${addr.apartment ? `, דירה ${addr.apartment}` : ''}, ${addr.city}`;
+                                                        setCustomerInfo(prev => ({
+                                                            ...prev,
+                                                            delivery_address: fullAddress,
+                                                            delivery_notes: addr.notes || prev.delivery_notes || '',
+                                                        }));
+                                                        if (addr.lat && addr.lng) {
+                                                            setDeliveryLocation({ lat: addr.lat, lng: addr.lng, address: fullAddress });
+                                                        }
+                                                    }}
+                                                    className="w-full text-right border-2 rounded-xl p-3 transition-all flex items-center gap-2 hover:border-brand-primary/50 hover:bg-orange-50 dark:hover:bg-orange-900/10 border-gray-200 dark:border-brand-dark-border"
+                                                >
+                                                    <FaMapMarkerAlt className={`flex-shrink-0 ${addr.is_default ? 'text-brand-primary' : 'text-gray-400'}`} size={14} />
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className="font-bold text-sm text-gray-900 dark:text-brand-dark-text">{addr.label}</span>
+                                                            {addr.is_default && <FaStar className="text-amber-400" size={10} />}
+                                                        </div>
+                                                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                                                            {addr.street} {addr.house_number}{addr.apartment ? `, דירה ${addr.apartment}` : ''}, {addr.city}
+                                                        </p>
+                                                    </div>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+
                                     {!deliveryLocation && (
                                         <button
                                             type="button"
@@ -873,10 +980,13 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                             </label>
                             <input
                                 type="datetime-local"
+                                dir="ltr"
                                 value={scheduledFor}
                                 onChange={(e) => {
                                     setScheduledFor(e.target.value);
-                                    setCustomerInfo(prev => ({ ...prev, payment_method: 'credit_card' }));
+                                    if (!isRegisteredCustomer) {
+                                        setCustomerInfo(prev => ({ ...prev, payment_method: 'credit_card' }));
+                                    }
                                 }}
                                 min={new Date(Date.now() + 30 * 60000).toISOString().slice(0, 16)}
                                 className="w-full px-4 py-3 border-2 border-amber-200 dark:border-amber-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all dark:bg-brand-dark-bg dark:text-brand-dark-text"
@@ -937,6 +1047,7 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                     onConfirmOrder={handleConfirmOrder}
                     submitting={submitting}
                     onRemoveItem={removeFromCart}
+                    promotionDiscount={promotionDiscount}
                     giftItems={selectedGiftItems}
                     metPromotions={metPromotions}
                 />

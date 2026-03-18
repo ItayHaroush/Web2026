@@ -14,6 +14,7 @@ class Order extends Model
     protected $fillable = [
         'restaurant_id',
         'tenant_id',
+        'customer_id',
         'correlation_id',
         'customer_name',
         'customer_phone',
@@ -42,6 +43,7 @@ class Order extends Model
         'scheduled_for',
         'is_future_order',
         'status',
+        'cancellation_reason',
         'is_test',              // הזמנת בדיקה
         'test_note',            // הערה להזמנת בדיקה
         'total_amount',
@@ -203,6 +205,14 @@ class Order extends Model
     public function restaurant(): BelongsTo
     {
         return $this->belongsTo(Restaurant::class);
+    }
+
+    /**
+     * הלקוח של ההזמנה
+     */
+    public function customer(): BelongsTo
+    {
+        return $this->belongsTo(Customer::class);
     }
 
     /**

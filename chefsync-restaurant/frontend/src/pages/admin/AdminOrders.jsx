@@ -7,6 +7,7 @@ import AdminLayout from '../../layouts/AdminLayout';
 import api from '../../services/apiClient';
 import reportService from '../../services/reportService';
 import RatingWidget from '../../components/RatingWidget';
+import CancelOrderModal from '../../components/CancelOrderModal';
 import {
     FaReceipt,
     FaClock,
@@ -51,6 +52,7 @@ export default function AdminOrders() {
     const [generatingReport, setGeneratingReport] = useState(false);
     const [etaSectionOpen, setEtaSectionOpen] = useState(false);
     const [customerSectionOpen, setCustomerSectionOpen] = useState(false);
+    const [cancelModal, setCancelModal] = useState({ isOpen: false, orderId: null });
     const previousOrdersCount = useRef(0);
     const orderPanelRef = useRef(null);
     const isLocked = restaurantStatus?.is_approved === false;
@@ -218,7 +220,7 @@ export default function AdminOrders() {
         }
     };
 
-    const updateStatus = async (orderId, newStatus) => {
+    const updateStatus = async (orderId, newStatus, cancellationReason) => {
         if (isLocked) {
             alert('המסעדה ממתינה לאישור מנהל מערכת. פעולות על הזמנות נעולות זמנית.');
             return;
@@ -237,9 +239,13 @@ export default function AdminOrders() {
         }
 
         try {
+            const payload = { status: newStatus };
+            if (newStatus === 'cancelled' && cancellationReason) {
+                payload.cancellation_reason = cancellationReason;
+            }
             console.log('Updating order', orderId, 'to status:', newStatus);
             const response = await api.patch(`/admin/orders/${orderId}/status`,
-                { status: newStatus },
+                payload,
                 { headers: getAuthHeaders() }
             );
             console.log('Update response:', response.data);
@@ -1189,11 +1195,7 @@ export default function AdminOrders() {
 
                                     {selectedOrder.status !== 'cancelled' && selectedOrder.status !== 'delivered' && (
                                         <button
-                                            onClick={() => {
-                                                if (confirm('האם אתה בטוח שברצונך לבטל את ההזמנה?')) {
-                                                    updateStatus(selectedOrder.id, 'cancelled');
-                                                }
-                                            }}
+                                            onClick={() => setCancelModal({ isOpen: true, orderId: selectedOrder.id })}
                                             disabled={isLocked}
                                             className="w-full bg-red-50 text-red-600 p-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] hover:bg-red-100 transition-all active:scale-95 flex items-center justify-center gap-2 group disabled:opacity-50"
                                         >
@@ -1217,6 +1219,12 @@ export default function AdminOrders() {
                     )}
                 </div>
             </div>
+            <CancelOrderModal
+                isOpen={cancelModal.isOpen}
+                orderId={cancelModal.orderId}
+                onClose={() => setCancelModal({ isOpen: false, orderId: null })}
+                onConfirm={(orderId, reason) => updateStatus(orderId, 'cancelled', reason)}
+            />
         </AdminLayout>
     );
 }

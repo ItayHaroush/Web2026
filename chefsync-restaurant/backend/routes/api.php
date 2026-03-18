@@ -25,6 +25,9 @@ use App\Http\Controllers\OrderEventController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\HypSubscriptionCallbackController;
 use App\Http\Controllers\HypOrderCallbackController;
+use App\Http\Controllers\CustomerAuthController;
+use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\CustomerAddressController;
 
 /**
  * API Routes
@@ -443,6 +446,7 @@ Route::middleware(['api', 'tenant'])->group(function () {
     // ============================================
     Route::post('/orders', [OrderController::class, 'store'])->name('orders.store');
     Route::get('/orders/{id}', [OrderController::class, 'show'])->name('orders.show');
+    Route::post('/orders/{id}/retry-payment', [OrderController::class, 'retryPayment'])->name('orders.retry-payment');
     Route::post('/check-delivery-zone', [OrderController::class, 'checkDeliveryZone'])->name('orders.check-delivery');
 
     // ============================================
@@ -474,6 +478,42 @@ Route::middleware(['api', 'tenant'])->group(function () {
     });
 });
 
+// ============================================
+// אימות לקוחות - Customer Auth Routes
+// ============================================
+Route::prefix('customer')->group(function () {
+    // התחברות ציבורית (ללא טוקן)
+    Route::post('/auth/check-phone', [CustomerAuthController::class, 'checkPhone'])->name('customer.auth.check-phone');
+    Route::post('/auth/phone', [CustomerAuthController::class, 'loginWithPhone'])->name('customer.auth.phone');
+    Route::post('/auth/google', [CustomerAuthController::class, 'loginWithGoogle'])->name('customer.auth.google');
+    Route::post('/auth/pin', [CustomerAuthController::class, 'loginWithPin'])->name('customer.auth.pin');
+
+    // אימות אימייל — ציבורי (ללא צורך בטוקן לקוח)
+    Route::get('/email/verify', [CustomerAuthController::class, 'verifyEmail'])->name('customer.email.verify');
+
+    // נתיבים מאומתים ללקוח
+    Route::middleware('customer_auth')->group(function () {
+        Route::get('/me', [CustomerAuthController::class, 'me'])->name('customer.me');
+        Route::put('/me', [CustomerAuthController::class, 'update'])->name('customer.update');
+        Route::post('/pin', [CustomerAuthController::class, 'setPin'])->name('customer.pin');
+        Route::post('/logout', [CustomerAuthController::class, 'logout'])->name('customer.logout');
+        Route::post('/email/verify-send', [CustomerAuthController::class, 'sendEmailVerification'])->name('customer.email.verify-send');
+        Route::post('/share', [CustomerAuthController::class, 'shareRestaurant'])->name('customer.share');
+        Route::get('/orders', [CustomerController::class, 'orderHistory'])->name('customer.orders');
+        Route::get('/favorites', [CustomerController::class, 'getFavorites'])->name('customer.favorites');
+        Route::post('/favorites', [CustomerController::class, 'addFavorite'])->name('customer.favorites.add');
+        Route::delete('/favorites/{menuItemId}', [CustomerController::class, 'removeFavorite'])->name('customer.favorites.remove');
+        Route::post('/reorder/{orderId}', [CustomerController::class, 'reorder'])->name('customer.reorder');
+
+        // כתובות שמורות
+        Route::get('/addresses', [CustomerAddressController::class, 'index'])->name('customer.addresses.index');
+        Route::post('/addresses', [CustomerAddressController::class, 'store'])->name('customer.addresses.store');
+        Route::put('/addresses/{id}', [CustomerAddressController::class, 'update'])->name('customer.addresses.update');
+        Route::delete('/addresses/{id}', [CustomerAddressController::class, 'destroy'])->name('customer.addresses.destroy');
+        Route::post('/addresses/{id}/default', [CustomerAddressController::class, 'setDefault'])->name('customer.addresses.default');
+    });
+});
+
 // Health Check
 Route::get('/health', function () {
     return response()->json(['status' => 'ok']);
@@ -488,6 +528,9 @@ Route::post('/kiosk/{token}/order', [KioskController::class, 'placeOrder'])->nam
 
 // רשימת מסעדות - ללא צורך ב-tenant
 Route::get('/restaurants', [RestaurantController::class, 'index'])->name('restaurants.index');
+
+// חיפוש מנות בתפריטים - ציבורי
+Route::get('/menu-search', [RestaurantController::class, 'searchMenuItems'])->name('menu.search');
 
 // מסעדה לפי tenant/slug - ציבורי (לטעינת דף תפריט מלא גם אם המסעדה סגורה)
 Route::get('/restaurants/by-tenant/{tenantId}', [RestaurantController::class, 'publicShowByTenant'])

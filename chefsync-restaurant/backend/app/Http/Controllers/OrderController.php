@@ -19,6 +19,7 @@ use App\Models\SystemError;
 use App\Models\User;
 use App\Models\MonitoringAlert;
 use App\Models\NotificationLog;
+use App\Services\CustomerOrderMailService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
@@ -150,6 +151,22 @@ class OrderController extends Controller
                             'allow_future_orders' => (bool) $restaurant->allow_future_orders,
                         ],
                     ], 403);
+                }
+            }
+
+            // ולידציה: הזמנה עתידית — וידאו שהזמן תואם לשעות הפעילות
+            if (!empty($validated['scheduled_for'])) {
+                $scheduledCarbon = \Carbon\Carbon::parse($validated['scheduled_for'])->timezone('Asia/Jerusalem');
+                $isOpenAtScheduled = Restaurant::calculateIsOpen(
+                    $restaurant->operating_days ?? [],
+                    $restaurant->operating_hours ?? [],
+                    $scheduledCarbon
+                );
+                if (!$isOpenAtScheduled) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'השעה שנבחרה אינה בשעות הפעילות של המסעדה',
+                    ], 422);
                 }
             }
 
@@ -510,6 +527,33 @@ class OrderController extends Controller
                 }
             }
 
+            // קישור הזמנה ללקוח (יצירה אוטומטית אם לא קיים)
+            try {
+                $customer = \App\Models\Customer::firstOrCreate(
+                    ['phone' => $normalizedCustomerPhone],
+                    ['name' => $validated['customer_name']]
+                );
+                $order->update(['customer_id' => $customer->id]);
+                $customer->increment('total_orders');
+                $customer->update([
+                    'last_order_at' => now(),
+                    'name' => $validated['customer_name'],
+                ]);
+
+                // שמור כתובת משלוח כברירת מחדל אם חסרה
+                if ($validated['delivery_method'] === 'delivery' && !$customer->default_delivery_address) {
+                    $customer->update([
+                        'default_delivery_address' => $validated['delivery_address'] ?? null,
+                        'default_delivery_lat' => $validated['delivery_lat'] ?? null,
+                        'default_delivery_lng' => $validated['delivery_lng'] ?? null,
+                        'default_delivery_notes' => $validated['delivery_notes'] ?? null,
+                        'preferred_payment_method' => $validated['payment_method'],
+                    ]);
+                }
+            } catch (\Throwable $e) {
+                Log::warning('Failed to link customer to order', ['error' => $e->getMessage()]);
+            }
+
             // שליחת פוש לטאבלטים של המסעדה (רק אם לא הזמנת test)
             // חשוב: עבור תשלום באשראי, נשלח את ההתראה רק אחרי אישור תשלום ב-HYP (ב-HypOrderCallbackController)
             if (!($validated['is_test'] ?? false) && $paymentMethod !== 'credit_card') {
@@ -622,6 +666,69 @@ class OrderController extends Controller
                 'message' => 'שגיאה ביצירת הזמנה',
                 'error' => $e->getMessage(),
             ], 500);
+        }
+    }
+
+    /**
+     * ניסיון תשלום חוזר להזמנה קיימת (B2C)
+     */
+    public function retryPayment($id)
+    {
+        try {
+            $tenantId = app('tenant_id');
+            $order = Order::where('tenant_id', $tenantId)->findOrFail($id);
+
+            if ($order->payment_method !== 'credit_card') {
+                return response()->json(['success' => false, 'message' => 'ההזמנה אינה דורשת תשלום באשראי'], 422);
+            }
+
+            if ($order->payment_status === 'paid') {
+                return response()->json(['success' => false, 'message' => 'ההזמנה כבר שולמה'], 422);
+            }
+
+            if ($order->status === 'cancelled') {
+                return response()->json(['success' => false, 'message' => 'לא ניתן לשלם על הזמנה שבוטלה'], 422);
+            }
+
+            $restaurant = Restaurant::withoutGlobalScope('tenant')->find($order->restaurant_id);
+            $restaurantPaymentService = app(RestaurantPaymentService::class);
+
+            if (!$restaurant || !$restaurantPaymentService->isRestaurantReady($restaurant)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'תשלום באשראי אינו זמין כרגע למסעדה זו',
+                ], 422);
+            }
+
+            // ביטול sessions ישנים
+            PaymentSession::where('order_id', $order->id)
+                ->whereIn('status', ['pending', 'expired'])
+                ->update(['status' => 'expired']);
+
+            $session = PaymentSession::create([
+                'tenant_id'     => $tenantId,
+                'restaurant_id' => $order->restaurant_id,
+                'order_id'      => $order->id,
+                'session_token' => \Illuminate\Support\Str::uuid()->toString(),
+                'amount'        => $order->total_amount,
+                'status'        => 'pending',
+                'expires_at'    => now()->addMinutes(config('payment.order_payment.session_timeout_minutes', 15)),
+            ]);
+
+            $paymentUrl = $restaurantPaymentService->generateOrderPaymentUrl($restaurant, $order, $session);
+            $session->update(['payment_url' => $paymentUrl]);
+
+            OrderEventService::log($order->id, 'retry_payment', 'customer', null, [
+                'session_id' => $session->id,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'payment_url' => $paymentUrl,
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Retry payment failed', ['order_id' => $id, 'error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => 'שגיאה ביצירת קישור תשלום'], 500);
         }
     }
 
@@ -805,6 +912,9 @@ class OrderController extends Controller
 
             // שליחת התראת Push מותאמת לסוג המשלוח
             $this->sendStatusNotification($order, $validated['status']);
+
+            // שליחת מייל ללקוח בסיום הזמנה (נמסרה / בוטלה)
+            CustomerOrderMailService::sendOnStatusChange($order, $validated['status']);
 
             return response()->json([
                 'success' => true,

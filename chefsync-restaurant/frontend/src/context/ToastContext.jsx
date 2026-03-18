@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
 import { FaCheckCircle, FaTimesCircle, FaShoppingBag } from 'react-icons/fa';
 
 /**
@@ -9,9 +9,10 @@ const ToastContext = createContext();
 
 export function ToastProvider({ children }) {
     const [toasts, setToasts] = useState([]);
+    const idCounter = useRef(0);
 
     const addToast = useCallback((message, type = 'success') => {
-        const id = Date.now();
+        const id = ++idCounter.current;
         setToasts((prev) => [...prev, { id, message, type }]);
 
         // הסר אחרי 3 שניות

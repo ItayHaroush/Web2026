@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { useToast } from './ToastContext';
 import { normalizeCartItem, normalizeCartItems } from '../utils/cart';
 import ConfirmationModal from '../components/ConfirmationModal';
@@ -11,6 +11,7 @@ import ConfirmationModal from '../components/ConfirmationModal';
 const CartContext = createContext();
 
 const CART_EXPIRY_HOURS = 24; // סל תקף ל-24 שעות
+const FUTURE_ORDER_EXPIRY_MS = 30 * 60 * 1000; // 30 דקות
 
 const createEmptyCustomerInfo = () => ({
     name: '',
@@ -25,6 +26,14 @@ export function CartProvider({ children }) {
     const { addToast } = useToast();
     const [currentTenantId, setCurrentTenantId] = useState(null);
     const [phoneVerified, setPhoneVerified] = useState(false);
+    const [scheduledFor, setScheduledForRaw] = useState('');
+    const scheduledAtRef = useRef(null);
+
+    // Wrapper: כשמגדירים scheduledFor שומרים גם את הזמן שבו הוגדר
+    const setScheduledFor = useCallback((val) => {
+        setScheduledForRaw(val);
+        scheduledAtRef.current = val ? Date.now() : null;
+    }, []);
 
     // State for Confirmation Modal
     const [pendingItem, setPendingItem] = useState(null);
@@ -108,6 +117,78 @@ export function CartProvider({ children }) {
             localStorage.setItem(`customer_info_${tenantId}`, JSON.stringify(customerInfo));
         }
     }, [customerInfo]);
+
+    // מילוי אוטומטי מפרטי לקוח רשום (אם הסל ריק מפרטים)
+    useEffect(() => {
+        if (customerInfo.name || customerInfo.phone) return; // כבר יש פרטים
+        try {
+            const savedCustomer = localStorage.getItem('customer_data');
+            if (savedCustomer) {
+                const parsed = JSON.parse(savedCustomer);
+                if (parsed.name || parsed.phone) {
+                    setCustomerInfo(prev => ({
+                        ...prev,
+                        name: prev.name || parsed.name || '',
+                        phone: prev.phone || parsed.phone || '',
+                        delivery_address: prev.delivery_address || parsed.default_delivery_address || '',
+                        delivery_notes: prev.delivery_notes || parsed.default_delivery_notes || '',
+                        payment_method: prev.payment_method || parsed.preferred_payment_method || 'cash',
+                    }));
+
+                    // דלג על OTP אם יש טוקן לקוח תקף
+                    const hasToken = !!localStorage.getItem('customer_token');
+                    if (hasToken && parsed.phone) {
+                        setPhoneVerified(true);
+                    }
+                }
+            }
+        } catch (e) {
+            // ignore
+        }
+    }, []); // רק פעם אחת בטעינה
+
+    // עדכון ריאקטיבי: אם המשתמש נרשם/התחבר באמצע session (cross-tab)
+    useEffect(() => {
+        const handleStorage = (e) => {
+            if (e.key !== 'customer_token' && e.key !== 'customer_data') return;
+            const token = localStorage.getItem('customer_token');
+            const data = localStorage.getItem('customer_data');
+            if (token && data) {
+                try {
+                    const parsed = JSON.parse(data);
+                    setPhoneVerified(true);
+                    setCustomerInfo(prev => ({
+                        ...prev,
+                        name: prev.name || parsed.name || '',
+                        phone: prev.phone || parsed.phone || '',
+                    }));
+                } catch { /* ignore */ }
+            }
+        };
+        window.addEventListener('storage', handleStorage);
+        return () => window.removeEventListener('storage', handleStorage);
+    }, []);
+
+    // עדכון ריאקטיבי: אם המשתמש נרשם/התחבר באותו tab
+    useEffect(() => {
+        const handleCustomerChanged = (e) => {
+            const data = e.detail;
+            if (!data) return;
+            setCustomerInfo(prev => ({
+                ...prev,
+                name: prev.name || data.name || '',
+                phone: prev.phone || data.phone || '',
+                delivery_address: prev.delivery_address || data.default_delivery_address || '',
+                delivery_notes: prev.delivery_notes || data.default_delivery_notes || '',
+                payment_method: prev.payment_method || data.preferred_payment_method || 'cash',
+            }));
+            if (localStorage.getItem('customer_token') && data.phone) {
+                setPhoneVerified(true);
+            }
+        };
+        window.addEventListener('customer_data_changed', handleCustomerChanged);
+        return () => window.removeEventListener('customer_data_changed', handleCustomerChanged);
+    }, []);
 
     useEffect(() => {
         const tenantId = localStorage.getItem('tenantId');
@@ -281,6 +362,20 @@ export function CartProvider({ children }) {
         }
     }, [commitCartItems]);
 
+    // בדיקה כל 60 שניות — אם עברו 30 דקות מאז שהוגדר scheduledFor, מוחקים סל + אישור
+    useEffect(() => {
+        if (!scheduledFor) return;
+        const interval = setInterval(() => {
+            if (scheduledAtRef.current && Date.now() - scheduledAtRef.current >= FUTURE_ORDER_EXPIRY_MS) {
+                setScheduledForRaw('');
+                scheduledAtRef.current = null;
+                clearCart();
+                addToast('ההזמנה העתידית פגה תוקף (30 דקות) — יש לבחור מחדש', 'info');
+            }
+        }, 60_000);
+        return () => clearInterval(interval);
+    }, [scheduledFor, clearCart, addToast]);
+
     const getTotal = useCallback(() => {
         const total = cartItems.reduce((sum, item) => sum + (item.totalPrice || 0), 0);
         return Number(total.toFixed(2));
@@ -302,6 +397,8 @@ export function CartProvider({ children }) {
         setCustomerInfo,
         phoneVerified,
         setPhoneVerified,
+        scheduledFor,
+        setScheduledFor,
     };
 
     return (

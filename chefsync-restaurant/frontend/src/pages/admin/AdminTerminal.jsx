@@ -3,6 +3,7 @@ import { useAdminAuth } from '../../context/AdminAuthContext';
 import AdminLayout from '../../layouts/AdminLayout';
 import api from '../../services/apiClient';
 import { reprintOrder } from '../../services/printerService';
+import CancelOrderModal from '../../components/CancelOrderModal';
 import {
     FaDesktop,
     FaClock,
@@ -22,6 +23,7 @@ export default function AdminTerminal() {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [reprintingId, setReprintingId] = useState(null);
+    const [cancelModal, setCancelModal] = useState({ isOpen: false, orderId: null });
 
     const formatPhone = (phone) => {
         if (!phone) return '';
@@ -111,7 +113,7 @@ export default function AdminTerminal() {
         }
     };
 
-    const updateStatus = async (orderId, status) => {
+    const updateStatus = async (orderId, status, cancellationReason) => {
         // בעת מסירה - אם התשלום במזומן או שהתשלום באשראי נכשל, הקפצת אישור גבייה
         if (status === 'delivered') {
             const order = orders.find(o => o.id === orderId);
@@ -125,7 +127,11 @@ export default function AdminTerminal() {
         }
 
         try {
-            await api.patch(`/admin/orders/${orderId}/status`, { status }, { headers: getAuthHeaders() });
+            const payload = { status };
+            if (status === 'cancelled' && cancellationReason) {
+                payload.cancellation_reason = cancellationReason;
+            }
+            await api.patch(`/admin/orders/${orderId}/status`, payload, { headers: getAuthHeaders() });
             fetchOrders();
         } catch (error) {
             console.error('Failed to update status:', error);
@@ -505,7 +511,7 @@ export default function AdminTerminal() {
                                                 </button>
                                             )}
                                             <button
-                                                onClick={() => updateStatus(order.id, 'cancelled')}
+                                                onClick={() => setCancelModal({ isOpen: true, orderId: order.id })}
                                                 className="py-3 bg-white text-rose-500 rounded-2xl text-xs font-black shadow-sm border border-gray-100 hover:bg-rose-50 transition-all active:scale-95 flex items-center justify-center gap-2"
                                             >
                                                 <FaTimes size={12} /> ביטול
@@ -518,6 +524,12 @@ export default function AdminTerminal() {
                     </div>
                 )}
             </div>
+            <CancelOrderModal
+                isOpen={cancelModal.isOpen}
+                orderId={cancelModal.orderId}
+                onClose={() => setCancelModal({ isOpen: false, orderId: null })}
+                onConfirm={(orderId, reason) => updateStatus(orderId, 'cancelled', reason)}
+            />
         </AdminLayout>
     );
 }
