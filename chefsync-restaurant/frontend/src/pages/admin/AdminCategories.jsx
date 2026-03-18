@@ -34,7 +34,7 @@ const EXTENDED_EMOJIS = [
     '🥢', '🍽️', '🍴', '🥄'
 ];
 
-export default function AdminCategories() {
+export default function AdminCategories({ embedded = false }) {
     const { getAuthHeaders, isManager } = useAdminAuth();
     const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -146,20 +146,19 @@ export default function AdminCategories() {
     };
 
     if (loading) {
-        return (
-            <AdminLayout>
-                <div className="flex flex-col items-center justify-center h-96">
-                    <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-brand-primary"></div>
-                    <p className="mt-4 text-gray-500 font-black animate-pulse">טוען קטגוריות...</p>
-                </div>
-            </AdminLayout>
+        const loader = (
+            <div className="flex flex-col items-center justify-center h-96">
+                <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-brand-primary"></div>
+                <p className="mt-4 text-gray-500 font-black animate-pulse">טוען קטגוריות...</p>
+            </div>
         );
+        if (embedded) return loader;
+        return <AdminLayout>{loader}</AdminLayout>;
     }
 
-    return (
-        <AdminLayout>
+    const content = (
             <div className="max-w-6xl mx-auto space-y-12 pb-32 animate-in fade-in duration-500">
-                {/* Header Section */}
+                {!embedded && (
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 px-4">
                     <div className="flex items-center gap-6">
                         <div className="w-20 h-20 bg-emerald-50 rounded-[2.5rem] flex items-center justify-center text-emerald-600 shadow-sm border border-emerald-100/50">
@@ -182,6 +181,18 @@ export default function AdminCategories() {
                         </button>
                     )}
                 </div>
+                )}
+                {embedded && isManager() && (
+                    <div className="flex justify-end px-4">
+                        <button
+                            onClick={openNew}
+                            className="bg-brand-primary text-white px-6 py-3 rounded-2xl font-black text-sm hover:bg-brand-dark transition-all flex items-center gap-2 shadow-lg shadow-brand-primary/20"
+                        >
+                            <FaPlus />
+                            הוספת קטגוריה
+                        </button>
+                    </div>
+                )}
 
                 {/* Categories Grid */}
                 {categories.length === 0 ? (
@@ -464,6 +475,8 @@ export default function AdminCategories() {
                     </div>
                 )}
             </div>
-        </AdminLayout>
     );
+
+    if (embedded) return content;
+    return <AdminLayout>{content}</AdminLayout>;
 }

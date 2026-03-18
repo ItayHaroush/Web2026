@@ -31,6 +31,7 @@ export default function AdminDashboard() {
     const { getAuthHeaders, isOwner, isManager } = useAdminAuth();
     const [stats, setStats] = useState(null);
     const [recentOrders, setRecentOrders] = useState([]);
+    const [futureOrders, setFutureOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [pushState, setPushState] = useState({ status: 'idle', message: '' });
 
@@ -115,11 +116,9 @@ export default function AdminDashboard() {
             console.log('Dashboard response:', response.data);
             if (response.data.success) {
                 setStats(response.data.stats);
-                // ✅ סינון הזמנות דוגמה מהדשבורד
                 const realOrders = (response.data.recent_orders || []).filter(order => !order.is_test);
                 setRecentOrders(realOrders);
-                console.log('Stats:', response.data.stats);
-                console.log('Recent orders (excluding test):', realOrders);
+                setFutureOrders(response.data.future_orders || []);
             }
         } catch (error) {
             console.error('Failed to fetch dashboard:', error);
@@ -330,6 +329,51 @@ export default function AdminDashboard() {
                     </div>
                 ))}
             </div>
+
+            {/* הזמנות עתידיות */}
+            {futureOrders.length > 0 && (
+                <div className="bg-white rounded-2xl border border-indigo-100 shadow-sm p-5 mb-6">
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-sm font-black text-gray-900 flex items-center gap-2">
+                            <div className="p-2 rounded-lg bg-indigo-50 text-indigo-600">
+                                <FaClock size={14} />
+                            </div>
+                            הזמנות עתידיות ({futureOrders.length})
+                        </h3>
+                        <button
+                            onClick={() => navigate('/admin/orders')}
+                            className="text-xs font-bold text-indigo-600 hover:underline"
+                        >
+                            צפה בכל ההזמנות
+                        </button>
+                    </div>
+                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                        {futureOrders.map(order => (
+                            <div
+                                key={order.id}
+                                onClick={() => navigate('/admin/orders')}
+                                className="flex items-center justify-between p-3 bg-indigo-50/50 rounded-xl border border-indigo-100/50 cursor-pointer hover:bg-indigo-100/50 transition-colors"
+                            >
+                                <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 bg-indigo-100 text-indigo-700 rounded-lg flex items-center justify-center text-xs font-black">
+                                        #{String(order.id).slice(-4)}
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-bold text-gray-900">{order.customer_name}</p>
+                                        <p className="text-[10px] text-indigo-600 font-bold">
+                                            {new Date(order.scheduled_for).toLocaleString('he-IL', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="text-left">
+                                    <p className="text-sm font-black text-gray-900">₪{Number(order.total_amount || order.total || 0).toFixed(0)}</p>
+                                    <p className="text-[10px] text-gray-400">{order.items?.length || 0} פריטים</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {/* סיכום נוסף - גריד צבעוני מצומצם */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">

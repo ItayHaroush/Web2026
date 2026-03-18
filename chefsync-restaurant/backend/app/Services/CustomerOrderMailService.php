@@ -38,14 +38,26 @@ class CustomerOrderMailService
 
             $order->loadMissing('items.menuItem');
 
+            $subject = '';
+            $type = '';
+
             if ($newStatus === 'delivered') {
-                Mail::to($customer->email)->queue(
-                    new CustomerOrderReceiptMail($order, $customer, $restaurant)
-                );
+                $mailable = new CustomerOrderReceiptMail($order, $customer, $restaurant);
+                $subject = "קבלה - הזמנה #{$order->id}";
+                $type = 'order_receipt';
+                Mail::to($customer->email)->queue($mailable);
             } elseif ($newStatus === 'cancelled') {
-                Mail::to($customer->email)->queue(
-                    new CustomerOrderCancelledMail($order, $customer, $restaurant)
-                );
+                $mailable = new CustomerOrderCancelledMail($order, $customer, $restaurant);
+                $subject = "ביטול הזמנה #{$order->id}";
+                $type = 'order_cancelled';
+                Mail::to($customer->email)->queue($mailable);
+            }
+
+            if ($type) {
+                EmailLogService::log($customer->email, $type, $subject, $customer->id, 'sent', null, [
+                    'order_id' => $order->id,
+                    'restaurant_id' => $order->restaurant_id,
+                ]);
             }
         } catch (\Throwable $e) {
             Log::warning('Failed to send customer order status email', [
@@ -53,6 +65,14 @@ class CustomerOrderMailService
                 'status' => $newStatus,
                 'error' => $e->getMessage(),
             ]);
+
+            try {
+                $customerId = isset($customer) ? $customer->id : null;
+                $email = isset($customer) ? $customer->email : 'unknown';
+                EmailLogService::log($email, 'order_' . $newStatus, "Failed: order #{$order->id}", $customerId, 'failed', $e->getMessage());
+            } catch (\Throwable $logErr) {
+                // Silently ignore logging failures
+            }
         }
     }
 }

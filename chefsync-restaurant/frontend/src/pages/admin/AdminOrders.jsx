@@ -602,7 +602,19 @@ export default function AdminOrders() {
                                                                     הזמנת דוגמה
                                                                 </div>
                                                             )}
+                                                            {order.is_future_order && (
+                                                                <div className="px-2.5 py-0.5 rounded-lg text-[9px] font-black uppercase border bg-indigo-50 text-indigo-700 border-indigo-200 flex items-center gap-1.5">
+                                                                    <FaClock size={9} />
+                                                                    הזמנה עתידית
+                                                                </div>
+                                                            )}
                                                         </div>
+
+                                                        {order.is_future_order && order.scheduled_for && (
+                                                            <p className="text-[10px] font-bold text-indigo-600 mt-0.5">
+                                                                מתוזמנת ל: {new Date(order.scheduled_for).toLocaleString('he-IL', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                                                            </p>
+                                                        )}
 
                                                         <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
                                                             <div className="flex items-center gap-1.5 text-xs font-bold text-gray-500">
@@ -1152,11 +1164,39 @@ export default function AdminOrders() {
                                     </div>
                                 )}
 
+                                {/* הזמנה עתידית — מידע ואזהרה */}
+                                {selectedOrder.is_future_order && selectedOrder.scheduled_for && (
+                                    <div className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-700 rounded-2xl p-4 space-y-1">
+                                        <div className="flex items-center gap-2 text-indigo-700 dark:text-indigo-300 font-black text-sm">
+                                            <FaClock />
+                                            הזמנה עתידית
+                                        </div>
+                                        <p className="text-indigo-600 dark:text-indigo-400 text-sm font-bold">
+                                            מתוזמנת ל: {new Date(selectedOrder.scheduled_for).toLocaleString('he-IL', { weekday: 'long', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                                        </p>
+                                        {new Date(selectedOrder.scheduled_for).getTime() - Date.now() > 60 * 60 * 1000 && selectedOrder.status === 'pending' && (
+                                            <p className="text-xs text-indigo-500 dark:text-indigo-400 mt-1">
+                                                ההזמנה תישלח למטבח אוטומטית בזמנה. ניתן לצפות בפרטים אך לא לקדם סטטוס.
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
+
                                 {/* כפתורי פעולה - מודרניים */}
                                 <div className="space-y-4 pt-2 pb-6">
                                     {(() => {
                                         const currentBadge = getStatusBadge(selectedOrder.status, selectedOrder.delivery_method);
                                         const nextStatus = currentBadge.nextStatus;
+                                        const isFutureLocked = selectedOrder.is_future_order && selectedOrder.scheduled_for && new Date(selectedOrder.scheduled_for).getTime() - Date.now() > 60 * 60 * 1000 && selectedOrder.status === 'pending';
+
+                                        if (isFutureLocked) {
+                                            return (
+                                                <div className="w-full bg-indigo-100 text-indigo-700 py-4 rounded-2xl font-black text-sm text-center flex items-center justify-center gap-2">
+                                                    <FaClock />
+                                                    הזמנה עתידית — ניתן לקדם סטטוס רק לאחר שההזמנה תתקבל במטבח
+                                                </div>
+                                            );
+                                        }
 
                                         if (nextStatus) {
                                             const nextBadge = getStatusBadge(nextStatus, selectedOrder.delivery_method);

@@ -36,7 +36,7 @@ const TRIGGER_LABELS = {
     manual: { text: 'ידני', color: 'bg-orange-50 text-orange-700 border-orange-200' },
 };
 
-export default function SuperAdminEmails() {
+export default function SuperAdminEmails({ embedded = false }) {
     const { getAuthHeaders } = useAdminAuth();
     const [templates, setTemplates] = useState([]);
     const [restaurants, setRestaurants] = useState([]);
@@ -194,19 +194,18 @@ export default function SuperAdminEmails() {
     );
 
     if (loading) {
-        return (
-            <SuperAdminLayout>
-                <div className="flex items-center justify-center min-h-[60vh]">
-                    <FaSpinner className="animate-spin text-brand-primary" size={32} />
-                </div>
-            </SuperAdminLayout>
+        const loader = (
+            <div className="flex items-center justify-center min-h-[60vh]">
+                <FaSpinner className="animate-spin text-brand-primary" size={32} />
+            </div>
         );
+        if (embedded) return loader;
+        return <SuperAdminLayout>{loader}</SuperAdminLayout>;
     }
 
-    return (
-        <SuperAdminLayout>
-            <div className="max-w-[1100px] mx-auto px-4 sm:px-6 py-4">
-                {/* Header */}
+    const content = (
+            <div className={embedded ? '' : 'max-w-[1100px] mx-auto px-4 sm:px-6 py-4'}>
+                {!embedded && (
                 <div className="flex items-center justify-between mb-8">
                     <div>
                         <h1 className="text-2xl font-black text-gray-900 flex items-center gap-3">
@@ -225,6 +224,18 @@ export default function SuperAdminEmails() {
                         שליחה גורפת
                     </button>
                 </div>
+                )}
+                {embedded && (
+                    <div className="flex justify-end mb-4">
+                        <button
+                            onClick={() => setShowBulkModal(true)}
+                            className="px-5 py-2.5 bg-brand-primary text-white rounded-2xl font-black text-xs uppercase tracking-wider hover:bg-brand-primary/90 transition-all shadow-lg shadow-brand-primary/20 flex items-center gap-2"
+                        >
+                            <FaUsers size={12} />
+                            שליחה גורפת
+                        </button>
+                    </div>
+                )}
 
                 {/* Template Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -554,6 +565,8 @@ export default function SuperAdminEmails() {
                     </div>
                 )}
             </div>
-        </SuperAdminLayout>
     );
+
+    if (embedded) return content;
+    return <SuperAdminLayout>{content}</SuperAdminLayout>;
 }

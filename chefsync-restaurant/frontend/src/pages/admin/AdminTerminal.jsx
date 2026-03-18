@@ -371,10 +371,18 @@ export default function AdminTerminal() {
                                                             שולחן {order.table_number}
                                                         </span>
                                                     )}
+                                                    {order.is_future_order && (
+                                                        <span className="px-3 py-1 rounded-full text-xs font-black bg-violet-100 text-violet-700 border-2 border-violet-300">
+                                                            הזמנה עתידית
+                                                        </span>
+                                                    )}
                                                 </div>
                                                 <p className="text-gray-400 font-bold text-xs mt-1 uppercase tracking-widest flex items-center gap-2">
                                                     <FaClock size={10} />
-                                                    {new Date(order.created_at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}
+                                                    {order.is_future_order && order.scheduled_for
+                                                        ? <>מתוזמנת: {new Date(order.scheduled_for).toLocaleString('he-IL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</>
+                                                        : new Date(order.created_at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
+                                                    }
                                                 </p>
                                             </div>
                                             <div className={`px-5 py-2 rounded-2xl text-xs font-black uppercase tracking-widest shadow-sm ${order.status === 'ready' ? 'bg-amber-500 text-white animate-bounce' :
@@ -470,29 +478,43 @@ export default function AdminTerminal() {
                                             <span className="text-2xl font-black text-gray-900 tracking-tighter">₪{Number(order.total).toFixed(2)}</span>
                                         </div>
 
-                                        {next ? (
-                                            <button
-                                                onClick={() => updateStatus(order.id, next)}
-                                                className={`w-full py-5 rounded-[2rem] font-black text-lg transition-all active:scale-95 shadow-xl flex items-center justify-center gap-4 hover:-translate-y-1 ${order.status === 'ready' ? 'bg-emerald-500 text-white shadow-emerald-500/20 hover:bg-emerald-600' :
-                                                    order.status === 'preparing' ? 'bg-amber-500 text-white shadow-amber-500/20 hover:bg-amber-600' :
-                                                        'bg-brand-primary text-white shadow-brand-primary/20 hover:bg-brand-dark'
-                                                    }`}
-                                            >
-                                                {order.status === 'ready' && order.delivery_method !== 'delivery' ? (
-                                                    <><FaCheckCircle /> הכר כנמסר</>
-                                                ) : order.status === 'ready' && order.delivery_method === 'delivery' ? (
-                                                    <><FaRoute /> שלח למשלוח</>
-                                                ) : order.status === 'delivering' ? (
-                                                    <><FaCheckCircle /> הכר כנמסר</>
-                                                ) : (
-                                                    <><FaRoute /> {statusLabel[next]}</>
-                                                )}
-                                            </button>
-                                        ) : (
+                                        {(() => {
+                                            const isFutureLocked = order.is_future_order && order.scheduled_for && new Date(order.scheduled_for).getTime() - Date.now() > 60 * 60 * 1000 && order.status === 'pending';
+                                            if (isFutureLocked) {
+                                                return (
+                                                    <div className="text-center py-4 bg-violet-50 text-violet-700 rounded-3xl font-black text-sm border border-violet-200 flex items-center justify-center gap-2">
+                                                        <FaClock size={14} />
+                                                        הזמנה עתידית — תתקבל ב-{new Date(order.scheduled_for).toLocaleString('he-IL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                                                    </div>
+                                                );
+                                            }
+                                            if (next) {
+                                                return (
+                                                    <button
+                                                        onClick={() => updateStatus(order.id, next)}
+                                                        className={`w-full py-5 rounded-[2rem] font-black text-lg transition-all active:scale-95 shadow-xl flex items-center justify-center gap-4 hover:-translate-y-1 ${order.status === 'ready' ? 'bg-emerald-500 text-white shadow-emerald-500/20 hover:bg-emerald-600' :
+                                                            order.status === 'preparing' ? 'bg-amber-500 text-white shadow-amber-500/20 hover:bg-amber-600' :
+                                                                'bg-brand-primary text-white shadow-brand-primary/20 hover:bg-brand-dark'
+                                                            }`}
+                                                    >
+                                                        {order.status === 'ready' && order.delivery_method !== 'delivery' ? (
+                                                            <><FaCheckCircle /> הכר כנמסר</>
+                                                        ) : order.status === 'ready' && order.delivery_method === 'delivery' ? (
+                                                            <><FaRoute /> שלח למשלוח</>
+                                                        ) : order.status === 'delivering' ? (
+                                                            <><FaCheckCircle /> הכר כנמסר</>
+                                                        ) : (
+                                                            <><FaRoute /> {statusLabel[next]}</>
+                                                        )}
+                                                    </button>
+                                                );
+                                            }
+                                            return (
                                             <div className="text-center py-4 bg-emerald-50 text-emerald-600 rounded-3xl font-black text-sm border border-emerald-100 flex items-center justify-center gap-2">
                                                 <FaCheckCircle /> הושלם
                                             </div>
-                                        )}
+                                            );
+                                        })()}
 
                                         <div className={`grid gap-3 mt-4 ${['preparing', 'ready', 'delivering'].includes(order.status) ? 'grid-cols-3' : 'grid-cols-2'}`}>
                                             <button

@@ -18,7 +18,7 @@ import {
     FaTable,
 } from 'react-icons/fa';
 
-export default function AdminBases() {
+export default function AdminBases({ embedded = false }) {
     const { getAuthHeaders, isManager } = useAdminAuth();
     const [bases, setBases] = useState([]);
     const [categories, setCategories] = useState([]);
@@ -192,20 +192,19 @@ export default function AdminBases() {
     };
 
     if (loading) {
-        return (
-            <AdminLayout>
-                <div className="flex flex-col items-center justify-center h-96">
-                    <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-brand-primary"></div>
-                    <p className="mt-4 text-gray-500 font-black animate-pulse">טוען בסיסים...</p>
-                </div>
-            </AdminLayout>
+        const loader = (
+            <div className="flex flex-col items-center justify-center h-96">
+                <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-brand-primary"></div>
+                <p className="mt-4 text-gray-500 font-black animate-pulse">טוען בסיסים...</p>
+            </div>
         );
+        if (embedded) return loader;
+        return <AdminLayout>{loader}</AdminLayout>;
     }
 
-    return (
-        <AdminLayout>
+    const content = (
             <div className="max-w-7xl mx-auto space-y-12 pb-32 animate-in fade-in duration-500">
-                {/* Header Section */}
+                {!embedded && (
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 px-4">
                     <div className="flex items-center gap-5">
                         <div className="w-20 h-20 bg-amber-50 rounded-[2.5rem] flex items-center justify-center text-amber-600 shadow-sm border border-amber-100/50">
@@ -226,6 +225,18 @@ export default function AdminBases() {
                         </button>
                     )}
                 </div>
+                )}
+                {embedded && isManager() && (
+                    <div className="flex justify-end px-4">
+                        <button
+                            onClick={() => openModal()}
+                            className="bg-brand-primary text-white px-6 py-3 rounded-2xl font-black text-sm hover:bg-brand-dark transition-all flex items-center gap-2 shadow-lg shadow-brand-primary/20"
+                        >
+                            <FaPlus />
+                            הוספת בסיס חדש
+                        </button>
+                    </div>
+                )}
 
                 {/* Bases Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 px-4">
@@ -506,6 +517,8 @@ export default function AdminBases() {
                     </div>
                 )}
             </div>
-        </AdminLayout>
     );
+
+    if (embedded) return content;
+    return <AdminLayout>{content}</AdminLayout>;
 }

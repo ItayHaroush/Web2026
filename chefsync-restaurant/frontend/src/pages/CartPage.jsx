@@ -18,6 +18,7 @@ import { usePromotions } from '../context/PromotionContext';
 import PromotionProgress from '../components/PromotionProgress';
 import GiftSelectionModal from '../components/GiftSelectionModal';
 import MenuItemModal from '../components/MenuItemModal';
+import FutureOrderModal from '../components/FutureOrderModal';
 import { resolveAssetUrl } from '../utils/assets';
 
 /**
@@ -55,8 +56,9 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
     const [savedAddresses, setSavedAddresses] = useState([]);
 
     const isRegisteredCustomer = isRecognized && !!customer?.id;
-    // לקוח רשום יכול להזמין מראש גם במזומן
-    const canFutureOrder = !restaurant?.is_open_now && restaurant?.allow_future_orders && (restaurant?.accepts_credit_card || isRegisteredCustomer);
+    // הזמנה עתידית — זמינה גם כשהמסעדה פתוחה, כל עוד allow_future_orders פעיל
+    const canFutureOrder = restaurant?.allow_future_orders && (restaurant?.accepts_credit_card || isRegisteredCustomer);
+    const [showFutureOrderModal, setShowFutureOrderModal] = useState(false);
 
     // Fetch menu for category quick-add modal
     useEffect(() => {
@@ -170,8 +172,8 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
             return;
         }
 
-        // בדיקת הזמנה עתידית — חובה לבחור זמן
-        if (canFutureOrder && !scheduledFor) {
+        // כשמסעדה סגורה — חובה לבחור זמן להזמנה עתידית
+        if (canFutureOrder && !restaurant?.is_open_now && !scheduledFor) {
             setError('המסעדה סגורה. יש לבחור תאריך ושעה להזמנה עתידית.');
             return;
         }
@@ -965,36 +967,52 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                         </div>
                     </div>
 
-                    {/* הזמנה עתידית - כשהמסעדה סגורה */}
+                    {/* הזמנה עתידית */}
                     {canFutureOrder && (
-                        <div className="border-2 border-amber-300 dark:border-amber-700 rounded-xl p-4 bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20">
+                        <div className={`border-2 rounded-xl p-4 ${!restaurant?.is_open_now ? 'border-amber-300 dark:border-amber-700 bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20' : 'border-blue-300 dark:border-blue-700 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20'}`}>
                             <div className="flex items-center gap-2 mb-2">
-                                <FaClock className="text-amber-600" />
-                                <p className="text-xs font-bold text-amber-800 dark:text-amber-400 uppercase tracking-wide">המסעדה סגורה — הזמנה עתידית</p>
+                                <FaClock className={!restaurant?.is_open_now ? 'text-amber-600' : 'text-blue-600'} />
+                                <p className={`text-xs font-bold uppercase tracking-wide ${!restaurant?.is_open_now ? 'text-amber-800 dark:text-amber-400' : 'text-blue-800 dark:text-blue-400'}`}>
+                                    {!restaurant?.is_open_now ? 'המסעדה סגורה — הזמנה עתידית' : 'הזמנה עתידית'}
+                                </p>
                             </div>
-                            <p className="text-sm text-amber-700 dark:text-amber-300 mb-3">
-                                ניתן להזמין מראש — ההזמנה תתקבל לזמן שתבחר. תשלום באשראי בלבד.
-                            </p>
-                            <label className="block text-xs font-bold text-gray-600 dark:text-brand-dark-muted mb-1">
-                                בחר תאריך ושעה
-                            </label>
-                            <input
-                                type="datetime-local"
-                                dir="ltr"
-                                value={scheduledFor}
-                                onChange={(e) => {
-                                    setScheduledFor(e.target.value);
-                                    if (!isRegisteredCustomer) {
-                                        setCustomerInfo(prev => ({ ...prev, payment_method: 'credit_card' }));
-                                    }
-                                }}
-                                min={new Date(Date.now() + 30 * 60000).toISOString().slice(0, 16)}
-                                className="w-full px-4 py-3 border-2 border-amber-200 dark:border-amber-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all dark:bg-brand-dark-bg dark:text-brand-dark-text"
-                                required
-                            />
-                            <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
-                                💳 הזמנה עתידית מחייבת תשלום באשראי
-                            </p>
+
+                            {scheduledFor ? (
+                                <div className="flex items-center justify-between bg-white dark:bg-brand-dark-bg rounded-lg px-3 py-2.5 border border-gray-200 dark:border-brand-dark-border">
+                                    <div className="flex items-center gap-2">
+                                        <FaClock className={!restaurant?.is_open_now ? 'text-amber-500' : 'text-blue-500'} size={12} />
+                                        <span className="text-sm font-bold text-gray-800 dark:text-brand-dark-text">
+                                            {new Date(scheduledFor).toLocaleDateString('he-IL', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                                        </span>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowFutureOrderModal(true)}
+                                        className={`text-xs font-bold ${!restaurant?.is_open_now ? 'text-amber-600' : 'text-blue-600'} hover:underline`}
+                                    >
+                                        שנה
+                                    </button>
+                                </div>
+                            ) : (
+                                <>
+                                    <p className={`text-sm mb-3 ${!restaurant?.is_open_now ? 'text-amber-700 dark:text-amber-300' : 'text-blue-700 dark:text-blue-300'}`}>
+                                        {!restaurant?.is_open_now
+                                            ? 'ניתן להזמין מראש — בחר תאריך ושעה.'
+                                            : 'רוצה לקבל את ההזמנה בזמן אחר?'}
+                                    </p>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowFutureOrderModal(true)}
+                                        className={`w-full py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-colors ${!restaurant?.is_open_now
+                                            ? 'bg-amber-500 text-white hover:bg-amber-600'
+                                            : 'bg-blue-600 text-white hover:bg-blue-700'
+                                        }`}
+                                    >
+                                        <FaClock size={12} />
+                                        בחר תאריך ושעה
+                                    </button>
+                                </>
+                            )}
                         </div>
                     )}
 
@@ -1290,6 +1308,19 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                     />
                 )}
             </div>
+
+            <FutureOrderModal
+                isOpen={showFutureOrderModal}
+                onClose={() => setShowFutureOrderModal(false)}
+                onConfirm={(isoString) => {
+                    setScheduledFor(isoString);
+                    if (!isRegisteredCustomer) {
+                        setCustomerInfo(prev => ({ ...prev, payment_method: 'credit_card' }));
+                    }
+                    setShowFutureOrderModal(false);
+                }}
+                restaurant={restaurant}
+            />
         </CustomerLayout>
     );
 }

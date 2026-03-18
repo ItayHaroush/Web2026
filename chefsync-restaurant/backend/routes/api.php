@@ -28,6 +28,7 @@ use App\Http\Controllers\HypOrderCallbackController;
 use App\Http\Controllers\CustomerAuthController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\CustomerAddressController;
+use App\Http\Controllers\SuperAdminCustomerController;
 
 /**
  * API Routes
@@ -184,6 +185,16 @@ Route::prefix('super-admin')->middleware(['auth:sanctum', 'super_admin'])->group
 
     // Impersonation - כניסה כמסעדה
     Route::post('/impersonate/{restaurantId}', [SuperAdminController::class, 'impersonate'])->name('super-admin.impersonate');
+
+    // ניהול לקוחות קצה
+    Route::get('/customers', [SuperAdminCustomerController::class, 'index'])->name('super-admin.customers.index');
+    Route::get('/customers/stats', [SuperAdminCustomerController::class, 'stats'])->name('super-admin.customers.stats');
+    Route::get('/customers/{id}', [SuperAdminCustomerController::class, 'show'])->name('super-admin.customers.show');
+    Route::put('/customers/{id}', [SuperAdminCustomerController::class, 'update'])->name('super-admin.customers.update');
+    Route::delete('/customers/{id}', [SuperAdminCustomerController::class, 'destroy'])->name('super-admin.customers.destroy');
+
+    // לוג מיילים
+    Route::get('/email-log', [SuperAdminCustomerController::class, 'emailLog'])->name('super-admin.email-log');
 });
 
 // ============================================

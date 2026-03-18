@@ -65,9 +65,19 @@ export default function OrderHistoryModal({ isOpen, onClose }) {
         }
     }, [isOpen, fetchOrders]);
 
-    const handleReorder = async (orderId) => {
+    const handleReorder = async (orderId, order) => {
         const token = customerToken || localStorage.getItem('customer_token');
         if (!token) return;
+
+        // Cross-restaurant reorder: confirm if the target restaurant differs from current
+        const currentTenantId = window.location.pathname.split('/')[1];
+        if (order?.restaurant_tenant_id && currentTenantId && order.restaurant_tenant_id !== currentTenantId) {
+            const confirmed = window.confirm(
+                `ההזמנה ממסעדה אחרת (${order.restaurant_name || order.restaurant_tenant_id}). לעבור למסעדה ולטעון את ההזמנה?`
+            );
+            if (!confirmed) return;
+        }
+
         setReordering(orderId);
         try {
             const response = await apiClient.post(`/customer/reorder/${orderId}`, {}, {
@@ -82,7 +92,7 @@ export default function OrderHistoryModal({ isOpen, onClose }) {
                 }
                 onClose();
                 navigate(`/${restaurant_tenant_id}/menu`);
-                window.dispatchEvent(new Event('reorder_items_ready'));
+                setTimeout(() => window.dispatchEvent(new Event('reorder_items_ready')), 100);
             }
         } catch { /* ignore */ }
         setReordering(null);
@@ -269,7 +279,7 @@ export default function OrderHistoryModal({ isOpen, onClose }) {
                                     {/* Reorder button */}
                                     {['completed', 'delivered'].includes(order.status) && (
                                         <button
-                                            onClick={() => handleReorder(order.id)}
+                                            onClick={() => handleReorder(order.id, order)}
                                             disabled={reordering === order.id}
                                             className="w-full flex items-center justify-center gap-1.5 bg-brand-primary/5 hover:bg-brand-primary/10 text-brand-primary border-t border-gray-100 dark:border-brand-dark-border/50 px-4 py-2.5 font-bold text-xs transition disabled:opacity-50"
                                         >

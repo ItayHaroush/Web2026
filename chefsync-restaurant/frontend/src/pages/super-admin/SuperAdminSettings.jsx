@@ -8,7 +8,8 @@ import {
     FaGlobe,
     FaDatabase,
     FaShieldAlt,
-    FaChevronLeft
+    FaChevronLeft,
+    FaUserShield
 } from 'react-icons/fa';
 
 export default function SuperAdminSettings() {
@@ -84,6 +85,13 @@ export default function SuperAdminSettings() {
                         title="תחזוקת בסיס נתונים"
                         description="גיבויי נתונים, ניקוי לוגים ואופטימיזציה של המערכת."
                         to="/super-admin/settings/database"
+                    />
+                    <SettingItem
+                        icon={<FaUserShield size={20} />}
+                        title="בדיקת Auth"
+                        description="אבחון הרשאות, אסימוני גישה ותקינות חיבור API."
+                        to="/super-admin/settings/auth-debug"
+                        status="דיאגנוסטיקה"
                     />
                 </div>
             </div>

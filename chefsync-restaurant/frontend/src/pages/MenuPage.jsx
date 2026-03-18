@@ -112,7 +112,7 @@ export default function MenuPage({ isPreviewMode = false }) {
         if (!pendingReorderItems || !restaurant) return;
 
         const isOpen = isPreviewMode ? true : ((restaurant.is_open_now ?? restaurant.is_open) !== false);
-        const allowsFuture = restaurant.allow_future_orders && (restaurant.accepts_credit_card || (isRecognized && !!customer?.id));
+        const allowsFuture = allowsFutureOrders;
 
         if (isOpen || (allowsFuture && futureOrderApproved)) {
             if (cartItems.length > 0) {
@@ -322,15 +322,18 @@ export default function MenuPage({ isPreviewMode = false }) {
     const isOpenNow = restaurant?.is_open_now ?? restaurant?.is_open;
     const canOrder = isPreviewMode ? true : (isOpenNow !== false);
     const isRegisteredCustomer = isRecognized && !!customer?.id;
-    // לקוח רשום יכול להזמין מראש גם במזומן, אורח — רק אשראי
-    const canPreOrder = !canOrder && restaurant?.allow_future_orders && (restaurant?.accepts_credit_card || isRegisteredCustomer);
+    const allowsFutureOrders = restaurant?.allow_future_orders && (restaurant?.accepts_credit_card || isRegisteredCustomer);
+    // כשהמסעדה סגורה — הזמנה עתידית היא הדרך היחידה
+    const canPreOrder = !canOrder && allowsFutureOrders;
+    // כשהמסעדה פתוחה — אפשר לתזמן הזמנה עתידית (אופציונלי)
+    const canScheduleFuture = canOrder && allowsFutureOrders;
 
     const handleOpenItemModal = (menuItem) => {
         if (!canOrder && !canPreOrder) {
             addToast('המסעדה סגורה כרגע', 'error');
             return;
         }
-        // הזמנה עתידית — חייב לאשר תאריך/שעה לפני הוספה לסל
+        // הזמנה עתידית (מסעדה סגורה) — חייב לאשר תאריך/שעה לפני הוספה לסל
         if (canPreOrder && !futureOrderApproved) {
             setShowFutureOrderModal(true);
             return;
@@ -509,6 +512,41 @@ export default function MenuPage({ isPreviewMode = false }) {
                             </p>
                         </div>
                     )}
+                </div>
+            )}
+
+            {canScheduleFuture && !futureOrderApproved && (
+                <div className="mb-6 bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/30 rounded-xl px-4 py-3">
+                    <div className="flex items-center justify-between gap-3">
+                        <div className="flex-1">
+                            <p className="text-blue-800 dark:text-blue-300 text-sm font-medium">
+                                רוצה להזמין למועד מאוחר יותר?
+                            </p>
+                        </div>
+                        <button
+                            onClick={() => setShowFutureOrderModal(true)}
+                            className="bg-blue-600 text-white px-4 py-2 rounded-xl font-bold text-sm hover:bg-blue-700 transition-colors flex items-center gap-2 shrink-0"
+                        >
+                            <FaClock size={12} />
+                            הזמנה עתידית
+                        </button>
+                    </div>
+                </div>
+            )}
+            {canScheduleFuture && futureOrderApproved && (
+                <div className="mb-6 bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/30 rounded-xl px-4 py-3 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                        <FaCheckCircle className="text-blue-600 dark:text-blue-400 shrink-0" />
+                        <p className="text-blue-800 dark:text-blue-300 text-sm font-medium">
+                            הזמנה עתידית ל-{scheduledFor ? new Date(scheduledFor).toLocaleDateString('he-IL', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''}
+                        </p>
+                    </div>
+                    <button
+                        onClick={() => { setFutureOrderApproved(false); setScheduledFor(null); }}
+                        className="text-blue-600 dark:text-blue-400 text-xs font-bold hover:underline shrink-0"
+                    >
+                        ביטול תזמון
+                    </button>
                 </div>
             )}
 
@@ -990,7 +1028,7 @@ export default function MenuPage({ isPreviewMode = false }) {
                 isOpen={Boolean(selectedMenuItem)}
                 onClose={handleCloseModal}
                 onAdd={handleAddFromModal}
-                isOrderingEnabled={canOrder || (canPreOrder && futureOrderApproved)}
+                isOrderingEnabled={canOrder || (canPreOrder && futureOrderApproved) || (canScheduleFuture && futureOrderApproved)}
             />
 
             {/* מודל מידע נוסף */}

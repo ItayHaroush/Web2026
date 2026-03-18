@@ -19,7 +19,7 @@ const DEFAULT_FORM = {
     require_name: false,
 };
 
-export default function AdminKiosks() {
+export default function AdminKiosks({ embedded = false }) {
     const { isManager } = useAdminAuth();
     const [kiosks, setKiosks] = useState([]);
     const [limits, setLimits] = useState({});
@@ -119,20 +119,19 @@ export default function AdminKiosks() {
     const canCreateMore = kiosks.length < (limits.max_kiosks || 1);
 
     if (loading) {
-        return (
-            <AdminLayout>
-                <div className="flex flex-col items-center justify-center h-96">
-                    <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-brand-primary"></div>
-                    <p className="mt-4 text-gray-500 font-black animate-pulse">טוען קיוסקים...</p>
-                </div>
-            </AdminLayout>
+        const loader = (
+            <div className="flex flex-col items-center justify-center h-96">
+                <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-brand-primary"></div>
+                <p className="mt-4 text-gray-500 font-black animate-pulse">טוען קיוסקים...</p>
+            </div>
         );
+        if (embedded) return loader;
+        return <AdminLayout>{loader}</AdminLayout>;
     }
 
-    return (
-        <AdminLayout>
+    const content = (
             <div className="max-w-6xl mx-auto space-y-12 pb-32 animate-in fade-in duration-500">
-                {/* Header */}
+                {!embedded && (
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 px-4">
                     <div className="flex items-center gap-6">
                         <div className="w-20 h-20 bg-amber-50 rounded-[2.5rem] flex items-center justify-center text-amber-600 shadow-sm border border-amber-100/50">
@@ -159,6 +158,7 @@ export default function AdminKiosks() {
                         </button>
                     )}
                 </div>
+                )}
 
                 {/* Tier Upgrade Banner */}
                 {tier === 'basic' && (
@@ -237,6 +237,8 @@ export default function AdminKiosks() {
                     />
                 )}
             </div>
-        </AdminLayout>
     );
+
+    if (embedded) return content;
+    return <AdminLayout>{content}</AdminLayout>;
 }

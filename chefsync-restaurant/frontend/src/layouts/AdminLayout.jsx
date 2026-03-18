@@ -12,26 +12,16 @@ import {
     FaChartPie,
     FaClipboardList,
     FaUtensils,
-    FaBreadSlice,
-    FaCarrot,
-    FaTags,
-    FaUsers,
-    FaStore,
-    FaMapMarkedAlt,
-    FaTicketAlt,
-    FaPrint,
-    FaMobileAlt,
-    FaQrcode,
     FaDesktop,
     FaChartBar,
     FaShieldAlt,
     FaClock,
-    FaTv,
-    FaTabletAlt,
+    FaTicketAlt,
     FaCreditCard,
     FaExclamationTriangle,
-    FaUserClock,
-    FaCashRegister
+    FaCashRegister,
+    FaCog,
+    FaServer
 } from 'react-icons/fa';
 
 export default function AdminLayout({ children }) {
@@ -107,63 +97,21 @@ export default function AdminLayout({ children }) {
             show: true
         },
         {
-            path: '/admin/menu',
-            icon: <FaUtensils />,
-            label: 'תפריט',
-            show: isManager()
-        },
-        {
-            path: '/admin/menu/bases',
-            icon: <FaBreadSlice />,
-            label: 'בסיסים',
-            show: isManager()
-        },
-        {
-            path: '/admin/menu/salads',
-            icon: <FaCarrot />,
-            label: 'תוספות',
-            show: isManager()
-        },
-        {
-            path: '/admin/categories',
-            icon: <FaTags />,
-            label: 'קטגוריות',
-            show: isManager()
-        },
-        {
-            path: '/admin/employees',
-            icon: <FaUsers />,
-            label: 'עובדים',
-            show: isManager()
-        },
-        {
-            path: '/admin/reports',
-            icon: <FaChartBar />,
-            label: 'דוחות יומיים',
-            show: isManager()
-        },
-        {
-            path: '/admin/restaurant',
-            icon: <FaStore />,
-            label: 'פרטי מסעדה',
-            show: isManager() || isOwner()
-        },
-        {
-            path: '/admin/payment-settings',
-            icon: <FaCreditCard />,
-            label: 'הגדרות תשלום וחשבון',
-            show: isOwner()
-        },
-        {
-            path: '/admin/delivery-zones',
-            icon: <FaMapMarkedAlt />,
-            label: 'אזורי משלוח',
-            show: isManager()
-        },
-        {
             path: '/admin/terminal',
             icon: <FaDesktop />,
             label: 'מסוף סניף',
+            show: true
+        },
+        {
+            path: '/admin/menu-management',
+            icon: <FaUtensils />,
+            label: 'ניהול תפריט',
+            show: isManager()
+        },
+        {
+            path: '/admin/reports-center',
+            icon: <FaChartBar />,
+            label: 'דוחות',
             show: true
         },
         {
@@ -173,49 +121,17 @@ export default function AdminLayout({ children }) {
             show: isManager()
         },
         {
-            path: '/admin/printers',
-            icon: <FaPrint />,
-            label: 'מדפסות',
+            path: '/admin/devices',
+            icon: <FaServer />,
+            label: 'מכשירים',
             show: isManager()
         },
         {
-            path: '/admin/simulator',
-            icon: <FaMobileAlt />,
-            label: 'סימולטור',
-            show: isManager()
+            path: '/admin/settings-hub',
+            icon: <FaCog />,
+            label: 'הגדרות',
+            show: true
         },
-        {
-            path: '/admin/qr-code',
-            icon: <FaQrcode />,
-            label: 'QR Code',
-            show: isManager()
-        },
-        {
-            path: '/admin/display-screens',
-            icon: <FaTv />,
-            label: 'מסכי תצוגה',
-            show: isManager()
-        },
-        {
-            path: '/admin/kiosks',
-            icon: <FaTabletAlt />,
-            label: 'קיוסקים',
-            show: isManager()
-        },
-        {
-            path: '/admin/time-reports',
-            icon: <FaUserClock />,
-            label: 'דוח נוכחות',
-            show: true,
-            proOnly: true
-        },
-        {
-            path: '/admin/pos',
-            icon: <FaCashRegister />,
-            label: 'קופה POS',
-            show: isManager(),
-            proOnly: true
-        }
     ].filter(item => item.show);
 
     const statusBadge = (
@@ -259,7 +175,7 @@ export default function AdminLayout({ children }) {
                     <DashboardHeader
                         toggleSidebar={() => setSidebarOpen(!sidebarOpen)}
                         user={user}
-                        title={menuItems.find(item => item.path === location.pathname)?.label || 'ניהול מסעדה'}
+                        title={menuItems.find(item => location.pathname === item.path || location.pathname.startsWith(item.path + '/'))?.label || 'ניהול מסעדה'}
                         isCollapsed={isCollapsed}
                         endContent={statusBadge}
                         notificationCount={restaurantStatus.active_orders_count || 0}

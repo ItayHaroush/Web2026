@@ -17,7 +17,7 @@ import {
     FaBoxOpen
 } from 'react-icons/fa';
 
-export default function SuperAdminNotifications() {
+export default function SuperAdminNotifications({ embedded = false }) {
     const { getAuthHeaders } = useAdminAuth();
 
     const [loadingFilters, setLoadingFilters] = useState(true);
@@ -116,9 +116,9 @@ export default function SuperAdminNotifications() {
         }
     };
 
-    return (
-        <SuperAdminLayout>
-            <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-4">
+    const content = (
+            <div className={embedded ? '' : 'max-w-[1200px] mx-auto px-4 sm:px-6 py-4'}>
+                {!embedded && (
                 <div className="mb-8">
                     <h1 className="text-2xl font-black text-gray-900 flex items-center gap-2">
                         <div className="p-2 bg-brand-primary/10 rounded-lg">
@@ -128,6 +128,7 @@ export default function SuperAdminNotifications() {
                     </h1>
                     <p className="text-sm text-gray-500 mt-1">שילוח הודעות Push למכשירי קצה מבוססי מסעדות</p>
                 </div>
+                )}
 
                 <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
                     {/* עמודה שמאלית - טופס ובחירה */}
@@ -377,6 +378,8 @@ export default function SuperAdminNotifications() {
                     </div>
                 </div>
             </div>
-        </SuperAdminLayout>
     );
+
+    if (embedded) return content;
+    return <SuperAdminLayout>{content}</SuperAdminLayout>;
 }

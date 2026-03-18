@@ -42,7 +42,7 @@ const DEFAULT_FORM = {
 
 const DEVICE_FORM = { name: '', role: 'kitchen', printer_ip: '', printer_port: 9100 };
 
-export default function AdminPrinters() {
+export default function AdminPrinters({ embedded = false }) {
     const [searchParams, setSearchParams] = useSearchParams();
     const activeTab = searchParams.get('tab') || 'printers';
 
@@ -243,20 +243,19 @@ export default function AdminPrinters() {
     };
 
     if (loading) {
-        return (
-            <AdminLayout>
-                <div className="flex flex-col items-center justify-center h-96">
-                    <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500"></div>
-                    <p className="mt-4 text-gray-500 font-black animate-pulse">טוען מדפסות...</p>
-                </div>
-            </AdminLayout>
+        const loader = (
+            <div className="flex flex-col items-center justify-center h-96">
+                <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500"></div>
+                <p className="mt-4 text-gray-500 font-black animate-pulse">טוען מדפסות...</p>
+            </div>
         );
+        if (embedded) return loader;
+        return <AdminLayout>{loader}</AdminLayout>;
     }
 
-    return (
-        <AdminLayout>
+    const content = (
             <div className="max-w-6xl mx-auto space-y-12 pb-32 animate-in fade-in duration-500">
-                {/* Header */}
+                {!embedded && (
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 px-4">
                     <div className="flex items-center gap-6">
                         <div className="w-20 h-20 bg-blue-50 rounded-[2.5rem] flex items-center justify-center text-blue-600 shadow-sm border border-blue-100/50">
@@ -281,6 +280,7 @@ export default function AdminPrinters() {
                         </button>
                     )}
                 </div>
+                )}
 
                 {/* Tabs */}
                 <div className="flex gap-2 px-4">
@@ -503,6 +503,8 @@ export default function AdminPrinters() {
                     </div>
                 )}
             </div>
-        </AdminLayout>
     );
+
+    if (embedded) return content;
+    return <AdminLayout>{content}</AdminLayout>;
 }

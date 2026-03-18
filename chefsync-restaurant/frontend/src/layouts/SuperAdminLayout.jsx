@@ -10,12 +10,10 @@ import {
     FaBell,
     FaFileInvoiceDollar,
     FaCogs,
-    FaSms,
-    FaUserShield,
     FaClipboardList,
     FaReceipt,
     FaEnvelope,
-    FaHistory
+    FaUsers,
 } from 'react-icons/fa';
 
 export default function SuperAdminLayout({ children }) {
@@ -37,14 +35,9 @@ export default function SuperAdminLayout({ children }) {
             icon: <FaChartPie />,
         },
         {
-            label: 'התראות',
-            path: '/super-admin/notifications',
+            label: 'מרכז התראות',
+            path: '/super-admin/notification-center',
             icon: <FaBell />,
-        },
-        {
-            label: 'לוג התראות',
-            path: '/super-admin/notification-log',
-            icon: <FaHistory />,
         },
         {
             label: 'דוחות',
@@ -57,19 +50,14 @@ export default function SuperAdminLayout({ children }) {
             icon: <FaReceipt />,
         },
         {
-            label: 'מיילים',
-            path: '/super-admin/emails',
+            label: 'לקוחות',
+            path: '/super-admin/customers',
+            icon: <FaUsers />,
+        },
+        {
+            label: 'ניהול מיילים',
+            path: '/super-admin/email-management',
             icon: <FaEnvelope />,
-        },
-        {
-            label: 'הגדרות',
-            path: '/super-admin/settings',
-            icon: <FaCogs />,
-        },
-        {
-            label: 'SMS Debug',
-            path: '/super-admin/sms-debug',
-            icon: <FaSms />,
         },
         {
             label: 'לוגים והזמנות',
@@ -77,9 +65,9 @@ export default function SuperAdminLayout({ children }) {
             icon: <FaClipboardList />,
         },
         {
-            label: 'בדיקת Auth',
-            path: '/super-admin/debug',
-            icon: <FaUserShield />,
+            label: 'הגדרות',
+            path: '/super-admin/settings',
+            icon: <FaCogs />,
         },
     ];
 
@@ -99,7 +87,7 @@ export default function SuperAdminLayout({ children }) {
                 <DashboardHeader
                     toggleSidebar={() => setSidebarOpen(!sidebarOpen)}
                     user={user}
-                    title={menuItems.find(item => item.path === location.pathname)?.label || 'ניהול מערכת'}
+                    title={menuItems.find(item => location.pathname === item.path || location.pathname.startsWith(item.path + '/'))?.label || 'ניהול מערכת'}
                     isCollapsed={isCollapsed}
                     profilePath="/super-admin/profile"
                 />

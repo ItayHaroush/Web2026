@@ -28,7 +28,7 @@ import {
 
 const COLORS = ['#f97316', '#3b82f6', '#8b5cf6', '#22c55e', '#ef4444', '#eab308'];
 
-export default function AdminReports() {
+export default function AdminReports({ embedded = false }) {
     const { addToast } = useToast();
     const [reports, setReports] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -136,10 +136,9 @@ export default function AdminReports() {
         }
     };
 
-    return (
-        <AdminLayout>
+    const content = (
             <div className="max-w-7xl mx-auto space-y-6 animate-in fade-in duration-500">
-                {/* Header */}
+                {!embedded && (
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div>
                         <h1 className="text-3xl font-black text-gray-900 flex items-center gap-3">
@@ -179,6 +178,7 @@ export default function AdminReports() {
                         </button>
                     </div>
                 </div>
+                )}
 
                 {/* Filters */}
                 <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-wrap items-center gap-4">
@@ -403,8 +403,10 @@ export default function AdminReports() {
                     />
                 )}
             </div>
-        </AdminLayout>
     );
+
+    if (embedded) return content;
+    return <AdminLayout>{content}</AdminLayout>;
 }
 
 function KpiCard({ label, value, icon, color }) {

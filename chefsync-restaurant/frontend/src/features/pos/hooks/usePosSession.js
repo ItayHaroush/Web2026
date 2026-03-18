@@ -1,14 +1,9 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import posApi from '../api/posApi';
 import { useAdminAuth } from '../../../context/AdminAuthContext';
 
 const INACTIVITY_TIMEOUT = 5 * 60 * 1000; // 5 minutes
 const BYPASS_KEY = 'pos_bypass';
-
-const getStableHeaders = () => {
-    const token = localStorage.getItem('authToken') || localStorage.getItem('admin_token');
-    return token ? { Authorization: `Bearer ${token}` } : {};
-};
 
 function getBypass() {
     try {
@@ -43,11 +38,12 @@ export default function usePosSession() {
     const [expiresAt, setExpiresAt] = useState(null);
     const [bypassAttempted, setBypassAttempted] = useState(false);
     const inactivityTimer = useRef(null);
-    const headersRef = useRef(getStableHeaders());
+    const token = (typeof localStorage !== 'undefined' && (localStorage.getItem('authToken') || localStorage.getItem('admin_token'))) || '';
+    const headers = useMemo(() => (token ? { Authorization: `Bearer ${token}` } : {}), [token]);
 
-    // Keep headersRef up to date
-    headersRef.current = getStableHeaders();
-    const headers = headersRef.current;
+    // Ref for async callbacks that need latest headers
+    const headersRef = useRef(headers);
+    headersRef.current = headers;
 
     const resetInactivityTimer = useCallback(() => {
         if (inactivityTimer.current) clearTimeout(inactivityTimer.current);

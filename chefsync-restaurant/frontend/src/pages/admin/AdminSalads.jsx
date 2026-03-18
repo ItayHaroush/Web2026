@@ -25,7 +25,7 @@ import {
     FaHandPointer,
 } from 'react-icons/fa';
 
-export default function AdminSalads() {
+export default function AdminSalads({ embedded = false }) {
     const { getAuthHeaders, isManager } = useAdminAuth();
     const [salads, setSalads] = useState([]);
     const [groups, setGroups] = useState([]);
@@ -394,20 +394,19 @@ export default function AdminSalads() {
     }, [selectedGroup]);
 
     if (loading) {
-        return (
-            <AdminLayout>
-                <div className="flex flex-col items-center justify-center h-96">
-                    <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-brand-primary"></div>
-                    <p className="mt-4 text-gray-500 font-black animate-pulse text-lg">טוען תוספות וחוקי בחירה...</p>
-                </div>
-            </AdminLayout>
+        const loader = (
+            <div className="flex flex-col items-center justify-center h-96">
+                <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-brand-primary"></div>
+                <p className="mt-4 text-gray-500 font-black animate-pulse text-lg">טוען תוספות וחוקי בחירה...</p>
+            </div>
         );
+        if (embedded) return loader;
+        return <AdminLayout>{loader}</AdminLayout>;
     }
 
-    return (
-        <AdminLayout>
+    const content = (
             <div className="max-w-7xl mx-auto space-y-12 pb-40 animate-in fade-in duration-700">
-                {/* Header Section - Modern SaaS Style */}
+                {!embedded && (
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 px-4">
                     <div className="flex items-center gap-6">
                         <div className="w-24 h-24 bg-emerald-50 rounded-[2.5rem] flex items-center justify-center text-emerald-600 shadow-sm border border-emerald-100/50">
@@ -437,6 +436,7 @@ export default function AdminSalads() {
                         </button>
                     )}
                 </div>
+                )}
 
                 {/* Main Configuration Layout */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 px-4">
@@ -1234,6 +1234,8 @@ export default function AdminSalads() {
                     </div>
                 )}
             </div>
-        </AdminLayout>
     );
+
+    if (embedded) return content;
+    return <AdminLayout>{content}</AdminLayout>;
 }

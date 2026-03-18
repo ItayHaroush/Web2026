@@ -36,7 +36,7 @@ function formatMinutes(minutes) {
     return `${h} שעות ${m} דק׳`;
 }
 
-export default function AdminTimeReports() {
+export default function AdminTimeReports({ embedded = false }) {
     const { getAuthHeaders, isManager } = useAdminAuth();
     const { subscriptionInfo } = useRestaurantStatus();
     const [tab, setTab] = useState(isManager() ? 'manager' : 'employee');
@@ -84,6 +84,7 @@ export default function AdminTimeReports() {
     }, [isBasicTier]);
 
     if (isBasicTier) {
+        if (embedded) return <div className="text-center py-12 text-gray-400 text-sm font-bold">תכונה זו זמינה בתוכנית Pro</div>;
         return <ProFeatureGate featureName="דוח נוכחות" />;
     }
 
@@ -94,9 +95,9 @@ export default function AdminTimeReports() {
         return d.toLocaleDateString('he-IL', { weekday: 'short', day: 'numeric', month: 'short' });
     };
 
-    return (
-        <AdminLayout>
+    const content = (
             <div className="max-w-7xl mx-auto space-y-8 pb-40 animate-in fade-in duration-700">
+                {!embedded && (
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 px-4">
                     <div className="flex items-center gap-5">
                         <div className="w-20 h-20 bg-amber-50 rounded-[2rem] flex items-center justify-center text-amber-600 shadow-sm border border-amber-100/50">
@@ -117,6 +118,7 @@ export default function AdminTimeReports() {
                         </div>
                     )}
                 </div>
+                )}
 
                 <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between px-4">
                     {isManager() && (
@@ -211,8 +213,10 @@ export default function AdminTimeReports() {
                     </div>
                 )}
             </div>
-        </AdminLayout>
     );
+
+    if (embedded) return content;
+    return <AdminLayout>{content}</AdminLayout>;
 }
 
 function ManagerReport({ data, expandedUser, setExpandedUser, formatDate }) {

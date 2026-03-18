@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Customer;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\MenuItem;
@@ -137,11 +138,13 @@ class OrderController extends Controller
             }
 
             if (!($restaurant->is_open_now ?? false)) {
-                // הזמנה עתידית מותרת גם אם המסעדה סגורה (רק באשראי)
                 $isFutureOrder = !empty($validated['scheduled_for']);
                 $isCreditPayment = ($validated['payment_method'] ?? 'cash') === 'credit_card';
+                $isRegisteredCustomer = !empty($validated['customer_id']) || (!empty($validated['customer_phone']) && Customer::where('phone', $validated['customer_phone'])->where('is_registered', true)->exists());
 
-                if (!$isFutureOrder || !$isCreditPayment || !$restaurant->allow_future_orders) {
+                // סגורה — חובה הזמנה עתידית; לקוח רשום יכול לשלם מזומן, אורח רק אשראי
+                $paymentOk = $isCreditPayment || $isRegisteredCustomer;
+                if (!$isFutureOrder || !$paymentOk || !$restaurant->allow_future_orders) {
                     return response()->json([
                         'success' => false,
                         'message' => 'המסעדה סגורה כרגע ולא ניתן לבצע הזמנה',

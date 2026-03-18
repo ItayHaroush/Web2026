@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCustomer } from '../context/CustomerContext';
 import { requestPhoneCode, verifyPhoneCode } from '../services/phoneAuthService';
@@ -46,6 +46,9 @@ export default function UserProfileModal({ isOpen, onClose }) {
     const [editingAddress, setEditingAddress] = useState(null);
     const [addressForm, setAddressForm] = useState({ label: 'בית', street: '', house_number: '', apartment: '', floor: '', entrance: '', city: '', notes: '' });
 
+    const phoneInputRef = useRef(null);
+    const otpInputRef = useRef(null);
+
     // כשנפתח — קבע שלב ראשוני
     useEffect(() => {
         if (!isOpen) return;
@@ -65,6 +68,19 @@ export default function UserProfileModal({ isOpen, onClose }) {
             setLastName('');
         }
     }, [isOpen, isRecognized]);
+
+    // פוקוס אוטומטי על השדה הפעיל אחרי שהמודל נפתח (תמיכה במובייל)
+    useEffect(() => {
+        if (!isOpen) return;
+        const timer = setTimeout(() => {
+            const ref = step === 'otp-verify' ? otpInputRef : phoneInputRef;
+            if (ref.current) {
+                ref.current.focus();
+                ref.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }, 350);
+        return () => clearTimeout(timer);
+    }, [isOpen, step]);
 
     // טיימר resend
     useEffect(() => {
@@ -297,7 +313,7 @@ export default function UserProfileModal({ isOpen, onClose }) {
                 {/* Header */}
                 <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-brand-dark-border">
                     <h2 className="text-xl font-black text-gray-900 dark:text-brand-dark-text">
-                        {step === 'phone-input' && 'התחברות'}
+                        {step === 'phone-input' && 'התחברות / הרשמה'}
                         {step === 'otp-verify' && 'אימות קוד'}
                         {step === 'register' && 'השלמת הרשמה'}
                         {step === 'profile' && 'הפרופיל שלי'}
@@ -316,7 +332,11 @@ export default function UserProfileModal({ isOpen, onClose }) {
                             <p className="text-sm text-gray-600 dark:text-brand-dark-muted">
                                 הזן מספר טלפון לקבלת קוד אימות
                             </p>
+                            <p className="text-xs text-gray-400 dark:text-gray-500 -mt-2">
+                                משתמש חדש? ניצור לך חשבון אוטומטית
+                            </p>
                             <input
+                                ref={phoneInputRef}
                                 type="tel"
                                 dir="ltr"
                                 inputMode="tel"
@@ -324,7 +344,6 @@ export default function UserProfileModal({ isOpen, onClose }) {
                                 value={phone}
                                 onChange={(e) => setPhone(e.target.value)}
                                 className="w-full text-center text-lg font-bold border-2 border-gray-200 dark:border-brand-dark-border rounded-xl px-4 py-3 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none transition dark:bg-brand-dark-bg dark:text-brand-dark-text"
-                                autoFocus
                                 onKeyDown={(e) => e.key === 'Enter' && handleSendOtp()}
                             />
                             {error && <p className="text-sm text-red-600 text-center">{error}</p>}
@@ -352,6 +371,7 @@ export default function UserProfileModal({ isOpen, onClose }) {
                                 קוד אימות נשלח ל-<span className="font-bold" dir="ltr">{phone}</span>
                             </p>
                             <input
+                                ref={otpInputRef}
                                 type="tel"
                                 dir="ltr"
                                 inputMode="numeric"
@@ -360,7 +380,6 @@ export default function UserProfileModal({ isOpen, onClose }) {
                                 value={otpCode}
                                 onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                                 className="w-full text-center text-2xl tracking-[0.5em] font-bold border-2 border-gray-200 dark:border-brand-dark-border rounded-xl px-4 py-3 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none transition dark:bg-brand-dark-bg dark:text-brand-dark-text"
-                                autoFocus
                                 onKeyDown={(e) => e.key === 'Enter' && handleVerifyOtp()}
                             />
                             {error && <p className="text-sm text-red-600 text-center">{error}</p>}

@@ -80,8 +80,8 @@ apiClient.interceptors.request.use((config) => {
     const isSuperAdminCall = urlPath.startsWith('/super-admin/');
     const isCustomerEndpoint = urlPath.startsWith('/customer/') || urlPath === '/customer';
 
-    // Don't clobber an explicit header; skip tenant header for super-admin routes
-    if (!isSuperAdminCall && tenantId && !config.headers?.[TENANT_HEADER]) {
+    // Don't clobber an explicit header; skip tenant header for super-admin and customer routes
+    if (!isSuperAdminCall && !isCustomerEndpoint && tenantId && !config.headers?.[TENANT_HEADER]) {
         config.headers[TENANT_HEADER] = tenantId;
     }
 

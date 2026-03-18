@@ -226,12 +226,14 @@ class RegisterRestaurantController extends Controller
             // שליחת מייל ברכה לבעל המסעדה
             try {
                 Mail::to($owner->email)->send(new WelcomeMail($restaurant, $owner->name, $owner->email));
+                \App\Services\EmailLogService::log($owner->email, 'restaurant_welcome', 'ברוכים הבאים - הרשמת מסעדה', null, 'sent', null, ['restaurant_id' => $restaurant->id]);
             } catch (\Exception $mailError) {
                 Log::warning('Welcome email failed', [
                     'restaurant_id' => $restaurant->id,
                     'email' => $owner->email,
                     'error' => $mailError->getMessage(),
                 ]);
+                try { \App\Services\EmailLogService::log($owner->email, 'restaurant_welcome', 'ברוכים הבאים - הרשמת מסעדה', null, 'failed', $mailError->getMessage()); } catch (\Throwable $ignore) {}
             }
 
             return response()->json([

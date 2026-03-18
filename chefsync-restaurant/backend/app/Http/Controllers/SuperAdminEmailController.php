@@ -151,6 +151,8 @@ class SuperAdminEmailController extends Controller
                 'user_id' => $request->user()->id,
             ]);
 
+            try { \App\Services\EmailLogService::log($email, 'test_email', "בדיקה: {$type}", null, 'sent', null, ['restaurant_id' => $restaurantId]); } catch (\Throwable $ignore) {}
+
             return response()->json([
                 'success' => true,
                 'message' => "מייל {$type} נשלח בהצלחה ל-{$email}",
@@ -229,8 +231,10 @@ class SuperAdminEmailController extends Controller
 
                 Mail::to($owner->email)->send($mailable);
                 $sent++;
+                try { \App\Services\EmailLogService::log($owner->email, 'bulk_email', "שליחה המונית: {$type}", null, 'sent', null, ['restaurant_id' => $restaurant->id]); } catch (\Throwable $ignore) {}
             } catch (\Exception $e) {
                 $failed++;
+                try { \App\Services\EmailLogService::log($owner->email ?? 'unknown', 'bulk_email', "שליחה המונית: {$type}", null, 'failed', $e->getMessage(), ['restaurant_id' => $restaurant->id ?? null]); } catch (\Throwable $ignore) {}
                 $errors[] = [
                     'restaurant' => $restaurant->name,
                     'email' => $owner->email,

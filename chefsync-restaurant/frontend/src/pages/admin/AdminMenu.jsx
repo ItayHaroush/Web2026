@@ -34,7 +34,7 @@ import {
     FaUndo
 } from 'react-icons/fa';
 
-export default function AdminMenu() {
+export default function AdminMenu({ embedded = false }) {
     const { getAuthHeaders, isManager } = useAdminAuth();
     const { restaurantStatus } = useRestaurantStatus();
     const isLocked = restaurantStatus?.is_approved === false;
@@ -458,18 +458,18 @@ export default function AdminMenu() {
         : items;
 
     if (loading) {
-        return (
-            <AdminLayout>
-                <div className="flex items-center justify-center h-64">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary"></div>
-                </div>
-            </AdminLayout>
+        const loader = (
+            <div className="flex items-center justify-center h-64">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary"></div>
+            </div>
         );
+        if (embedded) return loader;
+        return <AdminLayout>{loader}</AdminLayout>;
     }
 
-    return (
-        <AdminLayout>
-            {/* כותרת מודרנית */}
+    const content = (
+        <>
+            {!embedded && (
             <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-4 sm:p-6 mb-6 overflow-hidden relative">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-brand-primary/5 rounded-full -mr-16 -mt-16 blur-2xl" />
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 relative z-10">
@@ -500,6 +500,7 @@ export default function AdminMenu() {
                     )}
                 </div>
             </div>
+            )}
 
             {/* טאבים - פריטים / קטגוריות */}
             <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-2 mb-6">
@@ -1155,6 +1156,9 @@ export default function AdminMenu() {
                     </div>
                 </div>
             )}
-        </AdminLayout>
+        </>
     );
+
+    if (embedded) return content;
+    return <AdminLayout>{content}</AdminLayout>;
 }

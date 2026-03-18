@@ -126,16 +126,31 @@ class AdminController extends Controller
         // הזמנות אחרונות
         $recentOrders = Order::where('restaurant_id', $restaurantId)
             ->visibleToRestaurant()
-            ->where('is_test', false)  // ← מתעלם מהזמנות test
+            ->where('is_test', false)
             ->with('items.menuItem.category')
             ->orderBy('created_at', 'desc')
             ->take(10)
             ->get();
 
+        // הזמנות עתידיות ממתינות
+        $futureOrders = Order::where('restaurant_id', $restaurantId)
+            ->visibleToRestaurant()
+            ->where('is_test', false)
+            ->where('is_future_order', true)
+            ->whereIn('status', ['pending', 'received', 'confirmed'])
+            ->where('scheduled_for', '>', now())
+            ->orderBy('scheduled_for', 'asc')
+            ->with('items.menuItem')
+            ->take(20)
+            ->get();
+
+        $stats['future_orders_count'] = $futureOrders->count();
+
         return response()->json([
             'success' => true,
             'stats' => $stats,
             'recent_orders' => $recentOrders,
+            'future_orders' => $futureOrders,
         ]);
     }
 

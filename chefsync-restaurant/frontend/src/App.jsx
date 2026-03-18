@@ -20,10 +20,6 @@ import NotFoundPage from './pages/NotFoundPage';
 import AdminLogin from './pages/admin/AdminLogin';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminOrders from './pages/admin/AdminOrders';
-import AdminMenu from './pages/admin/AdminMenu';
-import AdminBases from './pages/admin/AdminBases';
-import AdminSalads from './pages/admin/AdminSalads';
-import AdminCategories from './pages/admin/AdminCategories';
 import AdminEmployees from './pages/admin/AdminEmployees';
 import AdminRestaurant from './pages/admin/AdminRestaurant';
 import AdminMenuPreview from './pages/admin/AdminMenuPreview';
@@ -36,28 +32,24 @@ import PaymentSuccess from './pages/admin/PaymentSuccess';
 import PaymentError from './pages/admin/PaymentError';
 import AdminDeliveryZones from './pages/admin/AdminDeliveryZones';
 import AdminCoupons from './pages/admin/AdminCoupons';
-import AdminPrinters from './pages/admin/AdminPrinters';
 import AdminSimulator from './pages/admin/AdminSimulator';
 import AdminQrCode from './pages/admin/AdminQrCode';
-import AdminDisplayScreens from './pages/admin/AdminDisplayScreens';
 import ScreenViewer from './pages/ScreenViewer';
 import KioskViewer from './pages/KioskViewer';
-import AdminKiosks from './pages/admin/AdminKiosks';
-import AdminReports from './pages/admin/AdminReports';
-import AdminTimeReports from './pages/admin/AdminTimeReports';
 import POSLite from './features/pos/POSLite';
 import AdminPaymentSettings from './pages/admin/AdminPaymentSettings';
 import AdminUserSettings from './pages/admin/AdminUserSettings';
 import PaymentCallback from './pages/PaymentCallback';
 import AdminAuthDebug from './pages/admin/AdminAuthDebug';
+import AdminMenuManagement from './pages/admin/AdminMenuManagement';
+import AdminReportsCenter from './pages/admin/AdminReportsCenter';
+import AdminDevices from './pages/admin/AdminDevices';
+import AdminSettingsHub from './pages/admin/AdminSettingsHub';
 import SuperAdminDashboard from './pages/super-admin/SuperAdminDashboard';
-import SuperAdminNotifications from './pages/super-admin/SuperAdminNotifications';
-import SuperAdminNotificationLog from './pages/super-admin/SuperAdminNotificationLog';
 import SuperAdminReports from './pages/super-admin/SuperAdminReports';
 import SuperAdminInvoices from './pages/super-admin/SuperAdminInvoices';
 import SuperAdminSettings from './pages/super-admin/SuperAdminSettings';
 import SuperAdminOrderDebug from './pages/super-admin/SuperAdminOrderDebug';
-import SuperAdminEmails from './pages/super-admin/SuperAdminEmails';
 import SuperAdminProfile from './pages/super-admin/SuperAdminProfile';
 import RegionalSettings from './pages/super-admin/settings/RegionalSettings';
 import BillingSettings from './pages/super-admin/settings/BillingSettings';
@@ -66,7 +58,10 @@ import NotificationSettings from './pages/super-admin/settings/NotificationSetti
 import PolicySettings from './pages/super-admin/settings/PolicySettings';
 import DatabaseMaintenance from './pages/super-admin/settings/DatabaseMaintenance';
 import DebugAuth from './pages/super-admin/DebugAuth';
-import SuperAdminSmsDebug from './pages/super-admin/SuperAdminSmsDebug';
+import SuperAdminCustomers from './pages/super-admin/SuperAdminCustomers';
+import SuperAdminCustomerDetail from './pages/super-admin/SuperAdminCustomerDetail';
+import SuperAdminNotificationCenter from './pages/super-admin/SuperAdminNotificationCenter';
+import SuperAdminEmailManagement from './pages/super-admin/SuperAdminEmailManagement';
 import DebugAPI from './pages/DebugAPI';
 import RegisterRestaurant from './pages/RegisterRestaurant';
 import LandingPage from './pages/LandingPage';
@@ -188,37 +183,17 @@ function AppRoutes() {
         }
       />
       <Route
-        path="/admin/menu"
+        path="/admin/menu-management"
         element={
           <AdminRoute>
-            <AdminMenu />
+            <AdminMenuManagement />
           </AdminRoute>
         }
       />
-      <Route
-        path="/admin/menu/bases"
-        element={
-          <AdminRoute>
-            <AdminBases />
-          </AdminRoute>
-        }
-      />
-      <Route
-        path="/admin/menu/salads"
-        element={
-          <AdminRoute>
-            <AdminSalads />
-          </AdminRoute>
-        }
-      />
-      <Route
-        path="/admin/categories"
-        element={
-          <AdminRoute>
-            <AdminCategories />
-          </AdminRoute>
-        }
-      />
+      <Route path="/admin/menu" element={<Navigate to="/admin/menu-management" replace />} />
+      <Route path="/admin/menu/bases" element={<Navigate to="/admin/menu-management" replace />} />
+      <Route path="/admin/menu/salads" element={<Navigate to="/admin/menu-management" replace />} />
+      <Route path="/admin/categories" element={<Navigate to="/admin/menu-management" replace />} />
       <Route
         path="/admin/employees"
         element={
@@ -325,14 +300,15 @@ function AppRoutes() {
         }
       />
       <Route
-        path="/admin/printers"
+        path="/admin/devices"
         element={
           <AdminRoute>
-            <AdminPrinters />
+            <AdminDevices />
           </AdminRoute>
         }
       />
-      <Route path="/admin/print-devices" element={<Navigate to="/admin/printers?tab=devices" replace />} />
+      <Route path="/admin/printers" element={<Navigate to="/admin/devices" replace />} />
+      <Route path="/admin/print-devices" element={<Navigate to="/admin/devices" replace />} />
       <Route
         path="/admin/simulator"
         element={
@@ -349,38 +325,18 @@ function AppRoutes() {
           </AdminRoute>
         }
       />
+      <Route path="/admin/display-screens" element={<Navigate to="/admin/devices" replace />} />
+      <Route path="/admin/kiosks" element={<Navigate to="/admin/devices" replace />} />
       <Route
-        path="/admin/display-screens"
+        path="/admin/reports-center"
         element={
           <AdminRoute>
-            <AdminDisplayScreens />
+            <AdminReportsCenter />
           </AdminRoute>
         }
       />
-      <Route
-        path="/admin/kiosks"
-        element={
-          <AdminRoute>
-            <AdminKiosks />
-          </AdminRoute>
-        }
-      />
-      <Route
-        path="/admin/reports"
-        element={
-          <AdminRoute>
-            <AdminReports />
-          </AdminRoute>
-        }
-      />
-      <Route
-        path="/admin/time-reports"
-        element={
-          <AdminRoute>
-            <AdminTimeReports />
-          </AdminRoute>
-        }
-      />
+      <Route path="/admin/reports" element={<Navigate to="/admin/reports-center" replace />} />
+      <Route path="/admin/time-reports" element={<Navigate to="/admin/reports-center" replace />} />
       <Route
         path="/admin/pos"
         element={
@@ -394,6 +350,14 @@ function AppRoutes() {
         element={
           <AdminRoute>
             <AdminAuthDebug />
+          </AdminRoute>
+        }
+      />
+      <Route
+        path="/admin/settings-hub"
+        element={
+          <AdminRoute>
+            <AdminSettingsHub />
           </AdminRoute>
         }
       />
@@ -418,21 +382,16 @@ function AppRoutes() {
         }
       />
       <Route
-        path="/super-admin/notifications"
+        path="/super-admin/notification-center"
         element={
           <SuperAdminRoute>
-            <SuperAdminNotifications />
+            <SuperAdminNotificationCenter />
           </SuperAdminRoute>
         }
       />
-      <Route
-        path="/super-admin/notification-log"
-        element={
-          <SuperAdminRoute>
-            <SuperAdminNotificationLog />
-          </SuperAdminRoute>
-        }
-      />
+      <Route path="/super-admin/notifications" element={<Navigate to="/super-admin/notification-center" replace />} />
+      <Route path="/super-admin/notification-log" element={<Navigate to="/super-admin/notification-center" replace />} />
+      <Route path="/super-admin/sms-debug" element={<Navigate to="/super-admin/notification-center" replace />} />
       <Route
         path="/super-admin/reports"
         element={
@@ -514,29 +473,23 @@ function AppRoutes() {
         }
       />
       <Route
-        path="/super-admin/debug"
+        path="/super-admin/settings/auth-debug"
         element={
           <SuperAdminRoute>
             <DebugAuth />
           </SuperAdminRoute>
         }
       />
+      <Route path="/super-admin/debug" element={<Navigate to="/super-admin/settings/auth-debug" replace />} />
       <Route
-        path="/super-admin/sms-debug"
+        path="/super-admin/email-management"
         element={
           <SuperAdminRoute>
-            <SuperAdminSmsDebug />
+            <SuperAdminEmailManagement />
           </SuperAdminRoute>
         }
       />
-      <Route
-        path="/super-admin/emails"
-        element={
-          <SuperAdminRoute>
-            <SuperAdminEmails />
-          </SuperAdminRoute>
-        }
-      />
+      <Route path="/super-admin/emails" element={<Navigate to="/super-admin/email-management" replace />} />
       <Route
         path="/super-admin/profile"
         element={
@@ -545,6 +498,23 @@ function AppRoutes() {
           </SuperAdminRoute>
         }
       />
+      <Route
+        path="/super-admin/customers"
+        element={
+          <SuperAdminRoute>
+            <SuperAdminCustomers />
+          </SuperAdminRoute>
+        }
+      />
+      <Route
+        path="/super-admin/customers/:id"
+        element={
+          <SuperAdminRoute>
+            <SuperAdminCustomerDetail />
+          </SuperAdminRoute>
+        }
+      />
+      <Route path="/super-admin/email-log" element={<Navigate to="/super-admin/email-management" replace />} />
 
       <Route path="*" element={<NotFoundPage />} />
     </Routes>

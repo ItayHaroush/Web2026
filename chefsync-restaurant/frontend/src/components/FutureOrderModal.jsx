@@ -151,7 +151,7 @@ export default function FutureOrderModal({ isOpen, onClose, onConfirm, restauran
                         </div>
                         <div>
                             <h2 className="text-xl font-bold">הזמנה עתידית</h2>
-                            <p className="text-white/80 text-sm">המסעדה סגורה כרגע</p>
+                            <p className="text-white/80 text-sm">בחר מועד לקבלת ההזמנה</p>
                         </div>
                     </div>
                 </div>
@@ -246,7 +246,7 @@ export default function FutureOrderModal({ isOpen, onClose, onConfirm, restauran
                         className="flex-1 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold hover:from-amber-600 hover:to-orange-600 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
                         <FaCheckCircle />
-                        <span>אישור והמשך לתפריט</span>
+                        <span>אישור</span>
                     </button>
                 </div>
             </div>

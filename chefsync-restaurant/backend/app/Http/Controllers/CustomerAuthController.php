@@ -108,6 +108,14 @@ class CustomerAuthController extends Controller
             ->where('customer_phone', $phone)
             ->update(['customer_id' => $customer->id]);
 
+        // קישור למשתמש מערכת (admin) לפי מספר טלפון
+        if (!$customer->user_id) {
+            $linkedUser = \App\Models\User::where('phone', $phone)->first();
+            if ($linkedUser) {
+                $customer->update(['user_id' => $linkedUser->id]);
+            }
+        }
+
         // סנכרון מונה הזמנות ותאריך אחרון מהנתונים בפועל
         $this->syncOrderStats($customer);
 
@@ -300,8 +308,10 @@ class CustomerAuthController extends Controller
         if ($emailChanged) {
             try {
                 Mail::to($validated['email'])->queue(new CustomerEmailVerificationMail($customer->fresh(), $token));
+                \App\Services\EmailLogService::log($validated['email'], 'email_verification', 'אימות כתובת אימייל', $customer->id);
             } catch (\Throwable $e) {
                 Log::warning('Failed to send email verification on profile update', ['error' => $e->getMessage()]);
+                try { \App\Services\EmailLogService::log($validated['email'], 'email_verification', 'אימות כתובת אימייל', $customer->id, 'failed', $e->getMessage()); } catch (\Throwable $ignore) {}
             }
         }
 

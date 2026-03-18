@@ -12,7 +12,7 @@ import {
     FaStore,
 } from 'react-icons/fa';
 
-export default function SuperAdminNotificationLog() {
+export default function SuperAdminNotificationLog({ embedded = false }) {
     const { getAuthHeaders } = useAdminAuth();
     const [logs, setLogs] = useState([]);
     const [pagination, setPagination] = useState({ current_page: 1, last_page: 1 });
@@ -44,9 +44,9 @@ export default function SuperAdminNotificationLog() {
         fetchLogs(page);
     }, [page, fetchLogs]);
 
-    return (
-        <SuperAdminLayout>
-            <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-4">
+    const content = (
+            <div className={embedded ? '' : 'max-w-[1200px] mx-auto px-4 sm:px-6 py-4'}>
+                {!embedded && (
                 <div className="mb-8">
                     <h1 className="text-2xl font-black text-gray-900 flex items-center gap-2">
                         <div className="p-2 bg-brand-primary/10 rounded-lg">
@@ -56,6 +56,7 @@ export default function SuperAdminNotificationLog() {
                     </h1>
                     <p className="text-sm text-gray-500 mt-1">היסטוריית כל ההתראות שנשלחו מהמערכת</p>
                 </div>
+                )}
 
                 <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
                     {/* Table header */}
@@ -137,6 +138,8 @@ export default function SuperAdminNotificationLog() {
                     )}
                 </div>
             </div>
-        </SuperAdminLayout>
     );
+
+    if (embedded) return content;
+    return <SuperAdminLayout>{content}</SuperAdminLayout>;
 }
