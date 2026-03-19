@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CartSession;
 use App\Models\MonthlyInvoice;
 use App\Models\MonitoringAlert;
 use App\Models\NotificationLog;
@@ -61,9 +62,28 @@ class SuperAdminBillingController extends Controller
             ->where('status', 'paid')->sum('total_due');
         $invoicesOverdue = MonthlyInvoice::where('status', 'overdue')->count();
 
+        // תזכורות סל נטוש
+        $abandonedCartPackagesSold = (int) RestaurantPayment::where('type', 'abandoned_cart_package')
+            ->where('status', 'paid')
+            ->whereBetween('created_at', [now()->startOfMonth(), now()->endOfMonth()])
+            ->count();
+        $abandonedCartRevenueMonth = (float) RestaurantPayment::where('type', 'abandoned_cart_package')
+            ->where('status', 'paid')
+            ->whereBetween('created_at', [now()->startOfMonth(), now()->endOfMonth()])
+            ->sum('amount');
+        $restaurantsWithReminders = Restaurant::where('abandoned_cart_reminders_enabled', true)->count();
+        $abandonedCartSessionsMonth = CartSession::whereNotNull('reminded_at')
+            ->whereBetween('reminded_at', [now()->startOfMonth(), now()->endOfMonth()])
+            ->count();
+
+        $pricing = SuperAdminSettingsController::getPricingArray();
+        $packagePrices = [50 => 50, 100 => 90, 500 => 400];
+
         return response()->json([
             'success' => true,
             'data' => [
+                'pricing' => $pricing,
+                'package_prices' => $packagePrices,
                 'monthly_expected' => $monthlyExpected,
                 'outstanding' => $outstanding,
                 'paid_this_month' => $paidThisMonth,
@@ -76,6 +96,10 @@ class SuperAdminBillingController extends Controller
                 'invoiced_this_month' => $invoicedThisMonth,
                 'invoices_paid_this_month' => $invoicesPaidThisMonth,
                 'invoices_overdue_count' => $invoicesOverdue,
+                'abandoned_cart_packages_sold' => $abandonedCartPackagesSold,
+                'abandoned_cart_revenue_month' => $abandonedCartRevenueMonth,
+                'restaurants_with_reminders' => $restaurantsWithReminders,
+                'abandoned_cart_sessions_month' => $abandonedCartSessionsMonth,
             ],
         ]);
     }
@@ -166,6 +190,9 @@ class SuperAdminBillingController extends Controller
             'payment_reference' => 'nullable|string|max:100',  // מזהה עסקה מ-HYP אם יש
             'custom_monthly_price' => 'nullable|numeric|min:0',  // דריסת מחיר חודשי
             'custom_yearly_price' => 'nullable|numeric|min:0',   // דריסת מחיר שנתי
+            'abandoned_cart_package_size' => 'nullable|integer|in:50,100,500',  // חבילה לכלול בתשלום
+            'abandoned_cart_package_amount' => 'nullable|numeric|min:0',
+            'setup_fee' => 'nullable|numeric|min:0',  // דמי הקמת מסוף אם לא נגבו
         ]);
 
         $restaurant = Restaurant::findOrFail($id);
@@ -183,8 +210,23 @@ class SuperAdminBillingController extends Controller
         $effectiveMonthly = $customMonthly !== null ? (float) $customMonthly : $defaultMonthly;
         $effectiveYearly = $customYearly !== null ? (float) $customYearly : $defaultYearly;
 
-        $chargeAmount = $planType === 'yearly' ? $effectiveYearly : $effectiveMonthly;
-        $monthlyFee = $planType === 'yearly' ? round($chargeAmount / 12, 2) : $chargeAmount;
+        $baseCharge = $planType === 'yearly' ? $effectiveYearly : $effectiveMonthly;
+        $monthlyFee = $planType === 'yearly' ? round($baseCharge / 12, 2) : $baseCharge;
+
+        // תוספות: חבילת תזכורות, דמי הקמה, חוב קיים
+        $subscription = RestaurantSubscription::firstOrCreate(
+            ['restaurant_id' => $restaurant->id],
+            ['monthly_fee' => 0, 'billing_day' => 1, 'currency' => 'ILS', 'status' => 'active', 'outstanding_amount' => 0]
+        );
+        $outstanding = (float) ($subscription->outstanding_amount ?? 0);
+        $packageAmount = 0;
+        $packageCredits = 0;
+        if (!empty($validated['abandoned_cart_package_size'])) {
+            $packageCredits = (int) $validated['abandoned_cart_package_size'];
+            $packageAmount = (float) ($validated['abandoned_cart_package_amount'] ?? [50 => 50, 100 => 90, 500 => 400][$packageCredits] ?? 0);
+        }
+        $setupFee = (float) ($validated['setup_fee'] ?? 0);
+        $chargeAmount = $baseCharge + $packageAmount + $setupFee + $outstanding;
 
         $periodStart = now()->startOfDay();
         $periodEnd = $planType === 'yearly' ? $periodStart->copy()->addYear() : $periodStart->copy()->addMonth();
@@ -216,17 +258,44 @@ class SuperAdminBillingController extends Controller
 
             // רישום התשלום — רק אם תשלום בוצע בפועל
             if ($validated['record_payment'] ?? false) {
+                $ref = $validated['payment_reference'] ?? ('manual_' . now()->format('YmdHis'));
+
                 RestaurantPayment::create([
                     'restaurant_id' => $restaurant->id,
-                    'amount'        => $chargeAmount,
+                    'type'          => 'subscription',
+                    'amount'        => $baseCharge + $setupFee,
                     'currency'      => 'ILS',
                     'period_start'  => $periodStart,
                     'period_end'    => $periodEnd,
                     'paid_at'       => now(),
                     'method'        => 'hyp_credit_card',
-                    'reference'     => $validated['payment_reference'] ?? ('manual_' . now()->format('YmdHis')),
+                    'reference'     => $ref,
                     'status'        => 'paid',
                 ]);
+
+                if ($packageAmount > 0) {
+                    RestaurantPayment::create([
+                        'restaurant_id' => $restaurant->id,
+                        'type'          => 'abandoned_cart_package',
+                        'amount'        => $packageAmount,
+                        'currency'      => 'ILS',
+                        'period_start'  => $periodStart,
+                        'period_end'    => $periodEnd,
+                        'paid_at'       => now(),
+                        'method'        => 'hyp_credit_card',
+                        'reference'     => $ref . '_package',
+                        'status'        => 'paid',
+                    ]);
+                    $restaurant->increment('abandoned_cart_sms_balance', $packageCredits);
+                }
+
+                // סמן חבילות ממתינות (חוב קיים) כשולמו
+                if ($outstanding > 0) {
+                    RestaurantPayment::where('restaurant_id', $restaurant->id)
+                        ->where('type', 'abandoned_cart_package')
+                        ->where('status', 'pending')
+                        ->update(['status' => 'paid', 'paid_at' => now()]);
+                }
             }
 
             $restaurantUpdate = [
@@ -247,6 +316,9 @@ class SuperAdminBillingController extends Controller
             }
             if ($customYearly !== null) {
                 $restaurantUpdate['yearly_price'] = $effectiveYearly;
+            }
+            if ($setupFee > 0) {
+                $restaurantUpdate['hyp_setup_fee_charged'] = true;
             }
 
             $restaurant->update($restaurantUpdate);
@@ -272,9 +344,11 @@ class SuperAdminBillingController extends Controller
             // --- Notifications ---
             $tierLabel = $tier === 'pro' ? 'Pro' : 'Basic';
             $planLabel = $planType === 'yearly' ? 'שנתי' : 'חודשי';
-            $priceInfo = $customMonthly !== null || $customYearly !== null
-                ? " (מחיר מותאם: ₪{$chargeAmount})"
-                : " (₪{$chargeAmount})";
+            $breaks = ["₪{$baseCharge} מנוי"];
+            if ($setupFee > 0) $breaks[] = "₪{$setupFee} דמי הקמה";
+            if ($packageAmount > 0) $breaks[] = "₪{$packageAmount} חבילת תזכורות ({$packageCredits} הודעות)";
+            if ($outstanding > 0) $breaks[] = "₪{$outstanding} חוב קודם";
+            $priceInfo = " (סהכ ₪{$chargeAmount}" . (count($breaks) > 1 ? ': ' . implode(' + ', $breaks) : '') . ')';
 
             // Restaurant owner alert
             try {
@@ -666,6 +740,7 @@ class SuperAdminBillingController extends Controller
     {
         $payments = RestaurantPayment::with('restaurant')
             ->when($request->filled('status'), fn($q) => $q->where('status', $request->status))
+            ->when($request->filled('type'), fn($q) => $q->where('type', $request->type))
             ->orderByDesc('paid_at')
             ->orderByDesc('created_at')
             ->paginate(50);
@@ -674,6 +749,60 @@ class SuperAdminBillingController extends Controller
             'success' => true,
             'payments' => $payments,
         ]);
+    }
+
+    /**
+     * הוספת חבילת תזכורות סל נטוש למסעדה — מתווסף לחוב, יתרה ניתנת מיד.
+     * התשלום יתבצע כשירשום תשלום (בהפעלת מנוי או חיוב נפרד).
+     */
+    public function addAbandonedCartPackage(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'package_size' => 'required|integer|in:50,100,500',
+            'amount' => 'required|numeric|min:0',
+            'reference' => 'nullable|string|max:255',
+            'method' => 'nullable|string|max:100',
+        ]);
+
+        $restaurant = Restaurant::findOrFail($id);
+        $credits = $validated['package_size'];
+        $amount = (float) $validated['amount'];
+
+        DB::beginTransaction();
+        try {
+            RestaurantPayment::create([
+                'restaurant_id' => $restaurant->id,
+                'type' => 'abandoned_cart_package',
+                'amount' => $amount,
+                'currency' => 'ILS',
+                'paid_at' => null,
+                'method' => $validated['method'] ?? 'manual',
+                'reference' => $validated['reference'] ?? "חבילת תזכורות {$credits} הודעות",
+                'status' => 'pending',
+            ]);
+
+            $restaurant->increment('abandoned_cart_sms_balance', $credits);
+
+            $subscription = RestaurantSubscription::firstOrCreate(
+                ['restaurant_id' => $restaurant->id],
+                ['monthly_fee' => 0, 'billing_day' => 1, 'currency' => 'ILS', 'status' => 'active', 'outstanding_amount' => 0]
+            );
+            $subscription->increment('outstanding_amount', $amount);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => "נוספו {$credits} הודעות. יתרה: {$restaurant->fresh()->abandoned_cart_sms_balance}. החיוב (₪{$amount}) יתווסף לתשלום הבא.",
+                'balance' => $restaurant->fresh()->abandoned_cart_sms_balance,
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'שגיאה: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 
     // ============================================

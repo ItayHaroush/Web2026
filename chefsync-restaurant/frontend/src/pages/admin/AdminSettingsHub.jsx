@@ -10,7 +10,8 @@ import {
     FaQrcode,
     FaMobileAlt,
     FaUserCog,
-    FaChevronLeft
+    FaChevronLeft,
+    FaShoppingCart,
 } from 'react-icons/fa';
 
 function SettingCard({ icon, title, description, to, badge }) {
@@ -72,6 +73,13 @@ export default function AdminSettingsHub() {
             to: '/admin/payment-settings',
             show: isOwner(),
             badge: 'בעלים',
+        },
+        {
+            icon: <FaShoppingCart size={20} />,
+            title: 'תזכורות סל נטוש',
+            description: 'הפעלה, יתרה ורכישת חבילות SMS ללקוחות עם סל נטוש.',
+            to: '/admin/abandoned-cart-reminders',
+            show: isManager() || isOwner(),
         },
         {
             icon: <FaQrcode size={20} />,

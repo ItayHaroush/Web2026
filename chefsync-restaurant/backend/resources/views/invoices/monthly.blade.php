@@ -454,7 +454,7 @@
                 <p class="info-line">אחוז עמלה: <span class="info-value">{{ $invoice->commission_percent }}%</span></p>
                 @endif
                 @if($invoice->base_fee > 0)
-                <p class="info-line">דמי מנוי חודשי: <span class="info-value">{{ number_format($invoice->base_fee, 2) }} &#8362;</span></p>
+                <p class="info-line">דמי מנוי חודשי: <span class="info-value">@if($invoice->original_base_fee > 0)<s class="text-gray-500">{{ number_format($invoice->original_base_fee, 2) }}</s> &#8362; &rarr; @endif{{ number_format($invoice->base_fee, 2) }} &#8362;</span></p>
                 @endif
                 <p class="info-line">קרדיטים AI חודשיים: <span class="info-value">{{ $aiCreditsMonthly > 0 ? $aiCreditsMonthly : 'לא כלול' }}</span></p>
             </td>
@@ -475,7 +475,7 @@
             @if($invoice->base_fee > 0)
             <tr>
                 <td>דמי מנוי חודשי</td>
-                <td>תשלום קבוע</td>
+                <td>תשלום קבוע @if($invoice->original_base_fee > 0)<span class="text-gray-500"><s>{{ number_format($invoice->original_base_fee, 2) }} &#8362;</s></span> &rarr; @endif</td>
                 <td class="amount-col">{{ number_format($invoice->base_fee, 2) }} &#8362;</td>
             </tr>
             @endif
@@ -486,7 +486,21 @@
                 <td class="amount-col">{{ number_format($invoice->commission_fee, 2) }} &#8362;</td>
             </tr>
             @endif
-            @if($invoice->base_fee == 0 && $invoice->commission_fee == 0)
+            @if(($invoice->abandoned_cart_fee ?? 0) > 0)
+            <tr>
+                <td>חבילת תזכורות סל נטוש</td>
+                <td>הודעות SMS לסיום הזמנות</td>
+                <td class="amount-col">{{ number_format($invoice->abandoned_cart_fee, 2) }} &#8362;</td>
+            </tr>
+            @endif
+            @if(($invoice->setup_fee ?? 0) > 0)
+            <tr>
+                <td>דמי הקמת חיבור מסוף</td>
+                <td>חד-פעמי</td>
+                <td class="amount-col">{{ number_format($invoice->setup_fee, 2) }} &#8362;</td>
+            </tr>
+            @endif
+            @if($invoice->base_fee == 0 && $invoice->commission_fee == 0 && ($invoice->abandoned_cart_fee ?? 0) == 0 && ($invoice->setup_fee ?? 0) == 0)
             <tr>
                 <td>ללא חיובים</td>
                 <td>-</td>

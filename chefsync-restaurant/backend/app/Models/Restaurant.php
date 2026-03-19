@@ -84,6 +84,8 @@ class Restaurant extends Model
         'payment_failed_at',
         'payment_failure_count',
         'hyp_setup_fee_charged',
+        'abandoned_cart_reminders_enabled',
+        'abandoned_cart_sms_balance',
     ];
 
     protected $hidden = [
@@ -127,6 +129,7 @@ class Restaurant extends Model
         'hyp_card_token' => 'encrypted',
         'accepted_payment_methods' => 'array',
         'payment_failed_at' => 'datetime',
+        'abandoned_cart_reminders_enabled' => 'boolean',
     ];
 
     /**

@@ -33,10 +33,16 @@ class SuperAdminController extends Controller
     {
         $user = $request->user();
 
+        // מסעדות פעילות מאומתות = is_approved + subscription_status (trial/active)
+        $activeVerifiedCount = Restaurant::where('is_approved', true)
+            ->whereIn('subscription_status', ['trial', 'active'])
+            ->count();
+
         // סטטיסטיקות כלליות
         $stats = [
             'total_restaurants' => Restaurant::count(),
-            'active_restaurants' => Restaurant::where('is_open', true)->count(),
+            'active_restaurants' => $activeVerifiedCount,
+            'open_now_count' => Restaurant::where('is_open', true)->count(),
             'total_orders' => Order::visibleToRestaurant()->where('status', '!=', 'cancelled')->where('is_test', false)->count(),
             'total_revenue' => Order::visibleToRestaurant()->where('status', '!=', 'cancelled')->where('is_test', false)->sum('total_amount'),
             'orders_today' => Order::visibleToRestaurant()->whereDate('created_at', today())
@@ -68,10 +74,14 @@ class SuperAdminController extends Controller
 
         $recentSystemErrors = SystemError::unresolved()->recent(24)->count();
 
-        // מסעדות לפי סטטוס
+        // מסעדות לפי סטטוס (פעילות מאומתות = approved + trial/active)
         $restaurantsByStatus = [
-            'active' => Restaurant::where('is_open', true)->count(),
-            'inactive' => Restaurant::where('is_open', false)->count(),
+            'active' => $activeVerifiedCount,
+            'inactive' => Restaurant::where(function ($q) {
+                $q->where('is_approved', false)
+                    ->orWhereNotIn('subscription_status', ['trial', 'active']);
+            })->count(),
+            'open_now' => Restaurant::where('is_open', true)->count(),
         ];
 
         // הזמנות לפי סטטוס — רק כאלה שהגיעו למסעדה (לא תקועות בתשלום)
@@ -105,12 +115,16 @@ class SuperAdminController extends Controller
     {
         $query = Restaurant::withCount(['orders', 'categories', 'menuItems']);
 
-        // סינון לפי סטטוס
+        // סינון לפי סטטוס (active = מאומתות + מנוי פעיל)
         if ($request->has('status')) {
             if ($request->status === 'active') {
-                $query->where('is_open', true);
+                $query->where('is_approved', true)->whereIn('subscription_status', ['trial', 'active']);
             } elseif ($request->status === 'inactive') {
-                $query->where('is_open', false);
+                $query->where(function ($q) {
+                    $q->where('is_approved', false)->orWhereNotIn('subscription_status', ['trial', 'active']);
+                });
+            } elseif ($request->status === 'open_now') {
+                $query->where('is_open', true);
             }
         }
 

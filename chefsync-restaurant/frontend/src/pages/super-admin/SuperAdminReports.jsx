@@ -9,6 +9,7 @@ import {
     FaSync,
     FaSearch,
     FaStore,
+    FaBell,
     FaCalendarAlt,
     FaCreditCard,
     FaClock,
@@ -42,10 +43,12 @@ export default function SuperAdminReports() {
     const [statusFilter, setStatusFilter] = useState('');
     const [tierFilter, setTierFilter] = useState('');
     const [activateModal, setActivateModal] = useState(null);
+    const [packageModal, setPackageModal] = useState(null);
     const [activating, setActivating] = useState(false);
+    const [addingPackage, setAddingPackage] = useState(false);
     const [resetting, setResetting] = useState(false);
     const [grantingFree, setGrantingFree] = useState(false);
-    const [activateForm, setActivateForm] = useState({ tier: 'basic', plan_type: 'monthly', note: '', record_payment: false, payment_reference: '', trial_days: 14, free_months: 1, free_note: '', custom_price_enabled: false, custom_monthly_price: '', custom_yearly_price: '' });
+    const [activateForm, setActivateForm] = useState({ tier: 'basic', plan_type: 'monthly', note: '', record_payment: false, payment_reference: '', trial_days: 14, free_months: 1, free_note: '', custom_price_enabled: false, custom_monthly_price: '', custom_yearly_price: '', abandoned_cart_package_size: '', abandoned_cart_package_amount: '', abandoned_cart_package_custom: false, setup_fee: '' });
     const [wizardStep, setWizardStep] = useState(1);
     const [wizardAction, setWizardAction] = useState('activate'); // 'activate' | 'free' | 'trial'
 
@@ -118,6 +121,15 @@ export default function SuperAdminReports() {
                 else delete payload.custom_yearly_price;
             }
             delete payload.custom_price_enabled;
+            if (payload.abandoned_cart_package_size) {
+                payload.abandoned_cart_package_size = parseInt(payload.abandoned_cart_package_size, 10);
+                payload.abandoned_cart_package_amount = payload.abandoned_cart_package_amount ? parseFloat(payload.abandoned_cart_package_amount) : ({ 50: 50, 100: 90, 500: 400 }[payload.abandoned_cart_package_size] ?? 0);
+            } else {
+                delete payload.abandoned_cart_package_size;
+                delete payload.abandoned_cart_package_amount;
+            }
+            if (payload.setup_fee !== '' && payload.setup_fee != null) payload.setup_fee = parseFloat(payload.setup_fee);
+            else delete payload.setup_fee;
             await api.post(`/super-admin/billing/restaurants/${activateModal.id}/activate`, payload, { headers });
             toast.success(`המנוי הופעל למסעדה ${activateModal.name}`);
             setActivateModal(null);
@@ -146,6 +158,26 @@ export default function SuperAdminReports() {
             toast.error(error.response?.data?.message || 'שגיאה בהחזרה לניסיון');
         } finally {
             setResetting(false);
+        }
+    };
+
+    const handleAddPackage = async (pkgSize, amount) => {
+        if (!packageModal) return;
+        setAddingPackage(true);
+        try {
+            const headers = getAuthHeaders();
+            await api.post(
+                `/super-admin/billing/restaurants/${packageModal.id}/abandoned-cart-package`,
+                { package_size: pkgSize, amount, reference: `חבילת ${pkgSize} הודעות`, method: 'manual' },
+                { headers }
+            );
+            toast.success(`נוספו ${pkgSize} הודעות למסעדה ${packageModal.name}`);
+            setPackageModal(null);
+            fetchData();
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'שגיאה בהוספת חבילה');
+        } finally {
+            setAddingPackage(false);
         }
     };
 
@@ -303,7 +335,7 @@ export default function SuperAdminReports() {
                             />
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
                             <StatCard
                                 title="הכנסות הזמנות החודש"
                                 value={`₪${Number(summary.order_revenue_month || 0).toLocaleString()}`}
@@ -324,6 +356,38 @@ export default function SuperAdminReports() {
                                 subtitle="סך תשלומי מנויים השנה"
                                 accent="green"
                                 icon={<FaCoins size={18} />}
+                            />
+                        </div>
+
+                        {/* תזכורות סל נטוש */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                            <StatCard
+                                title="חבילות תזכורות נמכרו"
+                                value={summary.abandoned_cart_packages_sold ?? 0}
+                                subtitle="החודש"
+                                accent="blue"
+                                icon={<FaGift size={18} />}
+                            />
+                            <StatCard
+                                title="הכנסות תזכורות"
+                                value={`₪${Number(summary.abandoned_cart_revenue_month || 0).toLocaleString()}`}
+                                subtitle="החודש"
+                                accent="green"
+                                icon={<FaCoins size={18} />}
+                            />
+                            <StatCard
+                                title="מסעדות עם תזכורות"
+                                value={summary.restaurants_with_reminders ?? 0}
+                                subtitle="מפעילות תזכורות"
+                                accent="purple"
+                                icon={<FaStore size={18} />}
+                            />
+                            <StatCard
+                                title="הודעות תזכורת נשלחו"
+                                value={summary.abandoned_cart_sessions_month ?? 0}
+                                subtitle="החודש"
+                                accent="orange"
+                                icon={<FaBell size={18} />}
                             />
                         </div>
                     </>
@@ -471,13 +535,20 @@ export default function SuperAdminReports() {
                                                         </div>
                                                     </td>
                                                     <td className="px-4 py-4 text-center">
-                                                        <div className="flex justify-center gap-1">
+                                                        <div className="flex justify-center gap-1 flex-wrap">
+                                                            <button
+                                                                onClick={() => setPackageModal(r)}
+                                                                className="px-3 py-1.5 bg-amber-50 text-amber-600 border border-amber-200 rounded-lg text-[10px] font-black hover:bg-amber-600 hover:text-white transition-all"
+                                                                title="הוסף חבילת תזכורות"
+                                                            >
+                                                                <FaBell size={10} />
+                                                            </button>
                                                             {r.billing_status !== 'active' && (
                                                                 <button
                                                                     onClick={() => {
                                                                         setActivateModal(r);
                                                                         const hasCustom = r.monthly_price && r.monthly_price != 600;
-                                                                        setActivateForm({ tier: r.tier || 'basic', plan_type: r.subscription_plan || 'monthly', note: '', record_payment: false, payment_reference: '', trial_days: 14, free_months: 1, free_note: '', custom_price_enabled: !!hasCustom, custom_monthly_price: hasCustom ? r.monthly_price : '', custom_yearly_price: r.yearly_price && r.yearly_price != 5000 ? r.yearly_price : '' });
+                                                                        setActivateForm({ tier: r.tier || 'basic', plan_type: r.subscription_plan || 'monthly', note: '', record_payment: false, payment_reference: '', trial_days: 14, free_months: 1, free_note: '', custom_price_enabled: !!hasCustom, custom_monthly_price: hasCustom ? r.monthly_price : '', custom_yearly_price: r.yearly_price && r.yearly_price != 5000 ? r.yearly_price : '', abandoned_cart_package_size: '', abandoned_cart_package_amount: '', abandoned_cart_package_custom: false, setup_fee: '' });
                                                                         setWizardStep(1);
                                                                         setWizardAction('activate');
                                                                     }}
@@ -490,7 +561,7 @@ export default function SuperAdminReports() {
                                                             <button
                                                                 onClick={() => {
                                                                     setActivateModal(r);
-                                                                    setActivateForm({ tier: r.tier || 'basic', plan_type: r.subscription_plan || 'monthly', note: '', record_payment: false, payment_reference: '', trial_days: 14, free_months: 1, free_note: '', custom_price_enabled: false, custom_monthly_price: '', custom_yearly_price: '' });
+                                                                    setActivateForm({ tier: r.tier || 'basic', plan_type: r.subscription_plan || 'monthly', note: '', record_payment: false, payment_reference: '', trial_days: 14, free_months: 1, free_note: '', custom_price_enabled: false, custom_monthly_price: '', custom_yearly_price: '', abandoned_cart_package_size: '', abandoned_cart_package_amount: '', abandoned_cart_package_custom: false, setup_fee: '' });
                                                                     setWizardStep(1);
                                                                     setWizardAction('activate');
                                                                 }}
@@ -683,6 +754,73 @@ export default function SuperAdminReports() {
                                             </div>
                                         )}
                                     </div>
+
+                                    {/* חבילת תזכורות */}
+                                    <div>
+                                        <label className="text-xs font-black text-gray-500 mb-2 block">חבילת תזכורות סל נטוש</label>
+                                        <div className="flex flex-wrap gap-2">
+                                            {[
+                                                { value: '', label: 'ללא', amount: 0 },
+                                                { value: 50, label: '50 הודעות', amount: 50 },
+                                                { value: 100, label: '100 הודעות', amount: 90 },
+                                                { value: 500, label: '500 הודעות', amount: 400 },
+                                            ].map(p => (
+                                                <button
+                                                    key={p.value || 'none'}
+                                                    onClick={() => setActivateForm(f => ({ ...f, abandoned_cart_package_size: p.value, abandoned_cart_package_amount: p.value ? p.amount : '', abandoned_cart_package_custom: false }))}
+                                                    className={`px-3 py-2 rounded-xl border-2 text-xs font-bold transition-all
+                                                        ${(activateForm.abandoned_cart_package_size || '') === (p.value || '') ? 'border-green-500 bg-green-50 text-green-700 ring-2 ring-green-200' : 'border-gray-100 text-gray-600 hover:border-gray-200'}`}
+                                                >
+                                                    {p.label}{p.amount ? ` (₪${p.amount})` : ''}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        {activateForm.abandoned_cart_package_size && (
+                                            <label className="flex items-center gap-3 cursor-pointer mt-2 p-2 rounded-xl bg-green-50/50 border border-green-100">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={activateForm.abandoned_cart_package_custom ?? false}
+                                                    onChange={(e) => {
+                                                    const def = { 50: 50, 100: 90, 500: 400 }[parseInt(activateForm.abandoned_cart_package_size)];
+                                                    setActivateForm(f => ({
+                                                        ...f,
+                                                        abandoned_cart_package_custom: e.target.checked,
+                                                        abandoned_cart_package_amount: e.target.checked ? (f.abandoned_cart_package_amount || def) : def
+                                                    }));
+                                                }}
+                                                    className="w-4 h-4 rounded accent-green-600"
+                                                />
+                                                <span className="text-xs font-bold text-green-800">מחיר מותאם (מבצע) — לחשבונית לפי מחיר בפועל</span>
+                                                {activateForm.abandoned_cart_package_custom && (
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        step="1"
+                                                        value={activateForm.abandoned_cart_package_amount ?? ''}
+                                                        onChange={(e) => setActivateForm(f => ({ ...f, abandoned_cart_package_amount: e.target.value }))}
+                                                        placeholder="מחיר בפועל"
+                                                        className="w-20 px-2 py-1 border border-green-200 rounded-lg text-sm font-bold"
+                                                        dir="ltr"
+                                                    />
+                                                )}
+                                            </label>
+                                        )}
+                                    </div>
+
+                                    {/* דמי הקמת מסוף */}
+                                    <div>
+                                        <label className="text-xs font-black text-gray-500 mb-1 block">דמי הקמת מסוף (₪) — אופציונלי</label>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            step="1"
+                                            value={activateForm.setup_fee ?? ''}
+                                            onChange={(e) => setActivateForm(f => ({ ...f, setup_fee: e.target.value }))}
+                                            placeholder="0"
+                                            className="w-full max-w-[120px] px-3 py-2.5 border border-gray-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-brand-primary/20 outline-none"
+                                            dir="ltr"
+                                        />
+                                    </div>
                                 </div>
                             )}
 
@@ -834,10 +972,36 @@ export default function SuperAdminReports() {
                                                     </div>
                                                 )}
                                                 {activateForm.record_payment && (
-                                                    <div className="flex justify-between items-center">
-                                                        <span className="text-amber-600 font-bold">רישום תשלום</span>
-                                                        <span className="font-bold text-amber-700">כן{activateForm.payment_reference ? ` (${activateForm.payment_reference})` : ''}</span>
-                                                    </div>
+                                                    <>
+                                                        <div className="flex justify-between items-center">
+                                                            <span className="text-amber-600 font-bold">רישום תשלום</span>
+                                                            <span className="font-bold text-amber-700">כן{activateForm.payment_reference ? ` (${activateForm.payment_reference})` : ''}</span>
+                                                        </div>
+                                                        {(() => {
+                                                            const pricing = summary?.data?.pricing || { basic: { monthly: 450, yearly: 4500 }, pro: { monthly: 600, yearly: 5000 } };
+                                                            const tier = activateForm.tier || 'basic';
+                                                            const planType = activateForm.plan_type || 'monthly';
+                                                            const baseCharge = activateForm.custom_price_enabled
+                                                                ? (planType === 'yearly' ? parseFloat(activateForm.custom_yearly_price) || 0 : parseFloat(activateForm.custom_monthly_price) || 0)
+                                                                : (pricing[tier]?.[planType] ?? 0);
+                                                            const packageAmount = activateForm.abandoned_cart_package_size
+                                                                ? (parseFloat(activateForm.abandoned_cart_package_amount) || { 50: 50, 100: 90, 500: 400 }[parseInt(activateForm.abandoned_cart_package_size)]) || 0
+                                                                : 0;
+                                                            const setupFee = parseFloat(activateForm.setup_fee) || 0;
+                                                            const outstanding = parseFloat(activateModal?.outstanding_amount) || 0;
+                                                            const total = baseCharge + packageAmount + setupFee + outstanding;
+                                                            const breaks = [`₪${baseCharge} מנוי`];
+                                                            if (setupFee) breaks.push(`₪${setupFee} דמי הקמה`);
+                                                            if (packageAmount) breaks.push(`₪${packageAmount} חבילה`);
+                                                            if (outstanding) breaks.push(`₪${outstanding} חוב`);
+                                                            return (
+                                                                <div className="mt-2 pt-2 border-t border-amber-200 bg-amber-50/50 -mx-2 px-3 py-2 rounded-lg">
+                                                                    <p className="text-xs font-black text-amber-800">סכום לחיוב בפועל: ₪{total.toLocaleString()}</p>
+                                                                    {breaks.length > 1 && <p className="text-[10px] text-amber-700 mt-0.5">{breaks.join(' + ')}</p>}
+                                                                </div>
+                                                            );
+                                                        })()}
+                                                    </>
                                                 )}
                                             </>
                                         )}
@@ -927,6 +1091,44 @@ export default function SuperAdminReports() {
                                     </button>
                                 );
                             })()}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Package Modal */}
+            {packageModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm" onClick={() => setPackageModal(null)}>
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                        <div className="px-5 py-4 border-b border-gray-100">
+                            <div className="flex items-center justify-between">
+                                <h3 className="text-lg font-black text-gray-900">הוספת חבילת תזכורות</h3>
+                                <button onClick={() => setPackageModal(null)} className="p-2 hover:bg-gray-100 rounded-xl text-gray-400">
+                                    <FaTimes size={16} />
+                                </button>
+                            </div>
+                            <p className="text-sm text-gray-500 mt-1">{packageModal.name}</p>
+                        </div>
+                        <div className="p-5 space-y-4">
+                            <p className="text-sm font-bold text-gray-700">בחר חבילה:</p>
+                            <div className="grid grid-cols-3 gap-2">
+                                {[
+                                    { size: 50, price: 50 },
+                                    { size: 100, price: 90 },
+                                    { size: 500, price: 400 },
+                                ].map(({ size, price }) => (
+                                    <button
+                                        key={size}
+                                        onClick={() => handleAddPackage(size, price)}
+                                        disabled={addingPackage}
+                                        className="p-4 rounded-xl border-2 border-gray-100 hover:border-amber-300 hover:bg-amber-50/50 transition-all disabled:opacity-50"
+                                    >
+                                        <p className="text-lg font-black text-gray-900">{size}</p>
+                                        <p className="text-xs text-gray-500">הודעות</p>
+                                        <p className="text-sm font-bold text-amber-600 mt-1">₪{price}</p>
+                                    </button>
+                                ))}
+                            </div>
                         </div>
                     </div>
                 </div>

@@ -20,6 +20,7 @@ use App\Models\SystemError;
 use App\Models\User;
 use App\Models\MonitoringAlert;
 use App\Models\NotificationLog;
+use App\Models\CartSession;
 use App\Services\CustomerOrderMailService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -611,6 +612,24 @@ class OrderController extends Controller
                 );
             } catch (\Exception $e) {
                 Log::warning('Failed to log order event', ['error' => $e->getMessage()]);
+            }
+
+            // סמן סלי נטוש שהושלמו
+            try {
+                $q = CartSession::where('tenant_id', $tenantId)
+                    ->where('restaurant_id', $restaurantId)
+                    ->whereNull('completed_order_id');
+                $q->where(function ($sub) use ($order, $normalizedCustomerPhone) {
+                    if ($order->customer_id) {
+                        $sub->where('customer_id', $order->customer_id);
+                    }
+                    if ($normalizedCustomerPhone) {
+                        $sub->orWhere('customer_phone', $normalizedCustomerPhone);
+                    }
+                });
+                $q->update(['completed_order_id' => $order->id]);
+            } catch (\Exception $e) {
+                Log::warning('Failed to mark cart sessions completed', ['error' => $e->getMessage()]);
             }
 
             // B2C: אם תשלום באשראי, צור payment session + payment URL

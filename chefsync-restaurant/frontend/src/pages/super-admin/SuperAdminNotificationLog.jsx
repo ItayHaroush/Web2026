@@ -19,12 +19,16 @@ export default function SuperAdminNotificationLog({ embedded = false }) {
     const [loading, setLoading] = useState(true);
     const [page, setPage] = useState(1);
 
+    const [typeFilter, setTypeFilter] = useState('');
+
     const fetchLogs = useCallback(async (p) => {
         setLoading(true);
         try {
+            const params = { page: p, per_page: 20 };
+            if (typeFilter) params.type = typeFilter;
             const res = await api.get('/super-admin/notifications/log', {
                 headers: getAuthHeaders(),
-                params: { page: p, per_page: 20 },
+                params,
             });
             if (res.data?.success) {
                 setLogs(res.data.data?.data || []);
@@ -38,23 +42,42 @@ export default function SuperAdminNotificationLog({ embedded = false }) {
         } finally {
             setLoading(false);
         }
-    }, [getAuthHeaders]);
+    }, [getAuthHeaders, typeFilter]);
 
     useEffect(() => {
         fetchLogs(page);
     }, [page, fetchLogs]);
 
+    useEffect(() => {
+        setPage(1);
+    }, [typeFilter]);
+
     const content = (
             <div className={embedded ? '' : 'max-w-[1200px] mx-auto px-4 sm:px-6 py-4'}>
                 {!embedded && (
                 <div className="mb-8">
-                    <h1 className="text-2xl font-black text-gray-900 flex items-center gap-2">
-                        <div className="p-2 bg-brand-primary/10 rounded-lg">
-                            <FaHistory className="text-brand-primary" size={20} />
+                    <div className="flex flex-wrap items-center justify-between gap-4">
+                        <div>
+                            <h1 className="text-2xl font-black text-gray-900 flex items-center gap-2">
+                                <div className="p-2 bg-brand-primary/10 rounded-lg">
+                                    <FaHistory className="text-brand-primary" size={20} />
+                                </div>
+                                לוג התראות
+                            </h1>
+                            <p className="text-sm text-gray-500 mt-1">היסטוריית כל ההתראות שנשלחו מהמערכת</p>
                         </div>
-                        לוג התראות
-                    </h1>
-                    <p className="text-sm text-gray-500 mt-1">היסטוריית כל ההתראות שנשלחו מהמערכת</p>
+                        <label className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">סוג</span>
+                            <select
+                                value={typeFilter}
+                                onChange={(e) => setTypeFilter(e.target.value)}
+                                className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                            >
+                                <option value="">הכל</option>
+                                <option value="abandoned_cart_sms">תזכורת סל נטוש (SMS)</option>
+                            </select>
+                        </label>
+                    </div>
                 </div>
                 )}
 

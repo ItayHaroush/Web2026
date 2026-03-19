@@ -62,13 +62,20 @@ class RestaurantSubscription extends Model
         $baseFee = (float) $this->base_fee;
         $commissionPercent = (float) $this->commission_percent;
 
-        // If no explicit billing config, use global defaults
+        // If no explicit billing config, prefer subscription monthly_fee (כולל דריסת מחיר)
         if ((!$model || $model === 'flat') && $baseFee == 0 && $commissionPercent == 0) {
+            $monthlyFee = (float) $this->monthly_fee;
+            if ($monthlyFee > 0) {
+                return [
+                    'billing_model' => 'flat',
+                    'base_fee' => $monthlyFee,
+                    'commission_percent' => 0,
+                    'is_default' => false,
+                ];
+            }
             $globalModel = SystemSetting::get('commission_model', 'flat');
             $globalFee = (float) SystemSetting::get('flat_monthly_fee', 0);
             $globalPercent = (float) SystemSetting::get('commission_percentage', 0);
-
-            // Use global defaults only if they exist
             if ($globalFee > 0 || $globalPercent > 0) {
                 return [
                     'billing_model' => $globalModel,
@@ -77,11 +84,9 @@ class RestaurantSubscription extends Model
                     'is_default' => true,
                 ];
             }
-
-            // Fall back to monthly_fee from subscription
             return [
                 'billing_model' => 'flat',
-                'base_fee' => (float) $this->monthly_fee,
+                'base_fee' => 0,
                 'commission_percent' => 0,
                 'is_default' => true,
             ];

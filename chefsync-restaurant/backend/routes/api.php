@@ -29,6 +29,7 @@ use App\Http\Controllers\CustomerAuthController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\CustomerAddressController;
 use App\Http\Controllers\SuperAdminCustomerController;
+use App\Http\Controllers\SuperAdminCartSessionsController;
 
 /**
  * API Routes
@@ -96,6 +97,7 @@ Route::prefix('super-admin')->middleware(['auth:sanctum', 'super_admin'])->group
     Route::get('/billing/restaurants', [SuperAdminBillingController::class, 'restaurants'])->name('super-admin.billing.restaurants');
     Route::post('/billing/restaurants/{id}/charge', [SuperAdminBillingController::class, 'chargeRestaurant'])->name('super-admin.billing.charge');
     Route::get('/billing/payments', [SuperAdminBillingController::class, 'payments'])->name('super-admin.billing.payments');
+    Route::post('/billing/restaurants/{id}/abandoned-cart-package', [SuperAdminBillingController::class, 'addAbandonedCartPackage'])->name('super-admin.billing.abandoned-cart-package');
 
     // חשבוניות חודשיות
     Route::get('/billing/invoices', [SuperAdminBillingController::class, 'invoices'])->name('super-admin.billing.invoices');
@@ -187,6 +189,8 @@ Route::prefix('super-admin')->middleware(['auth:sanctum', 'super_admin'])->group
     Route::post('/impersonate/{restaurantId}', [SuperAdminController::class, 'impersonate'])->name('super-admin.impersonate');
 
     // ניהול לקוחות קצה
+    Route::get('/cart-sessions', [SuperAdminCartSessionsController::class, 'index'])->name('super-admin.cart-sessions.index');
+    Route::get('/cart-sessions/restaurants', [SuperAdminCartSessionsController::class, 'restaurants'])->name('super-admin.cart-sessions.restaurants');
     Route::get('/customers', [SuperAdminCustomerController::class, 'index'])->name('super-admin.customers.index');
     Route::get('/customers/stats', [SuperAdminCustomerController::class, 'stats'])->name('super-admin.customers.stats');
     Route::get('/customers/{id}', [SuperAdminCustomerController::class, 'show'])->name('super-admin.customers.show');
@@ -451,6 +455,11 @@ Route::middleware(['api', 'tenant'])->group(function () {
     // תפריט - ללקוחות
     // ============================================
     Route::get('/menu', [MenuController::class, 'getMenu'])->name('menu.get');
+
+    // ============================================
+    // סל - heartbeat לתזכורות סל נטוש
+    // ============================================
+    Route::post('/cart/heartbeat', [\App\Http\Controllers\CartHeartbeatController::class, 'store'])->name('cart.heartbeat');
 
     // ============================================
     // הזמנות - ללקוחות

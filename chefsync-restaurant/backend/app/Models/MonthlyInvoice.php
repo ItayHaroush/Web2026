@@ -14,7 +14,11 @@ class MonthlyInvoice extends Model
         'restaurant_id',
         'month',
         'base_fee',
+        'original_base_fee',
         'commission_fee',
+        'abandoned_cart_fee',
+        'original_abandoned_cart_fee',
+        'setup_fee',
         'total_due',
         'order_count',
         'order_revenue',
@@ -29,7 +33,11 @@ class MonthlyInvoice extends Model
 
     protected $casts = [
         'base_fee' => 'decimal:2',
+        'original_base_fee' => 'decimal:2',
         'commission_fee' => 'decimal:2',
+        'abandoned_cart_fee' => 'decimal:2',
+        'original_abandoned_cart_fee' => 'decimal:2',
+        'setup_fee' => 'decimal:2',
         'total_due' => 'decimal:2',
         'order_revenue' => 'decimal:2',
         'commission_percent' => 'decimal:2',

@@ -2,9 +2,11 @@
 
 namespace App\Services;
 
+use App\Http\Controllers\SuperAdminSettingsController;
 use App\Models\MonthlyInvoice;
 use App\Models\Order;
 use App\Models\Restaurant;
+use App\Models\RestaurantPayment;
 use App\Models\RestaurantSubscription;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
@@ -127,13 +129,54 @@ class PlatformCommissionService
                 break;
         }
 
-        $totalDue = round($baseFee + $commissionFee, 2);
+        // חבילות תזכורות סל נטוש — שולמו או ממתינות (נוספו לחוב)
+        $abandonedCartFee = (float) RestaurantPayment::where('restaurant_id', $restaurant->id)
+            ->where('type', 'abandoned_cart_package')
+            ->where(function ($q) use ($periodStart, $periodEnd) {
+                $q->where(function ($q2) use ($periodStart, $periodEnd) {
+                    $q2->where('status', 'paid')->whereBetween('paid_at', [$periodStart, $periodEnd]);
+                })->orWhere(function ($q2) use ($periodStart, $periodEnd) {
+                    $q2->where('status', 'pending')->whereBetween('created_at', [$periodStart, $periodEnd]);
+                });
+            })
+            ->sum('amount');
+
+        // דמי פתיחת מסוף — חד-פעמי, מופיע בחשבונית הראשונה אחרי שהמסעדן אישר ופתח מסוף
+        $setupFee = 0;
+        if ($restaurant->hyp_setup_fee_charged) {
+            $alreadyInvoiced = MonthlyInvoice::where('restaurant_id', $restaurant->id)
+                ->where('setup_fee', '>', 0)
+                ->exists();
+            if (!$alreadyInvoiced) {
+                $setupFee = ($restaurant->tier === 'pro') ? 100 : 200;
+            }
+        }
+
+        $totalDue = round($baseFee + $commissionFee + $abandonedCartFee + $setupFee, 2);
+
+        // מחיר מקורי לתצוגה עם קו — כשהמחיר בפועל נמוך ממחיר החבילה
+        $originalBaseFee = null;
+        if ($config['billing_model'] === 'flat' && $baseFee > 0) {
+            $pricing = SuperAdminSettingsController::getPricingArray();
+            $tier = $restaurant->tier ?? 'basic';
+            $planType = $subscription->plan_type ?? 'monthly';
+            $catalogMonthly = (float) ($pricing[$tier]['monthly'] ?? 0);
+            $catalogYearly = (float) ($pricing[$tier]['yearly'] ?? 0);
+            $standardBaseFee = $planType === 'yearly' ? round($catalogYearly / 12, 2) : $catalogMonthly;
+            if ($standardBaseFee > 0 && abs((float) $baseFee - $standardBaseFee) > 0.01) {
+                $originalBaseFee = $standardBaseFee;
+            }
+        }
 
         return MonthlyInvoice::create([
             'restaurant_id' => $restaurant->id,
             'month' => $month,
             'base_fee' => $baseFee,
+            'original_base_fee' => $originalBaseFee,
             'commission_fee' => $commissionFee,
+            'abandoned_cart_fee' => $abandonedCartFee,
+            'original_abandoned_cart_fee' => null,
+            'setup_fee' => $setupFee,
             'total_due' => $totalDue,
             'order_count' => $orderCount,
             'order_revenue' => $orderRevenue,

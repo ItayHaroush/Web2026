@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -12,6 +13,7 @@ class RestaurantPayment extends Model
 
     protected $fillable = [
         'restaurant_id',
+        'type',
         'amount',
         'currency',
         'period_start',
@@ -30,19 +32,22 @@ class RestaurantPayment extends Model
         'paid_at' => 'datetime',
     ];
 
+    /** סוגי תשלום שמתאימים לחשבונית חודשית */
+    public const INVOICE_TYPES = ['subscription', 'abandoned_cart_package'];
+
     protected static function booted(): void
     {
         static::created(function (self $payment) {
-            if ($payment->status === 'paid') {
-                $payment->markMatchingInvoicePaid();
+            if ($payment->status === 'paid' && in_array($payment->type ?? 'subscription', self::INVOICE_TYPES, true)) {
+                $payment->tryMarkMatchingInvoicePaid();
             }
         });
     }
 
     /**
-     * כשתשלום נרשם — מסמן את החשבונית התואמת כשולמה
+     * כשתשלום נרשם — בודק אם סך התשלומים (מנוי + חבילות תזכורות) מכסה את החשבונית ומסמן כשולמה
      */
-    private function markMatchingInvoicePaid(): void
+    private function tryMarkMatchingInvoicePaid(): void
     {
         $paidAt = $this->paid_at ?? $this->created_at ?? now();
         $month = $paidAt->format('Y-m');
@@ -52,7 +57,6 @@ class RestaurantPayment extends Model
             ->whereIn('status', ['pending', 'overdue', 'draft'])
             ->first();
 
-        // אם לא נמצאה לחודש הנוכחי, חפש את האחרונה הפתוחה
         if (!$invoice) {
             $invoice = MonthlyInvoice::where('restaurant_id', $this->restaurant_id)
                 ->whereIn('status', ['pending', 'overdue'])
@@ -60,11 +64,34 @@ class RestaurantPayment extends Model
                 ->first();
         }
 
-        if ($invoice) {
+        if (!$invoice) {
+            return;
+        }
+
+        // סך תשלומים לחודש (מנוי + חבילות תזכורות)
+        $periodStart = Carbon::parse($invoice->month . '-01')->startOfMonth();
+        $periodEnd = (clone $periodStart)->endOfMonth();
+
+        $totalPaid = (float) static::where('restaurant_id', $this->restaurant_id)
+            ->whereIn('type', self::INVOICE_TYPES)
+            ->where('status', 'paid')
+            ->whereBetween('paid_at', [$periodStart, $periodEnd])
+            ->sum('amount');
+
+        if ($totalPaid >= (float) $invoice->total_due) {
             $invoice->update([
                 'status'  => 'paid',
                 'paid_at' => $paidAt,
             ]);
+
+            // סמן חבילות תזכורות ממתינות כשולמו
+            $periodStart = Carbon::parse($invoice->month . '-01')->startOfMonth();
+            $periodEnd = (clone $periodStart)->endOfMonth();
+            static::where('restaurant_id', $this->restaurant_id)
+                ->where('type', 'abandoned_cart_package')
+                ->where('status', 'pending')
+                ->whereBetween('created_at', [$periodStart, $periodEnd])
+                ->update(['status' => 'paid', 'paid_at' => $paidAt]);
         }
     }
 

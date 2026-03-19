@@ -417,9 +417,9 @@ export default function SuperAdminDashboard() {
                             color="blue"
                         />
                         <StatCard
-                            label="מסעדות פעילות"
+                            label="מסעדות פעילות מאומתות"
                             value={stats.restaurants_by_status.active}
-                            subtext="פתוחות כרגע"
+                            subtext="מאושרות ומנוי פעיל"
                             icon={<FaCheckCircle size={18} />}
                             color="green"
                         />

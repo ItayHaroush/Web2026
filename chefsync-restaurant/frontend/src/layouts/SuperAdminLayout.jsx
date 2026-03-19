@@ -14,6 +14,7 @@ import {
     FaReceipt,
     FaEnvelope,
     FaUsers,
+    FaShoppingCart,
 } from 'react-icons/fa';
 
 export default function SuperAdminLayout({ children }) {
@@ -48,6 +49,11 @@ export default function SuperAdminLayout({ children }) {
             label: 'חשבוניות',
             path: '/super-admin/invoices',
             icon: <FaReceipt />,
+        },
+        {
+            label: 'סלי נטוש',
+            path: '/super-admin/abandoned-carts',
+            icon: <FaShoppingCart />,
         },
         {
             label: 'לקוחות',

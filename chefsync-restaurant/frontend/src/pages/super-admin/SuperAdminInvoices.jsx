@@ -457,6 +457,7 @@ export default function SuperAdminInvoices() {
                                         <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-center hidden md:table-cell">מודל</th>
                                         <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-left">בסיס</th>
                                         <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-left">עמלה</th>
+                                        <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-left hidden xl:table-cell">תזכורות</th>
                                         <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-left">דמי הקמה</th>
                                         <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-left">סה״כ</th>
                                         <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-center hidden lg:table-cell">הזמנות</th>
@@ -499,9 +500,16 @@ export default function SuperAdminInvoices() {
                                                     <span className="text-[10px] text-gray-400 block">{inv.commission_percent}%</span>
                                                 )}
                                             </td>
+                                            <td className="px-6 py-4 text-left hidden xl:table-cell">
+                                                {Number(inv.abandoned_cart_fee || 0) > 0 ? (
+                                                    <span className="text-sm font-black text-amber-600" title="חבילת תזכורות סל נטוש">₪{Number(inv.abandoned_cart_fee).toLocaleString()}</span>
+                                                ) : (
+                                                    <span className="text-sm text-gray-400">—</span>
+                                                )}
+                                            </td>
                                             <td className="px-6 py-4 text-left">
-                                                {inv._billing && inv._billing.setup_fee_charged && Number(inv._billing.pending_setup_fee || 0) > 0 ? (
-                                                    <span className="text-sm font-black text-gray-900">₪{Number(inv._billing.pending_setup_fee || 0).toLocaleString()}</span>
+                                                {Number(inv.setup_fee || 0) > 0 ? (
+                                                    <span className="text-sm font-black text-gray-900" title="דמי הקמת חיבור מסוף">₪{Number(inv.setup_fee).toLocaleString()}</span>
                                                 ) : (
                                                     <span className="text-sm text-gray-400">—</span>
                                                 )}

@@ -49,6 +49,8 @@ class SuperAdminCustomerController extends Controller
         $customer = Customer::with(['addresses'])->findOrFail($id);
 
         $orders = Order::withoutGlobalScope('tenant')
+            ->with(['items.menuItem'])
+            ->withCount('items')
             ->where(function ($q) use ($customer) {
                 $q->where('customer_id', $customer->id);
                 if (!empty($customer->phone)) {

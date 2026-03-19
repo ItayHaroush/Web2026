@@ -45,6 +45,7 @@ import AdminMenuManagement from './pages/admin/AdminMenuManagement';
 import AdminReportsCenter from './pages/admin/AdminReportsCenter';
 import AdminDevices from './pages/admin/AdminDevices';
 import AdminSettingsHub from './pages/admin/AdminSettingsHub';
+import AdminAbandonedCartReminders from './pages/admin/AdminAbandonedCartReminders';
 import SuperAdminDashboard from './pages/super-admin/SuperAdminDashboard';
 import SuperAdminReports from './pages/super-admin/SuperAdminReports';
 import SuperAdminInvoices from './pages/super-admin/SuperAdminInvoices';
@@ -58,6 +59,7 @@ import NotificationSettings from './pages/super-admin/settings/NotificationSetti
 import PolicySettings from './pages/super-admin/settings/PolicySettings';
 import DatabaseMaintenance from './pages/super-admin/settings/DatabaseMaintenance';
 import DebugAuth from './pages/super-admin/DebugAuth';
+import SuperAdminAbandonedCarts from './pages/super-admin/SuperAdminAbandonedCarts';
 import SuperAdminCustomers from './pages/super-admin/SuperAdminCustomers';
 import SuperAdminCustomerDetail from './pages/super-admin/SuperAdminCustomerDetail';
 import SuperAdminNotificationCenter from './pages/super-admin/SuperAdminNotificationCenter';
@@ -369,6 +371,14 @@ function AppRoutes() {
           </AdminRoute>
         }
       />
+      <Route
+        path="/admin/abandoned-cart-reminders"
+        element={
+          <AdminRoute>
+            <AdminAbandonedCartReminders />
+          </AdminRoute>
+        }
+      />
 
       {/* Super Admin */}
       <Route path="/super-admin/login" element={<Navigate to="/admin/login" replace />} />
@@ -495,6 +505,14 @@ function AppRoutes() {
         element={
           <SuperAdminRoute>
             <SuperAdminProfile />
+          </SuperAdminRoute>
+        }
+      />
+      <Route
+        path="/super-admin/abandoned-carts"
+        element={
+          <SuperAdminRoute>
+            <SuperAdminAbandonedCarts />
           </SuperAdminRoute>
         }
       />

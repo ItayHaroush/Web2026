@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useCallback, useEffect, use
 import { useToast } from './ToastContext';
 import { normalizeCartItem, normalizeCartItems } from '../utils/cart';
 import ConfirmationModal from '../components/ConfirmationModal';
+import { apiClient } from '../services/apiClient';
 
 /**
  * Context להנהלת סל קניות
@@ -117,6 +118,40 @@ export function CartProvider({ children }) {
             localStorage.setItem(`customer_info_${tenantId}`, JSON.stringify(customerInfo));
         }
     }, [customerInfo]);
+
+    // Heartbeat לתזכורות סל נטוש - debounce 30 שניות
+    const heartbeatTimerRef = useRef(null);
+    useEffect(() => {
+        if (cartItems.length === 0) return;
+        const tenantId = localStorage.getItem('tenantId') || currentTenantId;
+        if (!tenantId) return;
+        const phone = customerInfo?.phone?.trim?.() || '';
+        let customerId = null;
+        try {
+            const cd = localStorage.getItem('customer_data');
+            if (cd) {
+                const parsed = JSON.parse(cd);
+                customerId = parsed?.id ?? null;
+            }
+        } catch { /* ignore */ }
+        if (!phone && !customerId) return;
+
+        if (heartbeatTimerRef.current) clearTimeout(heartbeatTimerRef.current);
+        heartbeatTimerRef.current = setTimeout(() => {
+            heartbeatTimerRef.current = null;
+            const payload = {
+                cart: cartItems,
+                customer_phone: phone || undefined,
+                customer_id: customerId || undefined,
+                customer_name: customerInfo?.name || undefined,
+                total_amount: cartItems.reduce((s, i) => s + (i.totalPrice || 0), 0),
+            };
+            apiClient.post('/cart/heartbeat', payload).catch(() => {});
+        }, 30_000);
+        return () => {
+            if (heartbeatTimerRef.current) clearTimeout(heartbeatTimerRef.current);
+        };
+    }, [cartItems, customerInfo?.phone, customerInfo?.name, currentTenantId]);
 
     // מילוי אוטומטי מפרטי לקוח רשום (אם הסל ריק מפרטים)
     useEffect(() => {

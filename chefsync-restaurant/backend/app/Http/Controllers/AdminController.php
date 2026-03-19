@@ -1947,6 +1947,7 @@ class AdminController extends Controller
             'enable_dine_in_pricing' => 'sometimes|boolean',
             'delivery_minimum' => 'nullable|numeric|min:0',
             'allow_future_orders' => 'sometimes|boolean',
+            'abandoned_cart_reminders_enabled' => 'sometimes|boolean',
         ]);
 
         if ($request->hasFile('logo')) {
@@ -2065,6 +2066,10 @@ class AdminController extends Controller
 
         if ($request->has('allow_future_orders')) {
             $updateData['allow_future_orders'] = $request->boolean('allow_future_orders');
+        }
+
+        if ($request->has('abandoned_cart_reminders_enabled')) {
+            $updateData['abandoned_cart_reminders_enabled'] = $request->boolean('abandoned_cart_reminders_enabled');
         }
 
         if ($request->has('common_allergens')) {
