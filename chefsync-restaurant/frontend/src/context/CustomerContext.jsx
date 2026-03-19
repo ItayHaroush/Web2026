@@ -170,7 +170,12 @@ export function CustomerProvider({ children }) {
                 const updated = response.data.data;
                 setCustomer(updated);
                 persistCustomerData(updated);
-                return { success: true, customer: updated };
+                return {
+                    success: true,
+                    customer: updated,
+                    message: response.data?.message,
+                    email_verification_sent: response.data?.email_verification_sent,
+                };
             }
             return { success: false };
         } catch (err) {

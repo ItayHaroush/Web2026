@@ -305,20 +305,27 @@ class CustomerAuthController extends Controller
 
         $customer->update($validated);
 
+        $emailSendOk = true;
         if ($emailChanged) {
             try {
-                Mail::to($validated['email'])->queue(new CustomerEmailVerificationMail($customer->fresh(), $token));
-                \App\Services\EmailLogService::log($validated['email'], 'email_verification', 'אימות כתובת אימייל', $customer->id);
+                Mail::to($validated['email'])->send(new CustomerEmailVerificationMail($customer->fresh(), $token));
+                \App\Services\EmailLogService::log($validated['email'], 'email_verification', 'אימות כתובת אימייל', $customer->id, 'sent');
             } catch (\Throwable $e) {
                 Log::warning('Failed to send email verification on profile update', ['error' => $e->getMessage()]);
                 try { \App\Services\EmailLogService::log($validated['email'], 'email_verification', 'אימות כתובת אימייל', $customer->id, 'failed', $e->getMessage()); } catch (\Throwable $ignore) {}
+                $emailSendOk = false;
             }
         }
 
+        $message = 'הפרופיל עודכן בהצלחה';
+        if ($emailChanged) {
+            $message = $emailSendOk ? 'הפרופיל עודכן — מייל אימות נשלח' : 'הפרופיל עודכן. שליחת מייל אימות נכשלה — ניתן לנסות שוב';
+        }
         return response()->json([
             'success' => true,
-            'message' => $emailChanged ? 'הפרופיל עודכן — מייל אימות נשלח' : 'הפרופיל עודכן בהצלחה',
+            'message' => $message,
             'data' => $this->formatCustomer($customer->fresh()),
+            'email_verification_sent' => $emailChanged && $emailSendOk,
         ]);
     }
 
@@ -354,9 +361,15 @@ class CustomerAuthController extends Controller
             'email_verified_at' => null,
         ]);
 
-        Mail::to($request->email)->queue(new CustomerEmailVerificationMail($customer, $token));
-
-        return response()->json(['success' => true, 'message' => 'מייל אימות נשלח']);
+        try {
+            Mail::to($request->email)->send(new CustomerEmailVerificationMail($customer, $token));
+            \App\Services\EmailLogService::log($request->email, 'email_verification', 'אימות כתובת אימייל', $customer->id, 'sent');
+            return response()->json(['success' => true, 'message' => 'מייל אימות נשלח']);
+        } catch (\Throwable $e) {
+            Log::warning('Failed to send email verification', ['error' => $e->getMessage()]);
+            try { \App\Services\EmailLogService::log($request->email, 'email_verification', 'אימות כתובת אימייל', $customer->id, 'failed', $e->getMessage()); } catch (\Throwable $ignore) {}
+            return response()->json(['success' => false, 'message' => 'שליחת המייל נכשלה. נסה שוב או פנה לתמיכה.'], 500);
+        }
     }
 
     /**

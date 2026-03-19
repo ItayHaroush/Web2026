@@ -210,6 +210,9 @@ export default function UserProfileModal({ isOpen, onClose }) {
         });
         if (result.success) {
             setEditMode(false);
+            if (result.email_verification_sent === false && result.message) {
+                setError(result.message);
+            }
         } else {
             setError(result.message || 'שגיאה בעדכון');
         }
@@ -225,8 +228,8 @@ export default function UserProfileModal({ isOpen, onClose }) {
                 headers: { Authorization: `Bearer ${customerToken}` },
             });
             setEmailVerifySent(true);
-        } catch {
-            setError('שגיאה בשליחת מייל אימות');
+        } catch (err) {
+            setError(err?.response?.data?.message || 'שגיאה בשליחת מייל אימות');
         }
         setEmailVerifySending(false);
     };
