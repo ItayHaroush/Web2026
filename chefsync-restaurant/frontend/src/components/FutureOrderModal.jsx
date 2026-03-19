@@ -6,9 +6,10 @@ const HEBREW_DAYS = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמי
 
 /**
  * מודל בחירת תאריך ושעה להזמנה עתידית
- * נפתח כשהמסעדה סגורה + allow_future_orders + accepts_credit_card
+ * נפתח כשהמסעדה סגורה + allow_future_orders (+אשראי או משתמש רשום).
+ * הודעת «תשלום באשראי מראש» מוצגת רק לאורחים.
  */
-export default function FutureOrderModal({ isOpen, onClose, onConfirm, restaurant }) {
+export default function FutureOrderModal({ isOpen, onClose, onConfirm, restaurant, isRegisteredCustomer = false }) {
     const [selectedDate, setSelectedDate] = useState('');
     const [selectedTime, setSelectedTime] = useState('');
     const [error, setError] = useState('');
@@ -162,13 +163,15 @@ export default function FutureOrderModal({ isOpen, onClose, onConfirm, restauran
                         בחר תאריך ושעה שבהם המסעדה פתוחה. ההזמנה תישמר במערכת ותועבר למטבח בזמן.
                     </p>
 
-                    {/* Credit card notice */}
-                    <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl">
-                        <FaCreditCard className="text-blue-500 shrink-0" />
-                        <p className="text-sm text-blue-700 dark:text-blue-300 font-medium">
-                            התשלום יתבצע מראש באשראי בעת ביצוע ההזמנה
-                        </p>
-                    </div>
+                    {/* אורחים: הזמנה עתידית דורשת אשראי מראש. משתמש רשום יכול גם במזומן — בלי הודעה */}
+                    {!isRegisteredCustomer && (
+                        <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl">
+                            <FaCreditCard className="text-blue-500 shrink-0" />
+                            <p className="text-sm text-blue-700 dark:text-blue-300 font-medium">
+                                התשלום יתבצע מראש באשראי בעת ביצוע ההזמנה
+                            </p>
+                        </div>
+                    )}
 
                     {/* Date Picker */}
                     <div>

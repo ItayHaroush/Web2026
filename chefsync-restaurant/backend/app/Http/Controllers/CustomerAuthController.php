@@ -245,12 +245,26 @@ class CustomerAuthController extends Controller
      */
     public function setPassword(Request $request)
     {
-        $request->validate([
+        $customer = $request->customer;
+
+        $rules = [
             'password' => 'required|string|min:6|confirmed',
             'password_confirmation' => 'required|string|min:6',
-        ]);
+        ];
+        if ($customer->password_hash) {
+            $rules['current_password'] = 'required|string';
+        }
+        $request->validate($rules);
 
-        $customer = $request->customer;
+        if ($customer->password_hash) {
+            if (!Hash::check($request->input('current_password'), $customer->password_hash)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'הסיסמה הנוכחית שגויה',
+                ], 422);
+            }
+        }
+
         $customer->update([
             'password_hash' => Hash::make($request->password),
             'is_registered' => true,

@@ -132,13 +132,17 @@ export function CustomerProvider({ children }) {
     /**
      * הגדרת סיסמה ללקוח (דורש חיבור כלקוח — לאחר התחברות ב-SMS)
      */
-    const setPassword = useCallback(async (password, passwordConfirmation) => {
+    const setPassword = useCallback(async (password, passwordConfirmation, currentPassword = null) => {
         if (!customerToken) return { success: false, message: 'לא מחובר' };
         try {
-            const response = await apiClient.post('/customer/password', {
+            const payload = {
                 password,
                 password_confirmation: passwordConfirmation,
-            }, {
+            };
+            if (currentPassword != null && String(currentPassword).length > 0) {
+                payload.current_password = currentPassword;
+            }
+            const response = await apiClient.post('/customer/password', payload, {
                 headers: { Authorization: `Bearer ${customerToken}` },
             });
             if (response.data?.success) {

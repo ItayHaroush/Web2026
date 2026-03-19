@@ -3,12 +3,13 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCustomer } from '../context/CustomerContext';
 import { CustomerLayout } from '../layouts/CustomerLayout';
-import { FaMask, FaBoxOpen, FaUser, FaPhone, FaClock, FaInfoCircle, FaUtensils, FaShoppingBag, FaCheckCircle, FaExclamationTriangle, FaMapMarkerAlt, FaCreditCard, FaMoneyBillWave, FaGift, FaHeart, FaRedo } from 'react-icons/fa';
+import { FaBoxOpen, FaUser, FaPhone, FaClock, FaInfoCircle, FaUtensils, FaShoppingBag, FaCheckCircle, FaExclamationTriangle, FaMapMarkerAlt, FaCreditCard, FaMoneyBillWave, FaGift, FaHeart, FaRedo } from 'react-icons/fa';
 import orderService from '../services/orderService';
 import { ORDER_STATUS, ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from '../constants/api';
 import RatingWidget from '../components/RatingWidget';
 import api from '../services/apiClient';
 import CountdownTimer from '../components/CountdownTimer';
+import TopDismissibleBanner from '../components/TopDismissibleBanner';
 
 /**
  * פורמט מספר טלפון ישראלי
@@ -62,6 +63,9 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
     const [reviewText, setReviewText] = useState('');
     const [submittingReview, setSubmittingReview] = useState(false);
     const [reviewSuccess, setReviewSuccess] = useState(false);
+
+    /** באנר דמו עליון — נסגר ידנית; זכירה לפי הזמנה בסשן */
+    const [demoTopBannerDismissed, setDemoTopBannerDismissed] = useState(false);
 
     // הרשמת לקוח
     const { isRecognized, isRegistered, loginWithPhone, customer } = useCustomer();
@@ -127,6 +131,24 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
                 .catch(err => console.error('Failed to load restaurant:', err));
         }
     }, [effectiveTenantId]);
+
+    useEffect(() => {
+        if (!orderId || !effectiveTenantId) return;
+        try {
+            setDemoTopBannerDismissed(sessionStorage.getItem(`order_demo_banner_${effectiveTenantId}_${orderId}`) === '1');
+        } catch {
+            setDemoTopBannerDismissed(false);
+        }
+    }, [orderId, effectiveTenantId]);
+
+    const dismissDemoTopBanner = useCallback(() => {
+        if (effectiveTenantId && orderId) {
+            try {
+                sessionStorage.setItem(`order_demo_banner_${effectiveTenantId}_${orderId}`, '1');
+            } catch { /* ignore */ }
+        }
+        setDemoTopBannerDismissed(true);
+    }, [effectiveTenantId, orderId]);
 
     // פתיחה מפוש "הוסף ביקורת" — גלילה לאזור הדירוג
     useEffect(() => {
@@ -451,16 +473,6 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
 
     const content = (
         <div className="space-y-8">
-            {/* תג דמו */}
-            {restaurant?.is_demo && (
-                <div className="max-w-2xl mx-auto bg-gradient-to-r from-amber-100 to-orange-100 border-2 border-amber-400 rounded-2xl p-3 shadow-lg">
-                    <div className="flex items-center justify-center gap-2">
-                        <FaMask className="text-2xl text-orange-500" />
-                        <span className="font-bold text-amber-900">הזמנה להמחשה - לא אמיתית</span>
-                    </div>
-                </div>
-            )}
-
             <div className="text-center">
                 <h1 className="text-2xl sm:text-3xl font-bold text-brand-primary mb-2">
                     {isFutureOrder ? 'הזמנה עתידית' : 'סטטוס הזמנה'}
@@ -944,6 +956,28 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
         </div>
     );
 
+    const demoTopBanner =
+        restaurant?.is_demo &&
+        !demoTopBannerDismissed && (
+            <TopDismissibleBanner
+                open
+                onClose={dismissDemoTopBanner}
+                title="הזמנה להמחשה בלבד"
+                message="זו הזמנת דמו — אינה אמיתית ואינה משפיעה על המסעדה."
+                variant="demo"
+            />
+        );
+
     // במצב preview לא צריך CustomerLayout (כבר יש AdminLayout)
-    return isPreviewMode ? content : <CustomerLayout>{content}</CustomerLayout>;
+    return isPreviewMode ? (
+        <>
+            {demoTopBanner}
+            {content}
+        </>
+    ) : (
+        <CustomerLayout>
+            {demoTopBanner}
+            {content}
+        </CustomerLayout>
+    );
 }

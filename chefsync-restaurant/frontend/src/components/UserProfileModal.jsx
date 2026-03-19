@@ -11,7 +11,7 @@ import {
     getCustomerFcmTokenIfPermitted,
     clearStoredCustomerFcmToken,
 } from '../services/fcm';
-import { FaUser, FaTimes, FaSignOutAlt, FaEdit, FaRedo, FaPhone, FaArrowRight, FaClock, FaTruck, FaStore, FaCheck, FaMapMarkerAlt, FaPlus, FaTrash, FaStar, FaEnvelope, FaExclamationTriangle, FaLock, FaBell } from 'react-icons/fa';
+import { FaTimes, FaSignOutAlt, FaEdit, FaRedo, FaPhone, FaArrowRight, FaClock, FaStore, FaCheck, FaMapMarkerAlt, FaPlus, FaTrash, FaStar, FaEnvelope, FaExclamationTriangle, FaLock, FaBell, FaHome, FaCog, FaShoppingBag, FaLightbulb } from 'react-icons/fa';
 
 /**
  * מודל פרופיל משתמש — התחברות, הרשמה, פרופיל והזמנות
@@ -30,9 +30,14 @@ export default function UserProfileModal({ isOpen, onClose }) {
     const [otpCode, setOtpCode] = useState('');
     const [passwordMode, setPasswordMode] = useState(false); // התחברות עם סיסמה במקום OTP
     const [passwordValue, setPasswordValue] = useState('');
-    const [showSetPasswordOffer, setShowSetPasswordOffer] = useState(false); // הצעה להגדרת סיסמה אחרי התחברות
+    /** הגדרת סיסמה ראשונה (אין עדיין has_pin) */
     const [passwordOffer, setPasswordOffer] = useState('');
     const [passwordOfferConfirm, setPasswordOfferConfirm] = useState('');
+    /** שינוי סיסמה (יש has_pin) */
+    const [showChangePasswordForm, setShowChangePasswordForm] = useState(false);
+    const [changeCurrentPassword, setChangeCurrentPassword] = useState('');
+    const [changeNewPassword, setChangeNewPassword] = useState('');
+    const [changeNewPasswordConfirm, setChangeNewPasswordConfirm] = useState('');
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
     const [error, setError] = useState('');
@@ -61,6 +66,11 @@ export default function UserProfileModal({ isOpen, onClose }) {
     const [notifPrefsLoading, setNotifPrefsLoading] = useState(false);
     const [notifPrefsSaving, setNotifPrefsSaving] = useState(false);
     const pushSectionRef = useRef(null);
+    const passwordSectionRef = useRef(null);
+    const addressesSectionRef = useRef(null);
+
+    /** טאבי פרופיל (רק אחרי התחברות) */
+    const [profileTab, setProfileTab] = useState('home');
 
     // Addresses
     const [addresses, setAddresses] = useState([]);
@@ -80,6 +90,7 @@ export default function UserProfileModal({ isOpen, onClose }) {
         setEmailVerifySent(false);
         if (isRecognized) {
             setStep('profile');
+            setProfileTab('home');
             const freshToken = localStorage.getItem('customer_token');
             fetchOrders(freshToken);
             fetchAddresses(freshToken);
@@ -90,9 +101,12 @@ export default function UserProfileModal({ isOpen, onClose }) {
             setLastName('');
             setPasswordMode(false);
             setPasswordValue('');
-            setShowSetPasswordOffer(false);
             setPasswordOffer('');
             setPasswordOfferConfirm('');
+            setShowChangePasswordForm(false);
+            setChangeCurrentPassword('');
+            setChangeNewPassword('');
+            setChangeNewPasswordConfirm('');
         }
     }, [isOpen, isRecognized]);
 
@@ -298,7 +312,6 @@ export default function UserProfileModal({ isOpen, onClose }) {
                     const loginResult = await loginWithPhone(phone);
                     if (loginResult.success) {
                         setStep('profile');
-                        setShowSetPasswordOffer(!!loginResult.customer && !loginResult.customer.has_pin);
                         const freshToken = localStorage.getItem('customer_token');
                         fetchOrders(freshToken);
                         fetchAddresses(freshToken);
@@ -334,7 +347,6 @@ export default function UserProfileModal({ isOpen, onClose }) {
         const result = await loginWithPhone(phone, fullName);
         if (result.success) {
             setStep('profile');
-            setShowSetPasswordOffer(!!result.customer && !result.customer.has_pin);
             const freshToken = localStorage.getItem('customer_token');
             fetchOrders(freshToken);
             fetchAddresses(freshToken);
@@ -381,11 +393,39 @@ export default function UserProfileModal({ isOpen, onClose }) {
         const result = await setPassword(passwordOffer, passwordOfferConfirm);
         setLoading(false);
         if (result.success) {
-            setShowSetPasswordOffer(false);
             setPasswordOffer('');
             setPasswordOfferConfirm('');
+            setError('');
         } else {
             setError(result.message || 'שגיאה בשמירת סיסמה');
+        }
+    };
+
+    const handleChangeExistingPassword = async () => {
+        if (!changeNewPassword || changeNewPassword.length < 6) {
+            setError('הסיסמה החדשה חייבת להכיל לפחות 6 תווים');
+            return;
+        }
+        if (changeNewPassword !== changeNewPasswordConfirm) {
+            setError('הסיסמאות החדשות לא תואמות');
+            return;
+        }
+        if (!changeCurrentPassword || changeCurrentPassword.length < 1) {
+            setError('נא להזין את הסיסמה הנוכחית');
+            return;
+        }
+        setError('');
+        setLoading(true);
+        const result = await setPassword(changeNewPassword, changeNewPasswordConfirm, changeCurrentPassword);
+        setLoading(false);
+        if (result.success) {
+            setShowChangePasswordForm(false);
+            setChangeCurrentPassword('');
+            setChangeNewPassword('');
+            setChangeNewPasswordConfirm('');
+            setError('');
+        } else {
+            setError(result.message || 'שגיאה בעדכון סיסמה');
         }
     };
 
@@ -501,14 +541,17 @@ export default function UserProfileModal({ isOpen, onClose }) {
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
             {/* Modal */}
-            <div className="relative bg-white dark:bg-brand-dark-surface rounded-t-3xl sm:rounded-3xl shadow-2xl w-full sm:max-w-md max-h-[90vh] sm:max-h-[80vh] overflow-hidden animate-slide-up sm:animate-none z-10">
+            <div className={`relative bg-white dark:bg-brand-dark-surface rounded-t-3xl sm:rounded-3xl shadow-2xl w-full sm:max-w-md overflow-hidden animate-slide-up sm:animate-none z-10 flex flex-col max-h-[90vh] sm:max-h-[80vh] ${step === 'profile' && customer ? 'pb-0' : ''}`}>
                 {/* Header */}
-                <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-brand-dark-border">
+                <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-brand-dark-border shrink-0">
                     <h2 className="text-xl font-black text-gray-900 dark:text-brand-dark-text">
                         {step === 'phone-input' && 'התחברות / הרשמה'}
                         {step === 'otp-verify' && 'אימות קוד'}
                         {step === 'register' && 'השלמת הרשמה'}
-                        {step === 'profile' && 'הפרופיל שלי'}
+                        {step === 'profile' && customer && profileTab === 'home' && 'הפרופיל שלי'}
+                        {step === 'profile' && customer && profileTab === 'orders' && 'הזמנות שלי'}
+                        {step === 'profile' && customer && profileTab === 'settings' && 'הגדרות'}
+                        {step === 'profile' && !customer && 'הפרופיל שלי'}
                     </h2>
                     <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition p-1">
                         <FaTimes size={20} />
@@ -516,7 +559,7 @@ export default function UserProfileModal({ isOpen, onClose }) {
                 </div>
 
                 {/* Content — scrollable */}
-                <div className="overflow-y-auto max-h-[calc(90vh-80px)] sm:max-h-[calc(80vh-80px)] p-5 space-y-4">
+                <div className="overflow-y-auto flex-1 min-h-0 p-5 space-y-4">
 
                     {/* === שלב 1: הזנת טלפון === */}
                     {step === 'phone-input' && (
@@ -693,187 +736,383 @@ export default function UserProfileModal({ isOpen, onClose }) {
                         </>
                     )}
 
-                    {/* === שלב 4: פרופיל === */}
+                    {/* === שלב 4: פרופיל (טאבים: ראשי / הזמנות / הגדרות) === */}
                     {step === 'profile' && customer && (
                         <>
-                            {/* הצעה להגדרת סיסמה — אחרי התחברות ללקוח רשום ללא סיסמה */}
-                            {showSetPasswordOffer && (
-                                <div className="bg-gradient-to-l from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border border-emerald-200 dark:border-emerald-700 rounded-xl p-4 space-y-3">
-                                    <div className="flex items-center gap-2">
-                                        <FaLock className="text-emerald-600 dark:text-emerald-400 flex-shrink-0" size={18} />
-                                        <h3 className="text-sm font-bold text-emerald-800 dark:text-emerald-300">
-                                            כניסה מהירה בלי SMS — הגדר סיסמה
-                                        </h3>
+                            {profileTab === 'home' && (
+                                <>
+                                    {/* פרטי משתמש */}
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-14 h-14 rounded-full bg-brand-primary/10 flex items-center justify-center flex-shrink-0">
+                                            <span className="text-2xl font-bold text-brand-primary">
+                                                {customer.name?.charAt(0)?.toUpperCase() || '?'}
+                                            </span>
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="font-bold text-lg text-gray-900 dark:text-brand-dark-text truncate">{customer.name}</p>
+                                            <p className="text-sm text-gray-500 dark:text-brand-dark-muted" dir="ltr">{formatPhone(customer.phone)}</p>
+                                            {customer.email && (
+                                                <p className="text-sm text-gray-500 dark:text-brand-dark-muted truncate">{customer.email}</p>
+                                            )}
+                                        </div>
+                                        {!editMode && (
+                                            <button
+                                                onClick={() => {
+                                                    setEditMode(true);
+                                                    setEditName(customer.name || '');
+                                                    setEditEmail(customer.email || '');
+                                                }}
+                                                className="text-brand-primary hover:text-brand-secondary transition p-2"
+                                                title="ערוך פרופיל"
+                                            >
+                                                <FaEdit size={16} />
+                                            </button>
+                                        )}
                                     </div>
-                                    <p className="text-xs text-emerald-700 dark:text-emerald-400">
-                                        בפעם הבאה היכנס עם טלפון וסיסמה, בלי להמתין לקוד
-                                    </p>
-                                    <div className="space-y-2">
-                                        <input
-                                            type="password"
-                                            value={passwordOffer}
-                                            onChange={(e) => setPasswordOffer(e.target.value)}
-                                            placeholder="סיסמה (לפחות 6 תווים)"
-                                            className="w-full border-2 border-emerald-200 dark:border-emerald-600 rounded-lg px-3 py-2 focus:border-emerald-500 outline-none dark:bg-emerald-900/30 dark:text-emerald-100"
-                                            dir="ltr"
-                                        />
-                                        <input
-                                            type="password"
-                                            value={passwordOfferConfirm}
-                                            onChange={(e) => setPasswordOfferConfirm(e.target.value)}
-                                            placeholder="אימות סיסמה"
-                                            className="w-full border-2 border-emerald-200 dark:border-emerald-600 rounded-lg px-3 py-2 focus:border-emerald-500 outline-none dark:bg-emerald-900/30 dark:text-emerald-100"
-                                            dir="ltr"
-                                        />
-                                    </div>
-                                    <div className="flex gap-2">
-                                        <button
-                                            onClick={handleSetPasswordFromOffer}
-                                            disabled={loading || passwordOffer.length < 6 || passwordOffer !== passwordOfferConfirm}
-                                            className="flex-1 bg-emerald-600 text-white rounded-lg px-3 py-2 text-sm font-bold hover:bg-emerald-700 transition disabled:opacity-50"
-                                        >
-                                            {loading ? 'שומר...' : 'הגדר סיסמה'}
-                                        </button>
-                                        <button
-                                            onClick={() => { setShowSetPasswordOffer(false); setPasswordOffer(''); setPasswordOfferConfirm(''); setError(''); }}
-                                            className="px-3 py-2 text-sm text-emerald-600 dark:text-emerald-400 hover:underline"
-                                        >
-                                            אולי אחר כך
-                                        </button>
-                                    </div>
-                                    {error && <p className="text-xs text-red-600">{error}</p>}
-                                </div>
+
+                                    {editMode && (
+                                        <div className="space-y-3 bg-gray-50 dark:bg-brand-dark-bg rounded-xl p-4">
+                                            <input
+                                                type="text"
+                                                placeholder="שם מלא"
+                                                value={editName}
+                                                onChange={(e) => setEditName(e.target.value)}
+                                                className="w-full border-2 border-gray-200 dark:border-brand-dark-border rounded-xl px-4 py-2 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none transition dark:bg-brand-dark-surface dark:text-brand-dark-text text-sm"
+                                            />
+                                            <input
+                                                type="email"
+                                                placeholder="אימייל (אופציונלי)"
+                                                value={editEmail}
+                                                onChange={(e) => setEditEmail(e.target.value)}
+                                                className="w-full border-2 border-gray-200 dark:border-brand-dark-border rounded-xl px-4 py-2 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none transition dark:bg-brand-dark-surface dark:text-brand-dark-text text-sm"
+                                                dir="ltr"
+                                            />
+                                            {error && <p className="text-sm text-red-600 text-center">{error}</p>}
+                                            <div className="flex gap-2">
+                                                <button
+                                                    onClick={handleSaveProfile}
+                                                    disabled={loading || editName.trim().length < 2}
+                                                    className="flex-1 bg-brand-primary text-white rounded-xl px-4 py-2 font-bold text-sm hover:bg-brand-secondary transition disabled:opacity-50"
+                                                >
+                                                    {loading ? 'שומר...' : 'שמור'}
+                                                </button>
+                                                <button
+                                                    onClick={() => { setEditMode(false); setError(''); }}
+                                                    className="flex-1 bg-gray-200 dark:bg-brand-dark-border text-gray-700 dark:text-brand-dark-text rounded-xl px-4 py-2 font-bold text-sm hover:bg-gray-300 dark:hover:bg-brand-dark-border/70 transition"
+                                                >
+                                                    ביטול
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {customer.total_orders > 0 && (
+                                        <div className="bg-brand-primary/5 dark:bg-brand-primary/10 rounded-xl p-3 flex items-center justify-between">
+                                            <span className="text-sm text-gray-600 dark:text-brand-dark-muted">סה״כ הזמנות</span>
+                                            <span className="font-bold text-brand-primary">{customer.total_orders}</span>
+                                        </div>
+                                    )}
+
+                                    {/* הצעות לייעול — תמיד במסך הראשי */}
+                                    {!editMode && (
+                                        <div className="bg-gradient-to-br from-amber-50 to-orange-50/90 dark:from-amber-900/25 dark:to-orange-950/35 border-2 border-amber-200/90 dark:border-amber-800/50 rounded-2xl p-4 space-y-3 shadow-sm">
+                                            <div className="flex items-center gap-2">
+                                                <FaLightbulb className="text-amber-600 dark:text-amber-400 shrink-0" size={18} />
+                                                <p className="text-sm font-black text-gray-900 dark:text-brand-dark-text">הצעות לשיפור החוויה</p>
+                                            </div>
+                                            <p className="text-xs text-gray-600 dark:text-brand-dark-muted leading-relaxed">
+                                                ריכזנו עבורך צעדים שיכולים לחסוך זמן, לייעל התראות ולהפוך הזמנה חוזרת לפשוטה יותר.
+                                            </p>
+                                            <ul className="space-y-3 text-sm text-gray-800 dark:text-brand-dark-text">
+                                                {!pushEnabled && (
+                                                    <li className="flex gap-3">
+                                                        <FaBell className="text-orange-500 flex-shrink-0 mt-0.5" size={16} />
+                                                        <div>
+                                                            <p className="font-bold">הפעלת התראות דחיפה</p>
+                                                            <p className="text-xs text-gray-600 dark:text-brand-dark-muted mt-0.5">
+                                                                מבצעים וסטטוס הזמנה ישירות למכשיר —{' '}
+                                                                <button
+                                                                    type="button"
+                                                                    className="text-orange-600 dark:text-orange-400 font-bold underline"
+                                                                    onClick={() => {
+                                                                        setProfileTab('settings');
+                                                                        setTimeout(() => pushSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 120);
+                                                                    }}
+                                                                >
+                                                                    פתח בהגדרות
+                                                                </button>
+                                                            </p>
+                                                        </div>
+                                                    </li>
+                                                )}
+                                                {!customer.has_pin && (
+                                                    <li className="flex gap-3">
+                                                        <FaLock className="text-brand-primary flex-shrink-0 mt-0.5" size={16} />
+                                                        <div>
+                                                            <p className="font-bold">סיסמה לכניסה מהירה</p>
+                                                            <p className="text-xs text-gray-600 dark:text-brand-dark-muted mt-0.5">
+                                                                כניסה בלי להמתין ל־SMS —{' '}
+                                                                <button
+                                                                    type="button"
+                                                                    className="text-brand-primary font-bold underline"
+                                                                    onClick={() => {
+                                                                        setProfileTab('settings');
+                                                                        setTimeout(() => passwordSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 120);
+                                                                    }}
+                                                                >
+                                                                    הגדרות סיסמה
+                                                                </button>
+                                                            </p>
+                                                        </div>
+                                                    </li>
+                                                )}
+                                                {!customer.email && (
+                                                    <li className="flex gap-3">
+                                                        <FaEnvelope className="text-blue-500 flex-shrink-0 mt-0.5" size={16} />
+                                                        <div>
+                                                            <p className="font-bold">אימייל לקבלות וחשבוניות</p>
+                                                            <p className="text-xs text-gray-600 dark:text-brand-dark-muted mt-0.5 mb-1">סיכומי הזמנה ומסמכים במייל</p>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    setEditMode(true);
+                                                                    setEditName(customer.name || '');
+                                                                    setEditEmail('');
+                                                                }}
+                                                                className="text-xs font-bold text-blue-600 dark:text-blue-400 underline"
+                                                            >
+                                                                הוסף אימייל בפרופיל
+                                                            </button>
+                                                        </div>
+                                                    </li>
+                                                )}
+                                                {addresses.length === 0 && (
+                                                    <li className="flex gap-3">
+                                                        <FaMapMarkerAlt className="text-emerald-600 flex-shrink-0 mt-0.5" size={16} />
+                                                        <div>
+                                                            <p className="font-bold">כתובת מועדפת למשלוח</p>
+                                                            <p className="text-xs text-gray-600 dark:text-brand-dark-muted mt-0.5">
+                                                                מילוי מהיר בקופה —{' '}
+                                                                <button
+                                                                    type="button"
+                                                                    className="text-emerald-600 dark:text-emerald-400 font-bold underline"
+                                                                    onClick={() => {
+                                                                        setProfileTab('settings');
+                                                                        setTimeout(() => addressesSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 120);
+                                                                    }}
+                                                                >
+                                                                    הוסף כתובת
+                                                                </button>
+                                                            </p>
+                                                        </div>
+                                                    </li>
+                                                )}
+                                                <li className="flex gap-3 pt-1 border-t border-amber-200/60 dark:border-amber-800/40">
+                                                    <FaShoppingBag className="text-brand-primary flex-shrink-0 mt-0.5" size={16} />
+                                                    <div>
+                                                        <p className="font-bold">הזמנה חוזרת מהר</p>
+                                                        <p className="text-xs text-gray-600 dark:text-brand-dark-muted mt-0.5">
+                                                            רשימת הזמנות אחרונות ו־״הזמן שוב״ בלחיצה —{' '}
+                                                            <button type="button" className="text-brand-primary font-bold underline" onClick={() => setProfileTab('orders')}>
+                                                                מעבר להזמנות
+                                                            </button>
+                                                        </p>
+                                                    </div>
+                                                </li>
+                                                <li className="flex gap-3">
+                                                    <FaCog className="text-gray-600 dark:text-gray-400 flex-shrink-0 mt-0.5" size={16} />
+                                                    <div>
+                                                        <p className="font-bold">סיסמה, התראות וכתובות</p>
+                                                        <p className="text-xs text-gray-600 dark:text-brand-dark-muted mt-0.5">
+                                                            כל האפשרויות במקום אחד —{' '}
+                                                            <button type="button" className="font-bold text-gray-800 dark:text-brand-dark-text underline" onClick={() => setProfileTab('settings')}>
+                                                                הגדרות
+                                                            </button>
+                                                        </p>
+                                                    </div>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    )}
+                                </>
                             )}
 
-                            {/* פרטי משתמש */}
-                            <div className="flex items-center gap-3">
-                                <div className="w-14 h-14 rounded-full bg-brand-primary/10 flex items-center justify-center flex-shrink-0">
-                                    <span className="text-2xl font-bold text-brand-primary">
-                                        {customer.name?.charAt(0)?.toUpperCase() || '?'}
-                                    </span>
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <p className="font-bold text-lg text-gray-900 dark:text-brand-dark-text truncate">{customer.name}</p>
-                                    <p className="text-sm text-gray-500 dark:text-brand-dark-muted" dir="ltr">{formatPhone(customer.phone)}</p>
-                                    {customer.email && (
-                                        <p className="text-sm text-gray-500 dark:text-brand-dark-muted truncate">{customer.email}</p>
+                            {profileTab === 'orders' && (
+                                <div>
+                                    <p className="text-xs text-gray-500 dark:text-brand-dark-muted mb-3">
+                                        כאן מופיעות עד 5 ההזמנות האחרונות. בחרו ״הזמן שוב״ כדי למלא את העגלה כמו בהזמנה הקודמת.
+                                    </p>
+                                    <h3 className="font-bold text-gray-900 dark:text-brand-dark-text mb-3 sr-only">הזמנות אחרונות</h3>
+                                    {ordersLoading ? (
+                                        <p className="text-sm text-gray-500 text-center py-4 animate-pulse">טוען...</p>
+                                    ) : orders.length === 0 ? (
+                                        <p className="text-sm text-gray-400 text-center py-8">אין הזמנות עדיין — לאחר הזמנה ראשונה תראו אותה כאן</p>
+                                    ) : (
+                                        <div className="space-y-3">
+                                            {orders.map((order) => (
+                                                <div key={order.id} className="bg-gray-50 dark:bg-brand-dark-bg rounded-xl p-3 space-y-2">
+                                                    <div className="flex items-center justify-between">
+                                                        <div className="flex items-center gap-2">
+                                                            {order.restaurant_logo_url ? (
+                                                                <img src={order.restaurant_logo_url} alt="" className="w-8 h-8 rounded-lg object-cover" />
+                                                            ) : (
+                                                                <div className="w-8 h-8 rounded-lg bg-brand-primary/10 flex items-center justify-center">
+                                                                    <FaStore className="text-brand-primary" size={12} />
+                                                                </div>
+                                                            )}
+                                                            <div>
+                                                                <p className="font-bold text-sm text-gray-900 dark:text-brand-dark-text">{order.restaurant_name}</p>
+                                                                <p className="text-xs text-gray-400 flex items-center gap-1">
+                                                                    <FaClock size={9} />
+                                                                    {new Date(order.created_at).toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                        <p className="font-bold text-sm text-gray-900 dark:text-brand-dark-text">₪{Number(order.total_amount).toFixed(2)}</p>
+                                                    </div>
+                                                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                                                        {order.items?.slice(0, 3).map((item, i) => (
+                                                            <span key={i}>
+                                                                {item.name} ×{item.quantity}
+                                                                {i < Math.min(order.items.length, 3) - 1 && ' · '}
+                                                            </span>
+                                                        ))}
+                                                        {order.items?.length > 3 && <span> +{order.items.length - 3}</span>}
+                                                    </div>
+                                                    <button
+                                                        onClick={() => handleReorder(order.id, order.restaurant_tenant_id)}
+                                                        disabled={reordering === order.id}
+                                                        className="w-full flex items-center justify-center gap-1.5 bg-brand-primary/10 text-brand-primary rounded-lg px-3 py-2 font-bold text-xs hover:bg-brand-primary/20 transition disabled:opacity-50"
+                                                    >
+                                                        <FaRedo size={10} className={reordering === order.id ? 'animate-spin' : ''} />
+                                                        <span>{reordering === order.id ? 'מכין...' : 'הזמן שוב'}</span>
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
                                     )}
                                 </div>
-                                {!editMode && (
-                                    <button
-                                        onClick={() => {
-                                            setEditMode(true);
-                                            setEditName(customer.name || '');
-                                            setEditEmail(customer.email || '');
-                                        }}
-                                        className="text-brand-primary hover:text-brand-secondary transition p-2"
-                                        title="ערוך פרופיל"
-                                    >
-                                        <FaEdit size={16} />
-                                    </button>
-                                )}
-                            </div>
-
-                            {/* Edit mode */}
-                            {editMode && (
-                                <div className="space-y-3 bg-gray-50 dark:bg-brand-dark-bg rounded-xl p-4">
-                                    <input
-                                        type="text"
-                                        placeholder="שם מלא"
-                                        value={editName}
-                                        onChange={(e) => setEditName(e.target.value)}
-                                        className="w-full border-2 border-gray-200 dark:border-brand-dark-border rounded-xl px-4 py-2 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none transition dark:bg-brand-dark-surface dark:text-brand-dark-text text-sm"
-                                    />
-                                    <input
-                                        type="email"
-                                        placeholder="אימייל (אופציונלי)"
-                                        value={editEmail}
-                                        onChange={(e) => setEditEmail(e.target.value)}
-                                        className="w-full border-2 border-gray-200 dark:border-brand-dark-border rounded-xl px-4 py-2 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none transition dark:bg-brand-dark-surface dark:text-brand-dark-text text-sm"
-                                        dir="ltr"
-                                    />
-                                    {error && <p className="text-sm text-red-600 text-center">{error}</p>}
-                                    <div className="flex gap-2">
-                                        <button
-                                            onClick={handleSaveProfile}
-                                            disabled={loading || editName.trim().length < 2}
-                                            className="flex-1 bg-brand-primary text-white rounded-xl px-4 py-2 font-bold text-sm hover:bg-brand-secondary transition disabled:opacity-50"
-                                        >
-                                            {loading ? 'שומר...' : 'שמור'}
-                                        </button>
-                                        <button
-                                            onClick={() => { setEditMode(false); setError(''); }}
-                                            className="flex-1 bg-gray-200 dark:bg-brand-dark-border text-gray-700 dark:text-brand-dark-text rounded-xl px-4 py-2 font-bold text-sm hover:bg-gray-300 dark:hover:bg-brand-dark-border/70 transition"
-                                        >
-                                            ביטול
-                                        </button>
-                                    </div>
-                                </div>
                             )}
 
-                            {/* המלצות להשלמת חוויה — רק כשהתראות דחיפה כבויות */}
-                            {!pushEnabled && !editMode && (
-                                <div className="bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700 rounded-xl p-4 space-y-3">
-                                    <p className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">מומלץ לשפר</p>
-                                    <ul className="space-y-3 text-sm text-gray-800 dark:text-brand-dark-text">
-                                        <li className="flex gap-3">
-                                            <FaBell className="text-orange-500 flex-shrink-0 mt-0.5" size={16} />
-                                            <div>
-                                                <p className="font-bold">הפעלת התראות דחיפה</p>
-                                                <p className="text-xs text-gray-600 dark:text-brand-dark-muted mt-0.5">
-                                                    מבצעים וסטטוס הזמנה —{' '}
-                                                    <button
-                                                        type="button"
-                                                        className="text-orange-600 dark:text-orange-400 font-bold underline"
-                                                        onClick={() => pushSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
-                                                    >
-                                                        קפיצה להגדרה
-                                                    </button>
-                                                </p>
+                            {profileTab === 'settings' && (
+                                <>
+                            {/* סיסמה לכניסה */}
+                            {!editMode && (
+                                <div
+                                    ref={passwordSectionRef}
+                                    id="customer-password-settings"
+                                    className="rounded-xl border-2 border-gray-200 dark:border-brand-dark-border bg-gray-50/80 dark:bg-brand-dark-bg p-4 space-y-3"
+                                >
+                                    <div className="flex items-center gap-2">
+                                        <FaLock className="text-brand-primary shrink-0" size={16} />
+                                        <h3 className="font-bold text-gray-900 dark:text-brand-dark-text text-sm">סיסמה לכניסה מהירה</h3>
+                                    </div>
+                                    {!customer.has_pin ? (
+                                        <>
+                                            <p className="text-xs text-gray-600 dark:text-brand-dark-muted">
+                                                עדיין לא הוגדרה סיסמה. אפשר להיכנס רק עם קוד SMS. הגדרת סיסמה מאפשרת <strong>התחברות עם טלפון + סיסמה</strong> בלי לחכות לקוד.
+                                            </p>
+                                            <div className="space-y-2">
+                                                <input
+                                                    type="password"
+                                                    value={passwordOffer}
+                                                    onChange={(e) => { setPasswordOffer(e.target.value); setError(''); }}
+                                                    placeholder="סיסמה חדשה (לפחות 6 תווים)"
+                                                    className="w-full border-2 border-gray-200 dark:border-brand-dark-border rounded-lg px-3 py-2.5 focus:border-brand-primary outline-none dark:bg-brand-dark-surface dark:text-brand-dark-text text-sm"
+                                                    dir="ltr"
+                                                />
+                                                <input
+                                                    type="password"
+                                                    value={passwordOfferConfirm}
+                                                    onChange={(e) => { setPasswordOfferConfirm(e.target.value); setError(''); }}
+                                                    placeholder="אימות סיסמה"
+                                                    className="w-full border-2 border-gray-200 dark:border-brand-dark-border rounded-lg px-3 py-2.5 focus:border-brand-primary outline-none dark:bg-brand-dark-surface dark:text-brand-dark-text text-sm"
+                                                    dir="ltr"
+                                                />
                                             </div>
-                                        </li>
-                                        {!customer.email && (
-                                            <li className="flex gap-3">
-                                                <FaEnvelope className="text-blue-500 flex-shrink-0 mt-0.5" size={16} />
-                                                <div>
-                                                    <p className="font-bold">אימייל לקבלות וחשבוניות</p>
-                                                    <p className="text-xs text-gray-600 dark:text-brand-dark-muted mt-0.5 mb-2">קבלות הזמנה וסיכומים במייל</p>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                            setEditMode(true);
-                                                            setEditName(customer.name || '');
-                                                            setEditEmail('');
-                                                        }}
-                                                        className="text-xs font-bold text-blue-600 dark:text-blue-400 underline"
-                                                    >
-                                                        הוסף אימייל
-                                                    </button>
+                                            <button
+                                                type="button"
+                                                onClick={handleSetPasswordFromOffer}
+                                                disabled={loading || passwordOffer.length < 6 || passwordOffer !== passwordOfferConfirm}
+                                                className="w-full bg-brand-primary text-white rounded-xl px-4 py-2.5 text-sm font-bold hover:bg-brand-secondary transition disabled:opacity-50"
+                                            >
+                                                {loading ? 'שומר...' : 'שמור סיסמה'}
+                                            </button>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <p className="text-xs text-gray-600 dark:text-brand-dark-muted">
+                                                כבר קיימת סיסמה — ניתן להתחבר מהמסך הראשי ב־״התחבר עם סיסמה (ללא SMS)״.
+                                            </p>
+                                            {!showChangePasswordForm ? (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => { setShowChangePasswordForm(true); setError(''); }}
+                                                    className="w-full py-2.5 rounded-xl border-2 border-brand-primary/40 text-brand-primary font-bold text-sm hover:bg-orange-50 dark:hover:bg-orange-900/15 transition"
+                                                >
+                                                    שנה סיסמה
+                                                </button>
+                                            ) : (
+                                                <div className="space-y-2 pt-1">
+                                                    <input
+                                                        type="password"
+                                                        value={changeCurrentPassword}
+                                                        onChange={(e) => { setChangeCurrentPassword(e.target.value); setError(''); }}
+                                                        placeholder="סיסמה נוכחית"
+                                                        className="w-full border-2 border-gray-200 dark:border-brand-dark-border rounded-lg px-3 py-2.5 focus:border-brand-primary outline-none dark:bg-brand-dark-surface dark:text-brand-dark-text text-sm"
+                                                        dir="ltr"
+                                                        autoComplete="current-password"
+                                                    />
+                                                    <input
+                                                        type="password"
+                                                        value={changeNewPassword}
+                                                        onChange={(e) => { setChangeNewPassword(e.target.value); setError(''); }}
+                                                        placeholder="סיסמה חדשה (לפחות 6 תווים)"
+                                                        className="w-full border-2 border-gray-200 dark:border-brand-dark-border rounded-lg px-3 py-2.5 focus:border-brand-primary outline-none dark:bg-brand-dark-surface dark:text-brand-dark-text text-sm"
+                                                        dir="ltr"
+                                                        autoComplete="new-password"
+                                                    />
+                                                    <input
+                                                        type="password"
+                                                        value={changeNewPasswordConfirm}
+                                                        onChange={(e) => { setChangeNewPasswordConfirm(e.target.value); setError(''); }}
+                                                        placeholder="אימות סיסמה חדשה"
+                                                        className="w-full border-2 border-gray-200 dark:border-brand-dark-border rounded-lg px-3 py-2.5 focus:border-brand-primary outline-none dark:bg-brand-dark-surface dark:text-brand-dark-text text-sm"
+                                                        dir="ltr"
+                                                        autoComplete="new-password"
+                                                    />
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            type="button"
+                                                            onClick={handleChangeExistingPassword}
+                                                            disabled={
+                                                                loading ||
+                                                                changeNewPassword.length < 6 ||
+                                                                changeNewPassword !== changeNewPasswordConfirm ||
+                                                                !changeCurrentPassword
+                                                            }
+                                                            className="flex-1 bg-brand-primary text-white rounded-xl px-3 py-2.5 text-sm font-bold hover:bg-brand-secondary transition disabled:opacity-50"
+                                                        >
+                                                            {loading ? 'שומר...' : 'עדכן סיסמה'}
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setShowChangePasswordForm(false);
+                                                                setChangeCurrentPassword('');
+                                                                setChangeNewPassword('');
+                                                                setChangeNewPasswordConfirm('');
+                                                                setError('');
+                                                            }}
+                                                            className="px-4 py-2.5 rounded-xl border-2 border-gray-300 dark:border-brand-dark-border text-sm font-bold text-gray-700 dark:text-gray-300"
+                                                        >
+                                                            ביטול
+                                                        </button>
+                                                    </div>
                                                 </div>
-                                            </li>
-                                        )}
-                                        {addresses.length === 0 && (
-                                            <li className="flex gap-3">
-                                                <FaMapMarkerAlt className="text-emerald-600 flex-shrink-0 mt-0.5" size={16} />
-                                                <div>
-                                                    <p className="font-bold">כתובת מועדפת</p>
-                                                    <p className="text-xs text-gray-600 dark:text-brand-dark-muted mt-0.5 mb-2">שמירת מיקום למשלוח מהיר</p>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                            setShowAddressForm(true);
-                                                            setEditingAddress(null);
-                                                            setAddressForm({ label: 'בית', street: '', house_number: '', apartment: '', floor: '', entrance: '', city: '', notes: '' });
-                                                            setError('');
-                                                        }}
-                                                        className="text-xs font-bold text-emerald-600 dark:text-emerald-400 underline"
-                                                    >
-                                                        הוסף כתובת
-                                                    </button>
-                                                </div>
-                                            </li>
-                                        )}
-                                    </ul>
+                                            )}
+                                        </>
+                                    )}
                                 </div>
                             )}
 
@@ -995,16 +1234,8 @@ export default function UserProfileModal({ isOpen, onClose }) {
                                 );
                             })()}
 
-                            {/* סטטיסטיקה */}
-                            {customer.total_orders > 0 && (
-                                <div className="bg-brand-primary/5 dark:bg-brand-primary/10 rounded-xl p-3 flex items-center justify-between">
-                                    <span className="text-sm text-gray-600 dark:text-brand-dark-muted">סה״כ הזמנות</span>
-                                    <span className="font-bold text-brand-primary">{customer.total_orders}</span>
-                                </div>
-                            )}
-
                             {/* מיקומים שמורים */}
-                            <div>
+                            <div ref={addressesSectionRef} id="customer-addresses-settings">
                                 <div className="flex items-center justify-between mb-3">
                                     <h3 className="font-bold text-gray-900 dark:text-brand-dark-text flex items-center gap-2">
                                         <FaMapMarkerAlt className="text-brand-primary" size={14} />
@@ -1107,59 +1338,6 @@ export default function UserProfileModal({ isOpen, onClose }) {
                                 )}
                             </div>
 
-                            {/* הזמנות אחרונות */}
-                            <div>
-                                <h3 className="font-bold text-gray-900 dark:text-brand-dark-text mb-3">הזמנות אחרונות</h3>
-                                {ordersLoading ? (
-                                    <p className="text-sm text-gray-500 text-center py-4 animate-pulse">טוען...</p>
-                                ) : orders.length === 0 ? (
-                                    <p className="text-sm text-gray-400 text-center py-4">אין הזמנות עדיין</p>
-                                ) : (
-                                    <div className="space-y-3">
-                                        {orders.map((order) => (
-                                            <div key={order.id} className="bg-gray-50 dark:bg-brand-dark-bg rounded-xl p-3 space-y-2">
-                                                <div className="flex items-center justify-between">
-                                                    <div className="flex items-center gap-2">
-                                                        {order.restaurant_logo_url ? (
-                                                            <img src={order.restaurant_logo_url} alt="" className="w-8 h-8 rounded-lg object-cover" />
-                                                        ) : (
-                                                            <div className="w-8 h-8 rounded-lg bg-brand-primary/10 flex items-center justify-center">
-                                                                <FaStore className="text-brand-primary" size={12} />
-                                                            </div>
-                                                        )}
-                                                        <div>
-                                                            <p className="font-bold text-sm text-gray-900 dark:text-brand-dark-text">{order.restaurant_name}</p>
-                                                            <p className="text-xs text-gray-400 flex items-center gap-1">
-                                                                <FaClock size={9} />
-                                                                {new Date(order.created_at).toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                    <p className="font-bold text-sm text-gray-900 dark:text-brand-dark-text">₪{Number(order.total_amount).toFixed(2)}</p>
-                                                </div>
-                                                <div className="text-xs text-gray-500 dark:text-gray-400">
-                                                    {order.items?.slice(0, 3).map((item, i) => (
-                                                        <span key={i}>
-                                                            {item.name} ×{item.quantity}
-                                                            {i < Math.min(order.items.length, 3) - 1 && ' · '}
-                                                        </span>
-                                                    ))}
-                                                    {order.items?.length > 3 && <span> +{order.items.length - 3}</span>}
-                                                </div>
-                                                <button
-                                                    onClick={() => handleReorder(order.id, order.restaurant_tenant_id)}
-                                                    disabled={reordering === order.id}
-                                                    className="w-full flex items-center justify-center gap-1.5 bg-brand-primary/10 text-brand-primary rounded-lg px-3 py-2 font-bold text-xs hover:bg-brand-primary/20 transition disabled:opacity-50"
-                                                >
-                                                    <FaRedo size={10} className={reordering === order.id ? 'animate-spin' : ''} />
-                                                    <span>{reordering === order.id ? 'מכין...' : 'הזמן שוב'}</span>
-                                                </button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-
                             {/* התנתקות */}
                             <button
                                 onClick={handleLogout}
@@ -1168,9 +1346,45 @@ export default function UserProfileModal({ isOpen, onClose }) {
                                 <FaSignOutAlt size={14} />
                                 <span>התנתקות</span>
                             </button>
+                                </>
+                            )}
+
                         </>
                     )}
                 </div>
+
+                {/* ניווט תחתון — פרופיל מחובר */}
+                {step === 'profile' && customer && (
+                    <nav
+                        className="shrink-0 flex items-stretch justify-around gap-1 border-t border-gray-100 dark:border-brand-dark-border bg-white/95 dark:bg-brand-dark-surface/95 backdrop-blur-sm px-2 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] z-10"
+                        aria-label="ניווט פרופיל"
+                    >
+                        <button
+                            type="button"
+                            onClick={() => setProfileTab('home')}
+                            className={`flex flex-1 flex-col items-center gap-0.5 py-2 rounded-xl text-[10px] font-bold transition ${profileTab === 'home' ? 'text-brand-primary bg-brand-primary/10' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-brand-dark-bg'}`}
+                        >
+                            <FaHome size={20} className={profileTab === 'home' ? 'text-brand-primary' : ''} aria-hidden />
+                            <span>ראשי</span>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setProfileTab('orders')}
+                            className={`flex flex-1 flex-col items-center gap-0.5 py-2 rounded-xl text-[10px] font-bold transition ${profileTab === 'orders' ? 'text-brand-primary bg-brand-primary/10' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-brand-dark-bg'}`}
+                        >
+                            <FaShoppingBag size={20} className={profileTab === 'orders' ? 'text-brand-primary' : ''} aria-hidden />
+                            <span>הזמנות</span>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setProfileTab('settings')}
+                            className={`flex flex-1 flex-col items-center gap-0.5 py-2 rounded-xl text-[10px] font-bold transition ${profileTab === 'settings' ? 'text-brand-primary bg-brand-primary/10' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-brand-dark-bg'}`}
+                        >
+                            <FaCog size={20} className={profileTab === 'settings' ? 'text-brand-primary' : ''} aria-hidden />
+                            <span>הגדרות</span>
+                        </button>
+                    </nav>
+                )}
             </div>
         </div>
     );

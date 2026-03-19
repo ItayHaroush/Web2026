@@ -517,8 +517,8 @@ export default function AdminOrders() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                {/* רשימת הזמנות */}
-                <div className="lg:col-span-12 xl:col-span-7">
+                {/* רשימת הזמנות — לטאבלט+ לצד פרטים (מ-lg ומעלה) */}
+                <div className="lg:col-span-7">
                     <div className="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden">
                         <div className="p-5 border-b border-gray-50 flex items-center justify-between bg-slate-50/50">
                             <h2 className="font-black text-gray-900 flex items-center gap-2 uppercase tracking-wide text-sm">
@@ -682,10 +682,18 @@ export default function AdminOrders() {
                     </div>
                 </div>
 
-                {/* פרטי הזמנה - פאנל צדדי מודרני */}
-                <div className="lg:col-span-12 xl:col-span-5" ref={orderPanelRef}>
+                {/* פרטי הזמנה — צד בדסקטופ/טאבלט; sheet תחתון באייפון (מתחת ל-lg) */}
+                <div className="lg:col-span-5 relative" ref={orderPanelRef}>
+                    {selectedOrder && (
+                        <button
+                            type="button"
+                            className="fixed inset-0 z-30 bg-black/45 backdrop-blur-[2px] lg:hidden"
+                            onClick={() => setSelectedOrder(null)}
+                            aria-label="סגור פרטי הזמנה"
+                        />
+                    )}
                     {selectedOrder ? (
-                        <div className="bg-white rounded-[2rem] border border-gray-200 shadow-xl overflow-hidden sticky top-24 animate-in fade-in slide-in-from-left-4 duration-300">
+                        <div className="bg-white rounded-[2rem] border border-gray-200 shadow-xl overflow-hidden animate-in fade-in slide-in-from-left-4 duration-300 max-lg:fixed max-lg:left-0 max-lg:right-0 max-lg:bottom-0 max-lg:z-40 max-lg:max-h-[92vh] max-lg:rounded-b-none max-lg:rounded-t-[2rem] max-lg:flex max-lg:flex-col max-lg:pb-[env(safe-area-inset-bottom,0px)] lg:sticky lg:top-24 lg:max-h-none">
                             {/* כותרת הפרטים */}
                             <div className="p-6 border-b border-gray-100 bg-slate-50 relative">
                                 <div className="absolute top-0 left-0 w-24 h-24 bg-brand-primary/5 rounded-full -ml-12 -mt-12" />
@@ -713,7 +721,7 @@ export default function AdminOrders() {
                                 </div>
                             </div>
 
-                            <div className="p-6 space-y-6 max-h-[calc(100vh-250px)] overflow-y-auto custom-scrollbar">
+                            <div className="p-6 space-y-6 max-h-[calc(100vh-250px)] overflow-y-auto custom-scrollbar max-lg:max-h-none max-lg:flex-1 max-lg:min-h-0">
                                 {/* סטטוס נוכחי - כרטיס בולט */}
                                 <div className={`rounded-3xl p-5 border-2 relative overflow-hidden group ${getStatusBadge(selectedOrder.status, selectedOrder.delivery_method).color}`}>
                                     <div className="absolute -right-4 -bottom-4 opacity-5 group-hover:scale-110 transition-transform">
@@ -1100,7 +1108,7 @@ export default function AdminOrders() {
                                         <div className="space-y-3">
                                             <div className="flex items-center justify-between">
                                                 <div className="flex items-center gap-2 text-sm font-bold text-gray-700">
-                                                    {selectedOrder.payment_method === 'credit_card' ? <FaCreditCard size={14} className="text-blue-500" /> : <FaMoneyBillWave size={14} className="text-green-500" />}
+                                                    {selectedOrder.payment_method === 'credit_card' ? <FaCreditCard size={14} className="text-brand-primary" /> : <FaMoneyBillWave size={14} className="text-green-500" />}
                                                     {selectedOrder.payment_method === 'credit_card' ? 'כרטיס אשראי' : 'מזומן'}
                                                 </div>
                                                 <div className={`px-2.5 py-1 rounded-lg text-[10px] font-black border ${selectedOrder.payment_status === 'paid' ? 'bg-green-50 text-green-700 border-green-200' :
@@ -1247,7 +1255,7 @@ export default function AdminOrders() {
                             </div>
                         </div>
                     ) : (
-                        <div className="bg-white rounded-[2rem] border border-gray-100 shadow-sm p-12 text-center sticky top-24">
+                        <div className="hidden lg:block bg-white rounded-[2rem] border border-gray-100 shadow-sm p-12 text-center sticky top-24">
                             <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6 border border-dashed border-gray-200">
                                 <FaInfoCircle size={32} className="text-gray-300 animate-pulse" />
                             </div>

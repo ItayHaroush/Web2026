@@ -19,6 +19,7 @@ import PromotionProgress from '../components/PromotionProgress';
 import GiftSelectionModal from '../components/GiftSelectionModal';
 import MenuItemModal from '../components/MenuItemModal';
 import FutureOrderModal from '../components/FutureOrderModal';
+import CartCheckoutWizard from '../components/CartCheckoutWizard';
 import { resolveAssetUrl } from '../utils/assets';
 
 /**
@@ -59,6 +60,21 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
     // הזמנה עתידית — זמינה גם כשהמסעדה פתוחה, כל עוד allow_future_orders פעיל
     const canFutureOrder = restaurant?.allow_future_orders && (restaurant?.accepts_credit_card || isRegisteredCustomer);
     const [showFutureOrderModal, setShowFutureOrderModal] = useState(false);
+    /** מודל: אחרי מפה / כתובת חסרה — להציע כתובת שמורה למשתמש רשום */
+    const [showSavedAddressChoiceModal, setShowSavedAddressChoiceModal] = useState(false);
+
+    /** שלבי תשלום חכמים: 1=סל, 2=פרטים+סיכום, 3=סיום (בלי לשנות לוגיקת submit) */
+    const [checkoutStep, setCheckoutStep] = useState(1);
+    const goCheckoutStep = (step) => {
+        setCheckoutStep(step);
+        if (typeof window !== 'undefined') {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    };
+
+    useEffect(() => {
+        setCheckoutStep(1);
+    }, [tenantId]);
 
     // Fetch menu for category quick-add modal
     useEffect(() => {
@@ -148,6 +164,45 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
         }
     };
 
+    /** החלת כתובת שמורה — מזינה כתובת, מיקום, localStorage ובדיקת אזור */
+    const applySavedAddress = (addr) => {
+        const fullAddress = `${addr.street} ${addr.house_number}${addr.apartment ? `, דירה ${addr.apartment}` : ''}, ${addr.city}`;
+        setCustomerInfo((prev) => ({
+            ...prev,
+            delivery_address: fullAddress,
+            delivery_notes: addr.notes != null && String(addr.notes).trim() !== '' ? addr.notes : prev.delivery_notes,
+        }));
+        if (addr.lat != null && addr.lng != null) {
+            const lat = parseFloat(addr.lat);
+            const lng = parseFloat(addr.lng);
+            const locationData = {
+                lat,
+                lng,
+                cityName: addr.city || '',
+                street: addr.street || '',
+                fullAddress,
+                needsCompletion: false,
+            };
+            setDeliveryLocation(locationData);
+            try {
+                localStorage.setItem('user_delivery_location', JSON.stringify(locationData));
+            } catch {
+                /* ignore */
+            }
+            checkDeliveryZoneAvailability(lat, lng);
+        } else {
+            setDeliveryLocation((prev) => ({
+                ...(prev && typeof prev === 'object' ? prev : {}),
+                fullAddress,
+                street: addr.street,
+                cityName: addr.city,
+                needsCompletion: false,
+            }));
+        }
+        setError(null);
+        setShowSavedAddressChoiceModal(false);
+    };
+
     const handleQuantityChange = (itemKey, newQuantity) => {
         if (newQuantity < 1) {
             removeFromCart(itemKey);
@@ -206,6 +261,11 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
 
             // בדיקה שיש רחוב + מספר בית + עיר (לא רק עיר או רחוב בלי מספר)
             if (!address || !hasStreet || !hasMultipleParts || !hasNumber) {
+                setError(null);
+                if (isRegisteredCustomer && savedAddresses.length > 0) {
+                    setShowSavedAddressChoiceModal(true);
+                    return;
+                }
                 setShowDeliveryModal(true);
                 setError('נא להשלים כתובת משלוח מלאה (רחוב, מספר בית ועיר)');
                 return;
@@ -321,6 +381,21 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
         return (
             <CustomerLayout>
                 <div className="space-y-6">
+                    {restaurant && (
+                        <div className="flex items-center gap-3 rounded-2xl border border-gray-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-surface px-3 py-2.5 sm:px-4 shadow-sm">
+                            {restaurant.logo_url ? (
+                                <img src={resolveAssetUrl(restaurant.logo_url)} alt="" className="h-11 w-11 sm:h-12 sm:w-12 object-contain rounded-xl bg-gray-50 dark:bg-brand-dark-bg p-1 shrink-0" />
+                            ) : (
+                                <div className="h-11 w-11 rounded-xl bg-brand-primary/15 flex items-center justify-center shrink-0">
+                                    <FaStore className="text-brand-primary text-lg" />
+                                </div>
+                            )}
+                            <div className="min-w-0 flex-1">
+                                <p className="text-[10px] sm:text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-brand-dark-muted">סל במסעדה</p>
+                                <p className="font-black text-gray-900 dark:text-brand-dark-text truncate text-base sm:text-lg leading-tight">{restaurant.name}</p>
+                            </div>
+                        </div>
+                    )}
                     <h1 className="text-3xl font-bold text-brand-primary">סל קניות</h1>
 
                     {/* באנר מצב תצוגה מקדימה */}
@@ -343,7 +418,7 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                     <div className="bg-orange-50 dark:bg-orange-900/20 border border-brand-primary/30 text-gray-900 dark:text-brand-dark-text px-6 py-8 rounded-lg text-center">
                         <p className="text-lg mb-4">{UI_TEXT.MSG_EMPTY_CART}</p>
                         <button
-                            onClick={() => navigate('/menu')}
+                            onClick={() => navigate(tenantId ? `/${tenantId}/menu` : '/')}
                             className="bg-brand-primary text-white px-6 py-3 rounded-lg hover:bg-gray-800 transition inline-block"
                         >
                             חזור לתפריט
@@ -426,39 +501,129 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                         setDeliveryLocation(location);
                         setShowLocationModal(false);
 
-                        // בדיקה אם המיקום חסר פרטים (רק עיר ללא רחוב)
                         const needsCompletion = !location.street || location.needsCompletion;
 
-                        // Update delivery address automatically from location
                         if (location.fullAddress) {
-                            setCustomerInfo({ ...customerInfo, delivery_address: location.fullAddress });
+                            setCustomerInfo((prev) => ({ ...prev, delivery_address: location.fullAddress }));
                         }
 
-                        // אם חסרים פרטים, פתח מיד את מודל פרטי המשלוח
+                        if (needsCompletion && isRegisteredCustomer && savedAddresses.length > 0) {
+                            setShowSavedAddressChoiceModal(true);
+                            return;
+                        }
+
                         if (needsCompletion) {
-                            setTimeout(() => {
-                                setShowDeliveryModal(true);
-                            }, 300); // המתנה קצרה לסגירת המודל הקודם
+                            setTimeout(() => setShowDeliveryModal(true), 300);
                         }
                     }}
                 />
-                <div className="flex items-center gap-3">
-                    <div className="p-3 bg-orange-100 dark:bg-orange-900/30 rounded-2xl">
-                        <FaShoppingCart className="text-2xl text-brand-primary" />
+
+                {/* משתמש רשום: להשתמש בכתובת שמורה או להשלים ידנית — לפני/במקום מודל פרטים */}
+                {showSavedAddressChoiceModal && (
+                    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-[2px] p-3">
+                        <div
+                            role="dialog"
+                            aria-modal="true"
+                            aria-labelledby="saved-addr-choice-title"
+                            className="bg-white dark:bg-brand-dark-surface rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-brand-dark-border"
+                        >
+                            <div className="p-4 sm:p-5 border-b border-gray-100 dark:border-brand-dark-border flex justify-between items-start gap-2">
+                                <div>
+                                    <h2 id="saved-addr-choice-title" className="text-lg font-black text-gray-900 dark:text-brand-dark-text">
+                                        כתובת שמורה?
+                                    </h2>
+                                    <p className="text-sm text-gray-600 dark:text-brand-dark-muted mt-1">
+                                        המיקום שנבחר דורש השלמת פרטים. אפשר להשתמש בכתובת מהחשבון שלך.
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowSavedAddressChoiceModal(false)}
+                                    className="shrink-0 w-9 h-9 rounded-full bg-gray-100 dark:bg-brand-dark-bg text-gray-600 dark:text-gray-300 hover:bg-gray-200 text-xl leading-none"
+                                    aria-label="סגור"
+                                >
+                                    ×
+                                </button>
+                            </div>
+                            <div className="p-4 sm:p-5 space-y-2">
+                                {savedAddresses.map((addr) => (
+                                    <button
+                                        key={addr.id}
+                                        type="button"
+                                        onClick={() => applySavedAddress(addr)}
+                                        className="w-full text-right rounded-xl border-2 border-gray-200 dark:border-brand-dark-border hover:border-brand-primary/60 hover:bg-orange-50 dark:hover:bg-orange-900/15 p-3 transition-all flex items-start gap-3"
+                                    >
+                                        <FaMapMarkerAlt className={`shrink-0 mt-0.5 ${addr.is_default ? 'text-brand-primary' : 'text-gray-400'}`} />
+                                        <div className="min-w-0 flex-1">
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                <span className="font-bold text-gray-900 dark:text-brand-dark-text text-sm">{addr.label}</span>
+                                                {addr.is_default && <FaStar className="text-amber-400 text-xs" />}
+                                            </div>
+                                            <p className="text-xs text-gray-600 dark:text-brand-dark-muted mt-0.5 break-words">
+                                                {addr.street} {addr.house_number}
+                                                {addr.apartment ? `, דירה ${addr.apartment}` : ''}, {addr.city}
+                                            </p>
+                                            {(!addr.lat || !addr.lng) && (
+                                                <p className="text-[10px] text-amber-700 dark:text-amber-400 mt-1">ללא נ.צ. במפה — ייתכן שתידרש בחירת מיקום מחדש לאימות אזור</p>
+                                            )}
+                                        </div>
+                                    </button>
+                                ))}
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setShowSavedAddressChoiceModal(false);
+                                        setShowDeliveryModal(true);
+                                    }}
+                                    className="w-full py-3 rounded-xl border-2 border-dashed border-gray-300 dark:border-brand-dark-border text-sm font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-brand-dark-bg transition-colors"
+                                >
+                                    להשלים כתובת ידנית
+                                </button>
+                            </div>
+                        </div>
                     </div>
-                    <h1 className="text-3xl font-black text-gray-900 dark:text-brand-dark-text">סל קניות</h1>
+                )}
+                {restaurant && (
+                    <div className="flex items-center gap-2 sm:gap-3 rounded-xl sm:rounded-2xl border border-gray-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-surface px-2 py-2 sm:px-4 sm:py-3 shadow-sm">
+                        {restaurant.logo_url ? (
+                            <img
+                                src={resolveAssetUrl(restaurant.logo_url)}
+                                alt=""
+                                className="h-9 w-9 sm:h-14 sm:w-14 object-contain rounded-lg sm:rounded-xl bg-gray-50 dark:bg-brand-dark-bg p-0.5 sm:p-1 shrink-0 ring-1 sm:ring-2 ring-brand-primary/10"
+                            />
+                        ) : (
+                            <div className="h-9 w-9 sm:h-14 sm:w-14 rounded-lg sm:rounded-xl bg-brand-primary/15 flex items-center justify-center shrink-0 ring-1 sm:ring-2 ring-brand-primary/20">
+                                <FaStore className="text-brand-primary text-base sm:text-xl" />
+                            </div>
+                        )}
+                        <div className="min-w-0 flex-1">
+                            <p className="text-[9px] sm:text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-brand-dark-muted leading-tight">הזמנה מ־</p>
+                            <p className="font-black text-gray-900 dark:text-brand-dark-text truncate text-sm sm:text-xl leading-tight">{restaurant.name}</p>
+                        </div>
+                    </div>
+                )}
+                <div className="flex items-center gap-2 sm:gap-3">
+                    <div className="p-2 sm:p-3 bg-orange-100 dark:bg-orange-900/30 rounded-xl sm:rounded-2xl">
+                        <FaShoppingCart className="text-xl sm:text-2xl text-brand-primary" />
+                    </div>
+                    <h1 className="text-xl sm:text-3xl font-black text-gray-900 dark:text-brand-dark-text">סל קניות</h1>
                 </div>
+
+                <CartCheckoutWizard step={checkoutStep} onStepChange={goCheckoutStep} />
 
                 {/* באנר מצב תצוגה מקדימה */}
                 {isPreviewMode && (
-                    <div className="bg-gradient-to-r from-purple-50 via-indigo-50 to-purple-50 border-2 border-purple-400 rounded-2xl p-4 shadow-lg">
-                        <div className="flex items-center gap-3">
-                            <div className="bg-purple-500 rounded-full p-3">
-                                <FaShoppingCart className="text-2xl text-white" />
+                    <div className="bg-gradient-to-r from-purple-50 via-indigo-50 to-purple-50 border border-purple-400 sm:border-2 rounded-lg sm:rounded-2xl p-2 sm:p-4 shadow-sm sm:shadow-lg">
+                        <div className="flex items-start gap-2 sm:gap-3">
+                            <div className="bg-purple-500 rounded-full p-1.5 sm:p-3 shrink-0">
+                                <FaShoppingCart className="text-sm sm:text-2xl text-white" />
                             </div>
-                            <div className="flex-1">
-                                <h3 className="font-bold text-purple-900 text-lg mb-1 flex items-center gap-2"><FaSearch className="text-purple-700" /> מצב תצוגה מקדימה</h3>
-                                <p className="text-sm text-purple-800">
+                            <div className="flex-1 min-w-0">
+                                <h3 className="font-bold text-purple-900 text-xs sm:text-lg sm:mb-1 flex items-center gap-1 sm:gap-2 leading-snug">
+                                    <FaSearch className="text-purple-700 shrink-0 text-[10px] sm:text-base" />
+                                    <span className="truncate">תצוגה מקדימה — הזמנת דוגמה, ללא השפעה על דוחות.</span>
+                                </h3>
+                                <p className="hidden sm:block text-sm text-purple-800">
                                     אתה צופה בסל כמנהל מסעדה. ההזמנה תסומן כ-<strong>הזמנת דוגמה</strong> ולא תשפיע על מונים ודוחות.
                                 </p>
                             </div>
@@ -468,14 +633,14 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
 
                 {/* באנר דמו */}
                 {restaurant?.is_demo && !isPreviewMode && (
-                    <div className="bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 border-2 border-amber-400 rounded-2xl p-4 shadow-lg">
-                        <div className="flex items-center gap-3">
-                            <div className="bg-amber-500 rounded-full p-3 animate-pulse">
-                                <FaMask className="text-2xl text-white" />
+                    <div className="bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 border border-amber-400 sm:border-2 rounded-lg sm:rounded-2xl p-2 sm:p-4 shadow-sm sm:shadow-lg">
+                        <div className="flex items-start gap-2 sm:gap-3">
+                            <div className="bg-amber-500 rounded-full p-1.5 sm:p-3 shrink-0 animate-pulse">
+                                <FaMask className="text-sm sm:text-2xl text-white" />
                             </div>
-                            <div className="flex-1">
-                                <h3 className="font-bold text-amber-900 text-lg mb-1">הזמנה להמחשה</h3>
-                                <p className="text-sm text-amber-800">
+                            <div className="flex-1 min-w-0">
+                                <h3 className="font-bold text-amber-900 text-xs sm:text-lg sm:mb-1 leading-snug truncate">דמו — ללא אימות טלפון, הכל לדוגמה.</h3>
+                                <p className="hidden sm:block text-sm text-amber-800">
                                     זוהי הזמנת דמו - <strong>אין צורך באימות טלפון</strong>. כל השלבים מסומלצים.
                                 </p>
                             </div>
@@ -520,72 +685,145 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                         setShowDeliveryModal(false);
                     }}
                     customerInfo={customerInfo}
-                    setCustomerInfo={setCustomerInfo} deliveryLocation={deliveryLocation} onSaved={() => {
-                        // פרטי המשלוח נשמרו - הלקוח יכול להמשיך
+                    setCustomerInfo={setCustomerInfo}
+                    deliveryLocation={deliveryLocation}
+                    savedAddresses={isRegisteredCustomer ? savedAddresses : []}
+                    onApplySavedAddress={(addr) => {
+                        applySavedAddress(addr);
+                        setShowDeliveryModal(false);
+                    }}
+                    onSaved={() => {
+                        // פרטי המשלוח נשמרו
                     }}
                 />
 
-                {/* פריטים בסל */}
-                <div className="space-y-2">
-                    {cartItems.map((item) => {
+                {/* שלב 1: פריטים ומבצעים */}
+                {checkoutStep === 1 && (
+                    <>
+                <div className="max-sm:border border-gray-200 dark:border-brand-dark-border max-sm:rounded-lg max-sm:overflow-hidden max-sm:bg-white max-sm:dark:bg-brand-dark-surface sm:space-y-2">
+                    {cartItems.map((item, itemIndex) => {
                         const addonsInside = (item.addons || []).filter(a => !a.on_side).map(a => (a.quantity || 1) > 1 ? `${a.name} ×${a.quantity}` : a.name);
                         const addonsOnSide = (item.addons || []).filter(a => a.on_side).map(a => (a.quantity || 1) > 1 ? `${a.name} ×${a.quantity}` : a.name);
-
                         return (
-                            <div
-                                key={item.cartKey}
-                                className="bg-white dark:bg-brand-dark-surface border-2 border-gray-200 dark:border-brand-dark-border rounded-2xl p-5 hover:shadow-lg transition-shadow"
-                            >
-                                <div className="flex justify-between items-start gap-4">
-                                    <div className="flex-1 space-y-2">
-                                        <h3 className="font-bold text-gray-900 dark:text-brand-dark-text text-lg">{item.name}</h3>
-                                        {item.variant?.name && (
-                                            <p className="text-sm text-brand-primary font-medium">סוג לחם: {item.variant.name}</p>
-                                        )}
-                                        {addonsInside.length > 0 && (
-                                            <p className="text-sm text-gray-600 dark:text-brand-dark-muted">תוספות: {addonsInside.join(' · ')}</p>
-                                        )}
-                                        {addonsOnSide.length > 0 && (
-                                            <p className="text-sm text-orange-600 font-medium flex items-center gap-1">
-                                                <FaBoxOpen />
-                                                <span>בצד: {addonsOnSide.join(' · ')}</span>
-                                            </p>
-                                        )}
-                                        <p className="text-xs text-gray-500">₪{item.unitPrice.toFixed(2)} ליחידה</p>
-                                    </div>
-
-                                    <div className="flex flex-col items-end gap-3">
-                                        {/* מחיר כולל */}
-                                        <div className="text-right">
-                                            <p className="font-black text-xl text-gray-900 dark:text-brand-dark-text">
-                                                ₪{item.totalPrice.toFixed(2)}
-                                            </p>
-                                        </div>
-
-                                        {/* קוביית כמות משופרת */}
-                                        <div className="flex items-center gap-1 bg-gray-100 dark:bg-brand-dark-border/50 rounded-xl p-1">
+                            <div key={item.cartKey}>
+                                {/* מובייל — שורה קומפקטית + שורת פירוט */}
+                                <div
+                                    className={`sm:hidden ${
+                                        itemIndex < cartItems.length - 1
+                                            ? 'border-b border-gray-200 dark:border-brand-dark-border'
+                                            : ''
+                                    }`}
+                                >
+                                    <div className="flex items-center gap-1.5 w-full px-2 py-2 min-h-[2.75rem]">
+                                        <div className="flex items-center rounded-md bg-gray-100 dark:bg-brand-dark-border/50 p-0.5 shrink-0">
                                             <button
+                                                type="button"
                                                 onClick={() => handleQuantityChange(item.cartKey, item.qty - 1)}
-                                                className="w-8 h-8 flex items-center justify-center rounded-lg bg-white dark:bg-brand-dark-bg hover:bg-red-50 hover:text-red-600 text-gray-600 dark:text-brand-dark-muted font-bold transition-all shadow-sm"
+                                                className="w-7 h-7 flex items-center justify-center rounded bg-white dark:bg-brand-dark-bg text-gray-700 dark:text-brand-dark-text text-sm font-bold active:bg-red-50"
                                             >
                                                 −
                                             </button>
-                                            <span className="w-10 text-center font-bold text-gray-900 dark:text-brand-dark-text">{item.qty}</span>
+                                            <span className="w-6 text-center text-xs font-black text-gray-900 dark:text-brand-dark-text tabular-nums">{item.qty}</span>
                                             <button
+                                                type="button"
                                                 onClick={() => handleQuantityChange(item.cartKey, item.qty + 1)}
-                                                className="w-8 h-8 flex items-center justify-center rounded-lg bg-white dark:bg-brand-dark-bg hover:bg-green-50 hover:text-green-600 text-gray-600 dark:text-brand-dark-muted font-bold transition-all shadow-sm"
+                                                className="w-7 h-7 flex items-center justify-center rounded bg-white dark:bg-brand-dark-bg text-gray-700 dark:text-brand-dark-text text-sm font-bold active:bg-green-50"
                                             >
                                                 +
                                             </button>
                                         </div>
-
-                                        {/* הסרה */}
+                                        <p className="flex-1 min-w-0 text-xs font-bold text-gray-900 dark:text-brand-dark-text leading-tight line-clamp-1" title={item.name}>
+                                            {item.name}
+                                        </p>
+                                        <span className="shrink-0 text-xs font-black text-gray-900 dark:text-brand-dark-text tabular-nums">₪{item.totalPrice.toFixed(2)}</span>
                                         <button
+                                            type="button"
                                             onClick={() => removeFromCart(item.cartKey)}
-                                            className="text-red-500 hover:text-red-700 font-bold text-xl transition-colors"
+                                            className="shrink-0 w-7 h-7 flex items-center justify-center text-red-500 text-lg font-bold leading-none rounded-md active:bg-red-50 dark:active:bg-red-950/30"
+                                            aria-label="הסר מהסל"
                                         >
                                             ×
                                         </button>
+                                    </div>
+                                    <div className="px-2 pb-2 pt-0 text-[10px] text-gray-600 dark:text-brand-dark-muted leading-snug space-y-0.5 bg-gray-50/70 dark:bg-brand-dark-bg/40">
+                                        {item.variant?.name && (
+                                            <p>
+                                                <span className="font-semibold text-gray-500 dark:text-gray-400">סוג: </span>
+                                                {item.variant.name}
+                                            </p>
+                                        )}
+                                        {addonsInside.length > 0 && (
+                                            <p>
+                                                <span className="font-semibold text-gray-500 dark:text-gray-400">תוספות: </span>
+                                                {addonsInside.join(' · ')}
+                                            </p>
+                                        )}
+                                        {addonsOnSide.length > 0 && (
+                                            <p className="text-orange-700 dark:text-orange-400">
+                                                <FaBoxOpen className="inline align-middle ms-0.5" size={10} />
+                                                בצד: {addonsOnSide.join(' · ')}
+                                            </p>
+                                        )}
+                                        <p className="text-gray-500 dark:text-gray-500">
+                                            ₪{item.unitPrice.toFixed(2)} ליחידה × {item.qty}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* טאבלט+ — כרטיס */}
+                                <div className="hidden sm:block bg-white dark:bg-brand-dark-surface border-2 border-gray-200 dark:border-brand-dark-border rounded-2xl p-5 hover:shadow-lg transition-shadow">
+                                    <div className="flex justify-between items-start gap-4">
+                                        <div className="flex-1 space-y-2">
+                                            <h3 className="font-bold text-gray-900 dark:text-brand-dark-text text-lg">{item.name}</h3>
+                                            {item.variant?.name && (
+                                                <p className="text-sm text-brand-primary font-medium">סוג לחם: {item.variant.name}</p>
+                                            )}
+                                            {addonsInside.length > 0 && (
+                                                <p className="text-sm text-gray-600 dark:text-brand-dark-muted">תוספות: {addonsInside.join(' · ')}</p>
+                                            )}
+                                            {addonsOnSide.length > 0 && (
+                                                <p className="text-sm text-orange-600 font-medium flex items-center gap-1">
+                                                    <FaBoxOpen />
+                                                    <span>בצד: {addonsOnSide.join(' · ')}</span>
+                                                </p>
+                                            )}
+                                            <p className="text-xs text-gray-500">₪{item.unitPrice.toFixed(2)} ליחידה</p>
+                                        </div>
+
+                                        <div className="flex flex-col items-end gap-3">
+                                            <div className="text-right">
+                                                <p className="font-black text-xl text-gray-900 dark:text-brand-dark-text">
+                                                    ₪{item.totalPrice.toFixed(2)}
+                                                </p>
+                                            </div>
+
+                                            <div className="flex items-center gap-1 bg-gray-100 dark:bg-brand-dark-border/50 rounded-xl p-1">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleQuantityChange(item.cartKey, item.qty - 1)}
+                                                    className="w-8 h-8 flex items-center justify-center rounded-lg bg-white dark:bg-brand-dark-bg hover:bg-red-50 hover:text-red-600 text-gray-600 dark:text-brand-dark-muted font-bold transition-all shadow-sm"
+                                                >
+                                                    −
+                                                </button>
+                                                <span className="w-10 text-center font-bold text-gray-900 dark:text-brand-dark-text">{item.qty}</span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleQuantityChange(item.cartKey, item.qty + 1)}
+                                                    className="w-8 h-8 flex items-center justify-center rounded-lg bg-white dark:bg-brand-dark-bg hover:bg-green-50 hover:text-green-600 text-gray-600 dark:text-brand-dark-muted font-bold transition-all shadow-sm"
+                                                >
+                                                    +
+                                                </button>
+                                            </div>
+
+                                            <button
+                                                type="button"
+                                                onClick={() => removeFromCart(item.cartKey)}
+                                                className="text-red-500 hover:text-red-700 font-bold text-xl transition-colors"
+                                                aria-label="הסר מהסל"
+                                            >
+                                                ×
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -610,9 +848,22 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                         onClose={() => setGiftPromotion(null)}
                     />
                 )}
+                        <button
+                            type="button"
+                            onClick={() => goCheckoutStep(2)}
+                            className="w-full mt-4 py-4 rounded-xl font-black text-base sm:text-lg bg-gradient-to-r from-brand-primary to-orange-600 text-white shadow-lg hover:shadow-xl hover:from-orange-600 hover:to-orange-700 transition-all"
+                        >
+                            המשך לפרטים ומשלוח
+                        </button>
+                    </>
+                )}
 
+                {/* שלבים 2–3: סיכום + אותו טופס ואותו onSubmit */}
+                {checkoutStep >= 2 && (
+                <form id="cart-order-form" onSubmit={handleProceedToConfirmation} className="space-y-4 sm:space-y-6 bg-white dark:bg-brand-dark-surface border border-gray-200 dark:border-brand-dark-border p-4 sm:p-8 rounded-xl sm:rounded-2xl shadow-sm">
+                <div className={checkoutStep !== 2 ? 'hidden' : 'block'}>
                 {/* סכום ביניים */}
-                <div className="bg-gradient-to-br from-brand-cream to-orange-50 dark:from-brand-dark-surface dark:to-orange-900/20 border-2 border-gray-200 dark:border-brand-dark-border rounded-2xl p-6 space-y-3">
+                <div className="bg-gradient-to-br from-brand-cream to-orange-50 dark:from-brand-dark-surface dark:to-orange-900/20 border border-gray-200 sm:border-2 dark:border-brand-dark-border rounded-xl sm:rounded-2xl p-3 sm:p-6 space-y-2 sm:space-y-3 text-sm sm:text-base">
                     <div className="flex justify-between items-center text-lg">
                         <span className="font-medium text-gray-700 dark:text-gray-300">סכום ביניים:</span>
                         <span className="font-bold text-gray-900 dark:text-brand-dark-text">₪{total.toFixed(2)}</span>
@@ -656,7 +907,7 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                         </div>
                     )}
 
-                    <div className="flex justify-between items-center text-2xl font-black border-t-2 border-gray-300 dark:border-brand-dark-border pt-3">
+                    <div className="flex justify-between items-center text-lg sm:text-2xl font-black border-t border-gray-300 dark:border-brand-dark-border sm:border-t-2 pt-2 sm:pt-3">
                         <span className="text-gray-900 dark:text-brand-dark-text">סה"כ לתשלום:</span>
                         <span className="text-brand-primary">₪{totalWithDelivery.toFixed(2)}</span>
                     </div>
@@ -674,7 +925,7 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                     )}
 
                     {/* כפתור הערות קטן וחמוד */}
-                    <div className="flex justify-center mt-4">
+                    <div className="flex justify-center mt-2 sm:mt-4">
                         <button
                             type="button"
                             onClick={() => {
@@ -682,7 +933,7 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                                 setTempNotes(initialNotes);
                                 setShowNotesModal(true);
                             }}
-                            className="inline-flex items-center gap-2 px-4 py-2 bg-amber-100 hover:bg-amber-200 text-amber-800 font-medium text-sm rounded-full transition-all shadow-sm hover:shadow-md active:scale-95"
+                            className="inline-flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-amber-100 hover:bg-amber-200 text-amber-800 font-medium text-xs sm:text-sm rounded-full transition-all shadow-sm hover:shadow-md active:scale-95"
                         >
                             <FaStickyNote className="text-amber-600" />
                             <span>{customerInfo?.delivery_notes ? 'ערוך הערה' : 'הוסף הערה'}</span>
@@ -695,7 +946,7 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                     </div>
 
                     {deliveryLocation && customerInfo.delivery_method === 'delivery' && (
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 bg-orange-50 dark:bg-orange-900/20 p-3 rounded-lg text-sm">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1 sm:gap-2 bg-orange-50 dark:bg-orange-900/20 p-2 sm:p-3 rounded-md sm:rounded-lg text-xs sm:text-sm">
                             <div className="flex-1">
                                 <p className="font-medium text-gray-900 dark:text-brand-dark-text text-xs sm:text-sm break-words">
                                     <FaMapMarkerAlt className="text-brand-primary inline shrink-0" /> {deliveryLocation.fullAddress ||
@@ -715,11 +966,9 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                     )}
                 </div>
 
-                {/* טופס פרטים אישיים */}
-                <form id="cart-order-form" onSubmit={handleProceedToConfirmation} className="space-y-6 bg-white dark:bg-brand-dark-surface border border-gray-200 dark:border-brand-dark-border p-6 sm:p-8 rounded-2xl shadow-sm">
-                    <div className="flex items-center gap-2 pb-4 border-b border-gray-200 dark:border-brand-dark-border">
-                        <FaUser className="text-brand-primary" />
-                        <h2 className="text-xl font-black text-gray-900 dark:text-brand-dark-text">פרטים אישיים</h2>
+                    <div className="flex items-center gap-2 pb-3 sm:pb-4 border-b border-gray-200 dark:border-brand-dark-border">
+                        <FaUser className="text-brand-primary text-sm sm:text-base" />
+                        <h2 className="text-base sm:text-xl font-black text-gray-900 dark:text-brand-dark-text">פרטים אישיים</h2>
                     </div>
 
                     <div>
@@ -808,17 +1057,7 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                                                 <button
                                                     key={addr.id}
                                                     type="button"
-                                                    onClick={() => {
-                                                        const fullAddress = `${addr.street} ${addr.house_number}${addr.apartment ? `, דירה ${addr.apartment}` : ''}, ${addr.city}`;
-                                                        setCustomerInfo(prev => ({
-                                                            ...prev,
-                                                            delivery_address: fullAddress,
-                                                            delivery_notes: addr.notes || prev.delivery_notes || '',
-                                                        }));
-                                                        if (addr.lat && addr.lng) {
-                                                            setDeliveryLocation({ lat: addr.lat, lng: addr.lng, address: fullAddress });
-                                                        }
-                                                    }}
+                                                    onClick={() => applySavedAddress(addr)}
                                                     className="w-full text-right border-2 rounded-xl p-3 transition-all flex items-center gap-2 hover:border-brand-primary/50 hover:bg-orange-50 dark:hover:bg-orange-900/10 border-gray-200 dark:border-brand-dark-border"
                                                 >
                                                     <FaMapMarkerAlt className={`flex-shrink-0 ${addr.is_default ? 'text-brand-primary' : 'text-gray-400'}`} size={14} />
@@ -967,20 +1206,67 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                         </div>
                     </div>
 
-                    {/* הזמנה עתידית */}
+                    <div className="flex flex-col-reverse sm:flex-row gap-3 pt-4 mt-4 border-t border-gray-200 dark:border-brand-dark-border">
+                        <button
+                            type="button"
+                            onClick={() => goCheckoutStep(1)}
+                            className="flex-1 font-bold py-3.5 sm:py-4 rounded-xl text-center bg-gray-200 dark:bg-brand-dark-border text-gray-800 dark:text-brand-dark-text hover:bg-gray-300 dark:hover:bg-gray-600 transition-all"
+                        >
+                            חזור לסל
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => goCheckoutStep(3)}
+                            className="flex-1 bg-gradient-to-r from-brand-primary to-orange-600 text-white font-black py-3.5 sm:py-4 rounded-xl hover:from-orange-600 hover:to-orange-700 transition-all shadow-lg"
+                        >
+                            המשך לסיום והזמנה
+                        </button>
+                    </div>
+                </div>
+
+                <div className={checkoutStep !== 3 ? 'hidden' : 'block'}>
+                    <div className="rounded-xl sm:rounded-2xl border-2 border-brand-primary/25 bg-gradient-to-br from-orange-50 to-brand-cream dark:from-orange-950/40 dark:to-brand-dark-surface p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+                        <div>
+                            <p className="text-xs font-bold text-gray-500 dark:text-brand-dark-muted uppercase tracking-wide">סיכום לפני שליחה</p>
+                            <p className="text-lg sm:text-xl font-black text-gray-900 dark:text-brand-dark-text">
+                                סה״כ לתשלום: <span className="text-brand-primary">₪{totalWithDelivery.toFixed(2)}</span>
+                            </p>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => goCheckoutStep(2)}
+                            className="text-sm font-bold text-brand-primary hover:underline whitespace-nowrap self-start sm:self-auto"
+                        >
+                            עריכת פרטים וסיכום
+                        </button>
+                    </div>
+
+                    {/* הזמנה עתידית — צבעים: סגור=ענבר, פתוח=ציאן (ניגודיות טובה בלייט/דארק) */}
                     {canFutureOrder && (
-                        <div className={`border-2 rounded-xl p-4 ${!restaurant?.is_open_now ? 'border-amber-300 dark:border-amber-700 bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20' : 'border-blue-300 dark:border-blue-700 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20'}`}>
+                        <div
+                            className={
+                                !restaurant?.is_open_now
+                                    ? 'border-2 rounded-lg sm:rounded-xl p-3 sm:p-4 border-amber-400 dark:border-amber-500/50 bg-gradient-to-br from-amber-50 via-orange-50/90 to-amber-50 dark:from-amber-950/45 dark:via-orange-950/25 dark:to-amber-950/35 text-sm sm:text-base'
+                                    : 'border-2 rounded-lg sm:rounded-xl p-3 sm:p-4 border-cyan-500 dark:border-cyan-400/55 bg-gradient-to-br from-cyan-50 via-teal-50/80 to-cyan-50/90 dark:from-cyan-950/45 dark:via-teal-950/30 dark:to-cyan-950/40 text-sm sm:text-base'
+                            }
+                        >
                             <div className="flex items-center gap-2 mb-2">
-                                <FaClock className={!restaurant?.is_open_now ? 'text-amber-600' : 'text-blue-600'} />
-                                <p className={`text-xs font-bold uppercase tracking-wide ${!restaurant?.is_open_now ? 'text-amber-800 dark:text-amber-400' : 'text-blue-800 dark:text-blue-400'}`}>
+                                <FaClock className={!restaurant?.is_open_now ? 'text-amber-700 dark:text-amber-300' : 'text-cyan-700 dark:text-cyan-300'} />
+                                <p
+                                    className={
+                                        !restaurant?.is_open_now
+                                            ? 'text-xs font-bold uppercase tracking-wide text-amber-900 dark:text-amber-100'
+                                            : 'text-xs font-bold uppercase tracking-wide text-cyan-900 dark:text-cyan-100'
+                                    }
+                                >
                                     {!restaurant?.is_open_now ? 'המסעדה סגורה — הזמנה עתידית' : 'הזמנה עתידית'}
                                 </p>
                             </div>
 
                             {scheduledFor ? (
-                                <div className="flex items-center justify-between bg-white dark:bg-brand-dark-bg rounded-lg px-3 py-2.5 border border-gray-200 dark:border-brand-dark-border">
+                                <div className="flex items-center justify-between bg-white/90 dark:bg-brand-dark-bg rounded-lg px-3 py-2.5 border border-gray-200/90 dark:border-brand-dark-border">
                                     <div className="flex items-center gap-2">
-                                        <FaClock className={!restaurant?.is_open_now ? 'text-amber-500' : 'text-blue-500'} size={12} />
+                                        <FaClock className={!restaurant?.is_open_now ? 'text-amber-600 dark:text-amber-400' : 'text-cyan-600 dark:text-cyan-400'} size={12} />
                                         <span className="text-sm font-bold text-gray-800 dark:text-brand-dark-text">
                                             {new Date(scheduledFor).toLocaleDateString('he-IL', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
                                         </span>
@@ -988,14 +1274,24 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                                     <button
                                         type="button"
                                         onClick={() => setShowFutureOrderModal(true)}
-                                        className={`text-xs font-bold ${!restaurant?.is_open_now ? 'text-amber-600' : 'text-blue-600'} hover:underline`}
+                                        className={
+                                            !restaurant?.is_open_now
+                                                ? 'text-xs font-bold text-amber-700 dark:text-amber-300 hover:underline'
+                                                : 'text-xs font-bold text-cyan-700 dark:text-cyan-300 hover:underline'
+                                        }
                                     >
                                         שנה
                                     </button>
                                 </div>
                             ) : (
                                 <>
-                                    <p className={`text-sm mb-3 ${!restaurant?.is_open_now ? 'text-amber-700 dark:text-amber-300' : 'text-blue-700 dark:text-blue-300'}`}>
+                                    <p
+                                        className={
+                                            !restaurant?.is_open_now
+                                                ? 'text-sm mb-3 text-amber-900 dark:text-amber-200'
+                                                : 'text-sm mb-3 text-cyan-900 dark:text-cyan-100'
+                                        }
+                                    >
                                         {!restaurant?.is_open_now
                                             ? 'ניתן להזמין מראש — בחר תאריך ושעה.'
                                             : 'רוצה לקבל את ההזמנה בזמן אחר?'}
@@ -1003,10 +1299,11 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                                     <button
                                         type="button"
                                         onClick={() => setShowFutureOrderModal(true)}
-                                        className={`w-full py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-colors ${!restaurant?.is_open_now
-                                            ? 'bg-amber-500 text-white hover:bg-amber-600'
-                                            : 'bg-blue-600 text-white hover:bg-blue-700'
-                                        }`}
+                                        className={
+                                            !restaurant?.is_open_now
+                                                ? 'w-full py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-colors bg-amber-600 text-white hover:bg-amber-700 dark:bg-amber-600 dark:hover:bg-amber-500'
+                                                : 'w-full py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-colors bg-cyan-600 text-white hover:bg-cyan-700 dark:bg-cyan-600 dark:hover:bg-cyan-500'
+                                        }
                                     >
                                         <FaClock size={12} />
                                         בחר תאריך ושעה
@@ -1044,7 +1341,9 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                         </Link>
                         .
                     </div>
+                </div>
                 </form>
+                )}
 
                 {/* מודל אישור הזמנה */}
                 <OrderConfirmationSheet
@@ -1320,6 +1619,7 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                     setShowFutureOrderModal(false);
                 }}
                 restaurant={restaurant}
+                isRegisteredCustomer={isRegisteredCustomer}
             />
         </CustomerLayout>
     );

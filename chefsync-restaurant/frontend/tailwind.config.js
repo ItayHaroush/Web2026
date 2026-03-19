@@ -16,12 +16,29 @@ export default {
         karantina: ['Karantina', 'system-ui', 'sans-serif'],
         amatic: ['"Amatic SC"', 'cursive', 'sans-serif'],
       },
+      keyframes: {
+        menuOrdersHintIn: {
+          '0%': { transform: 'translateX(110%)', opacity: '0' },
+          '100%': { transform: 'translateX(0)', opacity: '1' },
+        },
+        /** פופ־אפ עליון ממורכז — בלי translateX כדי שלא ידרוס מרכוז (left-1/2 -translate-x-1/2) */
+        topDismissibleIn: {
+          '0%': { opacity: '0', transform: 'translateY(-0.5rem)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+      },
+      animation: {
+        'menu-orders-hint-in': 'menuOrdersHintIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+        'top-dismissible-in': 'topDismissibleIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+      },
       colors: {
         brand: {
           primary: '#F97316',
           secondary: '#FB923C',
           dark: '#1F2937',
           accent: '#FBBF24',
+          /** טקסט מודגש על רקע שמנת/כתום בהיר (תואם למיתוג) */
+          muted: '#78350F',
           light: '#FFF7ED',
           cream: '#FEF3C7',
           surface: '#FFFFFF',

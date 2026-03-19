@@ -1,7 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { FaHome, FaLightbulb, FaCheck, FaExclamationTriangle, FaSave, FaComment } from 'react-icons/fa';
+import { FaHome, FaLightbulb, FaCheck, FaExclamationTriangle, FaSave, FaComment, FaMapMarkerAlt, FaStar } from 'react-icons/fa';
 
-export default function DeliveryDetailsModal({ open, onClose, customerInfo, setCustomerInfo, onSaved, deliveryLocation }) {
+export default function DeliveryDetailsModal({
+    open,
+    onClose,
+    customerInfo,
+    setCustomerInfo,
+    onSaved,
+    deliveryLocation,
+    savedAddresses = [],
+    onApplySavedAddress,
+}) {
     const [street, setStreet] = useState('');
     const [houseNumber, setHouseNumber] = useState('');
     const [city, setCity] = useState('');
@@ -140,6 +149,39 @@ export default function DeliveryDetailsModal({ open, onClose, customerInfo, setC
                             <FaLightbulb className="text-gray-900 dark:text-brand-primary" /> נא למלא כתובת מלאה לצורך משלוח מדויק
                         </p>
                     </div>
+
+                    {savedAddresses.length > 0 && typeof onApplySavedAddress === 'function' && (
+                        <div className="mb-4 rounded-xl border-2 border-brand-primary/25 dark:border-brand-primary/40 bg-orange-50/80 dark:bg-orange-950/20 p-3">
+                            <p className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2 flex items-center gap-2">
+                                <FaMapMarkerAlt className="text-brand-primary" /> מיקומים שמורים בחשבון
+                            </p>
+                            <div className="space-y-2 max-h-[40vh] overflow-y-auto">
+                                {savedAddresses.map((addr) => (
+                                    <button
+                                        key={addr.id}
+                                        type="button"
+                                        onClick={() => onApplySavedAddress(addr)}
+                                        className="w-full text-right rounded-lg border border-gray-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-surface hover:border-brand-primary/50 hover:bg-orange-50/50 dark:hover:bg-orange-900/10 p-2.5 transition-all flex items-start gap-2"
+                                    >
+                                        <FaMapMarkerAlt className={`shrink-0 mt-0.5 ${addr.is_default ? 'text-brand-primary' : 'text-gray-400'}`} size={14} />
+                                        <div className="min-w-0 flex-1">
+                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                                <span className="font-bold text-sm text-gray-900 dark:text-brand-dark-text">{addr.label}</span>
+                                                {addr.is_default && <FaStar className="text-amber-400" size={10} />}
+                                            </div>
+                                            <p className="text-[11px] text-gray-600 dark:text-brand-dark-muted mt-0.5 leading-snug">
+                                                {addr.street} {addr.house_number}
+                                                {addr.apartment ? `, דירה ${addr.apartment}` : ''}, {addr.city}
+                                            </p>
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+                            <p className="text-[10px] text-gray-500 dark:text-brand-dark-muted mt-2">
+                                בחירה תמלא אוטומטית את הכתובת ותסגור חלון זה (אם יש מיקום למסעדה — גם תיבדק הגזרה).
+                            </p>
+                        </div>
+                    )}
 
                     <form onSubmit={handleSave} className="space-y-4">
                         <div>

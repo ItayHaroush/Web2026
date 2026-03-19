@@ -7,7 +7,7 @@ export default function PromotionProgress({ onSelectGift, onNavigateToCategory }
     if (!eligiblePromotions || eligiblePromotions.length === 0) return null;
 
     return (
-        <div className="space-y-3">
+        <div className="space-y-2 sm:space-y-3">
             {eligiblePromotions.map(promo => {
                 const { met, rules, times_qualified } = promo.progress || {};
                 const timesQ = times_qualified || 0;
@@ -19,20 +19,20 @@ export default function PromotionProgress({ onSelectGift, onNavigateToCategory }
                 const effectiveMax = getEffectiveMax(promo);
 
                 return (
-                    <div key={promo.promotion_id} className="bg-gradient-to-l from-brand-light to-brand-cream rounded-2xl p-4 border border-brand-primary/20">
-                        <div className="flex items-center gap-2 mb-2">
-                            <FaGift className={met ? 'text-brand-primary' : 'text-gray-400'} size={16} />
-                            <span className="font-bold text-gray-800 text-sm">{promo.name}</span>
+                    <div key={promo.promotion_id} className="bg-gradient-to-l from-brand-light to-brand-cream rounded-lg sm:rounded-2xl p-2 sm:p-4 border border-brand-primary/20">
+                        <div className="flex items-center gap-1.5 sm:gap-2 mb-1 sm:mb-2 flex-wrap">
+                            <FaGift className={met ? 'text-brand-primary' : 'text-gray-400'} size={14} />
+                            <span className="font-bold text-gray-800 text-xs sm:text-sm truncate min-w-0 max-w-[65%] sm:max-w-none">{promo.name}</span>
                             {met && (
-                                <span className="bg-brand-light text-brand-primary text-xs font-bold px-2 py-0.5 rounded-full mr-auto flex items-center gap-1">
+                                <span className="bg-brand-light text-brand-primary text-[10px] sm:text-xs font-bold px-1.5 sm:px-2 py-0.5 rounded-full mr-auto flex items-center gap-1 shrink-0">
                                     <FaCheck size={10} />
-                                    {timesQ > 1 ? `x${timesQ} מבצעים!` : 'עומד בתנאים'}
+                                    {timesQ > 1 ? `x${timesQ}` : 'בתנאים'}
                                 </span>
                             )}
                         </div>
 
                         {/* Progress bar */}
-                        <div className="w-full bg-white/60 rounded-full h-2 mb-2 overflow-hidden">
+                        <div className="w-full bg-white/60 rounded-full h-1.5 sm:h-2 mb-1 sm:mb-2 overflow-hidden">
                             <div
                                 className={`h-full rounded-full transition-all duration-500 ${met ? 'bg-brand-primary' : 'bg-gray-300 dark:bg-gray-600'}`}
                                 style={{ width: `${progressPercent}%` }}
@@ -40,13 +40,13 @@ export default function PromotionProgress({ onSelectGift, onNavigateToCategory }
                         </div>
 
                         {/* Rule details */}
-                        <div className="flex flex-wrap gap-2 text-xs">
+                        <div className="flex flex-wrap gap-1 sm:gap-2 text-[10px] sm:text-xs leading-tight">
                             {(rules || []).map((rule, i) => {
                                 const ruleMet = rule.current >= rule.required;
                                 return (
                                     <span
                                         key={i}
-                                        className={`px-2 py-1 rounded-lg font-medium ${ruleMet
+                                        className={`px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-md sm:rounded-lg font-medium ${ruleMet
                                             ? 'bg-brand-light text-brand-primary'
                                             : 'bg-white text-gray-600'
                                             }`}
@@ -62,15 +62,15 @@ export default function PromotionProgress({ onSelectGift, onNavigateToCategory }
 
                         {/* CTA for unmet rules — navigate to add items */}
                         {!met && onNavigateToCategory && (
-                            <div className="mt-2 flex flex-wrap gap-2">
+                            <div className="mt-1.5 sm:mt-2 flex flex-wrap gap-1 sm:gap-2">
                                 {(rules || []).filter(r => r.current < r.required).map((rule, i) => (
                                     <button
                                         key={i}
                                         onClick={() => onNavigateToCategory(rule.category_id)}
-                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-primary/10 hover:bg-brand-primary/20 text-brand-primary rounded-lg text-xs font-bold transition-colors"
+                                        className="flex items-center gap-1 px-2 py-1 sm:px-3 sm:py-1.5 bg-brand-primary/10 hover:bg-brand-primary/20 text-brand-primary rounded-md sm:rounded-lg text-[10px] sm:text-xs font-bold transition-colors"
                                     >
                                         <FaPlus size={10} />
-                                        <span>הוסף עוד {rule.required - rule.current} {rule.category_name}</span>
+                                        <span className="truncate max-w-[14rem] sm:max-w-none">+{rule.required - rule.current} {rule.category_name}</span>
                                     </button>
                                 ))}
                             </div>
@@ -90,10 +90,10 @@ export default function PromotionProgress({ onSelectGift, onNavigateToCategory }
                                 }).join(', ');
 
                                 return (
-                                    <div className="mt-3 flex-1 bg-brand-primary text-white py-2.5 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2">
-                                        <FaGift size={14} />
-                                        <span>{giftLabel}</span>
-                                        <FaCheck size={12} />
+                                    <div className="mt-2 sm:mt-3 flex-1 bg-brand-primary text-white py-2 px-2 sm:py-2.5 sm:px-4 rounded-lg sm:rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 sm:gap-2 text-center">
+                                        <FaGift size={14} className="shrink-0" />
+                                        <span className="line-clamp-2 sm:line-clamp-none">{giftLabel}</span>
+                                        <FaCheck size={12} className="shrink-0" />
                                     </div>
                                 );
                             }
@@ -104,15 +104,15 @@ export default function PromotionProgress({ onSelectGift, onNavigateToCategory }
                                     : 'מתנה נבחרה';
 
                                 return (
-                                    <div className="mt-3 flex gap-2">
-                                        <div className="flex-1 bg-brand-primary text-white py-2.5 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2">
-                                            <FaGift size={14} />
-                                            <span>{giftLabel}</span>
-                                            <FaCheck size={12} />
+                                    <div className="mt-2 sm:mt-3 flex gap-1.5 sm:gap-2">
+                                        <div className="flex-1 bg-brand-primary text-white py-2 px-2 sm:py-2.5 sm:px-4 rounded-lg sm:rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 min-w-0">
+                                            <FaGift size={14} className="shrink-0" />
+                                            <span className="truncate">{giftLabel}</span>
+                                            <FaCheck size={12} className="shrink-0" />
                                         </div>
                                         <button
                                             onClick={() => onSelectGift(promo)}
-                                            className="bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 py-2.5 px-3 rounded-xl font-bold text-sm hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors flex items-center gap-1"
+                                            className="bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 py-2 px-2 sm:py-2.5 sm:px-3 rounded-lg sm:rounded-xl font-bold text-xs sm:text-sm hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors flex items-center gap-1 shrink-0"
                                         >
                                             <FaExchangeAlt size={12} />
                                             שנה
@@ -124,7 +124,7 @@ export default function PromotionProgress({ onSelectGift, onNavigateToCategory }
                             return (
                                 <button
                                     onClick={() => onSelectGift(promo)}
-                                    className="mt-3 w-full bg-gradient-to-r from-brand-primary to-orange-600 text-white py-2.5 rounded-xl font-bold text-sm hover:from-orange-600 hover:to-orange-700 transition-all flex items-center justify-center gap-2"
+                                    className="mt-2 sm:mt-3 w-full bg-gradient-to-r from-brand-primary to-orange-600 text-white py-2 sm:py-2.5 rounded-lg sm:rounded-xl font-bold text-xs sm:text-sm hover:from-orange-600 hover:to-orange-700 transition-all flex items-center justify-center gap-2"
                                 >
                                     <FaGift size={14} />
                                     {effectiveMax > 1 ? `בחר/י ${effectiveMax} מתנות` : 'בחר/י מתנה'}

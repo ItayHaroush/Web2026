@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { FaWhatsapp, FaPhoneAlt, FaMask, FaShoppingBag, FaTruck, FaClock, FaShieldAlt, FaExclamationTriangle, FaInfoCircle, FaCreditCard, FaMoneyBillWave, FaGift, FaTimes, FaPlus, FaArrowLeft, FaChevronLeft, FaTag, FaMapMarkerAlt, FaCheckCircle } from 'react-icons/fa';
+import { FaWhatsapp, FaPhoneAlt, FaMask, FaShoppingBag, FaTruck, FaClock, FaShieldAlt, FaExclamationTriangle, FaInfoCircle, FaCreditCard, FaMoneyBillWave, FaGift, FaTimes, FaPlus, FaArrowLeft, FaChevronLeft, FaTag, FaCheckCircle, FaHistory, FaMapMarkerAlt } from 'react-icons/fa';
 import { SiWaze } from 'react-icons/si';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
@@ -15,8 +15,7 @@ import { resolveAssetUrl } from '../utils/assets';
 import { API_BASE_URL, TENANT_HEADER } from '../constants/api';
 import MenuItemModal from '../components/MenuItemModal';
 import FutureOrderModal from '../components/FutureOrderModal';
-import ActiveOrdersModal from '../components/ActiveOrdersModal';
-import orderService from '../services/orderService';
+import TopDismissibleBanner from '../components/TopDismissibleBanner';
 import { getSuggestions } from '../components/SuggestionCards';
 
 /**
@@ -37,9 +36,6 @@ export default function MenuPage({ isPreviewMode = false }) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [activeCategory, setActiveCategory] = useState(null);
-    const [activeOrders, setActiveOrders] = useState([]);
-    const [activeOrdersData, setActiveOrdersData] = useState([]);
-    const [showActiveOrdersModal, setShowActiveOrdersModal] = useState(false);
     const [selectedMenuItem, setSelectedMenuItem] = useState(null);
     const [isPWA, setIsPWA] = useState(false);
     const [showFutureOrderModal, setShowFutureOrderModal] = useState(false);
@@ -52,8 +48,15 @@ export default function MenuPage({ isPreviewMode = false }) {
     const [suggestionAddonPicker, setSuggestionAddonPicker] = useState(null);
     const [suggestionSelectedAddons, setSuggestionSelectedAddons] = useState({});
     const [showPromoPopup, setShowPromoPopup] = useState(false);
+    /** פופ־אפ עליון: מסעדה סגורה (במקום טוסט) */
+    const [closedRestaurantNotice, setClosedRestaurantNotice] = useState(null);
+
+    /** מודל הסבר מסעדת דמו — נסגר רק בלחיצת אישור (פעם אחת לסשן) */
+    const [showDemoDisclaimerModal, setShowDemoDisclaimerModal] = useState(false);
     const [reorderDialog, setReorderDialog] = useState(null);
     const [pendingReorderItems, setPendingReorderItems] = useState(null);
+    /** פופ־אפ «הזמנות שלי» — נסגר ב־X ונשמר לסשן לפי מסעדה */
+    const [ordersHintDismissed, setOrdersHintDismissed] = useState(false);
     const categoryRefs = useRef({});
     const tabRefs = useRef({});
 
@@ -124,7 +127,7 @@ export default function MenuPage({ isPreviewMode = false }) {
         } else if (!isOpen && allowsFuture && !futureOrderApproved) {
             setShowFutureOrderModal(true);
         } else {
-            addToast('המסעדה סגורה כרגע — נסה שוב בשעות הפעילות', 'error');
+            setClosedRestaurantNotice('נסה שוב בשעות הפעילות, או בדוק אם קיימת הזמנה מראש.');
             setPendingReorderItems(null);
             localStorage.removeItem('reorder_unavailable');
         }
@@ -139,6 +142,51 @@ export default function MenuPage({ isPreviewMode = false }) {
         const match = window.location.pathname.match(/^\/([^\/]+)\/menu/);
         return match?.[1] || '';
     }, [params?.tenantId, tenantId]);
+
+    useEffect(() => {
+        if (!effectiveTenantId) return;
+        try {
+            setOrdersHintDismissed(sessionStorage.getItem(`menu_orders_hint_${effectiveTenantId}`) === '1');
+        } catch {
+            setOrdersHintDismissed(false);
+        }
+    }, [effectiveTenantId]);
+
+    const dismissOrdersHint = useCallback(() => {
+        if (effectiveTenantId) {
+            try {
+                sessionStorage.setItem(`menu_orders_hint_${effectiveTenantId}`, '1');
+            } catch { /* ignore */ }
+        }
+        setOrdersHintDismissed(true);
+    }, [effectiveTenantId]);
+
+    const acknowledgeDemoDisclaimer = useCallback(() => {
+        if (effectiveTenantId) {
+            try {
+                sessionStorage.setItem(`demo_menu_ack_${effectiveTenantId}`, '1');
+            } catch { /* ignore */ }
+        }
+        setShowDemoDisclaimerModal(false);
+    }, [effectiveTenantId]);
+
+    /** מסעדת דמו: פופ־אפ הסבר פעם לסשן (עד אישור) */
+    useEffect(() => {
+        if (!restaurant?.is_demo || !effectiveTenantId) {
+            setShowDemoDisclaimerModal(false);
+            return;
+        }
+        try {
+            if (sessionStorage.getItem(`demo_menu_ack_${effectiveTenantId}`) === '1') {
+                setShowDemoDisclaimerModal(false);
+                return;
+            }
+        } catch {
+            setShowDemoDisclaimerModal(true);
+            return;
+        }
+        setShowDemoDisclaimerModal(true);
+    }, [restaurant?.is_demo, effectiveTenantId]);
 
     const getWazeLink = () => {
         const query = [restaurant?.address, restaurant?.city].filter(Boolean).join(', ');
@@ -230,10 +278,6 @@ export default function MenuPage({ isPreviewMode = false }) {
         loadMenu();
         loadPromotions();
 
-        // Multi-order: טוען מערך הזמנות פעילות
-        let savedOrders = [];
-        try { savedOrders = JSON.parse(localStorage.getItem(`activeOrders_${effectiveTenantId}`)) || []; } catch { savedOrders = []; }
-        setActiveOrders(savedOrders);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [effectiveTenantId, searchParams, setCustomerInfo]);
 
@@ -320,6 +364,7 @@ export default function MenuPage({ isPreviewMode = false }) {
     }, [restaurant?.common_allergens]);
 
     const isOpenNow = restaurant?.is_open_now ?? restaurant?.is_open;
+    const deliveryMinAmount = restaurant ? (parseFloat(restaurant.delivery_minimum) || 0) : 0;
     const canOrder = isPreviewMode ? true : (isOpenNow !== false);
     const isRegisteredCustomer = isRecognized && !!customer?.id;
     const allowsFutureOrders = restaurant?.allow_future_orders && (restaurant?.accepts_credit_card || isRegisteredCustomer);
@@ -328,9 +373,61 @@ export default function MenuPage({ isPreviewMode = false }) {
     // כשהמסעדה פתוחה — אפשר לתזמן הזמנה עתידית (אופציונלי)
     const canScheduleFuture = canOrder && allowsFutureOrders;
 
+    /** תגית בכרטיס פרטי המסעדה — פותחת מודל; נקרא פעמיים (מובייל/דסקטופ) כדי ליצור אלמנטים נפרדים */
+    const renderFutureOrderRestaurantTag = () => {
+        if (!allowsFutureOrders) return null;
+        const scheduledLabel = scheduledFor
+            ? new Date(scheduledFor).toLocaleDateString('he-IL', {
+                weekday: 'short',
+                day: '2-digit',
+                month: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+            })
+            : '';
+
+        if (futureOrderApproved && scheduledFor) {
+            return (
+                <div className="inline-flex max-w-full min-w-0 items-stretch overflow-hidden rounded-full border border-cyan-500/45 shadow-sm dark:border-cyan-400/40">
+                    <button
+                        type="button"
+                        onClick={() => setShowFutureOrderModal(true)}
+                        className="flex max-w-[11rem] min-w-0 items-center gap-1 rounded-r-none px-2.5 py-1.5 text-xs font-bold leading-tight bg-gradient-to-br from-cyan-50 to-teal-50 text-cyan-900 hover:opacity-95 dark:from-cyan-950/50 dark:to-teal-950/40 dark:text-cyan-100"
+                    >
+                        <FaCheckCircle className="h-3 w-3 shrink-0 text-cyan-600 dark:text-cyan-400" aria-hidden />
+                        <span className="truncate">{scheduledLabel}</span>
+                    </button>
+                    <button
+                        type="button"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setFutureOrderApproved(false);
+                            setScheduledFor(null);
+                        }}
+                        className="flex shrink-0 items-center justify-center rounded-l-none border-r border-cyan-200/80 bg-cyan-100 px-2 text-cyan-800 hover:bg-cyan-200 dark:border-cyan-700/50 dark:bg-cyan-900/60 dark:text-cyan-200 dark:hover:bg-cyan-800/80"
+                        aria-label="ביטול תזמון הזמנה עתידית"
+                    >
+                        <FaTimes className="h-3 w-3" />
+                    </button>
+                </div>
+            );
+        }
+
+        return (
+            <button
+                type="button"
+                onClick={() => setShowFutureOrderModal(true)}
+                className="inline-flex items-center gap-1.5 rounded-full border border-cyan-500/40 bg-gradient-to-br from-cyan-50 to-teal-50/90 px-3 py-1.5 text-xs font-black text-cyan-900 shadow-sm transition hover:border-cyan-500/70 hover:shadow dark:border-cyan-400/35 dark:from-cyan-950/45 dark:to-teal-950/30 dark:text-cyan-100"
+            >
+                <FaClock className="h-3 w-3 shrink-0" aria-hidden />
+                <span>הזמנה עתידית</span>
+            </button>
+        );
+    };
+
     const handleOpenItemModal = (menuItem) => {
         if (!canOrder && !canPreOrder) {
-            addToast('המסעדה סגורה כרגע', 'error');
+            setClosedRestaurantNotice('לא ניתן להזמין כרגע — המסעדה סגורה.');
             return;
         }
         // הזמנה עתידית (מסעדה סגורה) — חייב לאשר תאריך/שעה לפני הוספה לסל
@@ -460,18 +557,58 @@ export default function MenuPage({ isPreviewMode = false }) {
 
     return (
         <CustomerLayout>
-            {/* באנר לקוח חוזר */}
-            {isRecognized && customer?.name && !isPreviewMode && (
-                <div className="mb-4 bg-gradient-to-r from-brand-primary/10 to-orange-50 dark:from-brand-primary/20 dark:to-orange-900/10 border border-brand-primary/20 dark:border-brand-primary/30 rounded-xl px-4 py-3 flex items-center justify-between">
-                    <span className="text-sm font-bold text-gray-800 dark:text-brand-dark-text">
-                        {customer.name} :) רוצה לראות את ההזמנות הקודמות?
-                    </span>
-                    <button
-                        onClick={openOrderHistory}
-                        className="bg-brand-primary text-white px-4 py-1.5 rounded-lg text-sm font-bold hover:bg-brand-secondary transition whitespace-nowrap"
+            <TopDismissibleBanner
+                open={!!closedRestaurantNotice}
+                onClose={() => setClosedRestaurantNotice(null)}
+                title="המסעדה סגורה כעת"
+                message={closedRestaurantNotice || undefined}
+                variant="error"
+            />
+
+            {/* פופ־אפ עליון-ימני — לקוח מזוהה */}
+            {isRecognized && customer?.name && !isPreviewMode && !ordersHintDismissed && (
+                <div
+                    className="fixed top-3 right-3 sm:top-4 sm:right-4 z-[100] w-[min(calc(100vw-1.5rem),19rem)] motion-reduce:animate-none animate-menu-orders-hint-in pointer-events-none"
+                    dir="ltr"
+                >
+                    <div
+                        className="pointer-events-auto relative overflow-hidden rounded-2xl border border-brand-primary/25 bg-white/95 dark:bg-slate-900 dark:border-slate-600 shadow-2xl shadow-brand-primary/15 dark:shadow-black/50 backdrop-blur-md dark:backdrop-blur-none ring-1 ring-black/5 dark:ring-slate-500/40"
+                        role="dialog"
+                        aria-labelledby="menu-orders-hint-title"
+                        dir="rtl"
                     >
-                        ההזמנות שלי
-                    </button>
+                        <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-l from-brand-primary via-orange-400 to-brand-secondary" aria-hidden />
+                        <button
+                            type="button"
+                            onClick={dismissOrdersHint}
+                            className="absolute top-2 right-2 z-10 flex h-8 w-8 items-center justify-center rounded-full text-gray-500 transition hover:bg-gray-100 hover:text-gray-800 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
+                            aria-label="סגור הודעה"
+                        >
+                            <FaTimes className="h-3.5 w-3.5" />
+                        </button>
+                        <div className="p-4 pt-10 pl-4 pr-10 sm:pt-11">
+                            <div className="flex items-start gap-3">
+                                <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-primary/15 text-brand-primary dark:bg-orange-500/25 dark:text-orange-300" aria-hidden>
+                                    <FaHistory className="h-4 w-4" />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                    <p id="menu-orders-hint-title" className="text-sm font-black leading-snug text-gray-900 dark:text-white">
+                                        היי {customer.name}
+                                    </p>
+                                    <p className="mt-1 text-xs font-medium leading-relaxed text-gray-600 dark:text-slate-300">
+                                        רוצה לראות את ההזמנות הקודמות?
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={openOrderHistory}
+                                className="mt-3 w-full rounded-xl bg-brand-primary py-2.5 text-sm font-black text-white shadow-md transition hover:bg-brand-secondary active:scale-[0.98]"
+                            >
+                                ההזמנות שלי
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
 
@@ -484,24 +621,20 @@ export default function MenuPage({ isPreviewMode = false }) {
                         </p>
                     </div>
                     {canPreOrder && !futureOrderApproved && (
-                        <div className="px-4 py-3 bg-amber-50 dark:bg-amber-900/20 border-t border-amber-200 dark:border-amber-500/30">
-                            <p className="text-amber-800 dark:text-amber-300 text-sm font-medium mb-2">
-                                ניתן להזמין מראש — בחר תאריך ושעה להזמנה עתידית
+                        <div className="px-4 py-2.5 bg-amber-50/80 dark:bg-amber-900/15 border-t border-amber-200/80 dark:border-amber-500/25">
+                            <p className="text-amber-900 dark:text-amber-200/95 text-xs sm:text-sm font-medium leading-snug">
+                                ניתן להזמין מראש — בחרו מועד בלחיצה על התגית <strong>״הזמנה עתידית״</strong> בכרטיס פרטי המסעדה למטה.
+                                {!isRegisteredCustomer && restaurant?.accepts_credit_card && (
+                                    <span className="block mt-1 text-[11px] opacity-90">התשלום יתבצע באשראי.</span>
+                                )}
                             </p>
-                            <button
-                                onClick={() => setShowFutureOrderModal(true)}
-                                className="bg-brand-primary text-white px-5 py-2 rounded-xl font-bold text-sm hover:bg-brand-secondary transition-colors flex items-center gap-2"
-                            >
-                                <FaClock />
-                                הזמנה עתידית
-                            </button>
                         </div>
                     )}
                     {canPreOrder && futureOrderApproved && (
-                        <div className="px-4 py-3 bg-green-50 dark:bg-green-900/20 border-t border-green-200 dark:border-green-500/30 flex items-center gap-2">
-                            <FaCheckCircle className="text-green-600 dark:text-green-400 shrink-0" />
-                            <p className="text-green-800 dark:text-green-300 text-sm font-medium">
-                                הזמנה עתידית אושרה — ניתן להוסיף מוצרים לסל.{isRegisteredCustomer ? '' : ' התשלום יתבצע באשראי.'}
+                        <div className="px-4 py-2.5 bg-emerald-50/90 dark:bg-emerald-900/20 border-t border-emerald-200 dark:border-emerald-600/30 flex items-center gap-2">
+                            <FaCheckCircle className="text-emerald-600 dark:text-emerald-400 shrink-0 w-4 h-4" aria-hidden />
+                            <p className="text-emerald-900 dark:text-emerald-200/95 text-xs sm:text-sm font-medium">
+                                ניתן להוסיף מוצרים לסל להזמנה המתוזמנת.{!isRegisteredCustomer && restaurant?.accepts_credit_card ? ' התשלום יתבצע באשראי.' : ''}
                             </p>
                         </div>
                     )}
@@ -515,106 +648,10 @@ export default function MenuPage({ isPreviewMode = false }) {
                 </div>
             )}
 
-            {canScheduleFuture && !futureOrderApproved && (
-                <div className="mb-6 bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/30 rounded-xl px-4 py-3">
-                    <div className="flex items-center justify-between gap-3">
-                        <div className="flex-1">
-                            <p className="text-blue-800 dark:text-blue-300 text-sm font-medium">
-                                רוצה להזמין למועד מאוחר יותר?
-                            </p>
-                        </div>
-                        <button
-                            onClick={() => setShowFutureOrderModal(true)}
-                            className="bg-blue-600 text-white px-4 py-2 rounded-xl font-bold text-sm hover:bg-blue-700 transition-colors flex items-center gap-2 shrink-0"
-                        >
-                            <FaClock size={12} />
-                            הזמנה עתידית
-                        </button>
-                    </div>
-                </div>
-            )}
-            {canScheduleFuture && futureOrderApproved && (
-                <div className="mb-6 bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/30 rounded-xl px-4 py-3 flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                        <FaCheckCircle className="text-blue-600 dark:text-blue-400 shrink-0" />
-                        <p className="text-blue-800 dark:text-blue-300 text-sm font-medium">
-                            הזמנה עתידית ל-{scheduledFor ? new Date(scheduledFor).toLocaleDateString('he-IL', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''}
-                        </p>
-                    </div>
-                    <button
-                        onClick={() => { setFutureOrderApproved(false); setScheduledFor(null); }}
-                        className="text-blue-600 dark:text-blue-400 text-xs font-bold hover:underline shrink-0"
-                    >
-                        ביטול תזמון
-                    </button>
-                </div>
-            )}
-
-            {/* כרטיסייה של הזמנות פעילות */}
-            {activeOrders.length > 0 && (
-                <div className="mb-6 p-4 bg-gradient-to-r from-brand-primary to-brand-secondary rounded-2xl shadow-lg text-white cursor-pointer hover:shadow-xl transition-shadow"
-                    onClick={() => {
-                        if (activeOrders.length === 1) {
-                            navigate(isPreviewMode ? `/admin/preview-order-status/${activeOrders[0]}` : `/${effectiveTenantId || tenantId || ''}/order-status/${activeOrders[0]}`);
-                        } else {
-                            // טוען פרטי הזמנות ופותח מודל
-                            Promise.all(activeOrders.map(id => orderService.getOrder(id).then(r => r.data).catch(() => null)))
-                                .then(results => {
-                                    setActiveOrdersData(results.filter(Boolean));
-                                    setShowActiveOrdersModal(true);
-                                });
-                        }
-                    }}>
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            <div className="relative">
-                                <FaMapMarkerAlt className="text-xl shrink-0" />
-                                {activeOrders.length > 1 && (
-                                    <span className="absolute -top-2 -right-2 bg-white text-brand-primary text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center shadow">
-                                        {activeOrders.length}
-                                    </span>
-                                )}
-                            </div>
-                            <div>
-                                <p className="font-semibold mb-0.5">{activeOrders.length > 1 ? `${activeOrders.length} הזמנות פעילות` : 'הזמנה בעיצומה'}</p>
-                                {activeOrders.length === 1 && <p className="text-sm opacity-90">הזמנה #{activeOrders[0]}</p>}
-                            </div>
-                        </div>
-                        <FaChevronLeft className="text-xl opacity-80 shrink-0" />
-                    </div>
-                    <p className="text-xs opacity-75 mt-2">{activeOrders.length > 1 ? 'לחץ לצפייה בכל ההזמנות' : 'לחץ כדי לראות סטטוס מלא'}</p>
-                </div>
-            )}
-
-            <ActiveOrdersModal
-                isOpen={showActiveOrdersModal}
-                onClose={() => setShowActiveOrdersModal(false)}
-                orders={activeOrdersData}
-                onOrderClick={(id) => {
-                    setShowActiveOrdersModal(false);
-                    navigate(isPreviewMode ? `/admin/preview-order-status/${id}` : `/${effectiveTenantId || tenantId || ''}/order-status/${id}`);
-                }}
-            />
-
-            {/* באנר דמו */}
-            {restaurant?.is_demo && (
-                <div className="mb-6 p-4 bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-400 rounded-2xl shadow-lg">
-                    <div className="flex items-start gap-3">
-                        <FaMask className="text-3xl text-orange-500" />
-                        <div className="flex-1">
-                            <h3 className="font-bold text-amber-900 mb-1">מסעדה לדוגמא</h3>
-                            <p className="text-sm text-amber-800">
-                                זוהי מסעדת דמו לצורכי הדגמה בלבד. ההזמנות כאן אינן אמיתיות.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Hero Section - סגנון Wolt */}
+            {/* Hero Section - סגנון Wolt (מובייל: גובה דינמי — בלי חיתוך לוגו/תגית) */}
             <div className="relative -mx-4 sm:-mx-6 lg:-mx-8 -mt-8 mb-8">
                 {/* רקע עם לוגו גדול */}
-                <div className="relative h-48 sm:h-72 bg-gradient-to-br from-brand-dark via-brand-primary to-brand-secondary overflow-hidden">
+                <div className="relative min-h-[13rem] h-auto sm:h-72 sm:min-h-0 bg-gradient-to-br from-brand-dark via-brand-primary to-brand-secondary overflow-hidden">
                     {/* לוגואים מעומעמים ברקע */}
                     {restaurant?.logo_url && (
                         <>
@@ -646,25 +683,25 @@ export default function MenuPage({ isPreviewMode = false }) {
                         </>
                     )}
 
-                    {/* תוכן ה-Hero */}
-                    <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="text-center text-white px-4">
+                    {/* תוכן ה-Hero — מובייל: בלוק יחסי + ריווח אנכי | sm+: ממורכז באבסולוט */}
+                    <div className="relative z-10 flex min-h-[13rem] flex-col items-center justify-center px-4 pt-10 pb-6 text-center text-white sm:absolute sm:inset-0 sm:min-h-0 sm:py-8 sm:pt-14 sm:pb-8">
+                        <div className="flex w-full max-w-lg flex-col items-center">
                             {restaurant?.logo_url && (
-                                <div className="mb-4 flex justify-center">
-                                    <div className="bg-white p-3 rounded-2xl shadow-2xl">
+                                <div className="mb-4 flex justify-center sm:mb-5">
+                                    <div className="rounded-2xl bg-white p-2.5 shadow-2xl sm:p-3">
                                         <img
                                             src={resolveAssetUrl(restaurant.logo_url)}
                                             alt={restaurant?.name}
-                                            className="h-16 w-16 sm:h-20 sm:w-20 object-contain"
+                                            className="h-14 w-14 object-contain sm:h-20 sm:w-20"
                                         />
                                     </div>
                                 </div>
                             )}
-                            <h1 className="text-3xl sm:text-4xl font-bold mb-2 drop-shadow-lg">
+                            <h1 className="mb-2 px-1 text-xl font-bold drop-shadow-lg sm:text-4xl">
                                 {restaurant?.name || 'תפריט המסעדה'}
                             </h1>
                             {(restaurant?.cuisine_type || restaurant?.restaurant_type) && (
-                                <span className="inline-block bg-white/20 backdrop-blur-sm px-4 py-1 rounded-full text-sm font-bold">
+                                <span className="inline-block max-w-[95vw] whitespace-normal break-words text-center leading-snug bg-white/20 px-3 py-1.5 text-xs font-bold backdrop-blur-sm rounded-full sm:max-w-lg sm:px-4 sm:text-sm">
                                     {restaurant.cuisine_type || (restaurant.restaurant_type ? ({
                                         pizza: 'פיצה',
                                         shawarma: 'שווארמה',
@@ -682,157 +719,55 @@ export default function MenuPage({ isPreviewMode = false }) {
                 {/* כרטיס מידע צף */}
                 {restaurant && (
                     <div className="mx-4 sm:mx-6 lg:mx-8 mt-0 sm:-mt-2 lg:-mt-8 relative z-10">
-                        <div className="bg-white dark:bg-brand-dark-surface rounded-2xl shadow-xl p-4 sm:p-6">
-                            {/* מבנה מובייל - שני שורות */}
-                            <div className="lg:hidden space-y-3">
-                                {/* שורה ראשונה: כתובת+וויז לצד טלפון+חיוג */}
-                                <div className="flex items-center justify-between gap-3">
-                                    {/* כתובת + וויז */}
-                                    <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 flex-1 min-w-0">
-                                        <span className="font-medium truncate">{restaurant.address}</span>
-                                        <a
-                                            href={wazeLink || undefined}
-                                            target="_blank"
-                                            rel="noreferrer"
-                                            className={`flex-shrink-0 flex items-center justify-center h-8 w-8 rounded-full border text-base ${wazeLink ? 'bg-gray-50 dark:bg-brand-dark-border text-brand-primary border-gray-200 dark:border-brand-dark-border hover:bg-gray-100 dark:hover:bg-gray-500' : 'bg-gray-100 text-gray-400 border-transparent cursor-not-allowed pointer-events-none'}`}
-                                            aria-label="פתח ב-Waze"
-                                        >
-                                            <SiWaze className="h-4 w-4" />
-                                        </a>
-                                    </div>
-
-                                    {/* טלפון + חיוג */}
-                                    {restaurant.phone && (
-                                        <div className="flex items-center gap-2 text-sm text-brand-primary font-semibold flex-shrink-0">
-                                            <span className="text-xs sm:text-sm">{restaurant.phone}</span>
-                                            <a
-                                                href={phoneHref || undefined}
-                                                className={`flex items-center justify-center h-8 w-8 rounded-full border text-base ${phoneHref ? 'bg-gray-50 text-emerald-700 border-gray-200 hover:bg-gray-100' : 'bg-gray-100 text-gray-400 border-transparent cursor-not-allowed pointer-events-none'}`}
-                                                aria-label="חייג למסעדה"
-                                            >
-                                                <FaPhoneAlt className="h-3.5 w-3.5" />
-                                            </a>
-                                        </div>
-                                    )}
+                        <div className="bg-white dark:bg-brand-dark-surface rounded-2xl shadow-xl border border-gray-100/90 dark:border-brand-dark-border px-3 py-3 sm:px-4 sm:py-3.5">
+                            {/* שורה עליונה: 3 בעמודה — פתוח · משלוחים · איסוף */}
+                            <div className="grid grid-cols-3 gap-2 sm:gap-2">
+                                <div className={`flex min-w-0 items-center justify-center gap-1 rounded-full border px-2 py-1.5 text-center text-xs font-black shadow-sm ${isOpenNow ? 'border-emerald-200/90 bg-emerald-50 text-emerald-800 dark:border-emerald-800/50 dark:bg-emerald-950/35 dark:text-emerald-200' : 'border-rose-200/90 bg-rose-50 text-rose-800 dark:border-rose-800/40 dark:bg-rose-950/30 dark:text-rose-200'}`}>
+                                    <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${isOpenNow ? 'animate-pulse bg-emerald-500' : 'bg-rose-500'}`} />
+                                    <span className="truncate">{isOpenNow ? 'פתוח' : 'סגור'}</span>
                                 </div>
 
-                                {/* שורה שנייה: מידע נוסף + סטטוס + משלוחים/איסוף */}
-                                <div className="flex items-center gap-2 text-xs flex-wrap">
-                                    {/* כפתור מידע נוסף */}
-                                    <button
-                                        onClick={() => setShowInfoModal(true)}
-                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/30 rounded-lg text-brand-primary transition-colors font-medium"
-                                    >
-                                        <FaInfoCircle className="w-3 h-3" />
-                                        <span>מידע נוסף</span>
-                                    </button>
-
-                                    {/* סטטוס פתיחה */}
-                                    <div className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 ${isOpenNow ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                                        <span className={`w-1.5 h-1.5 rounded-full ${isOpenNow ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
-                                        {isOpenNow ? 'פתוח עכשיו' : 'סגור'}
+                                {restaurant.has_delivery ? (
+                                    <div className="flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-full border border-orange-200/80 bg-orange-50 px-2 py-1.5 text-orange-900 shadow-sm dark:border-orange-800/40 dark:bg-orange-950/30 dark:text-orange-100">
+                                        <div className="flex items-center justify-center gap-1 text-xs font-black">
+                                            <FaTruck className="h-3 w-3 shrink-0" aria-hidden />
+                                            <span className="truncate">משלוחים</span>
+                                        </div>
+                                        <span className={`text-[10px] font-bold leading-none ${deliveryMinAmount > 0 ? 'text-orange-700 dark:text-orange-300' : 'text-orange-700/95 dark:text-orange-300/95'}`}>
+                                            {deliveryMinAmount > 0 ? `מינ׳ ₪${deliveryMinAmount.toFixed(0)}` : 'ללא מינימום'}
+                                        </span>
                                     </div>
+                                ) : (
+                                    <div className="rounded-full border border-transparent min-h-[2.25rem]" aria-hidden />
+                                )}
 
-                                    {/* משלוחים/איסוף */}
-                                    {restaurant.has_delivery && (
-                                        <div className="flex flex-col items-center px-3 py-1.5 bg-orange-50 dark:bg-orange-900/20 text-brand-primary rounded-xl text-xs font-bold">
-                                            <div className="flex items-center gap-1.5">
-                                                <FaTruck className="w-3 h-3" />
-                                                <span>משלוחים</span>
-                                            </div>
-                                            {parseFloat(restaurant.delivery_minimum) > 0 && (
-                                                <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">מינימום ₪{parseFloat(restaurant.delivery_minimum).toFixed(0)}</span>
-                                            )}
-                                        </div>
-                                    )}
-                                    {restaurant.has_pickup && (
-                                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 text-purple-700 rounded-full text-xs font-bold">
-                                            <FaShoppingBag className="w-3 h-3" />
-                                            <span>איסוף עצמי</span>
-                                        </div>
-                                    )}
-                                </div>
+                                {restaurant.has_pickup ? (
+                                    <div className="inline-flex min-w-0 items-center justify-center gap-1 rounded-full border border-violet-200/90 bg-violet-50 px-2.5 py-1.5 text-violet-800 shadow-sm dark:border-violet-800/45 dark:bg-violet-950/35 dark:text-violet-200">
+                                        <FaShoppingBag className="h-3 w-3 shrink-0" aria-hidden />
+                                        <span className="truncate text-xs font-black">איסוף</span>
+                                    </div>
+                                ) : (
+                                    <div className="rounded-full border border-transparent min-h-[2.25rem]" aria-hidden />
+                                )}
                             </div>
 
-                            {/* מבנה דסקטופ - שורה אחת */}
-                            <div className="hidden lg:flex items-center justify-between gap-4">
-                                {/* פרטים */}
-                                <div className="flex items-start gap-4 flex-1">
-                                    {restaurant.logo_url && (
-                                        <img
-                                            src={resolveAssetUrl(restaurant.logo_url)}
-                                            alt=""
-                                            className="h-12 w-12 object-contain opacity-50"
-                                        />
-                                    )}
-                                    <div className="space-y-2 flex-1">
-                                        <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-                                            <span className="font-medium">{restaurant.address}</span>
-                                            <a
-                                                href={wazeLink || undefined}
-                                                target="_blank"
-                                                rel="noreferrer"
-                                                className={`flex items-center justify-center h-9 w-9 rounded-full border text-base ${wazeLink ? 'bg-gray-50 dark:bg-brand-dark-border text-brand-primary border-gray-200 dark:border-brand-dark-border hover:bg-gray-100 dark:hover:bg-gray-500' : 'bg-gray-100 text-gray-400 border-transparent cursor-not-allowed pointer-events-none'}`}
-                                                aria-label="פתח ב-Waze"
-                                            >
-                                                <SiWaze className="h-5 w-5" />
-                                            </a>
-                                        </div>
-                                        {restaurant.phone && (
-                                            <div className="flex items-center gap-2 text-sm text-brand-primary font-semibold">
-                                                <span>{restaurant.phone}</span>
-                                                <a
-                                                    href={phoneHref || undefined}
-                                                    className={`flex items-center justify-center h-9 w-9 rounded-full border text-base ${phoneHref ? 'bg-gray-50 text-emerald-700 border-gray-200 hover:bg-gray-100' : 'bg-gray-100 text-gray-400 border-transparent cursor-not-allowed pointer-events-none'}`}
-                                                    aria-label="חייג למסעדה"
-                                                >
-                                                    <FaPhoneAlt className="h-4 w-4" />
-                                                </a>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
+                            <div className="my-3 flex items-center gap-3 sm:my-4">
+                                <span className="h-px flex-1 bg-gray-200 dark:bg-brand-dark-border" />
+                                <span className="shrink-0 px-1 text-[10px] font-black tracking-[0.2em] text-gray-400 dark:text-gray-500">··</span>
+                                <span className="h-px flex-1 bg-gray-200 dark:bg-brand-dark-border" />
+                            </div>
 
-                                {/* סטטוס + אייקונים */}
-                                <div className="flex flex-wrap items-center gap-2">
-                                    {/* סטטוס פתיחה */}
-                                    <div className={`px-4 py-2 rounded-full text-sm font-bold flex items-center gap-2 ${isOpenNow ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                                        <span className={`w-2 h-2 rounded-full ${isOpenNow ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
-                                        {isOpenNow ? 'פתוח עכשיו' : 'סגור'}
-                                    </div>
-
-                                    {/* משלוחים/איסוף */}
-                                    {(restaurant.has_delivery || restaurant.has_pickup) && (
-                                        <div className="flex items-center gap-2 text-xs text-gray-600 font-bold">
-                                            {restaurant.has_delivery && (
-                                                <div className="flex flex-col items-center px-3 py-1.5 bg-orange-50 dark:bg-orange-900/20 text-brand-primary rounded-xl">
-                                                    <div className="flex items-center gap-1.5">
-                                                        <FaTruck className="w-3 h-3" />
-                                                        <span>משלוחים</span>
-                                                    </div>
-                                                    {parseFloat(restaurant.delivery_minimum) > 0 && (
-                                                        <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">מינימום ₪{parseFloat(restaurant.delivery_minimum).toFixed(0)}</span>
-                                                    )}
-                                                </div>
-                                            )}
-                                            {restaurant.has_pickup && (
-                                                <div className="flex items-center gap-1.5 px-3 py-2 bg-purple-50 text-purple-700 rounded-full">
-                                                    <FaShoppingBag className="w-3 h-3" />
-                                                    <span>איסוף עצמי</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-
-                                    {/* כפתור מידע נוסף */}
-                                    <button
-                                        onClick={() => setShowInfoModal(true)}
-                                        className="flex items-center gap-2 px-4 py-2 bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/30 text-brand-primary rounded-full text-sm font-bold transition-colors"
-                                    >
-                                        <FaInfoCircle className="w-3 h-3" />
-                                        <span>מידע נוסף</span>
-                                    </button>
-                                </div>
+                            {/* שורה שנייה: הזמנה עתידית · מידע נוסף */}
+                            <div className="flex flex-wrap items-center justify-center gap-2 lg:justify-start">
+                                {allowsFutureOrders && renderFutureOrderRestaurantTag()}
+                                <button
+                                    type="button"
+                                    onClick={() => setShowInfoModal(true)}
+                                    className="inline-flex items-center gap-1.5 rounded-full border-2 border-brand-primary/30 bg-gradient-to-br from-orange-50 to-amber-50/90 px-3 py-1.5 text-xs font-black text-brand-primary shadow-sm transition hover:border-brand-primary/55 hover:shadow dark:from-orange-950/40 dark:to-amber-950/25 dark:text-orange-300 dark:border-orange-500/35"
+                                >
+                                    <FaInfoCircle className="h-3 w-3 shrink-0" aria-hidden />
+                                    מידע נוסף
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -915,8 +850,8 @@ export default function MenuPage({ isPreviewMode = false }) {
                 </div>
             )}
 
-            {/* תוכן התפריט */}
-            <div className="space-y-10 pb-24 md:pb-0">
+            {/* תוכן התפריט — ריווח תחתון מינימלי מול שורת קטגוריות קבועה (מובייל) */}
+            <div className="space-y-6 md:space-y-10 max-md:pb-[calc(3.35rem+env(safe-area-inset-bottom,0px))] md:pb-0">
                 {menu.length === 0 ? (
                     <div className="bg-white dark:bg-brand-dark-surface rounded-2xl shadow-sm p-12 text-center">
                         {restaurant?.logo_url && (
@@ -932,27 +867,27 @@ export default function MenuPage({ isPreviewMode = false }) {
                             className="scroll-mt-32"
                         >
                             {/* כותרת קטגוריה - סגנון Wolt */}
-                            <div className="flex items-center gap-4 mb-6">
+                            <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
                                 {restaurant?.logo_url && (
-                                    <div className="bg-gradient-to-br from-brand-primary/20 to-brand-secondary/20 p-3 rounded-xl">
+                                    <div className="bg-gradient-to-br from-brand-primary/20 to-brand-secondary/20 p-2 sm:p-3 rounded-xl shrink-0">
                                         <img
                                             src={resolveAssetUrl(restaurant.logo_url)}
                                             alt=""
-                                            className="h-8 w-8 object-contain"
+                                            className="h-6 w-6 sm:h-8 sm:w-8 object-contain"
                                         />
                                     </div>
                                 )}
-                                <div className="flex-1">
-                                    <h2 className="text-2xl sm:text-3xl font-bold text-brand-dark dark:text-brand-dark-text">{category.name}</h2>
+                                <div className="flex-1 min-w-0">
+                                    <h2 className="text-lg sm:text-3xl font-bold text-brand-dark dark:text-brand-dark-text">{category.name}</h2>
                                     {category.description && (
-                                        <p className="text-gray-500 dark:text-brand-dark-muted text-sm mt-1">{category.description}</p>
+                                        <p className="text-gray-500 dark:text-brand-dark-muted text-xs sm:text-sm mt-1 line-clamp-2 sm:line-clamp-none">{category.description}</p>
                                     )}
                                 </div>
                                 <div className="hidden sm:block h-px flex-1 bg-gradient-to-l from-transparent via-gray-200 dark:via-brand-dark-border to-transparent"></div>
                             </div>
 
                             {/* Grid של מנות - סגנון Wolt */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                                 {category.items.length === 0 ? (
                                     <p className="text-gray-400 italic col-span-full text-center py-8">אין פריטים זמינים</p>
                                 ) : (
@@ -962,10 +897,10 @@ export default function MenuPage({ isPreviewMode = false }) {
                                             onClick={() => {
                                                 handleOpenItemModal(item);
                                             }}
-                                            className={`bg-white dark:bg-brand-dark-surface rounded-2xl shadow-sm transition-all duration-300 overflow-hidden group border border-gray-100 dark:border-brand-dark-border ${(canOrder || canPreOrder) ? 'cursor-pointer hover:shadow-xl hover:border-brand-primary/30' : 'cursor-not-allowed opacity-80'}`}
+                                            className={`bg-white dark:bg-brand-dark-surface rounded-xl sm:rounded-2xl shadow-sm transition-all duration-300 overflow-hidden group border border-gray-100 dark:border-brand-dark-border ${(canOrder || canPreOrder) ? 'cursor-pointer hover:shadow-xl hover:border-brand-primary/30' : 'cursor-not-allowed opacity-80'}`}
                                         >
-                                            {/* תמונה / לוגו placeholder */}
-                                            <div className="relative h-44 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-brand-dark-border/50 dark:to-brand-dark-bg overflow-hidden">
+                                            {/* תמונה / לוגו placeholder — קומפקטי במובייל */}
+                                            <div className="relative h-32 sm:h-44 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-brand-dark-border/50 dark:to-brand-dark-bg overflow-hidden">
                                                 {item.image_url ? (
                                                     <img
                                                         src={resolveAssetUrl(item.image_url)}
@@ -983,33 +918,33 @@ export default function MenuPage({ isPreviewMode = false }) {
                                                 ) : null}
 
                                                 {/* כפתור הוספה מהיר */}
-                                                <div className="absolute bottom-3 left-3 right-3">
+                                                <div className="absolute bottom-2 left-2 right-2 sm:bottom-3 sm:left-3 sm:right-3">
                                                     <button
                                                         onClick={(e) => {
                                                             e.stopPropagation();
                                                             handleOpenItemModal(item);
                                                         }}
                                                         disabled={!canOrder && !canPreOrder}
-                                                        className={`w-full text-white py-2.5 rounded-xl font-bold shadow-lg transform translate-y-2 opacity-0 transition-all duration-300 flex items-center justify-center gap-2 ${(canOrder || canPreOrder) ? 'bg-brand-primary hover:bg-brand-secondary group-hover:translate-y-0 group-hover:opacity-100' : 'bg-gray-400 cursor-not-allowed'}`}
+                                                        className={`w-full text-white py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-sm sm:text-base font-bold shadow-lg transform translate-y-2 opacity-0 transition-all duration-300 flex items-center justify-center gap-1.5 sm:gap-2 ${(canOrder || canPreOrder) ? 'bg-brand-primary hover:bg-brand-secondary group-hover:translate-y-0 group-hover:opacity-100' : 'bg-gray-400 cursor-not-allowed'}`}
                                                     >
                                                         <span>הוסף</span>
-                                                        <span className="bg-white/20 px-2 py-0.5 rounded-lg text-sm">₪{item.price}</span>
+                                                        <span className="bg-white/20 px-1.5 sm:px-2 py-0.5 rounded-lg text-xs sm:text-sm">₪{item.price}</span>
                                                     </button>
                                                 </div>
                                             </div>
 
                                             {/* פרטי המנה */}
-                                            <div className="p-4">
-                                                <div className="flex justify-between items-start gap-2 mb-2">
-                                                    <h3 className="font-bold text-brand-dark dark:text-brand-dark-text group-hover:text-brand-primary transition-colors line-clamp-1">
+                                            <div className="p-3 sm:p-4">
+                                                <div className="flex justify-between items-start gap-2 mb-1 sm:mb-2">
+                                                    <h3 className="text-sm sm:text-base font-bold text-brand-dark dark:text-brand-dark-text group-hover:text-brand-primary transition-colors line-clamp-2 sm:line-clamp-1">
                                                         {item.name}
                                                     </h3>
-                                                    <span className="text-brand-primary font-bold whitespace-nowrap">
+                                                    <span className="text-brand-primary font-bold whitespace-nowrap text-sm sm:text-base shrink-0">
                                                         ₪{item.price}
                                                     </span>
                                                 </div>
                                                 {item.description && (
-                                                    <p className="text-gray-500 dark:text-brand-dark-muted text-sm line-clamp-2 leading-relaxed">
+                                                    <p className="text-gray-500 dark:text-brand-dark-muted text-xs sm:text-sm line-clamp-2 leading-snug sm:leading-relaxed">
                                                         {item.description}
                                                     </p>
                                                 )}
@@ -1030,6 +965,56 @@ export default function MenuPage({ isPreviewMode = false }) {
                 onAdd={handleAddFromModal}
                 isOrderingEnabled={canOrder || (canPreOrder && futureOrderApproved) || (canScheduleFuture && futureOrderApproved)}
             />
+
+            {/* מודל מסעדת דמו — אישור מפורש */}
+            {showDemoDisclaimerModal && restaurant?.is_demo && (
+                <div
+                    className="fixed inset-0 z-[10000] flex items-end sm:items-center justify-center sm:p-4"
+                    dir="rtl"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="demo-disclaimer-title"
+                >
+                    <div className="absolute inset-0 bg-slate-950/65 backdrop-blur-md" aria-hidden />
+                    <div className="relative w-full sm:max-w-md animate-slide-up sm:animate-none">
+                        <div className="bg-white dark:bg-brand-dark-surface rounded-t-[1.75rem] sm:rounded-3xl shadow-2xl border border-amber-200/80 dark:border-amber-900/40 overflow-hidden ring-1 ring-black/5">
+                            <div className="relative bg-gradient-to-br from-amber-400 via-orange-500 to-rose-500 px-6 pt-8 pb-10 text-white">
+                                <div className="absolute inset-0 opacity-25 bg-[radial-gradient(circle_at_20%_20%,white,transparent_45%),radial-gradient(circle_at_80%_0%,white,transparent_40%)]" />
+                                <div className="relative flex flex-col items-center text-center gap-3">
+                                    <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30 shadow-lg">
+                                        <FaMask className="text-4xl text-white drop-shadow" aria-hidden />
+                                    </div>
+                                    <p className="text-[11px] font-black uppercase tracking-[0.2em] text-white/90">סביבת הדגמה</p>
+                                    <h2 id="demo-disclaimer-title" className="text-2xl sm:text-[1.65rem] font-black leading-tight px-1">
+                                        מסעדה לדוגמה
+                                    </h2>
+                                </div>
+                            </div>
+                            <div className="px-5 sm:px-6 pt-2 pb-6 sm:pb-7 -mt-6 relative">
+                                <div className="rounded-2xl bg-amber-50/95 dark:bg-amber-950/35 border border-amber-200/90 dark:border-amber-800/50 p-4 sm:p-5 shadow-sm">
+                                    <p className="text-sm text-amber-950 dark:text-amber-100/95 leading-relaxed font-medium text-center">
+                                        זוהי <strong>מסעדת דמו</strong> לצורכי הדגמה והיכרות עם המערכת בלבד.
+                                        <span className="block mt-2 text-amber-900/90 dark:text-amber-200/90 text-[13px]">
+                                            הזמנות ותשלומים כאן אינם אמיתיים ואינם נשלחים לטיפול עסקי.
+                                        </span>
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={acknowledgeDemoDisclaimer}
+                                    className="mt-5 w-full py-3.5 rounded-2xl font-black text-base text-white bg-gradient-to-l from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 dark:from-amber-500 dark:to-orange-600 shadow-lg shadow-orange-500/25 transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
+                                >
+                                    <FaCheckCircle className="text-xl opacity-95" aria-hidden />
+                                    הבנתי, המשך לתפריט
+                                </button>
+                                <p className="text-center text-[11px] text-gray-400 dark:text-gray-500 mt-3 font-medium">
+                                    לחיצה מהווה אישור שהבנתם שמדובר בסביבת הדגמה
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* מודל מידע נוסף */}
             {showInfoModal && restaurant && (
@@ -1055,6 +1040,45 @@ export default function MenuPage({ isPreviewMode = false }) {
 
                         {/* תוכן */}
                         <div className="p-6 space-y-6">
+                            {/* יצירת קשר, כתובת וניווט */}
+                            {(restaurant.address || restaurant.city || restaurant.phone || wazeLink) && (
+                                <div className="space-y-4 rounded-2xl border border-gray-200/90 bg-gray-50/90 p-4 dark:border-brand-dark-border dark:bg-brand-dark-bg/90">
+                                    <div className="flex items-center gap-2 border-b border-gray-200/80 pb-2 dark:border-brand-dark-border">
+                                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-primary/10 text-brand-primary dark:bg-brand-primary/20 dark:text-orange-300">
+                                            <FaMapMarkerAlt className="h-4 w-4" aria-hidden />
+                                        </div>
+                                        <h4 className="text-sm font-black text-gray-900 dark:text-brand-dark-text">כתובת ויצירת קשר</h4>
+                                    </div>
+                                    {(restaurant.address || restaurant.city) && (
+                                        <p className="text-sm font-medium leading-relaxed text-gray-700 dark:text-brand-dark-muted">
+                                            {[restaurant.address, restaurant.city].filter(Boolean).join(', ')}
+                                        </p>
+                                    )}
+                                    <div className="flex flex-wrap gap-2">
+                                        {wazeLink && (
+                                            <a
+                                                href={wazeLink}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="inline-flex flex-1 min-w-[8.5rem] items-center justify-center gap-2 rounded-xl bg-[#33CCFF]/15 px-3 py-2.5 text-sm font-black text-sky-800 ring-1 ring-sky-400/30 transition hover:bg-[#33CCFF]/25 dark:text-sky-200 dark:ring-sky-500/40"
+                                            >
+                                                <SiWaze className="h-4 w-4 text-[#33CCFF]" aria-hidden />
+                                                פתח ב-Waze
+                                            </a>
+                                        )}
+                                        {phoneHref && restaurant.phone && (
+                                            <a
+                                                href={phoneHref}
+                                                className="inline-flex flex-1 min-w-[8.5rem] items-center justify-center gap-2 rounded-xl bg-emerald-50 px-3 py-2.5 text-sm font-black text-emerald-800 ring-1 ring-emerald-200/90 transition hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-200 dark:ring-emerald-800/50"
+                                            >
+                                                <FaPhoneAlt className="h-3.5 w-3.5" aria-hidden />
+                                                <span dir="ltr" className="truncate">{restaurant.phone}</span>
+                                            </a>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
                             {/* כשרות */}
                             {(restaurant.kosher_type || restaurant.kosher_certificate || restaurant.kosher_notes) && (
                                 <div className="space-y-3">
@@ -1133,15 +1157,14 @@ export default function MenuPage({ isPreviewMode = false }) {
                                             <div className="flex items-center justify-between text-sm">
                                                 <span className="text-gray-600 dark:text-brand-dark-muted">מינימום הזמנה למשלוח:</span>
                                                 <span className="font-bold text-brand-primary">
-                                                    {parseFloat(restaurant.delivery_minimum) > 0 ? `₪${parseFloat(restaurant.delivery_minimum).toFixed(0)}` : 'ללא מינימום'}
+                                                    {deliveryMinAmount > 0 ? `₪${deliveryMinAmount.toFixed(0)}` : 'ללא מינימום'}
                                                 </span>
                                             </div>
                                         )}
                                         {restaurant.has_pickup && (
-                                            <div className="flex items-center justify-between text-sm">
-                                                <span className="text-gray-600 dark:text-brand-dark-muted">מינימום הזמנה לאיסוף:</span>
-                                                <span className="font-bold text-gray-500 dark:text-gray-400">אין</span>
-                                            </div>
+                                            <p className="text-sm text-gray-600 dark:text-brand-dark-muted">
+                                                איסוף עצמי מהמסעדה זמין.
+                                            </p>
                                         )}
                                     </div>
                                 </div>
@@ -1159,8 +1182,8 @@ export default function MenuPage({ isPreviewMode = false }) {
                                         מזומן
                                     </span>
                                     {restaurant.available_payment_methods?.includes('credit_card') && (
-                                        <span className="text-xs text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 px-2.5 py-1 rounded-md flex items-center gap-1.5">
-                                            <FaCreditCard size={10} />
+                                        <span className="text-xs text-brand-muted dark:text-orange-200 bg-brand-light dark:bg-brand-primary/20 border border-brand-primary/20 dark:border-brand-primary/40 px-2.5 py-1 rounded-md flex items-center gap-1.5">
+                                            <FaCreditCard size={10} className="text-brand-primary dark:text-orange-300" />
                                             כרטיס אשראי
                                         </span>
                                     )}
@@ -1277,10 +1300,10 @@ export default function MenuPage({ isPreviewMode = false }) {
                             {frozenSuggestions.map((suggestion) => {
                                 const Icon = suggestion.icon;
                                 return (
-                                    <div key={suggestion.type} className="bg-gradient-to-l from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-2xl p-4 border border-blue-100 dark:border-blue-800/30">
+                                    <div key={suggestion.type} className="bg-gradient-to-l from-brand-light to-orange-50/80 dark:from-brand-primary/15 dark:to-orange-950/30 rounded-2xl p-3 sm:p-4 border border-brand-primary/15 dark:border-brand-primary/35">
                                         <div className="flex items-center gap-2 mb-3">
-                                            <div className="bg-blue-100 dark:bg-blue-800/30 p-2 rounded-xl">
-                                                <Icon className="text-blue-600 dark:text-blue-400" size={16} />
+                                            <div className="bg-brand-primary/15 dark:bg-brand-primary/25 p-2 rounded-xl">
+                                                <Icon className="text-brand-primary dark:text-orange-300" size={16} />
                                             </div>
                                             <div>
                                                 <p className="font-bold text-gray-800 dark:text-gray-200 text-sm">{suggestion.title}</p>
@@ -1294,7 +1317,7 @@ export default function MenuPage({ isPreviewMode = false }) {
                                                 return (
                                                     <div
                                                         key={item.id}
-                                                        className="flex-shrink-0 w-28 bg-white dark:bg-brand-dark-surface rounded-xl border border-gray-100 dark:border-brand-dark-border overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer relative"
+                                                        className="flex-shrink-0 w-24 sm:w-28 bg-white dark:bg-brand-dark-surface rounded-xl border border-gray-100 dark:border-brand-dark-border overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer relative"
                                                         onClick={() => handleSuggestionQuickAdd(item)}
                                                     >
                                                         {itemQty > 0 && (
@@ -1302,7 +1325,7 @@ export default function MenuPage({ isPreviewMode = false }) {
                                                                 {itemQty}
                                                             </div>
                                                         )}
-                                                        <div className="h-20 bg-gray-50 dark:bg-brand-dark-border/50 overflow-hidden relative">
+                                                        <div className="h-16 sm:h-20 bg-gray-50 dark:bg-brand-dark-border/50 overflow-hidden relative">
                                                             {item.image_url ? (
                                                                 <img src={resolveAssetUrl(item.image_url)} alt="" className="w-full h-full object-cover" />
                                                             ) : restaurant?.logo_url ? (
@@ -1532,6 +1555,7 @@ export default function MenuPage({ isPreviewMode = false }) {
                     addToast('הזמנה עתידית אושרה — ניתן להוסיף מוצרים', 'success');
                 }}
                 restaurant={restaurant}
+                isRegisteredCustomer={isRegisteredCustomer}
             />
 
         </CustomerLayout>

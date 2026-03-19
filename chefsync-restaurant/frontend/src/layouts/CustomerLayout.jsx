@@ -10,7 +10,7 @@ import UserProfileModal from '../components/UserProfileModal';
 import ActiveOrdersModal from '../components/ActiveOrdersModal';
 import OrderHistoryModal from '../components/OrderHistoryModal';
 import orderService from '../services/orderService';
-import { FaUser, FaShoppingBag } from 'react-icons/fa';
+import { FaUser, FaShoppingBag, FaBars, FaTimes } from 'react-icons/fa';
 
 /**
  * Layout ראשי עם ניווט עליון
@@ -26,6 +26,7 @@ export function CustomerLayout({ children }) {
     // הזמנות פעילות + ממתינות לביקורת
     const [showOrdersModal, setShowOrdersModal] = useState(false);
     const [ordersModalData, setOrdersModalData] = useState([]);
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
     // חישוב מספר הזמנות מ-localStorage
     const allOrderIds = useMemo(() => {
@@ -88,6 +89,15 @@ export function CustomerLayout({ children }) {
         return () => clearTimeout(timer);
     }, [isRecognized, openUserModal]);
 
+    useEffect(() => {
+        if (!mobileMenuOpen) return;
+        const prev = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        return () => {
+            document.body.style.overflow = prev;
+        };
+    }, [mobileMenuOpen]);
+
     // כשהמשתמש סוגר את המודל — עדכן dismiss
     const handleModalClose = () => {
         if (!isRecognized) {
@@ -104,20 +114,27 @@ export function CustomerLayout({ children }) {
 
     return (
         <div className="flex flex-col min-h-screen bg-brand-light dark:bg-brand-dark-bg dark:text-brand-dark-text" dir="rtl">
-            {/* Header - always dark */}
-            <header className="sticky top-0 z-50 bg-brand-dark shadow-md border-b border-gray-700">
-                <div className="max-w-6xl mx-auto px-6 py-4">
-                    <div className="flex justify-between items-center">
-                        <Link to="/" className="flex items-center">
+            {/* Header — fixed (עובד יציב בגלילה ב-iOS; sticky נשבר לעיתים עם overflow-x:hidden על html/body) */}
+            <header className="fixed top-0 inset-x-0 z-50 bg-brand-dark shadow-md border-b border-gray-700 overflow-visible pt-[env(safe-area-inset-top,0px)]">
+                <div className="max-w-6xl mx-auto px-3 py-2 sm:px-6 sm:py-4">
+                    <div className="flex items-center justify-between gap-2 min-h-[2.75rem] sm:min-h-0">
+                        <Link
+                            to="/"
+                            className="flex min-w-0 shrink items-center max-w-[52%] sm:max-w-none"
+                            onClick={() => setMobileMenuOpen(false)}
+                        >
                             <img
                                 src={logo}
                                 alt={PRODUCT_NAME}
-                                className="h-12 w-auto transform scale-110 sm:scale-125 origin-center drop-shadow-md brightness-0 invert"
+                                className="h-8 w-auto max-h-9 max-w-[min(160px,42vw)] object-contain object-right drop-shadow-md brightness-0 invert sm:h-12 sm:max-h-none sm:max-w-none sm:origin-center sm:scale-125"
                             />
                         </Link>
-                        <nav className="flex gap-4 sm:gap-6 items-center">
+
+                        {/* דסקטופ / טאבלט — כל הניווט בשורה */}
+                        <nav className="hidden md:flex gap-4 lg:gap-6 items-center shrink-0">
                             <ThemeToggle />
                             <button
+                                type="button"
                                 onClick={openUserModal}
                                 className="relative group"
                                 aria-label="פרופיל משתמש"
@@ -134,6 +151,7 @@ export function CustomerLayout({ children }) {
                             </button>
                             {tenantId && totalOrdersBadge > 0 && (
                                 <button
+                                    type="button"
                                     onClick={handleOrdersClick}
                                     className="relative text-white/80 hover:text-brand-primary transition"
                                     aria-label="הזמנות פעילות"
@@ -144,11 +162,11 @@ export function CustomerLayout({ children }) {
                                     </span>
                                 </button>
                             )}
-                            <Link to="/" className="text-white/80 hover:text-brand-primary transition font-medium">בית</Link>
+                            <Link to="/" className="text-white/80 hover:text-brand-primary transition font-medium whitespace-nowrap">בית</Link>
                             {tenantId && (
                                 <>
-                                    <Link to={menuPath} className="text-white/80 hover:text-brand-primary transition font-medium">תפריט</Link>
-                                    <Link to={cartPath} className="text-white/80 hover:text-brand-primary transition font-medium relative inline-block">
+                                    <Link to={menuPath} className="text-white/80 hover:text-brand-primary transition font-medium whitespace-nowrap">תפריט</Link>
+                                    <Link to={cartPath} className="text-white/80 hover:text-brand-primary transition font-medium relative inline-block whitespace-nowrap">
                                         סל
                                         {getItemCount() > 0 && (
                                             <span className="absolute -top-3 -left-3 bg-brand-primary text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center shadow-md">
@@ -157,25 +175,152 @@ export function CustomerLayout({ children }) {
                                         )}
                                     </Link>
                                     <button
+                                        type="button"
                                         onClick={logout}
-                                        className="text-white/60 hover:text-brand-primary transition text-sm font-medium"
+                                        className="text-white/60 hover:text-brand-primary transition text-sm font-medium whitespace-nowrap"
                                     >
                                         החלף מסעדה
                                     </button>
                                 </>
                             )}
                         </nav>
+
+                        {/* מובייל — אייקונים צפופים + המבורגר (בורר עיצוב בתוך המודל) */}
+                        <div className="flex md:hidden items-center gap-1.5 shrink-0">
+                            <button
+                                type="button"
+                                onClick={openUserModal}
+                                className="relative group p-1"
+                                aria-label="פרופיל משתמש"
+                            >
+                                {isRecognized ? (
+                                    <div className="w-8 h-8 rounded-full bg-brand-primary flex items-center justify-center text-white font-bold text-sm shadow-md">
+                                        {customer?.name?.charAt(0)?.toUpperCase() || <FaUser size={14} />}
+                                    </div>
+                                ) : (
+                                    <div className="w-8 h-8 rounded-full border-2 border-white/60 flex items-center justify-center text-white/60">
+                                        <FaUser size={14} />
+                                    </div>
+                                )}
+                            </button>
+                            {tenantId && totalOrdersBadge > 0 && (
+                                <button
+                                    type="button"
+                                    onClick={() => { setMobileMenuOpen(false); handleOrdersClick(); }}
+                                    className="relative p-1 text-white/80 hover:text-brand-primary transition"
+                                    aria-label="הזמנות פעילות"
+                                >
+                                    <FaShoppingBag size={18} />
+                                    <span className="absolute -top-1 -left-1 bg-brand-primary text-white text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center shadow-md">
+                                        {totalOrdersBadge}
+                                    </span>
+                                </button>
+                            )}
+                            <button
+                                type="button"
+                                onClick={() => setMobileMenuOpen(true)}
+                                className="p-2 rounded-lg text-white/90 hover:bg-white/10 transition"
+                                aria-expanded={mobileMenuOpen}
+                                aria-label="פתח תפריט"
+                            >
+                                <FaBars size={20} />
+                            </button>
+                        </div>
                     </div>
                 </div>
+
+                {/* מודל ניווט מובייל — בורר רקע בשורה מלאה + קישורים */}
+                {mobileMenuOpen && (
+                    <div className="fixed inset-0 z-[100] md:hidden">
+                        <button
+                            type="button"
+                            className="absolute inset-0 bg-black/55 backdrop-blur-[2px]"
+                            aria-label="סגור"
+                            onClick={() => setMobileMenuOpen(false)}
+                        />
+                        <div
+                            className="absolute top-0 left-0 right-0 max-h-[92vh] overflow-y-auto rounded-b-2xl bg-brand-dark shadow-2xl border-b border-gray-600 pt-[env(safe-area-inset-top,0px)]"
+                            role="dialog"
+                            aria-modal="true"
+                            aria-labelledby="mobile-menu-title"
+                        >
+                            <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-white/10">
+                                <h2 id="mobile-menu-title" className="text-sm font-black text-white uppercase tracking-wide">
+                                    תפריט
+                                </h2>
+                                <button
+                                    type="button"
+                                    onClick={() => setMobileMenuOpen(false)}
+                                    className="rounded-full p-2 text-white/80 hover:bg-white/10"
+                                    aria-label="סגור תפריט"
+                                >
+                                    <FaTimes size={20} />
+                                </button>
+                            </div>
+                            <div className="px-4 py-4 space-y-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+                                <ThemeToggle variant="fullWidth" />
+                                <nav className="flex flex-col rounded-xl bg-white/5 overflow-hidden divide-y divide-white/10">
+                                    <Link
+                                        to="/"
+                                        className="px-4 py-3.5 text-base font-bold text-white hover:bg-white/10"
+                                        onClick={() => setMobileMenuOpen(false)}
+                                    >
+                                        בית
+                                    </Link>
+                                    {tenantId && (
+                                        <>
+                                            <Link
+                                                to={menuPath}
+                                                className="px-4 py-3.5 text-base font-bold text-white hover:bg-white/10"
+                                                onClick={() => setMobileMenuOpen(false)}
+                                            >
+                                                תפריט
+                                            </Link>
+                                            <Link
+                                                to={cartPath}
+                                                className="px-4 py-3.5 text-base font-bold text-white hover:bg-white/10 flex items-center justify-between"
+                                                onClick={() => setMobileMenuOpen(false)}
+                                            >
+                                                <span>סל</span>
+                                                {getItemCount() > 0 && (
+                                                    <span className="bg-brand-primary text-white text-xs font-black rounded-full h-6 min-w-[1.5rem] px-1.5 flex items-center justify-center">
+                                                        {getItemCount()}
+                                                    </span>
+                                                )}
+                                            </Link>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setMobileMenuOpen(false);
+                                                    logout();
+                                                }}
+                                                className="px-4 py-3.5 text-base font-bold text-white/70 hover:bg-white/10 text-right w-full"
+                                            >
+                                                החלף מסעדה
+                                            </button>
+                                        </>
+                                    )}
+                                </nav>
+                                <div className="flex justify-center pt-2">
+                                    <img
+                                        src={logo}
+                                        alt=""
+                                        className="h-10 w-auto max-w-[200px] object-contain opacity-50 brightness-0 invert"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </header>
 
-            {/* Main Content */}
-            <main className="flex-1 max-w-6xl mx-auto w-full px-6 py-8">
+            {/* Main — בלי flex-1: הבר fixed לא נספר ב-flex; flex-1 היה יוצר רווח ענק לפני הפוטר אחרי הגלילה */}
+            <main className="max-w-6xl mx-auto w-full px-6 pb-6 sm:pb-8 pt-[calc(env(safe-area-inset-top,0px)+3.75rem)] sm:pt-[calc(env(safe-area-inset-top,0px)+5.75rem)]">
                 {children}
             </main>
 
-            {/* Footer */}
-            <footer className="bg-white dark:bg-brand-dark-surface border-t border-gray-100 dark:border-brand-dark-border text-center py-6 text-sm text-gray-500 dark:text-brand-dark-muted">
+            {/* Footer — mt-auto כשהתוכן קצר, הפוטר נשאר בתחתית מסך */}
+            <footer className="mt-auto bg-white dark:bg-brand-dark-surface border-t border-gray-100 dark:border-brand-dark-border text-center py-6 text-sm text-gray-500 dark:text-brand-dark-muted">
                 <p>{PRODUCT_NAME} © 2026 · {COMPANY_LEGAL_NAME} - {PRODUCT_TAGLINE_HE}</p>
             </footer>
 
