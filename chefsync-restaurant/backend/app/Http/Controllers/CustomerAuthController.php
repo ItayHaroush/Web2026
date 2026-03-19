@@ -193,13 +193,13 @@ class CustomerAuthController extends Controller
     }
 
     /**
-     * התחברות עם טלפון + PIN
+     * התחברות עם טלפון + סיסמה
      */
-    public function loginWithPin(Request $request)
+    public function loginWithPassword(Request $request)
     {
         $request->validate([
             'phone' => 'required|string',
-            'pin' => 'required|string|size:4',
+            'password' => 'required|string',
         ]);
 
         $phone = PhoneValidationService::normalizeIsraeliMobileE164($request->phone);
@@ -211,17 +211,17 @@ class CustomerAuthController extends Controller
         }
 
         $customer = Customer::where('phone', $phone)->first();
-        if (!$customer || !$customer->pin_hash) {
+        if (!$customer || !$customer->password_hash) {
             return response()->json([
                 'success' => false,
-                'message' => 'מספר טלפון או קוד PIN שגוי',
+                'message' => 'מספר טלפון או סיסמה שגויים',
             ], 401);
         }
 
-        if (!Hash::check($request->pin, $customer->pin_hash)) {
+        if (!Hash::check($request->password, $customer->password_hash)) {
             return response()->json([
                 'success' => false,
-                'message' => 'מספר טלפון או קוד PIN שגוי',
+                'message' => 'מספר טלפון או סיסמה שגויים',
             ], 401);
         }
 
@@ -241,23 +241,24 @@ class CustomerAuthController extends Controller
     }
 
     /**
-     * הגדרת PIN (דורש אימות כלקוח)
+     * הגדרת סיסמה (דורש אימות כלקוח — לאחר התחברות ב-SMS)
      */
-    public function setPin(Request $request)
+    public function setPassword(Request $request)
     {
         $request->validate([
-            'pin' => 'required|string|size:4|regex:/^\d{4}$/',
+            'password' => 'required|string|min:6|confirmed',
+            'password_confirmation' => 'required|string|min:6',
         ]);
 
         $customer = $request->customer;
         $customer->update([
-            'pin_hash' => Hash::make($request->pin),
+            'password_hash' => Hash::make($request->password),
             'is_registered' => true,
         ]);
 
         return response()->json([
             'success' => true,
-            'message' => 'קוד PIN נשמר בהצלחה',
+            'message' => 'הסיסמה נשמרה בהצלחה',
         ]);
     }
 
@@ -492,7 +493,7 @@ class CustomerAuthController extends Controller
             'email' => $customer->email,
             'email_verified' => !empty($customer->email_verified_at),
             'is_registered' => $customer->is_registered,
-            'has_pin' => !empty($customer->pin_hash),
+            'has_pin' => !empty($customer->password_hash),
             'has_google' => !empty($customer->google_id),
             'default_delivery_address' => $customer->default_delivery_address,
             'default_delivery_lat' => $customer->default_delivery_lat,

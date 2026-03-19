@@ -2,8 +2,16 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCustomer } from '../context/CustomerContext';
 import { requestPhoneCode, verifyPhoneCode } from '../services/phoneAuthService';
-import apiClient from '../services/apiClient';
-import { FaUser, FaTimes, FaSignOutAlt, FaEdit, FaRedo, FaPhone, FaArrowRight, FaClock, FaTruck, FaStore, FaCheck, FaMapMarkerAlt, FaPlus, FaTrash, FaStar, FaEnvelope, FaExclamationTriangle } from 'react-icons/fa';
+import apiClient, { getPublicTenantId } from '../services/apiClient';
+import { pingCustomerPwa, registerCustomerPush, unregisterCustomerPush } from '../services/customerPwaApi';
+import { fetchNotificationRestaurants, saveNotificationOptIns } from '../services/customerNotificationPrefsApi';
+import {
+    getStoredCustomerFcmToken,
+    requestCustomerFcmToken,
+    getCustomerFcmTokenIfPermitted,
+    clearStoredCustomerFcmToken,
+} from '../services/fcm';
+import { FaUser, FaTimes, FaSignOutAlt, FaEdit, FaRedo, FaPhone, FaArrowRight, FaClock, FaTruck, FaStore, FaCheck, FaMapMarkerAlt, FaPlus, FaTrash, FaStar, FaEnvelope, FaExclamationTriangle, FaLock, FaBell } from 'react-icons/fa';
 
 /**
  * מודל פרופיל משתמש — התחברות, הרשמה, פרופיל והזמנות
@@ -13,13 +21,18 @@ export default function UserProfileModal({ isOpen, onClose }) {
     const navigate = useNavigate();
     const {
         customer, customerToken, isRecognized,
-        checkPhone, loginWithPhone, logout, updateProfile, closeUserModal,
+        checkPhone, loginWithPhone, loginWithPassword, setPassword, logout, updateProfile, closeUserModal,
     } = useCustomer();
 
     // State machine: phone-input → otp-verify → register → profile
     const [step, setStep] = useState('phone-input');
     const [phone, setPhone] = useState('');
     const [otpCode, setOtpCode] = useState('');
+    const [passwordMode, setPasswordMode] = useState(false); // התחברות עם סיסמה במקום OTP
+    const [passwordValue, setPasswordValue] = useState('');
+    const [showSetPasswordOffer, setShowSetPasswordOffer] = useState(false); // הצעה להגדרת סיסמה אחרי התחברות
+    const [passwordOffer, setPasswordOffer] = useState('');
+    const [passwordOfferConfirm, setPasswordOfferConfirm] = useState('');
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
     const [error, setError] = useState('');
@@ -39,6 +52,15 @@ export default function UserProfileModal({ isOpen, onClose }) {
     // Email verification
     const [emailVerifySending, setEmailVerifySending] = useState(false);
     const [emailVerifySent, setEmailVerifySent] = useState(false);
+
+    // התראות Push (פרופיל)
+    const [pushEnabled, setPushEnabled] = useState(false);
+    const [pushToggleLoading, setPushToggleLoading] = useState(false);
+    const [pushMessage, setPushMessage] = useState('');
+    const [notificationRestaurants, setNotificationRestaurants] = useState([]);
+    const [notifPrefsLoading, setNotifPrefsLoading] = useState(false);
+    const [notifPrefsSaving, setNotifPrefsSaving] = useState(false);
+    const pushSectionRef = useRef(null);
 
     // Addresses
     const [addresses, setAddresses] = useState([]);
@@ -66,6 +88,11 @@ export default function UserProfileModal({ isOpen, onClose }) {
             setPhone('');
             setFirstName('');
             setLastName('');
+            setPasswordMode(false);
+            setPasswordValue('');
+            setShowSetPasswordOffer(false);
+            setPasswordOffer('');
+            setPasswordOfferConfirm('');
         }
     }, [isOpen, isRecognized]);
 
@@ -88,6 +115,121 @@ export default function UserProfileModal({ isOpen, onClose }) {
         const t = setTimeout(() => setResendTimer(prev => prev - 1), 1000);
         return () => clearTimeout(t);
     }, [resendTimer]);
+
+    const syncPushFromBrowser = useCallback(() => {
+        try {
+            const granted = typeof Notification !== 'undefined' && Notification.permission === 'granted';
+            const hasTok = !!getStoredCustomerFcmToken();
+            setPushEnabled(granted && hasTok);
+        } catch {
+            setPushEnabled(false);
+        }
+        setPushMessage('');
+    }, []);
+
+    useEffect(() => {
+        if (!isOpen || !isRecognized || step !== 'profile') return;
+        syncPushFromBrowser();
+    }, [isOpen, isRecognized, step, syncPushFromBrowser]);
+
+    const loadNotificationPrefs = useCallback(async () => {
+        const tok = customerToken || localStorage.getItem('customer_token');
+        if (!tok) return;
+        setNotifPrefsLoading(true);
+        try {
+            const rows = await fetchNotificationRestaurants(apiClient, tok);
+            setNotificationRestaurants(rows);
+        } catch {
+            setNotificationRestaurants([]);
+        }
+        setNotifPrefsLoading(false);
+    }, [customerToken]);
+
+    useEffect(() => {
+        if (!isOpen || step !== 'profile' || !customer) return;
+        loadNotificationPrefs();
+    }, [isOpen, step, customer, loadNotificationPrefs]);
+
+    const handleRestaurantNotifToggle = async (tenantId, enabled) => {
+        const tok = customerToken || localStorage.getItem('customer_token');
+        if (!tok) return;
+        const next = notificationRestaurants.map((r) =>
+            r.tenant_id === tenantId ? { ...r, enabled } : r
+        );
+        setNotificationRestaurants(next);
+        setNotifPrefsSaving(true);
+        setPushMessage('');
+        try {
+            await saveNotificationOptIns(
+                apiClient,
+                tok,
+                next.map((r) => ({ tenant_id: r.tenant_id, enabled: r.enabled })),
+                getPublicTenantId() || undefined
+            );
+        } catch (err) {
+            setPushMessage(err?.response?.data?.message || 'שגיאה בשמירת העדפות מסעדות');
+            loadNotificationPrefs();
+        }
+        setNotifPrefsSaving(false);
+    };
+
+    const handlePushToggle = useCallback(async (nextOn) => {
+        setPushMessage('');
+        const tok = customerToken || localStorage.getItem('customer_token');
+        if (!tok) {
+            setPushMessage('יש להתחבר כדי לשמור התראות');
+            return;
+        }
+        if (nextOn && typeof Notification !== 'undefined' && Notification.permission === 'denied') {
+            setPushMessage('הדפדפן חסם התראות — פתחו את הגדרות האתר (בצד הכתובת) ואפשרו התראות');
+            return;
+        }
+        const tidHint = getPublicTenantId() || undefined;
+        const standalone = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(display-mode: standalone)').matches;
+        setPushToggleLoading(true);
+        try {
+            if (nextOn) {
+                let token = getStoredCustomerFcmToken();
+                if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+                    token = await requestCustomerFcmToken();
+                } else if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+                    token = token || (await getCustomerFcmTokenIfPermitted());
+                }
+                if (!token) {
+                    setPushMessage('לא ניתן להפעיל כרגע — נסו דפדפן רגיל או התקנת אפליקציה (לא מתוך פייסבוק/אינסטגרם)');
+                    setPushEnabled(false);
+                    setPushToggleLoading(false);
+                    return;
+                }
+                await registerCustomerPush(apiClient, { tenantId: tidHint, customerToken: tok, token });
+                await pingCustomerPwa(apiClient, {
+                    tenantId: tidHint,
+                    standalone,
+                    pushPermission: 'granted',
+                    customerToken: tok,
+                });
+                setPushEnabled(true);
+                loadNotificationPrefs();
+            } else {
+                const t = getStoredCustomerFcmToken();
+                if (t) {
+                    await unregisterCustomerPush(apiClient, { tenantId: tidHint, customerToken: tok, token: t });
+                }
+                clearStoredCustomerFcmToken();
+                await pingCustomerPwa(apiClient, {
+                    tenantId: tidHint,
+                    standalone,
+                    pushPermission: 'denied',
+                    customerToken: tok,
+                });
+                setPushEnabled(false);
+            }
+        } catch (err) {
+            setPushMessage(err?.response?.data?.message || 'שגיאה בעדכון ההתראות');
+            syncPushFromBrowser();
+        }
+        setPushToggleLoading(false);
+    }, [customerToken, syncPushFromBrowser, loadNotificationPrefs]);
 
     // טעינת הזמנות
     const fetchOrders = useCallback(async (tokenOverride) => {
@@ -156,6 +298,7 @@ export default function UserProfileModal({ isOpen, onClose }) {
                     const loginResult = await loginWithPhone(phone);
                     if (loginResult.success) {
                         setStep('profile');
+                        setShowSetPasswordOffer(!!loginResult.customer && !loginResult.customer.has_pin);
                         const freshToken = localStorage.getItem('customer_token');
                         fetchOrders(freshToken);
                         fetchAddresses(freshToken);
@@ -191,6 +334,7 @@ export default function UserProfileModal({ isOpen, onClose }) {
         const result = await loginWithPhone(phone, fullName);
         if (result.success) {
             setStep('profile');
+            setShowSetPasswordOffer(!!result.customer && !result.customer.has_pin);
             const freshToken = localStorage.getItem('customer_token');
             fetchOrders(freshToken);
             fetchAddresses(freshToken);
@@ -198,6 +342,51 @@ export default function UserProfileModal({ isOpen, onClose }) {
             setError(result.message || 'שגיאה בהרשמה');
         }
         setLoading(false);
+    };
+
+    // התחברות עם סיסמה (ללא OTP)
+    const handleLoginWithPassword = async () => {
+        if (!passwordValue || passwordValue.length < 6) {
+            setError('הסיסמה חייבת להכיל לפחות 6 תווים');
+            return;
+        }
+        setError('');
+        setLoading(true);
+        const result = await loginWithPassword(phone, passwordValue);
+        if (result.success) {
+            setStep('profile');
+            setPasswordMode(false);
+            setPasswordValue('');
+            const freshToken = localStorage.getItem('customer_token');
+            fetchOrders(freshToken);
+            fetchAddresses(freshToken);
+        } else {
+            setError(result.message || 'מספר טלפון או סיסמה שגויים');
+        }
+        setLoading(false);
+    };
+
+    // שמירת סיסמה מהצעה (אחרי התחברות)
+    const handleSetPasswordFromOffer = async () => {
+        if (!passwordOffer || passwordOffer.length < 6) {
+            setError('הסיסמה חייבת להכיל לפחות 6 תווים');
+            return;
+        }
+        if (passwordOffer !== passwordOfferConfirm) {
+            setError('הסיסמאות לא תואמות');
+            return;
+        }
+        setError('');
+        setLoading(true);
+        const result = await setPassword(passwordOffer, passwordOfferConfirm);
+        setLoading(false);
+        if (result.success) {
+            setShowSetPasswordOffer(false);
+            setPasswordOffer('');
+            setPasswordOfferConfirm('');
+        } else {
+            setError(result.message || 'שגיאה בשמירת סיסמה');
+        }
     };
 
     // שמירת פרופיל
@@ -332,38 +521,90 @@ export default function UserProfileModal({ isOpen, onClose }) {
                     {/* === שלב 1: הזנת טלפון === */}
                     {step === 'phone-input' && (
                         <>
-                            <p className="text-sm text-gray-600 dark:text-brand-dark-muted">
-                                הזן מספר טלפון לקבלת קוד אימות
-                            </p>
-                            <p className="text-xs text-gray-400 dark:text-gray-500 -mt-2">
-                                משתמש חדש? ניצור לך חשבון אוטומטית
-                            </p>
-                            <input
-                                ref={phoneInputRef}
-                                type="tel"
-                                dir="ltr"
-                                inputMode="tel"
-                                placeholder="050-1234567"
-                                value={phone}
-                                onChange={(e) => setPhone(e.target.value)}
-                                className="w-full text-center text-lg font-bold border-2 border-gray-200 dark:border-brand-dark-border rounded-xl px-4 py-3 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none transition dark:bg-brand-dark-bg dark:text-brand-dark-text"
-                                onKeyDown={(e) => e.key === 'Enter' && handleSendOtp()}
-                            />
-                            {error && <p className="text-sm text-red-600 text-center">{error}</p>}
-                            <button
-                                onClick={handleSendOtp}
-                                disabled={loading || phone.replace(/\D/g, '').length < 9}
-                                className="w-full bg-brand-primary text-white rounded-xl px-4 py-3 font-bold hover:bg-brand-secondary transition disabled:opacity-50 flex items-center justify-center gap-2"
-                            >
-                                {loading ? (
-                                    <span className="animate-pulse">שולח...</span>
-                                ) : (
-                                    <>
-                                        <FaPhone size={14} />
-                                        <span>שלח קוד אימות</span>
-                                    </>
-                                )}
-                            </button>
+                            {!passwordMode ? (
+                                <>
+                                    <p className="text-sm text-gray-600 dark:text-brand-dark-muted">
+                                        הזן מספר טלפון לקבלת קוד אימות
+                                    </p>
+                                    <p className="text-xs text-gray-400 dark:text-gray-500 -mt-2">
+                                        משתמש חדש? ניצור לך חשבון אוטומטית
+                                    </p>
+                                    <input
+                                        ref={phoneInputRef}
+                                        type="tel"
+                                        dir="ltr"
+                                        inputMode="tel"
+                                        placeholder="050-1234567"
+                                        value={phone}
+                                        onChange={(e) => setPhone(e.target.value)}
+                                        className="w-full text-center text-lg font-bold border-2 border-gray-200 dark:border-brand-dark-border rounded-xl px-4 py-3 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none transition dark:bg-brand-dark-bg dark:text-brand-dark-text"
+                                        onKeyDown={(e) => e.key === 'Enter' && handleSendOtp()}
+                                    />
+                                    {error && <p className="text-sm text-red-600 text-center">{error}</p>}
+                                    <button
+                                        onClick={handleSendOtp}
+                                        disabled={loading || phone.replace(/\D/g, '').length < 9}
+                                        className="w-full bg-brand-primary text-white rounded-xl px-4 py-3 font-bold hover:bg-brand-secondary transition disabled:opacity-50 flex items-center justify-center gap-2"
+                                    >
+                                        {loading ? (
+                                            <span className="animate-pulse">שולח...</span>
+                                        ) : (
+                                            <>
+                                                <FaPhone size={14} />
+                                                <span>שלח קוד אימות</span>
+                                            </>
+                                        )}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => { setPasswordMode(true); setError(''); }}
+                                        className="w-full flex items-center justify-center gap-2 py-2 text-sm text-brand-primary font-bold hover:text-brand-secondary transition"
+                                    >
+                                        <FaLock size={12} />
+                                        <span>התחבר עם סיסמה (ללא SMS)</span>
+                                    </button>
+                                </>
+                            ) : (
+                                <>
+                                    <p className="text-sm text-gray-600 dark:text-brand-dark-muted">
+                                        הזן טלפון וסיסמה לכניסה מהירה
+                                    </p>
+                                    <input
+                                        ref={phoneInputRef}
+                                        type="tel"
+                                        dir="ltr"
+                                        inputMode="tel"
+                                        placeholder="050-1234567"
+                                        value={phone}
+                                        onChange={(e) => setPhone(e.target.value)}
+                                        className="w-full text-center text-lg font-bold border-2 border-gray-200 dark:border-brand-dark-border rounded-xl px-4 py-3 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none transition dark:bg-brand-dark-bg dark:text-brand-dark-text"
+                                    />
+                                    <input
+                                        type="password"
+                                        value={passwordValue}
+                                        onChange={(e) => setPasswordValue(e.target.value)}
+                                        placeholder="סיסמה"
+                                        className="w-full text-center border-2 border-gray-200 dark:border-brand-dark-border rounded-xl px-4 py-3 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none transition dark:bg-brand-dark-bg dark:text-brand-dark-text"
+                                        dir="ltr"
+                                        onKeyDown={(e) => e.key === 'Enter' && handleLoginWithPassword()}
+                                    />
+                                    {error && <p className="text-sm text-red-600 text-center">{error}</p>}
+                                    <button
+                                        onClick={handleLoginWithPassword}
+                                        disabled={loading || phone.replace(/\D/g, '').length < 9 || passwordValue.length < 6}
+                                        className="w-full bg-brand-primary text-white rounded-xl px-4 py-3 font-bold hover:bg-brand-secondary transition disabled:opacity-50 flex items-center justify-center gap-2"
+                                    >
+                                        {loading ? 'מתחבר...' : 'התחבר'}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => { setPasswordMode(false); setPasswordValue(''); setError(''); }}
+                                        className="w-full text-center text-sm text-gray-500 hover:text-gray-700 transition"
+                                    >
+                                        חזרה לקוד SMS
+                                    </button>
+                                </>
+                            )}
                         </>
                     )}
 
@@ -455,6 +696,55 @@ export default function UserProfileModal({ isOpen, onClose }) {
                     {/* === שלב 4: פרופיל === */}
                     {step === 'profile' && customer && (
                         <>
+                            {/* הצעה להגדרת סיסמה — אחרי התחברות ללקוח רשום ללא סיסמה */}
+                            {showSetPasswordOffer && (
+                                <div className="bg-gradient-to-l from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border border-emerald-200 dark:border-emerald-700 rounded-xl p-4 space-y-3">
+                                    <div className="flex items-center gap-2">
+                                        <FaLock className="text-emerald-600 dark:text-emerald-400 flex-shrink-0" size={18} />
+                                        <h3 className="text-sm font-bold text-emerald-800 dark:text-emerald-300">
+                                            כניסה מהירה בלי SMS — הגדר סיסמה
+                                        </h3>
+                                    </div>
+                                    <p className="text-xs text-emerald-700 dark:text-emerald-400">
+                                        בפעם הבאה היכנס עם טלפון וסיסמה, בלי להמתין לקוד
+                                    </p>
+                                    <div className="space-y-2">
+                                        <input
+                                            type="password"
+                                            value={passwordOffer}
+                                            onChange={(e) => setPasswordOffer(e.target.value)}
+                                            placeholder="סיסמה (לפחות 6 תווים)"
+                                            className="w-full border-2 border-emerald-200 dark:border-emerald-600 rounded-lg px-3 py-2 focus:border-emerald-500 outline-none dark:bg-emerald-900/30 dark:text-emerald-100"
+                                            dir="ltr"
+                                        />
+                                        <input
+                                            type="password"
+                                            value={passwordOfferConfirm}
+                                            onChange={(e) => setPasswordOfferConfirm(e.target.value)}
+                                            placeholder="אימות סיסמה"
+                                            className="w-full border-2 border-emerald-200 dark:border-emerald-600 rounded-lg px-3 py-2 focus:border-emerald-500 outline-none dark:bg-emerald-900/30 dark:text-emerald-100"
+                                            dir="ltr"
+                                        />
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={handleSetPasswordFromOffer}
+                                            disabled={loading || passwordOffer.length < 6 || passwordOffer !== passwordOfferConfirm}
+                                            className="flex-1 bg-emerald-600 text-white rounded-lg px-3 py-2 text-sm font-bold hover:bg-emerald-700 transition disabled:opacity-50"
+                                        >
+                                            {loading ? 'שומר...' : 'הגדר סיסמה'}
+                                        </button>
+                                        <button
+                                            onClick={() => { setShowSetPasswordOffer(false); setPasswordOffer(''); setPasswordOfferConfirm(''); setError(''); }}
+                                            className="px-3 py-2 text-sm text-emerald-600 dark:text-emerald-400 hover:underline"
+                                        >
+                                            אולי אחר כך
+                                        </button>
+                                    </div>
+                                    {error && <p className="text-xs text-red-600">{error}</p>}
+                                </div>
+                            )}
+
                             {/* פרטי משתמש */}
                             <div className="flex items-center gap-3">
                                 <div className="w-14 h-14 rounded-full bg-brand-primary/10 flex items-center justify-center flex-shrink-0">
@@ -521,29 +811,69 @@ export default function UserProfileModal({ isOpen, onClose }) {
                                 </div>
                             )}
 
-                            {/* דחיפה להוספת אימייל — כשעדיין אין */}
-                            {!customer.email && !editMode && (
-                                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl p-3 space-y-2">
-                                    <div className="flex items-center gap-2">
-                                        <FaEnvelope className="text-blue-500 flex-shrink-0" size={14} />
-                                        <p className="text-sm text-blue-800 dark:text-blue-300 font-medium">
-                                            הוסף אימייל כדי לקבל קבלות הזמנה וסיכומים במייל
-                                        </p>
-                                    </div>
-                                    <p className="text-xs text-blue-600 dark:text-blue-400">
-                                        ההזמנות שלך יישלחו למייל — תקף גם לשחזור סיסמה ומעקב הזמנות
-                                    </p>
-                                    <button
-                                        onClick={() => {
-                                            setEditMode(true);
-                                            setEditName(customer.name || '');
-                                            setEditEmail('');
-                                        }}
-                                        className="w-full flex items-center justify-center gap-2 bg-blue-500 text-white rounded-lg px-3 py-2 text-xs font-bold hover:bg-blue-600 transition"
-                                    >
-                                        <FaEdit size={12} />
-                                        <span>הוסף אימייל</span>
-                                    </button>
+                            {/* המלצות להשלמת חוויה — רק כשהתראות דחיפה כבויות */}
+                            {!pushEnabled && !editMode && (
+                                <div className="bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700 rounded-xl p-4 space-y-3">
+                                    <p className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">מומלץ לשפר</p>
+                                    <ul className="space-y-3 text-sm text-gray-800 dark:text-brand-dark-text">
+                                        <li className="flex gap-3">
+                                            <FaBell className="text-orange-500 flex-shrink-0 mt-0.5" size={16} />
+                                            <div>
+                                                <p className="font-bold">הפעלת התראות דחיפה</p>
+                                                <p className="text-xs text-gray-600 dark:text-brand-dark-muted mt-0.5">
+                                                    מבצעים וסטטוס הזמנה —{' '}
+                                                    <button
+                                                        type="button"
+                                                        className="text-orange-600 dark:text-orange-400 font-bold underline"
+                                                        onClick={() => pushSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
+                                                    >
+                                                        קפיצה להגדרה
+                                                    </button>
+                                                </p>
+                                            </div>
+                                        </li>
+                                        {!customer.email && (
+                                            <li className="flex gap-3">
+                                                <FaEnvelope className="text-blue-500 flex-shrink-0 mt-0.5" size={16} />
+                                                <div>
+                                                    <p className="font-bold">אימייל לקבלות וחשבוניות</p>
+                                                    <p className="text-xs text-gray-600 dark:text-brand-dark-muted mt-0.5 mb-2">קבלות הזמנה וסיכומים במייל</p>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setEditMode(true);
+                                                            setEditName(customer.name || '');
+                                                            setEditEmail('');
+                                                        }}
+                                                        className="text-xs font-bold text-blue-600 dark:text-blue-400 underline"
+                                                    >
+                                                        הוסף אימייל
+                                                    </button>
+                                                </div>
+                                            </li>
+                                        )}
+                                        {addresses.length === 0 && (
+                                            <li className="flex gap-3">
+                                                <FaMapMarkerAlt className="text-emerald-600 flex-shrink-0 mt-0.5" size={16} />
+                                                <div>
+                                                    <p className="font-bold">כתובת מועדפת</p>
+                                                    <p className="text-xs text-gray-600 dark:text-brand-dark-muted mt-0.5 mb-2">שמירת מיקום למשלוח מהיר</p>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setShowAddressForm(true);
+                                                            setEditingAddress(null);
+                                                            setAddressForm({ label: 'בית', street: '', house_number: '', apartment: '', floor: '', entrance: '', city: '', notes: '' });
+                                                            setError('');
+                                                        }}
+                                                        className="text-xs font-bold text-emerald-600 dark:text-emerald-400 underline"
+                                                    >
+                                                        הוסף כתובת
+                                                    </button>
+                                                </div>
+                                            </li>
+                                        )}
+                                    </ul>
                                 </div>
                             )}
 
@@ -576,6 +906,94 @@ export default function UserProfileModal({ isOpen, onClose }) {
                                     )}
                                 </div>
                             )}
+
+                            {/* התראות Push — מתג + בחירת מסעדות אחרי הפעלה */}
+                            {(() => {
+                                const ua = typeof navigator !== 'undefined' ? (navigator.userAgent || '') : '';
+                                const inFb = /FBAN|FBAV|Instagram/i.test(ua);
+                                const pushOk = typeof window !== 'undefined' && 'Notification' in window && 'serviceWorker' in navigator && !inFb;
+                                return (
+                                    <div
+                                        ref={pushSectionRef}
+                                        id="customer-push-settings"
+                                        className="rounded-xl border-2 border-gray-100 dark:border-brand-dark-border bg-gray-50/80 dark:bg-brand-dark-bg p-4 space-y-3"
+                                    >
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <FaBell className="text-orange-500" size={16} />
+                                            <h3 className="font-bold text-gray-900 dark:text-brand-dark-text text-sm">התראות דחיפה (Push)</h3>
+                                        </div>
+                                        <p className="text-xs text-gray-500 dark:text-brand-dark-muted">
+                                            {pushEnabled
+                                                ? 'בחרו מאיזו מסעדה מותר לשלוח אליכם עדכונים (לפי היסטוריית הזמנות).'
+                                                : 'אחרי ההפעלה תוכלו לסמן מסעדות ספציפיות. כיבוי מוחק את הרישום מהמערכת.'}
+                                        </p>
+                                        {!pushOk ? (
+                                            <p className="text-xs text-amber-700 dark:text-amber-400">
+                                                התראות אינן זמינות בדפדפן זה. נסו Chrome/Safari או התקנת אפליקציה — לא מתוך פייסבוק/אינסטגרם.
+                                            </p>
+                                        ) : (
+                                            <div className="flex items-center justify-between gap-3 pt-1" dir="ltr">
+                                                <span className="text-sm font-bold text-gray-700 dark:text-brand-dark-text rtl:text-right" dir="rtl">
+                                                    {pushEnabled ? 'מופעל' : 'כבוי'}
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    role="switch"
+                                                    aria-checked={pushEnabled}
+                                                    disabled={pushToggleLoading}
+                                                    onClick={() => handlePushToggle(!pushEnabled)}
+                                                    className={`relative w-14 h-8 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-orange-400 disabled:opacity-45 ${pushEnabled ? 'bg-orange-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+                                                >
+                                                    <span
+                                                        className={`absolute top-1 w-6 h-6 rounded-full bg-white shadow-md transition-all ${pushEnabled ? 'left-7' : 'left-1'}`}
+                                                    />
+                                                </button>
+                                            </div>
+                                        )}
+                                        {pushMessage && (
+                                            <p className="text-xs text-red-600 dark:text-red-400 font-medium">{pushMessage}</p>
+                                        )}
+                                        {typeof Notification !== 'undefined' && Notification.permission === 'denied' && (
+                                            <p className="text-xs text-amber-700 dark:text-amber-400">
+                                                ההרשאה נחסמה בדפדפן. יש לפתוח את הגדרות האתר ולאפשר התראות, ואז להפעיל את המתג שוב.
+                                            </p>
+                                        )}
+
+                                        {pushEnabled && pushOk && (
+                                            <div className="mt-2 pt-3 border-t border-gray-200 dark:border-brand-dark-border space-y-2">
+                                                <p className="text-xs font-black text-gray-600 dark:text-brand-dark-muted uppercase tracking-wide">מסעדות מורשות לשלוח התראות</p>
+                                                {notifPrefsLoading && (
+                                                    <p className="text-xs text-gray-500">טוען רשימה…</p>
+                                                )}
+                                                {!notifPrefsLoading && notificationRestaurants.length === 0 && (
+                                                    <p className="text-xs text-gray-500 dark:text-brand-dark-muted">
+                                                        אין עדיין מסעדות מהיסטוריה. לאחר הזמנה ראשונה תוכלו לאשר כאן מי רשאי לעדכן אתכם.
+                                                    </p>
+                                                )}
+                                                {notificationRestaurants.map((r) => (
+                                                    <div
+                                                        key={r.tenant_id}
+                                                        className="flex items-center justify-between gap-2 py-1.5 border-b border-gray-100 dark:border-brand-dark-border last:border-0"
+                                                    >
+                                                        <span className="text-sm font-medium text-gray-800 dark:text-brand-dark-text truncate">{r.name}</span>
+                                                        <button
+                                                            type="button"
+                                                            disabled={notifPrefsSaving}
+                                                            onClick={() => handleRestaurantNotifToggle(r.tenant_id, !r.enabled)}
+                                                            className={`relative w-12 h-7 rounded-full flex-shrink-0 transition-colors disabled:opacity-45 ${r.enabled ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+                                                            dir="ltr"
+                                                        >
+                                                            <span
+                                                                className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow transition-all ${r.enabled ? 'left-6' : 'left-1'}`}
+                                                            />
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })()}
 
                             {/* סטטיסטיקה */}
                             {customer.total_orders > 0 && (

@@ -22,6 +22,7 @@ use App\Models\MonitoringAlert;
 use App\Models\NotificationLog;
 use App\Models\CartSession;
 use App\Services\CustomerOrderMailService;
+use App\Services\CustomerOrderPushService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
@@ -932,8 +933,15 @@ class OrderController extends Controller
                 }
             }
 
-            // שליחת התראת Push מותאמת לסוג המשלוח
+            // שליחת התראת Push מותאמת לסוג המשלוח (צוות — טאבלטים)
             $this->sendStatusNotification($order, $validated['status']);
+
+            // פוש ללקוח קצה (PWA) — אישור / במשלוח / מסירה + ביקורת
+            try {
+                app(CustomerOrderPushService::class)->sendOrderStatusPush($order, $validated['status']);
+            } catch (\Throwable $e) {
+                Log::warning('Customer order push failed', ['error' => $e->getMessage(), 'order_id' => $order->id]);
+            }
 
             // שליחת מייל ללקוח בסיום הזמנה (נמסרה / בוטלה)
             CustomerOrderMailService::sendOnStatusChange($order, $validated['status']);

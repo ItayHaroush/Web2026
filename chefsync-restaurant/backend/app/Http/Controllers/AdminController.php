@@ -20,6 +20,7 @@ use App\Models\DeliveryZone;
 use App\Models\CashMovement;
 use App\Models\CashRegisterShift;
 use App\Services\BasePriceService;
+use App\Services\CustomerOrderPushService;
 use App\Services\HypPaymentService;
 use App\Models\RestaurantPayment;
 use App\Models\RestaurantSubscription;
@@ -2524,6 +2525,13 @@ class AdminController extends Controller
 
         // שליחת מייל ללקוח בסיום הזמנה (נמסרה / בוטלה)
         \App\Services\CustomerOrderMailService::sendOnStatusChange($order, $request->status);
+
+        // פוש ללקוח קצה (PWA)
+        try {
+            app(CustomerOrderPushService::class)->sendOrderStatusPush($order, $request->status);
+        } catch (\Throwable $e) {
+            Log::warning('Customer order push failed (admin)', ['error' => $e->getMessage(), 'order_id' => $order->id]);
+        }
 
         return response()->json([
             'success' => true,

@@ -145,7 +145,8 @@ class SuperAdminBillingController extends Controller
             $query->where('tier', $request->tier);
         }
 
-        $restaurants = $query->orderBy('created_at', 'desc')->paginate(50);
+        $perPage = min(500, max(1, (int) $request->input('per_page', 50)));
+        $restaurants = $query->orderBy('created_at', 'desc')->paginate($perPage);
 
         $restaurants->getCollection()->transform(function ($restaurant) {
             $subscription = $restaurant->subscription;
@@ -748,6 +749,197 @@ class SuperAdminBillingController extends Controller
         return response()->json([
             'success' => true,
             'payments' => $payments,
+        ]);
+    }
+
+    /**
+     * כל תשלומי מסעדה אחת — לניהול ידני (סופר אדמין).
+     */
+    public function restaurantPayments(Request $request, int $id): \Illuminate\Http\JsonResponse
+    {
+        Restaurant::findOrFail($id);
+        $payments = RestaurantPayment::where('restaurant_id', $id)
+            ->orderByDesc('paid_at')
+            ->orderByDesc('created_at')
+            ->paginate((int) $request->input('per_page', 100));
+
+        return response()->json([
+            'success' => true,
+            'payments' => $payments,
+        ]);
+    }
+
+    /**
+     * רישום תשלום ידני (תיעוד פנימי).
+     */
+    public function storeRestaurantPayment(Request $request, int $id): \Illuminate\Http\JsonResponse
+    {
+        $validated = $request->validate([
+            'amount' => 'required|numeric|min:0',
+            'paid_at' => 'nullable|date',
+            'type' => 'nullable|string|max:50',
+            'method' => 'nullable|string|max:100',
+            'reference' => 'nullable|string|max:255',
+            'status' => 'nullable|in:paid,pending,failed',
+        ]);
+
+        $restaurant = Restaurant::findOrFail($id);
+        $paidAt = isset($validated['paid_at'])
+            ? Carbon::parse($validated['paid_at'])
+            : now();
+
+        $payment = RestaurantPayment::create([
+            'restaurant_id' => $restaurant->id,
+            'type' => $validated['type'] ?? 'subscription',
+            'amount' => (float) $validated['amount'],
+            'currency' => 'ILS',
+            'period_start' => null,
+            'period_end' => null,
+            'paid_at' => $paidAt,
+            'method' => $validated['method'] ?? 'manual',
+            'reference' => $validated['reference'] ?? 'manual_super_admin',
+            'status' => $validated['status'] ?? 'paid',
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'התשלום נרשם',
+            'payment' => $payment,
+        ]);
+    }
+
+    /**
+     * עדכון תשלום לתיעוד (סכום, מזהה, תאריך) — לא משנה חשבונית היסטורית.
+     */
+    public function updateRestaurantPayment(Request $request, int $paymentId): \Illuminate\Http\JsonResponse
+    {
+        $payment = RestaurantPayment::findOrFail($paymentId);
+        $validated = $request->validate([
+            'amount' => 'sometimes|numeric|min:0',
+            'reference' => 'sometimes|nullable|string|max:255',
+            'paid_at' => 'sometimes|nullable|date',
+            'method' => 'sometimes|nullable|string|max:100',
+            'status' => 'sometimes|in:paid,pending,failed',
+        ]);
+
+        if (array_key_exists('amount', $validated)) {
+            $payment->amount = $validated['amount'];
+        }
+        if (array_key_exists('reference', $validated)) {
+            $payment->reference = $validated['reference'];
+        }
+        if (array_key_exists('paid_at', $validated) && $validated['paid_at'] !== null) {
+            $payment->paid_at = Carbon::parse($validated['paid_at']);
+        }
+        if (array_key_exists('method', $validated)) {
+            $payment->method = $validated['method'];
+        }
+        if (array_key_exists('status', $validated)) {
+            $payment->status = $validated['status'];
+        }
+        $payment->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'התשלום עודכן',
+            'payment' => $payment->fresh(),
+        ]);
+    }
+
+    /**
+     * מחיקת רשומת תשלום (ניקוי תיעוד). חשבוניות לא משתנות.
+     */
+    public function destroyRestaurantPayment(int $paymentId): \Illuminate\Http\JsonResponse
+    {
+        $payment = RestaurantPayment::findOrFail($paymentId);
+        $payment->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'התשלום נמחק',
+        ]);
+    }
+
+    /**
+     * איחוד כל תשלומי paid מתחילת השנה הקלנדרית לרשומת תשלום אחת.
+     */
+    public function mergeRestaurantPaymentsYtd(int $id): \Illuminate\Http\JsonResponse
+    {
+        $restaurant = Restaurant::findOrFail($id);
+        $year = now()->year;
+
+        $payments = RestaurantPayment::where('restaurant_id', $restaurant->id)
+            ->where('status', 'paid')
+            ->whereYear('paid_at', $year)
+            ->orderBy('paid_at')
+            ->get();
+
+        if ($payments->count() < 2) {
+            return response()->json([
+                'success' => false,
+                'message' => 'נדרשות לפחות 2 תשלומים ששולמו בשנה ' . $year . ' לאיחוד',
+            ], 422);
+        }
+
+        $count = $payments->count();
+        $total = (float) $payments->sum('amount');
+        $latestPaid = Carbon::parse($payments->max('paid_at'));
+
+        DB::transaction(function () use ($payments, $restaurant, $total, $latestPaid, $year) {
+            foreach ($payments as $p) {
+                $p->delete();
+            }
+            RestaurantPayment::create([
+                'restaurant_id' => $restaurant->id,
+                'type' => 'manual_merge',
+                'amount' => $total,
+                'currency' => 'ILS',
+                'paid_at' => $latestPaid,
+                'method' => 'manual_merge',
+                'reference' => 'merge_ytd_' . $year . '_' . now()->format('YmdHis'),
+                'status' => 'paid',
+            ]);
+        });
+
+        return response()->json([
+            'success' => true,
+            'message' => "אוחדו {$count} תשלומים לרשומה אחת (סה״כ ₪{$total})",
+            'merged_count' => $count,
+            'total' => $total,
+        ]);
+    }
+
+    /**
+     * עדכון תאריך חיוב הבא (מנוי + מסעדה).
+     */
+    public function updateNextCharge(Request $request, int $id): \Illuminate\Http\JsonResponse
+    {
+        $validated = $request->validate([
+            'next_charge_at' => 'required|date',
+        ]);
+
+        $restaurant = Restaurant::findOrFail($id);
+        $at = Carbon::parse($validated['next_charge_at']);
+
+        $subscription = RestaurantSubscription::firstOrCreate(
+            ['restaurant_id' => $restaurant->id],
+            [
+                'monthly_fee' => $restaurant->monthly_price ?? 0,
+                'billing_day' => min(28, max(1, (int) $at->day)),
+                'currency' => 'ILS',
+                'status' => 'active',
+                'outstanding_amount' => 0,
+            ]
+        );
+
+        $subscription->update(['next_charge_at' => $at]);
+        $restaurant->update(['next_payment_at' => $at]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'תאריך החיוב הבא עודכן',
+            'next_charge_at' => $at->toIso8601String(),
+            'subscription' => $subscription->fresh(),
         ]);
     }
 

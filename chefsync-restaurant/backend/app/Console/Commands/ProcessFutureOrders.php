@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\FcmToken;
 use App\Models\MonitoringAlert;
 use App\Models\Order;
+use App\Services\CustomerOrderPushService;
 use App\Services\FcmService;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
@@ -53,6 +54,16 @@ class ProcessFutureOrders extends Command
                         'url' => '/admin/orders',
                     ]
                 );
+
+                $order->refresh();
+                try {
+                    app(CustomerOrderPushService::class)->sendOrderStatusPush($order, Order::STATUS_RECEIVED);
+                } catch (\Throwable $e) {
+                    Log::warning('Customer order push failed (future order)', [
+                        'error' => $e->getMessage(),
+                        'order_id' => $order->id,
+                    ]);
+                }
 
                 // MonitoringAlert
                 MonitoringAlert::create([

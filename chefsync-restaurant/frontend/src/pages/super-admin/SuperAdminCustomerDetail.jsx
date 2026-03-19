@@ -103,6 +103,16 @@ export default function SuperAdminCustomerDetail() {
                             </div>
                             <div className="flex flex-wrap gap-3 text-xs">
                                 <span className="px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 font-bold">{customer.total_orders || 0} הזמנות</span>
+                                {customer.pwa_installed_at && (
+                                    <span className="px-2.5 py-1 rounded-full bg-violet-50 text-violet-700 font-bold">
+                                        PWA {new Date(customer.pwa_installed_at).toLocaleDateString('he-IL')}
+                                    </span>
+                                )}
+                                {customer.push_tokens?.length > 0 && (
+                                    <span className="px-2.5 py-1 rounded-full bg-cyan-50 text-cyan-800 font-bold">
+                                        פוש: {customer.push_tokens.length} מכשירים
+                                    </span>
+                                )}
                                 {customer.is_registered && <span className="px-2.5 py-1 rounded-full bg-green-50 text-green-700 font-bold">רשום</span>}
                                 {customer.user_id && <span className="px-2.5 py-1 rounded-full bg-purple-50 text-purple-700 font-bold flex items-center gap-1"><FaLink size={8} /> מקושר למשתמש</span>}
                                 <span className="px-2.5 py-1 rounded-full bg-gray-50 text-gray-600 font-bold">

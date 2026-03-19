@@ -29,6 +29,8 @@ use App\Http\Controllers\CustomerAuthController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\CustomerAddressController;
 use App\Http\Controllers\SuperAdminCustomerController;
+use App\Http\Controllers\CustomerPwaController;
+use App\Http\Controllers\CustomerNotificationPreferenceController;
 use App\Http\Controllers\SuperAdminCartSessionsController;
 
 /**
@@ -97,6 +99,12 @@ Route::prefix('super-admin')->middleware(['auth:sanctum', 'super_admin'])->group
     Route::get('/billing/restaurants', [SuperAdminBillingController::class, 'restaurants'])->name('super-admin.billing.restaurants');
     Route::post('/billing/restaurants/{id}/charge', [SuperAdminBillingController::class, 'chargeRestaurant'])->name('super-admin.billing.charge');
     Route::get('/billing/payments', [SuperAdminBillingController::class, 'payments'])->name('super-admin.billing.payments');
+    Route::get('/billing/restaurants/{id}/payments', [SuperAdminBillingController::class, 'restaurantPayments'])->name('super-admin.billing.restaurant-payments');
+    Route::post('/billing/restaurants/{id}/payments', [SuperAdminBillingController::class, 'storeRestaurantPayment'])->name('super-admin.billing.restaurant-payments.store');
+    Route::post('/billing/restaurants/{id}/payments/merge-ytd', [SuperAdminBillingController::class, 'mergeRestaurantPaymentsYtd'])->name('super-admin.billing.restaurant-payments.merge-ytd');
+    Route::patch('/billing/restaurants/{id}/next-charge', [SuperAdminBillingController::class, 'updateNextCharge'])->name('super-admin.billing.next-charge');
+    Route::patch('/billing/payments/{paymentId}', [SuperAdminBillingController::class, 'updateRestaurantPayment'])->whereNumber('paymentId')->name('super-admin.billing.payment-update');
+    Route::delete('/billing/payments/{paymentId}', [SuperAdminBillingController::class, 'destroyRestaurantPayment'])->whereNumber('paymentId')->name('super-admin.billing.payment-destroy');
     Route::post('/billing/restaurants/{id}/abandoned-cart-package', [SuperAdminBillingController::class, 'addAbandonedCartPackage'])->name('super-admin.billing.abandoned-cart-package');
 
     // חשבוניות חודשיות
@@ -193,6 +201,10 @@ Route::prefix('super-admin')->middleware(['auth:sanctum', 'super_admin'])->group
     Route::get('/cart-sessions/restaurants', [SuperAdminCartSessionsController::class, 'restaurants'])->name('super-admin.cart-sessions.restaurants');
     Route::get('/customers', [SuperAdminCustomerController::class, 'index'])->name('super-admin.customers.index');
     Route::get('/customers/stats', [SuperAdminCustomerController::class, 'stats'])->name('super-admin.customers.stats');
+    Route::get('/customers/broadcasts', [SuperAdminCustomerController::class, 'broadcastsIndex'])->name('super-admin.customers.broadcasts.index');
+    Route::post('/customers/broadcast', [SuperAdminCustomerController::class, 'broadcast'])->name('super-admin.customers.broadcast');
+    Route::post('/customers/{id}/push', [SuperAdminCustomerController::class, 'sendCustomerPush'])->whereNumber('id')->name('super-admin.customers.push');
+    Route::post('/customers/{id}/sms', [SuperAdminCustomerController::class, 'sendCustomerSms'])->whereNumber('id')->name('super-admin.customers.sms');
     Route::get('/customers/{id}', [SuperAdminCustomerController::class, 'show'])->name('super-admin.customers.show');
     Route::put('/customers/{id}', [SuperAdminCustomerController::class, 'update'])->name('super-admin.customers.update');
     Route::delete('/customers/{id}', [SuperAdminCustomerController::class, 'destroy'])->name('super-admin.customers.destroy');
@@ -502,11 +514,13 @@ Route::middleware(['api', 'tenant'])->group(function () {
 // אימות לקוחות - Customer Auth Routes
 // ============================================
 Route::prefix('customer')->group(function () {
+    Route::post('/pwa/ping', [CustomerPwaController::class, 'ping'])->name('customer.pwa.ping');
+
     // התחברות ציבורית (ללא טוקן)
     Route::post('/auth/check-phone', [CustomerAuthController::class, 'checkPhone'])->name('customer.auth.check-phone');
     Route::post('/auth/phone', [CustomerAuthController::class, 'loginWithPhone'])->name('customer.auth.phone');
     Route::post('/auth/google', [CustomerAuthController::class, 'loginWithGoogle'])->name('customer.auth.google');
-    Route::post('/auth/pin', [CustomerAuthController::class, 'loginWithPin'])->name('customer.auth.pin');
+    Route::post('/auth/password', [CustomerAuthController::class, 'loginWithPassword'])->name('customer.auth.password');
 
     // אימות אימייל — ציבורי (ללא צורך בטוקן לקוח)
     Route::get('/email/verify', [CustomerAuthController::class, 'verifyEmail'])->name('customer.email.verify');
@@ -515,7 +529,7 @@ Route::prefix('customer')->group(function () {
     Route::middleware('customer_auth')->group(function () {
         Route::get('/me', [CustomerAuthController::class, 'me'])->name('customer.me');
         Route::put('/me', [CustomerAuthController::class, 'update'])->name('customer.update');
-        Route::post('/pin', [CustomerAuthController::class, 'setPin'])->name('customer.pin');
+        Route::post('/password', [CustomerAuthController::class, 'setPassword'])->name('customer.password');
         Route::post('/logout', [CustomerAuthController::class, 'logout'])->name('customer.logout');
         Route::post('/email/verify-send', [CustomerAuthController::class, 'sendEmailVerification'])->name('customer.email.verify-send');
         Route::post('/share', [CustomerAuthController::class, 'shareRestaurant'])->name('customer.share');
@@ -531,6 +545,12 @@ Route::prefix('customer')->group(function () {
         Route::put('/addresses/{id}', [CustomerAddressController::class, 'update'])->name('customer.addresses.update');
         Route::delete('/addresses/{id}', [CustomerAddressController::class, 'destroy'])->name('customer.addresses.destroy');
         Route::post('/addresses/{id}/default', [CustomerAddressController::class, 'setDefault'])->name('customer.addresses.default');
+
+        Route::post('/fcm/register', [CustomerPwaController::class, 'registerFcm'])->name('customer.fcm.register');
+        Route::post('/fcm/unregister', [CustomerPwaController::class, 'unregisterFcm'])->name('customer.fcm.unregister');
+
+        Route::get('/notification-restaurants', [CustomerNotificationPreferenceController::class, 'index'])->name('customer.notification-restaurants.index');
+        Route::put('/notification-restaurants', [CustomerNotificationPreferenceController::class, 'update'])->name('customer.notification-restaurants.update');
     });
 });
 

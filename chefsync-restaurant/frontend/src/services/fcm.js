@@ -25,6 +25,8 @@ const messaging = getMessaging(app);
 const VAPID_KEY = 'BGbVAlRKn9V7VrOB9aN8-lAoZ9_q55ox6-pgJ0p7dN9uGPQl6t60ZiJwCzmZj_P2BHmGuMTSMjChxMOJAccvG-o';
 
 const LS_KEY = 'fcmToken';
+/** FCM ללקוחות קצה — נפרד מטוקן אדמין/טאבלט */
+const CUSTOMER_LS_KEY = 'customer_fcm_token';
 
 export function getStoredFcmToken() {
     try {
@@ -48,6 +50,101 @@ export function clearStoredFcmToken() {
     } catch {
         // ignore
     }
+}
+
+export function getStoredCustomerFcmToken() {
+    try {
+        return localStorage.getItem(CUSTOMER_LS_KEY);
+    } catch {
+        return null;
+    }
+}
+
+export function clearStoredCustomerFcmToken() {
+    try {
+        localStorage.removeItem(CUSTOMER_LS_KEY);
+    } catch {
+        // ignore
+    }
+}
+
+/**
+ * רישום FCM עבור לקוח PWA (שומר מפתח נפרד מפאנל המסעדה).
+ */
+export async function requestCustomerFcmToken() {
+    if (isFacebookBrowser()) {
+        return null;
+    }
+
+    if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+        return null;
+    }
+
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+        return null;
+    }
+
+    let swReg;
+    try {
+        swReg = await navigator.serviceWorker.register('/firebase-messaging-sw.js', { scope: '/' });
+    } catch (err) {
+        console.error('[FCM customer] SW register failed', err);
+        throw err;
+    }
+
+    const readyReg = await navigator.serviceWorker.ready;
+
+    const token = await getToken(messaging, {
+        vapidKey: VAPID_KEY,
+        serviceWorkerRegistration: readyReg || swReg,
+    });
+    try {
+        if (token) {
+            localStorage.setItem(CUSTOMER_LS_KEY, token);
+        }
+    } catch {
+        // ignore
+    }
+    return token;
+}
+
+/**
+ * כשהרשאת התראות כבר granted — מביא טוקן בלי לפתוח דיאלוג חדש.
+ */
+export async function getCustomerFcmTokenIfPermitted() {
+    if (isFacebookBrowser()) {
+        return null;
+    }
+    if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+        return null;
+    }
+    if (Notification.permission !== 'granted') {
+        return null;
+    }
+
+    let swReg;
+    try {
+        swReg = await navigator.serviceWorker.register('/firebase-messaging-sw.js', { scope: '/' });
+    } catch (err) {
+        console.error('[FCM customer] SW register failed', err);
+        return null;
+    }
+
+    const readyReg = await navigator.serviceWorker.ready;
+
+    const token = await getToken(messaging, {
+        vapidKey: VAPID_KEY,
+        serviceWorkerRegistration: readyReg || swReg,
+    });
+    try {
+        if (token) {
+            localStorage.setItem(CUSTOMER_LS_KEY, token);
+        }
+    } catch {
+        // ignore
+    }
+    return token;
 }
 
 export async function requestFcmToken() {

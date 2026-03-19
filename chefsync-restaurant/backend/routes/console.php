@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Schedule;
 
 Schedule::command('monitor:stale-orders')->everyFiveMinutes();
 Schedule::command('orders:process-future')->everyFiveMinutes();
+Schedule::command('orders:notify-pending-customer')->everyFiveMinutes();
 Schedule::command('monitor:daily-summary')->dailyAt('22:00');
 // חיוב מנויי מסעדות (B2B) – רץ רק אם הדגל הגלובלי פעיל
 if (config('payment.subscription_billing_enabled')) {

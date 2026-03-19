@@ -54,6 +54,7 @@ class Order extends Model
         'rating',
         'review_text',
         'reviewed_at',
+        'pending_customer_reminder_sent_at',
     ];
 
     protected $appends = ['total'];
@@ -75,6 +76,7 @@ class Order extends Model
         'reviewed_at' => 'datetime',
         'paid_at' => 'datetime',
         'marked_paid_at' => 'datetime',
+        'pending_customer_reminder_sent_at' => 'datetime',
     ];
 
     /**

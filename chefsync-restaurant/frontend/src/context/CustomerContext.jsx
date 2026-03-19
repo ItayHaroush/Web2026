@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import apiClient from '../services/apiClient';
+import apiClient, { getPublicTenantId } from '../services/apiClient';
+import { flushPendingCustomerFcmRegistration, unregisterCustomerPush } from '../services/customerPwaApi';
+import { clearStoredCustomerFcmToken, getStoredCustomerFcmToken } from '../services/fcm';
 
 /**
  * Context לניהול לקוח מזוהה (Recognized/Registered)
@@ -51,6 +53,7 @@ export function CustomerProvider({ children }) {
                 const data = response.data.data;
                 setCustomer(data);
                 persistCustomerData(data);
+                flushPendingCustomerFcmRegistration(apiClient, token);
             }
         } catch (err) {
             if (err?.response?.status === 401) {
@@ -87,6 +90,7 @@ export function CustomerProvider({ children }) {
                 setCustomerToken(token);
                 localStorage.setItem(CUSTOMER_TOKEN_KEY, token);
                 persistCustomerData(customerData);
+                flushPendingCustomerFcmRegistration(apiClient, token);
                 return { success: true, customer: customerData };
             }
             return { success: false, message: response.data?.message };
@@ -100,6 +104,15 @@ export function CustomerProvider({ children }) {
      */
     const logout = useCallback(async () => {
         if (customerToken) {
+            const fcmTok = getStoredCustomerFcmToken();
+            if (fcmTok) {
+                await unregisterCustomerPush(apiClient, {
+                    tenantId: getPublicTenantId() || undefined,
+                    customerToken,
+                    token: fcmTok,
+                });
+            }
+            clearStoredCustomerFcmToken();
             try {
                 await apiClient.post('/customer/logout', {}, {
                     headers: { Authorization: `Bearer ${customerToken}` },
@@ -117,12 +130,15 @@ export function CustomerProvider({ children }) {
     };
 
     /**
-     * הגדרת PIN ללקוח (דורש חיבור כלקוח)
+     * הגדרת סיסמה ללקוח (דורש חיבור כלקוח — לאחר התחברות ב-SMS)
      */
-    const setPin = useCallback(async (pin) => {
+    const setPassword = useCallback(async (password, passwordConfirmation) => {
         if (!customerToken) return { success: false, message: 'לא מחובר' };
         try {
-            const response = await apiClient.post('/customer/pin', { pin }, {
+            const response = await apiClient.post('/customer/password', {
+                password,
+                password_confirmation: passwordConfirmation,
+            }, {
                 headers: { Authorization: `Bearer ${customerToken}` },
             });
             if (response.data?.success) {
@@ -133,9 +149,31 @@ export function CustomerProvider({ children }) {
             }
             return { success: false, message: response.data?.message };
         } catch (err) {
-            return { success: false, message: err?.response?.data?.message || 'שגיאה בשמירת PIN' };
+            const msg = err?.response?.data?.message;
+            return { success: false, message: msg || err?.response?.data?.errors?.password?.[0] || 'שגיאה בשמירת סיסמה' };
         }
     }, [customerToken, customer]);
+
+    /**
+     * התחברות עם טלפון + סיסמה (ללא OTP — למי שהגדיר סיסמה)
+     */
+    const loginWithPassword = useCallback(async (phone, password) => {
+        try {
+            const response = await apiClient.post('/customer/auth/password', { phone, password });
+            if (response.data?.success) {
+                const { customer: customerData, token } = response.data.data;
+                setCustomer(customerData);
+                setCustomerToken(token);
+                localStorage.setItem(CUSTOMER_TOKEN_KEY, token);
+                persistCustomerData(customerData);
+                flushPendingCustomerFcmRegistration(apiClient, token);
+                return { success: true, customer: customerData };
+            }
+            return { success: false, message: response.data?.message };
+        } catch (err) {
+            return { success: false, message: err?.response?.data?.message || 'מספר טלפון או סיסמה שגויים' };
+        }
+    }, []);
 
     /**
      * התחברות עם Google ID Token
@@ -149,6 +187,7 @@ export function CustomerProvider({ children }) {
                 setCustomerToken(token);
                 localStorage.setItem(CUSTOMER_TOKEN_KEY, token);
                 persistCustomerData(customerData);
+                flushPendingCustomerFcmRegistration(apiClient, token);
                 return { success: true, customer: customerData };
             }
             return { success: false, message: response.data?.message };
@@ -201,8 +240,9 @@ export function CustomerProvider({ children }) {
         isRegistered,
         checkPhone,
         loginWithPhone,
+        loginWithPassword,
         loginWithGoogle,
-        setPin,
+        setPassword,
         logout,
         updateProfile,
         clearCustomer,

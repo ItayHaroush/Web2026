@@ -11,6 +11,7 @@ import DevModeBanner from './components/DevModeBanner';
 import CookieConsent from './components/CookieConsent';
 import FacebookInAppWarning from './components/FacebookInAppWarning';
 import PWAInstallBanner from './components/PWAInstallBanner';
+import PwaCustomerEngagement from './components/PwaCustomerEngagement';
 import HomePage from './pages/HomePage';
 import MenuPage from './pages/MenuPage';
 import CartPage from './pages/CartPage';
@@ -49,6 +50,7 @@ import AdminAbandonedCartReminders from './pages/admin/AdminAbandonedCartReminde
 import SuperAdminDashboard from './pages/super-admin/SuperAdminDashboard';
 import SuperAdminReports from './pages/super-admin/SuperAdminReports';
 import SuperAdminInvoices from './pages/super-admin/SuperAdminInvoices';
+import SuperAdminManualBilling from './pages/super-admin/SuperAdminManualBilling';
 import SuperAdminSettings from './pages/super-admin/SuperAdminSettings';
 import SuperAdminOrderDebug from './pages/super-admin/SuperAdminOrderDebug';
 import SuperAdminProfile from './pages/super-admin/SuperAdminProfile';
@@ -127,6 +129,7 @@ function AppRoutes() {
   }
   console.log("Tenant ID:", tenantId);
   return (
+    <>
     <Routes>
       {/* Debug */}
       <Route path="/debug-api" element={<DebugAPI />} />
@@ -419,6 +422,14 @@ function AppRoutes() {
         }
       />
       <Route
+        path="/super-admin/billing-manual"
+        element={
+          <SuperAdminRoute>
+            <SuperAdminManualBilling />
+          </SuperAdminRoute>
+        }
+      />
+      <Route
         path="/super-admin/settings"
         element={
           <SuperAdminRoute>
@@ -536,6 +547,8 @@ function AppRoutes() {
 
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
+    <PwaCustomerEngagement />
+    </>
   );
 }
 

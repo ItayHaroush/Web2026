@@ -15,6 +15,7 @@ import {
     FaEnvelope,
     FaUsers,
     FaShoppingCart,
+    FaCoins,
 } from 'react-icons/fa';
 
 export default function SuperAdminLayout({ children }) {
@@ -49,6 +50,11 @@ export default function SuperAdminLayout({ children }) {
             label: 'חשבוניות',
             path: '/super-admin/invoices',
             icon: <FaReceipt />,
+        },
+        {
+            label: 'תשלומים ידני',
+            path: '/super-admin/billing-manual',
+            icon: <FaCoins />,
         },
         {
             label: 'סלי נטוש',

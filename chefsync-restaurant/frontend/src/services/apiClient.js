@@ -42,6 +42,11 @@ const getTenantId = () => {
     return getTenantIdFromUrl() || localStorage.getItem('tenantId') || '';
 };
 
+/** לבקשות לקוח (PWA / FCM) שדורשות X-Tenant-ID — גם כשהנתיב ב-customer לא עובר interceptor */
+export function getPublicTenantId() {
+    return getTenantId();
+}
+
 // יצירת instance של axios עם ברירות מחדל
 export const apiClient = axios.create({
     baseURL: DEFAULT_API,

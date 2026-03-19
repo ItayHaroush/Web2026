@@ -37,6 +37,8 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const paymentResult = searchParams.get('payment'); // 'success' | 'failed' | null
+    const focusReviewFromPush = searchParams.get('review') === '1';
+    const focusContinueFromPush = searchParams.get('continue') === '1';
     const [order, setOrder] = useState(null);
     const [restaurant, setRestaurant] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -126,6 +128,27 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
         }
     }, [effectiveTenantId]);
 
+    // פתיחה מפוש "הוסף ביקורת" — גלילה לאזור הדירוג
+    useEffect(() => {
+        if (!focusReviewFromPush || !order || order.status !== ORDER_STATUS.DELIVERED) {
+            return;
+        }
+        const t = window.setTimeout(() => {
+            document.getElementById('order-review-section')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 500);
+        return () => window.clearTimeout(t);
+    }, [focusReviewFromPush, order?.id, order?.status]);
+
+    // פתיחה מפוש pending — גלילה לאזור תשלום / המשך תהליך
+    useEffect(() => {
+        if (!focusContinueFromPush || !order || order.status !== 'pending') {
+            return;
+        }
+        const t = window.setTimeout(() => {
+            document.getElementById('order-continue-section')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 500);
+        return () => window.clearTimeout(t);
+    }, [focusContinueFromPush, order?.id, order?.status]);
 
 
     const loadOrder = useCallback(async ({ withLoading = false } = {}) => {
@@ -466,9 +489,12 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
                 </div>
             )}
 
-            {/* כרטיס הזמנה */}
+            {/* כרטיס הזמנה — anchor להמשך תהליך (מזומן ממתין לאישור) */}
             {showStatusCard && (
-                <div className="bg-white dark:bg-brand-dark-surface rounded-2xl shadow-lg dark:shadow-black/20 border border-gray-200 dark:border-brand-dark-border p-6 sm:p-8 max-w-3xl mx-auto">
+                <div
+                    id={order.status === 'pending' && !isPendingPayment ? 'order-continue-section' : undefined}
+                    className="bg-white dark:bg-brand-dark-surface rounded-2xl shadow-lg dark:shadow-black/20 border border-gray-200 dark:border-brand-dark-border p-6 sm:p-8 max-w-3xl mx-auto"
+                >
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-6">
                         <div className="flex items-start gap-3">
                             <div className="mt-1 text-brand-primary">
@@ -613,7 +639,7 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
                             >
                                 {/* ביקורת מוטמעת בתוך המודל */}
                                 {order.status === ORDER_STATUS.DELIVERED && !order.rating && !reviewSuccess && (
-                                    <div className="w-full space-y-4">
+                                    <div className="w-full space-y-4" id="order-review-section">
                                         <div className="border-t border-green-200 pt-4">
                                             <h3 className="text-lg sm:text-xl font-black text-gray-900 dark:text-brand-dark-text mb-3 text-center">
                                                 איך הייתה החוויה?
@@ -730,7 +756,7 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
 
                     {/* מצב הזמנה עתידית ממתינה לתשלום */}
                     {isFutureAwaitingPayment && (
-                        <div className="mt-6 p-6 rounded-xl text-center bg-teal-50 dark:bg-teal-900/20 border-2 border-teal-300 dark:border-teal-700">
+                        <div id="order-continue-section" className="mt-6 p-6 rounded-xl text-center bg-teal-50 dark:bg-teal-900/20 border-2 border-teal-300 dark:border-teal-700">
                             <div className="flex flex-col items-center gap-4">
                                 <div className="w-16 h-16 rounded-full bg-teal-100 dark:bg-teal-800 flex items-center justify-center">
                                     <FaClock className="text-3xl text-teal-600 dark:text-teal-300" />
@@ -758,7 +784,7 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
 
                     {/* כפתור תשלום להזמנה רגילה שממתינה */}
                     {isPendingPayment && !isFutureOrder && paymentResult !== 'failed' && (
-                        <div className="mt-4">
+                        <div id="order-continue-section" className="mt-4">
                             <button
                                 onClick={handleRetryPayment}
                                 disabled={retryingPayment}

@@ -8,18 +8,18 @@ import { FaLock, FaTimes } from 'react-icons/fa';
  * מוצג אחרי הזמנה ראשונה / ביקור שלישי
  */
 export default function CustomerRegistrationSheet({ isOpen, onClose }) {
-    const { customer, loginWithGoogle, setPin, isRegistered } = useCustomer();
-    const [mode, setMode] = useState('main'); // 'main' | 'pin'
-    const [pinValue, setPinValue] = useState('');
-    const [pinConfirm, setPinConfirm] = useState('');
+    const { customer, loginWithGoogle, setPassword, isRegistered } = useCustomer();
+    const [mode, setMode] = useState('main'); // 'main' | 'password'
+    const [passwordValue, setPasswordValue] = useState('');
+    const [passwordConfirm, setPasswordConfirm] = useState('');
     const [error, setError] = useState('');
     const [saving, setSaving] = useState(false);
 
     useEffect(() => {
         if (isOpen) {
             setMode('main');
-            setPinValue('');
-            setPinConfirm('');
+            setPasswordValue('');
+            setPasswordConfirm('');
             setError('');
         }
     }, [isOpen]);
@@ -38,27 +38,27 @@ export default function CustomerRegistrationSheet({ isOpen, onClose }) {
         }
     }, []);
 
-    const handleSetPin = useCallback(async () => {
-        if (pinValue.length !== 4 || !/^\d{4}$/.test(pinValue)) {
-            setError('קוד PIN חייב להכיל 4 ספרות');
+    const handleSetPassword = useCallback(async () => {
+        if (!passwordValue || passwordValue.length < 6) {
+            setError('הסיסמה חייבת להכיל לפחות 6 תווים');
             return;
         }
-        if (pinValue !== pinConfirm) {
-            setError('הקודים לא תואמים');
+        if (passwordValue !== passwordConfirm) {
+            setError('הסיסמאות לא תואמות');
             return;
         }
 
         setSaving(true);
         setError('');
-        const result = await setPin(pinValue);
+        const result = await setPassword(passwordValue, passwordConfirm);
         setSaving(false);
 
         if (result.success) {
             onClose();
         } else {
-            setError(result.message || 'שגיאה בשמירת PIN');
+            setError(result.message || 'שגיאה בשמירת סיסמה');
         }
-    }, [pinValue, pinConfirm, setPin, onClose]);
+    }, [passwordValue, passwordConfirm, setPassword, onClose]);
 
     if (!isOpen || isRegistered) return null;
 
@@ -71,7 +71,7 @@ export default function CustomerRegistrationSheet({ isOpen, onClose }) {
             <div className="relative w-full max-w-lg bg-white dark:bg-brand-dark-surface rounded-t-2xl shadow-2xl p-6 space-y-5 animate-slide-up z-10">
                 <div className="flex items-center justify-between">
                     <h2 className="text-xl font-black text-gray-900 dark:text-brand-dark-text">
-                        {mode === 'main' ? 'שמור את ההזמנות שלך' : 'הגדרת קוד PIN'}
+                        {mode === 'main' ? 'שמור את ההזמנות שלך' : 'הגדרת סיסמה'}
                     </h2>
                     <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition">
                         <FaTimes size={20} />
@@ -94,11 +94,11 @@ export default function CustomerRegistrationSheet({ isOpen, onClose }) {
                             </button>
 
                             <button
-                                onClick={() => setMode('pin')}
+                                onClick={() => setMode('password')}
                                 className="w-full flex items-center justify-center gap-3 bg-brand-primary/10 border-2 border-brand-primary/30 rounded-xl px-4 py-3 font-bold text-brand-primary hover:bg-brand-primary/20 transition"
                             >
                                 <FaLock size={18} />
-                                <span>הגדר קוד PIN</span>
+                                <span>הגדר סיסמה</span>
                             </button>
                         </div>
 
@@ -111,29 +111,27 @@ export default function CustomerRegistrationSheet({ isOpen, onClose }) {
                     </>
                 )}
 
-                {mode === 'pin' && (
+                {mode === 'password' && (
                     <>
                         <p className="text-sm text-gray-600 dark:text-brand-dark-muted">
-                            בחר 4 ספרות לכניסה מהירה בפעם הבאה
+                            בחר סיסמה (לפחות 6 תווים) לכניסה מהירה בפעם הבאה
                         </p>
 
                         <div className="space-y-3">
                             <input
-                                type="tel"
-                                maxLength={4}
-                                value={pinValue}
-                                onChange={(e) => setPinValue(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                                placeholder="קוד PIN"
-                                className="w-full text-center text-2xl tracking-[0.5em] font-bold border-2 border-gray-200 dark:border-brand-dark-border rounded-xl px-4 py-3 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none transition dark:bg-brand-dark-bg dark:text-brand-dark-text"
+                                type="password"
+                                value={passwordValue}
+                                onChange={(e) => setPasswordValue(e.target.value)}
+                                placeholder="סיסמה"
+                                className="w-full border-2 border-gray-200 dark:border-brand-dark-border rounded-xl px-4 py-3 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none transition dark:bg-brand-dark-bg dark:text-brand-dark-text"
                                 autoFocus
                             />
                             <input
-                                type="tel"
-                                maxLength={4}
-                                value={pinConfirm}
-                                onChange={(e) => setPinConfirm(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                                placeholder="אימות קוד PIN"
-                                className="w-full text-center text-2xl tracking-[0.5em] font-bold border-2 border-gray-200 dark:border-brand-dark-border rounded-xl px-4 py-3 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none transition dark:bg-brand-dark-bg dark:text-brand-dark-text"
+                                type="password"
+                                value={passwordConfirm}
+                                onChange={(e) => setPasswordConfirm(e.target.value)}
+                                placeholder="אימות סיסמה"
+                                className="w-full border-2 border-gray-200 dark:border-brand-dark-border rounded-xl px-4 py-3 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none transition dark:bg-brand-dark-bg dark:text-brand-dark-text"
                             />
 
                             {error && (
@@ -141,11 +139,11 @@ export default function CustomerRegistrationSheet({ isOpen, onClose }) {
                             )}
 
                             <button
-                                onClick={handleSetPin}
-                                disabled={saving || pinValue.length !== 4 || pinConfirm.length !== 4}
+                                onClick={handleSetPassword}
+                                disabled={saving || passwordValue.length < 6 || passwordValue !== passwordConfirm}
                                 className="w-full bg-brand-primary text-white rounded-xl px-4 py-3 font-bold hover:bg-brand-secondary transition disabled:opacity-50"
                             >
-                                {saving ? 'שומר...' : 'שמור PIN'}
+                                {saving ? 'שומר...' : 'שמור סיסמה'}
                             </button>
 
                             <button

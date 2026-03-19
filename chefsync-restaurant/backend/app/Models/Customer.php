@@ -17,6 +17,7 @@ class Customer extends Model
         'email_verification_token',
         'google_id',
         'pin_hash',
+        'password_hash',
         'default_delivery_address',
         'default_delivery_lat',
         'default_delivery_lng',
@@ -25,16 +26,24 @@ class Customer extends Model
         'is_registered',
         'last_order_at',
         'total_orders',
+        'pwa_installed_at',
+        'last_app_open_at',
+        'push_opt_in_at',
+        'push_permission',
     ];
 
     protected $hidden = [
         'pin_hash',
+        'password_hash',
         'email_verification_token',
     ];
 
     protected $casts = [
         'is_registered' => 'boolean',
         'last_order_at' => 'datetime',
+        'pwa_installed_at' => 'datetime',
+        'last_app_open_at' => 'datetime',
+        'push_opt_in_at' => 'datetime',
         'email_verified_at' => 'datetime',
         'default_delivery_lat' => 'decimal:7',
         'default_delivery_lng' => 'decimal:7',
@@ -63,5 +72,15 @@ class Customer extends Model
     public function addresses(): HasMany
     {
         return $this->hasMany(CustomerAddress::class);
+    }
+
+    public function pushTokens(): HasMany
+    {
+        return $this->hasMany(CustomerPushToken::class);
+    }
+
+    public function restaurantNotificationOptIns(): HasMany
+    {
+        return $this->hasMany(CustomerRestaurantNotificationOptIn::class);
     }
 }
