@@ -521,6 +521,32 @@ export default function UserProfileModal({ isOpen, onClose }) {
                                 </div>
                             )}
 
+                            {/* דחיפה להוספת אימייל — כשעדיין אין */}
+                            {!customer.email && !editMode && (
+                                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl p-3 space-y-2">
+                                    <div className="flex items-center gap-2">
+                                        <FaEnvelope className="text-blue-500 flex-shrink-0" size={14} />
+                                        <p className="text-sm text-blue-800 dark:text-blue-300 font-medium">
+                                            הוסף אימייל כדי לקבל קבלות הזמנה וסיכומים במייל
+                                        </p>
+                                    </div>
+                                    <p className="text-xs text-blue-600 dark:text-blue-400">
+                                        ההזמנות שלך יישלחו למייל — תקף גם לשחזור סיסמה ומעקב הזמנות
+                                    </p>
+                                    <button
+                                        onClick={() => {
+                                            setEditMode(true);
+                                            setEditName(customer.name || '');
+                                            setEditEmail('');
+                                        }}
+                                        className="w-full flex items-center justify-center gap-2 bg-blue-500 text-white rounded-lg px-3 py-2 text-xs font-bold hover:bg-blue-600 transition"
+                                    >
+                                        <FaEdit size={12} />
+                                        <span>הוסף אימייל</span>
+                                    </button>
+                                </div>
+                            )}
+
                             {/* אימות מייל */}
                             {customer.email && !customer.email_verified && !editMode && (
                                 <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl p-3 space-y-2">

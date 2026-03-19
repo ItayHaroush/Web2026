@@ -389,7 +389,13 @@ class CustomerAuthController extends Controller
             'email_verification_token' => null,
         ]);
 
-        Mail::to($customer->email)->queue(new CustomerWelcomeMail($customer));
+        try {
+            Mail::to($customer->email)->send(new CustomerWelcomeMail($customer));
+            \App\Services\EmailLogService::log($customer->email, 'welcome', 'ברוכים הבאים', $customer->id, 'sent');
+        } catch (\Throwable $e) {
+            Log::warning('Failed to send welcome email after verification', ['customer_id' => $customer->id, 'error' => $e->getMessage()]);
+            try { \App\Services\EmailLogService::log($customer->email, 'welcome', 'ברוכים הבאים', $customer->id, 'failed', $e->getMessage()); } catch (\Throwable $ignore) {}
+        }
 
         return response()->json(['success' => true, 'message' => 'האימייל אומת בהצלחה']);
     }
@@ -407,14 +413,20 @@ class CustomerAuthController extends Controller
             'message' => 'nullable|string|max:500',
         ]);
 
-        Mail::to($request->friend_email)->queue(new CustomerShareMail(
-            $customer->name,
-            $request->restaurant_name,
-            $request->restaurant_url,
-            $request->message
-        ));
-
-        return response()->json(['success' => true, 'message' => 'ההמלצה נשלחה']);
+        try {
+            Mail::to($request->friend_email)->send(new CustomerShareMail(
+                $customer->name,
+                $request->restaurant_name,
+                $request->restaurant_url,
+                $request->message
+            ));
+            \App\Services\EmailLogService::log($request->friend_email, 'share', "שיתוף: {$request->restaurant_name}", $customer->id);
+            return response()->json(['success' => true, 'message' => 'ההמלצה נשלחה']);
+        } catch (\Throwable $e) {
+            Log::warning('Failed to send share email', ['error' => $e->getMessage()]);
+            try { \App\Services\EmailLogService::log($request->friend_email, 'share', "שיתוף: {$request->restaurant_name}", $customer->id, 'failed', $e->getMessage()); } catch (\Throwable $ignore) {}
+            return response()->json(['success' => false, 'message' => 'שליחת המייל נכשלה. נסה שוב.'], 500);
+        }
     }
 
     // ===== Private Helpers =====

@@ -45,12 +45,12 @@ class CustomerOrderMailService
                 $mailable = new CustomerOrderReceiptMail($order, $customer, $restaurant);
                 $subject = "קבלה - הזמנה #{$order->id}";
                 $type = 'order_receipt';
-                Mail::to($customer->email)->queue($mailable);
+                Mail::to($customer->email)->send($mailable);
             } elseif ($newStatus === 'cancelled') {
                 $mailable = new CustomerOrderCancelledMail($order, $customer, $restaurant);
                 $subject = "ביטול הזמנה #{$order->id}";
                 $type = 'order_cancelled';
-                Mail::to($customer->email)->queue($mailable);
+                Mail::to($customer->email)->send($mailable);
             }
 
             if ($type) {
