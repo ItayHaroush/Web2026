@@ -15,6 +15,7 @@ use App\Http\Controllers\FcmTokenController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\DisplayScreenController;
 use App\Http\Controllers\KioskController;
+use App\Http\Controllers\PaymentTerminalController;
 use App\Http\Controllers\PrinterController;
 use App\Http\Controllers\PrintAgentController;
 use App\Http\Controllers\PaymentSettingsController;
@@ -345,6 +346,11 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'tenant'])->group(function (
         Route::post('/payment-settings', [PaymentSettingsController::class, 'saveSettings'])->name('admin.payment-settings.save');
         Route::post('/payment-settings/verify', [PaymentSettingsController::class, 'verifyTerminal'])->name('admin.payment-settings.verify');
 
+        Route::get('/payment-terminals', [PaymentTerminalController::class, 'index'])->name('admin.payment-terminals.index');
+        Route::post('/payment-terminals', [PaymentTerminalController::class, 'store'])->name('admin.payment-terminals.store');
+        Route::put('/payment-terminals/{id}', [PaymentTerminalController::class, 'update'])->name('admin.payment-terminals.update');
+        Route::delete('/payment-terminals/{id}', [PaymentTerminalController::class, 'destroy'])->name('admin.payment-terminals.destroy');
+
         // ניהול עובדים
         Route::get('/employees', [AdminController::class, 'getEmployees'])->name('admin.employees.index');
         Route::put('/employees/{id}', [AdminController::class, 'updateEmployee'])->name('admin.employees.update');
@@ -565,6 +571,7 @@ Route::get('/screen/{token}', [DisplayScreenController::class, 'viewerContent'])
 // קיוסק ציבורי - ללא אימות
 Route::get('/kiosk/{token}/menu', [KioskController::class, 'menu'])->name('kiosk.menu');
 Route::post('/kiosk/{token}/order', [KioskController::class, 'placeOrder'])->name('kiosk.order');
+Route::post('/kiosk/{token}/orders/{orderId}/charge-pinpad', [KioskController::class, 'chargePinpadOrder'])->name('kiosk.order.charge-pinpad');
 
 // רשימת מסעדות - ללא צורך ב-tenant
 Route::get('/restaurants', [RestaurantController::class, 'index'])->name('restaurants.index');

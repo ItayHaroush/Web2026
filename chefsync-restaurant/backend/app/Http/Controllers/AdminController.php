@@ -25,6 +25,7 @@ use App\Services\HypPaymentService;
 use App\Models\RestaurantPayment;
 use App\Models\RestaurantSubscription;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -1949,6 +1950,14 @@ class AdminController extends Controller
             'delivery_minimum' => 'nullable|numeric|min:0',
             'allow_future_orders' => 'sometimes|boolean',
             'abandoned_cart_reminders_enabled' => 'sometimes|boolean',
+            'zcredit_terminal_number' => 'nullable|string|max:64',
+            'zcredit_terminal_password' => 'nullable|string|max:255',
+            'zcredit_pinpad_id' => 'nullable|string|max:64',
+            'default_payment_terminal_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('payment_terminals', 'id')->where('restaurant_id', $restaurant->id),
+            ],
         ]);
 
         if ($request->hasFile('logo')) {
@@ -2071,6 +2080,20 @@ class AdminController extends Controller
 
         if ($request->has('abandoned_cart_reminders_enabled')) {
             $updateData['abandoned_cart_reminders_enabled'] = $request->boolean('abandoned_cart_reminders_enabled');
+        }
+
+        if ($request->has('zcredit_terminal_number')) {
+            $updateData['zcredit_terminal_number'] = $request->input('zcredit_terminal_number') ?: null;
+        }
+        if ($request->has('zcredit_pinpad_id')) {
+            $updateData['zcredit_pinpad_id'] = $request->input('zcredit_pinpad_id') ?: null;
+        }
+        if ($request->has('zcredit_terminal_password') && $request->filled('zcredit_terminal_password')) {
+            $updateData['zcredit_terminal_password'] = $request->input('zcredit_terminal_password');
+        }
+        if ($request->has('default_payment_terminal_id')) {
+            $raw = $request->input('default_payment_terminal_id');
+            $updateData['default_payment_terminal_id'] = ($raw === '' || $raw === null) ? null : (int) $raw;
         }
 
         if ($request->has('common_allergens')) {
@@ -2227,6 +2250,9 @@ class AdminController extends Controller
                 'kosher_notes',
                 'common_allergens',
                 'allergen_notes',
+                'zcredit_terminal_number',
+                'zcredit_pinpad_id',
+                'default_payment_terminal_id',
             ];
             if (in_array($key, $nullableFields)) {
                 return true; // שמור גם null

@@ -21,8 +21,17 @@ export const posApi = {
     // POS Session
     setPosPin: (pin, headers) =>
         api.post('/admin/pos/set-pin', { pin }, { headers }),
-    verifyPin: (pin, headers) =>
-        api.post('/admin/pos/verify-pin', { pin }, { headers }),
+    verifyPin: (pin, headers, paymentTerminalId) =>
+        api.post(
+            '/admin/pos/verify-pin',
+            {
+                pin,
+                ...(paymentTerminalId ? { payment_terminal_id: paymentTerminalId } : {}),
+            },
+            { headers }
+        ),
+    getPaymentTerminals: (headers) =>
+        api.get('/admin/payment-terminals', { headers }),
     lockSession: (headers, token) =>
         api.post('/admin/pos/lock', {}, { headers: posHeaders(headers, token) }),
     unlockSession: (pin, headers) =>

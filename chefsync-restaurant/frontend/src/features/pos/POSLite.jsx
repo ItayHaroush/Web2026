@@ -122,6 +122,7 @@ export default function POSLite() {
             <POSPinLock
                 onUnlock={isLocked ? unlock : login}
                 isRelock={isLocked}
+                headers={headers}
             />
         );
     }

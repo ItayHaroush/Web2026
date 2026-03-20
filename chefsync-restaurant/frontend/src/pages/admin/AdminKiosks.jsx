@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import AdminLayout from '../../layouts/AdminLayout';
 import { FaTabletAlt, FaPlus, FaCrown } from 'react-icons/fa';
+import api from '../../services/apiClient';
 import {
     getKiosks,
     createKiosk,
@@ -17,10 +18,11 @@ import KioskTableQrModal from '../../components/kiosk/admin/KioskTableQrModal';
 const DEFAULT_FORM = {
     name: '',
     require_name: false,
+    payment_terminal_id: '',
 };
 
 export default function AdminKiosks({ embedded = false }) {
-    const { isManager } = useAdminAuth();
+    const { isManager, getAuthHeaders } = useAdminAuth();
     const [kiosks, setKiosks] = useState([]);
     const [limits, setLimits] = useState({});
     const [tier, setTier] = useState('basic');
@@ -30,8 +32,22 @@ export default function AdminKiosks({ embedded = false }) {
     const [form, setForm] = useState({ ...DEFAULT_FORM });
     const [copiedId, setCopiedId] = useState(null);
     const [qrKiosk, setQrKiosk] = useState(null);
+    const [paymentTerminals, setPaymentTerminals] = useState([]);
 
     useEffect(() => { fetchKiosks(); }, []);
+
+    useEffect(() => {
+        (async () => {
+            try {
+                const res = await api.get('/admin/payment-terminals', { headers: getAuthHeaders() });
+                if (res.data?.success && Array.isArray(res.data.terminals)) {
+                    setPaymentTerminals(res.data.terminals);
+                }
+            } catch {
+                setPaymentTerminals([]);
+            }
+        })();
+    }, [getAuthHeaders]);
 
     const fetchKiosks = async () => {
         try {
@@ -51,10 +67,17 @@ export default function AdminKiosks({ embedded = false }) {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
+            const payload = {
+                ...form,
+                payment_terminal_id:
+                    form.payment_terminal_id === '' || form.payment_terminal_id == null
+                        ? null
+                        : Number(form.payment_terminal_id),
+            };
             if (editKiosk) {
-                await updateKiosk(editKiosk.id, form);
+                await updateKiosk(editKiosk.id, payload);
             } else {
-                await createKiosk(form);
+                await createKiosk(payload);
             }
             closeModal();
             fetchKiosks();
@@ -110,6 +133,7 @@ export default function AdminKiosks({ embedded = false }) {
         setForm({
             name: kiosk.name,
             require_name: kiosk.require_name || false,
+            payment_terminal_id: kiosk.payment_terminal_id ?? '',
         });
         setShowModal(true);
     };
@@ -205,6 +229,7 @@ export default function AdminKiosks({ embedded = false }) {
                                 copiedId={copiedId}
                                 isManager={isManager()}
                                 tier={tier}
+                                paymentTerminals={paymentTerminals}
                                 onEdit={openEdit}
                                 onDelete={handleDelete}
                                 onToggle={handleToggle}
@@ -222,6 +247,7 @@ export default function AdminKiosks({ embedded = false }) {
                         form={form}
                         setForm={setForm}
                         editKiosk={editKiosk}
+                        paymentTerminals={paymentTerminals}
                         onSubmit={handleSubmit}
                         onClose={closeModal}
                     />

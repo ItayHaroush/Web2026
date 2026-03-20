@@ -75,7 +75,7 @@ export default function usePosSession() {
             setBypassAttempted(true);
             (async () => {
                 try {
-                    const res = await posApi.verifyPin(bypass.pin, headersRef.current);
+                    const res = await posApi.verifyPin(bypass.pin, headersRef.current, null);
                     if (res.data.success) {
                         setPosToken(res.data.token);
                         setPosUser(res.data.user);
@@ -91,8 +91,8 @@ export default function usePosSession() {
         }
     }, [posToken, bypassAttempted]);
 
-    const login = useCallback(async (pin, bypassHours = 0) => {
-        const res = await posApi.verifyPin(pin, headersRef.current);
+    const login = useCallback(async (pin, bypassHours = 0, paymentTerminalId = null) => {
+        const res = await posApi.verifyPin(pin, headersRef.current, paymentTerminalId);
         if (res.data.success) {
             setPosToken(res.data.token);
             setPosUser(res.data.user);

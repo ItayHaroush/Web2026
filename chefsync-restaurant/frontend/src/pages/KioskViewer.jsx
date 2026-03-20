@@ -10,7 +10,7 @@ import KioskItemDetail from '../components/kiosk/viewer/KioskItemDetail';
 import KioskCart from '../components/kiosk/viewer/KioskCart';
 import KioskOrderConfirm from '../components/kiosk/viewer/KioskOrderConfirm';
 import KioskOrderType from '../components/kiosk/viewer/KioskOrderType';
-import { placeKioskOrder } from '../services/kioskService';
+import { placeKioskOrder, chargeKioskPinpad } from '../services/kioskService';
 import { getSuggestions } from '../components/SuggestionCards';
 
 export default function KioskViewer() {
@@ -101,6 +101,7 @@ export default function KioskViewer() {
                 setConfirmedOrder({
                     orderId: result.data.order_id,
                     totalAmount: cart.totalPrice,
+                    paymentMethod,
                 });
                 cart.clearCart();
                 setStep('confirm');
@@ -143,6 +144,10 @@ export default function KioskViewer() {
                 <KioskOrderConfirm
                     orderId={confirmedOrder.orderId}
                     totalAmount={confirmedOrder.totalAmount}
+                    paymentMethod={confirmedOrder.paymentMethod}
+                    hasPinpadTerminal={!!kiosk?.has_pinpad_terminal}
+                    kioskToken={token}
+                    onChargePinpad={chargeKioskPinpad}
                     onReset={resetAll}
                 />
             </div>

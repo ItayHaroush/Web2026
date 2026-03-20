@@ -32,6 +32,7 @@ import {
     FaShieldAlt,
     FaChair,
     FaTrashAlt,
+    FaCreditCard,
 } from 'react-icons/fa';
 import { GiKebabSpit, GiChefToque } from 'react-icons/gi';
 
@@ -97,6 +98,7 @@ export default function AdminRestaurant() {
     const [openDayPanels, setOpenDayPanels] = useState({});
     const shareQrRef = useRef(null);
     const [resettingDineIn, setResettingDineIn] = useState(false);
+    const [paymentTerminals, setPaymentTerminals] = useState([]);
 
     const normalizeOperatingHours = (oh) => {
         if (!oh) return {};
@@ -137,6 +139,20 @@ export default function AdminRestaurant() {
     useEffect(() => {
         fetchRestaurant();
     }, []);
+
+    useEffect(() => {
+        if (!restaurant?.id) return;
+        (async () => {
+            try {
+                const res = await api.get('/admin/payment-terminals', { headers: getAuthHeaders() });
+                if (res.data?.success && Array.isArray(res.data.terminals)) {
+                    setPaymentTerminals(res.data.terminals);
+                }
+            } catch {
+                setPaymentTerminals([]);
+            }
+        })();
+    }, [restaurant?.id]);
 
     useEffect(() => {
         // שדרנו את סטטוס הקנייה לContext לשימוש בכל העמוד
@@ -294,6 +310,8 @@ export default function AdminRestaurant() {
                 'common_allergens',
                 'allergen_notes',
                 'delivery_minimum',
+                'zcredit_terminal_number',
+                'zcredit_pinpad_id',
             ];
             fieldsToSend.forEach((field) => {
                 const value = restaurant[field];
@@ -342,6 +360,16 @@ export default function AdminRestaurant() {
                 formData.append('logo', restaurant.logo);
             }
 
+            if (restaurant.zcredit_terminal_password) {
+                formData.append('zcredit_terminal_password', restaurant.zcredit_terminal_password);
+            }
+            if (restaurant.default_payment_terminal_id !== undefined && restaurant.default_payment_terminal_id !== null) {
+                formData.append(
+                    'default_payment_terminal_id',
+                    restaurant.default_payment_terminal_id === '' ? '' : String(restaurant.default_payment_terminal_id)
+                );
+            }
+
             // ✅ Laravel PUT + multipart workaround
             formData.append('_method', 'PUT');
 
@@ -362,7 +390,7 @@ export default function AdminRestaurant() {
                     normalized.operating_days || {}
                 );
                 console.log('✅ Updating state with:', normalized);
-                setRestaurant(normalized);
+                setRestaurant({ ...normalized, zcredit_terminal_password: '' });
                 setLogoPreview(normalized.logo_url ? resolveAssetUrl(normalized.logo_url) : null);
             }
 
@@ -721,6 +749,71 @@ export default function AdminRestaurant() {
                                         <span className="font-bold text-gray-700">אפשר הזמנה מראש כשהמסעדה סגורה</span>
                                     </label>
                                     <p className="text-xs text-gray-500">לקוחות יוכלו להזמין מראש ולשלם באשראי גם כשהמסעדה סגורה</p>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 p-8">
+                            <div className="flex items-center gap-3 mb-6">
+                                <div className="p-2 bg-violet-50 text-violet-600 rounded-xl">
+                                    <FaCreditCard size={20} />
+                                </div>
+                                <h3 className="text-xl font-black text-gray-900">מסוף Z-Credit (קופה / PinPad)</h3>
+                            </div>
+                            <p className="text-sm text-gray-500 mb-4">
+                                ברירת מחדל למסעדה. אפשר גם להגדיר מסופונים נפרדים דרך API / ניהול מסופונים.
+                            </p>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-sm font-black text-gray-700">מספר מסוף</label>
+                                    <input
+                                        type="text"
+                                        value={restaurant.zcredit_terminal_number || ''}
+                                        onChange={(e) => handleChange('zcredit_terminal_number', e.target.value)}
+                                        className="w-full px-4 py-3 bg-gray-50 rounded-xl font-bold border border-transparent focus:border-violet-300"
+                                        placeholder="לפי Z-Credit"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-black text-gray-700">מזהה PinPad</label>
+                                    <input
+                                        type="text"
+                                        value={restaurant.zcredit_pinpad_id || ''}
+                                        onChange={(e) => handleChange('zcredit_pinpad_id', e.target.value)}
+                                        className="w-full px-4 py-3 bg-gray-50 rounded-xl font-bold border border-transparent focus:border-violet-300"
+                                        placeholder="למשל 11002"
+                                    />
+                                </div>
+                                <div className="space-y-2 md:col-span-2">
+                                    <label className="text-sm font-black text-gray-700">סיסמת מסוף (השאר ריק לשמירת הקודמת)</label>
+                                    <input
+                                        type="password"
+                                        autoComplete="off"
+                                        value={restaurant.zcredit_terminal_password || ''}
+                                        onChange={(e) => handleChange('zcredit_terminal_password', e.target.value)}
+                                        className="w-full px-4 py-3 bg-gray-50 rounded-xl font-bold border border-transparent focus:border-violet-300"
+                                        placeholder="••••••••"
+                                    />
+                                </div>
+                                <div className="space-y-2 md:col-span-2">
+                                    <label className="text-sm font-black text-gray-700">מסוף ברירת מחדל (רשימת מסופונים)</label>
+                                    <select
+                                        value={restaurant.default_payment_terminal_id ?? ''}
+                                        onChange={(e) =>
+                                            handleChange(
+                                                'default_payment_terminal_id',
+                                                e.target.value === '' ? '' : Number(e.target.value)
+                                            )
+                                        }
+                                        className="w-full px-4 py-3 bg-gray-50 rounded-xl font-bold border border-transparent focus:border-violet-300"
+                                    >
+                                        <option value="">ללא — שדות למעלה או .env גלובלי</option>
+                                        {paymentTerminals.map((t) => (
+                                            <option key={t.id} value={t.id}>
+                                                {t.name}
+                                            </option>
+                                        ))}
+                                    </select>
                                 </div>
                             </div>
                         </section>

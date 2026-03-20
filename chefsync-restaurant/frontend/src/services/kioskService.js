@@ -93,3 +93,32 @@ export const placeKioskOrder = async (token, orderData) => {
     });
     return response.data;
 };
+
+/** השלמת תשלום אשראי במסופון פיזי (אחרי יצירת הזמנה באשראי) */
+export const chargeKioskPinpad = async (token, orderId) => {
+    const baseURL = apiClient.defaults.baseURL;
+    const response = await axios.post(
+        `${baseURL}/kiosk/${token}/orders/${orderId}/charge-pinpad`,
+        {},
+        {
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+            },
+            transformResponse: [(data) => {
+                if (typeof data === 'string') {
+                    const jsonStart = data.indexOf('{');
+                    if (jsonStart > 0) {
+                        data = data.substring(jsonStart);
+                    }
+                }
+                try {
+                    return JSON.parse(data);
+                } catch (e) {
+                    return data;
+                }
+            }],
+        }
+    );
+    return response.data;
+};

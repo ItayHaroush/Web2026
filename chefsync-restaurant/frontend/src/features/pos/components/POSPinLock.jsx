@@ -1,13 +1,32 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { FaBackspace, FaLock, FaCashRegister, FaArrowRight } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
+import posApi from '../api/posApi';
 
-export default function POSPinLock({ onUnlock, isRelock }) {
+export default function POSPinLock({ onUnlock, isRelock, headers }) {
     const navigate = useNavigate();
     const [pin, setPin] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const [bypassHours, setBypassHours] = useState(0); // 0 = no bypass
+    const [paymentTerminals, setPaymentTerminals] = useState([]);
+    const [paymentTerminalId, setPaymentTerminalId] = useState('');
+
+    useEffect(() => {
+        if (!headers?.Authorization || isRelock) return;
+        let cancelled = false;
+        (async () => {
+            try {
+                const res = await posApi.getPaymentTerminals(headers);
+                if (!cancelled && res.data?.success && Array.isArray(res.data.terminals)) {
+                    setPaymentTerminals(res.data.terminals);
+                }
+            } catch {
+                /* ignore */
+            }
+        })();
+        return () => { cancelled = true; };
+    }, [headers, isRelock]);
 
     const handleDigit = (d) => {
         if (pin.length >= 4 || loading) return;
@@ -26,7 +45,12 @@ export default function POSPinLock({ onUnlock, isRelock }) {
     const submit = async (code) => {
         setLoading(true);
         try {
-            await onUnlock(code, bypassHours);
+            if (isRelock) {
+                await onUnlock(code);
+            } else {
+                const tid = paymentTerminalId === '' ? null : Number(paymentTerminalId);
+                await onUnlock(code, bypassHours, tid);
+            }
         } catch (err) {
             const status = err?.response?.status;
             let msg = 'קוד PIN שגוי';
@@ -76,6 +100,22 @@ export default function POSPinLock({ onUnlock, isRelock }) {
                         {isRelock ? 'המסך ננעל — הקלד PIN' : 'הקלד קוד PIN לכניסה'}
                     </p>
                 </div>
+
+                {!isRelock && paymentTerminals.length > 0 && (
+                    <div className="mb-6 max-w-xs mx-auto">
+                        <label className="block text-xs font-bold text-slate-500 mb-2 text-center">מסופון תשלומים (Z-Credit)</label>
+                        <select
+                            value={paymentTerminalId}
+                            onChange={(e) => setPaymentTerminalId(e.target.value)}
+                            className="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-600 text-white font-bold text-sm"
+                        >
+                            <option value="">ברירת מחדל (מסעדה / מערכת)</option>
+                            {paymentTerminals.map((t) => (
+                                <option key={t.id} value={String(t.id)}>{t.name}</option>
+                            ))}
+                        </select>
+                    </div>
+                )}
 
                 {/* PIN dots */}
                 <div className="flex justify-center gap-5 mb-8">

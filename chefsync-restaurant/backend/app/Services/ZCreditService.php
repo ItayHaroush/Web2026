@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\PaymentTerminal;
 use App\Models\Restaurant;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -50,6 +51,18 @@ class ZCreditService
     }
 
     /**
+     * מסוף תשלומים ייעודי (קופה / קיוסק) — ערכים ריקים נופלים ל־.env דרך ה־constructor.
+     */
+    public static function forPaymentTerminal(PaymentTerminal $terminal): self
+    {
+        return new self(
+            $terminal->zcredit_terminal_number,
+            $terminal->zcredit_terminal_password,
+            $terminal->zcredit_pinpad_id
+        );
+    }
+
+    /**
      * חיוב כרטיס אשראי דרך PinPad
      *
      * @param float $amount סכום העסקה בשקלים
@@ -94,6 +107,7 @@ class ZCreditService
                 'terminal' => $this->terminalNumber,
                 'Track2_sent' => $this->pinpadId,
                 'ReturnCode' => $d['ReturnCode'] ?? null,
+                'ReturnMessage' => $d['ReturnMessage'] ?? ($d['ErrorMessage'] ?? null),
                 'HasError' => $d['HasError'] ?? null,
             ]);
 
@@ -165,6 +179,7 @@ class ZCreditService
                 'reference' => $referenceNumber,
                 'amount'    => $amount,
                 'ReturnCode' => $data['ReturnCode'] ?? null,
+                'ReturnMessage' => $data['ReturnMessage'] ?? ($data['ErrorMessage'] ?? null),
                 'HasError'   => $data['HasError'] ?? null,
             ]);
 

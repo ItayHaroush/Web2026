@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { FaTimes, FaQrcode, FaCopy, FaCheck, FaExternalLinkAlt, FaDownload } from 'react-icons/fa';
 import { QRCodeCanvas } from 'qrcode.react';
 
-export default function KioskFormModal({ form, setForm, editKiosk, onSubmit, onClose }) {
+export default function KioskFormModal({ form, setForm, editKiosk, paymentTerminals = [], onSubmit, onClose }) {
     const [copied, setCopied] = useState(false);
     const qrRef = useRef(null);
 
@@ -121,6 +121,32 @@ export default function KioskFormModal({ form, setForm, editKiosk, onSubmit, onC
                                 }`}></span>
                         </button>
                     </div>
+
+                    {paymentTerminals.length > 0 && (
+                        <div>
+                            <label className="block text-sm font-black text-gray-700 mb-2">מסופון Z-Credit (PinPad)</label>
+                            <select
+                                value={form.payment_terminal_id === null || form.payment_terminal_id === undefined ? '' : String(form.payment_terminal_id)}
+                                onChange={(e) =>
+                                    setForm({
+                                        ...form,
+                                        payment_terminal_id: e.target.value === '' ? '' : Number(e.target.value),
+                                    })
+                                }
+                                className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-2xl font-bold text-gray-900"
+                            >
+                                <option value="">ללא — תשלום בקופה כללי</option>
+                                {paymentTerminals.map((t) => (
+                                    <option key={t.id} value={String(t.id)}>
+                                        {t.name}
+                                    </option>
+                                ))}
+                            </select>
+                            <p className="text-xs text-gray-500 mt-2">
+                                כשמוגדר, לקוח יוכל להשלים אשראי במסופון אחרי ההזמנה
+                            </p>
+                        </div>
+                    )}
 
                     {/* Submit */}
                     <div className="flex gap-3 pt-4">

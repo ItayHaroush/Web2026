@@ -9,6 +9,16 @@
 - מעבר דמה → אמיתי: בעיקר עדכון **`.env`** (`ZCREDIT_*`), בלי שינוי קוד.
 - הרחבות עתידיות (כרטיס בדיקה וכו'): מתודה נפרדת או `ZCREDIT_TEST_MODE` — לא מחליפים את `chargePinPad`.
 
+### סדר עדיפות: מאיזה מסוף משתמשים בחיוב
+
+בקוד (`ZCreditResolver` ומקבילים):
+
+1. הזמנה מקיוסק עם `payment_terminal_id` על הקיוסק → רשומה ב־`payment_terminals`.
+2. סשן קופה עם `payment_terminal_id` (נבחר ב־`verify-pin`) → אותו מסוף.
+3. מסעדה עם `default_payment_terminal_id` → ברירת מחדל.
+4. שדות legacy על `restaurants` (`zcredit_terminal_number` וכו') → `ZCreditService::forRestaurant`.
+5. משתני `.env` הגלובליים (`ZCREDIT_*`). אין URL נפרד ל"דמה"; ההבדל הוא רק בערכי המסוף/סיסמה/PinPad.
+
 ---
 
 ## nginx מחזיר מסך 404 עם `<html>…nginx/1.x` (לא Laravel)
@@ -37,6 +47,7 @@ curl -sS -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8000/api/up
 | שימוש | Method | נתיב |
 |--------|--------|------|
 | חיוב הזמנה קיימת דרך PinPad (מוגן: `auth:sanctum` + POS session) | `POST` | `/api/admin/pos/orders/{id}/charge-credit` |
+| חיוב PinPad אחרי הזמנת קיוסק (טוקן קיוסק) | `POST` | `/api/kiosk/{token}/orders/{id}/charge-pinpad` |
 | גוף הבקשה | — | הבקר משתמש ב־**`total_amount` של ההזמנה** בבסיס הנתונים, לא בשדה `amount` ב־JSON (אם שלחת — זה לא משנה את הסכום). |
 
 **בדיקה עם curl (דורש Bearer + `X-Tenant-ID` + סשן POS לפי ההגדרות אצלכם):**

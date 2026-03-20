@@ -5,17 +5,20 @@ namespace App\Http\Controllers;
 use App\Models\Kiosk;
 use App\Models\MenuItem;
 use App\Models\Order;
+use App\Models\User;
 use App\Models\OrderItem;
 use App\Models\Restaurant;
 use App\Models\FcmToken;
 use App\Models\MonitoringAlert;
 use App\Models\NotificationLog;
-use App\Models\User;
 use App\Services\FcmService;
+use App\Services\PosPaymentService;
 use App\Services\PromotionService;
+use App\Services\ZCreditResolver;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class KioskController extends Controller
@@ -56,13 +59,18 @@ class KioskController extends Controller
 
     public function store(Request $request)
     {
+        $user = $request->user();
         $request->validate([
             'name' => 'required|string|max:100',
             'design_options' => 'nullable|array',
             'require_name' => 'nullable|boolean',
+            'payment_terminal_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('payment_terminals', 'id')->where('restaurant_id', $user->restaurant_id),
+            ],
         ]);
 
-        $user = $request->user();
         $restaurant = Restaurant::withoutGlobalScopes()->find($user->restaurant_id);
         $tier = $restaurant->tier ?? 'basic';
 
@@ -87,6 +95,7 @@ class KioskController extends Controller
             'design_options' => $designOptions,
             'require_name' => $request->input('require_name', false),
             'is_active' => true,
+            'payment_terminal_id' => $request->input('payment_terminal_id'),
         ]);
 
         return response()->json([
@@ -101,18 +110,23 @@ class KioskController extends Controller
 
     public function update(Request $request, $id)
     {
+        $user = $request->user();
         $request->validate([
             'name' => 'sometimes|string|max:100',
             'design_options' => 'sometimes|nullable|array',
             'require_name' => 'sometimes|boolean',
+            'payment_terminal_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('payment_terminals', 'id')->where('restaurant_id', $user->restaurant_id),
+            ],
         ]);
 
-        $user = $request->user();
         $kiosk = Kiosk::where('restaurant_id', $user->restaurant_id)->findOrFail($id);
         $restaurant = Restaurant::withoutGlobalScopes()->find($user->restaurant_id);
         $tier = $restaurant->tier ?? 'basic';
 
-        $updateData = $request->only(['name', 'design_options', 'require_name']);
+        $updateData = $request->only(['name', 'design_options', 'require_name', 'payment_terminal_id']);
 
         if ($tier === 'basic' && isset($updateData['design_options'])) {
             $updateData['design_options'] = null;
@@ -373,6 +387,8 @@ class KioskController extends Controller
                     'name' => $kiosk->name,
                     'design_options' => $kiosk->design_options,
                     'require_name' => $kiosk->require_name,
+                    'payment_terminal_id' => $kiosk->payment_terminal_id,
+                    'has_pinpad_terminal' => (bool) $kiosk->payment_terminal_id,
                 ],
                 'restaurant' => [
                     'name' => $restaurant->name ?? '',
@@ -700,6 +716,68 @@ class KioskController extends Controller
                 'message' => 'שגיאה ביצירת הזמנה',
             ], 500);
         }
+    }
+
+    /**
+     * השלמת תשלום אשראי במסופון פיזי (PinPad) — רלוונטי כשלקיוסק מקושר למסוף
+     */
+    public function chargePinpadOrder(Request $request, $token, $orderId)
+    {
+        $kiosk = Kiosk::withoutGlobalScopes()
+            ->where('token', $token)
+            ->where('is_active', true)
+            ->first();
+
+        if (!$kiosk) {
+            return response()->json([
+                'success' => false,
+                'message' => 'קיוסק לא נמצא או לא פעיל',
+            ], 404);
+        }
+
+        if (!$kiosk->payment_terminal_id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'לא הוגדר מסופון לקיוסק זה בהגדרות',
+                'code' => 'kiosk_terminal_missing',
+            ], 422);
+        }
+
+        $order = Order::withoutGlobalScopes()
+            ->where('restaurant_id', $kiosk->restaurant_id)
+            ->where('kiosk_id', $kiosk->id)
+            ->find($orderId);
+
+        if (!$order) {
+            return response()->json(['success' => false, 'message' => 'הזמנה לא נמצאה'], 404);
+        }
+
+        if ($order->payment_method !== 'credit_card') {
+            return response()->json(['success' => false, 'message' => 'הזמנה זו אינה בתשלום אשראי'], 422);
+        }
+
+        if ($order->payment_status === Order::PAYMENT_PAID) {
+            return response()->json(['success' => false, 'message' => 'ההזמנה כבר שולמה'], 422);
+        }
+
+        $deputyUserId = User::where('restaurant_id', $kiosk->restaurant_id)->orderBy('id')->value('id');
+        if (!$deputyUserId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'אין משתמש במסעדה לרישום תנועת קופה',
+            ], 500);
+        }
+
+        $zcredit = app(ZCreditResolver::class)->forOrder($order, null);
+        $paymentService = new PosPaymentService($zcredit);
+        $result = $paymentService->chargeOrderCredit(
+            (int) $order->id,
+            (float) $order->total_amount,
+            (int) $kiosk->restaurant_id,
+            (int) $deputyUserId
+        );
+
+        return response()->json($result, $result['success'] ? 200 : 422);
     }
 
     // ============================================

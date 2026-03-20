@@ -14,6 +14,7 @@ class Kiosk extends Model
         'name',
         'token',
         'is_active',
+        'payment_terminal_id',
         'design_options',
         'require_name',
         'tables',
@@ -53,6 +54,11 @@ class Kiosk extends Model
     public function restaurant(): BelongsTo
     {
         return $this->belongsTo(Restaurant::class);
+    }
+
+    public function paymentTerminal(): BelongsTo
+    {
+        return $this->belongsTo(PaymentTerminal::class);
     }
 
     public function getIsConnectedAttribute(): bool

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Facades\Storage;
@@ -86,12 +87,17 @@ class Restaurant extends Model
         'hyp_setup_fee_charged',
         'abandoned_cart_reminders_enabled',
         'abandoned_cart_sms_balance',
+        'zcredit_terminal_number',
+        'zcredit_terminal_password',
+        'zcredit_pinpad_id',
+        'default_payment_terminal_id',
     ];
 
     protected $hidden = [
         'hyp_terminal_password',
         'hyp_api_key',
         'hyp_card_token',
+        'zcredit_terminal_password',
     ];
 
     protected $attributes = [
@@ -130,6 +136,7 @@ class Restaurant extends Model
         'accepted_payment_methods' => 'array',
         'payment_failed_at' => 'datetime',
         'abandoned_cart_reminders_enabled' => 'boolean',
+        'zcredit_terminal_password' => 'encrypted',
     ];
 
     /**
@@ -189,6 +196,16 @@ class Restaurant extends Model
     public function monthlyInvoices(): HasMany
     {
         return $this->hasMany(MonthlyInvoice::class);
+    }
+
+    public function paymentTerminals(): HasMany
+    {
+        return $this->hasMany(PaymentTerminal::class);
+    }
+
+    public function defaultPaymentTerminal(): BelongsTo
+    {
+        return $this->belongsTo(PaymentTerminal::class, 'default_payment_terminal_id');
     }
 
     /**

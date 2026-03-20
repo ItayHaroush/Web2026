@@ -11,6 +11,7 @@ export default function KioskCard({
     copiedId,
     isManager,
     tier = 'basic',
+    paymentTerminals = [],
     onEdit,
     onDelete,
     onToggle,
@@ -20,6 +21,10 @@ export default function KioskCard({
 }) {
     const navigate = useNavigate();
     const isBasic = tier === 'basic';
+    const pinpadTerminalName =
+        kiosk.payment_terminal_id != null
+            ? paymentTerminals.find((t) => Number(t.id) === Number(kiosk.payment_terminal_id))?.name
+            : null;
     return (
         <div
             className={`group bg-white rounded-[3rem] shadow-sm border p-8 flex flex-col gap-6 hover:shadow-2xl hover:-translate-y-1 transition-all duration-500 relative overflow-hidden ${!kiosk.is_active ? 'border-gray-200 opacity-60' : 'border-gray-100'}`}
@@ -44,6 +49,14 @@ export default function KioskCard({
                             {kiosk.tables?.length > 0 && (
                                 <span className="px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border bg-purple-50 text-purple-600 border-purple-100">
                                     {kiosk.tables.length} שולחנות
+                                </span>
+                            )}
+                            {kiosk.payment_terminal_id != null && (
+                                <span
+                                    className="px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border bg-emerald-50 text-emerald-700 border-emerald-100"
+                                    title="חיוב אשראי במסופון אחרי ההזמנה"
+                                >
+                                    מסופון: {pinpadTerminalName || `#${kiosk.payment_terminal_id}`}
                                 </span>
                             )}
                         </div>

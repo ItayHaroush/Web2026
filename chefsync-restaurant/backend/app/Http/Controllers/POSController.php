@@ -18,6 +18,7 @@ use App\Models\User;
 use App\Services\FcmService;
 use App\Services\PosPaymentService;
 use App\Services\PrintService;
+use App\Services\ZCreditResolver;
 use App\Services\ZCreditService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -25,6 +26,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class POSController extends Controller
 {
@@ -43,9 +45,15 @@ class POSController extends Controller
 
     public function verifyPin(Request $request)
     {
-        $request->validate(['pin' => 'required|string|size:4']);
-
         $user = $request->user();
+        $request->validate([
+            'pin' => 'required|string|size:4',
+            'payment_terminal_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('payment_terminals', 'id')->where('restaurant_id', $user->restaurant_id),
+            ],
+        ]);
 
         if (!$user->pos_pin_hash || !Hash::check($request->pin, $user->pos_pin_hash)) {
             return response()->json(['success' => false, 'message' => 'קוד PIN שגוי'], 422);
@@ -57,6 +65,7 @@ class POSController extends Controller
         $session = PosSession::create([
             'user_id' => $user->id,
             'restaurant_id' => $user->restaurant_id,
+            'payment_terminal_id' => $request->input('payment_terminal_id'),
             'token' => $token,
             'expires_at' => Carbon::now()->addHours(8),
         ]);
@@ -673,7 +682,9 @@ class POSController extends Controller
         $restaurant = Restaurant::find($restaurantId);
         $tenantId = $restaurant?->tenant_id ?? '';
 
-        $zcredit = $restaurant ? ZCreditService::forRestaurant($restaurant) : app(ZCreditService::class);
+        $zcredit = $restaurant
+            ? app(ZCreditResolver::class)->forRestaurantContext($restaurant, $request->pos_session)
+            : app(ZCreditService::class);
         $paymentService = new PosPaymentService($zcredit);
 
         $result = $paymentService->createOrderAndCharge(
@@ -729,7 +740,7 @@ class POSController extends Controller
     /**
      * חיוב הזמנה קיימת באשראי דרך PinPad
      */
-    public function chargeOrderCredit(Request $request, $orderId, PosPaymentService $paymentService)
+    public function chargeOrderCredit(Request $request, $orderId, ZCreditResolver $zCreditResolver)
     {
         $user = $request->user();
         $restaurantId = $user->restaurant_id;
@@ -737,6 +748,9 @@ class POSController extends Controller
         $order = Order::withoutGlobalScopes()
             ->where('restaurant_id', $restaurantId)
             ->findOrFail($orderId);
+
+        $zcredit = $zCreditResolver->forOrder($order, $request->pos_session);
+        $paymentService = new PosPaymentService($zcredit);
 
         $result = $paymentService->chargeOrderCredit(
             $order->id,
@@ -899,7 +913,9 @@ class POSController extends Controller
         $paymentResult = null;
         if ($creditAmount > 0) {
             $restaurant = Restaurant::find($restaurantId);
-            $zcredit = $restaurant ? ZCreditService::forRestaurant($restaurant) : app(ZCreditService::class);
+            $zcredit = $restaurant
+                ? app(ZCreditResolver::class)->forOrder($order, $request->pos_session)
+                : app(ZCreditService::class);
             $result = $zcredit->chargePinPad($creditAmount, 'split_' . $order->id);
 
             if (!$result['success']) {
@@ -1005,7 +1021,9 @@ class POSController extends Controller
         if ($order->payment_method === 'credit_card' && $referenceNumber) {
             // החזר דרך ZCredit
             $restaurant = Restaurant::find($restaurantId);
-            $zcredit = $restaurant ? ZCreditService::forRestaurant($restaurant) : app(ZCreditService::class);
+            $zcredit = $restaurant
+                ? app(ZCreditResolver::class)->forOrder($order, $request->pos_session)
+                : app(ZCreditService::class);
             $result = $zcredit->refundTransaction($referenceNumber, (float) $order->total_amount);
 
             if (!$result['success']) {
