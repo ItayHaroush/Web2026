@@ -6,28 +6,17 @@ use App\Models\Restaurant;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * אינטגרציה Z-Credit — PinPad דרך CommitFullTransaction.
+ *
+ * עקרונות שמירה:
+ * - ברירת המחדל: `chargePinPad` שולח `Track2` = PINPAD+מזהה. מעבר למסופון אמיתי = עדכון ZCREDIT_* ב-.env.
+ * - נתיבי בדיקה עתידיים (כרטיס מלא וכו.): מתודה נפרדת; `config('services.zcredit.test_mode_enabled')` שמור לכך.
+ *
+ * @see docs/zcredit-pinpad-testing.md
+ */
 class ZCreditService
 {
-    // #region agent log
-    private static function agentDebugLog(string $location, string $message, array $data, string $hypothesisId = 'A'): void
-    {
-        try {
-            $path = dirname(base_path()) . DIRECTORY_SEPARATOR . '.cursor' . DIRECTORY_SEPARATOR . 'debug-38053a.log';
-            $line = json_encode([
-                'sessionId' => '38053a',
-                'timestamp' => (int) round(microtime(true) * 1000),
-                'location' => $location,
-                'message' => $message,
-                'hypothesisId' => $hypothesisId,
-                'data' => $data,
-            ], JSON_UNESCAPED_UNICODE) . "\n";
-            file_put_contents($path, $line, FILE_APPEND | LOCK_EX);
-        } catch (\Throwable $e) {
-            // ignore
-        }
-    }
-    // #endregion
-
     private string $apiUrl = 'https://pci.zcredit.co.il/ZCreditWS/api/Transaction/CommitFullTransaction';
     private string $refundUrl = 'https://pci.zcredit.co.il/ZCreditWS/api/Transaction/RefundTransaction';
 
@@ -89,14 +78,6 @@ class ZCreditService
         $payloadForLog['Password'] = '***';
         Log::info('[ZCredit] Payload sent', $payloadForLog);
 
-        self::agentDebugLog('ZCreditService::chargePinPad', 'request', [
-            'terminal_len' => strlen((string) $this->terminalNumber),
-            'terminal_empty' => $this->terminalNumber === '' || $this->terminalNumber === null,
-            'pinpad_id' => $this->pinpadId,
-            'amount_agorot' => $amountInAgorot,
-            'uniqueId' => $uniqueId,
-        ], 'C');
-
         try {
             $response = Http::timeout(90)
                 ->withHeaders(['Content-Type' => 'application/json'])
@@ -106,16 +87,6 @@ class ZCreditService
             $bodyPreview = is_string($response->body()) ? substr($response->body(), 0, 500) : '';
 
             $d = is_array($data) ? $data : [];
-            self::agentDebugLog('ZCreditService::chargePinPad', 'response_raw', [
-                'http_status' => $response->status(),
-                'json_ok' => is_array($data),
-                'has_error_raw' => $d['HasError'] ?? null,
-                'has_error_type' => array_key_exists('HasError', $d) ? gettype($d['HasError']) : 'missing',
-                'return_code' => $d['ReturnCode'] ?? null,
-                'return_message_snip' => isset($d['ReturnMessage']) ? substr((string) $d['ReturnMessage'], 0, 120) : null,
-                'error_message_snip' => isset($d['ErrorMessage']) ? substr((string) $d['ErrorMessage'], 0, 120) : null,
-                'body_preview_if_not_json' => is_array($data) ? null : $bodyPreview,
-            ], 'A');
 
             Log::info('[ZCredit] Transaction response', [
                 'amount' => $amount,
@@ -143,12 +114,6 @@ class ZCreditService
             }
 
             // Transaction declined or error
-            self::agentDebugLog('ZCreditService::chargePinPad', 'declined_branch', [
-                'http_ok' => $response->successful(),
-                'has_error_key' => array_key_exists('HasError', is_array($data) ? $data : []),
-                'has_error_val' => is_array($data) ? ($data['HasError'] ?? null) : null,
-            ], 'B');
-
             $fail = is_array($data) ? $data : [];
             return [
                 'success' => false,
@@ -160,9 +125,6 @@ class ZCreditService
                 ],
             ];
         } catch (\Illuminate\Http\Client\ConnectionException $e) {
-            self::agentDebugLog('ZCreditService::chargePinPad', 'connection_exception', [
-                'error' => substr($e->getMessage(), 0, 200),
-            ], 'E');
             Log::error('[ZCredit] Connection timeout', ['error' => $e->getMessage()]);
             return [
                 'success' => false,

@@ -15,10 +15,6 @@ export default function POSCreditPaymentModal({ cart, total, headers, posToken, 
                 items: cart,
             }, headers, posToken);
 
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/8df4a825-2af7-44b5-b28d-f1fe14cba861', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '38053a' }, body: JSON.stringify({ sessionId: '38053a', location: 'POSCreditPaymentModal.jsx:handlePay', message: 'createOrderCredit_ok', data: { success: !!res.data?.success, orderId: res.data?.order?.id }, timestamp: Date.now(), hypothesisId: 'FE', runId: 'pre' }) }).catch(() => {});
-            // #endregion
-
             if (res.data.success) {
                 setResult({
                     type: 'success',
@@ -31,9 +27,6 @@ export default function POSCreditPaymentModal({ cart, total, headers, posToken, 
             }
         } catch (e) {
             const responseData = e.response?.data;
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/8df4a825-2af7-44b5-b28d-f1fe14cba861', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '38053a' }, body: JSON.stringify({ sessionId: '38053a', location: 'POSCreditPaymentModal.jsx:handlePay', message: 'createOrderCredit_err', data: { status: e.response?.status, msg: responseData?.message, payment: responseData?.payment }, timestamp: Date.now(), hypothesisId: 'FE', runId: 'pre' }) }).catch(() => {});
-            // #endregion
             setResult({
                 type: 'error',
                 data: {

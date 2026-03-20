@@ -14,5 +14,10 @@ return [
         'api_key'           => env('ZCREDIT_API_KEY', 'c0863aa14e77ec032effda671797c295d8a2ab154e49242871a197d158fa3f30'),
         // ערך מלא ל־Track2: PINPAD11002 (או רק 11002 – הקוד יוסיף PINPAD)
         'pinpad_id'         => env('ZCREDIT_PINPAD_ID', '11002'),
+        /**
+         * עתידי: נתיבי בדיקה (כרטיס מלא וכו') — לא מפעילים עד שימומשו במתודה נפרדת.
+         * chargePinPad נשאר ברירת המחדל למסופון אמיתי (CommitFullTransaction + Track2).
+         */
+        'test_mode_enabled' => env('ZCREDIT_TEST_MODE', false),
     ],
 ];
