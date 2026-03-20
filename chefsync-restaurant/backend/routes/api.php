@@ -611,6 +611,24 @@ Route::prefix('agent')->middleware('device_token')->group(function () {
 });
 
 // ============================================
+// Z-Credit — בדיקת PinPad מקומית בלבד (ללא auth)
+// ============================================
+if (app()->environment('local')) {
+    Route::post('/zcredit/test-pinpad-charge', function (\Illuminate\Http\Request $request) {
+        $validated = $request->validate([
+            'amount' => 'required|numeric|min:0.01|max:999999',
+        ]);
+
+        $result = app(\App\Services\ZCreditService::class)->chargePinPad(
+            (float) $validated['amount'],
+            'local_pinpad_test_' . uniqid('', true)
+        );
+
+        return response()->json($result);
+    })->name('zcredit.test-pinpad-charge.local');
+}
+
+// ============================================
 // CORS Preflight (OPTIONS)
 // ============================================
 // בחלק מהדפדפנים בקשות עם Authorization מבצעות preflight.

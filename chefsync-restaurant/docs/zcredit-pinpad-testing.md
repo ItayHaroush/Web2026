@@ -11,6 +11,38 @@
 
 ---
 
+## נתיבי API בפרויקט (לא קיים `/api/pos/charge`)
+
+| שימוש | Method | נתיב |
+|--------|--------|------|
+| חיוב הזמנה קיימת דרך PinPad (מוגן: `auth:sanctum` + POS session) | `POST` | `/api/admin/pos/orders/{id}/charge-credit` |
+| גוף הבקשה | — | הבקר משתמש ב־**`total_amount` של ההזמנה** בבסיס הנתונים, לא בשדה `amount` ב־JSON (אם שלחת — זה לא משנה את הסכום). |
+
+**בדיקה עם curl (דורש Bearer + `X-Tenant-ID` + סשן POS לפי ההגדרות אצלכם):**
+
+```bash
+curl -X POST "http://localhost/api/admin/pos/orders/206/charge-credit" \
+  -H "Authorization: Bearer <token>" \
+  -H "X-Tenant-ID: <tenant>" \
+  -H "X-POS-Session: <pos_token_if_required>"
+```
+
+## בדיקת PinPad בלי auth (רק `APP_ENV=local`)
+
+נרשם ב־`routes/api.php` נתיב:
+
+`POST /api/zcredit/test-pinpad-charge`
+
+```bash
+curl -X POST "http://localhost/api/zcredit/test-pinpad-charge" \
+  -H "Content-Type: application/json" \
+  -d '{"amount": 10}'
+```
+
+בפרודקשן / בשרת staging הנתיב **לא** קיים — בכוונה.
+
+---
+
 ## שלב 0: צ'ק־ליסט לפני ניסיון
 
 | פריט | הערה |
