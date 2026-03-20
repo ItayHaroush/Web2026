@@ -11,6 +11,27 @@
 
 ---
 
+## nginx מחזיר מסך 404 עם `<html>…nginx/1.x` (לא Laravel)
+
+זה אומר שהבקשה **לא מגיעה ל־`public/index.php`** — בדרך כלל `root` / `location` ב־nginx לא מצביעים על תיקיית `backend/public` של הפרויקט, או ש־`http://localhost` משרת את ה־default site (למשל `/var/www/html`) ולא את האפליקציה.
+
+**בדיקה מהירה:**
+
+```bash
+# אם יש דומיין שמוגדר ב־server_name — השתמש בו
+curl -sS -o /dev/null -w "%{http_code}\n" https://YOUR_DOMAIN/api/up
+
+# או מול PHP ישירות (עוקף nginx)
+cd /var/www/Web2026/chefsync-restaurant/backend && php artisan serve --host=127.0.0.1 --port=8000
+curl -sS -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8000/api/up
+```
+
+אם `artisan serve` מחזיר 200 ל־`/api/up` אבל nginx ל־localhost לא — צריך לתקן vhost (למשל `root` ל־`.../chefsync-restaurant/backend/public` ו־`try_files $uri $uri/ /index.php?$query_string`).
+
+**שגיאה נפוצה:** להריץ `/api/zcredit/test-pinpad-charge` בטרמינל — זה לא פקודה. צריך `curl -X POST ...` מלא.
+
+---
+
 ## נתיבי API בפרויקט (לא קיים `/api/pos/charge`)
 
 | שימוש | Method | נתיב |
@@ -27,19 +48,17 @@ curl -X POST "http://localhost/api/admin/pos/orders/206/charge-credit" \
   -H "X-POS-Session: <pos_token_if_required>"
 ```
 
-## בדיקת PinPad בלי auth (רק `APP_ENV=local`)
+## בדיקת PinPad בלי auth (`POST /api/zcredit/test-pinpad-charge`)
 
-נרשם ב־`routes/api.php` נתיב:
-
-`POST /api/zcredit/test-pinpad-charge`
+נרשם כש־`APP_ENV=local` **או** כשב־`.env` מוגדר `ZCREDIT_ALLOW_TEST_ROUTE=true` (זמני בשרת — **חשוף**, ללא auth).
 
 ```bash
-curl -X POST "http://localhost/api/zcredit/test-pinpad-charge" \
+curl -X POST "https://YOUR_DOMAIN/api/zcredit/test-pinpad-charge" \
   -H "Content-Type: application/json" \
   -d '{"amount": 10}'
 ```
 
-בפרודקשן / בשרת staging הנתיב **לא** קיים — בכוונה.
+בפרודקשן השאר רק `false` או הסר את השורה.
 
 ---
 

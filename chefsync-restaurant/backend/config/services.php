@@ -19,5 +19,7 @@ return [
          * chargePinPad נשאר ברירת המחדל למסופון אמיתי (CommitFullTransaction + Track2).
          */
         'test_mode_enabled' => env('ZCREDIT_TEST_MODE', false),
+        /** POST /api/zcredit/test-pinpad-charge — רק ב-local או כש־true (מסוכן: חשוף בלי auth) */
+        'allow_test_pinpad_route' => filter_var(env('ZCREDIT_ALLOW_TEST_ROUTE', false), FILTER_VALIDATE_BOOLEAN),
     ],
 ];

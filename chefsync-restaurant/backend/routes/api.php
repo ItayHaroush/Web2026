@@ -611,9 +611,9 @@ Route::prefix('agent')->middleware('device_token')->group(function () {
 });
 
 // ============================================
-// Z-Credit — בדיקת PinPad מקומית בלבד (ללא auth)
+// Z-Credit — בדיקת PinPad (ללא auth): local או ZCREDIT_ALLOW_TEST_ROUTE=true
 // ============================================
-if (app()->environment('local')) {
+if (app()->environment('local') || config('services.zcredit.allow_test_pinpad_route')) {
     Route::post('/zcredit/test-pinpad-charge', function (\Illuminate\Http\Request $request) {
         $validated = $request->validate([
             'amount' => 'required|numeric|min:0.01|max:999999',
