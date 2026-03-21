@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../../layouts/AdminLayout';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import paymentSettingsService from '../../services/paymentSettingsService';
+import ZCreditSettingsPanel from '../../components/admin/ZCreditSettingsPanel';
 import { getBillingInfo } from '../../services/subscriptionService';
 import { FaCreditCard, FaMoneyBillWave, FaCheckCircle, FaExclamationTriangle, FaExternalLinkAlt, FaShieldAlt, FaSpinner, FaInfoCircle, FaWrench, FaCrown } from 'react-icons/fa';
 
@@ -470,6 +471,9 @@ export default function AdminPaymentSettings() {
                         </button>
                     </div>
                 )}
+
+                {/* Z-Credit — POS / PinPad / קיוסק (נפרד מ-HYP) */}
+                <ZCreditSettingsPanel getAuthHeaders={getAuthHeaders} isOwner={isOwner} />
 
                 {/* Save button when credit card NOT enabled (just save payment methods) */}
                 {!creditCardEnabled && (
