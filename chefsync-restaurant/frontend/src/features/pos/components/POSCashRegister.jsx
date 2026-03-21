@@ -12,7 +12,7 @@ function formatDuration(totalMinutes) {
     return `${h} שעות ו-${m} דקות`;
 }
 
-function printZReport(r) {
+function printDailyReport(r) {
     const varianceSign = r.variance > 0 ? '+' : '';
     const varianceStatus = r.variance === 0
         ? 'הקופה מאוזנת ✓'
@@ -20,7 +20,7 @@ function printZReport(r) {
 
     const movementsHtml = (r.movements || []).map(m => {
         const sign = ['payment', 'cash_in'].includes(m.type) ? '+' : '-';
-        const label = m.description || typeLabel(m.type);
+        const label = m.description || typeLabel(m.type, m.payment_method);
         return `<tr><td>${m.time}</td><td>${label}${m.order_id ? ` (#${m.order_id})` : ''}</td><td style="text-align:left">${sign}₪${m.amount.toFixed(2)}</td></tr>`;
     }).join('');
 
@@ -28,7 +28,7 @@ function printZReport(r) {
 <html dir="rtl" lang="he">
 <head>
 <meta charset="utf-8">
-<title>דוח Z — משמרת #${r.shift_id}</title>
+<title>דוח יומי — משמרת #${r.shift_id}</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: Arial, Helvetica, sans-serif; max-width: 400px; margin: 0 auto; padding: 20px; font-size: 13px; color: #111; }
@@ -48,7 +48,7 @@ function printZReport(r) {
 </style>
 </head>
 <body>
-<h1>דוח Z — סגירת משמרת</h1>
+<h1>דוח יומי — סגירת משמרת</h1>
 <p class="sub">משמרת #${r.shift_id}</p>
 
 <div class="divider"></div>
@@ -61,6 +61,7 @@ function printZReport(r) {
 <p class="section-title">מכירות</p>
 <div class="row"><span class="label">מזומן (${r.cash_payment_count} עסקאות)</span><span class="value">₪${r.cash_payments.toFixed(2)}</span></div>
 <div class="row"><span class="label">אשראי (${r.credit_payment_count} עסקאות)</span><span class="value">₪${r.credit_payments.toFixed(2)}</span></div>
+${(r.credit_in || 0) > 0 ? `<div class="row"><span class="label">כניסות אשראי ידניות</span><span class="value">₪${(r.credit_in || 0).toFixed(2)}</span></div>` : ''}
 ${r.refund_count > 0 ? `<div class="row"><span class="label">החזרים (${r.refund_count})</span><span class="value" style="color:red">-₪${r.refunds.toFixed(2)}</span></div>` : ''}
 <div class="divider"></div>
 <div class="row bold"><span class="label">סה״כ מכירות (${r.total_payment_count})</span><span class="value">₪${r.total_sales.toFixed(2)}</span></div>
@@ -69,7 +70,7 @@ ${r.refund_count > 0 ? `<div class="row"><span class="label">החזרים (${r.r
 <p class="section-title">תנועות מזומן</p>
 <div class="row"><span class="label">יתרת פתיחה</span><span class="value">₪${r.opening_balance.toFixed(2)}</span></div>
 <div class="row"><span class="label">+ תקבולי מזומן</span><span class="value">₪${r.cash_payments.toFixed(2)}</span></div>
-${r.cash_in > 0 ? `<div class="row"><span class="label">+ כניסות</span><span class="value">₪${r.cash_in.toFixed(2)}</span></div>` : ''}
+${r.cash_in > 0 ? `<div class="row"><span class="label">+ כניסות מזומן ידניות</span><span class="value">₪${r.cash_in.toFixed(2)}</span></div>` : ''}
 ${r.cash_out > 0 ? `<div class="row"><span class="label">- יציאות</span><span class="value">₪${r.cash_out.toFixed(2)}</span></div>` : ''}
 ${r.refunds > 0 ? `<div class="row"><span class="label">- החזרים</span><span class="value">₪${r.refunds.toFixed(2)}</span></div>` : ''}
 <div class="divider"></div>
@@ -130,6 +131,7 @@ export default function POSCashRegister({ headers, posToken, isManager, onShiftC
     const [closeNotes, setCloseNotes] = useState('');
     const [showCloseConfirm, setShowCloseConfirm] = useState(false);
     const [movementModal, setMovementModal] = useState(null);
+    const [movementPaymentMethod, setMovementPaymentMethod] = useState('cash');
     const [movementAmount, setMovementAmount] = useState('');
     const [movementDesc, setMovementDesc] = useState('');
     const [zReport, setZReport] = useState(null);
@@ -213,8 +215,16 @@ export default function POSCashRegister({ headers, posToken, isManager, onShiftC
     const handleMovement = async () => {
         if (!movementAmount || !movementModal) return;
         try {
-            await posApi.cashMovement(movementModal, parseFloat(movementAmount), movementDesc, headers, posToken);
+            await posApi.cashMovement(
+                movementModal,
+                parseFloat(movementAmount),
+                movementDesc,
+                headers,
+                posToken,
+                movementModal === 'cash_in' ? movementPaymentMethod : undefined
+            );
             setMovementModal(null);
+            setMovementPaymentMethod('cash');
             setMovementAmount('');
             setMovementDesc('');
             fetchData();
@@ -255,7 +265,7 @@ export default function POSCashRegister({ headers, posToken, isManager, onShiftC
                 setShowHistory(false);
             }
         } catch (e) {
-            alert('שגיאה בטעינת דוח Z');
+            alert('שגיאה בטעינת הדוח היומי');
         }
     };
 
@@ -307,7 +317,7 @@ export default function POSCashRegister({ headers, posToken, isManager, onShiftC
                         className="w-full py-4 bg-blue-500/10 border border-blue-500/30 rounded-2xl text-blue-400 font-black text-base flex items-center justify-center gap-3 transition-all active:scale-95 hover:bg-blue-500/20"
                     >
                         <FaHistory size={18} />
-                        היסטוריית דוחות Z
+                        היסטוריית דוחות יומיים
                     </button>
                 </div>
 
@@ -324,7 +334,7 @@ export default function POSCashRegister({ headers, posToken, isManager, onShiftC
                 {managerAuthAction && (
                     <POSManagerAuth
                         title="אישור מנהל"
-                        subtitle="נדרש קוד מנהל לצפייה בדוחות Z"
+                        subtitle="נדרש קוד מנהל לצפייה בדוחות יומיים"
                         headers={headers}
                         onVerified={handleManagerAuthVerified}
                         onClose={() => setManagerAuthAction(null)}
@@ -345,8 +355,9 @@ export default function POSCashRegister({ headers, posToken, isManager, onShiftC
                         <StatCard label="הזמנות" value={summary.order_count} color="purple" />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
-                        <StatCard label="כניסות מזומן" value={`₪${summary.cash_in}`} color="emerald" small />
+                    <div className="grid grid-cols-3 gap-3">
+                        <StatCard label="כניסות מזומן (ידני)" value={`₪${summary.cash_in}`} color="emerald" small />
+                        <StatCard label="כניסות אשראי (ידני)" value={`₪${summary.credit_in ?? 0}`} color="blue" small />
                         <StatCard label="יציאות מזומן" value={`₪${summary.cash_out}`} color="red" small />
                     </div>
                 </>
@@ -355,11 +366,11 @@ export default function POSCashRegister({ headers, posToken, isManager, onShiftC
             {isManager && (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     <button
-                        onClick={() => setMovementModal('cash_in')}
+                        onClick={() => { setMovementPaymentMethod('cash'); setMovementModal('cash_in'); }}
                         className="flex flex-col items-center gap-2 py-4 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl text-emerald-400 font-black text-sm transition-all active:scale-95 hover:bg-emerald-500/20"
                     >
                         <FaArrowDown size={20} />
-                        הכנסת מזומן
+                        הכנסה
                     </button>
                     <button
                         onClick={() => setMovementModal('cash_out')}
@@ -373,7 +384,7 @@ export default function POSCashRegister({ headers, posToken, isManager, onShiftC
                         className="flex flex-col items-center gap-2 py-4 bg-blue-500/10 border border-blue-500/30 rounded-2xl text-blue-400 font-black text-sm transition-all active:scale-95 hover:bg-blue-500/20"
                     >
                         <FaHistory size={20} />
-                        דוחות Z
+                        דוחות יומיים
                     </button>
                     <button
                         onClick={checkClockedInBeforeClose}
@@ -397,6 +408,7 @@ export default function POSCashRegister({ headers, posToken, isManager, onShiftC
                             <div key={m.id} className="flex items-center justify-between px-5 py-3">
                                 <div className="flex items-center gap-3">
                                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm ${m.type === 'payment' ? 'bg-emerald-500/20 text-emerald-400' :
+                                            m.type === 'cash_in' && m.payment_method === 'credit' ? 'bg-violet-500/20 text-violet-400' :
                                             m.type === 'cash_in' ? 'bg-blue-500/20 text-blue-400' :
                                                 m.type === 'cash_out' ? 'bg-red-500/20 text-red-400' :
                                                     'bg-amber-500/20 text-amber-400'
@@ -405,12 +417,16 @@ export default function POSCashRegister({ headers, posToken, isManager, onShiftC
                                     </div>
                                     <div>
                                         <p className="text-slate-300 text-sm font-semibold">
-                                            {m.description || (m.type === 'payment' ? 'תשלום' : m.type === 'cash_in' ? 'הכנסה' : m.type === 'cash_out' ? 'הוצאה' : 'החזר')}
+                                            {m.description || (m.type === 'payment' ? 'תשלום' : typeLabel(m.type, m.payment_method))}
                                         </p>
                                         <p className="text-slate-600 text-xs">{m.time}</p>
                                     </div>
                                 </div>
-                                <span className={`font-black text-sm ${['payment', 'cash_in'].includes(m.type) ? 'text-emerald-400' : 'text-red-400'}`}>
+                                <span className={`font-black text-sm ${
+                                    m.type === 'cash_out' || m.type === 'refund' ? 'text-red-400'
+                                        : m.type === 'cash_in' && m.payment_method === 'credit' ? 'text-violet-400'
+                                        : 'text-emerald-400'
+                                }`}>
                                     {['payment', 'cash_in'].includes(m.type) ? '+' : '-'}₪{m.amount}
                                 </span>
                             </div>
@@ -420,10 +436,35 @@ export default function POSCashRegister({ headers, posToken, isManager, onShiftC
             )}
 
             {movementModal && (
-                <Modal onClose={() => setMovementModal(null)}>
+                <Modal onClose={() => { setMovementModal(null); setMovementPaymentMethod('cash'); }}>
                     <h3 className="text-xl font-black text-white mb-4">
-                        {movementModal === 'cash_in' ? 'הכנסת מזומן' : 'הוצאת מזומן'}
+                        {movementModal === 'cash_in' ? 'הכנסה' : 'הוצאת מזומן'}
                     </h3>
+                    {movementModal === 'cash_in' && (
+                        <div className="flex gap-2 mb-4">
+                            <button
+                                type="button"
+                                onClick={() => setMovementPaymentMethod('cash')}
+                                className={`flex-1 py-3 rounded-xl font-black text-sm border transition-all ${movementPaymentMethod === 'cash' ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300' : 'bg-slate-900 border-slate-700 text-slate-500'}`}
+                            >
+                                מזומן
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setMovementPaymentMethod('credit')}
+                                className={`flex-1 py-3 rounded-xl font-black text-sm border transition-all ${movementPaymentMethod === 'credit' ? 'bg-blue-500/20 border-blue-500 text-blue-300' : 'bg-slate-900 border-slate-700 text-slate-500'}`}
+                            >
+                                אשראי
+                            </button>
+                        </div>
+                    )}
+                    {movementModal === 'cash_in' && (
+                        <p className="text-slate-500 text-xs mb-3">
+                            {movementPaymentMethod === 'cash'
+                                ? 'נוסף ליתרת המזומן בקופה.'
+                                : 'נרשם במכירות (אשראי) — לא מגדיל את המזומן בקופה.'}
+                        </p>
+                    )}
                     <input
                         type="number"
                         value={movementAmount}
@@ -477,7 +518,7 @@ export default function POSCashRegister({ headers, posToken, isManager, onShiftC
                         disabled={!closeBalance && closeBalance !== '0'}
                         className="w-full py-4 bg-red-500 text-white font-black rounded-2xl disabled:opacity-40 active:scale-95"
                     >
-                        סגור משמרת והפק דוח Z
+                        סגור משמרת והפק דוח יומי
                     </button>
                 </Modal>
             )}
@@ -560,7 +601,7 @@ export default function POSCashRegister({ headers, posToken, isManager, onShiftC
             {managerAuthAction && (
                 <POSManagerAuth
                     title="אישור מנהל"
-                    subtitle="נדרש קוד מנהל לצפייה בדוחות Z"
+                    subtitle="נדרש קוד מנהל לצפייה בדוחות יומיים"
                     headers={headers}
                     onVerified={handleManagerAuthVerified}
                     onClose={() => setManagerAuthAction(null)}
@@ -593,7 +634,7 @@ function ZReportModal({ report, onClose }) {
                 <div className="sticky top-0 bg-slate-800 border-b border-slate-700 px-6 py-4 flex items-center justify-between rounded-t-3xl z-10">
                     <h2 className="text-xl font-black text-white flex items-center gap-3">
                         <FaReceipt className="text-orange-400" />
-                        דוח Z — משמרת #{r.shift_id}
+                        דוח יומי — משמרת #{r.shift_id}
                     </h2>
                     <button onClick={onClose} className="text-slate-500 hover:text-white transition-colors">
                         <FaTimesCircle size={22} />
@@ -612,6 +653,9 @@ function ZReportModal({ report, onClose }) {
                         <h4 className="text-slate-500 text-xs font-black uppercase tracking-widest mb-2">מכירות</h4>
                         <Row label={`מזומן (${r.cash_payment_count} עסקאות)`} value={`₪${r.cash_payments.toFixed(2)}`} color="text-emerald-400" />
                         <Row label={`אשראי (${r.credit_payment_count} עסקאות)`} value={`₪${r.credit_payments.toFixed(2)}`} color="text-blue-400" />
+                        {(r.credit_in || 0) > 0 && (
+                            <Row label="כניסות אשראי ידניות" value={`₪${(r.credit_in || 0).toFixed(2)}`} color="text-violet-400" />
+                        )}
                         {r.refund_count > 0 && (
                             <Row label={`החזרים (${r.refund_count})`} value={`-₪${r.refunds.toFixed(2)}`} color="text-red-400" />
                         )}
@@ -624,7 +668,7 @@ function ZReportModal({ report, onClose }) {
                         <h4 className="text-slate-500 text-xs font-black uppercase tracking-widest mb-2">תנועות מזומן</h4>
                         <Row label="יתרת פתיחה" value={`₪${r.opening_balance.toFixed(2)}`} />
                         <Row label="+ תקבולי מזומן" value={`₪${r.cash_payments.toFixed(2)}`} color="text-emerald-400" />
-                        {r.cash_in > 0 && <Row label="+ כניסות מזומן" value={`₪${r.cash_in.toFixed(2)}`} color="text-emerald-400" />}
+                        {r.cash_in > 0 && <Row label="+ כניסות מזומן ידניות" value={`₪${r.cash_in.toFixed(2)}`} color="text-emerald-400" />}
                         {r.cash_out > 0 && <Row label="- יציאות מזומן" value={`₪${r.cash_out.toFixed(2)}`} color="text-red-400" />}
                         {r.refunds > 0 && <Row label="- החזרי מזומן" value={`₪${r.refunds.toFixed(2)}`} color="text-red-400" />}
                         <div className="border-t border-slate-700 pt-2 mt-2">
@@ -728,11 +772,15 @@ function ZReportModal({ report, onClose }) {
                                         <div>
                                             <span className="text-slate-400">{m.time}</span>
                                             <span className="text-slate-300 mr-2">
-                                                {m.description || typeLabel(m.type)}
+                                                {m.description || typeLabel(m.type, m.payment_method)}
                                             </span>
                                             {m.order_id && <span className="text-slate-600 text-xs mr-1">(#{m.order_id})</span>}
                                         </div>
-                                        <span className={`font-bold ${['payment', 'cash_in'].includes(m.type) ? 'text-emerald-400' : 'text-red-400'}`}>
+                                        <span className={`font-bold ${
+                                            m.type === 'cash_out' || m.type === 'refund' ? 'text-red-400'
+                                                : m.type === 'cash_in' && m.payment_method === 'credit' ? 'text-violet-400'
+                                                : 'text-emerald-400'
+                                        }`}>
                                             {['payment', 'cash_in'].includes(m.type) ? '+' : '-'}₪{m.amount.toFixed(2)}
                                         </span>
                                     </div>
@@ -744,7 +792,7 @@ function ZReportModal({ report, onClose }) {
 
                 <div className="sticky bottom-0 bg-slate-800 border-t border-slate-700 px-6 py-4 flex gap-3 rounded-b-3xl">
                     <button
-                        onClick={() => printZReport(r)}
+                        onClick={() => printDailyReport(r)}
                         className="flex-1 py-3 bg-blue-500/20 text-blue-400 font-black rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all hover:bg-blue-500/30"
                     >
                         <FaPrint /> הדפסה
@@ -771,7 +819,7 @@ function ShiftHistoryModal({ shifts, loading, onClose, onViewReport }) {
                 <div className="px-6 py-4 border-b border-slate-700 flex items-center justify-between">
                     <h2 className="text-xl font-black text-white flex items-center gap-3">
                         <FaHistory className="text-blue-400" />
-                        היסטוריית דוחות Z
+                        היסטוריית דוחות יומיים
                     </h2>
                     <button onClick={onClose} className="text-slate-500 hover:text-white transition-colors">
                         <FaTimesCircle size={22} />
@@ -831,8 +879,10 @@ function Row({ label, value, color, bold }) {
     );
 }
 
-function typeLabel(type) {
-    const map = { payment: 'תשלום', cash_in: 'הכנסת מזומן', cash_out: 'הוצאת מזומן', refund: 'החזר' };
+function typeLabel(type, paymentMethod) {
+    if (type === 'cash_in' && paymentMethod === 'credit') return 'הכנסה (אשראי)';
+    if (type === 'cash_in') return 'הכנסה (מזומן)';
+    const map = { payment: 'תשלום', cash_out: 'הוצאת מזומן', refund: 'החזר' };
     return map[type] || type;
 }
 

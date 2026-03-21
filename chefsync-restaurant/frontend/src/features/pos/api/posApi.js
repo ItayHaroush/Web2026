@@ -46,8 +46,17 @@ export const posApi = {
         api.post('/admin/pos/shift/close', { closing_balance: closingBalance, notes }, { headers: posHeaders(headers, token) }),
     currentShift: (headers, token) =>
         api.get('/admin/pos/shift/current', { headers: posHeaders(headers, token) }),
-    cashMovement: (type, amount, description, headers, token) =>
-        api.post('/admin/pos/shift/cash-movement', { type, amount, description }, { headers: posHeaders(headers, token) }),
+    cashMovement: (type, amount, description, headers, token, paymentMethod) =>
+        api.post(
+            '/admin/pos/shift/cash-movement',
+            {
+                type,
+                amount,
+                description,
+                ...(type === 'cash_in' && paymentMethod ? { payment_method: paymentMethod } : {}),
+            },
+            { headers: posHeaders(headers, token) }
+        ),
     shiftSummary: (headers, token) =>
         api.get('/admin/pos/shift/summary', { headers: posHeaders(headers, token) }),
     shiftHistory: (headers, token) =>

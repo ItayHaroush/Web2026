@@ -289,6 +289,7 @@ class POSController extends Controller
             'type' => 'required|in:cash_in,cash_out',
             'amount' => 'required|numeric|min:0.01',
             'description' => 'nullable|string|max:255',
+            'payment_method' => 'nullable|in:cash,credit',
         ]);
 
         $user = $request->user();
@@ -301,11 +302,15 @@ class POSController extends Controller
             ->whereNull('closed_at')
             ->firstOrFail();
 
+        $paymentMethod = $request->type === 'cash_out'
+            ? 'cash'
+            : ($request->type === 'cash_in' && $request->input('payment_method') === 'credit' ? 'credit' : 'cash');
+
         $movement = CashMovement::create([
             'shift_id' => $shift->id,
             'user_id' => $user->id,
             'type' => $request->type,
-            'payment_method' => 'cash',
+            'payment_method' => $paymentMethod,
             'amount' => $request->amount,
             'description' => $request->description,
         ]);
@@ -332,9 +337,11 @@ class POSController extends Controller
 
         $cashPayments = $movements->where('type', 'payment')->where('payment_method', 'cash')->sum('amount');
         $creditPayments = $movements->where('type', 'payment')->where('payment_method', 'credit')->sum('amount');
-        $cashIn = $movements->where('type', 'cash_in')->sum('amount');
+        $cashInCash = $movements->where('type', 'cash_in')->where('payment_method', 'cash')->sum('amount');
+        $cashInCredit = $movements->where('type', 'cash_in')->where('payment_method', 'credit')->sum('amount');
         $cashOut = $movements->where('type', 'cash_out')->sum('amount');
         $refunds = $movements->where('type', 'refund')->sum('amount');
+        $cashRefunds = $movements->where('type', 'refund')->where('payment_method', 'cash')->sum('amount');
 
         return response()->json([
             'success' => true,
@@ -345,14 +352,15 @@ class POSController extends Controller
                 'opening_balance' => (float) $shift->opening_balance,
                 'cash_payments' => round($cashPayments, 2),
                 'credit_payments' => round($creditPayments, 2),
-                'cash_in' => round($cashIn, 2),
+                'cash_in' => round($cashInCash, 2),
+                'credit_in' => round($cashInCredit, 2),
                 'cash_out' => round($cashOut, 2),
                 'refunds' => round($refunds, 2),
                 'expected_in_register' => round(
-                    (float) $shift->opening_balance + $cashPayments + $cashIn - $cashOut - $refunds,
+                    (float) $shift->opening_balance + $cashPayments + $cashInCash - $cashOut - $cashRefunds,
                     2
                 ),
-                'total_sales' => round($cashPayments + $creditPayments, 2),
+                'total_sales' => round($cashPayments + $creditPayments + $cashInCredit, 2),
                 'order_count' => $movements->where('type', 'payment')->count(),
                 'movements' => $movements->map(fn($m) => [
                     'id' => $m->id,
@@ -1381,7 +1389,8 @@ class POSController extends Controller
 
         $cashPayments = $movements->where('type', 'payment')->where('payment_method', 'cash')->sum('amount');
         $creditPayments = $movements->where('type', 'payment')->where('payment_method', 'credit')->sum('amount');
-        $cashIn = $movements->where('type', 'cash_in')->sum('amount');
+        $cashInCash = $movements->where('type', 'cash_in')->where('payment_method', 'cash')->sum('amount');
+        $cashInCredit = $movements->where('type', 'cash_in')->where('payment_method', 'credit')->sum('amount');
         $cashOut = $movements->where('type', 'cash_out')->sum('amount');
         $refunds = $movements->where('type', 'refund')->sum('amount');
         $cashRefunds = $movements->where('type', 'refund')->where('payment_method', 'cash')->sum('amount');
@@ -1392,7 +1401,7 @@ class POSController extends Controller
         $refundCount = $movements->where('type', 'refund')->count();
 
         $expectedBalance = round(
-            (float) $shift->opening_balance + $cashPayments + $cashIn - $cashOut - $cashRefunds,
+            (float) $shift->opening_balance + $cashPayments + $cashInCash - $cashOut - $cashRefunds,
             2
         );
 
@@ -1440,14 +1449,15 @@ class POSController extends Controller
             'expected_balance' => $expectedBalance,
             'variance' => $variance,
 
-            'total_sales' => round($cashPayments + $creditPayments, 2),
+            'total_sales' => round($cashPayments + $creditPayments + $cashInCredit, 2),
             'cash_payments' => round($cashPayments, 2),
             'cash_payment_count' => $cashPaymentCount,
             'credit_payments' => round($creditPayments, 2),
             'credit_payment_count' => $creditPaymentCount,
             'total_payment_count' => $paymentCount,
 
-            'cash_in' => round($cashIn, 2),
+            'cash_in' => round($cashInCash, 2),
+            'credit_in' => round($cashInCredit, 2),
             'cash_out' => round($cashOut, 2),
             'refunds' => round($refunds, 2),
             'refund_count' => $refundCount,
@@ -1471,11 +1481,11 @@ class POSController extends Controller
     {
         $movements = $shift->movements()->get();
         $cashPayments = $movements->where('type', 'payment')->where('payment_method', 'cash')->sum('amount');
-        $cashIn = $movements->where('type', 'cash_in')->sum('amount');
+        $cashInCash = $movements->where('type', 'cash_in')->where('payment_method', 'cash')->sum('amount');
         $cashOut = $movements->where('type', 'cash_out')->sum('amount');
         $refunds = $movements->where('type', 'refund')->where('payment_method', 'cash')->sum('amount');
 
-        return round((float) $shift->opening_balance + $cashPayments + $cashIn - $cashOut - $refunds, 2);
+        return round((float) $shift->opening_balance + $cashPayments + $cashInCash - $cashOut - $refunds, 2);
     }
 
     private function formatShift(CashRegisterShift $shift): array
