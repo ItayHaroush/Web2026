@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useAdminAuth } from '../context/AdminAuthContext';
 import { useCart } from '../context/CartContext';
 import { useCustomer } from '../context/CustomerContext';
 import logo from '../images/ChefSyncLogoIcon.png';
@@ -13,12 +14,13 @@ import orderService from '../services/orderService';
 import { FaUser, FaShoppingBag, FaBars, FaTimes } from 'react-icons/fa';
 
 /**
- * Layout ראשי עם ניווט עליון
- * משתמע עבור לקוח - בלי כפתורי ניהול
+ * Layout ראשי עם ניווט עליון (לקוח).
+ * קישור "כניסת מנהלים" מוצג רק כשיש סשן מנהל פעיל (AdminAuth).
  */
 
 export function CustomerLayout({ children }) {
     const { tenantId, logout } = useAuth();
+    const { user: adminUser, loading: adminAuthLoading } = useAdminAuth();
     const { getItemCount } = useCart();
     const { isRecognized, customer, isUserModalOpen, openUserModal, closeUserModal, isOrderHistoryOpen, closeOrderHistory } = useCustomer();
     const navigate = useNavigate();
@@ -112,6 +114,10 @@ export function CustomerLayout({ children }) {
     const menuPath = tenantId ? `/${tenantId}/menu` : '/';
     const cartPath = tenantId ? `/${tenantId}/cart` : '/';
 
+    /** קישור ניהול — רק כשמנהל/צוות מחוברים ל-Admin (לא ללקוחות אורחים) */
+    const showAdminEntryInMenu = !adminAuthLoading && !!adminUser;
+    const adminDashboardPath = adminUser?.is_super_admin ? '/super-admin/dashboard' : '/admin/dashboard';
+
     return (
         <div className="flex flex-col min-h-screen bg-brand-light dark:bg-brand-dark-bg dark:text-brand-dark-text" dir="rtl">
             {/* Header — fixed (עובד יציב בגלילה ב-iOS; sticky נשבר לעיתים עם overflow-x:hidden על html/body) */}
@@ -163,6 +169,14 @@ export function CustomerLayout({ children }) {
                                 </button>
                             )}
                             <Link to="/" className="text-white/80 hover:text-brand-primary transition font-medium whitespace-nowrap">בית</Link>
+                            {showAdminEntryInMenu && (
+                                <Link
+                                    to={adminDashboardPath}
+                                    className="text-white/80 hover:text-brand-primary transition font-medium whitespace-nowrap"
+                                >
+                                    כניסת מנהלים
+                                </Link>
+                            )}
                             {tenantId && (
                                 <>
                                     <Link to={menuPath} className="text-white/80 hover:text-brand-primary transition font-medium whitespace-nowrap">תפריט</Link>
@@ -267,6 +281,15 @@ export function CustomerLayout({ children }) {
                                     >
                                         בית
                                     </Link>
+                                    {showAdminEntryInMenu && (
+                                        <Link
+                                            to={adminDashboardPath}
+                                            className="px-4 py-3.5 text-base font-bold text-white hover:bg-white/10"
+                                            onClick={() => setMobileMenuOpen(false)}
+                                        >
+                                            כניסת מנהלים
+                                        </Link>
+                                    )}
                                     {tenantId && (
                                         <>
                                             <Link

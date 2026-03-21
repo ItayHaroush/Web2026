@@ -10,56 +10,83 @@ use Illuminate\Support\Facades\Log;
 /**
  * אינטגרציה Z-Credit — PinPad דרך CommitFullTransaction.
  *
- * עקרונות שמירה:
- * - ברירת המחדל: `chargePinPad` שולח `Track2` = PINPAD+מזהה. מעבר למסופון אמיתי = עדכון ZCREDIT_* ב-.env.
- * - נתיבי בדיקה עתידיים (כרטיס מלא וכו.): מתודה נפרדת; `config('services.zcredit.test_mode_enabled')` שמור לכך.
+ * פרטי מסוף אמיתיים מוגדרים **לכל מסעדה** (שדות `restaurants` / טבלת `payment_terminals`).
+ * משתני `ZCREDIT_*` ב-.env — אופציונליים (למשל סביבת פיתוח); בזרימת POS/קיוסק לא נופלים ל-.env
+ * כשמשתמשים ב־`forRestaurant` / `forPaymentTerminal` (רק DB).
+ *
+ * `ZCREDIT_MOCK=true` — חיוב/החזר מדומים בלי HTTP (עד חיבור מסופון אמיתי).
  *
  * @see docs/zcredit-pinpad-testing.md
  */
 class ZCreditService
 {
     private string $apiUrl = 'https://pci.zcredit.co.il/ZCreditWS/api/Transaction/CommitFullTransaction';
+
     private string $refundUrl = 'https://pci.zcredit.co.il/ZCreditWS/api/Transaction/RefundTransaction';
 
     private string $terminalNumber;
+
     private string $terminalPassword;
+
     private string $pinpadId;
+
+    /** כש־false: לא משתמשים ב־config('services.zcredit.terminal_*') — רק ערכים מפורשים (מסעדה/מסוף) */
+    private bool $allowEnvFallback;
 
     public function __construct(
         ?string $terminalNumber = null,
         ?string $terminalPassword = null,
-        ?string $pinpadId = null
+        ?string $pinpadId = null,
+        bool $allowEnvFallback = true
     ) {
-        $this->terminalNumber  = $terminalNumber  ?? config('services.zcredit.terminal_number');
-        $this->terminalPassword = $terminalPassword ?? config('services.zcredit.terminal_password');
-        $raw = (string) ($pinpadId ?? config('services.zcredit.pinpad_id', '11002'));
-        // שמירת הערך המלא ל־Track2 – חייב להכיל PINPAD (למשל PINPAD11002)
-        $this->pinpadId = preg_match('/^PINPAD/i', $raw) ? $raw : ('PINPAD' . trim($raw));
+        $this->allowEnvFallback = $allowEnvFallback;
+
+        if ($allowEnvFallback) {
+            $this->terminalNumber = (string) ($terminalNumber ?? config('services.zcredit.terminal_number') ?? '');
+            $this->terminalPassword = (string) ($terminalPassword ?? config('services.zcredit.terminal_password') ?? '');
+            $raw = (string) ($pinpadId ?? config('services.zcredit.pinpad_id') ?? '');
+        } else {
+            $this->terminalNumber = (string) ($terminalNumber ?? '');
+            $this->terminalPassword = (string) ($terminalPassword ?? '');
+            $raw = (string) ($pinpadId ?? '');
+        }
+
+        $this->pinpadId = $raw === '' ? '' : (preg_match('/^PINPAD/i', $raw) ? $raw : ('PINPAD' . trim($raw)));
     }
 
-    /**
-     * Factory: יצירת שירות ZCredit עם credentials של מסעדה ספציפית.
-     * אם למסעדה אין הגדרות ZCredit, נופל חזרה ל-config הגלובלי.
-     */
     public static function forRestaurant(Restaurant $restaurant): self
     {
         return new self(
             $restaurant->zcredit_terminal_number,
             $restaurant->zcredit_terminal_password,
-            $restaurant->zcredit_pinpad_id
+            $restaurant->zcredit_pinpad_id,
+            false
         );
     }
 
-    /**
-     * מסוף תשלומים ייעודי (קופה / קיוסק) — ערכים ריקים נופלים ל־.env דרך ה־constructor.
-     */
     public static function forPaymentTerminal(PaymentTerminal $terminal): self
     {
         return new self(
             $terminal->zcredit_terminal_number,
             $terminal->zcredit_terminal_password,
-            $terminal->zcredit_pinpad_id
+            $terminal->zcredit_pinpad_id,
+            false
         );
+    }
+
+    public function isMockMode(): bool
+    {
+        return (bool) config('services.zcredit.mock');
+    }
+
+    /**
+     * מספר מסוף + סיסמה + PinPad (Track2) — כולם נדרשים לעסקה אמיתית.
+     */
+    public function hasTerminalCredentials(): bool
+    {
+        return $this->terminalNumber !== ''
+            && $this->terminalPassword !== ''
+            && $this->pinpadId !== '';
     }
 
     /**
@@ -71,16 +98,33 @@ class ZCreditService
      */
     public function chargePinPad(float $amount, ?string $uniqueId = null): array
     {
+        if ($this->isMockMode()) {
+            Log::info('[ZCredit] Mock charge (no HTTP)', ['amount' => $amount, 'uniqueId' => $uniqueId]);
+
+            return $this->mockChargeSuccess($amount, $uniqueId);
+        }
+
+        if (!$this->hasTerminalCredentials()) {
+            return [
+                'success' => false,
+                'data' => [
+                    'return_code' => 'NO_TERMINAL',
+                    'error_message' => 'לא הוגדר מסוף Z-Credit. יש להגדיר ב"הגדרות תשלום" או להפעיל ZCREDIT_MOCK לבדיקות.',
+                    'full_response' => ['local_error' => true],
+                ],
+            ];
+        }
+
         $amountInAgorot = (int) round($amount * 100);
 
         $payload = [
-            'TerminalNumber'   => $this->terminalNumber,
-            'Password'         => $this->terminalPassword,
-            'TransactionSum'   => $amountInAgorot,
-            'CreditType'       => 1,
-            'NumOfPayments'    => 1,  // בתיעוד: NumOfPayments (לא NumberOfPayments)
-            'Currency'         => 'ILS',
-            'Track2'           => $this->pinpadId,
+            'TerminalNumber' => $this->terminalNumber,
+            'Password' => $this->terminalPassword,
+            'TransactionSum' => $amountInAgorot,
+            'CreditType' => 1,
+            'NumOfPayments' => 1,
+            'Currency' => 'ILS',
+            'Track2' => $this->pinpadId,
         ];
 
         if ($uniqueId) {
@@ -115,39 +159,63 @@ class ZCreditService
                 return [
                     'success' => true,
                     'data' => [
-                        'transaction_id'  => $data['ReferenceNumber'] ?? $data['TransactionID'] ?? null,
-                        'approval_code'   => $data['AuthNum'] ?? $data['ApprovalNumber'] ?? null,
-                        'voucher_number'  => $data['VoucherNumber'] ?? null,
-                        'return_code'     => $data['ReturnCode'] ?? null,
-                        'return_message'  => $data['ReturnMessage'] ?? null,
-                        'card_last4'      => $data['Card4Digits'] ?? $data['Last4Digits'] ?? null,
-                        'card_brand'      => $data['CardName'] ?? $data['CardBrand'] ?? null,
-                        'full_response'   => $data,
+                        'transaction_id' => $data['ReferenceNumber'] ?? $data['TransactionID'] ?? null,
+                        'approval_code' => $data['AuthNum'] ?? $data['ApprovalNumber'] ?? null,
+                        'voucher_number' => $data['VoucherNumber'] ?? null,
+                        'return_code' => $data['ReturnCode'] ?? null,
+                        'return_message' => $data['ReturnMessage'] ?? null,
+                        'card_last4' => $data['Card4Digits'] ?? $data['Last4Digits'] ?? null,
+                        'card_brand' => $data['CardName'] ?? $data['CardBrand'] ?? null,
+                        'full_response' => $data,
                     ],
                 ];
             }
 
-            // Transaction declined or error
             $fail = is_array($data) ? $data : [];
+
             return [
                 'success' => false,
                 'data' => [
-                    'return_code'    => $fail['ReturnCode'] ?? null,
+                    'return_code' => $fail['ReturnCode'] ?? null,
                     'return_message' => $fail['ReturnMessage'] ?? ($fail['ErrorMessage'] ?? 'העסקה נדחתה'),
-                    'error_message'  => $fail['ErrorMessage'] ?? $fail['ReturnMessage'] ?? 'שגיאה לא ידועה',
-                    'full_response'  => is_array($data) ? $data : ['non_json_body' => $bodyPreview ?? ''],
+                    'error_message' => $fail['ErrorMessage'] ?? $fail['ReturnMessage'] ?? 'שגיאה לא ידועה',
+                    'full_response' => is_array($data) ? $data : ['non_json_body' => $bodyPreview ?? ''],
                 ],
             ];
         } catch (\Illuminate\Http\Client\ConnectionException $e) {
             Log::error('[ZCredit] Connection timeout', ['error' => $e->getMessage()]);
+
             return [
                 'success' => false,
                 'data' => [
-                    'return_code'   => 'TIMEOUT',
+                    'return_code' => 'TIMEOUT',
                     'error_message' => 'תם הזמן לתקשורת עם ה-PinPad. נסו שוב.',
                 ],
             ];
         }
+    }
+
+    private function mockChargeSuccess(float $amount, ?string $uniqueId): array
+    {
+        $tid = 'MOCK_' . ($uniqueId ? preg_replace('/\W+/', '_', $uniqueId) : 'chg') . '_' . uniqid();
+
+        return [
+            'success' => true,
+            'data' => [
+                'transaction_id' => $tid,
+                'approval_code' => 'MOCK',
+                'voucher_number' => null,
+                'return_code' => 0,
+                'return_message' => 'Mock transaction',
+                'card_last4' => '0000',
+                'card_brand' => 'MOCK',
+                'full_response' => [
+                    'mock' => true,
+                    'amount' => $amount,
+                    'TransactionUniqueID' => $uniqueId,
+                ],
+            ],
+        ];
     }
 
     /**
@@ -159,10 +227,34 @@ class ZCreditService
      */
     public function refundTransaction(string $referenceNumber, ?float $amount = null): array
     {
+        if ($this->isMockMode() || str_starts_with($referenceNumber, 'MOCK_')) {
+            Log::info('[ZCredit] Mock refund', ['reference' => $referenceNumber, 'amount' => $amount]);
+
+            return [
+                'success' => true,
+                'data' => [
+                    'reference_number' => $referenceNumber,
+                    'return_code' => 0,
+                    'return_message' => 'Mock refund',
+                    'full_response' => ['mock' => true],
+                ],
+            ];
+        }
+
+        if (!$this->hasTerminalCredentials()) {
+            return [
+                'success' => false,
+                'data' => [
+                    'return_code' => 'NO_TERMINAL',
+                    'error_message' => 'לא הוגדר מסוף Z-Credit להחזר.',
+                ],
+            ];
+        }
+
         $payload = [
-            'TerminalNumber'                 => $this->terminalNumber,
-            'Password'                       => $this->terminalPassword,
-            'TransactionIdToCancelOrRefund'  => $referenceNumber,
+            'TerminalNumber' => $this->terminalNumber,
+            'Password' => $this->terminalPassword,
+            'TransactionIdToCancelOrRefund' => $referenceNumber,
         ];
 
         if ($amount !== null) {
@@ -177,10 +269,10 @@ class ZCreditService
 
             Log::info('[ZCredit] Refund response', [
                 'reference' => $referenceNumber,
-                'amount'    => $amount,
+                'amount' => $amount,
                 'ReturnCode' => $data['ReturnCode'] ?? null,
                 'ReturnMessage' => $data['ReturnMessage'] ?? ($data['ErrorMessage'] ?? null),
-                'HasError'   => $data['HasError'] ?? null,
+                'HasError' => $data['HasError'] ?? null,
             ]);
 
             if ($response->successful() && isset($data['HasError']) && !$data['HasError']) {
@@ -188,9 +280,9 @@ class ZCreditService
                     'success' => true,
                     'data' => [
                         'reference_number' => $data['ReferenceNumber'] ?? null,
-                        'return_code'      => $data['ReturnCode'] ?? null,
-                        'return_message'   => $data['ReturnMessage'] ?? null,
-                        'full_response'    => $data,
+                        'return_code' => $data['ReturnCode'] ?? null,
+                        'return_message' => $data['ReturnMessage'] ?? null,
+                        'full_response' => $data,
                     ],
                 ];
             }
@@ -198,17 +290,18 @@ class ZCreditService
             return [
                 'success' => false,
                 'data' => [
-                    'return_code'   => $data['ReturnCode'] ?? null,
+                    'return_code' => $data['ReturnCode'] ?? null,
                     'error_message' => $data['ReturnMessage'] ?? 'שגיאה בביטול העסקה',
                     'full_response' => $data,
                 ],
             ];
         } catch (\Exception $e) {
             Log::error('[ZCredit] Refund error', ['error' => $e->getMessage()]);
+
             return [
                 'success' => false,
                 'data' => [
-                    'return_code'   => 'ERROR',
+                    'return_code' => 'ERROR',
                     'error_message' => 'שגיאה בתקשורת עם שרת התשלומים',
                 ],
             ];

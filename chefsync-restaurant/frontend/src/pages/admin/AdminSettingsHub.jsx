@@ -12,6 +12,11 @@ import {
     FaUserCog,
     FaChevronLeft,
     FaShoppingCart,
+    FaUtensils,
+    FaCarrot,
+    FaTv,
+    FaTabletAlt,
+    FaPlus,
 } from 'react-icons/fa';
 
 function SettingCard({ icon, title, description, to, badge }) {
@@ -116,6 +121,46 @@ export default function AdminSettingsHub() {
                     </h1>
                     <p className="text-xs text-gray-500 mt-1 mr-[52px]">ניהול פרטי מסעדה, צוות, משלוחים ותשלום</p>
                 </div>
+
+                {(isManager() || isOwner()) && (
+                    <div className="mb-8 p-5 rounded-2xl bg-gray-50 border border-gray-100">
+                        <p className="text-xs font-black text-gray-500 uppercase tracking-wider mb-3">הוספה מהירה</p>
+                        <div className="flex flex-wrap gap-2">
+                            <Link
+                                to="/admin/menu-management?tab=items"
+                                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-sm font-black text-gray-800 hover:border-brand-primary hover:text-brand-primary transition-colors"
+                            >
+                                <FaUtensils size={14} />
+                                <FaPlus size={10} className="opacity-60" />
+                                פריט לתפריט
+                            </Link>
+                            <Link
+                                to="/admin/menu-management?tab=salads"
+                                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-sm font-black text-gray-800 hover:border-brand-primary hover:text-brand-primary transition-colors"
+                            >
+                                <FaCarrot size={14} />
+                                <FaPlus size={10} className="opacity-60" />
+                                תוספת
+                            </Link>
+                            <Link
+                                to="/admin/devices?tab=screens"
+                                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-sm font-black text-gray-800 hover:border-brand-primary hover:text-brand-primary transition-colors"
+                            >
+                                <FaTv size={14} />
+                                <FaPlus size={10} className="opacity-60" />
+                                מסך תצוגה
+                            </Link>
+                            <Link
+                                to="/admin/devices?tab=kiosks"
+                                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-sm font-black text-gray-800 hover:border-brand-primary hover:text-brand-primary transition-colors"
+                            >
+                                <FaTabletAlt size={14} />
+                                <FaPlus size={10} className="opacity-60" />
+                                קיוסק
+                            </Link>
+                        </div>
+                    </div>
+                )}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {settings.map((item) => (

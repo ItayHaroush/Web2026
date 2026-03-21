@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { FaTimes, FaSignOutAlt, FaChevronRight, FaChevronLeft, FaUtensils, FaStar, FaCashRegister } from 'react-icons/fa';
+import { FaTimes, FaSignOutAlt, FaChevronRight, FaChevronLeft, FaUtensils, FaStar, FaCashRegister, FaHome } from 'react-icons/fa';
 import { useRestaurantStatus } from '../../context/RestaurantStatusContext';
 
 export default function DashboardSidebar({
@@ -182,13 +182,28 @@ export default function DashboardSidebar({
                         {isCollapsed ? <FaChevronLeft /> : <FaChevronRight />}
                     </button>
 
-                    <button
-                        onClick={onLogout}
-                        className={`w-full flex items-center ${isCollapsed ? 'justify-center' : 'px-3'} py-2.5 text-red-500 hover:bg-red-50 hover:text-red-600 rounded-xl transition-all duration-200`}
+                    <div
+                        className={`flex gap-2 ${showCollapsed ? 'flex-col items-stretch' : 'flex-row'}`}
                     >
-                        <span className={`text-xl ${isCollapsed ? '' : 'ml-3'}`}><FaSignOutAlt /></span>
-                        {!isCollapsed && <span className="font-bold text-sm">התנתק מהמערכת</span>}
-                    </button>
+                        <button
+                            type="button"
+                            onClick={() => navigate('/')}
+                            className={`flex-1 min-w-0 flex items-center ${showCollapsed ? 'justify-center' : 'px-3'} py-2.5 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded-xl transition-all duration-200 border border-gray-200/80`}
+                            title="חזרה לאתר (ללא התנתקות)"
+                        >
+                            <span className={`text-xl shrink-0 ${showCollapsed ? '' : 'ml-2'}`}><FaHome /></span>
+                            {!showCollapsed && <span className="font-bold text-sm truncate">חזרה לבית</span>}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={onLogout}
+                            className={`flex-1 min-w-0 flex items-center ${showCollapsed ? 'justify-center' : 'px-3'} py-2.5 text-red-500 hover:bg-red-50 hover:text-red-600 rounded-xl transition-all duration-200`}
+                            title="התנתק מהמערכת"
+                        >
+                            <span className={`text-xl shrink-0 ${showCollapsed ? '' : 'ml-2'}`}><FaSignOutAlt /></span>
+                            {!showCollapsed && <span className="font-bold text-sm truncate">התנתק</span>}
+                        </button>
+                    </div>
                 </div>
             </aside>
         </>

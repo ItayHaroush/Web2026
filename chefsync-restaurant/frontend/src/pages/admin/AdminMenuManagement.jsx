@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import AdminLayout from '../../layouts/AdminLayout';
 import AdminMenu from './AdminMenu';
 import AdminBases from './AdminBases';
@@ -13,8 +14,26 @@ const TABS = [
     { id: 'categories', label: 'קטגוריות', icon: <FaTags size={14} /> },
 ];
 
+const TAB_IDS = ['items', 'bases', 'salads', 'categories'];
+
 export default function AdminMenuManagement() {
-    const [activeTab, setActiveTab] = useState('items');
+    const [searchParams, setSearchParams] = useSearchParams();
+    const tabFromUrl = searchParams.get('tab');
+    const [activeTab, setActiveTab] = useState(
+        () => (tabFromUrl && TAB_IDS.includes(tabFromUrl) ? tabFromUrl : 'items')
+    );
+
+    useEffect(() => {
+        const t = searchParams.get('tab');
+        if (t && TAB_IDS.includes(t)) {
+            setActiveTab(t);
+        }
+    }, [searchParams]);
+
+    const goTab = (id) => {
+        setActiveTab(id);
+        setSearchParams({ tab: id });
+    };
 
     return (
         <AdminLayout>
@@ -29,13 +48,13 @@ export default function AdminMenuManagement() {
                     <p className="text-xs text-gray-500 mt-1 mr-[52px]">ניהול פריטים, בסיסים, תוספות וקטגוריות</p>
                 </div>
 
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-1.5 mb-6">
-                    <div className="flex gap-1">
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-1.5 mb-6 overflow-x-auto overscroll-x-contain touch-pan-x [-webkit-overflow-scrolling:touch] max-w-full min-w-0">
+                    <div className="flex gap-1 min-w-max sm:min-w-0 sm:w-full">
                         {TABS.map((tab) => (
                             <button
                                 key={tab.id}
-                                onClick={() => setActiveTab(tab.id)}
-                                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
+                                onClick={() => goTab(tab.id)}
+                                className={`flex shrink-0 sm:flex-1 items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap snap-start ${
                                     activeTab === tab.id
                                         ? 'bg-gray-900 text-white shadow-lg'
                                         : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'

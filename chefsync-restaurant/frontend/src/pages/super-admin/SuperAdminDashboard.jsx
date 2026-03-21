@@ -319,16 +319,16 @@ export default function SuperAdminDashboard() {
         };
 
         return (
-            <div className={`p-3.5 rounded-xl border ${colorClasses[color]} flex items-center justify-between shadow-sm bg-white`}>
-                <div className="min-w-0">
-                    <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">{label}</p>
-                    <div className="flex items-baseline gap-1">
-                        <h3 className="text-lg font-black text-gray-800 leading-none">{value}</h3>
+            <div className={`p-3 sm:p-3.5 rounded-xl border ${colorClasses[color]} flex items-center justify-between gap-2 shadow-sm bg-white min-w-0`}>
+                <div className="min-w-0 flex-1">
+                    <p className="text-[10px] sm:text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-0.5 leading-tight">{label}</p>
+                    <div className="flex items-baseline gap-1 min-w-0">
+                        <h3 className="text-base sm:text-lg font-black text-gray-800 leading-tight break-words">{value}</h3>
                     </div>
-                    {subtext && <p className="text-[10px] text-gray-500 mt-1 truncate">{subtext}</p>}
+                    {subtext && <p className="text-[9px] sm:text-[10px] text-gray-500 mt-1 line-clamp-2">{subtext}</p>}
                 </div>
-                <div className={`p-2 rounded-lg shrink-0 ${iconClasses[color]}`}>
-                    {icon}
+                <div className={`p-1.5 sm:p-2 rounded-lg shrink-0 ${iconClasses[color]}`}>
+                    <span className="[&>svg]:w-4 [&>svg]:h-4 sm:[&>svg]:w-[18px] sm:[&>svg]:h-[18px]">{icon}</span>
                 </div>
             </div>
         );
@@ -336,7 +336,7 @@ export default function SuperAdminDashboard() {
 
     return (
         <SuperAdminLayout>
-            <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-4">
+            <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-4 pb-24 md:pb-4">
                 {/* Header */}
                 <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
@@ -350,8 +350,9 @@ export default function SuperAdminDashboard() {
                     </div>
 
                     <button
+                        type="button"
                         onClick={() => setShowAddRestaurant(true)}
-                        className="bg-brand-primary text-white px-5 py-2.5 rounded-xl hover:bg-brand-primary/90 font-bold transition-all shadow-lg shadow-brand-primary/20 flex items-center justify-center gap-2 text-sm"
+                        className="hidden md:inline-flex bg-brand-primary text-white px-5 py-2.5 rounded-xl hover:bg-brand-primary/90 font-bold transition-all shadow-lg shadow-brand-primary/20 items-center justify-center gap-2 text-sm"
                     >
                         <FaPlus size={14} />
                         הוספת מסעדה חדשה
@@ -375,40 +376,48 @@ export default function SuperAdminDashboard() {
                                 )}
                             </div>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
                             <button
-                                onClick={enablePush}
-                                disabled={pushState.status === 'loading' || permission === 'denied' || isPushEnabled}
-                                className={`flex-1 lg:flex-none px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-sm flex items-center justify-center gap-2 ${isPushEnabled
-                                    ? 'bg-green-50 text-green-700 border border-green-100 cursor-default'
-                                    : 'bg-brand-primary text-white hover:shadow-brand-primary/20 hover:shadow-lg disabled:opacity-50'
-                                    }`}
+                                type="button"
+                                role="switch"
+                                aria-checked={isPushEnabled}
+                                disabled={
+                                    pushState.status === 'loading'
+                                    || permission === 'denied'
+                                    || permission === 'unsupported'
+                                }
+                                onClick={() => (isPushEnabled ? disablePush() : enablePush())}
+                                className={`
+                                    relative flex h-9 w-[3.25rem] shrink-0 items-center rounded-full p-1 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40 focus-visible:ring-offset-2
+                                    ${pushState.status === 'loading' ? 'cursor-wait bg-gray-400' : permission === 'denied' || permission === 'unsupported' ? 'cursor-not-allowed bg-gray-200 opacity-60' : 'cursor-pointer'}
+                                    ${pushState.status !== 'loading' && (isPushEnabled ? 'bg-green-500 justify-end' : 'bg-gray-300 justify-start')}
+                                `}
                             >
                                 {pushState.status === 'loading' ? (
-                                    <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                ) : isPushEnabled ? (
-                                    <><FaCheck size={10} /> מחובר</>
+                                    <span className="absolute inset-0 flex items-center justify-center" aria-hidden>
+                                        <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                                    </span>
                                 ) : (
-                                    'הפעל התראות'
+                                    <span
+                                        className="h-7 w-7 rounded-full bg-white shadow-md pointer-events-none"
+                                        aria-hidden
+                                    />
                                 )}
                             </button>
-
-                            {isPushEnabled && (
-                                <button
-                                    onClick={disablePush}
-                                    disabled={pushState.status === 'loading'}
-                                    className="px-5 py-2.5 bg-white border border-gray-100 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-sm flex items-center justify-center gap-2"
-                                >
-                                    כבה
-                                </button>
-                            )}
+                            <span className="text-xs font-bold text-gray-500 whitespace-nowrap">
+                                {permission === 'denied' || permission === 'unsupported'
+                                    ? 'התראות לא זמינות בדפדפן זה'
+                                    : isPushEnabled
+                                        ? 'התראות פעילות'
+                                        : 'הפעל התראות'}
+                            </span>
                         </div>
                     </div>
                 </div>
 
                 {/* סטטיסטיקות */}
                 {stats && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
                         <StatCard
                             label="סך הכל מסעדות"
                             value={stats.stats.total_restaurants}
@@ -442,7 +451,7 @@ export default function SuperAdminDashboard() {
 
                 {/* SaaS KPIs */}
                 {stats?.saas && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
                         <StatCard
                             label="MRR"
                             value={`₪${Number(stats.saas.mrr || 0).toLocaleString()}`}
@@ -703,6 +712,17 @@ export default function SuperAdminDashboard() {
                         getAuthHeaders={getAuthHeaders}
                     />
                 )}
+
+                {/* FAB הוספת מסעדה — מובייל / טאבלט צר */}
+                <button
+                    type="button"
+                    onClick={() => setShowAddRestaurant(true)}
+                    className="md:hidden fixed bottom-5 left-5 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-brand-primary text-white shadow-lg shadow-brand-primary/35 ring-4 ring-white/90 active:scale-95 transition-transform"
+                    style={{ marginBottom: 'max(0.25rem, env(safe-area-inset-bottom))' }}
+                    aria-label="הוספת מסעדה חדשה"
+                >
+                    <FaPlus size={22} />
+                </button>
             </div>
         </SuperAdminLayout>
     );
@@ -1070,7 +1090,8 @@ function RestaurantDetailModal({ restaurant: initialRestaurant, onClose, onImper
         fetchDetails();
     }, [initialRestaurant.id]);
 
-    const publicUrl = `/${restaurant.tenant_id}`;
+    /** נתיב תפריט ציבורי (תואם App.jsx: /:tenantId/menu) */
+    const publicMenuUrl = `/${restaurant.tenant_id}/menu`;
 
     return (
         <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
@@ -1240,22 +1261,22 @@ function RestaurantDetailModal({ restaurant: initialRestaurant, onClose, onImper
                             </div>
 
                             {/* סטטיסטיקות */}
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                                <div className="bg-blue-50 rounded-xl p-3 border border-blue-100 text-center">
-                                    <p className="text-lg font-black text-blue-700">{restaurant.orders_count ?? 0}</p>
-                                    <p className="text-[10px] font-bold text-blue-500 mt-0.5">הזמנות</p>
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
+                                <div className="bg-blue-50 rounded-xl p-2.5 sm:p-3 border border-blue-100 text-center min-w-0">
+                                    <p className="text-base sm:text-lg font-black text-blue-700 tabular-nums leading-tight">{restaurant.orders_count ?? 0}</p>
+                                    <p className="text-[9px] sm:text-[10px] font-bold text-blue-500 mt-1 leading-tight">הזמנות</p>
                                 </div>
-                                <div className="bg-green-50 rounded-xl p-3 border border-green-100 text-center">
-                                    <p className="text-lg font-black text-green-700">₪{Number(restaurant.total_revenue || 0).toLocaleString()}</p>
-                                    <p className="text-[10px] font-bold text-green-500 mt-0.5">הכנסה</p>
+                                <div className="bg-green-50 rounded-xl p-2.5 sm:p-3 border border-green-100 text-center min-w-0">
+                                    <p className="text-base sm:text-lg font-black text-green-700 tabular-nums leading-tight break-words">₪{Number(restaurant.total_revenue || 0).toLocaleString()}</p>
+                                    <p className="text-[9px] sm:text-[10px] font-bold text-green-500 mt-1 leading-tight">הכנסה</p>
                                 </div>
-                                <div className="bg-purple-50 rounded-xl p-3 border border-purple-100 text-center">
-                                    <p className="text-lg font-black text-purple-700">{restaurant.menu_items_count ?? 0}</p>
-                                    <p className="text-[10px] font-bold text-purple-500 mt-0.5">פריטי תפריט</p>
+                                <div className="bg-purple-50 rounded-xl p-2.5 sm:p-3 border border-purple-100 text-center min-w-0">
+                                    <p className="text-base sm:text-lg font-black text-purple-700 tabular-nums leading-tight">{restaurant.menu_items_count ?? 0}</p>
+                                    <p className="text-[9px] sm:text-[10px] font-bold text-purple-500 mt-1 leading-tight">פריטי תפריט</p>
                                 </div>
-                                <div className="bg-orange-50 rounded-xl p-3 border border-orange-100 text-center">
-                                    <p className="text-lg font-black text-orange-700">{restaurant.categories_count ?? 0}</p>
-                                    <p className="text-[10px] font-bold text-orange-500 mt-0.5">קטגוריות</p>
+                                <div className="bg-orange-50 rounded-xl p-2.5 sm:p-3 border border-orange-100 text-center min-w-0">
+                                    <p className="text-base sm:text-lg font-black text-orange-700 tabular-nums leading-tight">{restaurant.categories_count ?? 0}</p>
+                                    <p className="text-[9px] sm:text-[10px] font-bold text-orange-500 mt-1 leading-tight">קטגוריות</p>
                                 </div>
                             </div>
 
@@ -1296,17 +1317,19 @@ function RestaurantDetailModal({ restaurant: initialRestaurant, onClose, onImper
                             </div>
 
                             {/* הפניות מהירות */}
-                            <div className="flex flex-wrap gap-2">
+                            <div className="flex flex-col sm:flex-row flex-wrap gap-2">
                                 <button
-                                    onClick={() => window.open(publicUrl, '_blank')}
-                                    className="flex items-center gap-2 px-4 py-2.5 bg-brand-primary text-white rounded-xl text-sm font-bold hover:opacity-90 transition-all"
+                                    type="button"
+                                    onClick={() => window.open(publicMenuUrl, '_blank', 'noopener,noreferrer')}
+                                    className="flex w-full sm:w-auto min-w-0 items-center justify-center gap-2 px-4 py-2.5 bg-brand-primary text-white rounded-xl text-sm font-bold hover:opacity-90 transition-all"
                                 >
-                                    <FaExternalLinkAlt size={12} />
+                                    <FaExternalLinkAlt size={12} className="shrink-0" />
                                     צפה בתפריט
                                 </button>
                                 <button
+                                    type="button"
                                     onClick={() => { onClose(); onImpersonate(restaurant); }}
-                                    className="flex items-center gap-2 px-4 py-2.5 bg-purple-600 text-white rounded-xl text-sm font-bold hover:bg-purple-700 transition-all"
+                                    className="flex w-full sm:w-auto min-w-0 items-center justify-center gap-2 px-4 py-2.5 bg-purple-600 text-white rounded-xl text-sm font-bold hover:bg-purple-700 transition-all"
                                 >
                                     <FaUserSecret size={12} />
                                     כניסה כמסעדה

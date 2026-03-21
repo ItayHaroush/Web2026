@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import AdminLayout from '../../layouts/AdminLayout';
+import MobileAddFab from '../../components/admin/MobileAddFab';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import api from '../../services/apiClient';
 import {
@@ -218,7 +219,7 @@ export default function AdminBases({ embedded = false }) {
                     {isManager() && (
                         <button
                             onClick={() => openModal()}
-                            className="w-full md:w-auto bg-brand-primary text-white px-10 py-5 rounded-[2rem] font-black hover:bg-brand-dark transition-all flex items-center justify-center gap-3 shadow-xl shadow-brand-primary/20 active:scale-95 group"
+                            className="hidden md:flex w-full md:w-auto bg-brand-primary text-white px-10 py-5 rounded-[2rem] font-black hover:bg-brand-dark transition-all items-center justify-center gap-3 shadow-xl shadow-brand-primary/20 active:scale-95 group"
                         >
                             <FaPlus className="group-hover:rotate-90 transition-transform" />
                             הוספת בסיס חדש
@@ -227,7 +228,7 @@ export default function AdminBases({ embedded = false }) {
                 </div>
                 )}
                 {embedded && isManager() && (
-                    <div className="flex justify-end px-4">
+                    <div className="hidden md:flex justify-end px-4">
                         <button
                             onClick={() => openModal()}
                             className="bg-brand-primary text-white px-6 py-3 rounded-2xl font-black text-sm hover:bg-brand-dark transition-all flex items-center gap-2 shadow-lg shadow-brand-primary/20"
@@ -424,9 +425,9 @@ export default function AdminBases({ embedded = false }) {
 
                 {/* Modern Modal */}
                 {modalOpen && (
-                    <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-300">
-                        <div className="bg-white rounded-[3.5rem] shadow-2xl max-w-xl w-full overflow-hidden border border-white/20 animate-in zoom-in-95 duration-300">
-                            <div className="px-10 py-8 bg-gray-50/50 border-b border-gray-100 flex items-center justify-between">
+                    <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-300">
+                        <div className="bg-white rounded-t-[2rem] sm:rounded-[3.5rem] shadow-2xl max-w-xl w-full max-h-[min(92dvh,90vh)] overflow-hidden flex flex-col min-h-0 border border-white/20 animate-in zoom-in-95 duration-300">
+                            <div className="px-4 sm:px-10 py-5 sm:py-8 bg-gray-50/50 border-b border-gray-100 flex items-center justify-between shrink-0">
                                 <div className="flex items-center gap-5">
                                     <div className="p-4 bg-brand-primary/10 rounded-[1.5rem] text-brand-primary shadow-sm">
                                         {editBase ? <FaEdit size={24} /> : <FaPlus size={24} />}
@@ -439,14 +440,16 @@ export default function AdminBases({ embedded = false }) {
                                     </div>
                                 </div>
                                 <button
+                                    type="button"
                                     onClick={closeModal}
-                                    className="p-3 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-2xl transition-all"
+                                    className="p-3 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-2xl transition-all shrink-0"
                                 >
                                     <FaTimes size={24} />
                                 </button>
                             </div>
 
-                            <form onSubmit={handleSubmit} className="p-10 space-y-8">
+                            <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+                                <div className="overflow-y-auto flex-1 min-h-0 p-4 sm:p-10 space-y-6 sm:space-y-8 custom-scrollbar">
                                 <div className="space-y-3">
                                     <label className="text-sm font-black text-gray-700 mr-2 uppercase tracking-widest flex items-center gap-2">
                                         <FaInfoCircle className="text-indigo-500" /> שם הבסיס
@@ -456,7 +459,7 @@ export default function AdminBases({ embedded = false }) {
                                         value={form.name}
                                         onChange={(e) => setForm({ ...form, name: e.target.value })}
                                         required
-                                        className="w-full px-6 py-5 bg-gray-50 border-none rounded-[1.5rem] focus:ring-4 focus:ring-brand-primary/10 text-gray-900 font-black transition-all"
+                                        className="w-full min-w-0 px-5 sm:px-6 py-4 sm:py-5 bg-gray-50 border-none rounded-[1.5rem] focus:ring-4 focus:ring-brand-primary/10 text-gray-900 font-black transition-all text-base"
                                         placeholder="למשל: לחם צרפתי, לחם דגנים..."
                                     />
                                 </div>
@@ -494,27 +497,31 @@ export default function AdminBases({ embedded = false }) {
                                         </div>
                                     </label>
                                 </div>
+                                </div>
 
-                                <div className="flex gap-4 pt-4">
-                                    <button
-                                        type="submit"
-                                        disabled={saving}
-                                        className="flex-1 bg-brand-primary text-white py-5 rounded-[1.5rem] font-black text-lg hover:shadow-2xl hover:shadow-brand-primary/20 hover:bg-brand-dark transition-all active:scale-95 flex items-center justify-center gap-3 disabled:opacity-50"
-                                    >
-                                        <FaSave />
-                                        {saving ? 'שומר...' : editBase ? 'עדכון בסיס' : 'הוספת בסיס'}
-                                    </button>
+                                <div className="flex flex-col-reverse sm:flex-row gap-3 p-4 sm:px-10 sm:pb-8 pt-2 border-t border-gray-100 bg-white shrink-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
                                     <button
                                         type="button"
                                         onClick={closeModal}
-                                        className="px-10 py-5 bg-gray-100 text-gray-700 rounded-[1.5rem] font-black hover:bg-gray-200 transition-all active:scale-95"
+                                        className="w-full sm:w-auto px-8 py-4 sm:py-5 bg-gray-100 text-gray-700 rounded-[1.5rem] font-black hover:bg-gray-200 transition-all active:scale-95"
                                     >
                                         ביטול
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={saving}
+                                        className="flex-1 bg-brand-primary text-white py-4 sm:py-5 rounded-[1.5rem] font-black text-base sm:text-lg hover:shadow-2xl hover:shadow-brand-primary/20 hover:bg-brand-dark transition-all active:scale-95 flex items-center justify-center gap-3 disabled:opacity-50"
+                                    >
+                                        <FaSave />
+                                        {saving ? 'שומר...' : editBase ? 'עדכון בסיס' : 'הוספת בסיס'}
                                     </button>
                                 </div>
                             </form>
                         </div>
                     </div>
+                )}
+                {isManager() && !modalOpen && (
+                    <MobileAddFab label="הוספת בסיס" icon={FaBreadSlice} onClick={() => openModal()} />
                 )}
             </div>
     );

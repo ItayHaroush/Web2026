@@ -22,8 +22,11 @@
 1. הזמנה מקיוסק עם `payment_terminal_id` על הקיוסק → רשומה ב־`payment_terminals`.
 2. סשן קופה עם `payment_terminal_id` (נבחר ב־`verify-pin`) → אותו מסוף.
 3. מסעדה עם `default_payment_terminal_id` → ברירת מחדל.
-4. שדות legacy על `restaurants` (`zcredit_terminal_number` וכו') → `ZCreditService::forRestaurant`.
-5. משתני `.env` הגלובליים (`ZCREDIT_*`). אין URL נפרד ל"דמה"; ההבדל הוא רק בערכי המסוף/סיסמה/PinPad.
+4. שדות על `restaurants` (`zcredit_terminal_number` וכו') — **בלי** נפילה ל־`.env` לחיובי POS/קיוסק.
+
+**מצב Mock (`ZCREDIT_MOCK=true` ב־`.env`):** חיוב/החזר מדומים בלי HTTP — מתאים עד חיבור מסופון אמיתי במסעדה. בייצור: `ZCREDIT_MOCK=false` והגדרת מסופון ב־`/admin/payment-settings`.
+
+משתני `ZCREDIT_TERMINAL_*` ב־`.env` נשארים אופציונליים לכלים (`php artisan zcredit:verify-config`) / route בדיקה מקומית בלבד.
 
 ---
 

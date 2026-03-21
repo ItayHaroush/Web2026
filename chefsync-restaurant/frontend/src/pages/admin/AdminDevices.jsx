@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import AdminLayout from '../../layouts/AdminLayout';
 import AdminPrinters from './AdminPrinters';
 import AdminDisplayScreens from './AdminDisplayScreens';
@@ -11,8 +12,26 @@ const TABS = [
     { id: 'kiosks', label: 'קיוסקים', icon: <FaTabletAlt size={14} /> },
 ];
 
+const TAB_IDS = TABS.map((t) => t.id);
+
 export default function AdminDevices() {
-    const [activeTab, setActiveTab] = useState('printers');
+    const [searchParams, setSearchParams] = useSearchParams();
+    const tabFromUrl = searchParams.get('tab');
+    const [activeTab, setActiveTab] = useState(
+        () => (tabFromUrl && TAB_IDS.includes(tabFromUrl) ? tabFromUrl : 'printers')
+    );
+
+    useEffect(() => {
+        const t = searchParams.get('tab');
+        if (t && TAB_IDS.includes(t)) {
+            setActiveTab(t);
+        }
+    }, [searchParams]);
+
+    const goTab = (id) => {
+        setActiveTab(id);
+        setSearchParams({ tab: id });
+    };
 
     return (
         <AdminLayout>
@@ -32,7 +51,7 @@ export default function AdminDevices() {
                         {TABS.map((tab) => (
                             <button
                                 key={tab.id}
-                                onClick={() => setActiveTab(tab.id)}
+                                onClick={() => goTab(tab.id)}
                                 className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
                                     activeTab === tab.id
                                         ? 'bg-gray-900 text-white shadow-lg'

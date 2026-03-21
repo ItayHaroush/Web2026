@@ -192,7 +192,7 @@ function POSNewOrderInner({ headers, posToken, onOrderCreated }) {
                             type="text"
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            className="w-full pr-10 pl-4 py-3 bg-slate-800 text-white rounded-xl border border-slate-700 focus:border-orange-500 focus:outline-none text-sm"
+                            className="w-full min-w-0 pr-10 pl-4 py-3 bg-slate-800 text-white rounded-xl border border-slate-700 focus:border-orange-500 focus:outline-none text-base"
                             placeholder="חיפוש פריט..."
                         />
                     </div>

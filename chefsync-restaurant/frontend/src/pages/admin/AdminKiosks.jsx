@@ -14,6 +14,7 @@ import {
 import KioskCard from '../../components/kiosk/admin/KioskCard';
 import KioskFormModal from '../../components/kiosk/admin/KioskFormModal';
 import KioskTableQrModal from '../../components/kiosk/admin/KioskTableQrModal';
+import MobileAddFab from '../../components/admin/MobileAddFab';
 
 const DEFAULT_FORM = {
     name: '',
@@ -172,7 +173,7 @@ export default function AdminKiosks({ embedded = false }) {
                         <button
                             onClick={canCreateMore ? openNew : undefined}
                             disabled={!canCreateMore}
-                            className={`w-full md:w-auto px-10 py-5 rounded-[2rem] font-black transition-all flex items-center justify-center gap-3 shadow-xl active:scale-95 group ${canCreateMore
+                            className={`hidden md:flex w-full md:w-auto px-10 py-5 rounded-[2rem] font-black transition-all items-center justify-center gap-3 shadow-xl active:scale-95 group ${canCreateMore
                                     ? 'bg-brand-primary text-white hover:bg-brand-dark shadow-brand-primary/20'
                                     : 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-none'
                                 }`}
@@ -182,6 +183,24 @@ export default function AdminKiosks({ embedded = false }) {
                         </button>
                     )}
                 </div>
+                )}
+
+                {embedded && isManager() && (
+                    <div className="hidden md:flex justify-end mb-6 px-4">
+                        <button
+                            type="button"
+                            onClick={canCreateMore ? openNew : undefined}
+                            disabled={!canCreateMore}
+                            className={`inline-flex items-center gap-2 px-6 py-3 rounded-2xl font-black text-sm shadow-lg ${
+                                canCreateMore
+                                    ? 'bg-brand-primary text-white hover:bg-brand-dark shadow-brand-primary/20'
+                                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                            }`}
+                        >
+                            <FaPlus />
+                            {canCreateMore ? 'קיוסק חדש' : 'הגעתם למגבלה'}
+                        </button>
+                    </div>
                 )}
 
                 {/* Tier Upgrade Banner */}
@@ -260,6 +279,13 @@ export default function AdminKiosks({ embedded = false }) {
                         maxTables={limits.max_tables || 10}
                         onClose={() => setQrKiosk(null)}
                         onTablesUpdated={fetchKiosks}
+                    />
+                )}
+                {isManager() && !showModal && !qrKiosk && (
+                    <MobileAddFab
+                        label={canCreateMore ? 'קיוסק חדש' : 'הגעתם למגבלה'}
+                        onClick={openNew}
+                        disabled={!canCreateMore}
                     />
                 )}
             </div>

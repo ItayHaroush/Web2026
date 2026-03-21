@@ -684,7 +684,7 @@ class POSController extends Controller
 
         $zcredit = $restaurant
             ? app(ZCreditResolver::class)->forRestaurantContext($restaurant, $request->pos_session)
-            : app(ZCreditService::class);
+            : new ZCreditService(null, null, null, false);
         $paymentService = new PosPaymentService($zcredit);
 
         $result = $paymentService->createOrderAndCharge(
@@ -915,7 +915,7 @@ class POSController extends Controller
             $restaurant = Restaurant::find($restaurantId);
             $zcredit = $restaurant
                 ? app(ZCreditResolver::class)->forOrder($order, $request->pos_session)
-                : app(ZCreditService::class);
+                : new ZCreditService(null, null, null, false);
             $result = $zcredit->chargePinPad($creditAmount, 'split_' . $order->id);
 
             if (!$result['success']) {
@@ -1023,7 +1023,7 @@ class POSController extends Controller
             $restaurant = Restaurant::find($restaurantId);
             $zcredit = $restaurant
                 ? app(ZCreditResolver::class)->forOrder($order, $request->pos_session)
-                : app(ZCreditService::class);
+                : new ZCreditService(null, null, null, false);
             $result = $zcredit->refundTransaction($referenceNumber, (float) $order->total_amount);
 
             if (!$result['success']) {

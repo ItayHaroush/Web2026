@@ -117,7 +117,7 @@ export default function AdminLayout({ children }) {
         {
             path: '/admin/coupons',
             icon: <FaTicketAlt />,
-            label: 'קופונים',
+            label: 'מבצעים',
             show: isManager()
         },
         {

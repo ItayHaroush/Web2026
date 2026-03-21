@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import AdminLayout from '../../layouts/AdminLayout';
+import MobileAddFab from '../../components/admin/MobileAddFab';
 import { FaTicketAlt, FaPlus, FaEdit, FaTrash, FaToggleOn, FaToggleOff, FaTimes } from 'react-icons/fa';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import promotionService from '../../services/promotionService';
@@ -76,6 +77,7 @@ export default function AdminCoupons() {
     const [saving, setSaving] = useState(false);
     const [modalOpen, setModalOpen] = useState(false);
     const [editingPromo, setEditingPromo] = useState(null);
+    const [promoWizardStep, setPromoWizardStep] = useState(1);
     const [form, setForm] = useState(emptyForm());
 
     const fetchData = useCallback(async () => {
@@ -106,6 +108,7 @@ export default function AdminCoupons() {
     const openCreate = () => {
         setEditingPromo(null);
         setForm(emptyForm());
+        setPromoWizardStep(1);
         setModalOpen(true);
     };
 
@@ -142,8 +145,19 @@ export default function AdminCoupons() {
         });
         if (form.rules.length === 0) setForm(f => ({ ...f, rules: [{ required_category_id: '', min_quantity: 1 }] }));
         if (form.rewards.length === 0) setForm(f => ({ ...f, rewards: [{ reward_type: 'free_item', reward_category_id: '', reward_menu_item_id: '', reward_value: '', max_selectable: 1, _mode: 'specific' }] }));
+        setPromoWizardStep(1);
         setModalOpen(true);
     };
+
+    const goPromoWizardNext = () => {
+        if (!editingPromo && promoWizardStep === 1 && !form.name?.trim()) {
+            alert('נא למלא שם מבצע');
+            return;
+        }
+        setPromoWizardStep((s) => Math.min(3, s + 1));
+    };
+
+    const goPromoWizardPrev = () => setPromoWizardStep((s) => Math.max(1, s - 1));
 
     const handleSave = async () => {
         try {
@@ -236,22 +250,22 @@ export default function AdminCoupons() {
 
     return (
         <AdminLayout>
-            <div className="max-w-6xl mx-auto space-y-8 pb-32 animate-in fade-in duration-500">
+            <div className="max-w-6xl mx-auto space-y-6 sm:space-y-8 pb-28 sm:pb-32 animate-in fade-in duration-500 w-full min-w-0 overflow-x-hidden">
                 {/* Header */}
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 px-4">
-                    <div className="flex items-center gap-5">
-                        <div className="w-16 h-16 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600 shadow-sm border border-emerald-100/50">
-                            <FaTicketAlt size={28} />
+                <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 px-4">
+                    <div className="flex items-start sm:items-center gap-3 sm:gap-5 min-w-0">
+                        <div className="w-12 h-12 sm:w-16 sm:h-16 bg-emerald-50 rounded-xl sm:rounded-2xl flex items-center justify-center text-emerald-600 shadow-sm border border-emerald-100/50 shrink-0">
+                            <FaTicketAlt className="text-xl sm:text-[28px]" />
                         </div>
-                        <div>
-                            <h1 className="text-3xl font-black text-gray-900 tracking-tight">מבצעים</h1>
-                            <p className="text-gray-500 font-medium mt-1">יצירה וניהול מבצעים ללקוחות</p>
+                        <div className="min-w-0">
+                            <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight break-words">מבצעים</h1>
+                            <p className="text-gray-500 font-medium mt-1 text-sm sm:text-base">יצירה וניהול מבצעים ללקוחות</p>
                         </div>
                     </div>
                     {isManager() && (
                         <button
                             onClick={openCreate}
-                            className="w-full md:w-auto bg-brand-primary text-white px-8 py-4 rounded-2xl font-bold hover:bg-brand-dark transition-all flex items-center justify-center gap-3 shadow-lg active:scale-95"
+                            className="hidden md:flex w-full md:w-auto bg-brand-primary text-white px-8 py-4 rounded-2xl font-bold hover:bg-brand-dark transition-all items-center justify-center gap-3 shadow-lg active:scale-95"
                         >
                             <FaPlus />
                             מבצע חדש
@@ -263,32 +277,32 @@ export default function AdminCoupons() {
                 {loading ? (
                     <div className="text-center py-20 text-gray-400">טוען מבצעים...</div>
                 ) : promotions.length === 0 ? (
-                    <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-12 text-center mx-4">
-                        <div className="w-20 h-20 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-500 mx-auto mb-6">
-                            <FaTicketAlt size={28} />
+                    <div className="bg-white rounded-2xl sm:rounded-3xl shadow-sm border border-gray-100 p-8 sm:p-12 text-center mx-4">
+                        <div className="w-16 h-16 sm:w-20 sm:h-20 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-500 mx-auto mb-4 sm:mb-6">
+                            <FaTicketAlt className="text-2xl sm:text-[28px]" />
                         </div>
-                        <h2 className="text-xl font-bold text-gray-900 mb-2">אין מבצעים עדיין</h2>
-                        <p className="text-gray-500">לחצ/י על "מבצע חדש" כדי ליצור את המבצע הראשון</p>
+                        <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-2">אין מבצעים עדיין</h2>
+                        <p className="text-gray-500 text-sm sm:text-base px-2">לחצ/י על &quot;מבצע חדש&quot; כדי ליצור את המבצע הראשון</p>
                     </div>
                 ) : (
-                    <div className="space-y-4 px-4">
+                    <div className="space-y-3 sm:space-y-4 px-3 sm:px-4">
                         {promotions.map(promo => {
                             const status = getPromotionStatus(promo);
                             return (
-                                <div key={promo.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                                    <div className="flex flex-col md:flex-row justify-between items-start gap-4">
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-3 mb-2">
-                                                <h3 className="text-lg font-bold text-gray-900 truncate">{promo.name}</h3>
-                                                <span className={`text-xs font-bold px-3 py-1 rounded-full ${status.color}`}>
+                                <div key={promo.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6">
+                                    <div className="flex flex-col gap-4">
+                                        <div className="flex-1 min-w-0 w-full">
+                                            <div className="flex flex-wrap items-center gap-2 mb-2">
+                                                <h3 className="text-base sm:text-lg font-bold text-gray-900 break-words flex-1 min-w-0">{promo.name}</h3>
+                                                <span className={`text-xs font-bold px-2.5 py-1 rounded-full shrink-0 ${status.color}`}>
                                                     {status.label}
                                                 </span>
                                                 {promo.priority > 0 && (
-                                                    <span className="text-xs text-gray-400">עדיפות: {promo.priority}</span>
+                                                    <span className="text-xs text-gray-400 shrink-0">עדיפות: {promo.priority}</span>
                                                 )}
                                             </div>
                                             {promo.description && (
-                                                <p className="text-sm text-gray-500 mb-2">{promo.description}</p>
+                                                <p className="text-sm text-gray-500 mb-2 break-words">{promo.description}</p>
                                             )}
                                             <div className="flex flex-wrap gap-2 text-xs">
                                                 <span className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full font-medium">
@@ -311,24 +325,27 @@ export default function AdminCoupons() {
                                         </div>
 
                                         {isManager() && (
-                                            <div className="flex items-center gap-2 shrink-0">
+                                            <div className="flex items-center justify-end sm:justify-start gap-2 pt-2 sm:pt-0 border-t border-gray-50 sm:border-0 shrink-0 -mx-1 px-1">
                                                 <button
+                                                    type="button"
                                                     onClick={() => handleToggle(promo.id)}
-                                                    className={`p-2 rounded-xl transition-colors ${promo.is_active ? 'text-green-600 hover:bg-green-50' : 'text-gray-400 hover:bg-gray-50'}`}
+                                                    className={`p-2.5 sm:p-2 rounded-xl transition-colors ${promo.is_active ? 'text-green-600 hover:bg-green-50' : 'text-gray-400 hover:bg-gray-50'}`}
                                                     title={promo.is_active ? 'השבת' : 'הפעל'}
                                                 >
                                                     {promo.is_active ? <FaToggleOn size={22} /> : <FaToggleOff size={22} />}
                                                 </button>
                                                 <button
+                                                    type="button"
                                                     onClick={() => openEdit(promo)}
-                                                    className="p-2 rounded-xl text-blue-600 hover:bg-blue-50 transition-colors"
+                                                    className="p-2.5 sm:p-2 rounded-xl text-blue-600 hover:bg-blue-50 transition-colors"
                                                     title="ערוך"
                                                 >
                                                     <FaEdit size={16} />
                                                 </button>
                                                 <button
+                                                    type="button"
                                                     onClick={() => handleDelete(promo.id)}
-                                                    className="p-2 rounded-xl text-red-500 hover:bg-red-50 transition-colors"
+                                                    className="p-2.5 sm:p-2 rounded-xl text-red-500 hover:bg-red-50 transition-colors"
                                                     title="מחק"
                                                 >
                                                     <FaTrash size={14} />
@@ -341,24 +358,35 @@ export default function AdminCoupons() {
                         })}
                     </div>
                 )}
+                {isManager() && !modalOpen && (
+                    <MobileAddFab label="מבצע חדש" onClick={openCreate} />
+                )}
             </div>
 
             {/* Modal */}
             {modalOpen && (
-                <div className="fixed inset-0 bg-black/40 z-50 flex items-start justify-center p-4 overflow-y-auto">
-                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl my-8 relative">
+                <div className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto">
+                    <div className="bg-white rounded-t-[1.75rem] sm:rounded-3xl shadow-2xl w-full max-w-2xl my-0 sm:my-8 relative max-h-[min(92dvh,90vh)] flex flex-col min-h-0">
                         {/* Modal Header */}
-                        <div className="sticky top-0 bg-white rounded-t-3xl border-b border-gray-100 px-6 py-4 flex items-center justify-between z-10">
-                            <h2 className="text-xl font-bold text-gray-900">
-                                {editingPromo ? 'עריכת מבצע' : 'מבצע חדש'}
-                            </h2>
-                            <button onClick={() => setModalOpen(false)} className="p-2 text-gray-400 hover:text-gray-600 rounded-xl hover:bg-gray-50">
+                        <div className="sticky top-0 bg-white rounded-t-[1.75rem] sm:rounded-t-3xl border-b border-gray-100 px-4 sm:px-6 py-4 flex items-center justify-between z-10 shrink-0">
+                            <div className="min-w-0">
+                                <h2 className="text-xl font-bold text-gray-900">
+                                    {editingPromo ? 'עריכת מבצע' : 'מבצע חדש'}
+                                </h2>
+                                {!editingPromo && (
+                                    <p className="text-[11px] font-bold text-gray-400 mt-1">
+                                        שלב {promoWizardStep} מתוך 3 — פרטים · תנאים · פרסים
+                                    </p>
+                                )}
+                            </div>
+                            <button type="button" onClick={() => { setModalOpen(false); setPromoWizardStep(1); }} className="p-2 text-gray-400 hover:text-gray-600 rounded-xl hover:bg-gray-50 shrink-0">
                                 <FaTimes size={18} />
                             </button>
                         </div>
 
-                        <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+                        <div className="p-4 sm:p-6 space-y-6 flex-1 overflow-y-auto min-h-0">
                             {/* Part 1: Basic Details */}
+                            {(editingPromo || promoWizardStep === 1) && (
                             <div className="space-y-4">
                                 <h3 className="font-bold text-gray-800 border-b border-gray-100 pb-2">פרטים בסיסיים</h3>
                                 <div>
@@ -367,7 +395,7 @@ export default function AdminCoupons() {
                                         type="text"
                                         value={form.name}
                                         onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                                        className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none"
+                                        className="w-full min-w-0 border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none text-base"
                                         placeholder="למשל: קנה 2 פיצות וקבל קינוח"
                                     />
                                 </div>
@@ -403,30 +431,40 @@ export default function AdminCoupons() {
                                     )}
                                     <input
                                         type="file"
-                                        accept="image/*"
+                                        accept="image/jpeg,image/png,image/webp,image/gif"
                                         onChange={e => {
                                             const file = e.target.files?.[0];
-                                            if (file) {
-                                                setForm(f => ({ ...f, image: file, imagePreview: URL.createObjectURL(file), removeImage: false }));
+                                            if (!file) return;
+                                            const maxBytes = 5 * 1024 * 1024;
+                                            if (file.size > maxBytes) {
+                                                alert('הקובץ גדול מדי (מקסימום 5MB)');
+                                                e.target.value = '';
+                                                return;
                                             }
+                                            if (!file.type.startsWith('image/')) {
+                                                alert('יש לבחור קובץ תמונה');
+                                                e.target.value = '';
+                                                return;
+                                            }
+                                            setForm(f => ({ ...f, image: file, imagePreview: URL.createObjectURL(file), removeImage: false }));
                                         }}
-                                        className="w-full text-sm text-gray-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-bold file:bg-brand-primary/10 file:text-brand-primary hover:file:bg-brand-primary/20"
+                                        className="w-full min-w-0 text-sm text-gray-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-bold file:bg-brand-primary/10 file:text-brand-primary hover:file:bg-brand-primary/20"
                                     />
                                 </div>
 
                                 {/* תקופת המבצע */}
                                 <div className="bg-gray-50 rounded-xl p-4 space-y-3">
                                     <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">תקופת המבצע</p>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div className="min-w-0">
                                             <label className="block text-sm font-medium text-gray-700 mb-1">מתאריך</label>
                                             <input type="datetime-local" dir="ltr" value={form.start_at} onChange={e => setForm(f => ({ ...f, start_at: e.target.value }))}
-                                                className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none text-sm bg-white" />
+                                                className="w-full min-w-0 max-w-full box-border border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none text-base bg-white" />
                                         </div>
-                                        <div>
+                                        <div className="min-w-0">
                                             <label className="block text-sm font-medium text-gray-700 mb-1">עד תאריך</label>
                                             <input type="datetime-local" dir="ltr" value={form.end_at} onChange={e => setForm(f => ({ ...f, end_at: e.target.value }))}
-                                                className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none text-sm bg-white" />
+                                                className="w-full min-w-0 max-w-full box-border border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none text-base bg-white" />
                                         </div>
                                     </div>
                                 </div>
@@ -434,23 +472,23 @@ export default function AdminCoupons() {
                                 {/* שעות פעילות יומיות */}
                                 <div className="bg-blue-50 rounded-xl p-4 space-y-3">
                                     <p className="text-xs font-bold text-blue-600 uppercase tracking-wide">שעות פעילות יומיות</p>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div className="min-w-0">
                                             <label className="block text-sm font-medium text-gray-700 mb-1">משעה</label>
                                             <input type="time" dir="ltr" value={form.active_hours_start} onChange={e => setForm(f => ({ ...f, active_hours_start: e.target.value }))}
-                                                className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none bg-white" />
+                                                className="w-full min-w-0 border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none text-base bg-white" />
                                         </div>
-                                        <div>
+                                        <div className="min-w-0">
                                             <label className="block text-sm font-medium text-gray-700 mb-1">עד שעה</label>
                                             <input type="time" dir="ltr" value={form.active_hours_end} onChange={e => setForm(f => ({ ...f, active_hours_end: e.target.value }))}
-                                                className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none bg-white" />
+                                                className="w-full min-w-0 border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none text-base bg-white" />
                                         </div>
                                     </div>
                                 </div>
 
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">ימים פעילים</label>
-                                    <div className="flex gap-2">
+                                    <div className="flex flex-wrap gap-2">
                                         {DAY_NAMES.map((name, i) => (
                                             <button
                                                 key={i}
@@ -496,12 +534,13 @@ export default function AdminCoupons() {
                                     ))}
                                 </div>
                             </div>
+                            )}
 
-                            {/* Part 2: Rules */}
+                            {(editingPromo || promoWizardStep === 2) && (
                             <div className="space-y-4">
                                 <h3 className="font-bold text-gray-800 border-b border-gray-100 pb-2">תנאים (AND)</h3>
                                 {form.rules.map((rule, i) => (
-                                    <div key={i} className="flex items-center gap-3 bg-gray-50 rounded-xl p-3">
+                                    <div key={i} className="flex flex-col sm:flex-row sm:items-center gap-3 bg-gray-50 rounded-xl p-3 min-w-0">
                                         <input
                                             type="number"
                                             value={rule.min_quantity}
@@ -513,7 +552,7 @@ export default function AdminCoupons() {
                                         <select
                                             value={rule.required_category_id}
                                             onChange={e => updateRule(i, 'required_category_id', parseInt(e.target.value) || '')}
-                                            className="flex-1 border border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none"
+                                            className="flex-1 min-w-0 border border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none text-base"
                                         >
                                             <option value="">בחר קטגוריה</option>
                                             {categories.map(cat => (
@@ -521,7 +560,7 @@ export default function AdminCoupons() {
                                             ))}
                                         </select>
                                         {form.rules.length > 1 && (
-                                            <button onClick={() => removeRule(i)} className="p-2 text-red-400 hover:text-red-600">
+                                            <button type="button" onClick={() => removeRule(i)} className="p-2 text-red-400 hover:text-red-600 self-end sm:self-auto">
                                                 <FaTimes size={14} />
                                             </button>
                                         )}
@@ -531,8 +570,9 @@ export default function AdminCoupons() {
                                     + הוסף תנאי
                                 </button>
                             </div>
+                            )}
 
-                            {/* Part 3: Rewards */}
+                            {(editingPromo || promoWizardStep === 3) && (
                             <div className="space-y-4">
                                 <h3 className="font-bold text-gray-800 border-b border-gray-100 pb-2">פרסים</h3>
                                 {form.rewards.map((reward, i) => (
@@ -574,7 +614,7 @@ export default function AdminCoupons() {
                                                     </button>
                                                 </div>
 
-                                                <div className="grid grid-cols-2 gap-3">
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 min-w-0">
                                                     {reward._mode === 'specific' ? (
                                                         <div>
                                                             <label className="block text-xs text-gray-500 mb-1">בחר מוצר</label>
@@ -644,23 +684,46 @@ export default function AdminCoupons() {
                                     + הוסף פרס
                                 </button>
                             </div>
+                            )}
                         </div>
 
                         {/* Modal Footer */}
-                        <div className="sticky bottom-0 bg-white rounded-b-3xl border-t border-gray-100 px-6 py-4 flex justify-end gap-3">
+                        <div className="sticky bottom-0 bg-white rounded-b-[1.75rem] sm:rounded-b-3xl border-t border-gray-100 px-4 sm:px-6 py-4 flex flex-col sm:flex-row flex-wrap justify-end gap-2 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))]">
+                            {!editingPromo && promoWizardStep > 1 && (
+                                <button
+                                    type="button"
+                                    onClick={goPromoWizardPrev}
+                                    className="order-2 sm:order-1 px-6 py-3 rounded-xl border border-gray-200 text-gray-700 font-bold hover:bg-gray-50 w-full sm:w-auto"
+                                >
+                                    הקודם
+                                </button>
+                            )}
+                            {!editingPromo && promoWizardStep < 3 && (
+                                <button
+                                    type="button"
+                                    onClick={goPromoWizardNext}
+                                    className="order-1 sm:order-2 flex-1 sm:flex-none px-6 py-3 rounded-xl bg-brand-primary text-white font-bold hover:bg-brand-dark min-w-[8rem]"
+                                >
+                                    הבא
+                                </button>
+                            )}
                             <button
-                                onClick={() => setModalOpen(false)}
-                                className="px-6 py-3 rounded-xl text-gray-600 font-bold hover:bg-gray-50 transition-colors"
+                                type="button"
+                                onClick={() => { setModalOpen(false); setPromoWizardStep(1); }}
+                                className="order-3 px-6 py-3 rounded-xl text-gray-600 font-bold hover:bg-gray-50 w-full sm:w-auto"
                             >
                                 ביטול
                             </button>
-                            <button
-                                onClick={handleSave}
-                                disabled={saving || !form.name}
-                                className="px-8 py-3 rounded-xl bg-brand-primary text-white font-bold hover:bg-brand-dark transition-colors disabled:opacity-50"
-                            >
-                                {saving ? 'שומר...' : editingPromo ? 'עדכן' : 'צור מבצע'}
-                            </button>
+                            {(editingPromo || promoWizardStep === 3) && (
+                                <button
+                                    type="button"
+                                    onClick={handleSave}
+                                    disabled={saving || !form.name}
+                                    className="order-1 sm:order-4 px-8 py-3 rounded-xl bg-gray-900 text-white font-bold hover:bg-black transition-colors disabled:opacity-50 w-full sm:w-auto"
+                                >
+                                    {saving ? 'שומר...' : editingPromo ? 'עדכן' : 'צור מבצע'}
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>

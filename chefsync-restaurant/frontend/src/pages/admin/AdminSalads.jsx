@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import AdminLayout from '../../layouts/AdminLayout';
+import MobileAddFab from '../../components/admin/MobileAddFab';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import api from '../../services/apiClient';
 import {
@@ -48,6 +49,10 @@ export default function AdminSalads({ embedded = false }) {
     const [updatingGroup, setUpdatingGroup] = useState(null);
     const [groupModalOpen, setGroupModalOpen] = useState(false);
     const [editingGroup, setEditingGroup] = useState(null);
+    /** וויזארד הוספת תוספת — רק ביצירה */
+    const [saladWizardStep, setSaladWizardStep] = useState(1);
+    /** וויזארד יצירת קבוצה — רק כשלא בעריכה */
+    const [groupWizardStep, setGroupWizardStep] = useState(1);
     const [groupForm, setGroupForm] = useState({
         name: '',
         min_selections: '0',
@@ -128,12 +133,14 @@ export default function AdminSalads({ embedded = false }) {
                 category_ids: [],
             });
         }
+        setSaladWizardStep(1);
         setModalOpen(true);
     };
 
     const closeModal = () => {
         setModalOpen(false);
         setEditSalad(null);
+        setSaladWizardStep(1);
         setForm({
             name: '',
             price_delta: '0',
@@ -145,9 +152,29 @@ export default function AdminSalads({ embedded = false }) {
         });
     };
 
+    const goSaladWizardNext = () => {
+        if (saladWizardStep === 1) {
+            if (!form.name?.trim()) {
+                alert('נא למלא שם לתוספת');
+                return;
+            }
+            if (!form.group_id) {
+                alert('נא לבחור קבוצה');
+                return;
+            }
+        }
+        setSaladWizardStep((s) => Math.min(3, s + 1));
+    };
+
+    const goSaladWizardPrev = () => setSaladWizardStep((s) => Math.max(1, s - 1));
+
     const handleSubmit = async (event) => {
         event.preventDefault();
         if (!isManager()) return;
+        if (!editSalad && saladWizardStep < 3) {
+            goSaladWizardNext();
+            return;
+        }
 
         const payload = {
             name: form.name.trim(),
@@ -259,12 +286,14 @@ export default function AdminSalads({ embedded = false }) {
                 source_selection_weight: '1',
             });
         }
+        setGroupWizardStep(1);
         setGroupModalOpen(true);
     };
 
     const closeGroupModal = () => {
         setGroupModalOpen(false);
         setEditingGroup(null);
+        setGroupWizardStep(1);
         setGroupForm({
             name: '',
             min_selections: '0',
@@ -278,9 +307,29 @@ export default function AdminSalads({ embedded = false }) {
         });
     };
 
+    const goGroupWizardNext = () => {
+        if (groupWizardStep === 1) {
+            if (!groupForm.name?.trim()) {
+                alert('נא למלא שם לקבוצה');
+                return;
+            }
+            if (groupForm.source_type === 'category' && !groupForm.source_category_id) {
+                alert('נא לבחור קטגוריה');
+                return;
+            }
+        }
+        setGroupWizardStep((s) => Math.min(3, s + 1));
+    };
+
+    const goGroupWizardPrev = () => setGroupWizardStep((s) => Math.max(1, s - 1));
+
     const handleGroupSubmit = async (event) => {
         event.preventDefault();
         if (!isManager()) return;
+        if (!editingGroup && groupWizardStep < 3) {
+            goGroupWizardNext();
+            return;
+        }
 
         const maxVal = groupForm.max_selections === '' || groupForm.max_selections === '0' || Number(groupForm.max_selections) === 0
             ? null
@@ -425,17 +474,49 @@ export default function AdminSalads({ embedded = false }) {
                         </div>
                     </div>
                     {isManager() && !isCategoryGroup && (
-                        <button
-                            onClick={() => openModal()}
-                            className="w-full md:w-auto bg-brand-primary text-white px-12 py-6 rounded-[2rem] font-black hover:bg-brand-dark transition-all flex items-center justify-center gap-4 shadow-2xl shadow-brand-primary/30 active:scale-95 group hover:-translate-y-1"
-                        >
-                            <div className="bg-white/20 p-2.5 rounded-xl group-hover:rotate-90 transition-transform">
-                                <FaPlus size={16} />
-                            </div>
-                            <span className="text-lg">הוספת פריט חדש</span>
-                        </button>
+                        <div className="hidden md:flex flex-col gap-3 w-full md:w-auto md:items-end">
+                            <button
+                                type="button"
+                                onClick={() => openGroupModal()}
+                                className="w-full md:w-auto inline-flex items-center justify-center gap-3 bg-slate-800 text-white px-10 py-4 rounded-[2rem] font-black text-sm shadow-lg hover:bg-slate-900 transition-all"
+                            >
+                                <FaLayerGroup size={16} />
+                                הוסף קבוצה
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => openModal()}
+                                className="w-full md:w-auto inline-flex items-center justify-center gap-3 bg-brand-primary text-white px-12 py-5 rounded-[2rem] font-black hover:bg-brand-dark transition-all shadow-2xl shadow-brand-primary/30 active:scale-95 group hover:-translate-y-1"
+                            >
+                                <div className="bg-white/20 p-2.5 rounded-xl group-hover:rotate-90 transition-transform">
+                                    <FaPlus size={16} />
+                                </div>
+                                <span className="text-lg">הוספת תוספת</span>
+                            </button>
+                        </div>
                     )}
                 </div>
+                )}
+
+                {embedded && isManager() && !isCategoryGroup && (
+                    <div className="hidden md:flex flex-col gap-2 items-end px-4 mb-4">
+                        <button
+                            type="button"
+                            onClick={() => openGroupModal()}
+                            className="inline-flex items-center gap-2 bg-slate-800 text-white px-6 py-2.5 rounded-2xl font-black text-sm shadow-md hover:bg-slate-900"
+                        >
+                            <FaLayerGroup size={14} />
+                            הוסף קבוצה
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => openModal()}
+                            className="inline-flex items-center gap-2 bg-brand-primary text-white px-6 py-3 rounded-2xl font-black text-sm shadow-lg shadow-brand-primary/20 hover:opacity-95"
+                        >
+                            <FaPlus size={14} />
+                            הוספת תוספת
+                        </button>
+                    </div>
                 )}
 
                 {/* Main Configuration Layout */}
@@ -800,83 +881,91 @@ export default function AdminSalads({ embedded = false }) {
                     </div>
                 </div>
 
-                {/* Premium Modal Design */}
+                {/* מודל תוספת — וויזארד ביצירה */}
                 {modalOpen && (
-                    <div className="fixed inset-0 bg-gray-900/70 backdrop-blur-md z-[100] flex items-center justify-center p-4 animate-in fade-in duration-500">
-                        <div className="bg-white rounded-[4rem] shadow-2xl max-w-2xl w-full overflow-hidden border border-white/20 animate-in zoom-in-95 duration-400 overflow-y-auto max-h-[92vh] custom-scrollbar">
-                            <div className="px-12 py-10 bg-gray-50/50 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white/80 backdrop-blur-xl z-20">
-                                <div className="flex items-center gap-6">
-                                    <div className="p-4 bg-brand-primary text-white rounded-[2rem] shadow-xl shadow-brand-primary/20">
-                                        <FaPlus size={24} />
+                    <div className="fixed inset-0 bg-gray-900/70 backdrop-blur-md z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-500">
+                        <div className="bg-white rounded-t-[1.75rem] sm:rounded-[3rem] shadow-2xl max-w-2xl w-full max-h-[min(92dvh,90vh)] flex flex-col min-h-0 border border-white/20 animate-in zoom-in-95 duration-400">
+                            <div className="px-4 py-5 sm:px-10 sm:py-8 bg-gray-50/50 border-b border-gray-100 flex items-center justify-between shrink-0">
+                                <div className="flex items-center gap-3 sm:gap-6 min-w-0">
+                                    <div className="p-3 sm:p-4 bg-brand-primary text-white rounded-2xl sm:rounded-[2rem] shadow-xl shadow-brand-primary/20 shrink-0">
+                                        <FaPlus size={22} />
                                     </div>
-                                    <div>
-                                        <h2 className="text-3xl font-black text-gray-900 tracking-tight">
+                                    <div className="min-w-0">
+                                        <h2 className="text-lg sm:text-2xl font-black text-gray-900 tracking-tight truncate">
                                             {editSalad ? 'עריכת פריט' : 'הוספת תוספת'}
                                         </h2>
-                                        <p className="text-gray-500 font-bold text-sm mt-0.5 whitespace-nowrap">ניהול קטלוג התוספות והסלטים שלך</p>
+                                        <p className="text-gray-500 font-bold text-xs sm:text-sm mt-0.5">ניהול קטלוג התוספות והסלטים</p>
+                                        {!editSalad && (
+                                            <p className="text-[10px] font-black text-gray-400 mt-1">
+                                                שלב {saladWizardStep} מתוך 3 — פרטים · הגדרות · קטגוריות
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
                                 <button
+                                    type="button"
                                     onClick={closeModal}
-                                    className="p-4 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-[1.5rem] transition-all"
+                                    className="p-3 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-2xl transition-all shrink-0"
                                 >
-                                    <FaTimes size={24} />
+                                    <FaTimes size={22} />
                                 </button>
                             </div>
 
-                            <form onSubmit={handleSubmit} className="p-12 space-y-12 pb-20">
-                                <div className="space-y-10">
-                                    {/* Primary Info */}
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                                        <div className="space-y-4">
-                                            <label className="text-xs font-black text-gray-500 mr-2 uppercase tracking-[0.2em] flex items-center gap-2">
-                                                <FaLayerGroup className="text-brand-primary" /> קבוצת השתייכות
-                                            </label>
-                                            <select
-                                                value={form.group_id}
-                                                onChange={(e) => setForm({ ...form, group_id: e.target.value })}
-                                                className="w-full px-8 py-5 bg-gray-50 border-none rounded-[1.5rem] focus:ring-4 focus:ring-brand-primary/10 text-gray-900 font-black appearance-none transition-all cursor-pointer text-lg"
-                                            >
-                                                {groups.map((group) => (
-                                                    <option key={group.id} value={group.id}>{group.name}</option>
-                                                ))}
-                                            </select>
+                            <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+                                <div className="overflow-y-auto flex-1 min-h-0 p-4 sm:p-10 space-y-8 sm:space-y-10 custom-scrollbar">
+                                    {(editSalad || saladWizardStep === 1) && (
+                                    <div className="space-y-6">
+                                        <h3 className="text-sm font-black text-gray-500 uppercase tracking-widest border-b border-gray-100 pb-2">פרטים בסיסיים</h3>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
+                                            <div className="space-y-2">
+                                                <label className="text-xs font-black text-gray-500 mr-2 uppercase tracking-[0.2em] flex items-center gap-2">
+                                                    <FaLayerGroup className="text-brand-primary" /> קבוצת השתייכות
+                                                </label>
+                                                <select
+                                                    value={form.group_id}
+                                                    onChange={(e) => setForm({ ...form, group_id: e.target.value })}
+                                                    className="w-full min-w-0 px-4 sm:px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-4 focus:ring-brand-primary/10 text-gray-900 font-black appearance-none transition-all cursor-pointer text-base"
+                                                >
+                                                    {groups.map((group) => (
+                                                        <option key={group.id} value={group.id}>{group.name}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-xs font-black text-gray-500 mr-2 uppercase tracking-[0.2em]">שם התוספת / סלט</label>
+                                                <input
+                                                    type="text"
+                                                    value={form.name}
+                                                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                                                    className="w-full min-w-0 px-4 sm:px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-4 focus:ring-brand-primary/10 text-gray-900 font-black transition-all text-base"
+                                                    placeholder="למשל: חומוס בייתי"
+                                                />
+                                            </div>
                                         </div>
-
-                                        <div className="space-y-4">
-                                            <label className="text-xs font-black text-gray-500 mr-2 uppercase tracking-[0.2em]">שם התוספת / סלט</label>
-                                            <input
-                                                type="text"
-                                                value={form.name}
-                                                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                                                required
-                                                className="w-full px-8 py-5 bg-gray-50 border-none rounded-[1.5rem] focus:ring-4 focus:ring-brand-primary/10 text-gray-900 font-black transition-all text-lg"
-                                                placeholder="למשל: חומוס בייתי"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    {/* Price and Visibility */}
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                                        <div className="space-y-4">
+                                        <div className="space-y-2">
                                             <label className="text-xs font-black text-gray-500 mr-2 uppercase tracking-[0.2em]">מחיר תוספת (₪)</label>
                                             <div className="relative">
-                                                <div className="absolute left-8 top-1/2 -translate-y-1/2 font-black text-gray-300 text-2xl">₪</div>
+                                                <div className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-gray-300 text-xl">₪</div>
                                                 <input
                                                     type="number"
                                                     min="0"
                                                     step="0.5"
                                                     value={form.price_delta}
                                                     onChange={(e) => setForm({ ...form, price_delta: e.target.value })}
-                                                    className="w-full pl-16 pr-8 py-5 bg-gray-50 border-none rounded-[1.5rem] focus:ring-4 focus:ring-brand-primary/10 text-gray-900 font-black text-xl"
+                                                    className="w-full min-w-0 pl-12 pr-4 py-4 bg-gray-50 border-none rounded-2xl focus:ring-4 focus:ring-brand-primary/10 text-gray-900 font-black text-base"
                                                 />
                                             </div>
-                                            <p className="text-[10px] text-gray-400 mr-2 font-bold italic">הזן '0' אם הבחירה כלולה במחיר המנה</p>
+                                            <p className="text-[10px] text-gray-400 mr-2 font-bold">הזן 0 אם הבחירה כלולה במחיר המנה</p>
                                         </div>
+                                    </div>
+                                    )}
 
-                                        <div className="space-y-4">
-                                            <label className="text-xs font-black text-gray-500 mr-2 uppercase tracking-[0.2em]">משקל בחירה</label>
-                                            <div className="relative">
+                                    {(editSalad || saladWizardStep === 2) && (
+                                    <div className="space-y-6">
+                                        <h3 className="text-sm font-black text-gray-500 uppercase tracking-widest border-b border-gray-100 pb-2">הגדרות בחירה</h3>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                            <div className="space-y-2">
+                                                <label className="text-xs font-black text-gray-500 mr-2 uppercase tracking-[0.2em]">משקל בחירה</label>
                                                 <input
                                                     type="number"
                                                     min="1"
@@ -884,18 +973,12 @@ export default function AdminSalads({ embedded = false }) {
                                                     step="1"
                                                     value={form.selection_weight || 1}
                                                     onChange={(e) => setForm({ ...form, selection_weight: e.target.value })}
-                                                    className="w-full px-8 py-5 bg-gray-50 border-none rounded-[1.5rem] focus:ring-4 focus:ring-brand-primary/10 text-gray-900 font-black text-xl"
+                                                    className="w-full px-4 py-4 bg-gray-50 border-none rounded-2xl focus:ring-4 focus:ring-brand-primary/10 text-gray-900 font-black text-base text-center"
                                                 />
+                                                <p className="text-[10px] text-gray-400 mr-2 font-bold">כמה בחירות נספרות (ברירת מחדל: 1)</p>
                                             </div>
-                                            <p className="text-[10px] text-gray-400 mr-2 font-bold italic">כמה בחירות נספרות? (ברירת מחדל: 1)</p>
-                                        </div>
-                                    </div>
-
-                                    {/* Max Quantity */}
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                                        <div className="space-y-4">
-                                            <label className="text-xs font-black text-gray-500 mr-2 uppercase tracking-[0.2em]">כמות מקסימלית לבחירה</label>
-                                            <div className="relative">
+                                            <div className="space-y-2">
+                                                <label className="text-xs font-black text-gray-500 mr-2 uppercase tracking-[0.2em]">כמות מקסימלית לבחירה</label>
                                                 <input
                                                     type="number"
                                                     min="1"
@@ -903,45 +986,44 @@ export default function AdminSalads({ embedded = false }) {
                                                     step="1"
                                                     value={form.max_quantity || 1}
                                                     onChange={(e) => setForm({ ...form, max_quantity: e.target.value })}
-                                                    className="w-full px-8 py-5 bg-gray-50 border-none rounded-[1.5rem] focus:ring-4 focus:ring-brand-primary/10 text-gray-900 font-black text-xl"
+                                                    className="w-full px-4 py-4 bg-gray-50 border-none rounded-2xl focus:ring-4 focus:ring-brand-primary/10 text-gray-900 font-black text-base text-center"
                                                 />
+                                                <p className="text-[10px] text-gray-400 mr-2 font-bold">1 = ללא כפל כמות</p>
                                             </div>
-                                            <p className="text-[10px] text-gray-400 mr-2 font-bold italic">כמה יחידות מאותו פריט הלקוח יכול לבחור? (1 = ללא כמות)</p>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-black text-gray-500 mr-2 uppercase tracking-[0.2em]">סטטוס תצוגה</label>
+                                            <label className="flex items-center gap-4 p-4 bg-emerald-50 rounded-2xl cursor-pointer hover:bg-emerald-100 transition-all border border-emerald-100">
+                                                <div className={`w-12 h-7 flex items-center rounded-full p-1 transition-colors ${form.is_active ? 'bg-emerald-500' : 'bg-gray-300'}`}>
+                                                    <div className={`bg-white w-5 h-5 rounded-full shadow transform transition-transform ${form.is_active ? '-translate-x-5' : 'translate-x-0'}`}></div>
+                                                </div>
+                                                <input
+                                                    type="checkbox"
+                                                    className="hidden"
+                                                    checked={form.is_active}
+                                                    onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
+                                                />
+                                                <span className="text-sm font-black text-emerald-900">זמין לבחירה</span>
+                                            </label>
                                         </div>
                                     </div>
+                                    )}
 
-                                    {/* Visibility Status */}
+                                    {(editSalad || saladWizardStep === 3) && (
                                     <div className="space-y-4">
-                                        <label className="text-xs font-black text-gray-500 mr-2 uppercase tracking-[0.2em]">סטטוס תצוגה</label>
-                                        <label className="flex items-center gap-5 p-5 bg-emerald-50 rounded-[1.5rem] cursor-pointer hover:bg-emerald-100 transition-all border border-emerald-100 group h-full max-h-[68px]">
-                                            <div className={`w-12 h-7 flex items-center rounded-full p-1 transition-colors ${form.is_active ? 'bg-emerald-500' : 'bg-gray-300'}`}>
-                                                <div className={`bg-white w-5 h-5 rounded-full shadow transform transition-transform ${form.is_active ? '-translate-x-5' : 'translate-x-0'}`}></div>
-                                            </div>
-                                            <input
-                                                type="checkbox"
-                                                className="hidden"
-                                                checked={form.is_active}
-                                                onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
-                                            />
-                                            <span className="text-sm font-black text-emerald-900">זמין לבחירה</span>
-                                        </label>
-                                    </div>
-
-                                    {/* Category Mapping */}
-                                    <div className="space-y-6">
-                                        <div className="flex justify-between items-end mr-2">
+                                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mr-0 sm:mr-2">
                                             <label className="text-xs font-black text-gray-500 uppercase tracking-[0.2em] flex items-center gap-2">
-                                                <FaMagic className="text-brand-primary" /> מופיע בקטגוריות:
+                                                <FaMagic className="text-brand-primary" /> מופיע בקטגוריות
                                             </label>
-                                            <span className="text-[10px] text-brand-primary font-black bg-brand-primary/5 px-3 py-1 rounded-full border border-brand-primary/10">
+                                            <span className="text-[10px] text-brand-primary font-black bg-brand-primary/5 px-3 py-1 rounded-full border border-brand-primary/10 self-start sm:self-auto">
                                                 {form.category_ids.length === 0 ? 'מופיע בכל המנות' : `נבחר: ${form.category_ids.length}`}
                                             </span>
                                         </div>
-                                        <div className="bg-gray-50/50 rounded-[3rem] p-8 max-h-72 overflow-y-auto grid grid-cols-2 sm:grid-cols-4 gap-4 custom-scrollbar border border-gray-100">
+                                        <div className="bg-gray-50/50 rounded-2xl sm:rounded-[2rem] p-4 sm:p-6 max-h-64 sm:max-h-72 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4 custom-scrollbar border border-gray-100">
                                             {categories.map((cat) => (
                                                 <label
                                                     key={cat.id}
-                                                    className={`flex flex-col items-center justify-center p-5 rounded-[2rem] cursor-pointer border-2 transition-all gap-2 relative group-active:scale-95 ${form.category_ids.includes(String(cat.id)) ? 'border-brand-primary bg-brand-primary/5 text-brand-primary shadow-lg shadow-brand-primary/5' : 'border-white bg-white hover:border-gray-200 text-gray-400'}`}
+                                                    className={`flex flex-col items-center justify-center p-3 sm:p-4 rounded-2xl cursor-pointer border-2 transition-all gap-2 min-w-0 ${form.category_ids.includes(String(cat.id)) ? 'border-brand-primary bg-brand-primary/5 text-brand-primary shadow-md' : 'border-white bg-white hover:border-gray-200 text-gray-400'}`}
                                                 >
                                                     <input
                                                         type="checkbox"
@@ -954,38 +1036,58 @@ export default function AdminSalads({ embedded = false }) {
                                                             setForm({ ...form, category_ids: next });
                                                         }}
                                                     />
-                                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${form.category_ids.includes(String(cat.id)) ? 'bg-brand-primary text-white scale-110' : 'bg-gray-100'}`}>
+                                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all shrink-0 ${form.category_ids.includes(String(cat.id)) ? 'bg-brand-primary text-white scale-110' : 'bg-gray-100'}`}>
                                                         {form.category_ids.includes(String(cat.id)) ? <FaCheckCircle size={14} /> : <span className="text-lg opacity-50">{cat.icon || '📂'}</span>}
                                                     </div>
-                                                    <span className="text-[11px] font-black text-center leading-tight tracking-tight">{cat.name}</span>
+                                                    <span className="text-[10px] sm:text-[11px] font-black text-center leading-tight line-clamp-2">{cat.name}</span>
                                                 </label>
                                             ))}
                                         </div>
                                     </div>
+                                    )}
                                 </div>
 
-                                <div className="flex gap-6 pt-10 sticky bottom-0 bg-white/80 backdrop-blur-md z-10">
-                                    <button
-                                        type="submit"
-                                        disabled={saving}
-                                        className="flex-[2] bg-gray-900 text-white py-6 rounded-[2rem] font-black text-xl hover:shadow-2xl hover:shadow-gray-200 hover:bg-black transition-all active:scale-95 flex items-center justify-center gap-4 disabled:opacity-50"
-                                    >
-                                        {saving ? (
-                                            <div className="w-6 h-6 border-3 border-white/30 border-t-white rounded-full animate-spin"></div>
-                                        ) : (
-                                            <>
-                                                <FaSave />
-                                                שמור תוספת
-                                            </>
-                                        )}
-                                    </button>
+                                <div className="flex flex-col sm:flex-row flex-wrap gap-2 p-4 sm:p-6 border-t border-gray-100 bg-white shrink-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+                                    {!editSalad && saladWizardStep > 1 && (
+                                        <button
+                                            type="button"
+                                            onClick={goSaladWizardPrev}
+                                            className="order-2 sm:order-1 w-full sm:w-auto px-6 py-3.5 bg-gray-100 text-gray-800 rounded-2xl font-black text-sm"
+                                        >
+                                            הקודם
+                                        </button>
+                                    )}
                                     <button
                                         type="button"
                                         onClick={closeModal}
-                                        className="flex-1 px-10 py-6 bg-gray-100 text-gray-600 rounded-[2rem] font-black hover:bg-gray-200 transition-all active:scale-95"
+                                        className="order-3 sm:order-2 px-6 py-3.5 bg-white border border-gray-200 text-gray-600 rounded-2xl font-black text-sm w-full sm:w-auto"
                                     >
                                         ביטול
                                     </button>
+                                    {!editSalad && saladWizardStep < 3 && (
+                                        <button
+                                            type="submit"
+                                            className="order-1 sm:order-3 flex-1 min-w-[10rem] py-3.5 bg-brand-primary text-white rounded-2xl font-black text-sm shadow-lg"
+                                        >
+                                            הבא
+                                        </button>
+                                    )}
+                                    {(editSalad || saladWizardStep === 3) && (
+                                        <button
+                                            type="submit"
+                                            disabled={saving}
+                                            className="order-1 flex-1 min-w-[10rem] py-3.5 bg-gray-900 text-white rounded-2xl font-black text-base hover:bg-black transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                                        >
+                                            {saving ? (
+                                                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                                            ) : (
+                                                <>
+                                                    <FaSave />
+                                                    {editSalad ? 'שמור שינויים' : 'שמור תוספת'}
+                                                </>
+                                            )}
+                                        </button>
+                                    )}
                                 </div>
                             </form>
                         </div>
@@ -994,29 +1096,38 @@ export default function AdminSalads({ embedded = false }) {
 
                 {/* Group Modal */}
                 {groupModalOpen && (
-                    <div className="fixed inset-0 bg-gray-900/70 backdrop-blur-md z-[100] flex items-center justify-center p-4 animate-in fade-in duration-500 overflow-y-auto">
-                        <div className="bg-white rounded-3xl sm:rounded-[4rem] shadow-2xl max-w-xl w-full border border-white/20 animate-in zoom-in-95 duration-400 my-4 sm:my-0 h-auto sm:max-h-[90vh] overflow-y-auto">
-                            <div className="px-6 py-6 sm:px-12 sm:py-10 bg-gray-50/50 border-b border-gray-100 flex items-center justify-between sticky top-0 backdrop-blur-sm z-10">
-                                <div className="flex items-center gap-4 sm:gap-6">
-                                    <div className="p-3 sm:p-4 bg-brand-primary text-white rounded-2xl sm:rounded-[2rem] shadow-xl shadow-brand-primary/20 bg-gradient-to-br from-brand-primary to-orange-600">
+                    <div className="fixed inset-0 bg-gray-900/70 backdrop-blur-md z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-500">
+                        <div className="bg-white rounded-t-[1.75rem] sm:rounded-[3rem] shadow-2xl max-w-xl w-full max-h-[min(92dvh,90vh)] flex flex-col min-h-0 border border-white/20 animate-in zoom-in-95 duration-400 my-0 sm:my-4">
+                            <div className="px-4 py-5 sm:px-10 sm:py-8 bg-gray-50/50 border-b border-gray-100 flex items-center justify-between shrink-0">
+                                <div className="flex items-center gap-3 sm:gap-6 min-w-0">
+                                    <div className="p-3 sm:p-4 bg-brand-primary text-white rounded-2xl sm:rounded-[2rem] shadow-xl shadow-brand-primary/20 bg-gradient-to-br from-brand-primary to-orange-600 shrink-0">
                                         <FaLayerGroup size={20} className="sm:w-6 sm:h-6" />
                                     </div>
-                                    <div>
-                                        <h2 className="text-xl sm:text-3xl font-black text-gray-900 tracking-tight">
+                                    <div className="min-w-0">
+                                        <h2 className="text-lg sm:text-2xl font-black text-gray-900 tracking-tight truncate">
                                             {editingGroup ? 'עריכת קבוצה' : 'הוספת קבוצה'}
                                         </h2>
                                         <p className="text-gray-500 font-bold text-xs sm:text-sm mt-0.5">ניהול קבוצת תוספות</p>
+                                        {!editingGroup && (
+                                            <p className="text-[10px] font-black text-gray-400 mt-1">
+                                                שלב {groupWizardStep} מתוך 3 — פרטים · בחירות · הגשה
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
                                 <button
+                                    type="button"
                                     onClick={closeGroupModal}
-                                    className="p-3 sm:p-4 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-[1.5rem] transition-all"
+                                    className="p-3 sm:p-4 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-[1.5rem] transition-all shrink-0"
                                 >
                                     <FaTimes size={20} className="sm:w-6 sm:h-6" />
                                 </button>
                             </div>
 
-                            <form onSubmit={handleGroupSubmit} className="p-6 sm:p-12 space-y-6 sm:space-y-10">
+                            <form onSubmit={handleGroupSubmit} className="flex flex-col flex-1 min-h-0">
+                            <div className="overflow-y-auto flex-1 min-h-0 p-4 sm:p-10 space-y-6 sm:space-y-10 custom-scrollbar">
+                                {(editingGroup || groupWizardStep === 1) && (
+                                <div className="space-y-6 sm:space-y-8">
                                 <div className="space-y-3 sm:space-y-4">
                                     <label className="text-xs font-black text-gray-500 mr-2 uppercase tracking-[0.2em]">שם הקבוצה</label>
                                     <input
@@ -1136,7 +1247,11 @@ export default function AdminSalads({ embedded = false }) {
                                     </div>
                                 )}
 
-                                <div className="grid grid-cols-2 gap-4 sm:gap-6">
+                                </div>
+                                )}
+
+                                {(editingGroup || groupWizardStep === 2) && (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                                     <div className="space-y-3 sm:space-y-4">
                                         <label className="text-[10px] sm:text-xs font-black text-gray-500 mr-2 uppercase tracking-wide sm:tracking-[0.2em]">מינימום לבחירה</label>
                                         <input
@@ -1161,7 +1276,10 @@ export default function AdminSalads({ embedded = false }) {
                                         <p className="text-[10px] text-gray-400 text-center font-bold">ריק = ללא הגבלה</p>
                                     </div>
                                 </div>
+                                )}
 
+                                {(editingGroup || groupWizardStep === 3) && (
+                                <div className="space-y-6">
                                 <div className="space-y-3 sm:space-y-4">
                                     <label className="text-xs font-black text-gray-500 mr-2 uppercase tracking-[0.2em]">סטטוס פעילות</label>
                                     <label className="flex items-center gap-4 p-4 sm:p-5 bg-emerald-50 rounded-2xl sm:rounded-[1.5rem] cursor-pointer hover:bg-emerald-100 transition-all border border-emerald-100 active:scale-98">
@@ -1205,33 +1323,66 @@ export default function AdminSalads({ embedded = false }) {
                                         </button>
                                     </div>
                                 </div>
+                                </div>
+                                )}
+                            </div>
 
-                                <div className="flex flex-col-reverse sm:flex-row gap-3 sm:gap-6 pt-2 sm:pt-6 sticky bottom-0 bg-white/95 sm:relative sm:bg-transparent pb-2 sm:pb-0 backdrop-blur-sm">
+                                <div className="flex flex-col sm:flex-row flex-wrap gap-2 p-4 sm:p-6 border-t border-gray-100 bg-white shrink-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+                                    {!editingGroup && groupWizardStep > 1 && (
+                                        <button
+                                            type="button"
+                                            onClick={goGroupWizardPrev}
+                                            className="order-2 sm:order-1 w-full sm:w-auto px-6 py-3.5 bg-gray-100 text-gray-800 rounded-2xl font-black text-sm"
+                                        >
+                                            הקודם
+                                        </button>
+                                    )}
                                     <button
                                         type="button"
                                         onClick={closeGroupModal}
-                                        className="w-full sm:flex-1 py-4 sm:py-6 bg-gray-100 text-gray-600 rounded-2xl sm:rounded-[2rem] font-black hover:bg-gray-200 transition-all active:scale-95"
+                                        className="order-3 sm:order-2 px-6 py-3.5 bg-white border border-gray-200 text-gray-600 rounded-2xl font-black text-sm w-full sm:w-auto"
                                     >
                                         ביטול
                                     </button>
-                                    <button
-                                        type="submit"
-                                        disabled={saving}
-                                        className="w-full sm:flex-[2] bg-gray-900 text-white py-4 sm:py-6 rounded-2xl sm:rounded-[2rem] font-black text-lg sm:text-xl hover:shadow-2xl hover:shadow-gray-200 hover:bg-black transition-all active:scale-95 flex items-center justify-center gap-3 sm:gap-4 disabled:opacity-50"
-                                    >
-                                        {saving ? (
-                                            <div className="w-6 h-6 border-3 border-white/30 border-t-white rounded-full animate-spin"></div>
-                                        ) : (
-                                            <>
-                                                <FaSave />
-                                                {editingGroup ? 'שמור שינויים' : 'צור קבוצה'}
-                                            </>
-                                        )}
-                                    </button>
+                                    {!editingGroup && groupWizardStep < 3 && (
+                                        <button
+                                            type="submit"
+                                            className="order-1 sm:order-3 flex-1 min-w-[10rem] py-3.5 bg-brand-primary text-white rounded-2xl font-black text-sm shadow-lg"
+                                        >
+                                            הבא
+                                        </button>
+                                    )}
+                                    {(editingGroup || groupWizardStep === 3) && (
+                                        <button
+                                            type="submit"
+                                            disabled={saving}
+                                            className="order-1 flex-1 min-w-[10rem] py-3.5 bg-gray-900 text-white rounded-2xl font-black text-base hover:bg-black transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                                        >
+                                            {saving ? (
+                                                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                                            ) : (
+                                                <>
+                                                    <FaSave />
+                                                    {editingGroup ? 'שמור שינויים' : 'צור קבוצה'}
+                                                </>
+                                            )}
+                                        </button>
+                                    )}
                                 </div>
                             </form>
                         </div>
                     </div>
+                )}
+                {isManager() && !isCategoryGroup && !modalOpen && !groupModalOpen && (
+                    <>
+                        <MobileAddFab
+                            label="הוסף קבוצה"
+                            icon={FaLayerGroup}
+                            onClick={() => openGroupModal()}
+                            positionClass="bottom-[6.75rem] right-4"
+                        />
+                        <MobileAddFab label="הוסף תוספת" onClick={() => openModal()} />
+                    </>
                 )}
             </div>
     );

@@ -147,6 +147,39 @@ export async function getCustomerFcmTokenIfPermitted() {
     return token;
 }
 
+/**
+ * טוקן FCM למנהלים/טאבלט (אותו מפתח LS_KEY) — בלי לבקש הרשאה מחדש.
+ * לשימוש אחרי התחברות מחדש כשהרשאת הדפדפן כבר granted.
+ */
+export async function getAdminFcmTokenIfPermitted() {
+    if (isFacebookBrowser()) {
+        return null;
+    }
+    if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+        return null;
+    }
+    if (Notification.permission !== 'granted') {
+        return null;
+    }
+
+    let swReg;
+    try {
+        swReg = await navigator.serviceWorker.register('/firebase-messaging-sw.js', { scope: '/' });
+    } catch (err) {
+        console.error('[FCM admin] SW register failed', err);
+        return null;
+    }
+
+    const readyReg = await navigator.serviceWorker.ready;
+
+    const token = await getToken(messaging, {
+        vapidKey: VAPID_KEY,
+        serviceWorkerRegistration: readyReg || swReg,
+    });
+    if (token) setStoredFcmToken(token);
+    return token;
+}
+
 export async function requestFcmToken() {
     // ⚠️ Block Firebase operations in Facebook/Instagram browsers
     if (isFacebookBrowser()) {

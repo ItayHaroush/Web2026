@@ -260,23 +260,25 @@ export default function SuperAdminCustomers() {
         ]
         : [];
 
+    const customerActionsClass = 'min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-xl border border-gray-100 bg-gray-50/80 hover:bg-gray-100 active:scale-[0.98] transition-colors';
+
     return (
         <SuperAdminLayout>
-            <div className="space-y-6" dir="rtl">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-2xl font-black text-gray-900 flex items-center gap-3">
-                            <div className="w-10 h-10 bg-indigo-600 text-white rounded-xl flex items-center justify-center shadow-lg">
+            <div className="space-y-6 w-full min-w-0 overflow-x-hidden" dir="rtl">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0">
+                        <h1 className="text-xl sm:text-2xl font-black text-gray-900 flex items-center gap-2 sm:gap-3">
+                            <div className="w-9 h-9 sm:w-10 sm:h-10 bg-indigo-600 text-white rounded-xl flex items-center justify-center shadow-lg shrink-0">
                                 <FaUsers size={18} />
                             </div>
-                            ניהול לקוחות
+                            <span className="break-words">ניהול לקוחות</span>
                         </h1>
-                        <p className="text-sm text-gray-500 mt-1">כל משתמשי הקצה — PWA, פוש, וואטסאפ ושידורים</p>
+                        <p className="text-xs sm:text-sm text-gray-500 mt-1">כל משתמשי הקצה — PWA, פוש, וואטסאפ ושידורים</p>
                     </div>
                     <button
                         type="button"
                         onClick={() => { setShowLogPanel((v) => !v); }}
-                        className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 text-sm font-bold text-gray-700 hover:bg-gray-50"
+                        className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-bold text-gray-700 hover:bg-gray-50 w-full sm:w-auto shrink-0"
                     >
                         <FaHistory size={14} /> לוג שידורים
                     </button>
@@ -333,18 +335,18 @@ export default function SuperAdminCustomers() {
                 )}
 
                 <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 space-y-3">
-                    <form onSubmit={handleSearch} className="flex gap-2">
-                        <div className="relative flex-1">
+                    <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-2">
+                        <div className="relative flex-1 min-w-0">
                             <FaSearch className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" size={13} />
                             <input
                                 type="text"
                                 placeholder="חפש לפי שם, טלפון או אימייל..."
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
-                                className="w-full pr-9 pl-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-1 focus:ring-indigo-200 outline-none"
+                                className="w-full min-w-0 pr-9 pl-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-1 focus:ring-indigo-200 outline-none"
                             />
                         </div>
-                        <button type="submit" className="bg-indigo-600 text-white px-4 rounded-xl text-sm font-bold hover:bg-indigo-700">
+                        <button type="submit" className="bg-indigo-600 text-white px-4 py-2.5 rounded-xl text-sm font-bold hover:bg-indigo-700 shrink-0 w-full sm:w-auto">
                             חפש
                         </button>
                     </form>
@@ -415,14 +417,109 @@ export default function SuperAdminCustomers() {
                         </div>
                     ) : (
                         <>
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-sm">
+                            {/* מובייל — כרטיסים */}
+                            <div className="md:hidden divide-y divide-gray-100">
+                                {customers.map((c) => (
+                                    <div key={`m-${c.id}`} className="p-4 space-y-3">
+                                        <div className="flex items-start gap-3">
+                                            <input
+                                                type="checkbox"
+                                                className="mt-1.5 shrink-0"
+                                                checked={selectedIds.includes(c.id)}
+                                                onChange={() => toggleSelect(c.id)}
+                                                aria-label={`בחר ${c.name}`}
+                                            />
+                                            <div className="min-w-0 flex-1 space-y-1">
+                                                <p className="font-bold text-gray-900 break-words">{c.name || '—'}</p>
+                                                <p className="text-sm text-gray-600 ltr text-right break-all" dir="ltr">{c.phone || '—'}</p>
+                                                {c.email ? (
+                                                    <p className="text-xs text-gray-600 break-all flex items-center gap-1">
+                                                        {c.email}
+                                                        {c.email_verified_at
+                                                            ? <FaCheckCircle className="text-green-500 shrink-0" size={10} />
+                                                            : <FaClock className="text-amber-500 shrink-0" size={10} />}
+                                                    </p>
+                                                ) : (
+                                                    <p className="text-xs text-gray-300">ללא אימייל</p>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-wrap gap-2 text-[11px] text-gray-600">
+                                            <span className="px-2 py-1 rounded-lg bg-gray-50 font-bold">הזמנות: {c.total_orders || 0}</span>
+                                            <span className="px-2 py-1 rounded-lg bg-gray-50">פוש: {c.push_tokens_count ?? 0}</span>
+                                            <span className="px-2 py-1 rounded-lg bg-gray-50">
+                                                PWA: {c.pwa_installed_at ? new Date(c.pwa_installed_at).toLocaleDateString('he-IL') : '—'}
+                                            </span>
+                                            <span className="px-2 py-1 rounded-lg bg-gray-50">
+                                                הזמנה אחרונה: {c.last_order_at ? new Date(c.last_order_at).toLocaleDateString('he-IL') : '—'}
+                                            </span>
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-2 pt-1">
+                                            {phoneToWaHref(c.phone) && (
+                                                <a
+                                                    href={phoneToWaHref(c.phone)}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className={`${customerActionsClass} text-green-600 col-span-1`}
+                                                    title="WhatsApp"
+                                                >
+                                                    <FaWhatsapp size={16} />
+                                                </a>
+                                            )}
+                                            <button
+                                                type="button"
+                                                onClick={() => { setPushModal(c); setPushForm({ title: 'עדכון', body: '' }); setPushForTenantId(''); }}
+                                                className={`${customerActionsClass} text-orange-600`}
+                                                title="שלח פוש"
+                                            >
+                                                <FaBell size={16} />
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => { setSmsModal(c); setSmsBody(''); }}
+                                                className={`${customerActionsClass} text-sky-600`}
+                                                title="שלח SMS"
+                                            >
+                                                <FaSms size={16} />
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => navigate(`/super-admin/customers/${c.id}`)}
+                                                className={`${customerActionsClass} text-indigo-600`}
+                                                title="צפה"
+                                            >
+                                                <FaEye size={16} />
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => startEdit(c)}
+                                                className={`${customerActionsClass} text-blue-600`}
+                                                title="ערוך"
+                                            >
+                                                <FaEdit size={16} />
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => deleteCustomer(c.id)}
+                                                className={`${customerActionsClass} text-red-500`}
+                                                title="מחק"
+                                            >
+                                                <FaTrash size={15} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* דסקטופ — טבלה */}
+                            <div className="hidden md:block overflow-x-auto">
+                                <table className="w-full text-sm min-w-[920px]">
                                     <thead className="bg-gray-50 text-[10px] font-black text-gray-400 uppercase tracking-wider">
                                         <tr>
                                             <th className="w-10 px-2 py-3">
                                                 <input
                                                     type="checkbox"
-                                                    checked={customers.length > 0 && customers.every((c) => selectedIds.includes(c.id))}
+                                                    checked={customers.length > 0 && customers.every((cc) => selectedIds.includes(cc.id))}
                                                     onChange={selectAllOnPage}
                                                     aria-label="בחר הכל בעמוד"
                                                 />
@@ -435,7 +532,7 @@ export default function SuperAdminCustomers() {
                                             <th className="text-center px-4 py-3">פוש</th>
                                             <th className="text-right px-4 py-3">הזמנה אחרונה</th>
                                             <th className="text-right px-4 py-3">נוצר</th>
-                                            <th className="text-center px-4 py-3">פעולות</th>
+                                            <th className="text-center px-4 py-3 w-[11rem]">פעולות</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-100">
@@ -476,57 +573,57 @@ export default function SuperAdminCustomers() {
                                                     {new Date(c.created_at).toLocaleDateString('he-IL')}
                                                 </td>
                                                 <td className="px-4 py-3">
-                                                    <div className="flex items-center justify-center gap-1 flex-wrap">
+                                                    <div className="flex items-center justify-center gap-1 flex-wrap max-w-[11rem] mx-auto">
                                                         {phoneToWaHref(c.phone) && (
                                                             <a
                                                                 href={phoneToWaHref(c.phone)}
                                                                 target="_blank"
                                                                 rel="noopener noreferrer"
-                                                                className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg"
+                                                                className="p-2 text-green-600 hover:bg-green-50 rounded-lg shrink-0"
                                                                 title="WhatsApp"
                                                             >
-                                                                <FaWhatsapp size={12} />
+                                                                <FaWhatsapp size={14} />
                                                             </a>
                                                         )}
                                                         <button
                                                             type="button"
                                                             onClick={() => { setPushModal(c); setPushForm({ title: 'עדכון', body: '' }); setPushForTenantId(''); }}
-                                                            className="p-1.5 text-orange-600 hover:bg-orange-50 rounded-lg"
+                                                            className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg shrink-0"
                                                             title="שלח פוש"
                                                         >
-                                                            <FaBell size={12} />
+                                                            <FaBell size={14} />
                                                         </button>
                                                         <button
                                                             type="button"
                                                             onClick={() => { setSmsModal(c); setSmsBody(''); }}
-                                                            className="p-1.5 text-sky-600 hover:bg-sky-50 rounded-lg"
+                                                            className="p-2 text-sky-600 hover:bg-sky-50 rounded-lg shrink-0"
                                                             title="שלח SMS"
                                                         >
-                                                            <FaSms size={12} />
+                                                            <FaSms size={14} />
                                                         </button>
                                                         <button
                                                             type="button"
                                                             onClick={() => navigate(`/super-admin/customers/${c.id}`)}
-                                                            className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg"
+                                                            className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg shrink-0"
                                                             title="צפה"
                                                         >
-                                                            <FaEye size={12} />
+                                                            <FaEye size={14} />
                                                         </button>
                                                         <button
                                                             type="button"
                                                             onClick={() => startEdit(c)}
-                                                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg"
+                                                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg shrink-0"
                                                             title="ערוך"
                                                         >
-                                                            <FaEdit size={12} />
+                                                            <FaEdit size={14} />
                                                         </button>
                                                         <button
                                                             type="button"
                                                             onClick={() => deleteCustomer(c.id)}
-                                                            className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg"
+                                                            className="p-2 text-red-500 hover:bg-red-50 rounded-lg shrink-0"
                                                             title="מחק"
                                                         >
-                                                            <FaTrash size={11} />
+                                                            <FaTrash size={13} />
                                                         </button>
                                                     </div>
                                                 </td>
@@ -537,9 +634,9 @@ export default function SuperAdminCustomers() {
                             </div>
 
                             {meta.lastPage > 1 && (
-                                <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-                                    <p className="text-xs text-gray-400">עמוד {meta.currentPage} מתוך {meta.lastPage} ({meta.total} לקוחות)</p>
-                                    <div className="flex gap-1">
+                                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between px-4 py-3 border-t border-gray-100">
+                                    <p className="text-xs text-gray-400 text-center sm:text-right">עמוד {meta.currentPage} מתוך {meta.lastPage} ({meta.total} לקוחות)</p>
+                                    <div className="flex gap-1 justify-center sm:justify-end">
                                         <button
                                             type="button"
                                             onClick={() => setPage((p) => Math.max(1, p - 1))}
@@ -565,9 +662,9 @@ export default function SuperAdminCustomers() {
 
                 {/* Push modal */}
                 {pushModal && (
-                    <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
+                    <div className="fixed inset-0 z-[999] flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto">
                         <div className="fixed inset-0 bg-black/50" onClick={() => setPushModal(null)} />
-                        <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4 z-10" dir="rtl">
+                        <div className="relative bg-white rounded-t-[1.75rem] sm:rounded-2xl shadow-xl w-full max-w-md max-h-[min(92dvh,90vh)] overflow-y-auto p-6 space-y-4 z-10 my-0 sm:my-8" dir="rtl">
                             <div className="flex items-center justify-between">
                                 <h3 className="text-lg font-black flex items-center gap-2">
                                     <FaBell className="text-orange-500" /> פוש ל-{pushModal.name}
@@ -611,9 +708,9 @@ export default function SuperAdminCustomers() {
 
                 {/* SMS modal */}
                 {smsModal && (
-                    <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
+                    <div className="fixed inset-0 z-[999] flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto">
                         <div className="fixed inset-0 bg-black/50" onClick={() => setSmsModal(null)} />
-                        <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4 z-10" dir="rtl">
+                        <div className="relative bg-white rounded-t-[1.75rem] sm:rounded-2xl shadow-xl w-full max-w-md max-h-[min(92dvh,90vh)] overflow-y-auto p-6 space-y-4 z-10 my-0 sm:my-8" dir="rtl">
                             <div className="flex items-center justify-between">
                                 <h3 className="text-lg font-black flex items-center gap-2">
                                     <FaSms className="text-sky-500" /> SMS ל-{smsModal.name}
@@ -642,9 +739,9 @@ export default function SuperAdminCustomers() {
 
                 {/* Broadcast modal */}
                 {broadcastOpen && (
-                    <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
+                    <div className="fixed inset-0 z-[999] flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto">
                         <div className="fixed inset-0 bg-black/50" onClick={() => setBroadcastOpen(false)} />
-                        <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 space-y-4 z-10" dir="rtl">
+                        <div className="relative bg-white rounded-t-[1.75rem] sm:rounded-2xl shadow-xl w-full max-w-lg max-h-[min(92dvh,90vh)] overflow-y-auto p-6 space-y-4 z-10 my-0 sm:my-8" dir="rtl">
                             <h3 className="text-lg font-black flex items-center gap-2">
                                 <FaMobileAlt className="text-indigo-500" /> שידור ל-{selectedIds.length} לקוחות
                             </h3>
@@ -700,9 +797,9 @@ export default function SuperAdminCustomers() {
                 )}
 
                 {editingCustomer && (
-                    <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
+                    <div className="fixed inset-0 z-[999] flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto">
                         <div className="fixed inset-0 bg-black/50" onClick={() => setEditingCustomer(null)} />
-                        <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4 z-10" dir="rtl">
+                        <div className="relative bg-white rounded-t-[1.75rem] sm:rounded-2xl shadow-xl w-full max-w-md max-h-[min(92dvh,90vh)] overflow-y-auto p-6 space-y-4 z-10 my-0 sm:my-8" dir="rtl">
                             <div className="flex items-center justify-between">
                                 <h3 className="text-lg font-black text-gray-900">עריכת לקוח</h3>
                                 <button type="button" onClick={() => setEditingCustomer(null)} className="text-gray-400 hover:text-gray-600">

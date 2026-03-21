@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import AdminLayout from '../../layouts/AdminLayout';
+import MobileAddFab from '../../components/admin/MobileAddFab';
 import { FaPrint, FaPlus, FaNetworkWired, FaEdit, FaTrash, FaPowerOff, FaCopy, FaCheck, FaTimes, FaExclamationTriangle } from 'react-icons/fa';
 import api from '../../services/apiClient';
 import {
@@ -273,7 +274,7 @@ export default function AdminPrinters({ embedded = false }) {
                     {isManager() && (
                         <button
                             onClick={activeTab === 'printers' ? openNew : openDeviceNew}
-                            className="w-full md:w-auto px-10 py-5 rounded-[2rem] font-black transition-all flex items-center justify-center gap-3 shadow-xl active:scale-95 group bg-blue-600 text-white hover:bg-blue-500 shadow-blue-600/20"
+                            className="hidden md:flex w-full md:w-auto px-10 py-5 rounded-[2rem] font-black transition-all items-center justify-center gap-3 shadow-xl active:scale-95 group bg-blue-600 text-white hover:bg-blue-500 shadow-blue-600/20"
                         >
                             <FaPlus className="group-hover:rotate-90 transition-transform" />
                             {activeTab === 'printers' ? 'מדפסת חדשה' : 'גשר הדפסה חדש'}
@@ -449,7 +450,7 @@ export default function AdminPrinters({ embedded = false }) {
 
                 {/* Create/Edit Device Modal */}
                 {showDeviceModal && (
-                    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={closeDeviceModal}>
+                    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[200] p-4" onClick={closeDeviceModal}>
                         <div className="bg-white rounded-[2rem] shadow-2xl max-w-lg w-full p-8" onClick={e => e.stopPropagation()}>
                             {newToken ? (
                                 <div className="text-center space-y-6">
@@ -501,6 +502,13 @@ export default function AdminPrinters({ embedded = false }) {
                             )}
                         </div>
                     </div>
+                )}
+                {isManager() && !showModal && !showDeviceModal && (
+                    <MobileAddFab
+                        label={activeTab === 'devices' ? 'גשר הדפסה חדש' : 'מדפסת חדשה'}
+                        icon={activeTab === 'devices' ? FaNetworkWired : FaPrint}
+                        onClick={activeTab === 'devices' ? openDeviceNew : openNew}
+                    />
                 )}
             </div>
     );

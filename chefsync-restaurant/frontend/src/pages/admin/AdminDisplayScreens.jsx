@@ -16,6 +16,7 @@ import {
 import ScreenCard from '../../components/display-screen/admin/ScreenCard';
 import ScreenFormModal from '../../components/display-screen/admin/ScreenFormModal';
 import ScreenItemsModal from '../../components/display-screen/admin/ScreenItemsModal';
+import MobileAddFab from '../../components/admin/MobileAddFab';
 
 const DEFAULT_FORM = {
     name: '',
@@ -244,7 +245,7 @@ export default function AdminDisplayScreens({ embedded = false }) {
                         <button
                             onClick={canCreateMore ? openNew : undefined}
                             disabled={!canCreateMore}
-                            className={`w-full md:w-auto px-10 py-5 rounded-[2rem] font-black transition-all flex items-center justify-center gap-3 shadow-xl active:scale-95 group ${
+                            className={`hidden md:flex w-full md:w-auto px-10 py-5 rounded-[2rem] font-black transition-all items-center justify-center gap-3 shadow-xl active:scale-95 group ${
                                 canCreateMore
                                     ? 'bg-brand-primary text-white hover:bg-brand-dark shadow-brand-primary/20'
                                     : 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-none'
@@ -255,6 +256,24 @@ export default function AdminDisplayScreens({ embedded = false }) {
                         </button>
                     )}
                 </div>
+                )}
+
+                {embedded && isManager() && (
+                    <div className="hidden md:flex justify-end mb-6 px-4">
+                        <button
+                            type="button"
+                            onClick={canCreateMore ? openNew : undefined}
+                            disabled={!canCreateMore}
+                            className={`inline-flex items-center gap-2 px-6 py-3 rounded-2xl font-black text-sm shadow-lg ${
+                                canCreateMore
+                                    ? 'bg-brand-primary text-white hover:bg-brand-dark shadow-brand-primary/20'
+                                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                            }`}
+                        >
+                            <FaPlus />
+                            {canCreateMore ? 'מסך חדש' : 'הגעתם למגבלה'}
+                        </button>
+                    </div>
                 )}
 
                 {/* Tier Upgrade Banner */}
@@ -337,6 +356,13 @@ export default function AdminDisplayScreens({ embedded = false }) {
                     onSave={saveItems}
                     onClose={() => { setShowItemsModal(false); setItemsScreenId(null); }}
                 />
+                {isManager() && !showModal && !showItemsModal && (
+                    <MobileAddFab
+                        label={canCreateMore ? 'מסך חדש' : 'הגעתם למגבלה'}
+                        onClick={openNew}
+                        disabled={!canCreateMore}
+                    />
+                )}
             </div>
     );
 

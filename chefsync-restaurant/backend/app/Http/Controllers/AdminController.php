@@ -1889,6 +1889,7 @@ class AdminController extends Controller
         return response()->json([
             'success' => true,
             'restaurant' => $restaurant,
+            'zcredit_mock_enabled' => (bool) config('services.zcredit.mock'),
         ]);
     }
 

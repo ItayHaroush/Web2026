@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import AdminLayout from '../../layouts/AdminLayout';
+import MobileAddFab from '../../components/admin/MobileAddFab';
 import api from '../../services/apiClient';
 import {
     FaChevronDown,
@@ -174,7 +175,7 @@ export default function AdminCategories({ embedded = false }) {
                     {isManager() && (
                         <button
                             onClick={openNew}
-                            className="w-full md:w-auto bg-brand-primary text-white px-10 py-5 rounded-[2rem] font-black hover:bg-brand-dark transition-all flex items-center justify-center gap-3 shadow-xl shadow-brand-primary/20 active:scale-95 group"
+                            className="hidden md:flex w-full md:w-auto bg-brand-primary text-white px-10 py-5 rounded-[2rem] font-black hover:bg-brand-dark transition-all items-center justify-center gap-3 shadow-xl shadow-brand-primary/20 active:scale-95 group"
                         >
                             <FaPlus className="group-hover:rotate-90 transition-transform" />
                             הוספת קטגוריה
@@ -183,7 +184,7 @@ export default function AdminCategories({ embedded = false }) {
                 </div>
                 )}
                 {embedded && isManager() && (
-                    <div className="flex justify-end px-4">
+                    <div className="hidden md:flex justify-end px-4">
                         <button
                             onClick={openNew}
                             className="bg-brand-primary text-white px-6 py-3 rounded-2xl font-black text-sm hover:bg-brand-dark transition-all flex items-center gap-2 shadow-lg shadow-brand-primary/20"
@@ -286,9 +287,9 @@ export default function AdminCategories({ embedded = false }) {
 
                 {/* Modern Premium Modal */}
                 {showModal && (
-                    <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-4 animate-in fade-in duration-300">
-                        <div className="bg-white rounded-[3.5rem] shadow-2xl max-w-2xl w-full overflow-hidden border border-white/20 animate-in zoom-in-95 duration-300">
-                            <div className="px-10 py-8 bg-gray-50/50 border-b border-gray-100 flex items-center justify-between">
+                    <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-md z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-300">
+                        <div className="bg-white rounded-t-[2rem] sm:rounded-[3.5rem] shadow-2xl max-w-2xl w-full max-h-[min(92dvh,90vh)] overflow-hidden flex flex-col min-h-0 border border-white/20 animate-in zoom-in-95 duration-300">
+                            <div className="px-4 sm:px-10 py-5 sm:py-8 bg-gray-50/50 border-b border-gray-100 flex items-center justify-between shrink-0">
                                 <div className="flex items-center gap-5">
                                     <div className="p-4 bg-brand-primary/10 rounded-[1.5rem] text-brand-primary shadow-sm">
                                         {editCategory ? <FaRegEdit size={24} /> : <FaPlus size={24} />}
@@ -301,14 +302,16 @@ export default function AdminCategories({ embedded = false }) {
                                     </div>
                                 </div>
                                 <button
+                                    type="button"
                                     onClick={closeModal}
-                                    className="p-3 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-2xl transition-all"
+                                    className="p-3 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-2xl transition-all shrink-0"
                                 >
                                     <FaTimes size={24} />
                                 </button>
                             </div>
 
-                            <form onSubmit={handleSubmit} className="p-10 space-y-10 max-h-[75vh] overflow-y-auto custom-scrollbar">
+                            <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+                            <div className="p-4 sm:p-10 space-y-8 sm:space-y-10 overflow-y-auto flex-1 min-h-0 custom-scrollbar">
                                 <div className="grid grid-cols-1 gap-10">
                                     <div className="space-y-4">
                                         <label className="text-sm font-black text-gray-700 mr-2 uppercase tracking-widest flex items-center gap-2">
@@ -319,7 +322,7 @@ export default function AdminCategories({ embedded = false }) {
                                             value={form.name}
                                             onChange={(e) => setForm({ ...form, name: e.target.value })}
                                             required
-                                            className="w-full px-8 py-5 bg-gray-50 border-none rounded-[1.5rem] focus:ring-4 focus:ring-brand-primary/10 text-gray-900 font-black transition-all text-lg"
+                                            className="w-full min-w-0 px-5 sm:px-8 py-4 sm:py-5 bg-gray-50 border-none rounded-[1.5rem] focus:ring-4 focus:ring-brand-primary/10 text-gray-900 font-black transition-all text-base sm:text-lg"
                                             placeholder="למשל: המיוחדים שלנו, קינוחים..."
                                         />
                                     </div>
@@ -403,7 +406,7 @@ export default function AdminCategories({ embedded = false }) {
                                         <label className="text-sm font-black text-gray-700 mr-2 uppercase tracking-widest">
                                             סוג הגשה מועדף
                                         </label>
-                                        <div className="grid grid-cols-3 gap-5">
+                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-5">
                                             {[
                                                 { id: 'both', label: 'גם וגם', icon: '🥗🌯', desc: 'כל סוגי המנות' },
                                                 { id: 'plate', label: 'צלחת', icon: '🥗', desc: 'סלטים ומנות חמות' },
@@ -453,26 +456,30 @@ export default function AdminCategories({ embedded = false }) {
                                         </p>
                                     </div>
                                 </div>
+                            </div>
 
-                                <div className="flex gap-6 pt-10">
-                                    <button
-                                        type="submit"
-                                        className="flex-1 bg-brand-primary text-white py-6 rounded-[2rem] font-black text-xl hover:bg-brand-dark transition-all shadow-xl shadow-brand-primary/20 active:scale-95 flex items-center justify-center gap-4"
-                                    >
-                                        <FaCheckCircle size={22} />
-                                        {editCategory ? 'עדכן קטגוריה' : 'צור קטגוריה'}
-                                    </button>
+                                <div className="flex flex-col-reverse sm:flex-row gap-3 p-4 sm:p-10 pt-4 border-t border-gray-100 bg-white shrink-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
                                     <button
                                         type="button"
                                         onClick={closeModal}
-                                        className="px-12 py-6 bg-gray-100 text-gray-700 rounded-[2rem] font-black hover:bg-gray-200 transition-all active:scale-95"
+                                        className="w-full sm:w-auto px-8 py-4 sm:py-6 bg-gray-100 text-gray-700 rounded-[2rem] font-black hover:bg-gray-200 transition-all active:scale-95"
                                     >
                                         ביטול
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        className="flex-1 bg-brand-primary text-white py-4 sm:py-6 rounded-[2rem] font-black text-lg sm:text-xl hover:bg-brand-dark transition-all shadow-xl shadow-brand-primary/20 active:scale-95 flex items-center justify-center gap-4"
+                                    >
+                                        <FaCheckCircle size={22} />
+                                        {editCategory ? 'עדכן קטגוריה' : 'צור קטגוריה'}
                                     </button>
                                 </div>
                             </form>
                         </div>
                     </div>
+                )}
+                {isManager() && !showModal && (
+                    <MobileAddFab label="הוספת קטגוריה" icon={FaTags} onClick={openNew} />
                 )}
             </div>
     );

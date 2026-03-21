@@ -23,6 +23,7 @@ export default function ZCreditSettingsPanel({ getAuthHeaders, isOwner }) {
     const [formTerminal, setFormTerminal] = useState(emptyTerminalForm);
     const [editingId, setEditingId] = useState(null);
     const [terminalSaving, setTerminalSaving] = useState(false);
+    const [zcreditMockEnabled, setZcreditMockEnabled] = useState(false);
 
     const load = useCallback(async () => {
         setLoading(true);
@@ -33,6 +34,7 @@ export default function ZCreditSettingsPanel({ getAuthHeaders, isOwner }) {
             ]);
             if (restRes.data?.success && restRes.data.restaurant) {
                 const r = restRes.data.restaurant;
+                setZcreditMockEnabled(!!restRes.data.zcredit_mock_enabled);
                 setZcreditTerminalNumber(r.zcredit_terminal_number || '');
                 setZcreditPinpadId(r.zcredit_pinpad_id || '');
                 setZcreditTerminalPassword('');
@@ -168,6 +170,16 @@ export default function ZCreditSettingsPanel({ getAuthHeaders, isOwner }) {
                 </div>
             </div>
 
+            {zcreditMockEnabled && (
+                <div className="rounded-2xl bg-amber-50 border border-amber-200 p-4 text-sm text-amber-950">
+                    <strong className="font-black">מצב Mock פעיל בשרת</strong>
+                    <p className="mt-1 opacity-90">
+                        חיובי PinPad מדומים (בלי Z-Credit אמיתי). לייצור: הגדירו מסופון במסעדה והגדירו{' '}
+                        <code className="bg-white/80 px-1 rounded text-xs">ZCREDIT_MOCK=false</code> ב־.env.
+                    </p>
+                </div>
+            )}
+
             <div className="rounded-2xl bg-slate-50 border border-slate-100 p-4 text-sm text-slate-700 space-y-2">
                 <div className="flex items-center gap-2 font-black text-slate-800">
                     <FaInfoCircle className="text-violet-500" />
@@ -177,7 +189,7 @@ export default function ZCreditSettingsPanel({ getAuthHeaders, isOwner }) {
                     <li>הזמנה מ<strong>קיוסק</strong> — אם לקיוסק מוגדר מסוף, משתמשים בו.</li>
                     <li>אחרת <strong>סשן קופה</strong> — המסוף שנבחר בכניסה עם PIN (POS Lite).</li>
                     <li>אחרת <strong>מסוף ברירת מחדל</strong> מהרשימה למטה (או מהשדות הישירים).</li>
-                    <li>אחרת השדות הישירים למטה על המסעדה, ואם ריקים — משתני <code className="bg-white px-1 rounded">.env</code> בשרת.</li>
+                    <li>אחרת השדות הישירים למטה על המסעדה (ללא נפילה ל־.env לחיובי POS).</li>
                 </ol>
             </div>
 

@@ -22,6 +22,15 @@ export default function MenuSearchPopup({ open, onClose, city }) {
         }
     }, [open]);
 
+    useEffect(() => {
+        if (!open) return undefined;
+        const prev = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        return () => {
+            document.body.style.overflow = prev;
+        };
+    }, [open]);
+
     const doSearch = useCallback(async (q) => {
         if (q.trim().length < 2) {
             setResults([]);
@@ -60,14 +69,17 @@ export default function MenuSearchPopup({ open, onClose, city }) {
     if (!open) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-start justify-center pt-16 sm:pt-24 px-4" onClick={onClose}>
+        <div
+            className="fixed inset-0 z-50 flex flex-col sm:items-start sm:justify-center sm:pt-24 sm:px-4 p-0"
+            onClick={onClose}
+        >
             <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
             <div
-                className="relative w-full max-w-lg bg-white dark:bg-brand-dark-surface rounded-2xl shadow-2xl overflow-hidden"
+                className="relative w-full max-w-none sm:max-w-lg mx-auto mt-0 sm:mt-0 flex flex-col flex-1 min-h-0 sm:flex-none sm:min-h-0 sm:max-h-[min(80vh,32rem)] bg-white dark:bg-brand-dark-surface rounded-none sm:rounded-2xl shadow-2xl overflow-hidden"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* שורת חיפוש */}
-                <div className="flex items-center gap-3 p-4 border-b border-gray-100 dark:border-brand-dark-border">
+                <div className="flex items-center gap-3 p-4 pt-[max(1rem,env(safe-area-inset-top))] sm:pt-4 border-b border-gray-100 dark:border-brand-dark-border shrink-0">
                     <FaSearch className="text-gray-400 w-4 h-4 flex-shrink-0" />
                     <input
                         ref={inputRef}
@@ -75,7 +87,7 @@ export default function MenuSearchPopup({ open, onClose, city }) {
                         value={query}
                         onChange={handleInputChange}
                         placeholder="מה בא לך לאכול?"
-                        className="flex-1 bg-transparent outline-none text-gray-800 dark:text-gray-200 font-semibold text-base placeholder:text-gray-400"
+                        className="flex-1 min-w-0 bg-transparent outline-none text-gray-800 dark:text-gray-200 font-semibold text-base placeholder:text-gray-400"
                     />
                     <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
                         <FaTimes className="w-4 h-4" />
@@ -83,7 +95,7 @@ export default function MenuSearchPopup({ open, onClose, city }) {
                 </div>
 
                 {/* תוצאות */}
-                <div className="max-h-[60vh] overflow-y-auto">
+                <div className="flex-1 min-h-0 overflow-y-auto sm:max-h-[60vh] pb-[env(safe-area-inset-bottom)]">
                     {loading && (
                         <div className="flex items-center justify-center py-10">
                             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary" />

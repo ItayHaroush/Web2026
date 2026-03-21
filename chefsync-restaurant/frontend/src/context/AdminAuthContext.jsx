@@ -1,5 +1,36 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import api from '../services/apiClient';
+import { getAdminFcmTokenIfPermitted } from '../services/fcm';
+
+/**
+ * לאחר התחברות: אם הדפדפן כבר אישר התראות — מרענן טוקן FCM ורושם בשרת.
+ * לא מבצע ביטול או מחיקה ב-logout — כדי לשמור על רציפות אחרי התחברות מחדש.
+ * (לקוחות קצה משתמשים ב-customer_fcm_token + נפרדים — לא כאן.)
+ */
+async function syncAdminFcmWithBackend(user, bearerToken) {
+    if (!user || !bearerToken) return;
+    if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+    try {
+        const fcmToken = await getAdminFcmTokenIfPermitted();
+        if (!fcmToken) return;
+        const headers = { Authorization: `Bearer ${bearerToken}` };
+        if (user.is_super_admin) {
+            await api.post(
+                '/super-admin/fcm/register',
+                { token: fcmToken, device_label: 'super_admin' },
+                { headers }
+            );
+        } else {
+            await api.post(
+                '/fcm/register',
+                { token: fcmToken, device_label: 'tablet' },
+                { headers }
+            );
+        }
+    } catch (e) {
+        console.warn('[FCM] sync after auth failed', e);
+    }
+}
 
 const AdminAuthContext = createContext(null);
 
@@ -34,6 +65,8 @@ export function AdminAuthProvider({ children }) {
                 // DEBUG: ודא שה-tenant נשמר
                 console.log('👤 User loaded:', response.data.user);
                 console.log('🏪 Tenant ID set:', localStorage.getItem('tenantId'));
+
+                void syncAdminFcmWithBackend(response.data.user, token);
             } else {
                 logout();
             }
@@ -103,6 +136,7 @@ export function AdminAuthProvider({ children }) {
             localStorage.removeItem('user');
             setToken(null);
             setUser(null);
+            /** לא מנקים fcmToken (localStorage) — הרשאת דפדפן נשארת; בהתחברות הבאה syncAdminFcmWithBackend ירשום מחדש מול המשתמש */
         }
     };
 

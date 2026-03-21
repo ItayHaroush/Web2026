@@ -132,10 +132,10 @@ export default function FutureOrderModal({ isOpen, onClose, onConfirm, restauran
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-[999] flex items-center justify-center p-4" onClick={onClose}>
+        <div className="fixed inset-0 z-[999] flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={onClose}>
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" />
             <div
-                className="relative bg-white dark:bg-brand-dark-surface rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-slideUp"
+                className="relative bg-white dark:bg-brand-dark-surface rounded-t-[1.75rem] sm:rounded-3xl shadow-2xl w-full max-w-md max-h-[min(92dvh,92vh)] overflow-hidden flex flex-col min-h-0 animate-slideUp sm:m-0"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
@@ -158,7 +158,7 @@ export default function FutureOrderModal({ isOpen, onClose, onConfirm, restauran
                 </div>
 
                 {/* Body */}
-                <div className="p-6 space-y-5">
+                <div className="p-6 space-y-5 overflow-y-auto min-h-0 flex-1">
                     <p className="text-gray-600 dark:text-brand-dark-muted text-sm leading-relaxed">
                         בחר תאריך ושעה שבהם המסעדה פתוחה. ההזמנה תישמר במערכת ותועבר למטבח בזמן.
                     </p>
@@ -190,7 +190,7 @@ export default function FutureOrderModal({ isOpen, onClose, onConfirm, restauran
                             }}
                             min={dateRange.min}
                             max={dateRange.max}
-                            className="w-full px-4 py-3 border-2 border-gray-200 dark:border-brand-dark-border rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all bg-white dark:bg-brand-dark-bg dark:text-brand-dark-text text-lg"
+                            className="w-full min-w-0 max-w-full box-border px-4 py-3 border-2 border-gray-200 dark:border-brand-dark-border rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all bg-white dark:bg-brand-dark-bg dark:text-brand-dark-text text-base"
                         />
                     </div>
 
@@ -222,7 +222,7 @@ export default function FutureOrderModal({ isOpen, onClose, onConfirm, restauran
                                     setSelectedTime(e.target.value);
                                     setError('');
                                 }}
-                                className="w-full px-4 py-3 border-2 border-gray-200 dark:border-brand-dark-border rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all bg-white dark:bg-brand-dark-bg dark:text-brand-dark-text text-lg"
+                                className="w-full min-w-0 max-w-full box-border px-4 py-3 border-2 border-gray-200 dark:border-brand-dark-border rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all bg-white dark:bg-brand-dark-bg dark:text-brand-dark-text text-base"
                             />
                         </div>
                     )}
@@ -236,7 +236,7 @@ export default function FutureOrderModal({ isOpen, onClose, onConfirm, restauran
                 </div>
 
                 {/* Footer */}
-                <div className="px-6 pb-6 flex gap-3">
+                <div className="px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-2 flex gap-3 shrink-0 border-t border-gray-100 dark:border-brand-dark-border bg-white dark:bg-brand-dark-surface">
                     <button
                         onClick={onClose}
                         className="flex-1 py-3 rounded-xl border-2 border-gray-200 dark:border-brand-dark-border text-gray-600 dark:text-brand-dark-muted font-bold hover:bg-gray-50 dark:hover:bg-brand-dark-bg transition-colors"

@@ -83,17 +83,29 @@ npm run dev
 
 ### Backend
 
+**לפני ההרצה:** שרת **MySQL** חייב לרוץ (למשל `127.0.0.1:3306`). אם אין מסד נתונים, צרו אותו (שם ברירת המחדל ב־`.env.example`: `TakeEat`):
+
+```sql
+CREATE DATABASE IF NOT EXISTS TakeEat CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+
+ב־macOS עם Homebrew, לדוגמה: `brew services start mysql` (או MariaDB בהתאם להתקנה שלכם).
+
 ```bash
 cd backend
 composer install
-cp .env.example .env
+cp .env.example .env   # רק בפעם הראשונה; עדכנו DB_PASSWORD אם נדרש
 php artisan key:generate
 php artisan migrate
 php artisan db:seed --class=RestaurantSeeder
 php artisan serve
 ```
 
+או מהשורש: `./startServ.sh` (לא דורס `.env` קיים; עוצר אם המיגרציות נכשלות).
+
 API ב: `http://localhost:8000/api`
+
+**שגיאת `Connection refused`:** MySQL לא רץ, פורט/מארח שגוי ב־`.env`, או סיסמת `root` לא תואמת — תקנו את `DB_*` ב־`backend/.env`.
 
 ---
 

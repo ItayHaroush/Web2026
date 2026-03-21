@@ -17,7 +17,7 @@ class ZCreditResolver
     {
         $restaurant = Restaurant::withoutGlobalScopes()->find($order->restaurant_id);
         if (!$restaurant) {
-            return app(ZCreditService::class);
+            return new ZCreditService(null, null, null, false);
         }
 
         if ($order->kiosk_id) {

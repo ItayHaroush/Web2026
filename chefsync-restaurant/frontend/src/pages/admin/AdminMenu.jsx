@@ -9,6 +9,7 @@ import AiDescriptionGenerator from '../../components/AiDescriptionGenerator';
 import AiPriceRecommender from '../../components/AiPriceRecommender';
 import AiImageEnhancer from '../../components/AiImageEnhancer';
 import AiDineInRecommender from '../../components/AiDineInRecommender';
+import MobileAddFab from '../../components/admin/MobileAddFab';
 import {
     FaUtensils,
     FaPlus,
@@ -49,6 +50,8 @@ export default function AdminMenu({ embedded = false }) {
     const [archivedItems, setArchivedItems] = useState([]);
     const [draggedCategory, setDraggedCategory] = useState(null);
     const [categoryBeingSorted, setCategoryBeingSorted] = useState([]);
+    /** וויזארד הוספת פריט — רק ליצירה (לא עריכה) */
+    const [menuWizardStep, setMenuWizardStep] = useState(1);
     const [basePrices, setBasePrices] = useState([]);
     const [basePriceAdjustments, setBasePriceAdjustments] = useState({});
     const [loadingBasePrices, setLoadingBasePrices] = useState(false);
@@ -340,6 +343,7 @@ export default function AdminMenu({ embedded = false }) {
             dine_in_adjustment: item.dine_in_adjustment ?? '',
             addon_selection_weight: item.addon_selection_weight != null ? String(item.addon_selection_weight) : '',
         });
+        setMenuWizardStep(1);
         setShowModal(true);
 
         // טען מחירי בסיס ברמת פריט אם הפריט משתמש בבסיסים
@@ -367,12 +371,24 @@ export default function AdminMenu({ embedded = false }) {
             dine_in_adjustment: '',
             addon_selection_weight: '',
         });
+        setMenuWizardStep(1);
         setShowModal(true);
     };
+
+    const goMenuWizardNext = () => {
+        if (!form.name?.trim() || form.price === '' || form.price === null || !form.category_id) {
+            alert('נא למלא שם פריט, מחיר וקטגוריה');
+            return;
+        }
+        setMenuWizardStep((s) => Math.min(3, s + 1));
+    };
+
+    const goMenuWizardPrev = () => setMenuWizardStep((s) => Math.max(1, s - 1));
 
     const closeModal = () => {
         setShowModal(false);
         setEditItem(null);
+        setMenuWizardStep(1);
         setForm({
             name: '',
             description: '',
@@ -502,12 +518,31 @@ export default function AdminMenu({ embedded = false }) {
             </div>
             )}
 
+            {embedded && activeTab === 'items' && isManager() && (
+                <>
+                    <div className="hidden md:flex flex-wrap justify-end gap-2 mb-4 px-1">
+                        <button
+                            type="button"
+                            onClick={openNewModal}
+                            disabled={isLocked}
+                            className={`inline-flex items-center gap-2 bg-brand-primary text-white px-5 py-2.5 rounded-2xl font-black text-xs shadow-lg shadow-brand-primary/20 ${isLocked ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-95'}`}
+                        >
+                            <FaPlus />
+                            הוסף פריט
+                        </button>
+                    </div>
+                    {!showModal && (
+                    <MobileAddFab label="הוסף פריט" onClick={openNewModal} disabled={isLocked} />
+                    )}
+                </>
+            )}
+
             {/* טאבים - פריטים / קטגוריות */}
-            <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-2 mb-6">
-                <div className="flex gap-2">
+            <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-2 mb-6 overflow-x-auto overscroll-x-contain touch-pan-x [-webkit-overflow-scrolling:touch] max-w-full min-w-0">
+                <div className="flex gap-2 min-w-max sm:min-w-0 sm:w-full">
                     <button
                         onClick={() => setActiveTab('items')}
-                        className={`flex-1 px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-wider transition-all ${activeTab === 'items'
+                        className={`shrink-0 sm:flex-1 px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-wider transition-all whitespace-nowrap ${activeTab === 'items'
                             ? 'bg-gray-900 text-white shadow-lg'
                             : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
                             }`}
@@ -517,7 +552,7 @@ export default function AdminMenu({ embedded = false }) {
                     </button>
                     <button
                         onClick={() => setActiveTab('categories')}
-                        className={`flex-1 px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-wider transition-all ${activeTab === 'categories'
+                        className={`shrink-0 sm:flex-1 px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-wider transition-all whitespace-nowrap ${activeTab === 'categories'
                             ? 'bg-gray-900 text-white shadow-lg'
                             : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
                             }`}
@@ -527,7 +562,7 @@ export default function AdminMenu({ embedded = false }) {
                     </button>
                     <button
                         onClick={() => { setActiveTab('archive'); fetchArchivedItems(); }}
-                        className={`flex-1 px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-wider transition-all ${activeTab === 'archive'
+                        className={`shrink-0 sm:flex-1 px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-wider transition-all whitespace-nowrap ${activeTab === 'archive'
                             ? 'bg-gray-900 text-white shadow-lg'
                             : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
                             }`}
@@ -542,11 +577,11 @@ export default function AdminMenu({ embedded = false }) {
             {activeTab === 'items' ? (
                 <>
                     {/* פילטר קטגוריות - טאבים מודרניים */}
-                    <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-2 mb-6 overflow-x-auto no-scrollbar">
-                        <div className="flex items-center gap-1 min-w-max">
+                    <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-2 mb-6 overflow-x-auto overscroll-x-contain no-scrollbar max-w-full min-w-0 touch-pan-x [-webkit-overflow-scrolling:touch] pb-1">
+                        <div className="flex items-center gap-1 min-w-max snap-x snap-mandatory sm:snap-none">
                             <button
                                 onClick={() => setFilterCategory('')}
-                                className={`px-4 py-2.5 rounded-2xl font-black text-[11px] uppercase tracking-wider transition-all flex items-center gap-2 group relative ${filterCategory === ''
+                                className={`shrink-0 snap-start px-4 py-2.5 rounded-2xl font-black text-[11px] uppercase tracking-wider transition-all flex items-center gap-2 group relative ${filterCategory === ''
                                     ? 'bg-gray-900 text-white shadow-lg'
                                     : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
                                     }`}
@@ -558,7 +593,7 @@ export default function AdminMenu({ embedded = false }) {
                                 <button
                                     key={cat.id}
                                     onClick={() => setFilterCategory(cat.id.toString())}
-                                    className={`px-4 py-2.5 rounded-2xl font-black text-[11px] uppercase tracking-wider transition-all flex items-center gap-2 group relative ${filterCategory === cat.id.toString()
+                                    className={`shrink-0 snap-start px-4 py-2.5 rounded-2xl font-black text-[11px] uppercase tracking-wider transition-all flex items-center gap-2 group relative ${filterCategory === cat.id.toString()
                                         ? 'bg-gray-900 text-white shadow-lg'
                                         : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
                                         }`}
@@ -794,23 +829,31 @@ export default function AdminMenu({ embedded = false }) {
 
             {/* Modal הוספת/עריכת פריט */}
             {showModal && (
-                <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-300">
-                    <div className="bg-white rounded-[2.5rem] max-w-lg w-full max-h-[90vh] overflow-hidden shadow-2xl flex flex-col">
-                        <div className="p-6 border-b border-gray-100 bg-slate-50/50 flex items-center justify-between">
-                            <div className="flex items-center gap-4">
-                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${editItem ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'}`}>
+                <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-300">
+                    <div className="bg-white rounded-t-[2rem] sm:rounded-[2.5rem] max-w-lg w-full max-h-[min(92dvh,90vh)] overflow-hidden shadow-2xl flex flex-col min-h-0">
+                        <div className="p-4 sm:p-6 border-b border-gray-100 bg-slate-50/50 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between shrink-0">
+                            <div className="flex items-center gap-3 min-w-0">
+                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${editItem ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'}`}>
                                     {editItem ? <FaEdit size={16} /> : <FaPlus size={16} />}
                                 </div>
-                                <h2 className="text-xl font-black text-gray-900">
-                                    {editItem ? 'עריכת פריט' : 'הוספת פריט חדש'}
-                                </h2>
+                                <div className="min-w-0">
+                                    <h2 className="text-lg sm:text-xl font-black text-gray-900 truncate">
+                                        {editItem ? 'עריכת פריט' : 'הוספת פריט חדש'}
+                                    </h2>
+                                    {!editItem && (
+                                        <p className="text-[10px] font-black text-gray-400 mt-1">
+                                            שלב {menuWizardStep} מתוך 3 — פרטים · תמונה · אפשרויות
+                                        </p>
+                                    )}
+                                </div>
                             </div>
-                            <button onClick={closeModal} className="w-10 h-10 rounded-full bg-white border border-gray-100 text-gray-400 hover:text-red-500 hover:bg-red-50 flex items-center justify-center transition-all shadow-sm">
+                            <button type="button" onClick={closeModal} className="self-end sm:self-auto w-10 h-10 rounded-full bg-white border border-gray-100 text-gray-400 hover:text-red-500 hover:bg-red-50 flex items-center justify-center transition-all shadow-sm shrink-0">
                                 <FaTimes size={14} />
                             </button>
                         </div>
 
-                        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto custom-scrollbar p-6 sm:p-8 space-y-6">
+                        <form onSubmit={(e) => { e.preventDefault(); handleSubmit(e); }} className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-8 space-y-6 min-h-0">
+                            {(editItem || menuWizardStep === 1) && (
                             <div className="space-y-4">
                                 <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
                                     <span className="w-1 h-1 bg-brand-primary rounded-full" />
@@ -824,7 +867,7 @@ export default function AdminMenu({ embedded = false }) {
                                         value={form.name}
                                         onChange={(e) => setForm({ ...form, name: e.target.value })}
                                         required
-                                        className="w-full bg-slate-50 border-none rounded-2xl px-5 py-4 text-sm font-black focus:ring-2 focus:ring-brand-primary transition-all"
+                                        className="w-full min-w-0 bg-slate-50 border-none rounded-2xl px-5 py-4 text-base font-black focus:ring-2 focus:ring-brand-primary transition-all"
                                         placeholder="למשל: שווארמה בפיתה"
                                     />
                                 </div>
@@ -835,7 +878,7 @@ export default function AdminMenu({ embedded = false }) {
                                         value={form.description}
                                         onChange={(e) => setForm({ ...form, description: e.target.value })}
                                         rows={3}
-                                        className="w-full bg-slate-50 border-none rounded-2xl px-5 py-4 text-sm font-black focus:ring-2 focus:ring-brand-primary transition-all resize-none"
+                                        className="w-full min-w-0 bg-slate-50 border-none rounded-2xl px-5 py-4 text-base font-black focus:ring-2 focus:ring-brand-primary transition-all resize-none"
                                         placeholder="מה יש במנה..."
                                     />
                                     <div className="pt-2">
@@ -852,8 +895,8 @@ export default function AdminMenu({ embedded = false }) {
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-1.5">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div className="space-y-1.5 min-w-0">
                                         <label className="text-[11px] font-black text-gray-500 uppercase tracking-tight mr-1 text-right block">מחיר (₪)</label>
                                         <div className="relative">
                                             <input
@@ -863,7 +906,7 @@ export default function AdminMenu({ embedded = false }) {
                                                 value={form.price}
                                                 onChange={(e) => setForm({ ...form, price: e.target.value })}
                                                 required
-                                                className="w-full bg-slate-50 border-none rounded-2xl px-5 py-4 text-sm font-black focus:ring-2 focus:ring-brand-primary transition-all"
+                                                className="w-full min-w-0 bg-slate-50 border-none rounded-2xl px-5 py-4 text-base font-black focus:ring-2 focus:ring-brand-primary transition-all"
                                                 placeholder="0.00"
                                             />
                                         </div>
@@ -883,13 +926,13 @@ export default function AdminMenu({ embedded = false }) {
                                         </div>
                                     </div>
 
-                                    <div className="space-y-1.5 text-right w-full">
+                                    <div className="space-y-1.5 text-right w-full min-w-0">
                                         <label className="text-[11px] font-black text-gray-500 uppercase tracking-tight mr-1 block">קטגוריה</label>
                                         <select
                                             value={form.category_id}
                                             onChange={(e) => setForm({ ...form, category_id: e.target.value })}
                                             required
-                                            className="w-full bg-slate-50 border-none rounded-2xl px-5 py-4 text-sm font-black appearance-none focus:ring-2 focus:ring-brand-primary transition-all pr-12 text-right"
+                                            className="w-full min-w-0 max-w-full bg-slate-50 border-none rounded-2xl px-5 py-4 text-base font-black appearance-none focus:ring-2 focus:ring-brand-primary transition-all pr-12 text-right"
                                             dir="rtl"
                                         >
                                             {categories.map((cat) => (
@@ -900,14 +943,37 @@ export default function AdminMenu({ embedded = false }) {
                                         </select>
                                     </div>
                                 </div>
+                            </div>
+                            )}
 
+                            {(editItem || menuWizardStep === 2) && (
+                            <div className="space-y-4">
+                                <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                                    <span className="w-1 h-1 bg-brand-primary rounded-full" />
+                                    תמונה
+                                </h3>
                                 <div className="space-y-1.5">
                                     <label className="text-[11px] font-black text-gray-500 uppercase tracking-tight mr-1">תמונת מנה</label>
                                     <div className="relative group">
                                         <input
                                             type="file"
-                                            accept="image/*"
-                                            onChange={(e) => setForm({ ...form, image: e.target.files[0] })}
+                                            accept="image/jpeg,image/png,image/webp,image/gif"
+                                            onChange={(e) => {
+                                                const f = e.target.files?.[0];
+                                                if (!f) return;
+                                                const maxBytes = 5 * 1024 * 1024;
+                                                if (f.size > maxBytes) {
+                                                    alert('הקובץ גדול מדי (מקסימום 5MB). נסו לצלם ברזולוציה נמוכה יותר או לדחוס.');
+                                                    e.target.value = '';
+                                                    return;
+                                                }
+                                                if (!f.type.startsWith('image/')) {
+                                                    alert('יש לבחור קובץ תמונה');
+                                                    e.target.value = '';
+                                                    return;
+                                                }
+                                                setForm({ ...form, image: f });
+                                            }}
                                             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                                         />
                                         <div className="w-full bg-slate-50 border-2 border-dashed border-gray-200 rounded-2xl px-5 py-8 text-center transition-all group-hover:border-brand-primary group-hover:bg-slate-100 flex flex-col items-center gap-2">
@@ -935,7 +1001,9 @@ export default function AdminMenu({ embedded = false }) {
                                 </div>
 
                             </div>
+                            )}
 
+                            {(editItem || menuWizardStep === 3) && (
                             <div className="pt-6 border-t border-gray-100 space-y-6">
                                 <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
                                     <span className="w-1 h-1 bg-brand-primary rounded-full" />
@@ -1132,23 +1200,44 @@ export default function AdminMenu({ embedded = false }) {
                                     </div>
                                 </div>
                             </div>
+                            )}
                         </form>
 
-                        <div className="p-6 bg-slate-50 flex gap-3 border-t border-gray-100 relative overflow-hidden">
+                        <div className="p-4 sm:p-6 bg-slate-50 flex flex-col sm:flex-row gap-2 sm:gap-3 border-t border-gray-100 relative overflow-hidden shrink-0">
                             <div className="absolute top-0 right-0 w-24 h-24 bg-brand-primary/5 rounded-full -mr-12 -mt-12" />
-                            <button
-                                type="button"
-                                onClick={handleSubmit}
-                                disabled={isLocked}
-                                className="flex-1 bg-gray-900 text-white py-4 rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] shadow-xl hover:shadow-slate-200 transition-all active:scale-95 flex items-center justify-center gap-2.5 disabled:opacity-50 z-10"
-                            >
-                                <FaCheck size={12} />
-                                {editItem ? 'שמור שינויים' : 'צור פריט חדש'}
-                            </button>
+                            {!editItem && menuWizardStep > 1 && (
+                                <button
+                                    type="button"
+                                    onClick={goMenuWizardPrev}
+                                    className="order-2 sm:order-1 px-6 py-3.5 bg-white text-gray-700 border border-gray-200 rounded-2xl font-black text-xs z-10"
+                                >
+                                    הקודם
+                                </button>
+                            )}
+                            {!editItem && menuWizardStep < 3 && (
+                                <button
+                                    type="button"
+                                    onClick={goMenuWizardNext}
+                                    className="order-1 sm:order-2 flex-1 bg-brand-primary text-white py-3.5 rounded-2xl font-black text-xs shadow-lg z-10"
+                                >
+                                    הבא
+                                </button>
+                            )}
+                            {((editItem || (!editItem && menuWizardStep === 3))) && (
+                                <button
+                                    type="button"
+                                    onClick={handleSubmit}
+                                    disabled={isLocked}
+                                    className="order-1 flex-1 bg-gray-900 text-white py-3.5 rounded-2xl font-black text-[11px] uppercase tracking-[0.15em] shadow-xl flex items-center justify-center gap-2 disabled:opacity-50 z-10"
+                                >
+                                    <FaCheck size={12} />
+                                    {editItem ? 'שמור שינויים' : 'צור פריט חדש'}
+                                </button>
+                            )}
                             <button
                                 type="button"
                                 onClick={closeModal}
-                                className="px-8 py-4 bg-white text-gray-500 border border-gray-100 rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] hover:bg-red-50 hover:text-red-500 hover:border-red-100 transition-all z-10"
+                                className="order-3 px-6 py-3.5 bg-white text-gray-500 border border-gray-100 rounded-2xl font-black text-[11px] uppercase tracking-[0.15em] hover:bg-red-50 hover:text-red-500 z-10"
                             >
                                 ביטול
                             </button>
