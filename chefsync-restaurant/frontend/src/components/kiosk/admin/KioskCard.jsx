@@ -62,16 +62,23 @@ export default function KioskCard({
                         </div>
                     </div>
                 </div>
-                <div className="flex items-center gap-2">
-                    <span className={`w-2.5 h-2.5 rounded-full ${kiosk.is_connected ? 'bg-green-500 animate-pulse' : 'bg-red-400'}`}></span>
-                    <span className={`text-xs font-black ${kiosk.is_connected ? 'text-green-600' : 'text-red-400'}`}>
-                        {kiosk.is_connected ? 'מחובר' : 'מנותק'}
+                <div className="flex flex-col items-end gap-0.5 text-right">
+                    <div className="flex items-center gap-2">
+                        <span className={`w-2.5 h-2.5 rounded-full ${kiosk.is_connected ? 'bg-green-500 animate-pulse' : 'bg-red-400'}`} />
+                        <span className={`text-xs font-black ${kiosk.is_connected ? 'text-green-600' : 'text-red-400'}`}>
+                            {kiosk.is_connected ? 'מסך קיוסק פעיל' : 'אין פעילות מסך'}
+                        </span>
+                    </div>
+                    <span className="text-[10px] text-gray-400 max-w-[12rem] leading-tight" title="הקישור למטה תמיד תקף; הנורה משקפת אם נפתח דף הקיוסק ב־2 הדקות האחרונות">
+                        פעיל = נראה שימוש בדף הקיוסק לאחרונה
                     </span>
                 </div>
             </div>
 
-            {/* Link */}
-            <div className="flex items-center gap-2 bg-gray-50 rounded-2xl p-3">
+            {/* Link — תמיד מוצג; לא תלוי ב&quot;מחובר&quot; */}
+            <div>
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-wide mb-1.5">קישור לפתיחה בטאבלט / דפדפן</p>
+                <div className="flex items-center gap-2 bg-gray-50 rounded-2xl p-3">
                 <input
                     type="text"
                     value={getKioskViewUrl(kiosk.token)}
@@ -90,11 +97,12 @@ export default function KioskCard({
                     href={getKioskViewUrl(kiosk.token)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="p-2 text-amber-600 hover:bg-amber-100 rounded-xl transition-all"
+                    className="p-2 text-amber-600 hover:bg-amber-100 rounded-xl transition-all shrink-0"
                     title="פתח בחלון חדש"
                 >
                     <FaExternalLinkAlt size={14} />
                 </a>
+                </div>
             </div>
 
             {/* Actions */}

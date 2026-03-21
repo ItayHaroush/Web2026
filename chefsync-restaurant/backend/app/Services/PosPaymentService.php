@@ -60,8 +60,9 @@ class PosPaymentService
                     'provider_response' => $data['full_response'],
                 ]);
 
-                // עדכון ההזמנה
+                // עדכון ההזמנה (אשראי — לרבות מוק Z-Credit)
                 $order->update([
+                    'payment_method'         => 'credit_card',
                     'payment_status'         => 'paid',
                     'payment_transaction_id' => $data['transaction_id'],
                     'paid_at'                => now(),

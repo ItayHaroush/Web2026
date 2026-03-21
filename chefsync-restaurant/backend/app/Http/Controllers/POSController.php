@@ -1018,8 +1018,12 @@ class POSController extends Controller
 
         $referenceNumber = $payment?->transaction_id ?? $order->payment_transaction_id;
 
-        if ($order->payment_method === 'credit_card' && $referenceNumber) {
-            // החזר דרך ZCredit
+        $isCreditRefund = $order->payment_method === 'credit_card'
+            || ($payment && $payment->provider === 'zcredit')
+            || ($referenceNumber && str_starts_with((string) $referenceNumber, 'MOCK_'));
+
+        if ($isCreditRefund && $referenceNumber) {
+            // החזר דרך ZCredit (כולל מוק — ZCreditService::refundTransaction)
             $restaurant = Restaurant::find($restaurantId);
             $zcredit = $restaurant
                 ? app(ZCreditResolver::class)->forOrder($order, $request->pos_session)
@@ -1041,7 +1045,7 @@ class POSController extends Controller
             }
         }
 
-        DB::transaction(function () use ($order, $restaurantId, $user) {
+        DB::transaction(function () use ($order, $restaurantId, $user, $isCreditRefund) {
             $order->update([
                 'payment_status' => 'refunded',
             ]);
@@ -1056,7 +1060,7 @@ class POSController extends Controller
                     'order_id'       => $order->id,
                     'user_id'        => $user->id,
                     'type'           => 'refund',
-                    'payment_method' => $order->payment_method === 'credit_card' ? 'credit' : 'cash',
+                    'payment_method' => $isCreditRefund ? 'credit' : 'cash',
                     'amount'         => (float) $order->total_amount,
                     'description'    => "החזר הזמנה #{$order->id}",
                 ]);
@@ -1499,6 +1503,7 @@ class POSController extends Controller
             'status' => $order->status,
             'delivery_method' => $order->delivery_method ?? 'pickup',
             'payment_method' => $order->payment_method,
+            'payment_transaction_id' => $order->payment_transaction_id,
             'payment_status' => $order->payment_status,
             'total_price' => (float) $order->total_amount,
             'source' => $order->source ?? 'website',

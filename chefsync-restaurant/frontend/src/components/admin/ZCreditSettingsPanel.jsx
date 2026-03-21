@@ -91,7 +91,22 @@ export default function ZCreditSettingsPanel({ getAuthHeaders, isOwner }) {
 
     const openNewTerminal = () => {
         setEditingId('new');
-        setFormTerminal(emptyTerminalForm());
+        // ברירת מחדל: אותו מספר מסוף כמו בשדות המסעדה למעלה — בדרך כלל רק PinPad משתנה בין מסופונים
+        setFormTerminal({
+            name: '',
+            zcredit_terminal_number: zcredit_terminal_number || '',
+            zcredit_pinpad_id: '',
+            zcredit_terminal_password: '',
+        });
+    };
+
+    const fillTerminalFromRestaurantDefaults = () => {
+        setFormTerminal((prev) => ({
+            ...prev,
+            zcredit_terminal_number: zcredit_terminal_number || prev.zcredit_terminal_number,
+            zcredit_pinpad_id: prev.zcredit_pinpad_id,
+            zcredit_terminal_password: zcredit_terminal_password || prev.zcredit_terminal_password,
+        }));
     };
 
     const openEditTerminal = (t) => {
@@ -278,6 +293,15 @@ export default function ZCreditSettingsPanel({ getAuthHeaders, isOwner }) {
                 <p className="text-xs text-gray-500">
                     אחרי יצירה — בחרו מסוף בקיוסק (ניהול קיוסקים) או בכניסה ל-POS. כל מסעדה רואה רק את המסופונים שלה.
                 </p>
+                <p className="text-xs text-slate-600 leading-relaxed rounded-xl bg-slate-50 border border-slate-100 px-3 py-2">
+                    <strong className="font-black text-slate-800">טיפ:</strong> לעיתים קרובות אותו <strong>מספר מסוף</strong> ואותה{' '}
+                    <strong>סיסמת מסוף</strong> מ-Z-Credit לכל המסופונים בנקודת המכירה — רק <strong>מזהה PinPad</strong> שונה לכל
+                    מכשיר (קופה / קיוסק). הטופס למטה נטען עם מספר המסוף מהשדות למעלה; הזינו PinPad ייחודי וסיסמה אם נדרש.
+                </p>
+                <p className="text-[11px] text-gray-400">
+                    חיבור ה-API של Z-Credit (<code className="bg-gray-100 px-1 rounded">CommitFullTransaction</code>) משתמש
+                    במספר מסוף, סיסמה ו-Track2 של ה-PinPad — אין שדה &quot;מפתח API&quot; נפרד בזרימה הזו.
+                </p>
 
                 {editingId !== null && (
                     <form onSubmit={saveTerminal} className="p-4 rounded-2xl bg-violet-50/50 border border-violet-100 space-y-3">
@@ -292,33 +316,51 @@ export default function ZCreditSettingsPanel({ getAuthHeaders, isOwner }) {
                             onChange={(e) => setFormTerminal({ ...formTerminal, name: e.target.value })}
                             className="w-full px-3 py-2 rounded-xl border border-violet-200"
                         />
+                        {editingId === 'new' && isOwner() && (
+                            <button
+                                type="button"
+                                onClick={fillTerminalFromRestaurantDefaults}
+                                className="text-xs font-bold text-violet-700 hover:underline text-right w-full"
+                            >
+                                מילוי מחדש ממספר מסוף (וסיסמה אם הוקלדה למעלה וטרם נשמרה) מהשדות &quot;ברירת מחדל למסעדה&quot;
+                            </button>
+                        )}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <div>
+                                <label className="block text-[10px] font-black text-violet-800 mb-0.5">מספר מסוף (Terminal)</label>
+                                <input
+                                    type="text"
+                                    placeholder="מספר מסוף"
+                                    value={formTerminal.zcredit_terminal_number}
+                                    onChange={(e) => setFormTerminal({ ...formTerminal, zcredit_terminal_number: e.target.value })}
+                                    className="w-full px-3 py-2 rounded-xl border border-violet-200 font-mono text-sm"
+                                    dir="ltr"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-black text-violet-800 mb-0.5">מזהה PinPad (ייחודי למסוף)</label>
+                                <input
+                                    type="text"
+                                    placeholder="למשל 11002"
+                                    value={formTerminal.zcredit_pinpad_id}
+                                    onChange={(e) => setFormTerminal({ ...formTerminal, zcredit_pinpad_id: e.target.value })}
+                                    className="w-full px-3 py-2 rounded-xl border border-violet-200 font-mono text-sm"
+                                    dir="ltr"
+                                />
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-[10px] font-black text-violet-800 mb-0.5">סיסמת מסוף (Password)</label>
                             <input
-                                type="text"
-                                placeholder="מספר מסוף"
-                                value={formTerminal.zcredit_terminal_number}
-                                onChange={(e) => setFormTerminal({ ...formTerminal, zcredit_terminal_number: e.target.value })}
-                                className="px-3 py-2 rounded-xl border border-violet-200 font-mono text-sm"
-                                dir="ltr"
-                            />
-                            <input
-                                type="text"
-                                placeholder="מזהה PinPad"
-                                value={formTerminal.zcredit_pinpad_id}
-                                onChange={(e) => setFormTerminal({ ...formTerminal, zcredit_pinpad_id: e.target.value })}
-                                className="px-3 py-2 rounded-xl border border-violet-200 font-mono text-sm"
+                                type="password"
+                                autoComplete="off"
+                                placeholder={editingId !== 'new' ? 'סיסמת מסוף (ריק = לא לשנות)' : 'אותה סיסמה כמו למעלה או לפי Z-Credit'}
+                                value={formTerminal.zcredit_terminal_password}
+                                onChange={(e) => setFormTerminal({ ...formTerminal, zcredit_terminal_password: e.target.value })}
+                                className="w-full px-3 py-2 rounded-xl border border-violet-200 font-mono text-sm"
                                 dir="ltr"
                             />
                         </div>
-                        <input
-                            type="password"
-                            autoComplete="off"
-                            placeholder={editingId !== 'new' ? 'סיסמת מסוף (ריק = לא לשנות)' : 'סיסמת מסוף'}
-                            value={formTerminal.zcredit_terminal_password}
-                            onChange={(e) => setFormTerminal({ ...formTerminal, zcredit_terminal_password: e.target.value })}
-                            className="w-full px-3 py-2 rounded-xl border border-violet-200 font-mono text-sm"
-                            dir="ltr"
-                        />
                         <div className="flex gap-2">
                             <button
                                 type="submit"

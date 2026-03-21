@@ -346,7 +346,10 @@ function OrderCard({ order, expanded, onToggle, onUpdateStatus, onCancel, showAc
                         >
                             <FaUtensils size={11} /> מטבח
                         </button>
-                        {order.payment_status === 'paid' && order.payment_method === 'credit_card' && (
+                        {order.payment_status === 'paid'
+                            && (order.payment_method === 'credit_card'
+                                || (order.payment_transaction_id
+                                    && String(order.payment_transaction_id).startsWith('MOCK_'))) && (
                             <button
                                 onClick={() => onRefund?.(order.id)}
                                 disabled={refunding === order.id}

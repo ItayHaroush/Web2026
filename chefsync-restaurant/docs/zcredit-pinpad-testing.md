@@ -24,7 +24,8 @@
 3. מסעדה עם `default_payment_terminal_id` → ברירת מחדל.
 4. שדות על `restaurants` (`zcredit_terminal_number` וכו') — **בלי** נפילה ל־`.env` לחיובי POS/קיוסק.
 
-**מצב Mock (`ZCREDIT_MOCK=true` ב־`.env`):** חיוב/החזר מדומים בלי HTTP — מתאים עד חיבור מסופון אמיתי במסעדה. בייצור: `ZCREDIT_MOCK=false` והגדרת מסופון ב־`/admin/payment-settings`.
+**מצב Mock (`ZCREDIT_MOCK=true` ב־`.env`):** חיוב/החזר מדומים בלי HTTP — מתאים עד חיבור מסופון אמיתי במסעדה. בייצור: `ZCREDIT_MOCK=false` והגדרת מסופון ב־`/admin/payment-settings`.  
+החזר POS (`POST .../orders/{id}/refund`) קורא ל־`refundTransaction` — במוק נרשם אישור מדומה; מזהה עסקה מסוג `MOCK_*` מזוהה גם בלי דגל המוק.
 
 משתני `ZCREDIT_TERMINAL_*` ב־`.env` נשארים אופציונליים לכלים (`php artisan zcredit:verify-config`) / route בדיקה מקומית בלבד.
 
