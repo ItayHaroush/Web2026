@@ -1,5 +1,14 @@
 import api from '../../../services/apiClient';
 
+/** מסיר מפתחות פנימיים מהסל לפני שליחה ל-API */
+function sanitizePosOrderPayload(data) {
+    if (!data?.items?.length) return data;
+    return {
+        ...data,
+        items: data.items.map(({ _cartKey, ...row }) => row),
+    };
+}
+
 const posHeaders = (authHeaders, posToken) => ({
     ...authHeaders,
     ...(posToken ? { 'X-POS-Session': posToken } : {}),
@@ -46,16 +55,13 @@ export const posApi = {
         api.post('/admin/pos/shift/close', { closing_balance: closingBalance, notes }, { headers: posHeaders(headers, token) }),
     currentShift: (headers, token) =>
         api.get('/admin/pos/shift/current', { headers: posHeaders(headers, token) }),
-    cashMovement: (type, amount, description, headers, token, paymentMethod) =>
+    cashMovement: (type, amount, description, headers, token) =>
+        api.post('/admin/pos/shift/cash-movement', { type, amount, description }, { headers: posHeaders(headers, token) }),
+    shiftChargeCredit: (amount, description, headers, token) =>
         api.post(
-            '/admin/pos/shift/cash-movement',
-            {
-                type,
-                amount,
-                description,
-                ...(type === 'cash_in' && paymentMethod ? { payment_method: paymentMethod } : {}),
-            },
-            { headers: posHeaders(headers, token) }
+            '/admin/pos/shift/charge-credit',
+            { amount, description },
+            { headers: posHeaders(headers, token), timeout: 90000 }
         ),
     shiftSummary: (headers, token) =>
         api.get('/admin/pos/shift/summary', { headers: posHeaders(headers, token) }),
@@ -77,9 +83,9 @@ export const posApi = {
             params: { per_page: 50, date: new Date().toISOString().slice(0, 10) },
         }),
     createOrder: (orderData, headers, token) =>
-        api.post('/admin/pos/orders', orderData, { headers: posHeaders(headers, token) }),
+        api.post('/admin/pos/orders', sanitizePosOrderPayload(orderData), { headers: posHeaders(headers, token) }),
     createOrderCredit: (orderData, headers, token) =>
-        api.post('/admin/pos/orders/credit', orderData, { headers: posHeaders(headers, token), timeout: 90000 }),
+        api.post('/admin/pos/orders/credit', sanitizePosOrderPayload(orderData), { headers: posHeaders(headers, token), timeout: 90000 }),
     chargeOrderCredit: (orderId, headers, token) =>
         api.post(`/admin/pos/orders/${orderId}/charge-credit`, {}, { headers: posHeaders(headers, token), timeout: 90000 }),
 
@@ -99,7 +105,11 @@ export const posApi = {
 
     // ניהול שולחנות / טאבים
     openTab: (tableNumber, items, headers, token) =>
-        api.post('/admin/pos/tabs/open', { table_number: tableNumber, items }, { headers: posHeaders(headers, token) }),
+        api.post(
+            '/admin/pos/tabs/open',
+            { table_number: tableNumber, items: items.map(({ _cartKey, ...row }) => row) },
+            { headers: posHeaders(headers, token) }
+        ),
     getOpenTabs: (headers, token) =>
         api.get('/admin/pos/tabs', { headers: posHeaders(headers, token) }),
     getTab: (tabId, headers, token) =>

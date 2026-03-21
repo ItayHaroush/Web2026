@@ -3,6 +3,8 @@ import { FaPlus, FaMinus, FaTrash, FaShekelSign, FaClock, FaTimes, FaUtensils, F
 import api from '../../../services/apiClient';
 import posApi from '../api/posApi';
 import POSManagerAuth from './POSManagerAuth';
+import POSMenuItemModal, { posItemNeedsConfiguration } from './POSMenuItemModal';
+import { buildCartKey } from '../../../utils/cart';
 
 export default function POSTablesView({ headers, posToken, shift }) {
     // Require open shift
@@ -609,6 +611,7 @@ function AddItemsModal({ tab, headers, posToken, onClose, onAdded }) {
     const [search, setSearch] = useState('');
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [configureItem, setConfigureItem] = useState(null);
 
     useEffect(() => {
         (async () => {
@@ -635,11 +638,30 @@ function AddItemsModal({ tab, headers, posToken, onClose, onAdded }) {
         search ? item.name.includes(search) : activeCategory ? item.category?.id === activeCategory : true
     );
 
-    const addToCart = (item) => {
+    const mergeCartLine = (line) => {
         setCart(prev => {
-            const existing = prev.find(c => c.menu_item_id === item.id);
-            if (existing) return prev.map(c => c === existing ? { ...c, quantity: c.quantity + 1 } : c);
-            return [...prev, { menu_item_id: item.id, name: item.name, price: parseFloat(item.price), quantity: 1, variant_name: null, addons: [] }];
+            const key = line._cartKey;
+            const existing = prev.find(c => c._cartKey === key);
+            if (existing) {
+                return prev.map(c => (c._cartKey === key ? { ...c, quantity: c.quantity + line.quantity } : c));
+            }
+            return [...prev, line];
+        });
+    };
+
+    const handlePickMenuItem = (item) => {
+        if (posItemNeedsConfiguration(item)) {
+            setConfigureItem(item);
+            return;
+        }
+        mergeCartLine({
+            menu_item_id: item.id,
+            name: item.name,
+            price: parseFloat(item.price),
+            quantity: 1,
+            variant_name: null,
+            addons: [],
+            _cartKey: buildCartKey(item.id, null, []),
         });
     };
 
@@ -652,13 +674,20 @@ function AddItemsModal({ tab, headers, posToken, onClose, onAdded }) {
         });
     };
 
-    const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    const lineUnitTotal = (row) => {
+        let u = row.price;
+        if (row.addons?.length) row.addons.forEach(a => { u += (a.price || 0); });
+        return u * row.quantity;
+    };
+
+    const cartTotal = cart.reduce((sum, item) => sum + lineUnitTotal(item), 0);
 
     const handleSave = async () => {
         if (cart.length === 0) return;
         setSaving(true);
         try {
-            await posApi.addItemsToTab(tab.id, cart, headers, posToken);
+            const itemsPayload = cart.map(({ _cartKey, ...row }) => row);
+            await posApi.addItemsToTab(tab.id, itemsPayload, headers, posToken);
             onAdded();
         } catch (e) {
             alert(e.response?.data?.message || 'שגיאה בהוספת פריטים');
@@ -704,7 +733,7 @@ function AddItemsModal({ tab, headers, posToken, onClose, onAdded }) {
                             ) : (
                                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                                     {filteredItems.map(item => (
-                                        <button key={item.id} onClick={() => addToCart(item)}
+                                        <button key={item.id} onClick={() => handlePickMenuItem(item)}
                                             className="bg-slate-900 border border-slate-700 rounded-xl p-3 text-right hover:border-orange-500/50 transition-all active:scale-95">
                                             <p className="text-white font-bold text-sm truncate">{item.name}</p>
                                             <p className="text-orange-400 font-black text-base mt-1">₪{item.price}</p>
@@ -722,15 +751,19 @@ function AddItemsModal({ tab, headers, posToken, onClose, onAdded }) {
                         </div>
                         <div className="flex-1 overflow-y-auto p-3 space-y-2 custom-scrollbar">
                             {cart.map((item, idx) => (
-                                <div key={idx} className="bg-slate-800 rounded-xl p-2.5 border border-slate-700/50">
+                                <div key={item._cartKey || idx} className="bg-slate-800 rounded-xl p-2.5 border border-slate-700/50">
                                     <p className="text-white font-bold text-xs">{item.name}</p>
+                                    {item.variant_name && <p className="text-slate-500 text-[10px]">{item.variant_name}</p>}
+                                    {item.addons?.length > 0 && (
+                                        <p className="text-slate-500 text-[10px]">{item.addons.map(a => a.name).join(', ')}</p>
+                                    )}
                                     <div className="flex items-center justify-between mt-1.5">
                                         <div className="flex items-center gap-1.5">
                                             <button onClick={() => updateQty(idx, -1)} className="w-6 h-6 rounded bg-slate-700 text-white flex items-center justify-center text-xs active:scale-90"><FaMinus size={8} /></button>
                                             <span className="text-white font-black text-xs w-4 text-center">{item.quantity}</span>
                                             <button onClick={() => updateQty(idx, 1)} className="w-6 h-6 rounded bg-slate-700 text-white flex items-center justify-center text-xs active:scale-90"><FaPlus size={8} /></button>
                                         </div>
-                                        <span className="text-orange-400 font-black text-xs">₪{(item.price * item.quantity).toFixed(2)}</span>
+                                        <span className="text-orange-400 font-black text-xs">₪{lineUnitTotal(item).toFixed(2)}</span>
                                     </div>
                                 </div>
                             ))}
@@ -751,6 +784,13 @@ function AddItemsModal({ tab, headers, posToken, onClose, onAdded }) {
                     </div>
                 </div>
             </div>
+            {configureItem && (
+                <POSMenuItemModal
+                    item={configureItem}
+                    onClose={() => setConfigureItem(null)}
+                    onAdd={line => mergeCartLine(line)}
+                />
+            )}
         </div>
     );
 }

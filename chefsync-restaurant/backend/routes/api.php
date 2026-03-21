@@ -400,6 +400,7 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'tenant'])->group(function (
                 Route::post('/shift/close', [\App\Http\Controllers\POSController::class, 'closeShift'])->name('admin.pos.shift.close');
                 Route::get('/shift/current', [\App\Http\Controllers\POSController::class, 'currentShift'])->name('admin.pos.shift.current');
                 Route::post('/shift/cash-movement', [\App\Http\Controllers\POSController::class, 'cashMovement'])->name('admin.pos.shift.movement');
+                Route::post('/shift/charge-credit', [\App\Http\Controllers\POSController::class, 'shiftCreditCharge'])->name('admin.pos.shift.charge-credit');
                 Route::get('/shift/summary', [\App\Http\Controllers\POSController::class, 'shiftSummary'])->name('admin.pos.shift.summary');
                 Route::get('/shift/history', [\App\Http\Controllers\POSController::class, 'shiftHistory'])->name('admin.pos.shift.history');
                 Route::get('/shift/{id}/report', [\App\Http\Controllers\POSController::class, 'shiftReport'])->name('admin.pos.shift.report');

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { FaPlus, FaMinus, FaTrash, FaShekelSign, FaShoppingCart, FaSearch, FaPercent, FaTag } from 'react-icons/fa';
 import api from '../../../services/apiClient';
 import posApi from '../api/posApi';
@@ -7,6 +7,8 @@ import POSCreditPaymentModal from './POSCreditPaymentModal';
 import POSPaymentMethodModal from './POSPaymentMethodModal';
 import { FaCashRegister } from 'react-icons/fa';
 import POSSplitPaymentModal from './POSSplitPaymentModal';
+import POSMenuItemModal, { posItemNeedsConfiguration } from './POSMenuItemModal';
+import { buildCartKey } from '../../../utils/cart';
 
 export default function POSNewOrder({ headers, posToken, onOrderCreated, shift }) {
     // Require open shift
@@ -36,6 +38,7 @@ function POSNewOrderInner({ headers, posToken, onOrderCreated }) {
     const [paymentMethod, setPaymentMethod] = useState(null); // 'cash' | 'credit' | 'hold' | 'split'
     const [holdLoading, setHoldLoading] = useState(false);
     const [holdOrderId, setHoldOrderId] = useState(null);
+    const [configureItem, setConfigureItem] = useState(null);
 
     // Discount state
     const [showDiscount, setShowDiscount] = useState(false);
@@ -76,21 +79,40 @@ function POSNewOrderInner({ headers, posToken, onOrderCreated }) {
         return activeCategory ? item.category?.id === activeCategory : true;
     });
 
-    const addToCart = (item) => {
+    const lineUnitTotal = (row) => {
+        let u = row.price;
+        if (row.addons?.length) {
+            row.addons.forEach(a => { u += (a.price || 0); });
+        }
+        return u * row.quantity;
+    };
+
+    const mergeCartLine = (line) => {
         setCart(prev => {
-            const existing = prev.find(c => c.menu_item_id === item.id && !c.variant_name);
+            const key = line._cartKey;
+            const existing = prev.find(c => c._cartKey === key);
             if (existing) {
-                return prev.map(c => c === existing ? { ...c, quantity: c.quantity + 1 } : c);
+                return prev.map(c => (c._cartKey === key ? { ...c, quantity: c.quantity + line.quantity } : c));
             }
-            return [...prev, {
-                menu_item_id: item.id,
-                name: item.name,
-                price: parseFloat(item.price),
-                quantity: 1,
-                variant_name: null,
-                addons: [],
-            }];
+            return [...prev, line];
         });
+    };
+
+    const handlePickMenuItem = (item) => {
+        if (posItemNeedsConfiguration(item)) {
+            setConfigureItem(item);
+            return;
+        }
+        const line = {
+            menu_item_id: item.id,
+            name: item.name,
+            price: parseFloat(item.price),
+            quantity: 1,
+            variant_name: null,
+            addons: [],
+            _cartKey: buildCartKey(item.id, null, []),
+        };
+        mergeCartLine(line);
     };
 
     const updateQty = (index, delta) => {
@@ -219,7 +241,7 @@ function POSNewOrderInner({ headers, posToken, onOrderCreated }) {
                         {filteredItems.map(item => (
                             <button
                                 key={item.id}
-                                onClick={() => addToCart(item)}
+                                onClick={() => handlePickMenuItem(item)}
                                 className="bg-slate-800 border border-slate-700 rounded-2xl p-4 text-right hover:border-orange-500/50 hover:bg-slate-700/50 transition-all active:scale-95 group"
                             >
                                 {item.image_url && (
@@ -308,7 +330,7 @@ function POSNewOrderInner({ headers, posToken, onOrderCreated }) {
                         <p className="text-slate-600 text-center py-12 font-bold text-sm">הסל ריק — בחר פריטים מהתפריט</p>
                     )}
                     {cart.map((item, idx) => (
-                        <div key={idx} className="bg-slate-900/50 rounded-xl p-3 border border-slate-700/50">
+                        <div key={item._cartKey || idx} className="bg-slate-900/50 rounded-xl p-3 border border-slate-700/50">
                             <div className="flex justify-between items-start mb-2">
                                 <p className="text-white font-bold text-sm flex-1">{item.name}</p>
                                 <button onClick={() => removeItem(idx)} className="text-red-400/60 hover:text-red-400 p-1 transition-colors">
@@ -318,7 +340,7 @@ function POSNewOrderInner({ headers, posToken, onOrderCreated }) {
                             {item.variant_name && (
                                 <p className="text-slate-500 text-xs mb-1">{item.variant_name}</p>
                             )}
-                            {item.addons.length > 0 && (
+                            {item.addons?.length > 0 && (
                                 <p className="text-slate-500 text-xs mb-1">{item.addons.map(a => (a.quantity || 1) > 1 ? `${a.name} ×${a.quantity}` : a.name).join(', ')}</p>
                             )}
                             <div className="flex items-center justify-between mt-2">
@@ -332,7 +354,7 @@ function POSNewOrderInner({ headers, posToken, onOrderCreated }) {
                                     </button>
                                 </div>
                                 <span className="text-orange-400 font-black text-sm">
-                                    ₪{(item.price * item.quantity).toFixed(2)}
+                                    ₪{lineUnitTotal(item).toFixed(2)}
                                 </span>
                             </div>
                         </div>
@@ -421,6 +443,14 @@ function POSNewOrderInner({ headers, posToken, onOrderCreated }) {
                         <p className="text-white text-xl font-black">יוצר הזמנה...</p>
                     </div>
                 </div>
+            )}
+
+            {configureItem && (
+                <POSMenuItemModal
+                    item={configureItem}
+                    onClose={() => setConfigureItem(null)}
+                    onAdd={line => mergeCartLine(line)}
+                />
             )}
 
             {holdOrderId && !holdLoading && (

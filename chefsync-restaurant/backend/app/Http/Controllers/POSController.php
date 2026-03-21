@@ -289,7 +289,6 @@ class POSController extends Controller
             'type' => 'required|in:cash_in,cash_out',
             'amount' => 'required|numeric|min:0.01',
             'description' => 'nullable|string|max:255',
-            'payment_method' => 'nullable|in:cash,credit',
         ]);
 
         $user = $request->user();
@@ -302,15 +301,11 @@ class POSController extends Controller
             ->whereNull('closed_at')
             ->firstOrFail();
 
-        $paymentMethod = $request->type === 'cash_out'
-            ? 'cash'
-            : ($request->type === 'cash_in' && $request->input('payment_method') === 'credit' ? 'credit' : 'cash');
-
         $movement = CashMovement::create([
             'shift_id' => $shift->id,
             'user_id' => $user->id,
             'type' => $request->type,
-            'payment_method' => $paymentMethod,
+            'payment_method' => 'cash',
             'amount' => $request->amount,
             'description' => $request->description,
         ]);
@@ -318,6 +313,59 @@ class POSController extends Controller
         return response()->json([
             'success' => true,
             'movement' => $movement,
+            'shift' => $this->formatShift($shift->fresh()),
+        ]);
+    }
+
+    /**
+     * חיוב אשראי לקופה (PinPad) — רישום כתנועת payment+אשראי, לא כהכנסה ידנית.
+     */
+    public function shiftCreditCharge(Request $request, ZCreditResolver $zCreditResolver)
+    {
+        $request->validate([
+            'amount' => 'required|numeric|min:0.01',
+            'description' => 'nullable|string|max:255',
+        ]);
+
+        $user = $request->user();
+
+        if (!$user->isManager()) {
+            return response()->json(['success' => false, 'message' => 'רק מנהל יכול לבצע חיוב אשראי'], 403);
+        }
+
+        $shift = CashRegisterShift::where('restaurant_id', $user->restaurant_id)
+            ->whereNull('closed_at')
+            ->firstOrFail();
+
+        $restaurant = Restaurant::find($user->restaurant_id);
+        if (!$restaurant) {
+            return response()->json(['success' => false, 'message' => 'מסעדה לא נמצאה'], 404);
+        }
+
+        $zcredit = $zCreditResolver->forRestaurantContext($restaurant, $request->pos_session);
+        $amount = round((float) $request->amount, 2);
+        $uniqueId = 'shift_credit_' . $shift->id . '_' . uniqid('', true);
+        $result = $zcredit->chargePinPad($amount, $uniqueId);
+
+        if (!$result['success']) {
+            return response()->json([
+                'success' => false,
+                'message' => $result['data']['error_message'] ?? 'העסקה נדחתה',
+            ], 422);
+        }
+
+        CashMovement::create([
+            'shift_id' => $shift->id,
+            'user_id' => $user->id,
+            'type' => 'payment',
+            'payment_method' => 'credit',
+            'amount' => $amount,
+            'description' => $request->description ?: 'תשלום אשראי',
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'התשלום אושר',
             'shift' => $this->formatShift($shift->fresh()),
         ]);
     }
@@ -361,7 +409,7 @@ class POSController extends Controller
                     2
                 ),
                 'total_sales' => round($cashPayments + $creditPayments + $cashInCredit, 2),
-                'order_count' => $movements->where('type', 'payment')->count(),
+                'order_count' => $movements->where('type', 'payment')->whereNotNull('order_id')->count(),
                 'movements' => $movements->map(fn($m) => [
                     'id' => $m->id,
                     'type' => $m->type,
