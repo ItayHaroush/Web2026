@@ -47,6 +47,7 @@ export const API_ENDPOINTS = {
 // סטטוסי הזמנה
 export const ORDER_STATUS = {
     PENDING: 'pending',        // ממתין
+    AWAITING_PAYMENT: 'awaiting_payment', // B2C אשראי לפני אישור HYP
     RECEIVED: 'received',      // התקבלה
     PREPARING: 'preparing',    // בהכנה
     READY: 'ready',           // מוכנה
@@ -57,6 +58,7 @@ export const ORDER_STATUS = {
 
 export const ORDER_STATUS_LABELS = {
     pending: 'ממתין',
+    awaiting_payment: 'ממתין לתשלום',
     received: 'התקבלה',
     preparing: 'בהכנה',
     ready: 'מוכנה',
@@ -67,6 +69,7 @@ export const ORDER_STATUS_LABELS = {
 
 export const ORDER_STATUS_COLORS = {
     pending: 'bg-gray-100 text-gray-700',
+    awaiting_payment: 'bg-orange-50 text-orange-800',
     received: 'bg-blue-100 text-blue-900',
     preparing: 'bg-yellow-100 text-yellow-900',
     ready: 'bg-green-100 text-green-900',

@@ -163,7 +163,7 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
 
     // פתיחה מפוש pending — גלילה לאזור תשלום / המשך תהליך
     useEffect(() => {
-        if (!focusContinueFromPush || !order || order.status !== 'pending') {
+        if (!focusContinueFromPush || !order || (order.status !== 'pending' && order.status !== ORDER_STATUS.AWAITING_PAYMENT)) {
             return;
         }
         const t = window.setTimeout(() => {
@@ -455,6 +455,7 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
         ];
 
     const currentStepIndex = statusSteps.findIndex((s) => s.value === order.status);
+    const safeStepIndex = currentStepIndex < 0 ? 0 : currentStepIndex;
     const isCancelled = order.status === 'cancelled';
     const isFutureOrder = !!order.scheduled_for;
     const isPendingPayment = order.payment_status === 'pending' && order.payment_method === 'credit_card';
@@ -504,7 +505,7 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
             {/* כרטיס הזמנה — anchor להמשך תהליך (מזומן ממתין לאישור) */}
             {showStatusCard && (
                 <div
-                    id={order.status === 'pending' && !isPendingPayment ? 'order-continue-section' : undefined}
+                    id={(order.status === 'pending' || order.status === ORDER_STATUS.AWAITING_PAYMENT) && !isPendingPayment ? 'order-continue-section' : undefined}
                     className="bg-white dark:bg-brand-dark-surface rounded-2xl shadow-lg dark:shadow-black/20 border border-gray-200 dark:border-brand-dark-border p-6 sm:p-8 max-w-3xl mx-auto"
                 >
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-6">
@@ -640,7 +641,7 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
                     )}
 
                     {/* שעון ספירה לאחור – מוסתר בהזמנה עתידית שממתינה */}
-                    {!isCancelled && !isFutureAwaitingPayment && !(isFutureOrder && order.status === 'pending') && (
+                    {!isCancelled && !isFutureAwaitingPayment && !(isFutureOrder && order.status === 'pending') && !isPendingPayment && (
                         <div className="my-6">
                             <CountdownTimer
                                 startTime={order.created_at}
@@ -735,7 +736,7 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
                                     <div
                                         className="absolute top-5 right-5 h-1 bg-gradient-to-l from-brand-secondary to-brand-primary rounded-full transition-all duration-500"
                                         style={{
-                                            width: `calc(${(currentStepIndex / (statusSteps.length - 1)) * 100}% - 2.5rem)`,
+                                            width: `calc(${(safeStepIndex / (statusSteps.length - 1)) * 100}% - 2.5rem)`,
                                             zIndex: 1
                                         }}
                                     ></div>
@@ -743,14 +744,14 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
                                     {statusSteps.map((step, index) => (
                                         <div key={step.value} className="flex flex-col items-center flex-1 relative" style={{ zIndex: 2 }}>
                                             <div
-                                                className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm mb-2 border-2 transition-all ${index <= currentStepIndex
+                                                className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm mb-2 border-2 transition-all ${index <= safeStepIndex
                                                     ? 'bg-gradient-to-br from-brand-primary to-brand-secondary text-white border-transparent shadow-lg'
                                                     : 'bg-white dark:bg-brand-dark-bg text-gray-400 dark:text-gray-500 border-gray-300 dark:border-gray-600'
                                                     }`}
                                             >
-                                                {index < currentStepIndex ? <FaCheckCircle /> : index + 1}
+                                                {index < safeStepIndex ? <FaCheckCircle /> : index + 1}
                                             </div>
-                                            <p className={`text-xs text-center font-medium ${index <= currentStepIndex ? 'text-gray-900 dark:text-brand-dark-text' : 'text-gray-500 dark:text-brand-dark-muted'
+                                            <p className={`text-xs text-center font-medium ${index <= safeStepIndex ? 'text-gray-900 dark:text-brand-dark-text' : 'text-gray-500 dark:text-brand-dark-muted'
                                                 }`}>{step.label}</p>
                                         </div>
                                     ))}

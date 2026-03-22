@@ -14,6 +14,22 @@ use Mpdf\Mpdf;
 
 class ReportController extends Controller
 {
+    private function applyOwnerDailyReportCutoff($query, Restaurant $restaurant): void
+    {
+        if ($restaurant->owner_activity_started_at) {
+            $query->where('date', '>=', $restaurant->owner_activity_started_at->toDateString());
+        }
+    }
+
+    private function assertDailyReportVisibleToOwner(DailyReport $report, Restaurant $restaurant): void
+    {
+        if ($restaurant->owner_activity_started_at
+            && $report->date
+            && $report->date->toDateString() < $restaurant->owner_activity_started_at->toDateString()) {
+            abort(404, 'הדוח לא זמין');
+        }
+    }
+
     /**
      * רשימת דוחות יומיים עם פילטרים
      * GET /admin/reports
@@ -29,7 +45,10 @@ class ReportController extends Controller
 
         $perPage = $request->integer('per_page', 30);
 
+        $restaurant = Restaurant::where('tenant_id', app('tenant_id'))->firstOrFail();
+
         $query = DailyReport::orderBy('date', 'desc');
+        $this->applyOwnerDailyReportCutoff($query, $restaurant);
 
         if ($request->filled('from')) {
             $query->where('date', '>=', $request->input('from'));
@@ -53,7 +72,9 @@ class ReportController extends Controller
      */
     public function show(int $id): JsonResponse
     {
+        $restaurant = Restaurant::where('tenant_id', app('tenant_id'))->firstOrFail();
         $report = DailyReport::findOrFail($id);
+        $this->assertDailyReportVisibleToOwner($report, $restaurant);
 
         return response()->json([
             'success' => true,
@@ -69,7 +90,9 @@ class ReportController extends Controller
     public function pdf(int $id)
     {
         try {
+            $restaurant = Restaurant::where('tenant_id', app('tenant_id'))->firstOrFail();
             $report = DailyReport::with('restaurant')->findOrFail($id);
+            $this->assertDailyReportVisibleToOwner($report, $restaurant);
 
             $html = view('reports.daily-pdf', ['report' => $report])->render();
 
@@ -125,7 +148,10 @@ class ReportController extends Controller
             'to' => 'nullable|date',
         ]);
 
+        $restaurant = Restaurant::where('tenant_id', app('tenant_id'))->firstOrFail();
+
         $query = DailyReport::orderBy('date', 'desc');
+        $this->applyOwnerDailyReportCutoff($query, $restaurant);
 
         if ($request->filled('from')) {
             $query->where('date', '>=', $request->input('from'));
@@ -136,8 +162,7 @@ class ReportController extends Controller
 
         $reports = $query->get();
 
-        $restaurant = Restaurant::where('tenant_id', app('tenant_id'))->first();
-        $restaurantName = $restaurant?->name ?? '';
+        $restaurantName = $restaurant->name ?? '';
 
         $headers = [
             'Content-Type' => 'text/csv; charset=UTF-8',
@@ -219,7 +244,11 @@ class ReportController extends Controller
         $from = Carbon::parse($request->input('from'))->startOfDay();
         $to = Carbon::parse($request->input('to'))->endOfDay();
 
-        $orders = Order::whereBetween('created_at', [$from, $to])
+        $restaurant = Restaurant::where('tenant_id', app('tenant_id'))->firstOrFail();
+
+        $orders = Order::where('restaurant_id', $restaurant->id)
+            ->forOwnerReporting($restaurant)
+            ->whereBetween('created_at', [$from, $to])
             ->where('is_test', false)
             ->where('status', '!=', 'cancelled')
             ->orderBy('created_at')
@@ -282,11 +311,14 @@ class ReportController extends Controller
             'to' => 'required|date',
         ]);
 
-        $reports = DailyReport::with('restaurant')
+        $restaurant = Restaurant::where('tenant_id', app('tenant_id'))->firstOrFail();
+
+        $reportsQuery = DailyReport::with('restaurant')
             ->where('date', '>=', $request->input('from'))
             ->where('date', '<=', $request->input('to'))
-            ->orderBy('date')
-            ->get();
+            ->orderBy('date');
+        $this->applyOwnerDailyReportCutoff($reportsQuery, $restaurant);
+        $reports = $reportsQuery->get();
 
         if ($reports->isEmpty()) {
             return response()->json([
@@ -329,8 +361,7 @@ class ReportController extends Controller
 
         $zip->close();
 
-        $restaurant = Restaurant::where('tenant_id', app('tenant_id'))->first();
-        $zipName = 'reports-' . ($restaurant?->name ?? 'takeeat') . '.zip';
+        $zipName = 'reports-' . ($restaurant->name ?? 'takeeat') . '.zip';
 
         return response()->download($zipPath, $zipName)->deleteFileAfterSend(true);
     }
@@ -348,6 +379,14 @@ class ReportController extends Controller
         $restaurant = Restaurant::where('tenant_id', app('tenant_id'))->firstOrFail();
 
         $dateStr = Carbon::parse($request->input('date'))->toDateString();
+        if ($restaurant->owner_activity_started_at
+            && $dateStr < $restaurant->owner_activity_started_at->toDateString()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'אין דוח לתקופה זו (לפני תאריך תחילת הפעילות)',
+            ], 422);
+        }
+
         $startOfDay = Carbon::parse($dateStr)->startOfDay();
         $endOfDay = Carbon::parse($dateStr)->endOfDay();
 

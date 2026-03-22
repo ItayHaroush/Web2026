@@ -57,7 +57,7 @@ class CustomerOrderPushService
             'type' => 'customer_pending_order',
             'orderId' => (string) $order->id,
             'tenantId' => $tenantId,
-            'status' => Order::STATUS_PENDING,
+            'status' => $order->status,
             'action' => 'continue',
             'url' => $path,
         ];
@@ -86,7 +86,7 @@ class CustomerOrderPushService
      */
     public function sendOrderStatusPush(Order $order, string $status): void
     {
-        if ($status === Order::STATUS_PENDING) {
+        if (in_array($status, [Order::STATUS_PENDING, Order::STATUS_AWAITING_PAYMENT], true)) {
             return;
         }
 

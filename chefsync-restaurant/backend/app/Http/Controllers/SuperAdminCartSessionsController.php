@@ -27,6 +27,7 @@ class SuperAdminCartSessionsController extends Controller
 
         $query = CartSession::with('restaurant:id,name,tenant_id')
             ->with('order:id,total_amount,created_at')
+            ->with('customer:id,name,phone')
             ->where(function ($q) {
                 $q->whereNotNull('customer_phone')->where('customer_phone', '!=', '')
                     ->orWhereNotNull('customer_id');
@@ -65,6 +66,20 @@ class SuperAdminCartSessionsController extends Controller
         $sessions = $query->orderByDesc('updated_at')->paginate(50);
 
         $sessions->getCollection()->transform(function (CartSession $session) {
+            $displayName = $session->customer_id && $session->customer
+                ? $session->customer->name
+                : ($session->customer_name ?: null);
+
+            $tenantId = $session->restaurant?->tenant_id;
+            $orderStatusUrl = null;
+            if ($tenantId && $session->completed_order_id) {
+                $base = rtrim((string) config('app.frontend_url', ''), '/');
+                if ($base === '') {
+                    $base = rtrim((string) config('app.url', ''), '/');
+                }
+                $orderStatusUrl = $base . '/' . rawurlencode((string) $tenantId) . '/order-status/' . $session->completed_order_id;
+            }
+
             return [
                 'id' => $session->id,
                 'restaurant' => $session->restaurant ? [
@@ -73,12 +88,14 @@ class SuperAdminCartSessionsController extends Controller
                     'tenant_id' => $session->restaurant->tenant_id,
                 ] : null,
                 'customer_phone' => $this->maskPhone($session->customer_phone ?? ''),
-                'customer_name' => $session->customer_name,
+                'customer_name' => $displayName,
+                'is_registered_customer' => (bool) $session->customer_id,
                 'total_amount' => (float) $session->total_amount,
                 'item_count' => is_array($session->cart_data) ? count($session->cart_data) : 0,
                 'updated_at' => $session->updated_at?->toIso8601String(),
                 'reminded_at' => $session->reminded_at?->toIso8601String(),
                 'completed_order_id' => $session->completed_order_id,
+                'order_status_url' => $orderStatusUrl,
                 'order_total' => $session->order ? (float) $session->order->total_amount : null,
                 'status' => $session->reminded_at
                     ? ($session->completed_order_id ? 'converted' : 'reminded')

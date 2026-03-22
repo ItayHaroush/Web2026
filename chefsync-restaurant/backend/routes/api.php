@@ -340,6 +340,7 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'tenant'])->group(function (
         Route::patch('/orders/{id}/status', [AdminController::class, 'updateOrderStatus'])->name('admin.orders.status');
         Route::patch('/orders/{id}/eta', [AdminController::class, 'updateOrderEta'])->name('admin.orders.eta');
         Route::post('/orders/{id}/mark-paid', [AdminController::class, 'markOrderPaid'])->name('admin.orders.mark-paid');
+        Route::post('/orders/{id}/payment-link', [AdminController::class, 'createOrderPaymentLink'])->name('admin.orders.payment-link');
 
         // הגדרות תשלום
         Route::get('/payment-settings', [PaymentSettingsController::class, 'getSettings'])->name('admin.payment-settings.get');

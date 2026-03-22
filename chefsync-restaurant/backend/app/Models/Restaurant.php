@@ -91,6 +91,8 @@ class Restaurant extends Model
         'zcredit_terminal_password',
         'zcredit_pinpad_id',
         'default_payment_terminal_id',
+        /** תאריך תחילת פעילות אמיתית — סופר־אדמין; מסנן תצוגת סטטיסטיקות/הזמנות למסעדן מ־יום זה */
+        'owner_activity_started_at',
     ];
 
     protected $hidden = [
@@ -137,6 +139,7 @@ class Restaurant extends Model
         'payment_failed_at' => 'datetime',
         'abandoned_cart_reminders_enabled' => 'boolean',
         'zcredit_terminal_password' => 'encrypted',
+        'owner_activity_started_at' => 'date',
     ];
 
     /**

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Services\AiService;
 use App\Services\InsightsService;
+use App\Models\Order;
 use App\Models\Restaurant;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -178,8 +179,21 @@ class AiController extends Controller
             $restaurant = Restaurant::where('tenant_id', $tenantId)->firstOrFail();
             $user = $request->user();
 
+            $ownerCutoff = $restaurant->owner_activity_started_at?->copy()->startOfDay();
+            $weekStart = now()->subDays(7)->startOfDay();
+            $monthStart = now()->subDays(30)->startOfDay();
+            if ($ownerCutoff) {
+                if ($ownerCutoff->gt($weekStart)) {
+                    $weekStart = $ownerCutoff;
+                }
+                if ($ownerCutoff->gt($monthStart)) {
+                    $monthStart = $ownerCutoff;
+                }
+            }
+
             // Check cache first (24 hours)
-            $cacheKey = "ai:insights:tenant:{$tenantId}:" . now()->format('Y-m-d');
+            $cacheKey = 'ai:insights:tenant:' . $tenantId . ':' . now()->format('Y-m-d') . ':'
+                . ($restaurant->owner_activity_started_at?->toDateString() ?? 'none');
             $cached = Cache::get($cacheKey);
 
             if ($cached && !$request->boolean('force_regenerate')) {
@@ -193,11 +207,15 @@ class AiController extends Controller
             // Initialize AI Service
             $ai = new AiService($tenantId, $restaurant, $user);
 
+            $baseOrders = fn () => Order::where('restaurant_id', $restaurant->id)
+                ->visibleToRestaurant()
+                ->forOwnerReporting($restaurant);
+
             // Build dashboard context with REAL DATA
-            $menuItemsList = $restaurant->menuItems()->with('category')->get()->map(fn($item) => [
+            $menuItemsList = $restaurant->menuItems()->with('category')->get()->map(fn ($item) => [
                 'name' => $item->name,
                 'category' => $item->category?->name ?? 'ללא קטגוריה',
-                'price' => $item->price
+                'price' => $item->price,
             ])->toArray();
 
             $categoriesList = $restaurant->categories()->pluck('name')->toArray();
@@ -207,7 +225,15 @@ class AiController extends Controller
                 ->join('orders', 'order_items.order_id', '=', 'orders.id')
                 ->join('menu_items', 'order_items.menu_item_id', '=', 'menu_items.id')
                 ->where('orders.tenant_id', $tenantId)
-                ->where('orders.created_at', '>=', now()->subDays(30))
+                ->where('orders.restaurant_id', $restaurant->id)
+                ->where('orders.created_at', '>=', $monthStart)
+                ->where(function ($q) {
+                    $q->where('orders.status', '!=', Order::STATUS_AWAITING_PAYMENT)
+                        ->where(function ($q2) {
+                            $q2->where('orders.payment_method', '!=', 'credit_card')
+                                ->orWhere('orders.payment_status', '!=', Order::PAYMENT_PENDING);
+                        });
+                })
                 ->select('menu_items.name', DB::raw('SUM(order_items.quantity) as total_sold'))
                 ->groupBy('menu_items.id', 'menu_items.name')
                 ->orderByDesc('total_sold')
@@ -218,7 +244,13 @@ class AiController extends Controller
             // Hourly order distribution (last 30 days) for peak_times analysis
             $hourlyDistribution = DB::table('orders')
                 ->where('tenant_id', $tenantId)
-                ->where('created_at', '>=', now()->subDays(30))
+                ->where('restaurant_id', $restaurant->id)
+                ->where('created_at', '>=', $monthStart)
+                ->where('status', '!=', Order::STATUS_AWAITING_PAYMENT)
+                ->where(function ($q) {
+                    $q->where('payment_method', '!=', 'credit_card')
+                        ->orWhere('payment_status', '!=', Order::PAYMENT_PENDING);
+                })
                 ->select(DB::raw('HOUR(created_at) as hour'), DB::raw('COUNT(*) as count'))
                 ->groupBy(DB::raw('HOUR(created_at)'))
                 ->orderBy('hour')
@@ -233,12 +265,12 @@ class AiController extends Controller
                 'top_sellers' => $topSellers,
                 'total_menu_items' => count($menuItemsList),
                 'active_categories' => count($categoriesList),
-                'orders_today' => $restaurant->orders()->whereDate('created_at', today())->count(),
-                'orders_week' => $restaurant->orders()->where('created_at', '>=', now()->subDays(7))->count(),
-                'orders_month' => $restaurant->orders()->where('created_at', '>=', now()->subDays(30))->count(),
-                'revenue_today' => $restaurant->orders()->whereDate('created_at', today())->where('status', '!=', 'cancelled')->where('is_test', false)->sum('total_amount'),
-                'revenue_week' => $restaurant->orders()->where('created_at', '>=', now()->subDays(7))->where('status', '!=', 'cancelled')->where('is_test', false)->sum('total_amount'),
-                'pending_orders' => $restaurant->orders()->where('status', 'received')->count(),
+                'orders_today' => $baseOrders()->whereDate('created_at', today())->count(),
+                'orders_week' => $baseOrders()->where('created_at', '>=', $weekStart)->count(),
+                'orders_month' => $baseOrders()->where('created_at', '>=', $monthStart)->count(),
+                'revenue_today' => $baseOrders()->whereDate('created_at', today())->where('status', '!=', 'cancelled')->where('is_test', false)->sum('total_amount'),
+                'revenue_week' => $baseOrders()->where('created_at', '>=', $weekStart)->where('status', '!=', 'cancelled')->where('is_test', false)->sum('total_amount'),
+                'pending_orders' => $baseOrders()->where('status', 'received')->count(),
                 'hourly_distribution' => $hourlyDistribution,
                 'is_open' => $restaurant->is_open ?? true,
             ];

@@ -337,6 +337,8 @@ class SuperAdminController extends Controller
             'logo_url' => 'nullable|url',
             'is_open' => 'sometimes|boolean',
             'is_demo' => 'sometimes|boolean',
+            /** תאריך תחילת פעילות אמיתית — תצוגת מסעדן מאפס מיום זה (איפוס: null) */
+            'owner_activity_started_at' => 'nullable|date',
         ]);
 
         // אם השם משתנה, עדכן את ה-slug

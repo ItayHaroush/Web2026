@@ -184,8 +184,15 @@ export default function SuperAdminAbandonedCarts() {
                                             <FaStore size={12} className="text-gray-400" />
                                             <span className="text-sm font-bold text-gray-900">{s.restaurant?.name || '—'}</span>
                                         </div>
-                                        <div className="col-span-1 text-xs font-mono text-gray-600 flex items-center gap-1">
-                                            <FaPhone size={10} /> {s.customer_phone}
+                                        <div className="col-span-1 text-xs text-gray-600 flex flex-col gap-0.5">
+                                            <span className="font-mono flex items-center gap-1">
+                                                <FaPhone size={10} /> {s.customer_phone}
+                                            </span>
+                                            {s.customer_name && (
+                                                <span className={`text-[11px] ${s.is_registered_customer ? 'font-bold text-gray-900' : 'text-gray-700'}`}>
+                                                    {s.customer_name}
+                                                </span>
+                                            )}
                                         </div>
                                         <div className="col-span-1 text-sm font-bold text-brand-primary flex items-center gap-1">
                                             <FaShekelSign size={10} /> {s.order_total != null ? s.order_total.toFixed(0) : s.total_amount?.toFixed(0) ?? '—'}
@@ -202,7 +209,7 @@ export default function SuperAdminAbandonedCarts() {
                                                 {st.label}
                                             </span>
                                         </div>
-                                        <div className="col-span-1">
+                                        <div className="col-span-1 flex flex-col gap-1">
                                             {s.restaurant?.tenant_id && (
                                                 <a
                                                     href={cartUrl(s.restaurant.tenant_id)}
@@ -211,6 +218,16 @@ export default function SuperAdminAbandonedCarts() {
                                                     className="inline-flex items-center gap-1 text-xs text-brand-primary hover:underline"
                                                 >
                                                     <FaExternalLinkAlt size={10} /> עגלה
+                                                </a>
+                                            )}
+                                            {s.order_status_url && (
+                                                <a
+                                                    href={s.order_status_url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="inline-flex items-center gap-1 text-xs text-gray-600 hover:text-brand-primary hover:underline"
+                                                >
+                                                    <FaExternalLinkAlt size={10} /> הזמנה
                                                 </a>
                                             )}
                                         </div>

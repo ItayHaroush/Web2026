@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CartSession;
 use App\Models\Order;
 use App\Models\PaymentSession;
 use App\Models\Restaurant;
@@ -133,6 +134,14 @@ class HypOrderCallbackController extends Controller
         // Idempotency
         if ($order->payment_status === Order::PAYMENT_PAID) {
             Log::info('HYP order callback: already paid (idempotent)', ['order_id' => $order->id]);
+            if ($order->status === Order::STATUS_AWAITING_PAYMENT) {
+                $order->update(['status' => Order::STATUS_PENDING]);
+                try {
+                    CartSession::markCompletedForB2COrder($order->fresh());
+                } catch (\Throwable $e) {
+                    Log::warning('CartSession markCompleted (idempotent)', ['order_id' => $order->id, 'error' => $e->getMessage()]);
+                }
+            }
             return ['restaurant_id' => $restaurant->id, 'order_id' => $order->id, 'status' => 'success', 'message' => 'התשלום כבר בוצע'];
         }
 
@@ -172,13 +181,23 @@ class HypOrderCallbackController extends Controller
             $expectedAmount = (float) $amount;
         }
 
-        // עדכון הזמנה
-        $order->update([
+        // עדכון הזמנה — מעבר מ-awaiting_payment ל-pending (תור מטבח) אחרי תשלום מאושר
+        $orderUpdates = [
             'payment_status'         => Order::PAYMENT_PAID,
             'payment_transaction_id' => $transactionId,
             'payment_amount'         => $expectedAmount,
             'paid_at'                => now(),
-        ]);
+        ];
+        if ($order->status === Order::STATUS_AWAITING_PAYMENT) {
+            $orderUpdates['status'] = Order::STATUS_PENDING;
+        }
+        $order->update($orderUpdates);
+
+        try {
+            CartSession::markCompletedForB2COrder($order->fresh());
+        } catch (\Throwable $e) {
+            Log::warning('CartSession markCompleted after HYP payment', ['order_id' => $order->id, 'error' => $e->getMessage()]);
+        }
 
         Log::info('HYP order payment completed', [
             'order_id'       => $order->id,

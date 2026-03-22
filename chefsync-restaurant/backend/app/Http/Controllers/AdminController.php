@@ -19,7 +19,10 @@ use App\Models\PriceRule;
 use App\Models\DeliveryZone;
 use App\Models\CashMovement;
 use App\Models\CashRegisterShift;
+use App\Models\PaymentSession;
 use App\Services\BasePriceService;
+use App\Services\OrderEventService;
+use App\Services\RestaurantPaymentService;
 use App\Services\CustomerOrderPushService;
 use App\Services\HypPaymentService;
 use App\Models\RestaurantPayment;
@@ -84,14 +87,18 @@ class AdminController extends Controller
         $user = $request->user();
         $restaurantId = $this->resolveRestaurantId($request);
 
+        $restaurant = $this->resolveRestaurant($request);
+
         $stats = [
             'orders_today' => Order::where('restaurant_id', $restaurantId)
                 ->visibleToRestaurant()
+                ->when($restaurant, fn ($q) => $q->forOwnerReporting($restaurant))
                 ->where('is_test', false)  // ← מתעלם מהזמנות test
                 ->whereDate('created_at', today())
                 ->count(),
             'orders_pending' => Order::where('restaurant_id', $restaurantId)
                 ->visibleToRestaurant()
+                ->when($restaurant, fn ($q) => $q->forOwnerReporting($restaurant))
                 ->where('is_test', false)  // ← מתעלם מהזמנות test
                 ->whereIn('status', ['pending', 'received', 'preparing'])
                 ->count(),
@@ -104,6 +111,7 @@ class AdminController extends Controller
         if ($user->isOwner() || $user->isManager() || $user->is_super_admin) {
             $stats['revenue_today'] = Order::where('restaurant_id', $restaurantId)
                 ->visibleToRestaurant()
+                ->when($restaurant, fn ($q) => $q->forOwnerReporting($restaurant))
                 ->where('is_test', false)  // ← מתעלם מהזמנות test
                 ->whereDate('created_at', today())
                 ->where('status', '!=', 'cancelled')
@@ -119,6 +127,7 @@ class AdminController extends Controller
 
             $stats['revenue_week'] = Order::where('restaurant_id', $restaurantId)
                 ->visibleToRestaurant()
+                ->when($restaurant, fn ($q) => $q->forOwnerReporting($restaurant))
                 ->where('is_test', false)  // ← מתעלם מהזמנות test
                 ->whereBetween('created_at', [$weekStart, $weekEnd])
                 ->where('status', '!=', 'cancelled')
@@ -128,6 +137,7 @@ class AdminController extends Controller
         // הזמנות אחרונות
         $recentOrders = Order::where('restaurant_id', $restaurantId)
             ->visibleToRestaurant()
+            ->when($restaurant, fn ($q) => $q->forOwnerReporting($restaurant))
             ->where('is_test', false)
             ->with('items.menuItem.category')
             ->orderBy('created_at', 'desc')
@@ -137,6 +147,7 @@ class AdminController extends Controller
         // הזמנות עתידיות ממתינות
         $futureOrders = Order::where('restaurant_id', $restaurantId)
             ->visibleToRestaurant()
+            ->when($restaurant, fn ($q) => $q->forOwnerReporting($restaurant))
             ->where('is_test', false)
             ->where('is_future_order', true)
             ->whereIn('status', ['pending', 'received', 'confirmed'])
@@ -2438,9 +2449,10 @@ class AdminController extends Controller
 
     public function getOrders(Request $request)
     {
-        $user = $request->user();
+        $restaurant = $this->resolveRestaurant($request);
         $query = Order::where('restaurant_id', $this->resolveRestaurantId($request))
             ->visibleToRestaurant()
+            ->when($restaurant, fn ($q) => $q->forOwnerReporting($restaurant))
             ->with('items.menuItem.category');
 
         if ($request->has('status')) {
@@ -3164,6 +3176,96 @@ class AdminController extends Controller
             'success' => true,
             'message' => 'ההזמנה סומנה כשולמה',
             'order' => $order->load('items.menuItem.category'),
+        ]);
+    }
+
+    /**
+     * יצירת קישור תשלום HYP חדש ללקוח (אשראי B2C) — להעתקה או שליחה בוואטסאפ.
+     * מוגבל ל-Owner / SuperAdmin, כמו markOrderPaid.
+     */
+    public function createOrderPaymentLink(Request $request, $id)
+    {
+        $user = $request->user();
+
+        if (!$user->isOwner() && !$user->isSuperAdmin()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'רק בעל מסעדה או סופר-אדמין יכולים ליצור קישור תשלום',
+            ], 403);
+        }
+
+        $restaurantId = $this->resolveRestaurantId($request);
+        if (!$restaurantId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'לא ניתן לזהות מסעדה',
+            ], 422);
+        }
+
+        $order = Order::where('restaurant_id', $restaurantId)->findOrFail($id);
+
+        if ($order->payment_method !== 'credit_card') {
+            return response()->json([
+                'success' => false,
+                'message' => 'קישור תשלום זמין רק להזמנות באשראי',
+            ], 422);
+        }
+
+        if ($order->payment_status === Order::PAYMENT_PAID) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ההזמנה כבר שולמה',
+            ], 422);
+        }
+
+        if ($order->status === Order::STATUS_CANCELLED) {
+            return response()->json([
+                'success' => false,
+                'message' => 'לא ניתן ליצור תשלום להזמנה שבוטלה',
+            ], 422);
+        }
+
+        $restaurant = Restaurant::withoutGlobalScope('tenant')->find($order->restaurant_id);
+        $restaurantPaymentService = app(RestaurantPaymentService::class);
+
+        if (!$restaurant || !$restaurantPaymentService->isRestaurantReady($restaurant)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'תשלום באשראי אינו מוגדר או לא זמין למסעדה',
+            ], 422);
+        }
+
+        $tenantId = $order->tenant_id;
+
+        PaymentSession::where('order_id', $order->id)
+            ->whereIn('status', ['pending', 'expired'])
+            ->update(['status' => 'expired']);
+
+        $session = PaymentSession::create([
+            'tenant_id'     => $tenantId,
+            'restaurant_id' => $order->restaurant_id,
+            'order_id'      => $order->id,
+            'session_token' => Str::uuid()->toString(),
+            'amount'        => $order->total_amount,
+            'status'        => 'pending',
+            'expires_at'    => now()->addMinutes(config('payment.order_payment.session_timeout_minutes', 15)),
+        ]);
+
+        $paymentUrl = $restaurantPaymentService->generateOrderPaymentUrl($restaurant, $order, $session);
+        $session->update(['payment_url' => $paymentUrl]);
+
+        try {
+            OrderEventService::log($order->id, 'admin_payment_link', 'admin', $user->id, [
+                'session_id' => $session->id,
+            ], $request);
+        } catch (\Throwable $e) {
+            Log::warning('OrderEventService admin_payment_link failed', ['error' => $e->getMessage()]);
+        }
+
+        return response()->json([
+            'success'       => true,
+            'payment_url' => $paymentUrl,
+            'expires_at'  => $session->expires_at?->toIso8601String(),
         ]);
     }
 }

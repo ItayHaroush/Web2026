@@ -22,7 +22,7 @@ class NotifyPendingOrderCustomerPush extends Command
         $cutoff = now()->subMinutes($minutes);
 
         $query = Order::withoutGlobalScopes()
-            ->where('status', Order::STATUS_PENDING)
+            ->whereIn('status', [Order::STATUS_PENDING, Order::STATUS_AWAITING_PAYMENT])
             ->where('created_at', '<=', $cutoff)
             ->whereNull('pending_customer_reminder_sent_at')
             ->where('is_test', false)

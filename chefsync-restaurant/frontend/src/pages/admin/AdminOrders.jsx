@@ -32,9 +32,20 @@ import {
     FaTabletAlt,
     FaCreditCard,
     FaMoneyBillWave,
-    FaFileAlt
+    FaFileAlt,
+    FaCopy,
+    FaWhatsapp
 } from 'react-icons/fa';
 import { SiWaze, SiGooglemaps } from 'react-icons/si';
+
+/** מספר ל-wa.me (972...) */
+function digitsForWhatsApp(phone) {
+    if (!phone) return null;
+    let d = String(phone).replace(/\D/g, '');
+    if (d.startsWith('972') && d.length >= 11) return d;
+    if (d.startsWith('0') && d.length >= 9) return `972${d.slice(1)}`;
+    return d.length >= 9 ? `972${d.replace(/^0+/, '')}` : null;
+}
 
 export default function AdminOrders() {
     const { getAuthHeaders, isOwner, user } = useAdminAuth();
@@ -53,6 +64,7 @@ export default function AdminOrders() {
     const [etaSectionOpen, setEtaSectionOpen] = useState(false);
     const [customerSectionOpen, setCustomerSectionOpen] = useState(false);
     const [cancelModal, setCancelModal] = useState({ isOpen: false, orderId: null });
+    const [paymentLinkBusy, setPaymentLinkBusy] = useState(false);
     const previousOrdersCount = useRef(0);
     const orderPanelRef = useRef(null);
     const isLocked = restaurantStatus?.is_approved === false;
@@ -1142,31 +1154,92 @@ export default function AdminOrders() {
                                             )}
                                             {selectedOrder.payment_method === 'credit_card' &&
                                                 selectedOrder.payment_status !== 'paid' &&
+                                                selectedOrder.status !== 'cancelled' &&
                                                 isOwner() && (
-                                                    <button
-                                                        onClick={async () => {
-                                                            if (!confirm('האם לסמן את ההזמנה כשולמה?')) return;
-                                                            try {
-                                                                const res = await api.post(`/admin/orders/${selectedOrder.id}/mark-paid`, {}, { headers: getAuthHeaders() });
-                                                                if (res.data.success) {
-                                                                    setSelectedOrder(prev => ({
-                                                                        ...prev,
-                                                                        payment_status: 'paid',
-                                                                        marked_paid_by: user?.name,
-                                                                        marked_paid_at: new Date().toISOString()
-                                                                    }));
-                                                                    setOrders(prev => prev.map(o => o.id === selectedOrder.id ? { ...o, payment_status: 'paid', marked_paid_by: user?.name, marked_paid_at: new Date().toISOString() } : o));
-                                                                    setAllOrders(prev => prev.map(o => o.id === selectedOrder.id ? { ...o, payment_status: 'paid', marked_paid_by: user?.name, marked_paid_at: new Date().toISOString() } : o));
+                                                    <div className="space-y-2 pt-2 border-t border-gray-100">
+                                                        <p className="text-[10px] font-black uppercase tracking-wider text-gray-400">קישור לתשלום ללקוח</p>
+                                                        <p className="text-xs text-gray-600 leading-snug">
+                                                            אם הלקוח לא השלים באתר — צרו קישור חדש, העתיקו או שלחו בוואטסאפ.
+                                                        </p>
+                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                            <button
+                                                                type="button"
+                                                                disabled={paymentLinkBusy}
+                                                                onClick={async () => {
+                                                                    setPaymentLinkBusy(true);
+                                                                    try {
+                                                                        const res = await api.post(`/admin/orders/${selectedOrder.id}/payment-link`, {}, { headers: getAuthHeaders() });
+                                                                        if (res.data.success && res.data.payment_url) {
+                                                                            await navigator.clipboard.writeText(res.data.payment_url);
+                                                                            alert('קישור התשלום הועתק ללוח');
+                                                                        } else {
+                                                                            alert(res.data?.message || 'לא ניתן ליצור קישור');
+                                                                        }
+                                                                    } catch (err) {
+                                                                        alert(err.response?.data?.message || 'שגיאה ביצירת קישור תשלום');
+                                                                    } finally {
+                                                                        setPaymentLinkBusy(false);
+                                                                    }
+                                                                }}
+                                                                className="flex items-center justify-center gap-2 bg-slate-50 text-slate-800 border border-slate-200 p-3 rounded-2xl font-bold text-xs hover:bg-slate-100 transition-all disabled:opacity-50"
+                                                            >
+                                                                {paymentLinkBusy ? <FaSpinner className="animate-spin" size={14} /> : <FaCopy size={14} />}
+                                                                העתק קישור תשלום
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                disabled={paymentLinkBusy || !digitsForWhatsApp(selectedOrder.customer_phone)}
+                                                                title={!digitsForWhatsApp(selectedOrder.customer_phone) ? 'אין מספר טלפון בהזמנה' : undefined}
+                                                                onClick={async () => {
+                                                                    const wa = digitsForWhatsApp(selectedOrder.customer_phone);
+                                                                    if (!wa) return;
+                                                                    setPaymentLinkBusy(true);
+                                                                    try {
+                                                                        const res = await api.post(`/admin/orders/${selectedOrder.id}/payment-link`, {}, { headers: getAuthHeaders() });
+                                                                        if (res.data.success && res.data.payment_url) {
+                                                                            const text = `היי, להשלמת התשלום להזמנה #${selectedOrder.id}:\n${res.data.payment_url}`;
+                                                                            window.open(`https://wa.me/${wa}?text=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer');
+                                                                        } else {
+                                                                            alert(res.data?.message || 'לא ניתן ליצור קישור');
+                                                                        }
+                                                                    } catch (err) {
+                                                                        alert(err.response?.data?.message || 'שגיאה ביצירת קישור תשלום');
+                                                                    } finally {
+                                                                        setPaymentLinkBusy(false);
+                                                                    }
+                                                                }}
+                                                                className="flex items-center justify-center gap-2 bg-emerald-50 text-emerald-800 border border-emerald-200 p-3 rounded-2xl font-bold text-xs hover:bg-emerald-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                                            >
+                                                                {paymentLinkBusy ? <FaSpinner className="animate-spin" size={14} /> : <FaWhatsapp size={16} />}
+                                                                שלח בוואטסאפ
+                                                            </button>
+                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            onClick={async () => {
+                                                                if (!confirm('האם לסמן את ההזמנה כשולמה?')) return;
+                                                                try {
+                                                                    const res = await api.post(`/admin/orders/${selectedOrder.id}/mark-paid`, {}, { headers: getAuthHeaders() });
+                                                                    if (res.data.success) {
+                                                                        setSelectedOrder(prev => ({
+                                                                            ...prev,
+                                                                            payment_status: 'paid',
+                                                                            marked_paid_by: user?.name,
+                                                                            marked_paid_at: new Date().toISOString()
+                                                                        }));
+                                                                        setOrders(prev => prev.map(o => o.id === selectedOrder.id ? { ...o, payment_status: 'paid', marked_paid_by: user?.name, marked_paid_at: new Date().toISOString() } : o));
+                                                                        setAllOrders(prev => prev.map(o => o.id === selectedOrder.id ? { ...o, payment_status: 'paid', marked_paid_by: user?.name, marked_paid_at: new Date().toISOString() } : o));
+                                                                    }
+                                                                } catch (err) {
+                                                                    alert(err.response?.data?.message || 'שגיאה בסימון ההזמנה כשולמה');
                                                                 }
-                                                            } catch (err) {
-                                                                alert(err.response?.data?.message || 'שגיאה בסימון ההזמנה כשולמה');
-                                                            }
-                                                        }}
-                                                        className="w-full bg-green-50 text-green-700 border border-green-200 p-3 rounded-2xl font-black text-xs uppercase tracking-wider hover:bg-green-100 transition-all active:scale-95 flex items-center justify-center gap-2"
-                                                    >
-                                                        <FaCheckCircle size={14} />
-                                                        סמן כשולם
-                                                    </button>
+                                                            }}
+                                                            className="w-full bg-green-50 text-green-700 border border-green-200 p-3 rounded-2xl font-black text-xs uppercase tracking-wider hover:bg-green-100 transition-all active:scale-95 flex items-center justify-center gap-2"
+                                                        >
+                                                            <FaCheckCircle size={14} />
+                                                            סמן כשולם ידנית
+                                                        </button>
+                                                    </div>
                                                 )}
                                         </div>
                                     </div>

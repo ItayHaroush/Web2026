@@ -91,6 +91,8 @@ class Order extends Model
      * סטטוסים אפשריים
      */
     const STATUS_PENDING = 'pending';        // ממתין
+    /** B2C אשראי: נוצרה הזמנה, תשלום HYP עדיין לא הושלם */
+    const STATUS_AWAITING_PAYMENT = 'awaiting_payment';
     const STATUS_RECEIVED = 'received';      // התקבלה
     const STATUS_PREPARING = 'preparing';    // בהכנה
     const STATUS_READY = 'ready';            // מוכנה
@@ -131,6 +133,7 @@ class Order extends Model
     {
         // מעברים משותפים לכל סוג משלוח
         $commonTransitions = [
+            self::STATUS_AWAITING_PAYMENT => [self::STATUS_CANCELLED],
             self::STATUS_PENDING => [self::STATUS_RECEIVED, self::STATUS_PREPARING, self::STATUS_CANCELLED],
             self::STATUS_RECEIVED => [self::STATUS_PREPARING, self::STATUS_CANCELLED],
             self::STATUS_PREPARING => [self::STATUS_READY, self::STATUS_CANCELLED],
@@ -190,15 +193,39 @@ class Order extends Model
     }
 
     /**
-     * Scope: הזמנות שנראות למסעדה (לא "סטנד בי" ממתין לאישור אשראי).
-     * הזמנות באשראי עם payment_status=pending לא יופיעו ברשימה עד שאושרו ב-HYP.
+     * Scope: הזמנות שנראות למסעדה (לא תשלום אשראי B2C שלא הושלם).
      */
     public function scopeVisibleToRestaurant($query)
     {
-        return $query->where(function ($q) {
-            $q->where('payment_method', '!=', 'credit_card')
-                ->orWhere('payment_status', '!=', self::PAYMENT_PENDING);
-        });
+        return $query->where('status', '!=', self::STATUS_AWAITING_PAYMENT)
+            ->where(function ($q) {
+                $q->where('payment_method', '!=', 'credit_card')
+                    ->orWhere('payment_status', '!=', self::PAYMENT_PENDING);
+            });
+    }
+
+    /**
+     * סינון תצוגת מסעדן: רק הזמנות מ־תאריך תחילת פעילות (אם הוגדר ע"י סופר־אדמין).
+     */
+    public function scopeForOwnerReporting($query, Restaurant $restaurant)
+    {
+        if ($restaurant->owner_activity_started_at) {
+            $query->where(
+                'orders.created_at',
+                '>=',
+                $restaurant->owner_activity_started_at->copy()->startOfDay()
+            );
+        }
+
+        return $query;
+    }
+
+    /**
+     * סשני תשלום HYP (B2C)
+     */
+    public function paymentSessions(): HasMany
+    {
+        return $this->hasMany(PaymentSession::class);
     }
 
     /**

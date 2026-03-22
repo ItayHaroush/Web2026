@@ -1073,6 +1073,8 @@ function RestaurantDetailModal({ restaurant: initialRestaurant, onClose, onImper
     const { getAuthHeaders } = useAdminAuth();
     const [restaurant, setRestaurant] = useState(initialRestaurant);
     const [loading, setLoading] = useState(true);
+    const [ownerActivityDate, setOwnerActivityDate] = useState('');
+    const [savingOwnerActivity, setSavingOwnerActivity] = useState(false);
 
     useEffect(() => {
         const fetchDetails = async () => {
@@ -1080,7 +1082,15 @@ function RestaurantDetailModal({ restaurant: initialRestaurant, onClose, onImper
                 const res = await api.get(`/super-admin/restaurants/${initialRestaurant.id}`, {
                     headers: getAuthHeaders(),
                 });
-                if (res.data.success) setRestaurant(res.data.restaurant);
+                if (res.data.success) {
+                    const r = res.data.restaurant;
+                    setRestaurant(r);
+                    setOwnerActivityDate(
+                        r.owner_activity_started_at
+                            ? String(r.owner_activity_started_at).slice(0, 10)
+                            : ''
+                    );
+                }
             } catch (err) {
                 console.error('Failed to fetch restaurant details:', err);
             } finally {
@@ -1089,6 +1099,28 @@ function RestaurantDetailModal({ restaurant: initialRestaurant, onClose, onImper
         };
         fetchDetails();
     }, [initialRestaurant.id]);
+
+    const saveOwnerActivityDate = async (clear) => {
+        const value = clear ? null : (ownerActivityDate || null);
+        setSavingOwnerActivity(true);
+        try {
+            const res = await api.put(
+                `/super-admin/restaurants/${restaurant.id}`,
+                { owner_activity_started_at: value },
+                { headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' } }
+            );
+            if (res.data.success) {
+                setRestaurant(res.data.restaurant);
+                if (clear) setOwnerActivityDate('');
+                toast.success(clear ? 'תאריך תחילת הפעילות נוקה' : 'תאריך תחילת הפעילות נשמר');
+            }
+        } catch (err) {
+            console.error(err);
+            toast.error(err.response?.data?.message || 'שגיאה בשמירה');
+        } finally {
+            setSavingOwnerActivity(false);
+        }
+    };
 
     /** נתיב תפריט ציבורי (תואם App.jsx: /:tenantId/menu) */
     const publicMenuUrl = `/${restaurant.tenant_id}/menu`;
@@ -1277,6 +1309,44 @@ function RestaurantDetailModal({ restaurant: initialRestaurant, onClose, onImper
                                 <div className="bg-orange-50 rounded-xl p-2.5 sm:p-3 border border-orange-100 text-center min-w-0">
                                     <p className="text-base sm:text-lg font-black text-orange-700 tabular-nums leading-tight">{restaurant.categories_count ?? 0}</p>
                                     <p className="text-[9px] sm:text-[10px] font-bold text-orange-500 mt-1 leading-tight">קטגוריות</p>
+                                </div>
+                            </div>
+
+                            {/* תאריך תחילת פעילות — תצוגת מסעדן מאפס */}
+                            <div className="bg-amber-50/80 rounded-2xl p-5 border border-amber-100">
+                                <h3 className="text-sm font-black text-gray-900 mb-2 flex items-center gap-2">
+                                    <FaClipboardList className="text-amber-600" size={14} />
+                                    תאריך תחילת פעילות (תצוגת מסעדן)
+                                </h3>
+                                <p className="text-xs text-amber-900/80 font-medium mb-3 leading-relaxed">
+                                    מיום זה ואילך המסעדן רואה סטטיסטיקות, הזמנות ודוחות בלבד. הנתונים במסד לא נמחקים; חיובי פלטפורמה מבוססים על כל ההיסטוריה.
+                                </p>
+                                <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 items-stretch sm:items-end">
+                                    <div className="flex-1 min-w-0">
+                                        <label className="text-xs font-bold text-gray-500 block mb-1">מתאריך</label>
+                                        <input
+                                            type="date"
+                                            value={ownerActivityDate}
+                                            onChange={(e) => setOwnerActivityDate(e.target.value)}
+                                            className="w-full px-3 py-2 rounded-xl border border-amber-200 bg-white text-sm font-bold text-gray-800"
+                                        />
+                                    </div>
+                                    <button
+                                        type="button"
+                                        disabled={savingOwnerActivity}
+                                        onClick={() => saveOwnerActivityDate(false)}
+                                        className="px-4 py-2 bg-amber-600 text-white rounded-xl text-sm font-bold hover:bg-amber-700 disabled:opacity-50"
+                                    >
+                                        {savingOwnerActivity ? 'שומר…' : 'שמור'}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        disabled={savingOwnerActivity || !restaurant.owner_activity_started_at}
+                                        onClick={() => saveOwnerActivityDate(true)}
+                                        className="px-4 py-2 border border-amber-300 text-amber-900 rounded-xl text-sm font-bold hover:bg-amber-100/80 disabled:opacity-50"
+                                    >
+                                        נקה תאריך
+                                    </button>
                                 </div>
                             </div>
 

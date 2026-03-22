@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Models\CartSession;
 use App\Models\Order;
 use App\Models\PaymentSession;
 use App\Models\Restaurant;
@@ -147,12 +148,24 @@ class ReconcilePayments extends Command
                 // עדכון order
                 $order = $session->order;
                 if ($order && $order->payment_status !== Order::PAYMENT_PAID) {
-                    $order->update([
+                    $updates = [
                         'payment_status'         => Order::PAYMENT_PAID,
                         'payment_transaction_id' => $hypTransId,
                         'payment_amount'         => $expectedAmount,
                         'paid_at'                => now(),
-                    ]);
+                    ];
+                    if ($order->status === Order::STATUS_AWAITING_PAYMENT) {
+                        $updates['status'] = Order::STATUS_PENDING;
+                    }
+                    $order->update($updates);
+                    try {
+                        CartSession::markCompletedForB2COrder($order->fresh());
+                    } catch (\Throwable $e) {
+                        Log::warning('Reconcile: CartSession markCompleted failed', [
+                            'order_id' => $order->id,
+                            'error'    => $e->getMessage(),
+                        ]);
+                    }
                 }
 
                 Log::info('Reconciliation: session synced from HYP', [

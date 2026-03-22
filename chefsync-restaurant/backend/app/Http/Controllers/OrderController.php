@@ -478,7 +478,9 @@ class OrderController extends Controller
                 'eta_minutes' => $etaMinutes,
                 'eta_note' => $etaNote,
                 'eta_updated_at' => now(),
-                'status' => Order::STATUS_PENDING,
+                'status' => $paymentMethod === 'credit_card'
+                    ? Order::STATUS_AWAITING_PAYMENT
+                    : Order::STATUS_PENDING,
                 'is_test' => $validated['is_test'] ?? false,           // הזמנת בדיקה
                 'test_note' => $validated['test_note'] ?? null,         // הערה להזמנת בדיקה
                 'scheduled_for' => $validated['scheduled_for'] ?? null,
@@ -612,22 +614,13 @@ class OrderController extends Controller
                 Log::warning('Failed to log order event', ['error' => $e->getMessage()]);
             }
 
-            // סמן סלי נטוש שהושלמו
-            try {
-                $q = CartSession::where('tenant_id', $tenantId)
-                    ->where('restaurant_id', $restaurantId)
-                    ->whereNull('completed_order_id');
-                $q->where(function ($sub) use ($order, $normalizedCustomerPhone) {
-                    if ($order->customer_id) {
-                        $sub->where('customer_id', $order->customer_id);
-                    }
-                    if ($normalizedCustomerPhone) {
-                        $sub->orWhere('customer_phone', $normalizedCustomerPhone);
-                    }
-                });
-                $q->update(['completed_order_id' => $order->id]);
-            } catch (\Exception $e) {
-                Log::warning('Failed to mark cart sessions completed', ['error' => $e->getMessage()]);
+            // סמן סלי נטוש שהושלמו — רק כשהתשלום לא תלוי ב-HYP (מזומן); באשראי אחרי אישור ב-HypOrderCallbackController
+            if ($paymentMethod !== 'credit_card') {
+                try {
+                    CartSession::markCompletedForB2COrder($order->fresh());
+                } catch (\Exception $e) {
+                    Log::warning('Failed to mark cart sessions completed', ['error' => $e->getMessage()]);
+                }
             }
 
             // B2C: אם תשלום באשראי, צור payment session + payment URL
