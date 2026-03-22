@@ -49,9 +49,8 @@ class PromotionService {
     async createPromotion(data) {
         try {
             const fd = this._buildFormData(data);
-            const response = await apiClient.post('/admin/promotions', fd, {
-                headers: { 'Content-Type': 'multipart/form-data' },
-            });
+            // אל תגדיר Content-Type ידנית — axios מוסיף boundary ל־FormData
+            const response = await apiClient.post('/admin/promotions', fd);
             return response.data;
         } catch (error) {
             console.error('שגיאה ביצירת מבצע:', error);
@@ -73,9 +72,7 @@ class PromotionService {
         try {
             const fd = this._buildFormData(data);
             fd.append('_method', 'PUT');
-            const response = await apiClient.post(`/admin/promotions/${id}`, fd, {
-                headers: { 'Content-Type': 'multipart/form-data' },
-            });
+            const response = await apiClient.post(`/admin/promotions/${id}`, fd);
             return response.data;
         } catch (error) {
             console.error('שגיאה בעדכון מבצע:', error);

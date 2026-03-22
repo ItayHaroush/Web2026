@@ -57,7 +57,7 @@ class PromotionController extends Controller
             $validated = $request->validate([
                 'name' => 'required|string|max:100',
                 'description' => 'nullable|string|max:500',
-                'image' => 'nullable|image|max:2048',
+                'image' => 'nullable|image|max:12288',
                 'start_at' => 'nullable|date',
                 'end_at' => 'nullable|date|after_or_equal:start_at',
                 'active_hours_start' => 'nullable|date_format:H:i',
@@ -186,7 +186,7 @@ class PromotionController extends Controller
             $validated = $request->validate([
                 'name' => 'required|string|max:100',
                 'description' => 'nullable|string|max:500',
-                'image' => 'nullable|image|max:2048',
+                'image' => 'nullable|image|max:12288',
                 'remove_image' => 'nullable|boolean',
                 'start_at' => 'nullable|date',
                 'end_at' => 'nullable|date|after_or_equal:start_at',

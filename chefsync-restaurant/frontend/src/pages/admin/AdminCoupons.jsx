@@ -6,6 +6,7 @@ import { useAdminAuth } from '../../context/AdminAuthContext';
 import promotionService from '../../services/promotionService';
 import apiClient from '../../services/apiClient';
 import { resolveAssetUrl } from '../../utils/assets';
+import { compressPromotionImage } from '../../utils/compressPromotionImage';
 
 const DAY_NAMES = ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳'];
 
@@ -182,7 +183,12 @@ export default function AdminCoupons() {
             fetchData();
         } catch (err) {
             console.error('Save failed', err);
-            alert(err.response?.data?.message || 'שגיאה בשמירה');
+            const st = err.response?.status;
+            if (st === 413) {
+                alert('הבקשה גדולה מדי לשרת (לרוב תמונה). התמונה מכווצת אוטומטית — נסה שוב; אם נמשך, השתמש בתמונה קטנה יותר או בקש מהתמיכה להגדיל את מגבלת ההעלאה בשרת.');
+            } else {
+                alert(err.response?.data?.message || 'שגיאה בשמירה');
+            }
         } finally {
             setSaving(false);
         }
@@ -413,6 +419,7 @@ export default function AdminCoupons() {
                                 {/* תמונת מבצע */}
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">תמונת מבצע</label>
+                                    <p className="text-xs text-gray-500 mb-2">תמונות גדולות נדחסות אוטומטית לפני השליחה כדי למנוע שגיאת העלאה.</p>
                                     {(form.imagePreview || (editingPromo?.image_url && !form.removeImage)) && (
                                         <div className="relative inline-block mb-2">
                                             <img
@@ -432,12 +439,12 @@ export default function AdminCoupons() {
                                     <input
                                         type="file"
                                         accept="image/jpeg,image/png,image/webp,image/gif"
-                                        onChange={e => {
+                                        onChange={async (e) => {
                                             const file = e.target.files?.[0];
                                             if (!file) return;
-                                            const maxBytes = 5 * 1024 * 1024;
+                                            const maxBytes = 12 * 1024 * 1024;
                                             if (file.size > maxBytes) {
-                                                alert('הקובץ גדול מדי (מקסימום 5MB)');
+                                                alert('הקובץ גדול מדי (מקסימום 12MB לפני דחיסה)');
                                                 e.target.value = '';
                                                 return;
                                             }
@@ -446,7 +453,19 @@ export default function AdminCoupons() {
                                                 e.target.value = '';
                                                 return;
                                             }
-                                            setForm(f => ({ ...f, image: file, imagePreview: URL.createObjectURL(file), removeImage: false }));
+                                            try {
+                                                const processed = await compressPromotionImage(file);
+                                                setForm(f => ({
+                                                    ...f,
+                                                    image: processed,
+                                                    imagePreview: URL.createObjectURL(processed),
+                                                    removeImage: false,
+                                                }));
+                                            } catch (err) {
+                                                console.error(err);
+                                                alert('לא ניתן לעבד את התמונה. נסה קובץ אחר.');
+                                                e.target.value = '';
+                                            }
                                         }}
                                         className="w-full min-w-0 text-sm text-gray-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-bold file:bg-brand-primary/10 file:text-brand-primary hover:file:bg-brand-primary/20"
                                     />
