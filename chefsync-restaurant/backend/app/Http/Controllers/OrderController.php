@@ -175,25 +175,7 @@ class OrderController extends Controller
                 }
             }
 
-            // ולידציה: מינימום הזמנה למשלוח
-            if ($validated['delivery_method'] === 'delivery' && $restaurant->delivery_minimum > 0) {
-                // חשב סכום מוצרים בלבד (בלי עמלת משלוח)
-                $itemsTotal = 0;
-                foreach ($validated['items'] as $item) {
-                    $mi = MenuItem::find($item['menu_item_id']);
-                    if ($mi) {
-                        $qty = $item['qty'] ?? $item['quantity'] ?? 1;
-                        $itemsTotal += $mi->price * $qty;
-                    }
-                }
-                if ($itemsTotal < $restaurant->delivery_minimum) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => "מינימום הזמנה למשלוח: ₪{$restaurant->delivery_minimum}",
-                        'data' => ['delivery_minimum' => $restaurant->delivery_minimum, 'current_total' => $itemsTotal],
-                    ], 422);
-                }
-            }
+            // ולידציה: מינימום הזמנה למשלוח — מתבצע אחרי חישוב סכום שורות מלא (כמו בסל הלקוח), ראו מתחת ללולאת הפריטים
 
             // ולידציה: אם בחרו אשראי, לוודא שהמסעדה תומכת (מסוף מאומת + שיטה מופעלת)
             if (($validated['payment_method'] ?? 'cash') === 'credit_card') {
@@ -435,6 +417,21 @@ class OrderController extends Controller
                     'addons_total' => $addonsTotal,
                     'price_at_order' => $unitPrice,
                 ];
+            }
+
+            // מינימום הזמנה למשלוח: סכום שורות מלא (בסיס + וריאציה + תוספות) × כמות — כמו חישוב הסל בלקוח; בלי עמלת משלוח ובלי מבצעים
+            if ($validated['delivery_method'] === 'delivery' && (float) $restaurant->delivery_minimum > 0) {
+                $min = (float) $restaurant->delivery_minimum;
+                if ($totalAmount < $min) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => "מינימום הזמנה למשלוח: ₪{$min}",
+                        'data' => [
+                            'delivery_minimum' => $min,
+                            'current_total' => $totalAmount,
+                        ],
+                    ], 422);
+                }
             }
 
             // חישוב מבצעים (אם הלקוח שלח applied_promotions)
