@@ -19,7 +19,6 @@ import {
     FaBell,
     FaBellSlash,
     FaReceipt,
-    FaCheck,
     FaMapMarkerAlt,
     FaArrowLeft,
     FaTabletAlt,
@@ -227,6 +226,7 @@ export default function AdminDashboard() {
 
     const getStatusBadge = (status) => {
         const statuses = {
+            awaiting_payment: { text: 'ממתין לתשלום', color: 'bg-orange-50 text-orange-800 border-orange-100' },
             pending: { text: 'ממתין', color: 'bg-yellow-50 text-yellow-700 border-yellow-100' },
             received: { text: 'התקבל', color: 'bg-yellow-50 text-yellow-700 border-yellow-100' },
             preparing: { text: 'בהכנה', color: 'bg-blue-50 text-blue-700 border-blue-100' },
@@ -267,33 +267,28 @@ export default function AdminDashboard() {
                             )}
                         </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-3 shrink-0">
+                        <span className="text-xs font-black text-gray-500 whitespace-nowrap">התראות</span>
                         <button
-                            onClick={enablePush}
-                            disabled={pushState.status === 'loading' || permission === 'denied' || isPushEnabled}
-                            className={`flex-1 lg:flex-none px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-sm flex items-center justify-center gap-2 ${isPushEnabled
-                                ? 'bg-green-50 text-green-700 border border-green-100 cursor-default'
-                                : 'bg-brand-primary text-white hover:shadow-brand-primary/20 hover:shadow-lg disabled:opacity-50'
+                            type="button"
+                            role="switch"
+                            aria-checked={isPushEnabled}
+                            aria-busy={pushState.status === 'loading'}
+                            onClick={() => (isPushEnabled ? disablePush() : enablePush())}
+                            disabled={pushState.status === 'loading' || permission === 'denied'}
+                            className={`relative h-9 w-14 shrink-0 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus-visible:ring-offset-2 disabled:opacity-40 ${isPushEnabled ? 'bg-emerald-500' : 'bg-gray-200'
                                 }`}
                         >
-                            {pushState.status === 'loading' ? (
-                                <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                            ) : isPushEnabled ? (
-                                <><FaCheck size={10} /> מחובר</>
-                            ) : (
-                                'הפעל התראות'
+                            <span
+                                className={`absolute top-1 h-7 w-7 rounded-full bg-white shadow-md transition-all duration-200 ${isPushEnabled ? 'end-1' : 'start-1'
+                                    }`}
+                            />
+                            {pushState.status === 'loading' && (
+                                <span className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                    <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                                </span>
                             )}
                         </button>
-
-                        {isPushEnabled && (
-                            <button
-                                onClick={disablePush}
-                                disabled={pushState.status === 'loading'}
-                                className="px-5 py-2.5 bg-white border border-gray-100 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-sm flex items-center justify-center gap-2"
-                            >
-                                כבה
-                            </button>
-                        )}
                     </div>
                 </div>
             </div>
@@ -314,75 +309,6 @@ export default function AdminDashboard() {
                     </div>
                 );
             })()}
-
-            {canManualPaymentTools && manualPaymentOrders.length > 0 && (
-                <div className="bg-white rounded-3xl border border-cyan-100 shadow-sm overflow-hidden mb-6">
-                    <div className="p-5 border-b border-cyan-50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2.5 rounded-xl bg-cyan-50 text-cyan-700">
-                                <FaHandPaper size={18} />
-                            </div>
-                            <div>
-                                <h2 className="text-base font-black text-gray-900">הזמנות לטיפול ידני בתשלום מהאתר</h2>
-                                <p className="text-xs text-gray-500 font-bold mt-0.5">
-                                    {manualPaymentOrders.length === 1
-                                        ? 'הזמנה אחת ממתינה לאישור או לקישור תשלום (HYP)'
-                                        : `${manualPaymentOrders.length} הזמנות ממתינות לאישור או לקישור תשלום`}
-                                </p>
-                            </div>
-                        </div>
-                        <button
-                            type="button"
-                            onClick={() => navigate('/admin/orders')}
-                            className="text-xs font-black text-cyan-700 hover:underline shrink-0"
-                        >
-                            לכל ההזמנות
-                        </button>
-                    </div>
-                    <div className="divide-y divide-gray-50 max-h-80 overflow-y-auto">
-                        {manualPaymentOrders.map((o) => {
-                            const pay = o.payment_status === 'failed' ? 'תשלום נכשל' : 'ממתין לתשלום';
-                            const total = Number(o.total_amount ?? o.total ?? 0);
-                            return (
-                                <div
-                                    key={o.id}
-                                    className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 hover:bg-gray-50/80 transition-colors"
-                                >
-                                    <div className="min-w-0">
-                                        <div className="flex flex-wrap items-center gap-2 mb-1">
-                                            <span className="text-sm font-black text-gray-900">#{o.id}</span>
-                                            <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-lg bg-orange-50 text-orange-800 border border-orange-100">
-                                                {pay}
-                                            </span>
-                                        </div>
-                                        <p className="text-sm font-bold text-gray-800 truncate">{o.customer_name || '—'}</p>
-                                        <p className="text-[11px] text-gray-400 font-bold mt-0.5">
-                                            ₪{total.toFixed(2)} · {o.items?.length || 0} פריטים
-                                        </p>
-                                    </div>
-                                    <div className="flex flex-wrap gap-2 shrink-0">
-                                        <button
-                                            type="button"
-                                            onClick={() => setManualPaymentModalOrder(o)}
-                                            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-cyan-600 text-white text-xs font-black hover:bg-cyan-700 transition-all shadow-sm"
-                                        >
-                                            <FaLink size={12} />
-                                            טיפול ידני
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => navigate(`/admin/orders?orderId=${o.id}`)}
-                                            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-white border border-gray-200 text-gray-700 text-xs font-black hover:bg-gray-50 transition-all"
-                                        >
-                                            פתח בהזמנות
-                                        </button>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
-            )}
 
             {/* כרטיסי סטטיסטיקה מצומצמים */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -406,48 +332,110 @@ export default function AdminDashboard() {
                 ))}
             </div>
 
-            {/* הזמנות עתידיות */}
-            {futureOrders.length > 0 && (
-                <div className="bg-white rounded-2xl border border-indigo-100 shadow-sm p-5 mb-6">
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-sm font-black text-gray-900 flex items-center gap-2">
-                            <div className="p-2 rounded-lg bg-indigo-50 text-indigo-600">
-                                <FaClock size={14} />
+            {(futureOrders.length > 0 || (canManualPaymentTools && manualPaymentOrders.length > 0)) && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6 items-stretch">
+                    {futureOrders.length > 0 && (
+                        <div className="bg-white rounded-2xl border border-indigo-100 shadow-sm p-4 flex flex-col min-h-0">
+                            <div className="flex items-center justify-between gap-2 mb-3 shrink-0">
+                                <h3 className="text-sm font-black text-gray-900 flex items-center gap-2 min-w-0">
+                                    <span className="p-2 rounded-lg bg-indigo-50 text-indigo-600 shrink-0">
+                                        <FaClock size={14} />
+                                    </span>
+                                    <span className="truncate">עתידיות ({futureOrders.length})</span>
+                                </h3>
+                                <button
+                                    type="button"
+                                    onClick={() => navigate('/admin/orders')}
+                                    className="text-[10px] font-black text-indigo-600 hover:underline shrink-0"
+                                >
+                                    הכל
+                                </button>
                             </div>
-                            הזמנות עתידיות ({futureOrders.length})
-                        </h3>
-                        <button
-                            onClick={() => navigate('/admin/orders')}
-                            className="text-xs font-bold text-indigo-600 hover:underline"
-                        >
-                            צפה בכל ההזמנות
-                        </button>
-                    </div>
-                    <div className="space-y-2 max-h-64 overflow-y-auto">
-                        {futureOrders.map(order => (
-                            <div
-                                key={order.id}
-                                onClick={() => navigate('/admin/orders')}
-                                className="flex items-center justify-between p-3 bg-indigo-50/50 rounded-xl border border-indigo-100/50 cursor-pointer hover:bg-indigo-100/50 transition-colors"
-                            >
-                                <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 bg-indigo-100 text-indigo-700 rounded-lg flex items-center justify-center text-xs font-black">
-                                        #{String(order.id).slice(-4)}
+                            <div className="space-y-2 max-h-52 overflow-y-auto flex-1 min-h-0">
+                                {futureOrders.map(order => (
+                                    <div
+                                        key={order.id}
+                                        onClick={() => navigate('/admin/orders')}
+                                        className="flex items-center justify-between p-2.5 bg-indigo-50/50 rounded-xl border border-indigo-100/50 cursor-pointer hover:bg-indigo-100/50 transition-colors text-sm"
+                                    >
+                                        <div className="flex items-center gap-2 min-w-0">
+                                            <div className="w-7 h-7 bg-indigo-100 text-indigo-700 rounded-lg flex items-center justify-center text-[10px] font-black shrink-0">
+                                                #{String(order.id).slice(-4)}
+                                            </div>
+                                            <div className="min-w-0">
+                                                <p className="font-bold text-gray-900 truncate">{order.customer_name}</p>
+                                                <p className="text-[10px] text-indigo-600 font-bold">
+                                                    {new Date(order.scheduled_for).toLocaleString('he-IL', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="text-left shrink-0 mr-2">
+                                            <p className="font-black text-gray-900">₪{Number(order.total_amount || order.total || 0).toFixed(0)}</p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <p className="text-sm font-bold text-gray-900">{order.customer_name}</p>
-                                        <p className="text-[10px] text-indigo-600 font-bold">
-                                            {new Date(order.scheduled_for).toLocaleString('he-IL', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
-                                        </p>
-                                    </div>
-                                </div>
-                                <div className="text-left">
-                                    <p className="text-sm font-black text-gray-900">₪{Number(order.total_amount || order.total || 0).toFixed(0)}</p>
-                                    <p className="text-[10px] text-gray-400">{order.items?.length || 0} פריטים</p>
-                                </div>
+                                ))}
                             </div>
-                        ))}
-                    </div>
+                        </div>
+                    )}
+                    {canManualPaymentTools && manualPaymentOrders.length > 0 && (
+                        <div className="bg-white rounded-2xl border border-cyan-100 shadow-sm p-4 flex flex-col min-h-0">
+                            <div className="flex items-center justify-between gap-2 mb-3 shrink-0">
+                                <h3 className="text-sm font-black text-gray-900 flex items-center gap-2 min-w-0">
+                                    <span className="p-2 rounded-lg bg-cyan-50 text-cyan-700 shrink-0">
+                                        <FaHandPaper size={14} />
+                                    </span>
+                                    <span className="truncate">טיפול בתשלום ({manualPaymentOrders.length})</span>
+                                </h3>
+                                <button
+                                    type="button"
+                                    onClick={() => navigate('/admin/orders')}
+                                    className="text-[10px] font-black text-cyan-700 hover:underline shrink-0"
+                                >
+                                    הכל
+                                </button>
+                            </div>
+                            <div className="divide-y divide-gray-50 max-h-52 overflow-y-auto flex-1 min-h-0 border-t border-gray-50 -mx-4 px-4">
+                                {manualPaymentOrders.map((o) => {
+                                    const pay = o.payment_status === 'failed' ? 'נכשל' : 'ממתין';
+                                    const total = Number(o.total_amount ?? o.total ?? 0);
+                                    return (
+                                        <div
+                                            key={o.id}
+                                            className="py-2.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 hover:bg-gray-50/80 transition-colors first:pt-0"
+                                        >
+                                            <div className="min-w-0">
+                                                <div className="flex flex-wrap items-center gap-1.5 mb-0.5">
+                                                    <span className="text-xs font-black text-gray-900">#{o.id}</span>
+                                                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-orange-50 text-orange-800 border border-orange-100">
+                                                        {pay}
+                                                    </span>
+                                                </div>
+                                                <p className="text-xs font-bold text-gray-800 truncate">{o.customer_name || '—'}</p>
+                                                <p className="text-[10px] text-gray-400 font-bold">₪{total.toFixed(2)}</p>
+                                            </div>
+                                            <div className="flex flex-wrap gap-1.5 shrink-0">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setManualPaymentModalOrder(o)}
+                                                    className="inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-xl bg-cyan-600 text-white text-[10px] font-black hover:bg-cyan-700 transition-all"
+                                                >
+                                                    <FaLink size={10} />
+                                                    טיפול
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => navigate(`/admin/orders?orderId=${o.id}`)}
+                                                    className="inline-flex items-center justify-center px-3 py-1.5 rounded-xl bg-white border border-gray-200 text-gray-700 text-[10px] font-black hover:bg-gray-50"
+                                                >
+                                                    פתח
+                                                </button>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
 

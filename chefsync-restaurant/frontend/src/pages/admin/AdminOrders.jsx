@@ -329,6 +329,7 @@ export default function AdminOrders() {
 
     const statusOptions = [
         { value: '', label: 'הכל', icon: <FaReceipt /> },
+        { value: 'awaiting_payment', label: 'ממתין לתשלום', icon: <FaClock /> },
         { value: 'pending', label: 'ממתין', icon: <FaClock /> },
         { value: 'received', label: 'התקבל', icon: <FaBell /> },
         { value: 'preparing', label: 'בהכנה', icon: <FaSpinner className="animate-spin" /> },
@@ -342,6 +343,7 @@ export default function AdminOrders() {
         // פונקציה עזר לחישוב הסטטוס הבא לפי סוג המשלוח
         const getNextStatus = (currentStatus, isDelivery) => {
             const transitions = {
+                awaiting_payment: null,
                 pending: 'preparing',
                 received: 'preparing',
                 preparing: 'ready',
@@ -357,6 +359,12 @@ export default function AdminOrders() {
         const nextStatus = getNextStatus(status, isDelivery);
 
         const statuses = {
+            awaiting_payment: {
+                text: 'ממתין לתשלום',
+                color: 'bg-orange-50 text-orange-700 border-orange-100',
+                icon: <FaClock />,
+                nextStatus
+            },
             pending: {
                 text: 'ממתין',
                 color: 'bg-amber-50 text-amber-600 border-amber-100',

@@ -101,9 +101,14 @@ export default function AdminTerminal() {
             if (response.data.success) {
                 // סנן רק הזמנות שלא הושלמו או בוטלו
                 const allOrders = response.data.orders.data || response.data.orders;
-                const openOrders = allOrders.filter(order =>
-                    order.status !== 'delivered' && order.status !== 'cancelled'
-                );
+                const openOrders = allOrders.filter((order) => {
+                    if (order.status === 'delivered' || order.status === 'cancelled') return false;
+                    // הזמנה עתידית — רק אחרי שנכנסה לפעולה (למשל received והלאה אחרי שעובדת ה-cron)
+                    if (order.is_future_order && !['received', 'preparing', 'ready', 'delivering'].includes(order.status)) return false;
+                    // אשראי — רק אחרי תשלום מלא
+                    if (order.payment_method === 'credit_card' && order.payment_status !== 'paid') return false;
+                    return true;
+                });
                 setOrders(openOrders);
             }
         } catch (error) {

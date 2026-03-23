@@ -12,8 +12,35 @@ function digitsForWhatsApp(phone) {
     return d;
 }
 
+async function copyTextRobust(text) {
+    try {
+        if (navigator.clipboard?.writeText) {
+            await navigator.clipboard.writeText(text);
+            return true;
+        }
+    } catch {
+        /* clipboard API often fails outside HTTPS or without focus — fallback below */
+    }
+    try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.setAttribute('readonly', '');
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        ta.style.top = '0';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        const ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+        return ok;
+    } catch {
+        return false;
+    }
+}
+
 /**
- * טיפול ידני בתשלום מהאתר (HYP): קישור, וואטסאפ, סימון שולם, החלפה למזומן.
+ * טיפול ידני: קישור תשלום, וואטסאפ, סימון שולם, החלפה למזומן.
  */
 export default function OrderManualPaymentModal({ order, getAuthHeaders, onClose, onUpdated }) {
     const [paymentLinkBusy, setPaymentLinkBusy] = useState(false);
@@ -44,15 +71,19 @@ export default function OrderManualPaymentModal({ order, getAuthHeaders, onClose
             }
             if (mode === 'whatsapp') {
                 if (!waDigits) {
-                    await navigator.clipboard.writeText(url);
-                    showToast('אין מספר טלפון — הקישור הועתק ללוח');
+                    const copied = await copyTextRobust(url);
+                    showToast(copied ? 'אין מספר טלפון — הקישור הועתק ללוח' : 'אין מספר טלפון — לא ניתן להעתיק ללוח');
                     return;
                 }
                 const text = encodeURIComponent(`היי, להשלמת התשלום להזמנה #${order.id}:\n${url}`);
                 window.open(`https://wa.me/${waDigits}?text=${text}`, '_blank', 'noopener,noreferrer');
             } else {
-                await navigator.clipboard.writeText(url);
-                showToast('קישור התשלום הועתק ללוח');
+                const copied = await copyTextRobust(url);
+                if (copied) {
+                    showToast('קישור התשלום הועתק ללוח');
+                } else {
+                    window.prompt('העתקו את הקישור לתשלום:', url);
+                }
             }
         } catch (e) {
             showToast(e.response?.data?.message || 'שגיאה ביצירת קישור', true);
@@ -140,10 +171,6 @@ export default function OrderManualPaymentModal({ order, getAuthHeaders, onClose
                 )}
 
                 <div className="p-5 space-y-3">
-                    <p className="text-xs text-gray-500 leading-relaxed">
-                        קישור תשלום מהאתר (HYP) ללקוח — לא מסוף PinPad. לתשלום בקופה השתמשו במסך &quot;ממתינות לתשלום&quot; בקופה.
-                    </p>
-
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         <button
                             type="button"
@@ -152,7 +179,7 @@ export default function OrderManualPaymentModal({ order, getAuthHeaders, onClose
                             className="flex items-center justify-center gap-2 bg-slate-50 text-slate-800 border border-slate-200 p-3 rounded-2xl font-bold text-xs hover:bg-slate-100 transition-all disabled:opacity-50"
                         >
                             {paymentLinkBusy ? <FaSpinner className="animate-spin" size={14} /> : <FaCopy size={14} />}
-                            העתק קישור
+                            העתק קישור לתשלום
                         </button>
                         <button
                             type="button"
