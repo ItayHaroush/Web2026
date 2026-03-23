@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\DailyReportsPeriodMergedPdfMail;
 use App\Mail\DailyReportsPeriodZipMail;
 use App\Models\DailyReport;
 use App\Models\Restaurant;
@@ -59,6 +60,7 @@ class SuperAdminDailyReportsController extends Controller
             ->with('restaurant')
             ->where('date', '>=', $validated['from'])
             ->where('date', '<=', $validated['to'])
+            ->orderBy('restaurant_id')
             ->orderBy('date');
 
         if (! empty($validated['restaurant_ids'])) {
@@ -83,9 +85,9 @@ class SuperAdminDailyReportsController extends Controller
     }
 
     /**
-     * מייל אחד לכל מסעדה — קובץ ZIP אחד עם כל ה-PDF בתקופה (לא מייל לכל דוח).
+     * הורדת PDF מאוחד (עמוד לכל יום) — חלופה ל-ZIP של קבצים נפרדים.
      */
-    public function sendEmails(Request $request): JsonResponse
+    public function exportMergedPdf(Request $request)
     {
         $validated = $request->validate([
             'from' => 'required|date',
@@ -98,6 +100,49 @@ class SuperAdminDailyReportsController extends Controller
             ->with('restaurant')
             ->where('date', '>=', $validated['from'])
             ->where('date', '<=', $validated['to'])
+            ->orderBy('restaurant_id')
+            ->orderBy('date');
+
+        if (! empty($validated['restaurant_ids'])) {
+            $query->whereIn('restaurant_id', $validated['restaurant_ids']);
+        }
+
+        $reports = $query->get();
+
+        if ($reports->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'אין דוחות בטווח התאריכים שנבחר',
+            ], 404);
+        }
+
+        $pdfPath = DailyReportDeliveryService::buildMergedPdfPathForReports($reports, 'sa-export-merged');
+        $filename = 'daily-reports-merged-'.$validated['from'].'-to-'.$validated['to'].'.pdf';
+
+        return response()->download($pdfPath, $filename, [
+            'Content-Type' => 'application/pdf',
+        ])->deleteFileAfterSend(true);
+    }
+
+    /**
+     * מייל אחד לכל מסעדה — קובץ ZIP או PDF מאוחד עם כל הדוחות בתקופה (לא מייל לכל דוח).
+     */
+    public function sendEmails(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'from' => 'required|date',
+            'to' => 'required|date|after_or_equal:from',
+            'restaurant_ids' => 'nullable|array',
+            'restaurant_ids.*' => 'integer|exists:restaurants,id',
+            /** zip = כמה PDF בתוך ארכיון; merged_pdf = קובץ PDF אחד (עמוד לכל יום) */
+            'bundle' => 'nullable|string|in:zip,merged_pdf',
+        ]);
+
+        $query = DailyReport::withoutGlobalScopes()
+            ->with('restaurant')
+            ->where('date', '>=', $validated['from'])
+            ->where('date', '<=', $validated['to'])
+            ->orderBy('restaurant_id')
             ->orderBy('date');
 
         if (! empty($validated['restaurant_ids'])) {
@@ -106,6 +151,7 @@ class SuperAdminDailyReportsController extends Controller
 
         $reports = $query->get();
         $byRestaurant = $reports->groupBy('restaurant_id');
+        $useMergedPdf = ($validated['bundle'] ?? 'zip') === 'merged_pdf';
 
         $emailsSent = 0;
         $skippedNoEmail = 0;
@@ -126,16 +172,25 @@ class SuperAdminDailyReportsController extends Controller
                 continue;
             }
 
-            $zipPath = null;
+            $attachmentPath = null;
             try {
-                $zipPath = DailyReportDeliveryService::buildZipPathForReports($collection, 'email-'.$restaurantId);
-
-                Mail::to($email)->send(new DailyReportsPeriodZipMail(
-                    $restaurant,
-                    $validated['from'],
-                    $validated['to'],
-                    $zipPath
-                ));
+                if ($useMergedPdf) {
+                    $attachmentPath = DailyReportDeliveryService::buildMergedPdfPathForReports($collection, 'email-'.$restaurantId.'-merged');
+                    Mail::to($email)->send(new DailyReportsPeriodMergedPdfMail(
+                        $restaurant,
+                        $validated['from'],
+                        $validated['to'],
+                        $attachmentPath
+                    ));
+                } else {
+                    $attachmentPath = DailyReportDeliveryService::buildZipPathForReports($collection, 'email-'.$restaurantId);
+                    Mail::to($email)->send(new DailyReportsPeriodZipMail(
+                        $restaurant,
+                        $validated['from'],
+                        $validated['to'],
+                        $attachmentPath
+                    ));
+                }
                 $emailsSent++;
             } catch (\Throwable $e) {
                 $errors[] = "{$restaurant->name}: {$e->getMessage()}";
@@ -144,15 +199,17 @@ class SuperAdminDailyReportsController extends Controller
                     'error' => $e->getMessage(),
                 ]);
             } finally {
-                if ($zipPath && File::exists($zipPath)) {
-                    @unlink($zipPath);
+                if ($attachmentPath && File::exists($attachmentPath)) {
+                    @unlink($attachmentPath);
                 }
             }
         }
 
+        $bundleLabel = $useMergedPdf ? 'PDF מאוחד' : 'ZIP';
+
         return response()->json([
             'success' => true,
-            'message' => "נשלחו {$emailsSent} מיילים (מייל אחד לכל מסעדה עם ZIP)",
+            'message' => "נשלחו {$emailsSent} מיילים (מייל אחד לכל מסעדה — {$bundleLabel})",
             'data' => [
                 'sent' => $emailsSent,
                 'skipped_no_email' => $skippedNoEmail,

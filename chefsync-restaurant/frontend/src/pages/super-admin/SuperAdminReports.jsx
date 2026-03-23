@@ -1152,6 +1152,7 @@ function DailyReportsSummaryTab() {
     const [selectedRestaurantIds, setSelectedRestaurantIds] = useState([]);
     const [backfillLoading, setBackfillLoading] = useState(false);
     const [zipLoading, setZipLoading] = useState(false);
+    const [mergedPdfLoading, setMergedPdfLoading] = useState(false);
     const [emailLoading, setEmailLoading] = useState(false);
     const [waLoading, setWaLoading] = useState(false);
     const [waLinksModal, setWaLinksModal] = useState(null);
@@ -1252,13 +1253,26 @@ function DailyReportsSummaryTab() {
         }
     };
 
-    const handleSendEmails = async () => {
+    const handleExportMergedPdf = async () => {
+        setMergedPdfLoading(true);
+        try {
+            await reportService.superAdminExportMergedPdf(payloadBase());
+            toast.success('הורדת PDF מאוחד');
+        } catch (err) {
+            toast.error(err.response?.data?.message || err.message || 'אין דוחות בטווח או שגיאת שרת');
+        } finally {
+            setMergedPdfLoading(false);
+        }
+    };
+
+    const handleSendEmails = async (bundle = 'zip') => {
         setEmailLoading(true);
         try {
-            const res = await reportService.superAdminSendEmails(payloadBase());
+            const res = await reportService.superAdminSendEmails({ ...payloadBase(), bundle });
             const sent = res?.sent ?? 0;
             const skipped = res?.skipped_no_email ?? 0;
-            toast.success(`נשלחו ${sent} מיילים${skipped ? ` · דולגו ${skipped} ללא מייל` : ''}`);
+            const extra = bundle === 'merged_pdf' ? ' (PDF מאוחד)' : ' (ZIP)';
+            toast.success(`נשלחו ${sent} מיילים${extra}${skipped ? ` · דולגו ${skipped} ללא מייל` : ''}`);
         } catch (err) {
             toast.error(err.response?.data?.message || 'שגיאה בשליחת מיילים');
         } finally {
@@ -1389,7 +1403,7 @@ function DailyReportsSummaryTab() {
                     פעולות על דוחות יומיים
                 </h3>
                 <p className="text-xs text-gray-500 -mt-1">
-                    מייל: <strong className="text-gray-700">מייל אחד לכל מסעדה</strong> עם קובץ ZIP שמכיל את כל ה-PDF לתקופה. וואטסאפ: קישור אחד לכל מסעדה — למספר פלאפון בעלים (שמור במסך ניהול מסעדות) או גיבוי לטלפון מסעדה/בעלים.
+                    הורדה: <strong className="text-gray-700">ZIP</strong> (קובץ PDF לכל יום) או <strong className="text-gray-700">PDF מאוחד</strong> (עמוד לכל יום בקובץ אחד). מייל: מייל אחד לכל מסעדה עם צרופה לפי הבחירה. וואטסאפ: קישור אחד לכל מסעדה — פלאפון בעלים במערכת או גיבוי.
                 </p>
                 <div className="flex flex-wrap gap-2 pt-1">
                     <button
@@ -1408,16 +1422,34 @@ function DailyReportsSummaryTab() {
                         className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50"
                     >
                         <FaFileArchive size={12} />
-                        {zipLoading ? '...' : 'הורדת ZIP (PDF)'}
+                        {zipLoading ? '...' : 'הורדת ZIP'}
+                    </button>
+                    <button
+                        type="button"
+                        disabled={mergedPdfLoading}
+                        onClick={handleExportMergedPdf}
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold bg-teal-700 text-white hover:bg-teal-800 disabled:opacity-50"
+                    >
+                        <FaFilePdf size={12} />
+                        {mergedPdfLoading ? '...' : 'הורדת PDF מאוחד'}
                     </button>
                     <button
                         type="button"
                         disabled={emailLoading}
-                        onClick={handleSendEmails}
+                        onClick={() => handleSendEmails('zip')}
                         className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
                     >
                         <FaEnvelope size={12} />
-                        {emailLoading ? '...' : 'שליחת מיילים (ZIP אחד למסעדה)'}
+                        {emailLoading ? '...' : 'מייל — ZIP'}
+                    </button>
+                    <button
+                        type="button"
+                        disabled={emailLoading}
+                        onClick={() => handleSendEmails('merged_pdf')}
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50"
+                    >
+                        <FaFilePdf size={12} />
+                        {emailLoading ? '...' : 'מייל — PDF מאוחד'}
                     </button>
                     <button
                         type="button"

@@ -87,6 +87,43 @@ class DailyReportDeliveryService
     }
 
     /**
+     * PDF אחד — כל דוח יום כעמודים רצופים (חלופה ל-ZIP של קבצים נפרדים).
+     */
+    public static function buildMergedPdfPathForReports(Collection $reports, string $basename = 'daily-reports-merged'): string
+    {
+        $dir = storage_path('app/temp');
+        if (! is_dir($dir)) {
+            mkdir($dir, 0755, true);
+        }
+        $pdfPath = $dir.'/'.$basename.'-'.now()->timestamp.'-'.substr(sha1((string) microtime(true)), 0, 8).'.pdf';
+
+        $mpdf = new Mpdf(MpdfWritableConfig::merge([
+            'mode' => 'utf-8',
+            'format' => 'A4',
+            'default_font' => 'arial',
+            'directionality' => 'rtl',
+            'margin_left' => 15,
+            'margin_right' => 15,
+            'margin_top' => 15,
+            'margin_bottom' => 15,
+        ]));
+
+        $first = true;
+        foreach ($reports as $report) {
+            if (! $first) {
+                $mpdf->AddPage();
+            }
+            $first = false;
+            $html = view('reports.daily-pdf', ['report' => $report])->render();
+            $mpdf->WriteHTML($html);
+        }
+
+        $mpdf->Output($pdfPath, 'F');
+
+        return $pdfPath;
+    }
+
+    /**
      * טווח תאריכים לרבעון בלוח שנה (Asia/Jerusalem).
      *
      * @return array{0: \Carbon\Carbon, 1: \Carbon\Carbon, from: string, to: string}

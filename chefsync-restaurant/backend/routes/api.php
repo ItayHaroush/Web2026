@@ -196,6 +196,7 @@ Route::prefix('super-admin')->middleware(['auth:sanctum', 'super_admin'])->group
     Route::get('/reports/summary', [ReportController::class, 'superAdminSummary'])->name('super-admin.reports.summary');
     Route::post('/reports/backfill-missing', [SuperAdminDailyReportsController::class, 'backfillMissing'])->name('super-admin.reports.backfill-missing');
     Route::post('/reports/export-zip', [SuperAdminDailyReportsController::class, 'exportZip'])->name('super-admin.reports.export-zip');
+    Route::post('/reports/export-merged-pdf', [SuperAdminDailyReportsController::class, 'exportMergedPdf'])->name('super-admin.reports.export-merged-pdf');
     Route::post('/reports/send-emails', [SuperAdminDailyReportsController::class, 'sendEmails'])->name('super-admin.reports.send-emails');
     Route::post('/reports/whatsapp-links', [SuperAdminDailyReportsController::class, 'whatsappLinks'])->name('super-admin.reports.whatsapp-links');
     Route::get('/reports/quarterly-summary', [SuperAdminDailyReportsController::class, 'quarterlySummary'])->name('super-admin.reports.quarterly-summary');

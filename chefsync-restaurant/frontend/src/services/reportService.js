@@ -147,6 +147,47 @@ class ReportService {
         }
     }
 
+    async superAdminExportMergedPdf({ from, to, restaurant_ids }) {
+        try {
+            const response = await apiClient.post(
+                '/super-admin/reports/export-merged-pdf',
+                { from, to, restaurant_ids },
+                {
+                    responseType: 'blob',
+                    transformResponse: [(d) => d],
+                }
+            );
+            const raw = response.data;
+            const ct = (response.headers['content-type'] || '').toLowerCase();
+            if (ct.includes('application/json') && raw instanceof Blob) {
+                const text = await raw.text();
+                const j = JSON.parse(text);
+                throw new Error(j.message || 'שגיאה בהורדת PDF');
+            }
+            const blob = new Blob([raw], { type: 'application/pdf' });
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `daily-reports-merged-${from}-to-${to}.pdf`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (err) {
+            const data = err.response?.data;
+            if (data instanceof Blob) {
+                const text = await data.text();
+                try {
+                    const j = JSON.parse(text);
+                    throw new Error(j.message || err.message || 'שגיאה בהורדת PDF');
+                } catch (inner) {
+                    if (inner instanceof Error && inner.message && inner.message !== err.message) throw inner;
+                }
+            }
+            throw err;
+        }
+    }
+
     async superAdminSendEmails(payload) {
         const response = await apiClient.post('/super-admin/reports/send-emails', payload);
         return unwrapApiPayload(response.data) ?? response.data;
