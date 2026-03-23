@@ -8,6 +8,7 @@ use App\Models\Restaurant;
 use App\Models\User;
 use App\Services\DailyReportBackfillService;
 use App\Services\DailyReportDeliveryService;
+use App\Support\MpdfWritableConfig;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
@@ -259,7 +260,7 @@ class SuperAdminDailyReportsController extends Controller
             'restaurant' => $restaurant,
         ])->render();
 
-        $mpdf = new Mpdf([
+        $mpdf = new Mpdf(MpdfWritableConfig::merge([
             'mode' => 'utf-8',
             'format' => 'A4',
             'default_font' => 'arial',
@@ -268,7 +269,7 @@ class SuperAdminDailyReportsController extends Controller
             'margin_right' => 15,
             'margin_top' => 15,
             'margin_bottom' => 15,
-        ]);
+        ]));
         $mpdf->WriteHTML($html);
 
         $fn = 'quarterly-'.$validated['year'].'-Q'.$validated['quarter'].'-'.$restaurant->tenant_id.'.pdf';

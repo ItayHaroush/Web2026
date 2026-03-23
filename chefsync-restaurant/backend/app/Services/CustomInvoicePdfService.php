@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Support\MpdfWritableConfig;
 use Mpdf\Mpdf;
 
 class CustomInvoicePdfService
@@ -15,7 +16,7 @@ class CustomInvoicePdfService
 
         try {
             $html = view('invoices.itay_invoice_content', $data)->render();
-            $mpdf = new Mpdf([
+            $mpdf = new Mpdf(MpdfWritableConfig::merge([
                 'mode' => 'utf-8',
                 'format' => 'A4',
                 'directionality' => 'rtl',
@@ -23,9 +24,8 @@ class CustomInvoicePdfService
                 'autoLangToFont' => true,
                 'biDirectional' => true,
                 'default_font' => 'dejavusans',
-                'tempDir' => storage_path('app/mpdf-temp'),
                 'margin_bottom' => 25,
-            ]);
+            ]));
             $mpdf->SetHTMLFooter('
                 <table width="100%" style="border-top: 1px solid #e5e7eb; padding-top: 8px; direction: rtl;">
                     <tr>

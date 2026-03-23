@@ -13,6 +13,7 @@ use App\Models\Category;
 use App\Models\DisplayScreen;
 use App\Models\Kiosk;
 use App\Models\User;
+use App\Support\MpdfWritableConfig;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use Mpdf\Mpdf;
@@ -211,7 +212,7 @@ class InvoicePdfService
 
         $html = view('invoices.monthly', $data)->render();
 
-        $mpdf = new Mpdf([
+        $mpdf = new Mpdf(MpdfWritableConfig::merge([
             'mode' => 'utf-8',
             'format' => 'A4',
             'directionality' => 'rtl',
@@ -219,9 +220,8 @@ class InvoicePdfService
             'autoLangToFont' => true,
             'biDirectional' => true,
             'default_font' => 'dejavusans',
-            'tempDir' => storage_path('app/mpdf-temp'),
             'margin_bottom' => 25,
-        ]);
+        ]));
 
         // Footer on all pages
         $mpdf->SetHTMLFooter('

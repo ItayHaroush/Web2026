@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\DailyReport;
 use App\Models\Restaurant;
 use App\Models\User;
+use App\Support\MpdfWritableConfig;
 use Illuminate\Support\Collection;
 use Mpdf\Mpdf;
 
@@ -62,7 +63,7 @@ class DailyReportDeliveryService
 
         foreach ($reports as $report) {
             $html = view('reports.daily-pdf', ['report' => $report])->render();
-            $mpdf = new Mpdf([
+            $mpdf = new Mpdf(MpdfWritableConfig::merge([
                 'mode' => 'utf-8',
                 'format' => 'A4',
                 'default_font' => 'arial',
@@ -71,7 +72,7 @@ class DailyReportDeliveryService
                 'margin_right' => 15,
                 'margin_top' => 15,
                 'margin_bottom' => 15,
-            ]);
+            ]));
             $mpdf->WriteHTML($html);
             $date = $report->date->format('Y-m-d');
             $safeName = preg_replace('/[^\p{L}\p{N}_\-\s]/u', '', $report->restaurant?->name ?? 'report');

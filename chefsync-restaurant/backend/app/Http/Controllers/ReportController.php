@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Mail\DailyReportMail;
 use App\Console\Commands\GenerateDailyReportsJob;
 use App\Services\DailyReportDeliveryService;
+use App\Support\MpdfWritableConfig;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -100,12 +101,7 @@ class ReportController extends Controller
 
             $html = view('reports.daily-pdf', ['report' => $report])->render();
 
-            $tempDir = storage_path('app/mpdf-temp');
-            if (!is_dir($tempDir)) {
-                mkdir($tempDir, 0755, true);
-            }
-
-            $mpdf = new Mpdf([
+            $mpdf = new Mpdf(MpdfWritableConfig::merge([
                 'mode' => 'utf-8',
                 'format' => 'A4',
                 'default_font' => 'arial',
@@ -114,8 +110,7 @@ class ReportController extends Controller
                 'margin_right' => 15,
                 'margin_top' => 15,
                 'margin_bottom' => 15,
-                'tempDir' => $tempDir,
-            ]);
+            ]));
 
             $mpdf->WriteHTML($html);
 
@@ -345,7 +340,7 @@ class ReportController extends Controller
         foreach ($reports as $report) {
             $html = view('reports.daily-pdf', ['report' => $report])->render();
 
-            $mpdf = new Mpdf([
+            $mpdf = new Mpdf(MpdfWritableConfig::merge([
                 'mode' => 'utf-8',
                 'format' => 'A4',
                 'default_font' => 'arial',
@@ -354,7 +349,7 @@ class ReportController extends Controller
                 'margin_right' => 15,
                 'margin_top' => 15,
                 'margin_bottom' => 15,
-            ]);
+            ]));
             $mpdf->WriteHTML($html);
 
             $date = $report->date->format('Y-m-d');
