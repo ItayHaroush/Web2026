@@ -3,7 +3,7 @@ import { FaTimes, FaClock, FaChevronLeft, FaShoppingBag } from 'react-icons/fa';
 
 const STATUS_LABELS = {
     pending: { label: 'ממתינה', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' },
-    awaiting_payment: { label: 'ממתין לתשלום', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400' },
+    awaiting_payment: { label: 'ממתין לאשראי', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400' },
     received: { label: 'התקבלה', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' },
     preparing: { label: 'בהכנה', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400' },
     ready: { label: 'מוכנה', color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' },

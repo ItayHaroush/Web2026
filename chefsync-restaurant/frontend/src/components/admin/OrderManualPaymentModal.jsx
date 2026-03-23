@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { FaTimes, FaCopy, FaWhatsapp, FaCheckCircle, FaMoneyBillWave, FaSpinner } from 'react-icons/fa';
 import api from '../../services/apiClient';
+import { paymentStatusBadgeLabel } from '../../utils/orderPaymentLabels';
 
 function digitsForWhatsApp(phone) {
     if (!phone || typeof phone !== 'string') return null;
@@ -146,11 +147,10 @@ export default function OrderManualPaymentModal({ order, getAuthHeaders, onClose
                         </p>
                         <p className="text-xs text-gray-400 mt-0.5">
                             סה״כ ₪{total.toFixed(2)}
-                            {order.payment_status === 'failed' && (
-                                <span className="mr-2 text-red-600 font-black">· תשלום נכשל</span>
-                            )}
-                            {order.payment_status === 'pending' && (
-                                <span className="mr-2 text-amber-600 font-black">· ממתין לתשלום</span>
+                            {order.payment_method === 'credit_card' && (
+                                <span className={`mr-2 font-black ${order.payment_status === 'failed' ? 'text-red-600' : order.payment_status === 'paid' ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                    · {paymentStatusBadgeLabel(order)}
+                                </span>
                             )}
                         </p>
                     </div>

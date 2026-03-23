@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { FaCheckCircle, FaFire, FaBell, FaTruck, FaBan, FaClock, FaShekelSign, FaClipboardList, FaMotorcycle, FaPrint, FaUtensils, FaUndo, FaGlobe, FaMapMarkerAlt } from 'react-icons/fa';
 import posApi from '../api/posApi';
 import CancelOrderModal from '../../../components/CancelOrderModal';
+import { ORDER_STATUS_AWAITING_PAYMENT_HE, paymentStatusBadgeLabel, shouldShowPaymentStatusBadge } from '../../../utils/orderPaymentLabels';
 import POSManagerAuth from './POSManagerAuth';
 
 const SOURCE_LABELS = {
@@ -12,7 +13,7 @@ const SOURCE_LABELS = {
 };
 
 const STATUS_CONFIG = {
-    awaiting_payment: { label: 'ממתין לתשלום', color: 'bg-orange-500', bg: 'bg-orange-500/10 border-orange-500/30', icon: FaClock },
+    awaiting_payment: { label: ORDER_STATUS_AWAITING_PAYMENT_HE, color: 'bg-orange-500', bg: 'bg-orange-500/10 border-orange-500/30', icon: FaClock },
     pending: { label: 'ממתינה', color: 'bg-amber-500', bg: 'bg-amber-500/10 border-amber-500/30', icon: FaClock },
     received: { label: 'התקבלה', color: 'bg-orange-500', bg: 'bg-orange-500/10 border-orange-500/30', icon: FaBell },
     preparing: { label: 'בהכנה', color: 'bg-blue-500', bg: 'bg-blue-500/10 border-blue-500/30', icon: FaFire },
@@ -270,11 +271,9 @@ function paymentStatusBadgeClass(order) {
     return 'bg-amber-500/20 text-amber-400';
 }
 
-function paymentStatusLabel(order) {
-    if (order.payment_status === 'paid') return 'שולם';
-    if (order.payment_status === 'failed') return 'נכשל בתשלום';
-    if (order.payment_method === 'credit_card' && order.payment_status === 'pending') return 'ממתין לתשלום';
-    return 'ממתין';
+function posPaymentRowCaption(order) {
+    if (!shouldShowPaymentStatusBadge(order)) return null;
+    return paymentStatusBadgeLabel(order);
 }
 
 function OrderCard({
@@ -299,6 +298,7 @@ function OrderCard({
     const sourceKey = order.source || 'website';
     const sourceLabel = SOURCE_LABELS[sourceKey] || sourceKey;
     const showSourceBadge = sourceKey !== 'pos';
+    const paymentCaption = posPaymentRowCaption(order);
 
     return (
         <div className={`rounded-2xl border ${config.bg} overflow-hidden transition-all`}>
@@ -338,9 +338,11 @@ function OrderCard({
                     <p className="text-white font-black text-lg flex items-center gap-1 justify-end">
                         <FaShekelSign className="text-sm" />{order.total_price.toFixed(2)}
                     </p>
-                    <span className={`text-xs font-black px-2 py-0.5 rounded-lg ${paymentStatusBadgeClass(order)}`}>
-                        {paymentStatusLabel(order)}
-                    </span>
+                    {paymentCaption && (
+                        <span className={`text-xs font-black px-2 py-0.5 rounded-lg ${paymentStatusBadgeClass(order)}`}>
+                            {paymentCaption}
+                        </span>
+                    )}
                 </div>
             </button>
 

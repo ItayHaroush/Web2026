@@ -27,6 +27,7 @@ import {
     FaHandPaper
 } from 'react-icons/fa';
 import OrderManualPaymentModal from '../../components/admin/OrderManualPaymentModal';
+import { ORDER_STATUS_AWAITING_PAYMENT_HE, paymentStatusBadgeLabel, shouldShowPaymentStatusBadge } from '../../utils/orderPaymentLabels';
 
 export default function AdminDashboard() {
     const navigate = useNavigate();
@@ -226,7 +227,7 @@ export default function AdminDashboard() {
 
     const getStatusBadge = (status) => {
         const statuses = {
-            awaiting_payment: { text: 'ממתין לתשלום', color: 'bg-orange-50 text-orange-800 border-orange-100' },
+            awaiting_payment: { text: ORDER_STATUS_AWAITING_PAYMENT_HE, color: 'bg-orange-50 text-orange-800 border-orange-100' },
             pending: { text: 'ממתין', color: 'bg-yellow-50 text-yellow-700 border-yellow-100' },
             received: { text: 'התקבל', color: 'bg-yellow-50 text-yellow-700 border-yellow-100' },
             preparing: { text: 'בהכנה', color: 'bg-blue-50 text-blue-700 border-blue-100' },
@@ -530,16 +531,13 @@ export default function AdminDashboard() {
                                                     <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase border shrink-0 ${statusBadge.color}`}>
                                                         {statusBadge.text}
                                                     </span>
-                                                    {order.payment_status && order.payment_status !== 'not_required' && (
+                                                    {shouldShowPaymentStatusBadge(order) && (
                                                         <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase border shrink-0 ${order.payment_status === 'paid' ? 'bg-green-50 text-green-700 border-green-100' :
                                                             order.payment_status === 'pending' ? 'bg-orange-50 text-orange-700 border-orange-100' :
                                                                 order.payment_status === 'failed' ? 'bg-red-50 text-red-700 border-red-100' :
                                                                     'bg-gray-50 text-gray-600 border-gray-100'
                                                             }`}>
-                                                            {order.payment_status === 'paid'
-                                                                ? (order.payment_method === 'credit_card' ? 'שולם באשראי' : 'שולם במזומן')
-                                                                : order.payment_status === 'pending' ? 'ממתין לתשלום'
-                                                                    : order.payment_status === 'failed' ? 'תשלום נכשל' : ''}
+                                                            {paymentStatusBadgeLabel(order)}
                                                         </span>
                                                     )}
                                                 </div>

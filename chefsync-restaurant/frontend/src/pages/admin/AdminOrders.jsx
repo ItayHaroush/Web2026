@@ -5,6 +5,7 @@ import { useAdminAuth } from '../../context/AdminAuthContext';
 import { useRestaurantStatus } from '../../context/RestaurantStatusContext';
 import AdminLayout from '../../layouts/AdminLayout';
 import api from '../../services/apiClient';
+import { ORDER_STATUS_AWAITING_PAYMENT_HE, paymentStatusBadgeLabel, shouldShowPaymentStatusBadge } from '../../utils/orderPaymentLabels';
 import reportService from '../../services/reportService';
 import RatingWidget from '../../components/RatingWidget';
 import CancelOrderModal from '../../components/CancelOrderModal';
@@ -329,7 +330,7 @@ export default function AdminOrders() {
 
     const statusOptions = [
         { value: '', label: 'הכל', icon: <FaReceipt /> },
-        { value: 'awaiting_payment', label: 'ממתין לתשלום', icon: <FaClock /> },
+        { value: 'awaiting_payment', label: ORDER_STATUS_AWAITING_PAYMENT_HE, icon: <FaClock /> },
         { value: 'pending', label: 'ממתין', icon: <FaClock /> },
         { value: 'received', label: 'התקבל', icon: <FaBell /> },
         { value: 'preparing', label: 'בהכנה', icon: <FaSpinner className="animate-spin" /> },
@@ -360,7 +361,7 @@ export default function AdminOrders() {
 
         const statuses = {
             awaiting_payment: {
-                text: 'ממתין לתשלום',
+                text: ORDER_STATUS_AWAITING_PAYMENT_HE,
                 color: 'bg-orange-50 text-orange-700 border-orange-100',
                 icon: <FaClock />,
                 nextStatus
@@ -603,17 +604,14 @@ export default function AdminOrders() {
                                                                 <span className="w-1 h-1 rounded-full bg-current animate-pulse" />
                                                                 {statusBadge.text}
                                                             </div>
-                                                            {order.payment_status && order.payment_status !== 'not_required' && (
+                                                            {shouldShowPaymentStatusBadge(order) && (
                                                                 <div className={`px-2.5 py-0.5 rounded-lg text-[9px] font-black uppercase border flex items-center gap-1.5 ${order.payment_status === 'paid' ? 'bg-green-50 text-green-700 border-green-200' :
                                                                     order.payment_status === 'pending' ? 'bg-orange-50 text-orange-700 border-orange-200' :
                                                                         order.payment_status === 'failed' ? 'bg-red-50 text-red-700 border-red-200' :
                                                                             'bg-gray-50 text-gray-600 border-gray-200'
                                                                     }`}>
                                                                     {order.payment_method === 'credit_card' ? <FaCreditCard size={9} /> : <FaMoneyBillWave size={9} />}
-                                                                    {order.payment_status === 'paid'
-                                                                        ? (order.payment_method === 'credit_card' ? 'שולם באשראי' : 'שולם במזומן')
-                                                                        : order.payment_status === 'pending' ? 'ממתין לתשלום'
-                                                                            : order.payment_status === 'failed' ? 'תשלום נכשל' : ''}
+                                                                    {paymentStatusBadgeLabel(order)}
                                                                 </div>
                                                             )}
                                                             {order.is_test && (
@@ -1136,10 +1134,7 @@ export default function AdminOrders() {
                                                         selectedOrder.payment_status === 'failed' ? 'bg-red-50 text-red-700 border-red-200' :
                                                             'bg-gray-50 text-gray-500 border-gray-200'
                                                     }`}>
-                                                    {selectedOrder.payment_status === 'paid'
-                                                        ? (selectedOrder.payment_method === 'credit_card' ? 'שולם באשראי' : 'שולם במזומן')
-                                                        : selectedOrder.payment_status === 'pending' ? 'ממתין לתשלום'
-                                                            : selectedOrder.payment_status === 'failed' ? 'תשלום נכשל' : ''}
+                                                    {paymentStatusBadgeLabel(selectedOrder)}
                                                 </div>
                                             </div>
                                             {selectedOrder.payment_transaction_id && (
