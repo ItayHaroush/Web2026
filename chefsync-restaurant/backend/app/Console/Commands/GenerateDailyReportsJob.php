@@ -58,10 +58,12 @@ class GenerateDailyReportsJob extends Command
 
     public static function generateForRestaurant(Restaurant $restaurant, string $dateStr, Carbon $startOfDay, Carbon $endOfDay): ?DailyReport
     {
-        // שליפת כל ההזמנות (לא test) ביום הנתון
+        // כמו דשבורד מסעדן: לא test, נראות למסעדה, מתאריך תחילת פעילות (אם הוגדר)
         $orders = Order::withoutGlobalScopes()
             ->where('restaurant_id', $restaurant->id)
             ->where('is_test', false)
+            ->visibleToRestaurant()
+            ->forOwnerReporting($restaurant)
             ->whereBetween('created_at', [$startOfDay, $endOfDay])
             ->get();
 

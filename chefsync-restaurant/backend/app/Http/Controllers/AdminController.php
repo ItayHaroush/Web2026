@@ -50,7 +50,7 @@ class AdminController extends Controller
         if ($user->is_super_admin) {
             $tenantId = app()->has('tenant_id') ? app('tenant_id') : $request->header('X-Tenant-ID');
             if ($tenantId) {
-                $restaurant = Restaurant::where('tenant_id', $tenantId)->first();
+                $restaurant = Restaurant::withoutGlobalScopes()->where('tenant_id', $tenantId)->first();
                 return $restaurant?->id;
             }
         }
@@ -66,13 +66,14 @@ class AdminController extends Controller
         $user = $request->user();
 
         if ($user->restaurant_id) {
-            return $user->restaurant;
+            // ללא tenant scope — אחרת X-Tenant-ID שלא תואם למסעדה מסתיר את הרשומה
+            return Restaurant::withoutGlobalScopes()->find($user->restaurant_id);
         }
 
         if ($user->is_super_admin) {
             $tenantId = app()->has('tenant_id') ? app('tenant_id') : $request->header('X-Tenant-ID');
             if ($tenantId) {
-                return Restaurant::where('tenant_id', $tenantId)->first();
+                return Restaurant::withoutGlobalScopes()->where('tenant_id', $tenantId)->first();
             }
         }
 
@@ -90,10 +91,12 @@ class AdminController extends Controller
         $restaurant = $this->resolveRestaurant($request);
 
         $stats = [
+            // כמו דוח יומי + revenue_today: לא סופרים הזמנות מבוטלות
             'orders_today' => Order::where('restaurant_id', $restaurantId)
                 ->visibleToRestaurant()
                 ->when($restaurant, fn ($q) => $q->forOwnerReporting($restaurant))
                 ->where('is_test', false)  // ← מתעלם מהזמנות test
+                ->where('status', '!=', Order::STATUS_CANCELLED)
                 ->whereDate('created_at', today())
                 ->count(),
             'orders_pending' => Order::where('restaurant_id', $restaurantId)

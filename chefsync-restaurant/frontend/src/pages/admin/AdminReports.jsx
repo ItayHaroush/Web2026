@@ -19,7 +19,10 @@ import {
     FaChevronDown,
     FaChevronUp,
     FaTruck,
-    FaStore
+    FaStore,
+    FaEnvelope,
+    FaWhatsapp,
+    FaCopy
 } from 'react-icons/fa';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -38,6 +41,9 @@ export default function AdminReports({ embedded = false }) {
     const [exporting, setExporting] = useState(null);
     const [generateDate, setGenerateDate] = useState('');
     const [pagination, setPagination] = useState({ current_page: 1, last_page: 1 });
+    const [selectedIds, setSelectedIds] = useState(() => new Set());
+    const [bulkLoading, setBulkLoading] = useState(false);
+    const [waLinksModal, setWaLinksModal] = useState(null);
 
     // פילטרים
     const [from, setFrom] = useState(() => {
@@ -50,11 +56,11 @@ export default function AdminReports({ embedded = false }) {
     const fetchReports = useCallback(async (page = 1) => {
         setLoading(true);
         try {
-            const res = await reportService.getReports({ from, to, page, per_page: 30 });
-            setReports(res.data?.data || []);
+            const pageData = await reportService.getReports({ from, to, page, per_page: 30 });
+            setReports(pageData?.data || []);
             setPagination({
-                current_page: res.data?.current_page || 1,
-                last_page: res.data?.last_page || 1,
+                current_page: pageData?.current_page || 1,
+                last_page: pageData?.last_page || 1,
             });
         } catch (err) {
             addToast('שגיאה בטעינת דוחות', 'error');
@@ -66,6 +72,67 @@ export default function AdminReports({ embedded = false }) {
     useEffect(() => {
         fetchReports();
     }, [fetchReports]);
+
+    useEffect(() => {
+        setSelectedIds(new Set());
+    }, [from, to]);
+
+    const toggleSelect = (id) => {
+        setSelectedIds((prev) => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+        });
+    };
+
+    const toggleSelectAllPage = () => {
+        if (reports.length === 0) return;
+        const allOnPage = reports.every((r) => selectedIds.has(r.id));
+        setSelectedIds((prev) => {
+            const next = new Set(prev);
+            if (allOnPage) {
+                reports.forEach((r) => next.delete(r.id));
+            } else {
+                reports.forEach((r) => next.add(r.id));
+            }
+            return next;
+        });
+    };
+
+    const runBulk = async (opts) => {
+        if (selectedIds.size === 0) {
+            addToast('בחר דוחות מהרשימה', 'error');
+            return;
+        }
+        setBulkLoading(true);
+        try {
+            const payload = await reportService.bulkDispatchReports({
+                report_ids: [...selectedIds],
+                send_email: !!opts.send_email,
+                whatsapp: !!opts.whatsapp,
+                copy_text: !!opts.copy_text,
+            });
+            if (opts.send_email) {
+                addToast(`נשלחו ${payload?.emails_sent ?? 0} מיילים · דולגו ${payload?.skipped_no_email ?? 0} ללא מייל`, 'success');
+            }
+            if (opts.whatsapp) {
+                if (payload?.whatsapp_links?.length) {
+                    setWaLinksModal(payload.whatsapp_links);
+                } else {
+                    addToast('לא נמצאו מספרי וואטסאפ לדוחות שנבחרו', 'error');
+                }
+            }
+            if (opts.copy_text && payload?.copy_text) {
+                await navigator.clipboard.writeText(payload.copy_text);
+                addToast('הטקסט הועתק ללוח', 'success');
+            }
+        } catch (err) {
+            addToast(err.response?.data?.message || 'שגיאה בפעולה', 'error');
+        } finally {
+            setBulkLoading(false);
+        }
+    };
 
     // KPIs מחושבים
     const totalOrders = reports.reduce((s, r) => s + (r.total_orders || 0), 0);
@@ -128,8 +195,8 @@ export default function AdminReports({ embedded = false }) {
 
     const openReport = async (report) => {
         try {
-            const res = await reportService.getReport(report.id);
-            setSelectedReport(res.data);
+            const reportPayload = await reportService.getReport(report.id);
+            setSelectedReport(reportPayload);
             setModalOpen(true);
         } catch {
             addToast('שגיאה בטעינת דוח', 'error');
@@ -306,8 +373,37 @@ export default function AdminReports({ embedded = false }) {
 
                 {/* Reports Table */}
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                    <div className="p-4 border-b border-gray-100">
+                    <div className="p-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
                         <h3 className="text-lg font-black text-gray-900">דוחות יומיים</h3>
+                        {selectedIds.size > 0 && (
+                            <div className="flex flex-wrap items-center gap-2">
+                                <span className="text-sm text-gray-500">{selectedIds.size} נבחרו</span>
+                                <button
+                                    type="button"
+                                    disabled={bulkLoading}
+                                    onClick={() => runBulk({ send_email: true })}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+                                >
+                                    <FaEnvelope size={11} /> מייל
+                                </button>
+                                <button
+                                    type="button"
+                                    disabled={bulkLoading}
+                                    onClick={() => runBulk({ whatsapp: true })}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
+                                >
+                                    <FaWhatsapp size={12} /> וואטסאפ
+                                </button>
+                                <button
+                                    type="button"
+                                    disabled={bulkLoading}
+                                    onClick={() => runBulk({ copy_text: true })}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-gray-800 text-white hover:bg-black disabled:opacity-50"
+                                >
+                                    <FaCopy size={11} /> העתקה
+                                </button>
+                            </div>
+                        )}
                     </div>
 
                     {loading ? (
@@ -319,6 +415,15 @@ export default function AdminReports({ embedded = false }) {
                             <table className="w-full text-sm">
                                 <thead className="bg-gray-50">
                                     <tr>
+                                        <th className="text-right p-3 font-bold text-gray-500 w-10">
+                                            <input
+                                                type="checkbox"
+                                                checked={reports.length > 0 && reports.every((r) => selectedIds.has(r.id))}
+                                                onChange={toggleSelectAllPage}
+                                                title="בחר הכל בעמוד"
+                                                className="rounded border-gray-300"
+                                            />
+                                        </th>
                                         <th className="text-right p-3 font-bold text-gray-500">תאריך</th>
                                         <th className="text-right p-3 font-bold text-gray-500">הזמנות</th>
                                         <th className="text-right p-3 font-bold text-gray-500">הכנסות</th>
@@ -335,6 +440,14 @@ export default function AdminReports({ embedded = false }) {
                                 <tbody className="divide-y divide-gray-50">
                                     {reports.map(r => (
                                         <tr key={r.id} className="hover:bg-gray-50 transition-colors">
+                                            <td className="p-3">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedIds.has(r.id)}
+                                                    onChange={() => toggleSelect(r.id)}
+                                                    className="rounded border-gray-300"
+                                                />
+                                            </td>
                                             <td className="p-3 font-bold">{r.date?.split('T')[0]}</td>
                                             <td className="p-3">{r.total_orders}</td>
                                             <td className="p-3 font-bold text-emerald-600">₪{parseFloat(r.total_revenue || 0).toLocaleString()}</td>
@@ -401,6 +514,34 @@ export default function AdminReports({ embedded = false }) {
                         onClose={() => { setModalOpen(false); setSelectedReport(null); }}
                         onDownloadPdf={() => reportService.downloadPdf(selectedReport.id)}
                     />
+                )}
+
+                {waLinksModal && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50" onClick={() => setWaLinksModal(null)}>
+                        <div className="bg-white rounded-2xl max-w-lg w-full max-h-[80vh] overflow-hidden shadow-2xl" onClick={(e) => e.stopPropagation()}>
+                            <div className="p-4 border-b border-gray-100 flex justify-between items-center">
+                                <h3 className="font-black text-gray-900">קישורי וואטסאפ</h3>
+                                <button type="button" className="p-2 hover:bg-gray-100 rounded-lg" onClick={() => setWaLinksModal(null)}>
+                                    <FaTimes />
+                                </button>
+                            </div>
+                            <ul className="p-4 overflow-y-auto max-h-[60vh] space-y-2 text-sm">
+                                {waLinksModal.map((row) => (
+                                    <li key={row.report_id} className="flex flex-wrap items-center gap-2 justify-between border border-gray-100 rounded-xl p-2">
+                                        <span className="text-gray-600">{row.date}</span>
+                                        <a
+                                            href={row.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="font-bold text-green-600 hover:underline"
+                                        >
+                                            פתח
+                                        </a>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    </div>
                 )}
             </div>
     );

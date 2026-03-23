@@ -390,8 +390,9 @@ class ReportController extends Controller
             ], 422);
         }
 
-        $startOfDay = Carbon::parse($dateStr)->startOfDay();
-        $endOfDay = Carbon::parse($dateStr)->endOfDay();
+        $tz = 'Asia/Jerusalem';
+        $startOfDay = Carbon::parse($dateStr, $tz)->startOfDay();
+        $endOfDay = Carbon::parse($dateStr, $tz)->endOfDay();
 
         $report = GenerateDailyReportsJob::generateForRestaurant(
             $restaurant,

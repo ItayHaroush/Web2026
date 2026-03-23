@@ -17,9 +17,16 @@ class DailyReportBackfillService
     {
         $tz = 'Asia/Jerusalem';
 
+        $restaurant = Restaurant::withoutGlobalScopes()->find($restaurantId);
+        if (!$restaurant) {
+            return [];
+        }
+
         $ordersQuery = Order::withoutGlobalScopes()
             ->where('restaurant_id', $restaurantId)
-            ->where('is_test', false);
+            ->where('is_test', false)
+            ->visibleToRestaurant()
+            ->forOwnerReporting($restaurant);
 
         if ($fromDate) {
             $ordersQuery->where('created_at', '>=', Carbon::parse($fromDate, $tz)->startOfDay());

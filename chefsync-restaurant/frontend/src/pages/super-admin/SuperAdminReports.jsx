@@ -27,7 +27,10 @@ import {
     FaArrowLeft,
     FaGift,
     FaCheck,
-    FaTag
+    FaTag,
+    FaEnvelope,
+    FaWhatsapp,
+    FaFileArchive
 } from 'react-icons/fa';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
@@ -70,7 +73,8 @@ export default function SuperAdminReports() {
                 api.get('/super-admin/billing/restaurants', { headers, params })
             ]);
 
-            setSummary(summaryRes.data.data);
+            const billingPayload = summaryRes.data?.data ?? summaryRes.data;
+            setSummary(billingPayload ?? null);
             const list = restaurantsRes.data.restaurants?.data || restaurantsRes.data.restaurants || [];
             setRestaurants(list);
         } catch (error) {
@@ -1138,8 +1142,17 @@ export default function SuperAdminReports() {
 }
 
 function DailyReportsSummaryTab() {
+    const { getAuthHeaders } = useAdminAuth();
+    const [summaryLoading, setSummaryLoading] = useState(true);
     const [data, setData] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState(false);
+    const [restaurantList, setRestaurantList] = useState([]);
+    const [selectedRestaurantIds, setSelectedRestaurantIds] = useState([]);
+    const [backfillLoading, setBackfillLoading] = useState(false);
+    const [zipLoading, setZipLoading] = useState(false);
+    const [emailLoading, setEmailLoading] = useState(false);
+    const [waLoading, setWaLoading] = useState(false);
+    const [waLinksModal, setWaLinksModal] = useState(null);
     const [from, setFrom] = useState(() => {
         const d = new Date();
         d.setDate(d.getDate() - 7);
@@ -1147,21 +1160,117 @@ function DailyReportsSummaryTab() {
     });
     const [to, setTo] = useState(() => new Date().toISOString().split('T')[0]);
 
+    const payloadBase = () => ({
+        from,
+        to,
+        ...(selectedRestaurantIds.length > 0 ? { restaurant_ids: selectedRestaurantIds } : {}),
+    });
+
     const fetchSummary = async () => {
-        setLoading(true);
+        setSummaryLoading(true);
+        setLoadError(false);
         try {
-            const res = await reportService.getSuperAdminSummary({ from, to });
-            setData(res.data);
+            const summary = await reportService.getSuperAdminSummary({ from, to });
+            setData(summary || {});
         } catch (err) {
-            toast.error('שגיאה בטעינת דוחות יומיים');
+            console.error(err);
+            toast.error(err.response?.data?.message || 'שגיאה בטעינת דוחות יומיים');
+            setLoadError(true);
+            setData(null);
         } finally {
-            setLoading(false);
+            setSummaryLoading(false);
         }
     };
 
     useEffect(() => { fetchSummary(); }, [from, to]);
 
-    if (loading) return <div className="text-center py-16 text-gray-400">טוען דוחות יומיים...</div>;
+    useEffect(() => {
+        const loadRestaurants = async () => {
+            try {
+                const headers = getAuthHeaders();
+                const res = await api.get('/super-admin/restaurants', { headers });
+                const list = res.data.restaurants?.data || res.data.restaurants || [];
+                setRestaurantList(Array.isArray(list) ? list : []);
+            } catch {
+                setRestaurantList([]);
+            }
+        };
+        loadRestaurants();
+    }, [getAuthHeaders]);
+
+    const toggleRestaurant = (id) => {
+        setSelectedRestaurantIds((prev) =>
+            prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+        );
+    };
+
+    const selectAllRestaurants = () => {
+        if (selectedRestaurantIds.length === restaurantList.length) {
+            setSelectedRestaurantIds([]);
+        } else {
+            setSelectedRestaurantIds(restaurantList.map((r) => r.id));
+        }
+    };
+
+    const handleBackfill = async () => {
+        setBackfillLoading(true);
+        try {
+            const res = await reportService.superAdminBackfillMissing(payloadBase());
+            const total = res?.total ?? 0;
+            toast.success(`נוצרו/עודכנו ${total} דוחות חסרים`);
+            fetchSummary();
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'שגיאה במילוי דוחות');
+        } finally {
+            setBackfillLoading(false);
+        }
+    };
+
+    const handleExportZip = async () => {
+        setZipLoading(true);
+        try {
+            await reportService.superAdminExportZip(payloadBase());
+            toast.success('הקובץ יורד');
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'אין דוחות בטווח או שגיאת שרת');
+        } finally {
+            setZipLoading(false);
+        }
+    };
+
+    const handleSendEmails = async () => {
+        setEmailLoading(true);
+        try {
+            const res = await reportService.superAdminSendEmails(payloadBase());
+            const sent = res?.sent ?? 0;
+            const skipped = res?.skipped_no_email ?? 0;
+            toast.success(`נשלחו ${sent} מיילים${skipped ? ` · דולגו ${skipped} ללא מייל` : ''}`);
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'שגיאה בשליחת מיילים');
+        } finally {
+            setEmailLoading(false);
+        }
+    };
+
+    const handleWhatsappLinks = async () => {
+        setWaLoading(true);
+        try {
+            const res = await reportService.superAdminWhatsappLinks(payloadBase());
+            const links = res?.links || [];
+            if (links.length === 0) {
+                toast.error('אין מספרי וואטסאפ זמינים לדוחות בטווח');
+            } else {
+                setWaLinksModal(links);
+            }
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'שגיאה');
+        } finally {
+            setWaLoading(false);
+        }
+    };
+
+    if (summaryLoading) return <div className="text-center py-16 text-gray-400">טוען דוחות יומיים...</div>;
+    if (loadError && !data) return <div className="text-center py-16 text-rose-600 font-bold">לא ניתן לטעון סיכום. נסה שוב או בדוק התחברות.</div>;
     if (!data) return <div className="text-center py-16 text-gray-400">אין נתונים</div>;
 
     const chartData = (data.daily_breakdown || []).map(d => ({
@@ -1173,31 +1282,125 @@ function DailyReportsSummaryTab() {
 
     return (
         <div className="space-y-6">
-            {/* Filters */}
-            <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-wrap items-center gap-4">
-                <FaCalendarAlt className="text-brand-primary" />
-                <input type="date" value={from} onChange={e => setFrom(e.target.value)} className="border border-gray-200 rounded-xl px-3 py-2 text-sm" />
-                <span className="text-gray-400">עד</span>
-                <input type="date" value={to} onChange={e => setTo(e.target.value)} className="border border-gray-200 rounded-xl px-3 py-2 text-sm" />
+            {/* Filters + actions */}
+            <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col gap-4">
+                <div className="flex flex-wrap items-center gap-4">
+                    <FaCalendarAlt className="text-brand-primary" />
+                    <input type="date" value={from} onChange={e => setFrom(e.target.value)} className="border border-gray-200 rounded-xl px-3 py-2 text-sm" />
+                    <span className="text-gray-400">עד</span>
+                    <input type="date" value={to} onChange={e => setTo(e.target.value)} className="border border-gray-200 rounded-xl px-3 py-2 text-sm" />
+                </div>
+
+                {restaurantList.length > 0 && (
+                    <div className="border-t border-gray-100 pt-4">
+                        <p className="text-sm font-bold text-gray-700 mb-2">סינון מסעדות (ריק = כל המסעדות)</p>
+                        <button
+                            type="button"
+                            onClick={selectAllRestaurants}
+                            className="text-sm font-bold text-brand-primary mb-2 hover:underline"
+                        >
+                            {selectedRestaurantIds.length === restaurantList.length ? 'נקה בחירה' : 'בחר הכל'}
+                        </button>
+                        <div className="flex flex-wrap gap-2 max-h-36 overflow-y-auto">
+                            {restaurantList.map((r) => (
+                                <label key={r.id} className="inline-flex items-center gap-1.5 text-sm bg-gray-50 px-2 py-1 rounded-lg cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={selectedRestaurantIds.includes(r.id)}
+                                        onChange={() => toggleRestaurant(r.id)}
+                                    />
+                                    <span>{r.name}</span>
+                                </label>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                <div className="border-t border-gray-100 pt-4 flex flex-wrap gap-2">
+                    <button
+                        type="button"
+                        disabled={backfillLoading}
+                        onClick={handleBackfill}
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold bg-gray-900 text-white hover:bg-black disabled:opacity-50"
+                    >
+                        <FaSync size={12} className={backfillLoading ? 'animate-spin' : ''} />
+                        {backfillLoading ? 'ממלא...' : 'מילוי דוחות חסרים'}
+                    </button>
+                    <button
+                        type="button"
+                        disabled={zipLoading}
+                        onClick={handleExportZip}
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50"
+                    >
+                        <FaFileArchive size={12} />
+                        {zipLoading ? '...' : 'הורדת ZIP (PDF)'}
+                    </button>
+                    <button
+                        type="button"
+                        disabled={emailLoading}
+                        onClick={handleSendEmails}
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+                    >
+                        <FaEnvelope size={12} />
+                        {emailLoading ? '...' : 'שליחת מיילים'}
+                    </button>
+                    <button
+                        type="button"
+                        disabled={waLoading}
+                        onClick={handleWhatsappLinks}
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
+                    >
+                        <FaWhatsapp size={14} />
+                        {waLoading ? '...' : 'קישורי וואטסאפ'}
+                    </button>
+                </div>
             </div>
+
+            {waLinksModal && (
+                <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/50" onClick={() => setWaLinksModal(null)}>
+                    <div className="bg-white rounded-2xl max-w-lg w-full max-h-[80vh] overflow-hidden shadow-2xl" onClick={(e) => e.stopPropagation()}>
+                        <div className="p-4 border-b border-gray-100 flex justify-between items-center">
+                            <h3 className="font-black text-gray-900">קישורי וואטסאפ</h3>
+                            <button type="button" className="p-2 hover:bg-gray-100 rounded-lg" onClick={() => setWaLinksModal(null)}>
+                                <FaTimes />
+                            </button>
+                        </div>
+                        <ul className="p-4 overflow-y-auto max-h-[60vh] space-y-2 text-sm">
+                            {waLinksModal.map((row) => (
+                                <li key={row.report_id} className="flex flex-wrap items-center gap-2 justify-between border border-gray-100 rounded-xl p-2">
+                                    <span className="text-gray-600">{row.restaurant_name} · {row.date}</span>
+                                    <a
+                                        href={row.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="font-bold text-green-600 hover:underline"
+                                    >
+                                        פתח
+                                    </a>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                </div>
+            )}
 
             {/* KPIs */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
                     <p className="text-xs font-bold text-gray-500 mb-1">מסעדות פעילות</p>
-                    <h3 className="text-2xl font-black text-gray-900">{data.total_restaurants}</h3>
+                    <h3 className="text-2xl font-black text-gray-900">{data.total_restaurants ?? 0}</h3>
                 </div>
                 <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
                     <p className="text-xs font-bold text-gray-500 mb-1">סה״כ הזמנות</p>
-                    <h3 className="text-2xl font-black text-blue-600">{data.total_orders?.toLocaleString()}</h3>
+                    <h3 className="text-2xl font-black text-blue-600">{(data.total_orders ?? 0).toLocaleString()}</h3>
                 </div>
                 <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
                     <p className="text-xs font-bold text-gray-500 mb-1">סה״כ הכנסות</p>
-                    <h3 className="text-2xl font-black text-emerald-600">₪{data.total_revenue?.toLocaleString()}</h3>
+                    <h3 className="text-2xl font-black text-emerald-600">₪{(data.total_revenue ?? 0).toLocaleString()}</h3>
                 </div>
                 <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
                     <p className="text-xs font-bold text-gray-500 mb-1">ממוצע להזמנה</p>
-                    <h3 className="text-2xl font-black text-orange-600">₪{data.avg_order_value}</h3>
+                    <h3 className="text-2xl font-black text-orange-600">₪{data.avg_order_value ?? 0}</h3>
                 </div>
             </div>
 
