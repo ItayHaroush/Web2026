@@ -265,7 +265,7 @@ export default function AdminTerminal() {
     };
 
     const statusLabel = {
-        awaiting_payment: 'ממתין לאשראי',
+        awaiting_payment: 'ממתין לתשלום',
         pending: 'ממתין',
         received: 'התקבל',
         preparing: 'בהכנה',

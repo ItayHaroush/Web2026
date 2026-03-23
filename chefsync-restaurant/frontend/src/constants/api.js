@@ -58,7 +58,7 @@ export const ORDER_STATUS = {
 
 export const ORDER_STATUS_LABELS = {
     pending: 'ממתין',
-    awaiting_payment: 'ממתין לאשראי',
+    awaiting_payment: 'ממתין לתשלום',
     received: 'התקבלה',
     preparing: 'בהכנה',
     ready: 'מוכנה',
