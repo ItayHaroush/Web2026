@@ -279,6 +279,7 @@ export default function AdminRestaurant() {
                 'name',
                 'description',
                 'phone',
+                'owner_contact_phone',
                 'address',
                 'restaurant_type',
                 'cuisine_type',
@@ -510,6 +511,22 @@ export default function AdminRestaurant() {
                                                 placeholder="050-0000000"
                                             />
                                         </div>
+                                    </div>
+                                    <div className="md:col-span-2 space-y-2">
+                                        <label className="text-sm font-black text-gray-700 mr-1">פלאפון בעלים לדוחות / וואטסאפ (אופציונלי)</label>
+                                        <div className="relative">
+                                            <FaPhone className="absolute right-4 top-1/2 -translate-y-1/2 text-emerald-500" />
+                                            <input
+                                                type="text"
+                                                value={restaurant.owner_contact_phone || ''}
+                                                onChange={(e) => handleChange('owner_contact_phone', e.target.value)}
+                                                className="w-full pr-12 pl-5 py-4 bg-emerald-50/40 border border-emerald-100 rounded-2xl focus:ring-2 focus:ring-emerald-500/30 text-gray-900 font-bold transition-all ltr"
+                                                placeholder="נייד לקבלת דוחות — עדיפות על טלפון המסעדה"
+                                            />
+                                        </div>
+                                        <p className="text-xs text-gray-500 leading-relaxed">
+                                            אם ממולא, המערכת (כולל סופר־אדמין) תשתמש במספר זה לקישורי וואטסאפ לדוחות יומיים.
+                                        </p>
                                     </div>
                                 </div>
 

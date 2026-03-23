@@ -1943,6 +1943,7 @@ class AdminController extends Controller
             'description' => 'nullable|string',
             'cuisine_type' => 'nullable|string|max:255',
             'phone' => 'sometimes|string|max:20',
+            'owner_contact_phone' => 'nullable|string|max:32',
             'address' => 'sometimes|string|max:255',
             'city' => 'sometimes|string|max:255',
             'restaurant_type' => 'nullable|string|in:pizza,shawarma,burger,bistro,catering,general',
@@ -2024,6 +2025,11 @@ class AdminController extends Controller
         // שדות אופציונליים - רק אם יש להם ערך
         if ($request->filled('phone')) {
             $updateData['phone'] = $validated['phone'];
+        }
+
+        if ($request->has('owner_contact_phone')) {
+            $v = $request->input('owner_contact_phone');
+            $updateData['owner_contact_phone'] = $v === '' || $v === null ? null : (string) $v;
         }
 
         // description, address יכולים להיות ריקים (null/clear)

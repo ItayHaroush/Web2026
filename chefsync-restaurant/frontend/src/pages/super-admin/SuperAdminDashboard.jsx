@@ -1075,6 +1075,8 @@ function RestaurantDetailModal({ restaurant: initialRestaurant, onClose, onImper
     const [loading, setLoading] = useState(true);
     const [ownerActivityDate, setOwnerActivityDate] = useState('');
     const [savingOwnerActivity, setSavingOwnerActivity] = useState(false);
+    const [ownerContactPhone, setOwnerContactPhone] = useState('');
+    const [savingOwnerPhone, setSavingOwnerPhone] = useState(false);
 
     useEffect(() => {
         const fetchDetails = async () => {
@@ -1090,6 +1092,7 @@ function RestaurantDetailModal({ restaurant: initialRestaurant, onClose, onImper
                             ? String(r.owner_activity_started_at).slice(0, 10)
                             : ''
                     );
+                    setOwnerContactPhone(r.owner_contact_phone ?? '');
                 }
             } catch (err) {
                 console.error('Failed to fetch restaurant details:', err);
@@ -1119,6 +1122,27 @@ function RestaurantDetailModal({ restaurant: initialRestaurant, onClose, onImper
             toast.error(err.response?.data?.message || 'שגיאה בשמירה');
         } finally {
             setSavingOwnerActivity(false);
+        }
+    };
+
+    const saveOwnerContactPhone = async () => {
+        setSavingOwnerPhone(true);
+        try {
+            const res = await api.put(
+                `/super-admin/restaurants/${restaurant.id}`,
+                { owner_contact_phone: ownerContactPhone.trim() || null },
+                { headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' } }
+            );
+            if (res.data.success) {
+                setRestaurant(res.data.restaurant);
+                setOwnerContactPhone(res.data.restaurant.owner_contact_phone ?? '');
+                toast.success('פלאפון לדוחות ווואטסאפ נשמר');
+            }
+        } catch (err) {
+            console.error(err);
+            toast.error(err.response?.data?.message || 'שגיאה בשמירה');
+        } finally {
+            setSavingOwnerPhone(false);
         }
     };
 
@@ -1214,6 +1238,30 @@ function RestaurantDetailModal({ restaurant: initialRestaurant, onClose, onImper
                                     <div className="col-span-2">
                                         <span className="text-xs text-gray-400 font-bold">כתובת</span>
                                         <p className="font-bold text-gray-700">{restaurant.address || '—'}</p>
+                                    </div>
+                                    <div className="col-span-2 rounded-xl border border-emerald-100 bg-emerald-50/60 p-3">
+                                        <span className="text-xs text-emerald-800 font-bold block mb-1">פלאפון בעלים לדוחות/וואטסאפ (מערכת)</span>
+                                        <p className="text-[11px] text-emerald-900/80 mb-2 leading-snug">
+                                            מספר זה משמש לקישורי wa.me ולדוחות — עדיפות על טלפון המסעדה. ניתן לערוך כאן.
+                                        </p>
+                                        <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
+                                            <input
+                                                type="tel"
+                                                dir="ltr"
+                                                value={ownerContactPhone}
+                                                onChange={(e) => setOwnerContactPhone(e.target.value)}
+                                                placeholder="05x-xxxxxxx"
+                                                className="flex-1 min-w-0 px-3 py-2 rounded-xl border border-emerald-200 bg-white text-sm font-bold text-gray-800"
+                                            />
+                                            <button
+                                                type="button"
+                                                disabled={savingOwnerPhone}
+                                                onClick={saveOwnerContactPhone}
+                                                className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 disabled:opacity-50 shrink-0"
+                                            >
+                                                {savingOwnerPhone ? 'שומר…' : 'שמור'}
+                                            </button>
+                                        </div>
                                     </div>
                                     <div>
                                         <span className="text-xs text-gray-400 font-bold">סטטוס</span>

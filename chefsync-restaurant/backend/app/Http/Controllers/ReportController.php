@@ -10,6 +10,7 @@ use App\Models\Order;
 use App\Models\User;
 use App\Mail\DailyReportMail;
 use App\Console\Commands\GenerateDailyReportsJob;
+use App\Services\DailyReportDeliveryService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -529,7 +530,7 @@ class ReportController extends Controller
             }
 
             if ($whatsapp) {
-                $phone = $this->resolveBulkWhatsappPhone($report->restaurant);
+                $phone = DailyReportDeliveryService::resolveWhatsappPhone($report->restaurant);
                 if ($phone) {
                     $text = $this->buildBulkWhatsappSummary($report);
                     $links[] = [
@@ -570,30 +571,6 @@ class ReportController extends Controller
         $owner = User::where('restaurant_id', $restaurant->id)->where('role', 'owner')->first();
 
         return $owner?->email;
-    }
-
-    private function resolveBulkWhatsappPhone(?Restaurant $restaurant): ?string
-    {
-        if (!$restaurant) {
-            return null;
-        }
-        $raw = $restaurant->phone ?? null;
-        $owner = User::where('restaurant_id', $restaurant->id)->where('role', 'owner')->first();
-        if (!$raw && $owner?->phone) {
-            $raw = $owner->phone;
-        }
-        if (!$raw) {
-            return null;
-        }
-        $digits = preg_replace('/\D+/', '', $raw);
-        if (str_starts_with($digits, '0')) {
-            $digits = '972' . substr($digits, 1);
-        }
-        if ($digits !== '' && !str_starts_with($digits, '972')) {
-            $digits = '972' . ltrim($digits, '0');
-        }
-
-        return strlen($digits) >= 11 ? $digits : null;
     }
 
     private function buildBulkWhatsappSummary(DailyReport $report): string

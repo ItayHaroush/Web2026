@@ -2,13 +2,15 @@
 
 namespace App\Http\Controllers;
 
-use App\Mail\DailyReportMail;
+use App\Mail\DailyReportsPeriodZipMail;
 use App\Models\DailyReport;
 use App\Models\Restaurant;
 use App\Models\User;
 use App\Services\DailyReportBackfillService;
+use App\Services\DailyReportDeliveryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Mpdf\Mpdf;
@@ -71,47 +73,16 @@ class SuperAdminDailyReportsController extends Controller
             ], 404);
         }
 
-        $zipPath = storage_path('app/temp/sa-reports-'.now()->timestamp.'.zip');
-        $dir = dirname($zipPath);
-        if (! is_dir($dir)) {
-            mkdir($dir, 0755, true);
-        }
+        $zipPath = DailyReportDeliveryService::buildZipPathForReports($reports, 'sa-export');
+        $filename = 'daily-reports-'.$validated['from'].'-to-'.$validated['to'].'.zip';
 
-        $zip = new \ZipArchive;
-        if ($zip->open($zipPath, \ZipArchive::CREATE) !== true) {
-            return response()->json(['success' => false, 'message' => 'שגיאה ביצירת קובץ ZIP'], 500);
-        }
-
-        foreach ($reports as $report) {
-            $html = view('reports.daily-pdf', ['report' => $report])->render();
-
-            $mpdf = new Mpdf([
-                'mode' => 'utf-8',
-                'format' => 'A4',
-                'default_font' => 'arial',
-                'directionality' => 'rtl',
-                'margin_left' => 15,
-                'margin_right' => 15,
-                'margin_top' => 15,
-                'margin_bottom' => 15,
-            ]);
-            $mpdf->WriteHTML($html);
-
-            $date = $report->date->format('Y-m-d');
-            $safeName = preg_replace('/[^\p{L}\p{N}_\-\s]/u', '', $report->restaurant?->name ?? 'report');
-            $safeName = trim($safeName) ?: 'report';
-            $pdfContent = $mpdf->Output('', 'S');
-            $zip->addFromString("{$safeName}-{$date}.pdf", $pdfContent);
-        }
-
-        $zip->close();
-
-        return response()->download($zipPath, 'daily-reports-'.$validated['from'].'-to-'.$validated['to'].'.zip')
-            ->deleteFileAfterSend(true);
+        return response()->download($zipPath, $filename, [
+            'Content-Type' => 'application/zip',
+        ])->deleteFileAfterSend(true);
     }
 
     /**
-     * שליחת מייל DailyReportMail לכל דוח בתקופה (למייל מוגדר למסעדה / בעלים).
+     * מייל אחד לכל מסעדה — קובץ ZIP אחד עם כל ה-PDF בתקופה (לא מייל לכל דוח).
      */
     public function sendEmails(Request $request): JsonResponse
     {
@@ -133,40 +104,64 @@ class SuperAdminDailyReportsController extends Controller
         }
 
         $reports = $query->get();
+        $byRestaurant = $reports->groupBy('restaurant_id');
 
-        $sent = 0;
-        $skipped = 0;
+        $emailsSent = 0;
+        $skippedNoEmail = 0;
         $errors = [];
 
-        foreach ($reports as $report) {
-            $email = $this->resolveReportEmail($report);
+        foreach ($byRestaurant as $restaurantId => $collection) {
+            /** @var \Illuminate\Support\Collection $collection */
+            $first = $collection->first();
+            $restaurant = $first->restaurant ?? Restaurant::withoutGlobalScopes()->find($restaurantId);
+            if (! $restaurant) {
+                continue;
+            }
+
+            $email = $this->resolveReportEmailForRestaurant($restaurant);
             if (! $email) {
-                $skipped++;
+                $skippedNoEmail++;
 
                 continue;
             }
+
+            $zipPath = null;
             try {
-                Mail::to($email)->send(new DailyReportMail($report));
-                $sent++;
+                $zipPath = DailyReportDeliveryService::buildZipPathForReports($collection, 'email-'.$restaurantId);
+
+                Mail::to($email)->send(new DailyReportsPeriodZipMail(
+                    $restaurant,
+                    $validated['from'],
+                    $validated['to'],
+                    $zipPath
+                ));
+                $emailsSent++;
             } catch (\Throwable $e) {
-                $errors[] = "דוח {$report->id}: {$e->getMessage()}";
-                Log::warning('SuperAdmin daily report email failed', ['report_id' => $report->id, 'error' => $e->getMessage()]);
+                $errors[] = "{$restaurant->name}: {$e->getMessage()}";
+                Log::warning('SuperAdmin daily reports zip email failed', [
+                    'restaurant_id' => $restaurantId,
+                    'error' => $e->getMessage(),
+                ]);
+            } finally {
+                if ($zipPath && File::exists($zipPath)) {
+                    @unlink($zipPath);
+                }
             }
         }
 
         return response()->json([
             'success' => true,
-            'message' => "נשלחו {$sent} מיילים",
+            'message' => "נשלחו {$emailsSent} מיילים (מייל אחד לכל מסעדה עם ZIP)",
             'data' => [
-                'sent' => $sent,
-                'skipped_no_email' => $skipped,
+                'sent' => $emailsSent,
+                'skipped_no_email' => $skippedNoEmail,
                 'errors' => $errors,
             ],
         ]);
     }
 
     /**
-     * קישורי וואטסאפ (wa.me) עם טקסט מסכם לכל דוח — הדפדפן יפתח את האפליקציה.
+     * קישור וואטסאפ אחד לכל מסעדה — למספר owner_contact_phone (או גיבוי), טקסט מצטבר לתקופה.
      */
     public function whatsappLinks(Request $request): JsonResponse
     {
@@ -188,22 +183,25 @@ class SuperAdminDailyReportsController extends Controller
         }
 
         $reports = $query->get();
+        $byRestaurant = $reports->groupBy('restaurant_id');
         $links = [];
 
-        foreach ($reports as $report) {
-            $phone = $this->resolveWhatsappPhone($report->restaurant);
+        foreach ($byRestaurant as $restaurantId => $collection) {
+            $restaurant = $collection->first()->restaurant ?? Restaurant::withoutGlobalScopes()->find($restaurantId);
+            if (! $restaurant) {
+                continue;
+            }
+            $phone = DailyReportDeliveryService::resolveWhatsappPhone($restaurant);
             if (! $phone) {
                 continue;
             }
-            $text = $this->buildWhatsappSummary($report);
-            $url = 'https://wa.me/'.$phone.'?text='.rawurlencode($text);
+            $text = $this->buildWhatsappAggregatedSummary($restaurant, $collection, $validated['from'], $validated['to']);
             $links[] = [
-                'report_id' => $report->id,
-                'restaurant_id' => $report->restaurant_id,
-                'restaurant_name' => $report->restaurant?->name,
-                'date' => $report->date->format('Y-m-d'),
+                'restaurant_id' => (int) $restaurantId,
+                'restaurant_name' => $restaurant->name,
                 'phone_e164_digits' => $phone,
-                'url' => $url,
+                'reports_count' => $collection->count(),
+                'url' => 'https://wa.me/'.$phone.'?text='.rawurlencode($text),
             ];
         }
 
@@ -213,12 +211,76 @@ class SuperAdminDailyReportsController extends Controller
         ]);
     }
 
-    private function resolveReportEmail(DailyReport $report): ?string
+    /**
+     * סיכום רבעון (JSON) — כל דוחות היום של מסעדה ברבעון בשנה.
+     */
+    public function quarterlySummary(Request $request): JsonResponse
     {
-        $restaurant = $report->restaurant;
-        if (! $restaurant) {
-            return null;
-        }
+        $validated = $request->validate([
+            'restaurant_id' => 'required|integer|exists:restaurants,id',
+            'year' => 'required|integer|min:2020|max:2100',
+            'quarter' => 'required|integer|min:1|max:4',
+        ]);
+
+        $data = DailyReportDeliveryService::aggregateQuarterlyForRestaurant(
+            $validated['restaurant_id'],
+            $validated['year'],
+            $validated['quarter']
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'סיכום רבעון',
+            'data' => $data,
+        ]);
+    }
+
+    /**
+     * ייצוא PDF לדוח רבעון (מבוסס סיכום מצטבר).
+     */
+    public function quarterlyPdf(Request $request)
+    {
+        $validated = $request->validate([
+            'restaurant_id' => 'required|integer|exists:restaurants,id',
+            'year' => 'required|integer|min:2020|max:2100',
+            'quarter' => 'required|integer|min:1|max:4',
+        ]);
+
+        $summary = DailyReportDeliveryService::aggregateQuarterlyForRestaurant(
+            $validated['restaurant_id'],
+            $validated['year'],
+            $validated['quarter']
+        );
+
+        $restaurant = Restaurant::withoutGlobalScopes()->findOrFail($validated['restaurant_id']);
+
+        $html = view('reports.quarterly-pdf', [
+            'summary' => $summary,
+            'restaurant' => $restaurant,
+        ])->render();
+
+        $mpdf = new Mpdf([
+            'mode' => 'utf-8',
+            'format' => 'A4',
+            'default_font' => 'arial',
+            'directionality' => 'rtl',
+            'margin_left' => 15,
+            'margin_right' => 15,
+            'margin_top' => 15,
+            'margin_bottom' => 15,
+        ]);
+        $mpdf->WriteHTML($html);
+
+        $fn = 'quarterly-'.$validated['year'].'-Q'.$validated['quarter'].'-'.$restaurant->tenant_id.'.pdf';
+
+        return response($mpdf->Output('', 'S'), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="'.$fn.'"',
+        ]);
+    }
+
+    private function resolveReportEmailForRestaurant(Restaurant $restaurant): ?string
+    {
         if ($restaurant->daily_report_email) {
             return $restaurant->daily_report_email;
         }
@@ -227,38 +289,20 @@ class SuperAdminDailyReportsController extends Controller
         return $owner?->email;
     }
 
-    /** ספרות בלבד, כולל קידומת מדינה (972...) */
-    private function resolveWhatsappPhone(?Restaurant $restaurant): ?string
-    {
-        if (! $restaurant) {
-            return null;
-        }
-        $raw = $restaurant->phone ?? null;
-        $owner = User::where('restaurant_id', $restaurant->id)->where('role', 'owner')->first();
-        if (! $raw && $owner?->phone) {
-            $raw = $owner->phone;
-        }
-        if (! $raw) {
-            return null;
-        }
-        $digits = preg_replace('/\D+/', '', $raw);
-        if (str_starts_with($digits, '0')) {
-            $digits = '972'.substr($digits, 1);
-        }
-        if ($digits !== '' && ! str_starts_with($digits, '972')) {
-            $digits = '972'.ltrim($digits, '0');
-        }
+    private function buildWhatsappAggregatedSummary(
+        Restaurant $restaurant,
+        $collection,
+        string $from,
+        string $to
+    ): string {
+        $name = $restaurant->name ?? '';
+        $orders = (int) $collection->sum('total_orders');
+        $rev = (float) $collection->sum('total_revenue');
+        $days = $collection->count();
 
-        return strlen($digits) >= 11 ? $digits : null;
-    }
-
-    private function buildWhatsappSummary(DailyReport $report): string
-    {
-        $name = $report->restaurant?->name ?? '';
-        $d = $report->date->format('d/m/Y');
-
-        return "דוח יומי TakeEat — {$name} — {$d}\n"
-            ."הזמנות: {$report->total_orders} | הכנסות: ₪".number_format((float) $report->total_revenue, 0)
-            ."\nאיסוף: {$report->pickup_orders} | משלוח: {$report->delivery_orders}";
+        return "דוחות יומיים TakeEat — {$name}\n"
+            ."תקופה: {$from} — {$to}\n"
+            ."ימים עם דוח: {$days}\n"
+            ."סה״כ הזמנות: {$orders} | סה״כ הכנסות: ₪".number_format($rev, 0);
     }
 }

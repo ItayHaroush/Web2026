@@ -198,6 +198,8 @@ Route::prefix('super-admin')->middleware(['auth:sanctum', 'super_admin'])->group
     Route::post('/reports/export-zip', [SuperAdminDailyReportsController::class, 'exportZip'])->name('super-admin.reports.export-zip');
     Route::post('/reports/send-emails', [SuperAdminDailyReportsController::class, 'sendEmails'])->name('super-admin.reports.send-emails');
     Route::post('/reports/whatsapp-links', [SuperAdminDailyReportsController::class, 'whatsappLinks'])->name('super-admin.reports.whatsapp-links');
+    Route::get('/reports/quarterly-summary', [SuperAdminDailyReportsController::class, 'quarterlySummary'])->name('super-admin.reports.quarterly-summary');
+    Route::get('/reports/quarterly-pdf', [SuperAdminDailyReportsController::class, 'quarterlyPdf'])->name('super-admin.reports.quarterly-pdf');
 
     // Impersonation - כניסה כמסעדה
     Route::post('/impersonate/{restaurantId}', [SuperAdminController::class, 'impersonate'])->name('super-admin.impersonate');

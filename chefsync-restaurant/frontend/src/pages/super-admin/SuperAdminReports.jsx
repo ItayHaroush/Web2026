@@ -30,7 +30,9 @@ import {
     FaTag,
     FaEnvelope,
     FaWhatsapp,
-    FaFileArchive
+    FaFileArchive,
+    FaFilePdf,
+    FaLink
 } from 'react-icons/fa';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
@@ -1153,6 +1155,12 @@ function DailyReportsSummaryTab() {
     const [emailLoading, setEmailLoading] = useState(false);
     const [waLoading, setWaLoading] = useState(false);
     const [waLinksModal, setWaLinksModal] = useState(null);
+    const [qYear, setQYear] = useState(() => new Date().getFullYear());
+    const [qQuarter, setQQuarter] = useState(() => Math.floor(new Date().getMonth() / 3) + 1);
+    const [qRestaurantId, setQRestaurantId] = useState('');
+    const [quarterlyPreview, setQuarterlyPreview] = useState(null);
+    const [quarterlyLoading, setQuarterlyLoading] = useState(false);
+    const [quarterlyPdfLoading, setQuarterlyPdfLoading] = useState(false);
     const [from, setFrom] = useState(() => {
         const d = new Date();
         d.setDate(d.getDate() - 7);
@@ -1197,6 +1205,12 @@ function DailyReportsSummaryTab() {
         };
         loadRestaurants();
     }, [getAuthHeaders]);
+
+    useEffect(() => {
+        if (!qRestaurantId && restaurantList.length > 0) {
+            setQRestaurantId(String(restaurantList[0].id));
+        }
+    }, [restaurantList, qRestaurantId]);
 
     const toggleRestaurant = (id) => {
         setSelectedRestaurantIds((prev) =>
@@ -1269,6 +1283,53 @@ function DailyReportsSummaryTab() {
         }
     };
 
+    const handleQuarterlySummary = async () => {
+        if (!qRestaurantId) {
+            toast.error('בחר מסעדה');
+            return;
+        }
+        setQuarterlyLoading(true);
+        try {
+            const data = await reportService.superAdminQuarterlySummary({
+                restaurant_id: Number(qRestaurantId),
+                year: qYear,
+                quarter: qQuarter,
+            });
+            setQuarterlyPreview(data || null);
+            toast.success('סיכום רבעון נטען');
+        } catch (err) {
+            setQuarterlyPreview(null);
+            toast.error(err.response?.data?.message || err.message || 'שגיאה');
+        } finally {
+            setQuarterlyLoading(false);
+        }
+    };
+
+    const handleQuarterlyPdf = async () => {
+        if (!qRestaurantId) {
+            toast.error('בחר מסעדה');
+            return;
+        }
+        setQuarterlyPdfLoading(true);
+        try {
+            await reportService.superAdminQuarterlyPdfDownload({
+                restaurant_id: Number(qRestaurantId),
+                year: qYear,
+                quarter: qQuarter,
+            });
+            toast.success('הורדת PDF');
+        } catch (err) {
+            toast.error(err.response?.data?.message || err.message || 'שגיאה');
+        } finally {
+            setQuarterlyPdfLoading(false);
+        }
+    };
+
+    const yearOptions = useMemo(() => {
+        const y = new Date().getFullYear();
+        return Array.from({ length: 6 }, (_, i) => y - i);
+    }, []);
+
     if (summaryLoading) return <div className="text-center py-16 text-gray-400">טוען דוחות יומיים...</div>;
     if (loadError && !data) return <div className="text-center py-16 text-rose-600 font-bold">לא ניתן לטעון סיכום. נסה שוב או בדוק התחברות.</div>;
     if (!data) return <div className="text-center py-16 text-gray-400">אין נתונים</div>;
@@ -1282,10 +1343,14 @@ function DailyReportsSummaryTab() {
 
     return (
         <div className="space-y-6">
-            {/* Filters + actions */}
+            {/* תקופה + סינון מסעדות */}
             <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col gap-4">
-                <div className="flex flex-wrap items-center gap-4">
+                <h3 className="text-sm font-black text-gray-800 flex items-center gap-2">
                     <FaCalendarAlt className="text-brand-primary" />
+                    תקופה לדוחות יומיים
+                </h3>
+                <p className="text-xs text-gray-500 -mt-1">כל הפעולות למטה (ZIP, מייל, וואטסאפ) מסתמכות על טווח התאריכים והמסעדות שנבחרו כאן.</p>
+                <div className="flex flex-wrap items-center gap-4">
                     <input type="date" value={from} onChange={e => setFrom(e.target.value)} className="border border-gray-200 rounded-xl px-3 py-2 text-sm" />
                     <span className="text-gray-400">עד</span>
                     <input type="date" value={to} onChange={e => setTo(e.target.value)} className="border border-gray-200 rounded-xl px-3 py-2 text-sm" />
@@ -1315,8 +1380,18 @@ function DailyReportsSummaryTab() {
                         </div>
                     </div>
                 )}
+            </div>
 
-                <div className="border-t border-gray-100 pt-4 flex flex-wrap gap-2">
+            {/* פעולות דוח יומי */}
+            <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm space-y-3">
+                <h3 className="text-sm font-black text-gray-800 flex items-center gap-2">
+                    <FaEnvelope className="text-blue-500" size={14} />
+                    פעולות על דוחות יומיים
+                </h3>
+                <p className="text-xs text-gray-500 -mt-1">
+                    מייל: <strong className="text-gray-700">מייל אחד לכל מסעדה</strong> עם קובץ ZIP שמכיל את כל ה-PDF לתקופה. וואטסאפ: קישור אחד לכל מסעדה — למספר פלאפון בעלים (שמור במסך ניהול מסעדות) או גיבוי לטלפון מסעדה/בעלים.
+                </p>
+                <div className="flex flex-wrap gap-2 pt-1">
                     <button
                         type="button"
                         disabled={backfillLoading}
@@ -1342,7 +1417,7 @@ function DailyReportsSummaryTab() {
                         className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
                     >
                         <FaEnvelope size={12} />
-                        {emailLoading ? '...' : 'שליחת מיילים'}
+                        {emailLoading ? '...' : 'שליחת מיילים (ZIP אחד למסעדה)'}
                     </button>
                     <button
                         type="button"
@@ -1356,6 +1431,80 @@ function DailyReportsSummaryTab() {
                 </div>
             </div>
 
+            {/* דוח רבעון */}
+            <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm space-y-3">
+                <h3 className="text-sm font-black text-gray-800 flex items-center gap-2">
+                    <FaChartBar className="text-violet-500" size={14} />
+                    דוח רבעון — פעילות מסעדה
+                </h3>
+                <p className="text-xs text-gray-500 -mt-1">סיכום מצטבר מדוחות יומיים קיימים לרבעון בשנה (לא תלוי בטווח למעלה).</p>
+                {restaurantList.length > 0 ? (
+                    <div className="flex flex-col sm:flex-row flex-wrap gap-3 items-end">
+                        <div className="min-w-[200px]">
+                            <label className="text-xs font-bold text-gray-500 block mb-1">מסעדה</label>
+                            <select
+                                value={qRestaurantId}
+                                onChange={(e) => { setQRestaurantId(e.target.value); setQuarterlyPreview(null); }}
+                                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold"
+                            >
+                                {restaurantList.map((r) => (
+                                    <option key={r.id} value={String(r.id)}>{r.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="text-xs font-bold text-gray-500 block mb-1">שנה</label>
+                            <select
+                                value={qYear}
+                                onChange={(e) => { setQYear(Number(e.target.value)); setQuarterlyPreview(null); }}
+                                className="border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold"
+                            >
+                                {yearOptions.map((y) => (
+                                    <option key={y} value={y}>{y}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="text-xs font-bold text-gray-500 block mb-1">רבעון</label>
+                            <select
+                                value={qQuarter}
+                                onChange={(e) => { setQQuarter(Number(e.target.value)); setQuarterlyPreview(null); }}
+                                className="border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold"
+                            >
+                                {[1, 2, 3, 4].map((q) => (
+                                    <option key={q} value={q}>Q{q}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <button
+                            type="button"
+                            disabled={quarterlyLoading}
+                            onClick={handleQuarterlySummary}
+                            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-50"
+                        >
+                            {quarterlyLoading ? '...' : 'הצג סיכום'}
+                        </button>
+                        <button
+                            type="button"
+                            disabled={quarterlyPdfLoading}
+                            onClick={handleQuarterlyPdf}
+                            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold border-2 border-violet-200 text-violet-700 hover:bg-violet-50 disabled:opacity-50"
+                        >
+                            <FaFilePdf size={14} />
+                            {quarterlyPdfLoading ? '...' : 'הורד PDF'}
+                        </button>
+                    </div>
+                ) : (
+                    <p className="text-sm text-gray-400">טוען רשימת מסעדות…</p>
+                )}
+                {quarterlyPreview && (
+                    <div className="mt-3 p-4 rounded-xl bg-violet-50/50 border border-violet-100 text-sm space-y-1">
+                        <p className="font-black text-gray-800">{quarterlyPreview.restaurant_name} · {quarterlyPreview.from} — {quarterlyPreview.to}</p>
+                        <p className="text-gray-700">ימים עם דוח: <strong>{quarterlyPreview.days_with_reports}</strong> · הזמנות: <strong>{(quarterlyPreview.total_orders ?? 0).toLocaleString()}</strong> · הכנסות: <strong>₪{(quarterlyPreview.total_revenue ?? 0).toLocaleString()}</strong></p>
+                    </div>
+                )}
+            </div>
+
             {waLinksModal && (
                 <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/50" onClick={() => setWaLinksModal(null)}>
                     <div className="bg-white rounded-2xl max-w-lg w-full max-h-[80vh] overflow-hidden shadow-2xl" onClick={(e) => e.stopPropagation()}>
@@ -1367,16 +1516,24 @@ function DailyReportsSummaryTab() {
                         </div>
                         <ul className="p-4 overflow-y-auto max-h-[60vh] space-y-2 text-sm">
                             {waLinksModal.map((row) => (
-                                <li key={row.report_id} className="flex flex-wrap items-center gap-2 justify-between border border-gray-100 rounded-xl p-2">
-                                    <span className="text-gray-600">{row.restaurant_name} · {row.date}</span>
-                                    <a
-                                        href={row.url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="font-bold text-green-600 hover:underline"
-                                    >
-                                        פתח
-                                    </a>
+                                <li key={row.restaurant_id} className="flex flex-col gap-2 border border-gray-100 rounded-xl p-3">
+                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                        <span className="font-bold text-gray-800">{row.restaurant_name}</span>
+                                        <span className="text-xs text-gray-500">{row.reports_count} ימי דוח · {from} — {to}</span>
+                                    </div>
+                                    <div className="flex flex-wrap gap-2">
+                                        <a
+                                            href={row.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center gap-1.5 font-bold text-green-600 hover:underline"
+                                        >
+                                            <FaLink size={12} /> פתח בוואטסאפ
+                                        </a>
+                                        {row.phone_e164_digits && (
+                                            <span className="text-xs text-gray-400 font-mono" dir="ltr">wa.me/{row.phone_e164_digits}</span>
+                                        )}
+                                    </div>
                                 </li>
                             ))}
                         </ul>

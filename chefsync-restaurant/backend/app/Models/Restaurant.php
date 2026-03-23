@@ -37,6 +37,8 @@ class Restaurant extends Model
         'kashrut_text',         // פרטי כשרות נוספים
         'common_allergens',     // אלרגנים נפוצים במטבח
         'phone',
+        /** פלאפון אישי לבעלים — תצוגה לסופר־אדמין, וואטסאפ מערכת */
+        'owner_contact_phone',
         'address',
         'city',
         'latitude',

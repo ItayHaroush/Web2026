@@ -332,6 +332,8 @@ class SuperAdminController extends Controller
             'name' => 'sometimes|string|max:255',
             'tenant_id' => 'sometimes|string|max:255|unique:restaurants,tenant_id,' . $id . '|regex:/^[a-z0-9-]+$/',
             'phone' => 'sometimes|string|max:20',
+            /** פלאפון בעלים לדוחות/וואטסאפ — עדיפות על טלפון מסעדה */
+            'owner_contact_phone' => 'nullable|string|max:32',
             'address' => 'nullable|string',
             'description' => 'nullable|string',
             'logo_url' => 'nullable|url',
