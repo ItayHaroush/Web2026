@@ -321,11 +321,6 @@ function OrderCard({
                                     <FaGlobe size={10} /> {sourceLabel}
                                 </span>
                             )}
-                            {order.payment_status === 'failed' && (
-                                <span className="text-xs font-black px-2 py-0.5 rounded-lg bg-red-600/30 text-red-200 ring-1 ring-red-500/50">
-                                    נכשל בתשלום
-                                </span>
-                            )}
                             <span className="text-slate-400 text-xs font-semibold">{order.created_at}</span>
                         </div>
                         <p className="text-slate-400 text-sm font-semibold truncate">

@@ -1,5 +1,5 @@
 /**
- * תצוגת תשלום באשראי: רק "תשלום עבר" / "תשלום נכשל" (בלי כפילות מול סטטוס ההזמנה).
+ * תגית עם אייקון אשראי: שולם באשראי (ירוק) / תשלום אשראי נכשל (אדום).
  * כשההזמנה כבר "ממתין לאשראי" — לא מציגים שוב תגית "ממתין" על התשלום.
  */
 export function shouldShowPaymentStatusBadge(order) {
@@ -19,10 +19,10 @@ export function paymentStatusBadgeLabel(order) {
     const ps = order?.payment_status;
     const pm = order?.payment_method;
     if (ps === 'paid') {
-        return pm === 'credit_card' ? 'תשלום עבר' : 'שולם במזומן';
+        return pm === 'credit_card' ? 'שולם באשראי' : 'שולם במזומן';
     }
     if (ps === 'failed') {
-        return pm === 'credit_card' ? 'תשלום נכשל' : 'תשלום נכשל';
+        return pm === 'credit_card' ? 'תשלום אשראי נכשל' : 'תשלום נכשל';
     }
     if (ps === 'pending') {
         if (pm === 'credit_card') return 'ממתין לאשראי';

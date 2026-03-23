@@ -382,7 +382,8 @@ export default function POSPendingPaymentModal({ headers, posToken, onClose, onP
                                                 </span>
                                                 {isFailed && (
                                                     <span className="text-xs font-black px-2 py-1 rounded-lg bg-red-600/35 text-red-100 flex items-center gap-1 ring-1 ring-red-500/50">
-                                                        <FaExclamationTriangle size={10} /> נכשל בתשלום
+                                                        <FaExclamationTriangle size={10} />{' '}
+                                                        {order.payment_method === 'credit_card' ? 'תשלום אשראי נכשל' : 'נכשל בתשלום'}
                                                     </span>
                                                 )}
                                                 {order.delivery_method === 'delivery' && (
