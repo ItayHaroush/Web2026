@@ -1,13 +1,19 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\CustomInvoiceController;
+use App\Http\Controllers\EmailMarketingUnsubscribeController;
 use App\Http\Controllers\HypOrderRedirectController;
 use App\Http\Controllers\HypSubscriptionRedirectController;
+use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return ['message' => 'TakeEat API'];
 });
+
+// ביטול הרשמה למיילים שיווקיים (RFC 8058 — GET וגם POST one-click)
+Route::match(['get', 'post'], '/email/marketing/unsubscribe', [EmailMarketingUnsubscribeController::class, 'unsubscribe'])
+    ->middleware('signed')
+    ->name('email.marketing.unsubscribe');
 
 // טופס חשבונית ידנית ל-Itay Solutions
 Route::get('/custom-invoice', [CustomInvoiceController::class, 'showForm'])->name('custom-invoice.form');
@@ -28,6 +34,7 @@ Route::get('/pay/hyp/subscription/{restaurantId}', [HypSubscriptionRedirectContr
 
 // ── Appointed.cloud payment proxy (same HYP masof) ──
 use App\Http\Controllers\AppointedPaymentProxyController;
+
 Route::post('/appointed-pay/sign', [AppointedPaymentProxyController::class, 'sign']);
 Route::get('/appointed-pay/redirect', [AppointedPaymentProxyController::class, 'redirect']);
-Route::post("/appointed-pay/proxy", [AppointedPaymentProxyController::class, "proxy"]);
+Route::post('/appointed-pay/proxy', [AppointedPaymentProxyController::class, 'proxy']);

@@ -2,22 +2,22 @@
 
 namespace App\Http\Controllers;
 
-use App\Mail\WelcomeMail;
-use App\Mail\TrialInfoMail;
-use App\Mail\TrialExpiringMail;
-use App\Mail\RestaurantApprovedMail;
-use App\Mail\MonthlyReportMail;
 use App\Mail\CustomMail;
-use App\Models\Restaurant;
-use App\Models\User;
-use App\Models\Order;
+use App\Mail\MonthlyReportMail;
+use App\Mail\RestaurantApprovedMail;
+use App\Mail\TrialExpiringMail;
+use App\Mail\TrialInfoMail;
+use App\Mail\WelcomeMail;
+use App\Models\EmailMarketingSuppression;
 use App\Models\Kiosk;
 use App\Models\MonthlyInvoice;
+use App\Models\Order;
+use App\Models\Restaurant;
 use App\Models\RestaurantSubscription;
+use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 
 class SuperAdminEmailController extends Controller
 {
@@ -131,14 +131,15 @@ class SuperAdminEmailController extends Controller
         try {
             $mailable = match ($type) {
                 'welcome' => $this->buildWelcomeMail($restaurant),
-                'trial_info' => $this->buildTrialInfoMail($restaurant),
-                'trial_expiring' => $this->buildTrialExpiringMail($restaurant),
+                'trial_info' => $this->buildTrialInfoMail($restaurant, $email),
+                'trial_expiring' => $this->buildTrialExpiringMail($restaurant, $email),
                 'restaurant_approved' => $this->buildApprovedMail($restaurant),
                 'monthly_report' => $this->buildMonthlyReportMail(),
                 'custom' => new CustomMail(
                     $validated['subject'] ?? 'הודעה מ-TakeEat',
                     $validated['body'] ?? 'זוהי הודעת בדיקה ממערכת TakeEat.',
                     $validated['recipient_name'] ?? null,
+                    $email,
                 ),
             };
 
@@ -151,7 +152,10 @@ class SuperAdminEmailController extends Controller
                 'user_id' => $request->user()->id,
             ]);
 
-            try { \App\Services\EmailLogService::log($email, 'test_email', "בדיקה: {$type}", null, 'sent', null, ['restaurant_id' => $restaurantId]); } catch (\Throwable $ignore) {}
+            try {
+                \App\Services\EmailLogService::log($email, 'test_email', "בדיקה: {$type}", null, 'sent', null, ['restaurant_id' => $restaurantId]);
+            } catch (\Throwable $ignore) {
+            }
 
             return response()->json([
                 'success' => true,
@@ -167,7 +171,7 @@ class SuperAdminEmailController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'שליחת המייל נכשלה: ' . $e->getMessage(),
+                'message' => 'שליחת המייל נכשלה: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -206,16 +210,30 @@ class SuperAdminEmailController extends Controller
         $restaurants = $query->get();
         $sent = 0;
         $failed = 0;
+        $skipped = 0;
         $errors = [];
+        $delaySeconds = max(0, (int) config('mail.bulk_delay_seconds', 2));
+        $priorAttempt = false;
 
         foreach ($restaurants as $restaurant) {
             $owner = User::where('restaurant_id', $restaurant->id)
                 ->where('role', 'owner')
                 ->first();
 
-            if (!$owner || !$owner->email) {
+            if (! $owner || ! $owner->email) {
                 $failed++;
+
                 continue;
+            }
+
+            if (EmailMarketingSuppression::isSuppressed($owner->email)) {
+                $skipped++;
+
+                continue;
+            }
+
+            if ($priorAttempt && $delaySeconds > 0) {
+                usleep($delaySeconds * 1_000_000);
             }
 
             try {
@@ -224,6 +242,7 @@ class SuperAdminEmailController extends Controller
                         $validated['subject'] ?? 'הודעה מ-TakeEat',
                         $validated['body'] ?? '',
                         $owner->name,
+                        $owner->email,
                     ),
                     'trial_info' => $this->buildTrialInfoMail($restaurant),
                     'trial_expiring' => $this->buildTrialExpiringMail($restaurant),
@@ -231,16 +250,23 @@ class SuperAdminEmailController extends Controller
 
                 Mail::to($owner->email)->send($mailable);
                 $sent++;
-                try { \App\Services\EmailLogService::log($owner->email, 'bulk_email', "שליחה המונית: {$type}", null, 'sent', null, ['restaurant_id' => $restaurant->id]); } catch (\Throwable $ignore) {}
+                try {
+                    \App\Services\EmailLogService::log($owner->email, 'bulk_email', "שליחה המונית: {$type}", null, 'sent', null, ['restaurant_id' => $restaurant->id]);
+                } catch (\Throwable $ignore) {
+                }
             } catch (\Exception $e) {
                 $failed++;
-                try { \App\Services\EmailLogService::log($owner->email ?? 'unknown', 'bulk_email', "שליחה המונית: {$type}", null, 'failed', $e->getMessage(), ['restaurant_id' => $restaurant->id ?? null]); } catch (\Throwable $ignore) {}
+                try {
+                    \App\Services\EmailLogService::log($owner->email ?? 'unknown', 'bulk_email', "שליחה המונית: {$type}", null, 'failed', $e->getMessage(), ['restaurant_id' => $restaurant->id ?? null]);
+                } catch (\Throwable $ignore) {
+                }
                 $errors[] = [
                     'restaurant' => $restaurant->name,
                     'email' => $owner->email,
                     'error' => $e->getMessage(),
                 ];
             }
+            $priorAttempt = true;
         }
 
         Log::info('Bulk email sent by super admin', [
@@ -248,15 +274,17 @@ class SuperAdminEmailController extends Controller
             'filter' => $filter,
             'sent' => $sent,
             'failed' => $failed,
+            'skipped' => $skipped,
             'user_id' => $request->user()->id,
         ]);
 
         return response()->json([
             'success' => true,
-            'message' => "נשלחו {$sent} מיילים, {$failed} נכשלו",
+            'message' => "נשלחו {$sent} מיילים, {$failed} נכשלו, דולגו {$skipped} (ביטול שיווק)",
             'data' => [
                 'sent' => $sent,
                 'failed' => $failed,
+                'skipped' => $skipped,
                 'total' => $restaurants->count(),
                 'errors' => array_slice($errors, 0, 10),
             ],
@@ -290,6 +318,7 @@ class SuperAdminEmailController extends Controller
     private function buildWelcomeMail(Restaurant $restaurant): WelcomeMail
     {
         $owner = $this->getOwnerForRestaurant($restaurant);
+
         return new WelcomeMail(
             $restaurant,
             $owner->name ?? 'בעל המסעדה',
@@ -297,7 +326,7 @@ class SuperAdminEmailController extends Controller
         );
     }
 
-    private function buildTrialInfoMail(Restaurant $restaurant): TrialInfoMail
+    private function buildTrialInfoMail(Restaurant $restaurant, ?string $recipientOverride = null): TrialInfoMail
     {
         $ordersQuery = Order::where('restaurant_id', $restaurant->id)->where('is_test', false);
         $stats = [
@@ -310,11 +339,13 @@ class SuperAdminEmailController extends Controller
         $dayNumber = $restaurant->created_at
             ? (int) $restaurant->created_at->diffInDays(now())
             : 3;
+        $owner = $this->getOwnerForRestaurant($restaurant);
+        $recipient = $recipientOverride ?? $owner?->email;
 
-        return new TrialInfoMail($restaurant, max(1, $dayNumber), $stats);
+        return new TrialInfoMail($restaurant, max(1, $dayNumber), $stats, $recipient);
     }
 
-    private function buildTrialExpiringMail(Restaurant $restaurant): TrialExpiringMail
+    private function buildTrialExpiringMail(Restaurant $restaurant, ?string $recipientOverride = null): TrialExpiringMail
     {
         $daysRemaining = $restaurant->trial_ends_at
             ? max(0, (int) now()->diffInDays($restaurant->trial_ends_at, false))
@@ -326,13 +357,16 @@ class SuperAdminEmailController extends Controller
             'kiosk_orders' => (clone $ordersQuery)->where('source', 'kiosk')->count(),
             'menu_items' => $restaurant->menuItems()->count(),
         ];
+        $owner = $this->getOwnerForRestaurant($restaurant);
+        $recipient = $recipientOverride ?? $owner?->email;
 
-        return new TrialExpiringMail($restaurant, $daysRemaining, $usageSummary);
+        return new TrialExpiringMail($restaurant, $daysRemaining, $usageSummary, $recipient);
     }
 
     private function buildApprovedMail(Restaurant $restaurant): RestaurantApprovedMail
     {
         $owner = $this->getOwnerForRestaurant($restaurant);
+
         return new RestaurantApprovedMail($restaurant, $owner->name ?? 'בעל המסעדה');
     }
 
@@ -340,6 +374,7 @@ class SuperAdminEmailController extends Controller
     {
         $month = now()->subMonth()->format('Y-m');
         $reportData = $this->gatherMonthlyReportData($month);
+
         return new MonthlyReportMail($month, $reportData);
     }
 
@@ -376,7 +411,9 @@ class SuperAdminEmailController extends Controller
             'הודעה לדוגמה מ-TakeEat',
             "שלום! זוהי הודעה לדוגמה ממערכת TakeEat.\n\nניתן לשלוח הודעות מותאמות אישית לכל מסעדה או בצורה גורפת.\n\nתודה שאתם חלק מ-TakeEat!",
             'ישראל ישראלי',
+            null,
         );
+
         return $mail->render();
     }
 
@@ -392,7 +429,7 @@ class SuperAdminEmailController extends Controller
         $end = date('Y-m-t 23:59:59', mktime(0, 0, 0, $mon, 1, $year));
 
         // שאילתת בסיס - כל ההזמנות מכל המסעדות (ללא סינון tenant)
-        $baseQuery = fn() => Order::withoutGlobalScopes()
+        $baseQuery = fn () => Order::withoutGlobalScopes()
             ->whereBetween('created_at', [$start, $end])
             ->whereNotIn('status', ['cancelled'])
             ->where('is_test', false);
@@ -464,7 +501,7 @@ class SuperAdminEmailController extends Controller
             ->orderByDesc('month_orders')
             ->limit(10)
             ->get()
-            ->map(fn($r) => [
+            ->map(fn ($r) => [
                 'name' => $r->name,
                 'orders' => $r->month_orders ?? 0,
                 'web_orders' => $r->web_orders ?? 0,

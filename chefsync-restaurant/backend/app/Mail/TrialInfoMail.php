@@ -2,6 +2,7 @@
 
 namespace App\Mail;
 
+use App\Mail\Concerns\HasMarketingUnsubscribeHeaders;
 use App\Models\Restaurant;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
@@ -11,22 +12,30 @@ use Illuminate\Queue\SerializesModels;
 
 class TrialInfoMail extends Mailable
 {
+    use HasMarketingUnsubscribeHeaders;
     use Queueable, SerializesModels;
 
     /**
-     * @param Restaurant $restaurant
-     * @param int $dayNumber יום מספר X בניסיון (3 או 7)
-     * @param array $stats סטטיסטיקות שימוש
+     * @param  int  $dayNumber  יום מספר X בניסיון (3 או 7)
+     * @param  array  $stats  סטטיסטיקות שימוש
+     * @param  string|null  $recipientEmail  נמען לצורך List-Unsubscribe (מייל שיווקי)
      */
     public function __construct(
         public Restaurant $restaurant,
         public int $dayNumber = 3,
         public array $stats = [],
+        public ?string $recipientEmail = null,
     ) {}
+
+    protected function marketingRecipientEmail(): ?string
+    {
+        return $this->recipientEmail;
+    }
 
     public function envelope(): Envelope
     {
         $day = $this->dayNumber;
+
         return new Envelope(
             subject: "יום {$day} ב-TakeEat — טיפים לשימוש מיטבי",
         );
@@ -54,7 +63,7 @@ class TrialInfoMail extends Mailable
         $body = '';
 
         // ברכה
-        $body .= EmailLayoutHelper::paragraph("שלום,");
+        $body .= EmailLayoutHelper::paragraph('שלום,');
 
         if ($this->dayNumber <= 3) {
             $body .= EmailLayoutHelper::paragraph("עברו 3 ימים מאז שהצטרפתם ל-TakeEat עם <strong>\"{$restaurantName}\"</strong>. רצינו לוודא שהכל מתנהל חלק ולשתף כמה טיפים שיעזרו לכם להתחיל.");
@@ -115,11 +124,13 @@ class TrialInfoMail extends Mailable
         if ($daysLeft <= 7) {
             $body .= EmailLayoutHelper::warningBox(
                 '<p style="margin: 0; font-size: 14px; color: #92400e; text-align: center;">'
-                    . "<strong>נותרו לכם {$daysLeft} ימי ניסיון</strong><br>"
-                    . '<span style="font-size: 12px;">לאחר תקופת הניסיון, יש להפעיל מנוי כדי להמשיך.</span>'
-                    . '</p>'
+                    ."<strong>נותרו לכם {$daysLeft} ימי ניסיון</strong><br>"
+                    .'<span style="font-size: 12px;">לאחר תקופת הניסיון, יש להפעיל מנוי כדי להמשיך.</span>'
+                    .'</p>'
             );
         }
+
+        $body .= $this->marketingUnsubscribeFooterHtml();
 
         return EmailLayoutHelper::wrap($body, "יום {$this->dayNumber} ב-TakeEat — טיפים לשימוש מיטבי");
     }

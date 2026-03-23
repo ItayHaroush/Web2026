@@ -253,6 +253,54 @@ export default function NotificationSettings() {
                     </div>
                 </div>
 
+                {/* Gmail / deliverability checklist (from API) */}
+                {smtpStatus?.deliverability && (
+                    <div className="bg-amber-50/90 rounded-3xl border border-amber-100 shadow-sm p-5 mb-6 space-y-3">
+                        <h2 className="text-sm font-black text-amber-900">מסירה ל-Gmail ומוניטין דומיין</h2>
+                        <p className="text-xs text-amber-900/80 leading-relaxed">
+                            {smtpStatus.deliverability.dns_reminder}
+                        </p>
+                        <p className="text-xs text-amber-900/80 leading-relaxed">
+                            {smtpStatus.deliverability.ptr_reminder}
+                        </p>
+                        {smtpStatus.deliverability.tls_warning && (
+                            <p className="text-xs font-bold text-amber-800">
+                                מומלץ להשתמש בהצפנת TLS או SSL לחיבור SMTP (לא &quot;ללא הצפנה&quot;) — דרישת Google.
+                            </p>
+                        )}
+                        <p className="text-xs text-gray-600">
+                            השהייה בין שליחות גורפות:{' '}
+                            <strong>{smtpStatus.bulk_delay_seconds ?? 2}</strong> שניות (MAIL_BULK_DELAY_SECONDS)
+                        </p>
+                        <div className="flex flex-wrap gap-3 pt-1">
+                            <a
+                                href={smtpStatus.deliverability.google_sender_guidelines_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs font-bold text-amber-800 underline hover:text-amber-950"
+                            >
+                                הנחיות Google לשולחים
+                            </a>
+                            <a
+                                href={smtpStatus.deliverability.postmaster_tools_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs font-bold text-amber-800 underline hover:text-amber-950"
+                            >
+                                Google Postmaster Tools
+                            </a>
+                            <a
+                                href={smtpStatus.deliverability.google_sender_faq_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs font-bold text-amber-800 underline hover:text-amber-950"
+                            >
+                                שאלות נפוצות (שולחים)
+                            </a>
+                        </div>
+                    </div>
+                )}
+
                 {/* SMTP Form */}
                 <form onSubmit={handleSave} className="space-y-6">
                     <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 space-y-6">

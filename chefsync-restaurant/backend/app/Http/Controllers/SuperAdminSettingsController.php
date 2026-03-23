@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\SystemSetting;
 use App\Models\PolicyVersion;
 use App\Models\SystemError;
+use App\Models\SystemSetting;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Mail;
 
 class SuperAdminSettingsController extends Controller
@@ -20,7 +20,7 @@ class SuperAdminSettingsController extends Controller
     {
         $validGroups = ['regional', 'billing', 'security', 'notifications'];
 
-        if (!in_array($group, $validGroups)) {
+        if (! in_array($group, $validGroups)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Invalid settings group',
@@ -82,20 +82,20 @@ class SuperAdminSettingsController extends Controller
      */
     private static array $defaultPricing = [
         'basic' => [
-            'label'            => 'בייסיק',
-            'monthly'          => 450,
-            'yearly'           => 4500,
-            'ai_credits'       => 0,
+            'label' => 'בייסיק',
+            'monthly' => 450,
+            'yearly' => 4500,
+            'ai_credits' => 0,
             'trial_ai_credits' => 0,
-            'features'         => ['תפריט דיגיטלי', 'ניהול הזמנות', 'דוחות בסיסיים'],
+            'features' => ['תפריט דיגיטלי', 'ניהול הזמנות', 'דוחות בסיסיים'],
         ],
         'pro' => [
-            'label'            => 'פרו',
-            'monthly'          => 600,
-            'yearly'           => 5000,
-            'ai_credits'       => 500,
+            'label' => 'פרו',
+            'monthly' => 600,
+            'yearly' => 5000,
+            'ai_credits' => 500,
             'trial_ai_credits' => 50,
-            'features'         => ['תפריט דיגיטלי', 'ניהול הזמנות', 'דוחות מתקדמים', 'AI מתקדם', 'תמיכה מועדפת'],
+            'features' => ['תפריט דיגיטלי', 'ניהול הזמנות', 'דוחות מתקדמים', 'AI מתקדם', 'תמיכה מועדפת'],
         ],
     ];
 
@@ -106,13 +106,13 @@ class SuperAdminSettingsController extends Controller
     {
         $tiers = SystemSetting::get('pricing_tiers');
 
-        if (!$tiers || !is_array($tiers)) {
+        if (! $tiers || ! is_array($tiers)) {
             $tiers = self::$defaultPricing;
         }
 
         return response()->json([
             'success' => true,
-            'data'    => $tiers,
+            'data' => $tiers,
         ]);
     }
 
@@ -122,23 +122,23 @@ class SuperAdminSettingsController extends Controller
     public function updatePricingTiers(Request $request)
     {
         $validated = $request->validate([
-            'tiers'                        => 'required|array',
-            'tiers.basic'                  => 'required|array',
-            'tiers.basic.label'            => 'required|string|max:50',
-            'tiers.basic.monthly'          => 'required|numeric|min:0',
-            'tiers.basic.yearly'           => 'required|numeric|min:0',
-            'tiers.basic.ai_credits'       => 'required|integer|min:0',
+            'tiers' => 'required|array',
+            'tiers.basic' => 'required|array',
+            'tiers.basic.label' => 'required|string|max:50',
+            'tiers.basic.monthly' => 'required|numeric|min:0',
+            'tiers.basic.yearly' => 'required|numeric|min:0',
+            'tiers.basic.ai_credits' => 'required|integer|min:0',
             'tiers.basic.trial_ai_credits' => 'required|integer|min:0',
-            'tiers.basic.features'         => 'required|array',
-            'tiers.basic.features.*'       => 'string|max:100',
-            'tiers.pro'                    => 'required|array',
-            'tiers.pro.label'              => 'required|string|max:50',
-            'tiers.pro.monthly'            => 'required|numeric|min:0',
-            'tiers.pro.yearly'             => 'required|numeric|min:0',
-            'tiers.pro.ai_credits'         => 'required|integer|min:0',
-            'tiers.pro.trial_ai_credits'   => 'required|integer|min:0',
-            'tiers.pro.features'           => 'required|array',
-            'tiers.pro.features.*'         => 'string|max:100',
+            'tiers.basic.features' => 'required|array',
+            'tiers.basic.features.*' => 'string|max:100',
+            'tiers.pro' => 'required|array',
+            'tiers.pro.label' => 'required|string|max:50',
+            'tiers.pro.monthly' => 'required|numeric|min:0',
+            'tiers.pro.yearly' => 'required|numeric|min:0',
+            'tiers.pro.ai_credits' => 'required|integer|min:0',
+            'tiers.pro.trial_ai_credits' => 'required|integer|min:0',
+            'tiers.pro.features' => 'required|array',
+            'tiers.pro.features.*' => 'string|max:100',
         ]);
 
         SystemSetting::set(
@@ -151,13 +151,13 @@ class SuperAdminSettingsController extends Controller
 
         Log::info('Pricing tiers updated by super admin', [
             'user_id' => $request->user()->id,
-            'tiers'   => $validated['tiers'],
+            'tiers' => $validated['tiers'],
         ]);
 
         return response()->json([
             'success' => true,
             'message' => 'המחירים עודכנו בהצלחה',
-            'data'    => $validated['tiers'],
+            'data' => $validated['tiers'],
         ]);
     }
 
@@ -168,13 +168,13 @@ class SuperAdminSettingsController extends Controller
     {
         $tiers = SystemSetting::get('pricing_tiers');
 
-        if (!$tiers || !is_array($tiers)) {
+        if (! $tiers || ! is_array($tiers)) {
             $tiers = self::$defaultPricing;
         }
 
         return response()->json([
             'success' => true,
-            'data'    => $tiers,
+            'data' => $tiers,
         ]);
     }
 
@@ -185,7 +185,7 @@ class SuperAdminSettingsController extends Controller
     {
         $tiers = SystemSetting::get('pricing_tiers');
 
-        if (!$tiers || !is_array($tiers)) {
+        if (! $tiers || ! is_array($tiers)) {
             return self::$defaultPricing;
         }
 
@@ -203,7 +203,7 @@ class SuperAdminSettingsController extends Controller
     {
         $validTypes = ['terms_end_user', 'terms_restaurant', 'privacy_policy', 'cookie_banner'];
 
-        if (!in_array($type, $validTypes)) {
+        if (! in_array($type, $validTypes)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Invalid policy type',
@@ -279,7 +279,7 @@ class SuperAdminSettingsController extends Controller
     {
         $validTypes = ['terms_end_user', 'terms_restaurant', 'privacy_policy', 'cookie_banner'];
 
-        if (!in_array($type, $validTypes)) {
+        if (! in_array($type, $validTypes)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Invalid policy type',
@@ -288,7 +288,7 @@ class SuperAdminSettingsController extends Controller
 
         $policy = PolicyVersion::getPublished($type);
 
-        if (!$policy) {
+        if (! $policy) {
             return response()->json([
                 'success' => false,
                 'message' => 'No published policy found',
@@ -318,7 +318,7 @@ class SuperAdminSettingsController extends Controller
             $dbName = DB::selectOne('SELECT DATABASE() as db')->db;
 
             // Table sizes
-            $tables = DB::select(<<<SQL
+            $tables = DB::select(<<<'SQL'
                 SELECT TABLE_NAME as table_name,
                        TABLE_ROWS as row_count,
                        ROUND(DATA_LENGTH / 1024 / 1024, 2) as data_size_mb,
@@ -362,9 +362,10 @@ class SuperAdminSettingsController extends Controller
             ]);
         } catch (\Exception $e) {
             Log::error('Database status error', ['error' => $e->getMessage()]);
+
             return response()->json([
                 'success' => false,
-                'message' => 'שגיאה בשליפת סטטוס: ' . $e->getMessage(),
+                'message' => 'שגיאה בשליפת סטטוס: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -388,7 +389,7 @@ class SuperAdminSettingsController extends Controller
             $backupPath = storage_path("app/backups/{$timestamp}_{$dbName}.sql");
 
             // Ensure backup directory exists
-            if (!is_dir(storage_path('app/backups'))) {
+            if (! is_dir(storage_path('app/backups'))) {
                 mkdir(storage_path('app/backups'), 0755, true);
             }
 
@@ -424,9 +425,10 @@ class SuperAdminSettingsController extends Controller
             ]);
         } catch (\Exception $e) {
             Log::error('Backup error', ['error' => $e->getMessage()]);
+
             return response()->json([
                 'success' => false,
-                'message' => 'שגיאה בגיבוי: ' . $e->getMessage(),
+                'message' => 'שגיאה בגיבוי: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -473,7 +475,7 @@ class SuperAdminSettingsController extends Controller
         try {
             $dbName = DB::selectOne('SELECT DATABASE() as db')->db;
 
-            $tables = DB::select(<<<SQL
+            $tables = DB::select(<<<'SQL'
                 SELECT TABLE_NAME as table_name
                 FROM information_schema.TABLES
                 WHERE TABLE_SCHEMA = ?
@@ -496,7 +498,7 @@ class SuperAdminSettingsController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'שגיאה באופטימיזציה: ' . $e->getMessage(),
+                'message' => 'שגיאה באופטימיזציה: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -514,7 +516,16 @@ class SuperAdminSettingsController extends Controller
             $host = config('mail.mailers.smtp.host');
             $port = config('mail.mailers.smtp.port');
             $encryption = config('mail.mailers.smtp.encryption');
-            $configured = !empty($host) && $host !== '127.0.0.1' && $host !== 'localhost';
+            $configured = ! empty($host) && $host !== '127.0.0.1' && $host !== 'localhost';
+
+            $fromAddress = (string) config('mail.from.address', '');
+            $fromDomain = null;
+            if ($fromAddress !== '' && str_contains($fromAddress, '@')) {
+                $fromDomain = strtolower(substr(strrchr($fromAddress, '@'), 1));
+            }
+
+            $encLower = $encryption ? strtolower((string) $encryption) : '';
+            $tlsWarning = $configured && ($encLower === '' || $encLower === 'none');
 
             $connected = false;
             if ($configured) {
@@ -549,6 +560,17 @@ class SuperAdminSettingsController extends Controller
                     'from_name' => config('mail.from.name'),
                     'configured' => $configured,
                     'connected' => $connected,
+                    'bulk_delay_seconds' => (int) config('mail.bulk_delay_seconds', 2),
+                    'deliverability' => [
+                        'from_domain' => $fromDomain,
+                        'tls_recommended' => ! $tlsWarning,
+                        'tls_warning' => $tlsWarning,
+                        'dns_reminder' => 'יש להגדיר ברשם ה-DNS של הדומיין שבכתובת השולח (From): SPF, DKIM ו-DMARC — לפי הנחיות Google לשולחים ל-Gmail.',
+                        'ptr_reminder' => 'כתובת ה-IP שממנה יוצא SMTP צריכה PTR (reverse DNS) תקין — רלוונטי בעיקר לשרת VPS ייעודי.',
+                        'google_sender_guidelines_url' => config('deliverability.google_sender_guidelines_url'),
+                        'google_sender_faq_url' => config('deliverability.google_sender_faq_url'),
+                        'postmaster_tools_url' => config('deliverability.postmaster_tools_url'),
+                    ],
                 ],
             ]);
         } catch (\Exception $e) {
@@ -589,13 +611,14 @@ class SuperAdminSettingsController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'אימייל בדיקה נשלח בהצלחה ל-' . $toEmail,
+                'message' => 'אימייל בדיקה נשלח בהצלחה ל-'.$toEmail,
             ]);
         } catch (\Exception $e) {
             Log::error('SMTP test failed', ['error' => $e->getMessage()]);
+
             return response()->json([
                 'success' => false,
-                'message' => 'שליחת בדיקה נכשלה: ' . $e->getMessage(),
+                'message' => 'שליחת בדיקה נכשלה: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -617,11 +640,11 @@ class SuperAdminSettingsController extends Controller
             ];
 
             if (in_array($provider, ['sms019', '019sms', '019'])) {
-                $configured = !empty(config('sms.providers.sms019.token'))
-                    && !empty(config('sms.providers.sms019.username'));
+                $configured = ! empty(config('sms.providers.sms019.token'))
+                    && ! empty(config('sms.providers.sms019.username'));
             } else {
-                $configured = !empty(config('sms.providers.twilio.sid'))
-                    && !empty(config('sms.providers.twilio.token'));
+                $configured = ! empty(config('sms.providers.twilio.sid'))
+                    && ! empty(config('sms.providers.twilio.token'));
             }
 
             return response()->json([
