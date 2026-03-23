@@ -108,13 +108,20 @@ class HypOrderCallbackController extends Controller
             'fild3'          => $params['fild3'],
         ]);
 
+        // מציאת הזמנה לפני בדיקת CCode — כדי לעדכן payment_status=failed בדשבורד/קופה
+        $order = $this->findOrder($params);
+
         if ($ccode !== 0) {
             Log::warning('HYP order callback: CCode not 0', ['ccode' => $ccode]);
+            if ($order) {
+                $this->markOrderCreditPaymentFailed(
+                    $order,
+                    trim(($params['errMsg'] ?: '').' CCode='.$ccode) ?: 'התשלום לא אושר'
+                );
+            }
+
             return $this->resolveOrderContext($params, 'failed', 'התשלום לא אושר');
         }
-
-        // מציאת ההזמנה — קודם דרך Order field, אח"כ fallback ל-Fild3
-        $order = $this->findOrder($params);
 
         if (!$order) {
             Log::error('HYP order callback: order not found', [
@@ -128,6 +135,8 @@ class HypOrderCallbackController extends Controller
 
         if (!$restaurant) {
             Log::error('HYP order callback: restaurant not found', ['restaurant_id' => $order->restaurant_id]);
+            $this->markOrderCreditPaymentFailed($order, 'מסעדה לא נמצאה');
+
             return ['restaurant_id' => '', 'order_id' => $order->id, 'status' => 'failed', 'message' => 'מסעדה לא נמצאה'];
         }
 
@@ -155,6 +164,8 @@ class HypOrderCallbackController extends Controller
             if ($session->isExpired()) {
                 Log::warning('HYP order callback: session expired', ['session_id' => $session->id]);
                 $session->update(['status' => 'expired']);
+                $this->markOrderCreditPaymentFailed($order, 'פג תוקף התשלום');
+
                 return ['restaurant_id' => $restaurant->id, 'order_id' => $order->id, 'status' => 'failed', 'message' => 'פג תוקף התשלום'];
             }
 
@@ -167,6 +178,8 @@ class HypOrderCallbackController extends Controller
                     'expected' => $expectedAmount,
                 ]);
                 $session->update(['status' => 'failed', 'error_message' => 'Amount mismatch']);
+                $this->markOrderCreditPaymentFailed($order, 'חוסר התאמה בסכום');
+
                 return ['restaurant_id' => $restaurant->id, 'order_id' => $order->id, 'status' => 'failed', 'message' => 'חוסר התאמה בסכום'];
             }
 
@@ -328,6 +341,34 @@ class HypOrderCallbackController extends Controller
         }
 
         return ['restaurant_id' => '', 'order_id' => '', 'status' => 'failed', 'message' => 'התשלום נכשל'];
+    }
+
+    /**
+     * תשלום אשראי (HYP) נדחה או נכשל — מעדכן הזמנה ו-session כדי שהקופה/דשבורד יראו תגית כשלון.
+     */
+    private function markOrderCreditPaymentFailed(Order $order, string $errorMessage = ''): void
+    {
+        if ($order->payment_status === Order::PAYMENT_PAID) {
+            return;
+        }
+
+        if ($order->payment_method !== 'credit_card') {
+            return;
+        }
+
+        $order->update(['payment_status' => Order::PAYMENT_FAILED]);
+
+        $session = PaymentSession::where('order_id', $order->id)
+            ->whereNotIn('status', ['completed'])
+            ->latest()
+            ->first();
+
+        if ($session) {
+            $session->update([
+                'status' => 'failed',
+                'error_message' => $errorMessage !== '' ? $errorMessage : 'payment_declined',
+            ]);
+        }
     }
 
     /**

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { FaCheckCircle, FaFire, FaBell, FaTruck, FaBan, FaClock, FaShekelSign, FaClipboardList, FaMotorcycle, FaPrint, FaUtensils, FaUndo, FaGlobe, FaMapMarkerAlt } from 'react-icons/fa';
+import { FaCheckCircle, FaFire, FaBell, FaTruck, FaBan, FaClock, FaShekelSign, FaClipboardList, FaMotorcycle, FaPrint, FaUtensils, FaUndo, FaGlobe, FaMapMarkerAlt, FaCreditCard, FaMoneyBillWave } from 'react-icons/fa';
 import posApi from '../api/posApi';
 import CancelOrderModal from '../../../components/CancelOrderModal';
 import { ORDER_STATUS_AWAITING_PAYMENT_HE, paymentStatusBadgeLabel, shouldShowPaymentStatusBadge } from '../../../utils/orderPaymentLabels';
@@ -73,7 +73,9 @@ function normalizeOrder(raw) {
         delivery_address: raw.delivery_address || null,
         delivery_notes: raw.delivery_notes || null,
         payment_method: raw.payment_method,
-        payment_status: raw.payment_status,
+        payment_status: raw.payment_status != null && raw.payment_status !== ''
+            ? String(raw.payment_status).trim()
+            : null,
         total_price: parseFloat(raw.total_amount || raw.total_price || raw.total || 0),
         source: raw.source || 'website',
         is_future_order: !!raw.is_future_order,
@@ -166,7 +168,7 @@ export default function POSOrderPanel({ headers, posToken, mode = 'active' }) {
 
     useEffect(() => {
         fetchOrders();
-        const interval = setInterval(fetchOrders, 8000);
+        const interval = setInterval(fetchOrders, 5000);
         return () => clearInterval(interval);
     }, [fetchOrders]);
 
@@ -334,7 +336,9 @@ function OrderCard({
                         <FaShekelSign className="text-sm" />{order.total_price.toFixed(2)}
                     </p>
                     {paymentCaption && (
-                        <span className={`text-xs font-black px-2 py-0.5 rounded-lg ${paymentStatusBadgeClass(order)}`}>
+                        <span className={`inline-flex items-center justify-end gap-1 text-xs font-black px-2 py-0.5 rounded-lg ${paymentStatusBadgeClass(order)}`}>
+                            {order.payment_method === 'credit_card' && <FaCreditCard className="opacity-90 shrink-0" size={11} />}
+                            {order.payment_method === 'cash' && order.payment_status === 'paid' && <FaMoneyBillWave className="opacity-90 shrink-0" size={11} />}
                             {paymentCaption}
                         </span>
                     )}
