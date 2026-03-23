@@ -1,43 +1,42 @@
 <?php
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\MenuController;
-use App\Http\Controllers\OrderController;
-use App\Http\Controllers\RestaurantController;
-use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AdminController;
-use App\Http\Controllers\SuperAdminController;
-use App\Http\Controllers\SuperAdminBillingController;
-use App\Http\Controllers\SuperAdminNotificationController;
-use App\Http\Controllers\RegisterRestaurantController;
-use App\Http\Controllers\FcmTokenController;
+use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ChatController;
-use App\Http\Controllers\DisplayScreenController;
-use App\Http\Controllers\KioskController;
-use App\Http\Controllers\PaymentTerminalController;
-use App\Http\Controllers\PrinterController;
-use App\Http\Controllers\PrintAgentController;
-use App\Http\Controllers\PaymentSettingsController;
-use App\Http\Controllers\PromotionController;
-use App\Http\Controllers\SuperAdminSettingsController;
-use App\Http\Controllers\SuperAdminEmailController;
-use App\Http\Controllers\OrderEventController;
-use App\Http\Controllers\ReportController;
-use App\Http\Controllers\HypSubscriptionCallbackController;
-use App\Http\Controllers\HypOrderCallbackController;
+use App\Http\Controllers\CustomerAddressController;
 use App\Http\Controllers\CustomerAuthController;
 use App\Http\Controllers\CustomerController;
-use App\Http\Controllers\CustomerAddressController;
-use App\Http\Controllers\SuperAdminCustomerController;
-use App\Http\Controllers\CustomerPwaController;
 use App\Http\Controllers\CustomerNotificationPreferenceController;
+use App\Http\Controllers\CustomerPwaController;
+use App\Http\Controllers\DisplayScreenController;
+use App\Http\Controllers\FcmTokenController;
+use App\Http\Controllers\HypOrderCallbackController;
+use App\Http\Controllers\HypSubscriptionCallbackController;
+use App\Http\Controllers\KioskController;
+use App\Http\Controllers\MenuController;
+use App\Http\Controllers\OrderController;
+use App\Http\Controllers\OrderEventController;
+use App\Http\Controllers\PaymentSettingsController;
+use App\Http\Controllers\PaymentTerminalController;
+use App\Http\Controllers\PrintAgentController;
+use App\Http\Controllers\PrinterController;
+use App\Http\Controllers\PromotionController;
+use App\Http\Controllers\RegisterRestaurantController;
+use App\Http\Controllers\ReportController;
+use App\Http\Controllers\RestaurantController;
+use App\Http\Controllers\SuperAdminBillingController;
 use App\Http\Controllers\SuperAdminCartSessionsController;
+use App\Http\Controllers\SuperAdminController;
+use App\Http\Controllers\SuperAdminCustomerController;
 use App\Http\Controllers\SuperAdminDailyReportsController;
+use App\Http\Controllers\SuperAdminEmailController;
+use App\Http\Controllers\SuperAdminNotificationController;
+use App\Http\Controllers\SuperAdminSettingsController;
+use Illuminate\Support\Facades\Route;
 
 /**
  * API Routes
- * 
+ *
  * כל בקשה חייבת להכיל Header X-Tenant-ID
  * דוגמה: curl -H "X-Tenant-ID: restaurant-1" http://localhost:8000/api/menu
  */
@@ -51,8 +50,8 @@ Route::prefix('auth')->group(function () {
     Route::post('/phone/request', [\App\Http\Controllers\PhoneAuthController::class, 'requestCode']);
     Route::post('/phone/verify', [\App\Http\Controllers\PhoneAuthController::class, 'verifyCode']);
     // Preflight CORS
-    Route::options('/phone/request', fn() => response()->json(['success' => true]));
-    Route::options('/phone/verify', fn() => response()->json(['success' => true]));
+    Route::options('/phone/request', fn () => response()->json(['success' => true]));
+    Route::options('/phone/verify', fn () => response()->json(['success' => true]));
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/logout', [AuthController::class, 'logout'])->name('auth.logout');
@@ -426,6 +425,8 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'tenant'])->group(function (
                 // הזמנות ממתינות לתשלום
                 Route::get('/orders/pending-payment', [\App\Http\Controllers\POSController::class, 'getPendingPaymentOrders'])->name('admin.pos.orders.pending-payment');
                 Route::post('/orders/{id}/pay-cash', [\App\Http\Controllers\POSController::class, 'payPendingOrderCash'])->name('admin.pos.orders.pay-cash');
+                Route::post('/orders/{id}/payment-link', [\App\Http\Controllers\POSController::class, 'createOrderPaymentLink'])->name('admin.pos.orders.payment-link');
+                Route::post('/orders/{id}/switch-to-cash', [\App\Http\Controllers\POSController::class, 'switchOrderToCash'])->name('admin.pos.orders.switch-to-cash');
 
                 // תשלום מפוצל
                 Route::post('/orders/{id}/split-payment', [\App\Http\Controllers\POSController::class, 'splitPayment'])->name('admin.pos.orders.split-payment');
@@ -639,7 +640,7 @@ if (app()->environment('local') || config('services.zcredit.allow_test_pinpad_ro
 
         $result = app(\App\Services\ZCreditService::class)->chargePinPad(
             (float) $validated['amount'],
-            'local_pinpad_test_' . uniqid('', true)
+            'local_pinpad_test_'.uniqid('', true)
         );
 
         return response()->json($result);

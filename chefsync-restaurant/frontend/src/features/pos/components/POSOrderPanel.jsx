@@ -1,10 +1,28 @@
 import { useState, useEffect, useCallback } from 'react';
-import { FaCheckCircle, FaFire, FaBell, FaTruck, FaBan, FaClock, FaShekelSign, FaClipboardList, FaMotorcycle, FaPrint, FaUtensils, FaUndo } from 'react-icons/fa';
+import { FaCheckCircle, FaFire, FaBell, FaTruck, FaBan, FaClock, FaShekelSign, FaClipboardList, FaMotorcycle, FaPrint, FaUtensils, FaUndo, FaGlobe, FaLink, FaWhatsapp, FaMapMarkerAlt, FaMoneyBillWave } from 'react-icons/fa';
 import posApi from '../api/posApi';
 import CancelOrderModal from '../../../components/CancelOrderModal';
 import POSManagerAuth from './POSManagerAuth';
 
+const SOURCE_LABELS = {
+    website: 'אתר',
+    web: 'אתר',
+    kiosk: 'קיוסק',
+    pos: 'קופה',
+};
+
+function phoneToWhatsAppDigits(phone) {
+    if (!phone || typeof phone !== 'string') return null;
+    let d = phone.replace(/\D/g, '');
+    if (!d) return null;
+    if (d.startsWith('972')) return d;
+    if (d.startsWith('0')) return `972${d.slice(1)}`;
+    if (d.length === 9) return `972${d}`;
+    return d;
+}
+
 const STATUS_CONFIG = {
+    awaiting_payment: { label: 'ממתין לתשלום', color: 'bg-orange-500', bg: 'bg-orange-500/10 border-orange-500/30', icon: FaClock },
     pending: { label: 'ממתינה', color: 'bg-amber-500', bg: 'bg-amber-500/10 border-amber-500/30', icon: FaClock },
     received: { label: 'התקבלה', color: 'bg-orange-500', bg: 'bg-orange-500/10 border-orange-500/30', icon: FaBell },
     preparing: { label: 'בהכנה', color: 'bg-blue-500', bg: 'bg-blue-500/10 border-blue-500/30', icon: FaFire },
@@ -16,6 +34,7 @@ const STATUS_CONFIG = {
 
 function getAllowedNextStatuses(currentStatus, deliveryMethod) {
     const common = {
+        awaiting_payment: ['cancelled'],
         pending: ['received', 'preparing', 'cancelled'],
         received: ['preparing', 'cancelled'],
         preparing: ['ready', 'cancelled'],
@@ -53,15 +72,23 @@ function normalizeOrder(raw) {
             : (i.addons_text || null),
     }));
 
+    const scheduledRaw = raw.scheduled_for;
     return {
         id: raw.id,
         customer_name: raw.customer_name || 'אורח',
+        customer_phone: raw.customer_phone || null,
         status: raw.status,
         delivery_method: raw.delivery_method || 'pickup',
+        delivery_address: raw.delivery_address || null,
+        delivery_notes: raw.delivery_notes || null,
         payment_method: raw.payment_method,
         payment_status: raw.payment_status,
         total_price: parseFloat(raw.total_amount || raw.total_price || raw.total || 0),
         source: raw.source || 'website',
+        is_future_order: !!raw.is_future_order,
+        scheduled_for: scheduledRaw
+            ? (typeof scheduledRaw === 'string' ? scheduledRaw : new Date(scheduledRaw).toISOString())
+            : null,
         notes: raw.notes,
         table_number: raw.table_number,
         created_at: raw.created_at
@@ -75,6 +102,8 @@ function normalizeOrder(raw) {
 
 export default function POSOrderPanel({ headers, posToken, mode = 'active' }) {
     const [printMsg, setPrintMsg] = useState(null);
+    const [paymentLinkBusy, setPaymentLinkBusy] = useState(null);
+    const [cashSwitchBusy, setCashSwitchBusy] = useState(null);
     const [refunding, setRefunding] = useState(null);
     const [pendingRefundId, setPendingRefundId] = useState(null);
     const [cancelModal, setCancelModal] = useState({ isOpen: false, orderId: null });
@@ -166,6 +195,50 @@ export default function POSOrderPanel({ headers, posToken, mode = 'active' }) {
         }
     };
 
+    const handleCreatePaymentLink = async (order, modeAction) => {
+        if (!posToken) return;
+        setPaymentLinkBusy(order.id);
+        try {
+            const res = await posApi.createOrderPaymentLink(order.id, headers, posToken);
+            const url = res.data?.payment_url;
+            if (!url) throw new Error('אין קישור');
+            if (modeAction === 'whatsapp') {
+                const digits = phoneToWhatsAppDigits(order.customer_phone);
+                if (!digits) {
+                    await navigator.clipboard.writeText(url);
+                    showPrintMsg('אין מספר טלפון — הקישור הועתק ללוח', false);
+                    return;
+                }
+                const text = encodeURIComponent(
+                    `שלום, להשלמת התשלום להזמנה #${order.id}:\n${url}`
+                );
+                window.open(`https://wa.me/${digits}?text=${text}`, '_blank', 'noopener,noreferrer');
+            } else {
+                await navigator.clipboard.writeText(url);
+                showPrintMsg('קישור התשלום הועתק ללוח', false);
+            }
+        } catch (e) {
+            showPrintMsg(e.response?.data?.message || e.message || 'שגיאה ביצירת קישור', true);
+        } finally {
+            setPaymentLinkBusy(null);
+        }
+    };
+
+    const handleSwitchToCash = async (order) => {
+        if (!posToken) return;
+        if (!window.confirm('להחליף את ההזמנה למזומן? הלקוח ישלם בקופה או במסירה.')) return;
+        setCashSwitchBusy(order.id);
+        try {
+            await posApi.switchOrderToCash(order.id, headers, posToken);
+            showPrintMsg('אמצעי התשלום עודכן למזומן', false);
+            fetchOrders();
+        } catch (e) {
+            showPrintMsg(e.response?.data?.message || 'שגיאה בעדכון', true);
+        } finally {
+            setCashSwitchBusy(null);
+        }
+    };
+
     const isActive = (status) => !['delivered', 'cancelled'].includes(status);
     const filtered = mode === 'active'
         ? orders.filter(o => isActive(o.status))
@@ -222,6 +295,11 @@ export default function POSOrderPanel({ headers, posToken, mode = 'active' }) {
                         onPrintKitchen={handlePrintKitchen}
                         onRefund={handleRefund}
                         refunding={refunding}
+                        paymentLinkBusy={paymentLinkBusy}
+                        cashSwitchBusy={cashSwitchBusy}
+                        onPaymentLinkCopy={() => handleCreatePaymentLink(order, 'copy')}
+                        onPaymentLinkWhatsApp={() => handleCreatePaymentLink(order, 'whatsapp')}
+                        onSwitchToCash={() => handleSwitchToCash(order)}
                     />
                 ))}
             </div>
@@ -246,7 +324,37 @@ export default function POSOrderPanel({ headers, posToken, mode = 'active' }) {
     );
 }
 
-function OrderCard({ order, expanded, onToggle, onUpdateStatus, onCancel, showActions = true, onPrintReceipt, onPrintKitchen, onRefund, refunding }) {
+function paymentStatusBadgeClass(order) {
+    if (order.payment_status === 'paid') return 'bg-emerald-500/20 text-emerald-400';
+    if (order.payment_status === 'failed') return 'bg-red-500/25 text-red-300 ring-1 ring-red-500/40';
+    if (order.payment_method === 'credit_card') return 'bg-amber-500/20 text-amber-400';
+    return 'bg-amber-500/20 text-amber-400';
+}
+
+function paymentStatusLabel(order) {
+    if (order.payment_status === 'paid') return 'שולם';
+    if (order.payment_status === 'failed') return 'נכשל בתשלום';
+    if (order.payment_method === 'credit_card' && order.payment_status === 'pending') return 'ממתין לתשלום';
+    return 'ממתין';
+}
+
+function OrderCard({
+    order,
+    expanded,
+    onToggle,
+    onUpdateStatus,
+    onCancel,
+    showActions = true,
+    onPrintReceipt,
+    onPrintKitchen,
+    onRefund,
+    refunding,
+    paymentLinkBusy,
+    cashSwitchBusy,
+    onPaymentLinkCopy,
+    onPaymentLinkWhatsApp,
+    onSwitchToCash,
+}) {
     const config = STATUS_CONFIG[order.status] || STATUS_CONFIG.pending;
     const Icon = config.icon;
 
@@ -254,43 +362,93 @@ function OrderCard({ order, expanded, onToggle, onUpdateStatus, onCancel, showAc
     const nextStatuses = allowed.filter(s => s !== 'cancelled');
     const canCancel = allowed.includes('cancelled');
 
+    const sourceKey = order.source || 'website';
+    const sourceLabel = SOURCE_LABELS[sourceKey] || sourceKey;
+    const showSourceBadge = sourceKey !== 'pos';
+    const isWebSiteOrder = ['website', 'web'].includes(sourceKey);
+    const unpaidCredit =
+        order.payment_method === 'credit_card' &&
+        order.payment_status !== 'paid' &&
+        order.status !== 'cancelled';
+    /** קישור HYP — רק להזמנות מהאתר (לא PinPad ולא קיוסק) */
+    const showHypLinkActions = isWebSiteOrder && unpaidCredit;
+    /** החלפה למזומן — כל הזמנת אשראי שלא שולמה */
+    const showSwitchToCash = unpaidCredit;
+
     return (
         <div className={`rounded-2xl border ${config.bg} overflow-hidden transition-all`}>
             <button
                 onClick={onToggle}
                 className="w-full flex items-center justify-between px-5 py-4 text-right"
             >
-                <div className="flex items-center gap-4">
-                    <div className={`w-10 h-10 rounded-xl ${config.color} flex items-center justify-center text-white`}>
+                <div className="flex items-center gap-4 min-w-0">
+                    <div className={`w-10 h-10 rounded-xl ${config.color} flex items-center justify-center text-white shrink-0`}>
                         <Icon size={18} />
                     </div>
-                    <div>
-                        <div className="flex items-center gap-2">
+                    <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
                             <span className="text-white font-black text-lg">#{order.id}</span>
                             <span className={`text-xs font-black px-2 py-0.5 rounded-lg ${config.color} text-white`}>
                                 {config.label}
                             </span>
+                            {showSourceBadge && (
+                                <span className="text-xs font-black px-2 py-0.5 rounded-lg bg-blue-500/20 text-blue-300 flex items-center gap-1">
+                                    <FaGlobe size={10} /> {sourceLabel}
+                                </span>
+                            )}
+                            {order.payment_status === 'failed' && (
+                                <span className="text-xs font-black px-2 py-0.5 rounded-lg bg-red-600/30 text-red-200 ring-1 ring-red-500/50">
+                                    נכשל בתשלום
+                                </span>
+                            )}
                             <span className="text-slate-400 text-xs font-semibold">{order.created_at}</span>
                         </div>
-                        <p className="text-slate-400 text-sm font-semibold">
+                        <p className="text-slate-400 text-sm font-semibold truncate">
                             {order.customer_name} — {order.items.length} פריטים
                             {order.delivery_method === 'delivery' && <span className="text-purple-400 mr-2">משלוח</span>}
                         </p>
                     </div>
                 </div>
-                <div className="text-left">
-                    <p className="text-white font-black text-lg flex items-center gap-1">
+                <div className="text-left shrink-0 mr-2">
+                    <p className="text-white font-black text-lg flex items-center gap-1 justify-end">
                         <FaShekelSign className="text-sm" />{order.total_price.toFixed(2)}
                     </p>
-                    <span className={`text-xs font-black px-2 py-0.5 rounded-lg ${order.payment_status === 'paid' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'
-                        }`}>
-                        {order.payment_status === 'paid' ? 'שולם' : 'ממתין'}
+                    <span className={`text-xs font-black px-2 py-0.5 rounded-lg ${paymentStatusBadgeClass(order)}`}>
+                        {paymentStatusLabel(order)}
                     </span>
                 </div>
             </button>
 
             {expanded && (
                 <div className="px-5 pb-5 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                    {order.delivery_method === 'delivery' && (order.delivery_address || order.delivery_notes) && (
+                        <div className="bg-purple-500/10 border border-purple-500/25 rounded-xl p-3 space-y-2 text-sm">
+                            <p className="text-purple-300 font-black text-xs uppercase tracking-wide">משלוח</p>
+                            {order.delivery_address && (
+                                <p className="text-slate-200 flex items-start gap-2">
+                                    <FaMapMarkerAlt className="text-purple-400 mt-0.5 shrink-0" />
+                                    <span>{order.delivery_address}</span>
+                                </p>
+                            )}
+                            {order.delivery_notes && (
+                                <p className="text-slate-400 text-xs mr-6">הערות: {order.delivery_notes}</p>
+                            )}
+                        </div>
+                    )}
+
+                    {order.is_future_order && order.scheduled_for && (
+                        <p className="text-teal-400 text-sm font-bold bg-teal-500/10 px-3 py-2 rounded-xl border border-teal-500/20">
+                            הזמנה עתידית —{' '}
+                            {new Date(order.scheduled_for).toLocaleString('he-IL', {
+                                weekday: 'short',
+                                day: 'numeric',
+                                month: 'short',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                            })}
+                        </p>
+                    )}
+
                     <div className="bg-slate-900/50 rounded-xl p-4 space-y-2">
                         {order.items.map((item, i) => (
                             <div key={i} className="flex justify-between text-sm">
@@ -306,6 +464,46 @@ function OrderCard({ order, expanded, onToggle, onUpdateStatus, onCancel, showAc
 
                     {order.notes && (
                         <p className="text-amber-400 text-sm font-semibold bg-amber-500/10 p-3 rounded-xl">{order.notes}</p>
+                    )}
+
+                    {showHypLinkActions && (
+                        <div className="space-y-2 rounded-xl border border-cyan-500/25 bg-cyan-950/20 p-3">
+                            <p className="text-[11px] font-black text-cyan-200/90 leading-snug">
+                                תשלום מהאתר (HYP) — קישור ללקוח בלבד. לא מסוף אשראי פיזי.
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                                <button
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); onPaymentLinkCopy?.(); }}
+                                    disabled={paymentLinkBusy === order.id}
+                                    className="flex items-center gap-2 px-3 py-2 rounded-xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 text-xs font-black hover:bg-cyan-500/25 disabled:opacity-50"
+                                >
+                                    <FaLink size={12} />
+                                    {paymentLinkBusy === order.id ? 'יוצר...' : 'העתק קישור'}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); onPaymentLinkWhatsApp?.(); }}
+                                    disabled={paymentLinkBusy === order.id}
+                                    className="flex items-center gap-2 px-3 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-black hover:bg-emerald-500/25 disabled:opacity-50"
+                                >
+                                    <FaWhatsapp size={14} />
+                                    וואטסאפ
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {showSwitchToCash && (
+                        <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); onSwitchToCash?.(); }}
+                            disabled={cashSwitchBusy === order.id}
+                            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-amber-500/15 border border-amber-500/35 text-amber-200 text-sm font-black hover:bg-amber-500/25 disabled:opacity-50"
+                        >
+                            <FaMoneyBillWave />
+                            {cashSwitchBusy === order.id ? 'מעדכן...' : 'החלף למזומן (תשלום בקופה / במסירה)'}
+                        </button>
                     )}
 
                     {showActions && (

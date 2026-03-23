@@ -795,22 +795,28 @@ function ZReportModal({ report, onClose }) {
                                 כל הזמנות המשמרת ({r.orders.length})
                             </summary>
                             <div className="divide-y divide-slate-700/50 max-h-52 overflow-y-auto">
-                                {r.orders.map(o => (
-                                    <div key={o.id} className={`flex items-center justify-between px-5 py-2 text-sm ${!o.tracked && o.payment_method === 'מזומן' && o.payment_status === 'שולם' && o.status !== 'cancelled' ? 'bg-red-500/5' : ''}`}>
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-slate-400 font-mono">#{o.id}</span>
-                                            <span className="text-slate-300">{o.customer_name}</span>
-                                            <span className="text-slate-600 text-xs">{o.time}</span>
-                                            <span className={`text-xs px-1.5 py-0.5 rounded ${o.payment_method === 'מזומן' ? 'bg-amber-500/20 text-amber-400' : 'bg-blue-500/20 text-blue-400'}`}>
-                                                {o.payment_method}
-                                            </span>
-                                            <span className={`text-xs ${o.payment_status === 'שולם' ? 'text-emerald-500' : o.payment_status === 'בוטל' ? 'text-red-500' : 'text-amber-500'}`}>
-                                                {o.payment_status}
-                                            </span>
+                                {r.orders.map(o => {
+                                    const src = o.source === 'pos' ? 'קופה' : o.source === 'kiosk' ? 'קיוסק' : 'אתר';
+                                    return (
+                                        <div key={o.id} className={`flex items-center justify-between px-5 py-2 text-sm ${!o.tracked && o.payment_method === 'מזומן' && o.payment_status === 'שולם' && o.status !== 'cancelled' ? 'bg-red-500/5' : ''}`}>
+                                            <div className="flex flex-wrap items-center gap-2 min-w-0">
+                                                <span className="text-slate-400 font-mono">#{o.id}</span>
+                                                <span className="text-slate-300 truncate">{o.customer_name}</span>
+                                                <span className="text-slate-600 text-xs shrink-0">{o.time}</span>
+                                                <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-slate-600/50 text-slate-300 shrink-0">
+                                                    {src}
+                                                </span>
+                                                <span className={`text-xs px-1.5 py-0.5 rounded shrink-0 ${o.payment_method === 'מזומן' ? 'bg-amber-500/20 text-amber-400' : 'bg-blue-500/20 text-blue-400'}`}>
+                                                    {o.payment_method}
+                                                </span>
+                                                <span className={`text-xs shrink-0 ${o.payment_status === 'שולם' ? 'text-emerald-500' : o.payment_status === 'בוטל' ? 'text-red-500' : o.payment_status === 'נכשל' ? 'text-red-400 font-bold' : 'text-amber-500'}`}>
+                                                    {o.payment_status}
+                                                </span>
+                                            </div>
+                                            <span className="text-slate-300 font-bold shrink-0 mr-2">₪{o.total.toFixed(2)}</span>
                                         </div>
-                                        <span className="text-slate-300 font-bold">₪{o.total.toFixed(2)}</span>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         </details>
                     )}
