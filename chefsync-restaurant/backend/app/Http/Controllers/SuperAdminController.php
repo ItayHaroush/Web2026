@@ -2,30 +2,50 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Restaurant;
-use App\Models\User;
-use App\Models\Order;
+use App\Mail\RestaurantApprovedMail;
 use App\Models\City;
+use App\Models\Order;
+use App\Models\Restaurant;
+use App\Models\RestaurantPayment;
+use App\Models\RestaurantSubscription;
+use App\Models\SystemError;
+use App\Models\User;
+use App\Services\SmsService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
-use App\Services\SmsService;
-use App\Models\RestaurantSubscription;
-use App\Models\RestaurantPayment;
-use App\Models\SystemError;
-use App\Mail\RestaurantApprovedMail;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 
 /**
  * SuperAdminController - ניהול מערכת כללי
- * 
+ *
  * דורש הרשאת super_admin
  */
 class SuperAdminController extends Controller
 {
+    /**
+     * מדדי סופר-אדמין חייבים להתעלם מ־tenant global scope — אחרת אחרי התחזות/הקשר tenant
+     * נשארות רק הזמנות של tenant אחר והסכומים נחתכים (נמוך מדוחות יומיים / רבעון).
+     */
+    private function orderQuerySuperAdminRestaurant(int $restaurantId)
+    {
+        return Order::withoutGlobalScope('tenant')
+            ->where('restaurant_id', $restaurantId)
+            ->visibleToRestaurant()
+            ->where('status', '!=', Order::STATUS_CANCELLED)
+            ->where('is_test', false);
+    }
+
+    private function orderQuerySuperAdminPlatform()
+    {
+        return Order::withoutGlobalScope('tenant')
+            ->visibleToRestaurant()
+            ->where('status', '!=', Order::STATUS_CANCELLED)
+            ->where('is_test', false);
+    }
+
     /**
      * דשבורד Super Admin - סטטיסטיקות כלליות
      */
@@ -43,16 +63,10 @@ class SuperAdminController extends Controller
             'total_restaurants' => Restaurant::count(),
             'active_restaurants' => $activeVerifiedCount,
             'open_now_count' => Restaurant::where('is_open', true)->count(),
-            'total_orders' => Order::visibleToRestaurant()->where('status', '!=', 'cancelled')->where('is_test', false)->count(),
-            'total_revenue' => Order::visibleToRestaurant()->where('status', '!=', 'cancelled')->where('is_test', false)->sum('total_amount'),
-            'orders_today' => Order::visibleToRestaurant()->whereDate('created_at', today())
-                ->where('status', '!=', 'cancelled')
-                ->where('is_test', false)
-                ->count(),
-            'revenue_today' => Order::visibleToRestaurant()->whereDate('created_at', today())
-                ->where('status', '!=', 'cancelled')
-                ->where('is_test', false)
-                ->sum('total_amount'),
+            'total_orders' => (clone $this->orderQuerySuperAdminPlatform())->count(),
+            'total_revenue' => (clone $this->orderQuerySuperAdminPlatform())->sum('total_amount'),
+            'orders_today' => (clone $this->orderQuerySuperAdminPlatform())->whereDate('created_at', today())->count(),
+            'revenue_today' => (clone $this->orderQuerySuperAdminPlatform())->whereDate('created_at', today())->sum('total_amount'),
         ];
 
         // SaaS KPIs
@@ -84,8 +98,9 @@ class SuperAdminController extends Controller
             'open_now' => Restaurant::where('is_open', true)->count(),
         ];
 
-        // הזמנות לפי סטטוס — רק כאלה שהגיעו למסעדה (לא תקועות בתשלום)
-        $ordersByStatus = Order::visibleToRestaurant()
+        // הזמנות לפי סטטוס (כולל בוטלות) — לא תקועות בתשלום; ללא tenant scope
+        $ordersByStatus = Order::withoutGlobalScope('tenant')
+            ->visibleToRestaurant()
             ->where('is_test', false)
             ->select('status', DB::raw('count(*) as count'))
             ->groupBy('status')
@@ -142,14 +157,9 @@ class SuperAdminController extends Controller
 
         // הוספת נתוני הכנסות לכל מסעדה
         $restaurants->getCollection()->transform(function ($restaurant) {
-            $restaurant->total_revenue = Order::visibleToRestaurant()->where('restaurant_id', $restaurant->id)
-                ->where('status', '!=', 'cancelled')
-                ->where('is_test', false)
-                ->sum('total_amount');
-            $restaurant->orders_count = Order::visibleToRestaurant()->where('restaurant_id', $restaurant->id)
-                ->where('status', '!=', 'cancelled')
-                ->where('is_test', false)
-                ->count();
+            $restaurant->total_revenue = (clone $this->orderQuerySuperAdminRestaurant($restaurant->id))->sum('total_amount');
+            $restaurant->orders_count = (clone $this->orderQuerySuperAdminRestaurant($restaurant->id))->count();
+
             return $restaurant;
         });
 
@@ -166,11 +176,9 @@ class SuperAdminController extends Controller
     {
         $restaurant = Restaurant::withCount([
             'orders as orders_count' => function ($q) {
-                $q->where('status', '!=', 'cancelled')->where('is_test', false)
-                    ->where(function ($q2) {
-                        $q2->where('payment_method', '!=', 'credit_card')
-                            ->orWhere('payment_status', '!=', Order::PAYMENT_PENDING);
-                    });
+                $q->withoutGlobalScope('tenant')
+                    ->visibleToRestaurant()
+                    ->where('is_test', false);
             },
             'categories',
             'menuItems',
@@ -181,10 +189,7 @@ class SuperAdminController extends Controller
         $restaurant->active_kiosks_count = \App\Models\Kiosk::where('restaurant_id', $restaurant->id)->where('is_active', true)->count();
         $restaurant->active_screens_count = $restaurant->displayScreens()->where('is_active', true)->count();
 
-        $restaurant->total_revenue = Order::visibleToRestaurant()->where('restaurant_id', $restaurant->id)
-            ->where('status', '!=', 'cancelled')
-            ->where('is_test', false)
-            ->sum('total_amount');
+        $restaurant->total_revenue = (clone $this->orderQuerySuperAdminRestaurant($restaurant->id))->sum('total_amount');
 
         $restaurant->users = User::where('restaurant_id', $restaurant->id)
             ->select('id', 'name', 'email', 'phone', 'role', 'is_active')
@@ -256,7 +261,7 @@ class SuperAdminController extends Controller
             if ($request->hasFile('logo') && $request->file('logo')->isValid()) {
                 $logoFile = $request->file('logo');
                 $logoPath = $logoFile->store('logos', 'public');
-                $logoUrl = '/storage/' . $logoPath;
+                $logoUrl = '/storage/'.$logoPath;
             }
 
             Log::info('Creating restaurant', [
@@ -309,13 +314,14 @@ class SuperAdminController extends Controller
             ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Restaurant creation error: ' . $e->getMessage(), [
+            Log::error('Restaurant creation error: '.$e->getMessage(), [
                 'exception' => $e,
                 'validated_data' => $validated,
             ]);
+
             return response()->json([
                 'success' => false,
-                'message' => 'שגיאה ביצירת המסעדה: ' . $e->getMessage(),
+                'message' => 'שגיאה ביצירת המסעדה: '.$e->getMessage(),
                 'error_detail' => env('APP_DEBUG') ? $e->getMessage() : null,
             ], 500);
         }
@@ -330,7 +336,7 @@ class SuperAdminController extends Controller
 
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
-            'tenant_id' => 'sometimes|string|max:255|unique:restaurants,tenant_id,' . $id . '|regex:/^[a-z0-9-]+$/',
+            'tenant_id' => 'sometimes|string|max:255|unique:restaurants,tenant_id,'.$id.'|regex:/^[a-z0-9-]+$/',
             'phone' => 'sometimes|string|max:20',
             /** פלאפון בעלים לדוחות/וואטסאפ — עדיפות על טלפון מסעדה */
             'owner_contact_phone' => 'nullable|string|max:32',
@@ -365,7 +371,8 @@ class SuperAdminController extends Controller
         $restaurant = Restaurant::findOrFail($id);
 
         // בדיקה אם יש הזמנות פעילות
-        $activeOrders = Order::where('restaurant_id', $id)
+        $activeOrders = Order::withoutGlobalScope('tenant')
+            ->where('restaurant_id', $id)
             ->whereIn('status', ['pending', 'received', 'preparing', 'ready', 'delivering'])
             ->count();
 
@@ -392,7 +399,7 @@ class SuperAdminController extends Controller
         $restaurant = Restaurant::findOrFail($id);
         $currentOpen = (bool) ($restaurant->is_open_now ?? $restaurant->is_open);
         $restaurant->is_override_status = true;
-        $restaurant->is_open = !$currentOpen;
+        $restaurant->is_open = ! $currentOpen;
         $restaurant->save();
 
         return response()->json([
@@ -468,7 +475,7 @@ class SuperAdminController extends Controller
     {
         $restaurant = Restaurant::withoutGlobalScopes()->findOrFail($id);
 
-        if (!$restaurant->is_approved) {
+        if (! $restaurant->is_approved) {
             return response()->json([
                 'success' => true,
                 'message' => 'המסעדה כבר לא מאושרת',
@@ -495,25 +502,13 @@ class SuperAdminController extends Controller
         $restaurant = Restaurant::findOrFail($id);
 
         $stats = [
-            'total_orders' => Order::visibleToRestaurant()->where('restaurant_id', $id)
-                ->where('status', '!=', 'cancelled')
-                ->where('is_test', false)
-                ->count(),
-            'total_revenue' => Order::visibleToRestaurant()->where('restaurant_id', $id)
-                ->where('status', '!=', 'cancelled')
-                ->where('is_test', false)
-                ->sum('total_amount'),
-            'orders_today' => Order::visibleToRestaurant()->where('restaurant_id', $id)
-                ->whereDate('created_at', today())
-                ->where('status', '!=', 'cancelled')
-                ->where('is_test', false)
-                ->count(),
-            'revenue_today' => Order::visibleToRestaurant()->where('restaurant_id', $id)
-                ->whereDate('created_at', today())
-                ->where('status', '!=', 'cancelled')
-                ->where('is_test', false)
-                ->sum('total_amount'),
-            'orders_by_status' => Order::visibleToRestaurant()->where('restaurant_id', $id)
+            'total_orders' => (clone $this->orderQuerySuperAdminRestaurant($id))->count(),
+            'total_revenue' => (clone $this->orderQuerySuperAdminRestaurant($id))->sum('total_amount'),
+            'orders_today' => (clone $this->orderQuerySuperAdminRestaurant($id))->whereDate('created_at', today())->count(),
+            'revenue_today' => (clone $this->orderQuerySuperAdminRestaurant($id))->whereDate('created_at', today())->sum('total_amount'),
+            'orders_by_status' => Order::withoutGlobalScope('tenant')
+                ->where('restaurant_id', $id)
+                ->visibleToRestaurant()
                 ->where('is_test', false)
                 ->select('status', DB::raw('count(*) as count'))
                 ->groupBy('status')
@@ -534,6 +529,7 @@ class SuperAdminController extends Controller
     public function getCities()
     {
         $cities = City::orderBy('hebrew_name')->get();
+
         return response()->json([
             'success' => true,
             'data' => $cities,
@@ -569,7 +565,7 @@ class SuperAdminController extends Controller
                 })->values();
 
             // טבלאות ועמודות מתוך information_schema
-            $columns = collect(DB::select(<<<SQL
+            $columns = collect(DB::select(<<<'SQL'
                 SELECT TABLE_NAME as table_name,
                        COLUMN_NAME as column_name,
                        COLUMN_TYPE as column_type,
@@ -615,10 +611,11 @@ class SuperAdminController extends Controller
                 ],
             ]);
         } catch (\Throwable $e) {
-            Log::error('Schema status error: ' . $e->getMessage(), ['exception' => $e]);
+            Log::error('Schema status error: '.$e->getMessage(), ['exception' => $e]);
+
             return response()->json([
                 'success' => false,
-                'message' => 'שגיאה בשליפת סטטוס הסכימה: ' . $e->getMessage(),
+                'message' => 'שגיאה בשליפת סטטוס הסכימה: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -681,7 +678,7 @@ class SuperAdminController extends Controller
             'provider_status' => null,
             'provider_message' => null,
         ];
-        if (!$dryRun) {
+        if (! $dryRun) {
             $providerDebug = SmsService::sendVerificationCodeDetailed($phone, $code);
             $sent = (bool) ($providerDebug['sent'] ?? false);
         }
@@ -704,7 +701,7 @@ class SuperAdminController extends Controller
             ],
         ]);
 
-        if (!$dryRun && !$sent) {
+        if (! $dryRun && ! $sent) {
             return response()->json([
                 'success' => false,
                 'message' => 'שליחת SMS נכשלה',
@@ -780,8 +777,9 @@ class SuperAdminController extends Controller
     {
         $phone = preg_replace('/\s+/', '', $raw);
         if (str_starts_with($phone, '0')) {
-            return '+972' . substr($phone, 1);
+            return '+972'.substr($phone, 1);
         }
+
         return $phone;
     }
 
@@ -792,18 +790,20 @@ class SuperAdminController extends Controller
             return '***';
         }
         $last4 = substr($digits, -4);
-        return '***' . $last4;
+
+        return '***'.$last4;
     }
 
     private function formatPhoneForDisplay(string $raw): string
     {
         $phone = preg_replace('/\D/', '', $raw);
         if (strlen($phone) === 10 && str_starts_with($phone, '05')) {
-            return substr($phone, 0, 3) . '-' . substr($phone, 3);
+            return substr($phone, 0, 3).'-'.substr($phone, 3);
         }
         if (strlen($phone) === 9 && str_starts_with($phone, '0')) {
-            return substr($phone, 0, 2) . '-' . substr($phone, 2);
+            return substr($phone, 0, 2).'-'.substr($phone, 2);
         }
+
         return $raw;
     }
 }

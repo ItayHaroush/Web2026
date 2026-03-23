@@ -460,17 +460,47 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
     const isFutureOrder = !!order.scheduled_for;
     const isPendingPayment = order.payment_status === 'pending' && order.payment_method === 'credit_card';
     const isFutureAwaitingPayment = isFutureOrder && isPendingPayment;
+    /** הזמנה עתידית + אשראי — עדיין לא שולם (ממתין או נכשל): מציגים CTA תשלום ומסתירים טיימר/מעקב עד ששולם */
+    const isFutureCreditNeedsPayment =
+        isFutureOrder &&
+        order.payment_method === 'credit_card' &&
+        order.payment_status !== 'paid' &&
+        order.status !== 'cancelled';
+
+    /** טיימר: בהזמנה עתידית רק אחרי שההזמנה נכנסה למטבח (received ואילך), לא בזמן ממתין לתשלום/לפני קבלה */
+    const futureKitchenStatuses = [
+        ORDER_STATUS.RECEIVED,
+        ORDER_STATUS.PREPARING,
+        ORDER_STATUS.READY,
+        ORDER_STATUS.DELIVERING,
+        ORDER_STATUS.DELIVERED,
+    ];
+    const showCountdownTimer =
+        !isCancelled &&
+        (isFutureOrder
+            ? futureKitchenStatuses.includes(order.status)
+            : !isFutureAwaitingPayment && !(isFutureOrder && order.status === 'pending') && !isPendingPayment);
 
     const statusLabel = isFutureAwaitingPayment
         ? 'הזמנה עתידית — ממתין לתשלום'
-        : isFutureOrder && order.status === 'pending'
-            ? 'הזמנה עתידית — התקבלה'
-            : ORDER_STATUS_LABELS[order.status] ?? 'בוטל';
+        : isFutureOrder && order.payment_status === 'failed' && order.payment_method === 'credit_card'
+            ? 'הזמנה עתידית — תשלום נכשל'
+            : isFutureOrder && order.status === 'pending'
+                ? 'הזמנה עתידית — התקבלה'
+                : ORDER_STATUS_LABELS[order.status] ?? 'בוטל';
     const statusColor = isFutureAwaitingPayment
         ? 'bg-teal-100 text-teal-800'
-        : isFutureOrder && order.status === 'pending'
-            ? 'bg-teal-100 text-teal-700'
-            : ORDER_STATUS_COLORS[order.status] ?? 'bg-red-100 text-red-700';
+        : isFutureOrder && order.payment_status === 'failed' && order.payment_method === 'credit_card'
+            ? 'bg-red-100 text-red-800'
+            : isFutureOrder && order.status === 'pending'
+                ? 'bg-teal-100 text-teal-700'
+                : ORDER_STATUS_COLORS[order.status] ?? 'bg-red-100 text-red-700';
+
+    const showNonFuturePaymentFailedBanner =
+        !isCancelled &&
+        !isFutureOrder &&
+        order.payment_method === 'credit_card' &&
+        (order.payment_status === 'failed' || paymentResult === 'failed');
 
     const content = (
         <div className="space-y-8">
@@ -592,7 +622,7 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
                             <p className="font-bold text-green-700 dark:text-green-400">התשלום התקבל בהצלחה!</p>
                         </div>
                     )}
-                    {paymentResult === 'failed' && (
+                    {showNonFuturePaymentFailedBanner && (
                         <div className="bg-red-50 dark:bg-red-900/20 rounded-xl p-4 border border-red-200 dark:border-red-800 space-y-3">
                             <div className="flex items-center gap-3">
                                 <FaExclamationTriangle className="text-red-500 text-lg flex-shrink-0" />
@@ -640,8 +670,8 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
                         </div>
                     )}
 
-                    {/* שעון ספירה לאחור – מוסתר בהזמנה עתידית שממתינה */}
-                    {!isCancelled && !isFutureAwaitingPayment && !(isFutureOrder && order.status === 'pending') && !isPendingPayment && (
+                    {/* שעון ספירה לאחור – בהזמנה עתידית רק אחרי קבלה במטבח (received+); אחרת לפי תשלום */}
+                    {showCountdownTimer && (
                         <div className="my-6">
                             <CountdownTimer
                                 startTime={order.created_at}
@@ -720,7 +750,7 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
                         </div>
                     )}
 
-                    {!isCancelled && !isFutureAwaitingPayment && (
+                    {!isCancelled && !isFutureCreditNeedsPayment && (
                         <>
                             {/* סטטוס סרגל */}
                             <div className="bg-gray-50 dark:bg-brand-dark-border/50 rounded-xl p-6 space-y-4">
@@ -767,29 +797,82 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
                         </>
                     )}
 
-                    {/* מצב הזמנה עתידית ממתינה לתשלום */}
-                    {isFutureAwaitingPayment && (
-                        <div id="order-continue-section" className="mt-6 p-6 rounded-xl text-center bg-teal-50 dark:bg-teal-900/20 border-2 border-teal-300 dark:border-teal-700">
+                    {/* מצב הזמנה עתידית — ממתין לתשלום או תשלום נכשל (מצב שרת, לא רק redirect מ-HYP) */}
+                    {isFutureCreditNeedsPayment && (
+                        <div
+                            id="order-continue-section"
+                            className={`mt-6 p-6 rounded-xl text-center border-2 ${
+                                order.payment_status === 'failed'
+                                    ? 'bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700'
+                                    : 'bg-teal-50 dark:bg-teal-900/20 border-teal-300 dark:border-teal-700'
+                            }`}
+                        >
                             <div className="flex flex-col items-center gap-4">
-                                <div className="w-16 h-16 rounded-full bg-teal-100 dark:bg-teal-800 flex items-center justify-center">
-                                    <FaClock className="text-3xl text-teal-600 dark:text-teal-300" />
+                                <div
+                                    className={`w-16 h-16 rounded-full flex items-center justify-center ${
+                                        order.payment_status === 'failed'
+                                            ? 'bg-red-100 dark:bg-red-900/40'
+                                            : 'bg-teal-100 dark:bg-teal-800'
+                                    }`}
+                                >
+                                    {order.payment_status === 'failed' ? (
+                                        <FaExclamationTriangle className="text-3xl text-red-600 dark:text-red-300" />
+                                    ) : (
+                                        <FaClock className="text-3xl text-teal-600 dark:text-teal-300" />
+                                    )}
                                 </div>
                                 <div>
-                                    <p className="text-2xl font-black text-teal-900 dark:text-teal-200">הזמנה עתידית</p>
-                                    <p className="text-lg font-bold text-teal-700 dark:text-teal-300 mt-1">
+                                    <p
+                                        className={`text-2xl font-black ${
+                                            order.payment_status === 'failed'
+                                                ? 'text-red-900 dark:text-red-200'
+                                                : 'text-teal-900 dark:text-teal-200'
+                                        }`}
+                                    >
+                                        הזמנה עתידית
+                                    </p>
+                                    <p
+                                        className={`text-lg font-bold mt-1 ${
+                                            order.payment_status === 'failed'
+                                                ? 'text-red-800 dark:text-red-300'
+                                                : 'text-teal-700 dark:text-teal-300'
+                                        }`}
+                                    >
                                         {new Date(order.scheduled_for).toLocaleDateString('he-IL', { weekday: 'long', day: 'numeric', month: 'long' })}
                                         {' בשעה '}
                                         {new Date(order.scheduled_for).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}
                                     </p>
-                                    <p className="text-sm mt-3 text-teal-600 dark:text-teal-400">ממתין לתשלום — ההזמנה תטופל לאחר השלמת התשלום</p>
+                                    <p
+                                        className={`text-sm mt-3 ${
+                                            order.payment_status === 'failed'
+                                                ? 'text-red-700 dark:text-red-400'
+                                                : 'text-teal-600 dark:text-teal-400'
+                                        }`}
+                                    >
+                                        {order.payment_status === 'failed'
+                                            ? 'התשלום נכשל — ניתן לנסות שוב. ההזמנה תטופל לאחר תשלום מוצלח.'
+                                            : 'ממתין לתשלום — ההזמנה תטופל לאחר השלמת התשלום'}
+                                    </p>
                                 </div>
                                 <button
                                     onClick={handleRetryPayment}
                                     disabled={retryingPayment}
-                                    className="w-full max-w-xs flex items-center justify-center gap-2 py-3.5 px-6 bg-teal-600 hover:bg-teal-700 text-white font-black text-lg rounded-xl shadow-lg transition disabled:opacity-50"
+                                    className={`w-full max-w-xs flex items-center justify-center gap-2 py-3.5 px-6 text-white font-black text-lg rounded-xl shadow-lg transition disabled:opacity-50 ${
+                                        order.payment_status === 'failed'
+                                            ? 'bg-red-600 hover:bg-red-700'
+                                            : 'bg-teal-600 hover:bg-teal-700'
+                                    }`}
                                 >
-                                    <FaCreditCard />
-                                    {retryingPayment ? 'מעבד...' : 'שלם עכשיו'}
+                                    {order.payment_status === 'failed' ? (
+                                        <FaRedo className={retryingPayment ? 'animate-spin' : ''} />
+                                    ) : (
+                                        <FaCreditCard />
+                                    )}
+                                    {retryingPayment
+                                        ? 'מעבד...'
+                                        : order.payment_status === 'failed'
+                                            ? 'נסה לשלם שוב'
+                                            : 'שלם עכשיו'}
                                 </button>
                             </div>
                         </div>
