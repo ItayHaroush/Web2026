@@ -746,23 +746,59 @@ export default function AdminOrders() {
                                         {getStatusBadge(selectedOrder.status, selectedOrder.delivery_method).icon && React.cloneElement(getStatusBadge(selectedOrder.status, selectedOrder.delivery_method).icon, { size: 80 })}
                                     </div>
                                     <div className="relative z-10">
-                                        <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60 mb-1">סטטוס הזמנה</p>
-                                        <div className="flex items-center gap-3">
-                                            <div className="text-2xl font-black">{getStatusBadge(selectedOrder.status, selectedOrder.delivery_method).text}</div>
-                                            {selectedOrder.status === 'preparing' && (
-                                                <div className="flex gap-1">
-                                                    <span className="w-1.5 h-1.5 bg-current rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                                                    <span className="w-1.5 h-1.5 bg-current rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                                                    <span className="w-1.5 h-1.5 bg-current rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                                        {selectedOrder.status === 'cancelled' ? (
+                                            <>
+                                                {/* בוטל בלבד: סטטוס | סיבת ביטול */}
+                                                <div className="flex items-center justify-center sm:justify-between gap-0 text-[10px] font-black uppercase tracking-[0.12em] opacity-60 mb-3 pb-2 border-b border-current/10">
+                                                    <span className="flex-1 min-w-0 text-center">סטטוס הזמנה</span>
+                                                    <span className="opacity-35 shrink-0 px-1.5 sm:px-2" aria-hidden>|</span>
+                                                    <span className="flex-1 min-w-0 text-center">סיבת ביטול</span>
                                                 </div>
+                                                <div className="flex items-start justify-center sm:justify-between gap-0">
+                                                    <div className="flex-1 min-w-0 flex flex-col items-center text-center gap-1">
+                                                        <div className="text-2xl font-black inline-flex flex-wrap items-center justify-center gap-2">
+                                                            <span>{getStatusBadge(selectedOrder.status, selectedOrder.delivery_method).text}</span>
+                                                        </div>
+                                                    </div>
+                                                    <span className="opacity-35 shrink-0 px-1.5 sm:px-2 mt-1 sm:mt-2 select-none" aria-hidden>|</span>
+                                                    <div className="flex-1 min-w-0 text-center px-0.5">
+                                                        <p className="text-sm sm:text-base font-bold leading-snug break-words">
+                                                            {selectedOrder.cancellation_reason || '—'}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <div className="text-[10px] font-black uppercase tracking-[0.12em] opacity-60 mb-3 pb-2 border-b border-current/10 text-center">
+                                                    סטטוס הזמנה
+                                                </div>
+                                                <div className="flex flex-col items-center text-center gap-1">
+                                                    <div className="text-2xl font-black inline-flex flex-wrap items-center justify-center gap-2">
+                                                        <span>{getStatusBadge(selectedOrder.status, selectedOrder.delivery_method).text}</span>
+                                                        {selectedOrder.status === 'preparing' && (
+                                                            <span className="flex gap-1">
+                                                                <span className="w-1.5 h-1.5 bg-current rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                                                                <span className="w-1.5 h-1.5 bg-current rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                                                                <span className="w-1.5 h-1.5 bg-current rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </>
+                                        )}
+                                        {/* שורה 3: טופל ע&quot;י — מתחת לשתי העמודות */}
+                                        <div className="mt-4 pt-3 border-t border-current/10 text-center">
+                                            <p className="text-[10px] font-black uppercase tracking-[0.12em] opacity-60 mb-1.5">טופל ע&quot;י</p>
+                                            {selectedOrder.updated_by_name ? (
+                                                <span className="text-xs sm:text-sm font-bold uppercase inline-flex items-center justify-center gap-1.5 opacity-90">
+                                                    <FaUser size={10} className="shrink-0" />
+                                                    <span className="break-words">{selectedOrder.updated_by_name}</span>
+                                                </span>
+                                            ) : (
+                                                <span className="text-sm font-bold opacity-50">—</span>
                                             )}
                                         </div>
-                                        {selectedOrder.updated_by_name && (
-                                            <div className="mt-4 pt-3 border-t border-current/10 flex items-center gap-2 opacity-70">
-                                                <FaUser size={10} />
-                                                <span className="text-[10px] font-bold uppercase">טופל ע"י {selectedOrder.updated_by_name}</span>
-                                            </div>
-                                        )}
                                     </div>
                                 </div>
 
