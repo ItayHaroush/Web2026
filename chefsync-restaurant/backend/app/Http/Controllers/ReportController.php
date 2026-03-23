@@ -7,9 +7,12 @@ use Illuminate\Http\JsonResponse;
 use App\Models\DailyReport;
 use App\Models\Restaurant;
 use App\Models\Order;
+use App\Models\User;
+use App\Mail\DailyReportMail;
 use App\Console\Commands\GenerateDailyReportsJob;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Mpdf\Mpdf;
 
 class ReportController extends Controller
@@ -466,5 +469,139 @@ class ReportController extends Controller
             'message' => 'סיכום דוחות מערכת',
             'data' => $summary,
         ]);
+    }
+
+    /**
+     * שליחה מרוכזת: מייל / קישורי וואטסאפ / טקסט להעתקה — לדוחות שנבחרו (טננט נוכחי).
+     */
+    public function bulkDispatch(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'report_ids' => 'required|array|min:1',
+            'report_ids.*' => 'integer|exists:daily_reports,id',
+            'send_email' => 'sometimes|boolean',
+            'whatsapp' => 'sometimes|boolean',
+            'copy_text' => 'sometimes|boolean',
+        ]);
+
+        $sendEmail = $validated['send_email'] ?? false;
+        $whatsapp = $validated['whatsapp'] ?? false;
+        $copyText = $validated['copy_text'] ?? false;
+
+        if (!$sendEmail && !$whatsapp && !$copyText) {
+            return response()->json([
+                'success' => false,
+                'message' => 'בחר לפחות פעולה אחת (מייל, וואטסאפ או העתקה)',
+            ], 422);
+        }
+
+        $ids = array_values(array_unique($validated['report_ids']));
+        $reports = DailyReport::whereIn('id', $ids)->with('restaurant')->orderBy('date')->get();
+
+        if ($reports->count() !== count($ids)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'חלק מהדוחות לא נמצאו או לא שייכים למסעדה',
+            ], 422);
+        }
+
+        $sent = 0;
+        $skippedNoEmail = 0;
+        $errors = [];
+        $links = [];
+        $lines = [];
+
+        foreach ($reports as $report) {
+            if ($sendEmail) {
+                $email = $this->resolveBulkReportEmail($report);
+                if (!$email) {
+                    $skippedNoEmail++;
+                } else {
+                    try {
+                        Mail::to($email)->send(new DailyReportMail($report));
+                        $sent++;
+                    } catch (\Throwable $e) {
+                        $errors[] = "דוח {$report->id}: {$e->getMessage()}";
+                        Log::warning('Admin bulk daily report email failed', ['report_id' => $report->id, 'error' => $e->getMessage()]);
+                    }
+                }
+            }
+
+            if ($whatsapp) {
+                $phone = $this->resolveBulkWhatsappPhone($report->restaurant);
+                if ($phone) {
+                    $text = $this->buildBulkWhatsappSummary($report);
+                    $links[] = [
+                        'report_id' => $report->id,
+                        'date' => $report->date->format('Y-m-d'),
+                        'url' => 'https://wa.me/' . $phone . '?text=' . rawurlencode($text),
+                    ];
+                }
+            }
+
+            if ($copyText) {
+                $lines[] = $this->buildBulkWhatsappSummary($report);
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'בוצע',
+            'data' => [
+                'emails_sent' => $sent,
+                'skipped_no_email' => $skippedNoEmail,
+                'errors' => $errors,
+                'whatsapp_links' => $links,
+                'copy_text' => $copyText ? implode("\n\n---\n\n", $lines) : null,
+            ],
+        ]);
+    }
+
+    private function resolveBulkReportEmail(DailyReport $report): ?string
+    {
+        $restaurant = $report->restaurant;
+        if (!$restaurant) {
+            return null;
+        }
+        if ($restaurant->daily_report_email) {
+            return $restaurant->daily_report_email;
+        }
+        $owner = User::where('restaurant_id', $restaurant->id)->where('role', 'owner')->first();
+
+        return $owner?->email;
+    }
+
+    private function resolveBulkWhatsappPhone(?Restaurant $restaurant): ?string
+    {
+        if (!$restaurant) {
+            return null;
+        }
+        $raw = $restaurant->phone ?? null;
+        $owner = User::where('restaurant_id', $restaurant->id)->where('role', 'owner')->first();
+        if (!$raw && $owner?->phone) {
+            $raw = $owner->phone;
+        }
+        if (!$raw) {
+            return null;
+        }
+        $digits = preg_replace('/\D+/', '', $raw);
+        if (str_starts_with($digits, '0')) {
+            $digits = '972' . substr($digits, 1);
+        }
+        if ($digits !== '' && !str_starts_with($digits, '972')) {
+            $digits = '972' . ltrim($digits, '0');
+        }
+
+        return strlen($digits) >= 11 ? $digits : null;
+    }
+
+    private function buildBulkWhatsappSummary(DailyReport $report): string
+    {
+        $name = $report->restaurant?->name ?? '';
+        $d = $report->date->format('d/m/Y');
+
+        return "דוח יומי TakeEat — {$name} — {$d}\n"
+            . "הזמנות: {$report->total_orders} | הכנסות: ₪" . number_format((float) $report->total_revenue, 0)
+            . "\nאיסוף: {$report->pickup_orders} | משלוח: {$report->delivery_orders}";
     }
 }

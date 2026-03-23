@@ -33,6 +33,7 @@ use App\Http\Controllers\SuperAdminCustomerController;
 use App\Http\Controllers\CustomerPwaController;
 use App\Http\Controllers\CustomerNotificationPreferenceController;
 use App\Http\Controllers\SuperAdminCartSessionsController;
+use App\Http\Controllers\SuperAdminDailyReportsController;
 
 /**
  * API Routes
@@ -193,6 +194,10 @@ Route::prefix('super-admin')->middleware(['auth:sanctum', 'super_admin'])->group
 
     // דוחות יומיים - סופר אדמין
     Route::get('/reports/summary', [ReportController::class, 'superAdminSummary'])->name('super-admin.reports.summary');
+    Route::post('/reports/backfill-missing', [SuperAdminDailyReportsController::class, 'backfillMissing'])->name('super-admin.reports.backfill-missing');
+    Route::post('/reports/export-zip', [SuperAdminDailyReportsController::class, 'exportZip'])->name('super-admin.reports.export-zip');
+    Route::post('/reports/send-emails', [SuperAdminDailyReportsController::class, 'sendEmails'])->name('super-admin.reports.send-emails');
+    Route::post('/reports/whatsapp-links', [SuperAdminDailyReportsController::class, 'whatsappLinks'])->name('super-admin.reports.whatsapp-links');
 
     // Impersonation - כניסה כמסעדה
     Route::post('/impersonate/{restaurantId}', [SuperAdminController::class, 'impersonate'])->name('super-admin.impersonate');
@@ -462,6 +467,7 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'tenant'])->group(function (
         Route::get('/reports/csv', [ReportController::class, 'csv'])->name('admin.reports.csv');
         Route::get('/reports/tax-csv', [ReportController::class, 'taxCsv'])->name('admin.reports.tax-csv');
         Route::get('/reports/zip', [ReportController::class, 'zip'])->name('admin.reports.zip');
+        Route::post('/reports/bulk-dispatch', [ReportController::class, 'bulkDispatch'])->name('admin.reports.bulk-dispatch');
         Route::post('/reports/generate', [ReportController::class, 'generate'])->name('admin.reports.generate');
         Route::get('/reports/{id}', [ReportController::class, 'show'])->name('admin.reports.show');
         Route::get('/reports/{id}/pdf', [ReportController::class, 'pdf'])->name('admin.reports.pdf');

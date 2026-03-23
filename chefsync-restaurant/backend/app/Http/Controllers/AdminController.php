@@ -2979,7 +2979,7 @@ class AdminController extends Controller
      */
     public function billingInfo(Request $request)
     {
-        $restaurant = $request->user()->restaurant;
+        $restaurant = $this->resolveRestaurant($request);
 
         if (!$restaurant) {
             return response()->json([
