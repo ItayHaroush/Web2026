@@ -205,6 +205,26 @@ class Order extends Model
     }
 
     /**
+     * פאנל ניהול: כמו visibleToRestaurant, אבל כולל הזמנות אתר שממתינות לתשלום HYP (ממתין/נכשל).
+     */
+    public function scopeVisibleToRestaurantOrB2cAwaitingPayment($query)
+    {
+        return $query->where(function ($q) {
+            $q->where(function ($sub) {
+                $sub->where('status', '!=', self::STATUS_AWAITING_PAYMENT)
+                    ->where(function ($inner) {
+                        $inner->where('payment_method', '!=', 'credit_card')
+                            ->orWhere('payment_status', '!=', self::PAYMENT_PENDING);
+                    });
+            })->orWhere(function ($sub) {
+                $sub->where('status', self::STATUS_AWAITING_PAYMENT)
+                    ->where('payment_method', 'credit_card')
+                    ->whereIn('payment_status', [self::PAYMENT_PENDING, self::PAYMENT_FAILED]);
+            });
+        });
+    }
+
+    /**
      * סינון תצוגת מסעדן: רק הזמנות מ־תאריך תחילת פעילות (אם הוגדר ע"י סופר־אדמין).
      */
     public function scopeForOwnerReporting($query, Restaurant $restaurant)

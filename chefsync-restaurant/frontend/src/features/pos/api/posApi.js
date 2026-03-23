@@ -94,12 +94,6 @@ export const posApi = {
         api.get('/admin/pos/orders/pending-payment', { headers: posHeaders(headers, token) }),
     payPendingOrderCash: (orderId, amountTendered, headers, token) =>
         api.post(`/admin/pos/orders/${orderId}/pay-cash`, { amount_tendered: amountTendered }, { headers: posHeaders(headers, token) }),
-    /** קישור תשלום HYP להזמנת אתר (אשראי) — לקופה */
-    createOrderPaymentLink: (orderId, headers, token) =>
-        api.post(`/admin/pos/orders/${orderId}/payment-link`, {}, { headers: posHeaders(headers, token) }),
-    /** החלפת אשראי (אתר) למזומן — תשלום בקופה/במסירה */
-    switchOrderToCash: (orderId, headers, token) =>
-        api.post(`/admin/pos/orders/${orderId}/switch-to-cash`, {}, { headers: posHeaders(headers, token) }),
 
     // תשלום מפוצל
     splitPayment: (orderId, cashAmount, creditAmount, headers, token) =>

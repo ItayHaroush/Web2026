@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { FaTimes, FaShekelSign, FaCreditCard, FaMoneyBillWave, FaClock, FaGlobe, FaDesktop, FaCashRegister, FaCheckCircle, FaExclamationTriangle, FaBackspace, FaUtensils, FaMapMarkerAlt, FaLink, FaWhatsapp } from 'react-icons/fa';
+import { FaTimes, FaShekelSign, FaCreditCard, FaMoneyBillWave, FaClock, FaGlobe, FaDesktop, FaCashRegister, FaCheckCircle, FaExclamationTriangle, FaBackspace, FaUtensils, FaMapMarkerAlt } from 'react-icons/fa';
 import posApi from '../api/posApi';
 
 const SOURCE_CONFIG = {
@@ -9,22 +9,9 @@ const SOURCE_CONFIG = {
     website: { label: 'אתר', icon: FaGlobe, color: 'text-blue-400 bg-blue-500/10' },
 };
 
-function phoneToWhatsAppDigits(phone) {
-    if (!phone || typeof phone !== 'string') return null;
-    let d = phone.replace(/\D/g, '');
-    if (!d) return null;
-    if (d.startsWith('972')) return d;
-    if (d.startsWith('0')) return `972${d.slice(1)}`;
-    if (d.length === 9) return `972${d}`;
-    return d;
-}
-
 export default function POSPendingPaymentModal({ headers, posToken, onClose, onPaid }) {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [paymentLinkBusy, setPaymentLinkBusy] = useState(null);
-    const [cashSwitchBusy, setCashSwitchBusy] = useState(null);
-    const [toast, setToast] = useState('');
 
     // Cash payment flow
     const [cashOrder, setCashOrder] = useState(null);
@@ -162,56 +149,6 @@ export default function POSPendingPaymentModal({ headers, posToken, onClose, onP
         setCreditOrder(null);
         setAmountTendered('');
         setResult(null);
-    };
-
-    const handlePaymentLink = async (order, mode) => {
-        if (!posToken) return;
-        setPaymentLinkBusy(order.id);
-        try {
-            const res = await posApi.createOrderPaymentLink(order.id, headers, posToken);
-            const url = res.data?.payment_url;
-            if (!url) throw new Error('אין קישור');
-            if (mode === 'whatsapp') {
-                const digits = phoneToWhatsAppDigits(order.customer_phone);
-                if (!digits) {
-                    await navigator.clipboard.writeText(url);
-                    setToast('אין מספר טלפון — הקישור הועתק ללוח');
-                    setTimeout(() => setToast(''), 3500);
-                    return;
-                }
-                const text = encodeURIComponent(
-                    `שלום, להשלמת התשלום להזמנה #${order.id}:\n${url}`
-                );
-                window.open(`https://wa.me/${digits}?text=${text}`, '_blank', 'noopener,noreferrer');
-            } else {
-                await navigator.clipboard.writeText(url);
-                setToast('קישור התשלום הועתק ללוח');
-                setTimeout(() => setToast(''), 2500);
-            }
-        } catch (e) {
-            setToast(e.response?.data?.message || e.message || 'שגיאה ביצירת קישור');
-            setTimeout(() => setToast(''), 4000);
-        } finally {
-            setPaymentLinkBusy(null);
-        }
-    };
-
-    const handleSwitchToCash = async (order) => {
-        if (!posToken) return;
-        if (!window.confirm('להחליף את ההזמנה למזומן? הלקוח ישלם בקופה או במסירה (לא קישור HYP ולא PinPad).')) return;
-        setCashSwitchBusy(order.id);
-        try {
-            await posApi.switchOrderToCash(order.id, headers, posToken);
-            setToast('אמצעי התשלום עודכן למזומן');
-            setTimeout(() => setToast(''), 2500);
-            fetchOrders();
-            onPaid?.();
-        } catch (e) {
-            setToast(e.response?.data?.message || e.message || 'שגיאה');
-            setTimeout(() => setToast(''), 4000);
-        } finally {
-            setCashSwitchBusy(null);
-        }
     };
 
     const digits = ['7', '8', '9', '4', '5', '6', '1', '2', '3', '.', '0', 'del'];
@@ -395,12 +332,6 @@ export default function POSPendingPaymentModal({ headers, posToken, onClose, onP
                     </button>
                 </div>
 
-                {toast && (
-                    <div className="mx-6 mb-2 px-4 py-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/35 text-emerald-200 text-sm font-bold text-center">
-                        {toast}
-                    </div>
-                )}
-
                 {/* Processing overlay (for credit) */}
                 {processing && creditOrder && (
                     <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-10 flex items-center justify-center rounded-3xl">
@@ -435,9 +366,6 @@ export default function POSPendingPaymentModal({ headers, posToken, onClose, onP
                             const source = SOURCE_CONFIG[srcKey] || SOURCE_CONFIG.website;
                             const SourceIcon = source.icon;
                             const isFailed = order.payment_status === 'failed';
-                            const isWebSiteOrder = ['website', 'web'].includes(srcKey);
-                            const isCreditUnpaid = order.payment_method === 'credit_card';
-                            const showHypLink = isWebSiteOrder && isCreditUnpaid;
                             return (
                                 <div
                                     key={order.id}
@@ -491,45 +419,7 @@ export default function POSPendingPaymentModal({ headers, posToken, onClose, onP
                                                 )}
                                             </div>
                                         )}
-                                        {showHypLink && (
-                                            <div className="mb-3 rounded-xl border border-cyan-500/30 bg-cyan-950/30 p-3 space-y-2">
-                                                <p className="text-[11px] font-bold text-cyan-100/95 leading-relaxed">
-                                                    תשלום מהאתר (HYP) — קישור ללקוח. זה לא מסוף PinPad ולא שליחה לטלפון של המסוף.
-                                                </p>
-                                                <div className="flex flex-wrap gap-2">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handlePaymentLink(order, 'copy')}
-                                                        disabled={!!paymentLinkBusy || processing}
-                                                        className="flex items-center gap-2 px-3 py-2 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-xs font-black hover:bg-cyan-500/20 disabled:opacity-40"
-                                                    >
-                                                        <FaLink size={12} />
-                                                        {paymentLinkBusy === order.id ? '...' : 'העתק קישור'}
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handlePaymentLink(order, 'whatsapp')}
-                                                        disabled={!!paymentLinkBusy || processing}
-                                                        className="flex items-center gap-2 px-3 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-black hover:bg-emerald-500/20 disabled:opacity-40"
-                                                    >
-                                                        <FaWhatsapp size={14} />
-                                                        וואטסאפ
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        )}
                                         <p className="text-slate-500 text-xs font-black mb-2 border-t border-slate-700 pt-3">בקופה</p>
-                                        {isCreditUnpaid && (
-                                            <button
-                                                type="button"
-                                                onClick={() => handleSwitchToCash(order)}
-                                                disabled={!!cashSwitchBusy || processing}
-                                                className="w-full mb-3 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs font-black hover:bg-amber-500/20 disabled:opacity-40"
-                                            >
-                                                <FaMoneyBillWave />
-                                                {cashSwitchBusy === order.id ? 'מעדכן...' : 'החלף למזומן (תשלום בקופה / במסירה)'}
-                                            </button>
-                                        )}
                                         <div className="flex flex-col gap-2">
                                             <div className="flex gap-2">
                                                 <button

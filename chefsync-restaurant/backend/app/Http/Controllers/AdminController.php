@@ -162,11 +162,26 @@ class AdminController extends Controller
 
         $stats['future_orders_count'] = $futureOrders->count();
 
+        // הזמנות אתר שדורשות טיפול בתשלום (HYP — ממתין או נכשל)
+        $manualPaymentOrders = Order::where('restaurant_id', $restaurantId)
+            ->when($restaurant, fn ($q) => $q->forOwnerReporting($restaurant))
+            ->where('is_test', false)
+            ->where('status', Order::STATUS_AWAITING_PAYMENT)
+            ->where('payment_method', 'credit_card')
+            ->whereIn('payment_status', [Order::PAYMENT_PENDING, Order::PAYMENT_FAILED])
+            ->orderBy('created_at', 'desc')
+            ->with('items.menuItem.category')
+            ->take(30)
+            ->get();
+
+        $stats['manual_payment_attention_count'] = $manualPaymentOrders->count();
+
         return response()->json([
             'success' => true,
             'stats' => $stats,
             'recent_orders' => $recentOrders,
             'future_orders' => $futureOrders,
+            'manual_payment_orders' => $manualPaymentOrders,
         ]);
     }
 
@@ -2460,7 +2475,7 @@ class AdminController extends Controller
     {
         $restaurant = $this->resolveRestaurant($request);
         $query = Order::where('restaurant_id', $this->resolveRestaurantId($request))
-            ->visibleToRestaurant()
+            ->visibleToRestaurantOrB2cAwaitingPayment()
             ->when($restaurant, fn ($q) => $q->forOwnerReporting($restaurant))
             ->with('items.menuItem.category');
 
@@ -3124,7 +3139,7 @@ class AdminController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isOwner() && !$user->is_super_admin) {
+        if (! $user->isOwner() && ! $user->is_super_admin) {
             return response()->json([
                 'success' => false,
                 'message' => 'רק בעל המסעדה יכול לבצע פעולה זו',
@@ -3152,10 +3167,10 @@ class AdminController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isOwner() && !$user->isSuperAdmin()) {
+        if (! $user->isOwner() && ! $user->isSuperAdmin() && ! $user->isManager()) {
             return response()->json([
                 'success' => false,
-                'message' => 'רק בעל מסעדה או סופר-אדמין יכולים לסמן הזמנה כשולמה',
+                'message' => 'רק בעל מסעדה, מנהל או סופר-אדמין יכולים לסמן הזמנה כשולמה',
             ], 403);
         }
 
@@ -3172,6 +3187,9 @@ class AdminController extends Controller
         $order->payment_status = Order::PAYMENT_PAID;
         $order->marked_paid_by = $user->name;
         $order->marked_paid_at = now();
+        if ($order->status === Order::STATUS_AWAITING_PAYMENT) {
+            $order->status = Order::STATUS_PENDING;
+        }
         $order->save();
 
         Log::info('Order marked as paid manually', [
@@ -3196,15 +3214,15 @@ class AdminController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isOwner() && !$user->isSuperAdmin()) {
+        if (! $user->isOwner() && ! $user->isSuperAdmin() && ! $user->isManager()) {
             return response()->json([
                 'success' => false,
-                'message' => 'רק בעל מסעדה או סופר-אדמין יכולים ליצור קישור תשלום',
+                'message' => 'רק בעל מסעדה, מנהל או סופר-אדמין יכולים ליצור קישור תשלום',
             ], 403);
         }
 
         $restaurantId = $this->resolveRestaurantId($request);
-        if (!$restaurantId) {
+        if (! $restaurantId) {
             return response()->json([
                 'success' => false,
                 'message' => 'לא ניתן לזהות מסעדה',
@@ -3275,6 +3293,61 @@ class AdminController extends Controller
             'success'       => true,
             'payment_url' => $paymentUrl,
             'expires_at'  => $session->expires_at?->toIso8601String(),
+        ]);
+    }
+
+    /**
+     * החלפת אמצעי תשלום מאשראי (אתר) למזומן — תשלום בקופה או במסירה.
+     */
+    public function switchOrderToCash(Request $request, $id)
+    {
+        $user = $request->user();
+
+        if (! $user->isOwner() && ! $user->isSuperAdmin() && ! $user->isManager()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'אין הרשאה לפעולה זו',
+            ], 403);
+        }
+
+        $restaurantId = $this->resolveRestaurantId($request);
+        $order = Order::where('restaurant_id', $restaurantId)->findOrFail($id);
+
+        if ($order->payment_status === Order::PAYMENT_PAID) {
+            return response()->json(['success' => false, 'message' => 'ההזמנה כבר שולמה'], 422);
+        }
+
+        if ($order->status === Order::STATUS_CANCELLED) {
+            return response()->json(['success' => false, 'message' => 'לא ניתן לעדכן הזמנה שבוטלה'], 422);
+        }
+
+        if ($order->payment_method !== 'credit_card') {
+            return response()->json([
+                'success' => false,
+                'message' => 'החלפה למזומן רלוונטית רק כשההזמנה מוגדרת כאשראי',
+            ], 422);
+        }
+
+        $updates = [
+            'payment_method' => 'cash',
+            'payment_status' => Order::PAYMENT_PENDING,
+        ];
+        if ($order->status === Order::STATUS_AWAITING_PAYMENT) {
+            $updates['status'] = Order::STATUS_PENDING;
+        }
+
+        $order->update($updates);
+
+        try {
+            OrderEventService::log($order->id, 'admin_switch_to_cash', 'admin', $user->id, [], $request);
+        } catch (\Throwable $e) {
+            Log::warning('OrderEventService admin_switch_to_cash failed', ['error' => $e->getMessage()]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'אמצעי התשלום עודכן למזומן',
+            'order' => $order->fresh()->load('items.menuItem.category'),
         ]);
     }
 }

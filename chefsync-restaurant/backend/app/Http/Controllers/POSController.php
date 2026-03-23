@@ -10,17 +10,14 @@ use App\Models\MonitoringAlert;
 use App\Models\NotificationLog;
 use App\Models\Order;
 use App\Models\Payment;
-use App\Models\PaymentSession;
 use App\Models\PosSession;
 use App\Models\Printer;
 use App\Models\Restaurant;
 use App\Models\TableTab;
 use App\Models\User;
 use App\Services\FcmService;
-use App\Services\OrderEventService;
 use App\Services\PosPaymentService;
 use App\Services\PrintService;
-use App\Services\RestaurantPaymentService;
 use App\Services\ZCreditResolver;
 use App\Services\ZCreditService;
 use Carbon\Carbon;
@@ -849,147 +846,6 @@ class POSController extends Controller
             ]));
 
         return response()->json(['success' => true, 'orders' => $orders]);
-    }
-
-    /**
-     * יצירת קישור תשלום HYP להזמנת אתר (אשראי B2C) — זמין לכל משתמש קופה מול המסעדה שלו.
-     */
-    public function createOrderPaymentLink(Request $request, $orderId)
-    {
-        $user = $request->user();
-        $restaurantId = $user->restaurant_id;
-        if (! $restaurantId) {
-            return response()->json(['success' => false, 'message' => 'לא ניתן לזהות מסעדה'], 422);
-        }
-
-        $order = Order::withoutGlobalScopes()
-            ->where('restaurant_id', $restaurantId)
-            ->findOrFail($orderId);
-
-        if ($order->payment_method !== 'credit_card') {
-            return response()->json([
-                'success' => false,
-                'message' => 'קישור תשלום זמין רק להזמנות באשראי',
-            ], 422);
-        }
-
-        $orderSource = $order->source ?? 'website';
-        if (! in_array($orderSource, ['website', 'web'], true)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'קישור תשלום מקוון (HYP) זמין רק להזמנות מהאתר — לא למסוף PinPad בקופה',
-            ], 422);
-        }
-
-        if ($order->payment_status === Order::PAYMENT_PAID) {
-            return response()->json([
-                'success' => false,
-                'message' => 'ההזמנה כבר שולמה',
-            ], 422);
-        }
-
-        if ($order->status === Order::STATUS_CANCELLED) {
-            return response()->json([
-                'success' => false,
-                'message' => 'לא ניתן ליצור תשלום להזמנה שבוטלה',
-            ], 422);
-        }
-
-        $restaurant = Restaurant::withoutGlobalScope('tenant')->find($order->restaurant_id);
-        $restaurantPaymentService = app(RestaurantPaymentService::class);
-
-        if (! $restaurant || ! $restaurantPaymentService->isRestaurantReady($restaurant)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'תשלום באשראי אינו מוגדר או לא זמין למסעדה',
-            ], 422);
-        }
-
-        $tenantId = $order->tenant_id;
-
-        PaymentSession::where('order_id', $order->id)
-            ->whereIn('status', ['pending', 'expired'])
-            ->update(['status' => 'expired']);
-
-        $session = PaymentSession::create([
-            'tenant_id' => $tenantId,
-            'restaurant_id' => $order->restaurant_id,
-            'order_id' => $order->id,
-            'session_token' => Str::uuid()->toString(),
-            'amount' => $order->total_amount,
-            'status' => 'pending',
-            'expires_at' => now()->addMinutes(config('payment.order_payment.session_timeout_minutes', 15)),
-        ]);
-
-        $paymentUrl = $restaurantPaymentService->generateOrderPaymentUrl($restaurant, $order, $session);
-        $session->update(['payment_url' => $paymentUrl]);
-
-        try {
-            OrderEventService::log($order->id, 'pos_payment_link', 'pos', $user->id, [
-                'session_id' => $session->id,
-            ], $request);
-        } catch (\Throwable $e) {
-            Log::warning('OrderEventService pos_payment_link failed', ['error' => $e->getMessage()]);
-        }
-
-        return response()->json([
-            'success' => true,
-            'payment_url' => $paymentUrl,
-            'expires_at' => $session->expires_at?->toIso8601String(),
-        ]);
-    }
-
-    /**
-     * החלפת אמצעי תשלום מאשראי (אתר) למזומן — תשלום בקופה או במסירה, ללא קישור HYP.
-     */
-    public function switchOrderToCash(Request $request, $orderId)
-    {
-        $user = $request->user();
-        $restaurantId = $user->restaurant_id;
-        if (! $restaurantId) {
-            return response()->json(['success' => false, 'message' => 'לא ניתן לזהות מסעדה'], 422);
-        }
-
-        $order = Order::withoutGlobalScopes()
-            ->where('restaurant_id', $restaurantId)
-            ->findOrFail($orderId);
-
-        if ($order->payment_status === Order::PAYMENT_PAID) {
-            return response()->json(['success' => false, 'message' => 'ההזמנה כבר שולמה'], 422);
-        }
-
-        if ($order->status === Order::STATUS_CANCELLED) {
-            return response()->json(['success' => false, 'message' => 'לא ניתן לעדכן הזמנה שבוטלה'], 422);
-        }
-
-        if ($order->payment_method !== 'credit_card') {
-            return response()->json([
-                'success' => false,
-                'message' => 'החלפה למזומן רלוונטית רק כשההזמנה מוגדרת כאשראי',
-            ], 422);
-        }
-
-        $updates = [
-            'payment_method' => 'cash',
-            'payment_status' => Order::PAYMENT_PENDING,
-        ];
-        if ($order->status === Order::STATUS_AWAITING_PAYMENT) {
-            $updates['status'] = Order::STATUS_PENDING;
-        }
-
-        $order->update($updates);
-
-        try {
-            OrderEventService::log($order->id, 'pos_switch_to_cash', 'pos', $user->id, [], $request);
-        } catch (\Throwable $e) {
-            Log::warning('OrderEventService pos_switch_to_cash failed', ['error' => $e->getMessage()]);
-        }
-
-        return response()->json([
-            'success' => true,
-            'message' => 'אמצעי התשלום עודכן למזומן (תשלום בקופה או במסירה)',
-            'order' => $this->formatOrder($order->fresh()->load('items.menuItem')),
-        ]);
     }
 
     // ─── Pay Pending Order Cash ───

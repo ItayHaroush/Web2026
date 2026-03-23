@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { FaCheckCircle, FaFire, FaBell, FaTruck, FaBan, FaClock, FaShekelSign, FaClipboardList, FaMotorcycle, FaPrint, FaUtensils, FaUndo, FaGlobe, FaLink, FaWhatsapp, FaMapMarkerAlt, FaMoneyBillWave } from 'react-icons/fa';
+import { FaCheckCircle, FaFire, FaBell, FaTruck, FaBan, FaClock, FaShekelSign, FaClipboardList, FaMotorcycle, FaPrint, FaUtensils, FaUndo, FaGlobe, FaMapMarkerAlt } from 'react-icons/fa';
 import posApi from '../api/posApi';
 import CancelOrderModal from '../../../components/CancelOrderModal';
 import POSManagerAuth from './POSManagerAuth';
@@ -10,16 +10,6 @@ const SOURCE_LABELS = {
     kiosk: 'קיוסק',
     pos: 'קופה',
 };
-
-function phoneToWhatsAppDigits(phone) {
-    if (!phone || typeof phone !== 'string') return null;
-    let d = phone.replace(/\D/g, '');
-    if (!d) return null;
-    if (d.startsWith('972')) return d;
-    if (d.startsWith('0')) return `972${d.slice(1)}`;
-    if (d.length === 9) return `972${d}`;
-    return d;
-}
 
 const STATUS_CONFIG = {
     awaiting_payment: { label: 'ממתין לתשלום', color: 'bg-orange-500', bg: 'bg-orange-500/10 border-orange-500/30', icon: FaClock },
@@ -102,8 +92,6 @@ function normalizeOrder(raw) {
 
 export default function POSOrderPanel({ headers, posToken, mode = 'active' }) {
     const [printMsg, setPrintMsg] = useState(null);
-    const [paymentLinkBusy, setPaymentLinkBusy] = useState(null);
-    const [cashSwitchBusy, setCashSwitchBusy] = useState(null);
     const [refunding, setRefunding] = useState(null);
     const [pendingRefundId, setPendingRefundId] = useState(null);
     const [cancelModal, setCancelModal] = useState({ isOpen: false, orderId: null });
@@ -195,50 +183,6 @@ export default function POSOrderPanel({ headers, posToken, mode = 'active' }) {
         }
     };
 
-    const handleCreatePaymentLink = async (order, modeAction) => {
-        if (!posToken) return;
-        setPaymentLinkBusy(order.id);
-        try {
-            const res = await posApi.createOrderPaymentLink(order.id, headers, posToken);
-            const url = res.data?.payment_url;
-            if (!url) throw new Error('אין קישור');
-            if (modeAction === 'whatsapp') {
-                const digits = phoneToWhatsAppDigits(order.customer_phone);
-                if (!digits) {
-                    await navigator.clipboard.writeText(url);
-                    showPrintMsg('אין מספר טלפון — הקישור הועתק ללוח', false);
-                    return;
-                }
-                const text = encodeURIComponent(
-                    `שלום, להשלמת התשלום להזמנה #${order.id}:\n${url}`
-                );
-                window.open(`https://wa.me/${digits}?text=${text}`, '_blank', 'noopener,noreferrer');
-            } else {
-                await navigator.clipboard.writeText(url);
-                showPrintMsg('קישור התשלום הועתק ללוח', false);
-            }
-        } catch (e) {
-            showPrintMsg(e.response?.data?.message || e.message || 'שגיאה ביצירת קישור', true);
-        } finally {
-            setPaymentLinkBusy(null);
-        }
-    };
-
-    const handleSwitchToCash = async (order) => {
-        if (!posToken) return;
-        if (!window.confirm('להחליף את ההזמנה למזומן? הלקוח ישלם בקופה או במסירה.')) return;
-        setCashSwitchBusy(order.id);
-        try {
-            await posApi.switchOrderToCash(order.id, headers, posToken);
-            showPrintMsg('אמצעי התשלום עודכן למזומן', false);
-            fetchOrders();
-        } catch (e) {
-            showPrintMsg(e.response?.data?.message || 'שגיאה בעדכון', true);
-        } finally {
-            setCashSwitchBusy(null);
-        }
-    };
-
     const isActive = (status) => !['delivered', 'cancelled'].includes(status);
     const filtered = mode === 'active'
         ? orders.filter(o => isActive(o.status))
@@ -295,11 +239,6 @@ export default function POSOrderPanel({ headers, posToken, mode = 'active' }) {
                         onPrintKitchen={handlePrintKitchen}
                         onRefund={handleRefund}
                         refunding={refunding}
-                        paymentLinkBusy={paymentLinkBusy}
-                        cashSwitchBusy={cashSwitchBusy}
-                        onPaymentLinkCopy={() => handleCreatePaymentLink(order, 'copy')}
-                        onPaymentLinkWhatsApp={() => handleCreatePaymentLink(order, 'whatsapp')}
-                        onSwitchToCash={() => handleSwitchToCash(order)}
                     />
                 ))}
             </div>
@@ -349,11 +288,6 @@ function OrderCard({
     onPrintKitchen,
     onRefund,
     refunding,
-    paymentLinkBusy,
-    cashSwitchBusy,
-    onPaymentLinkCopy,
-    onPaymentLinkWhatsApp,
-    onSwitchToCash,
 }) {
     const config = STATUS_CONFIG[order.status] || STATUS_CONFIG.pending;
     const Icon = config.icon;
@@ -365,15 +299,6 @@ function OrderCard({
     const sourceKey = order.source || 'website';
     const sourceLabel = SOURCE_LABELS[sourceKey] || sourceKey;
     const showSourceBadge = sourceKey !== 'pos';
-    const isWebSiteOrder = ['website', 'web'].includes(sourceKey);
-    const unpaidCredit =
-        order.payment_method === 'credit_card' &&
-        order.payment_status !== 'paid' &&
-        order.status !== 'cancelled';
-    /** קישור HYP — רק להזמנות מהאתר (לא PinPad ולא קיוסק) */
-    const showHypLinkActions = isWebSiteOrder && unpaidCredit;
-    /** החלפה למזומן — כל הזמנת אשראי שלא שולמה */
-    const showSwitchToCash = unpaidCredit;
 
     return (
         <div className={`rounded-2xl border ${config.bg} overflow-hidden transition-all`}>
@@ -464,46 +389,6 @@ function OrderCard({
 
                     {order.notes && (
                         <p className="text-amber-400 text-sm font-semibold bg-amber-500/10 p-3 rounded-xl">{order.notes}</p>
-                    )}
-
-                    {showHypLinkActions && (
-                        <div className="space-y-2 rounded-xl border border-cyan-500/25 bg-cyan-950/20 p-3">
-                            <p className="text-[11px] font-black text-cyan-200/90 leading-snug">
-                                תשלום מהאתר (HYP) — קישור ללקוח בלבד. לא מסוף אשראי פיזי.
-                            </p>
-                            <div className="flex flex-wrap gap-2">
-                                <button
-                                    type="button"
-                                    onClick={(e) => { e.stopPropagation(); onPaymentLinkCopy?.(); }}
-                                    disabled={paymentLinkBusy === order.id}
-                                    className="flex items-center gap-2 px-3 py-2 rounded-xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 text-xs font-black hover:bg-cyan-500/25 disabled:opacity-50"
-                                >
-                                    <FaLink size={12} />
-                                    {paymentLinkBusy === order.id ? 'יוצר...' : 'העתק קישור'}
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={(e) => { e.stopPropagation(); onPaymentLinkWhatsApp?.(); }}
-                                    disabled={paymentLinkBusy === order.id}
-                                    className="flex items-center gap-2 px-3 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-black hover:bg-emerald-500/25 disabled:opacity-50"
-                                >
-                                    <FaWhatsapp size={14} />
-                                    וואטסאפ
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
-                    {showSwitchToCash && (
-                        <button
-                            type="button"
-                            onClick={(e) => { e.stopPropagation(); onSwitchToCash?.(); }}
-                            disabled={cashSwitchBusy === order.id}
-                            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-amber-500/15 border border-amber-500/35 text-amber-200 text-sm font-black hover:bg-amber-500/25 disabled:opacity-50"
-                        >
-                            <FaMoneyBillWave />
-                            {cashSwitchBusy === order.id ? 'מעדכן...' : 'החלף למזומן (תשלום בקופה / במסירה)'}
-                        </button>
                     )}
 
                     {showActions && (

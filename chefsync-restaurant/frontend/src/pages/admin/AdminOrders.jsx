@@ -48,7 +48,7 @@ function digitsForWhatsApp(phone) {
 }
 
 export default function AdminOrders() {
-    const { getAuthHeaders, isOwner, user } = useAdminAuth();
+    const { getAuthHeaders, isOwner, isManager, user } = useAdminAuth();
     const { restaurantStatus } = useRestaurantStatus();
     const [searchParams, setSearchParams] = useSearchParams();
     const [orders, setOrders] = useState([]);
@@ -1155,7 +1155,7 @@ export default function AdminOrders() {
                                             {selectedOrder.payment_method === 'credit_card' &&
                                                 selectedOrder.payment_status !== 'paid' &&
                                                 selectedOrder.status !== 'cancelled' &&
-                                                isOwner() && (
+                                                (isOwner() || isManager()) && (
                                                     <div className="space-y-2 pt-2 border-t border-gray-100">
                                                         <p className="text-[10px] font-black uppercase tracking-wider text-gray-400">קישור לתשלום ללקוח</p>
                                                         <p className="text-xs text-gray-600 leading-snug">

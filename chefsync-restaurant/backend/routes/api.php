@@ -348,6 +348,7 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'tenant'])->group(function (
         Route::patch('/orders/{id}/eta', [AdminController::class, 'updateOrderEta'])->name('admin.orders.eta');
         Route::post('/orders/{id}/mark-paid', [AdminController::class, 'markOrderPaid'])->name('admin.orders.mark-paid');
         Route::post('/orders/{id}/payment-link', [AdminController::class, 'createOrderPaymentLink'])->name('admin.orders.payment-link');
+        Route::post('/orders/{id}/switch-to-cash', [AdminController::class, 'switchOrderToCash'])->name('admin.orders.switch-to-cash');
 
         // הגדרות תשלום
         Route::get('/payment-settings', [PaymentSettingsController::class, 'getSettings'])->name('admin.payment-settings.get');
@@ -425,8 +426,6 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'tenant'])->group(function (
                 // הזמנות ממתינות לתשלום
                 Route::get('/orders/pending-payment', [\App\Http\Controllers\POSController::class, 'getPendingPaymentOrders'])->name('admin.pos.orders.pending-payment');
                 Route::post('/orders/{id}/pay-cash', [\App\Http\Controllers\POSController::class, 'payPendingOrderCash'])->name('admin.pos.orders.pay-cash');
-                Route::post('/orders/{id}/payment-link', [\App\Http\Controllers\POSController::class, 'createOrderPaymentLink'])->name('admin.pos.orders.payment-link');
-                Route::post('/orders/{id}/switch-to-cash', [\App\Http\Controllers\POSController::class, 'switchOrderToCash'])->name('admin.pos.orders.switch-to-cash');
 
                 // תשלום מפוצל
                 Route::post('/orders/{id}/split-payment', [\App\Http\Controllers\POSController::class, 'splitPayment'])->name('admin.pos.orders.split-payment');

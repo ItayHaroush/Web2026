@@ -23,8 +23,11 @@ import {
     FaMapMarkerAlt,
     FaArrowLeft,
     FaTabletAlt,
-    FaExclamationTriangle
+    FaExclamationTriangle,
+    FaLink,
+    FaHandPaper
 } from 'react-icons/fa';
+import OrderManualPaymentModal from '../../components/admin/OrderManualPaymentModal';
 
 export default function AdminDashboard() {
     const navigate = useNavigate();
@@ -32,6 +35,8 @@ export default function AdminDashboard() {
     const [stats, setStats] = useState(null);
     const [recentOrders, setRecentOrders] = useState([]);
     const [futureOrders, setFutureOrders] = useState([]);
+    const [manualPaymentOrders, setManualPaymentOrders] = useState([]);
+    const [manualPaymentModalOrder, setManualPaymentModalOrder] = useState(null);
     const [loading, setLoading] = useState(true);
     const [pushState, setPushState] = useState({ status: 'idle', message: '' });
 
@@ -43,6 +48,7 @@ export default function AdminDashboard() {
 
     // רק בעלים ומנהלים רואים הכנסות
     const canViewRevenue = isOwner() || isManager();
+    const canManualPaymentTools = isOwner() || isManager();
 
     useEffect(() => {
         fetchDashboard();
@@ -119,6 +125,7 @@ export default function AdminDashboard() {
                 const realOrders = (response.data.recent_orders || []).filter(order => !order.is_test);
                 setRecentOrders(realOrders);
                 setFutureOrders(response.data.future_orders || []);
+                setManualPaymentOrders(response.data.manual_payment_orders || []);
             }
         } catch (error) {
             console.error('Failed to fetch dashboard:', error);
@@ -307,6 +314,75 @@ export default function AdminDashboard() {
                     </div>
                 );
             })()}
+
+            {canManualPaymentTools && manualPaymentOrders.length > 0 && (
+                <div className="bg-white rounded-3xl border border-cyan-100 shadow-sm overflow-hidden mb-6">
+                    <div className="p-5 border-b border-cyan-50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2.5 rounded-xl bg-cyan-50 text-cyan-700">
+                                <FaHandPaper size={18} />
+                            </div>
+                            <div>
+                                <h2 className="text-base font-black text-gray-900">הזמנות לטיפול ידני בתשלום מהאתר</h2>
+                                <p className="text-xs text-gray-500 font-bold mt-0.5">
+                                    {manualPaymentOrders.length === 1
+                                        ? 'הזמנה אחת ממתינה לאישור או לקישור תשלום (HYP)'
+                                        : `${manualPaymentOrders.length} הזמנות ממתינות לאישור או לקישור תשלום`}
+                                </p>
+                            </div>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => navigate('/admin/orders')}
+                            className="text-xs font-black text-cyan-700 hover:underline shrink-0"
+                        >
+                            לכל ההזמנות
+                        </button>
+                    </div>
+                    <div className="divide-y divide-gray-50 max-h-80 overflow-y-auto">
+                        {manualPaymentOrders.map((o) => {
+                            const pay = o.payment_status === 'failed' ? 'תשלום נכשל' : 'ממתין לתשלום';
+                            const total = Number(o.total_amount ?? o.total ?? 0);
+                            return (
+                                <div
+                                    key={o.id}
+                                    className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 hover:bg-gray-50/80 transition-colors"
+                                >
+                                    <div className="min-w-0">
+                                        <div className="flex flex-wrap items-center gap-2 mb-1">
+                                            <span className="text-sm font-black text-gray-900">#{o.id}</span>
+                                            <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-lg bg-orange-50 text-orange-800 border border-orange-100">
+                                                {pay}
+                                            </span>
+                                        </div>
+                                        <p className="text-sm font-bold text-gray-800 truncate">{o.customer_name || '—'}</p>
+                                        <p className="text-[11px] text-gray-400 font-bold mt-0.5">
+                                            ₪{total.toFixed(2)} · {o.items?.length || 0} פריטים
+                                        </p>
+                                    </div>
+                                    <div className="flex flex-wrap gap-2 shrink-0">
+                                        <button
+                                            type="button"
+                                            onClick={() => setManualPaymentModalOrder(o)}
+                                            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-cyan-600 text-white text-xs font-black hover:bg-cyan-700 transition-all shadow-sm"
+                                        >
+                                            <FaLink size={12} />
+                                            טיפול ידני
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => navigate(`/admin/orders?orderId=${o.id}`)}
+                                            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-white border border-gray-200 text-gray-700 text-xs font-black hover:bg-gray-50 transition-all"
+                                        >
+                                            פתח בהזמנות
+                                        </button>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
 
             {/* כרטיסי סטטיסטיקה מצומצמים */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -538,6 +614,18 @@ export default function AdminDashboard() {
                     )}
                 </div>
             </div>
+
+            {manualPaymentModalOrder && (
+                <OrderManualPaymentModal
+                    order={manualPaymentModalOrder}
+                    getAuthHeaders={getAuthHeaders}
+                    onClose={() => setManualPaymentModalOrder(null)}
+                    onUpdated={() => {
+                        fetchDashboard();
+                        setManualPaymentModalOrder(null);
+                    }}
+                />
+            )}
         </AdminLayout>
     );
 }
