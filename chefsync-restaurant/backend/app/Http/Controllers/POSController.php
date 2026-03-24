@@ -193,7 +193,7 @@ class POSController extends Controller
         // בדוק שאין הזמנות ממתינות לתשלום
         $pendingCount = Order::withoutGlobalScopes()
             ->where('restaurant_id', $user->restaurant_id)
-            ->whereNotIn('payment_status', ['paid', 'refunded'])
+            ->whereNotIn('payment_status', ['paid', 'refunded', 'cancelled'])
             ->where('status', '!=', 'cancelled')
             ->whereDate('created_at', '>=', Carbon::today())
             ->count();
@@ -832,7 +832,7 @@ class POSController extends Controller
 
         $orders = Order::withoutGlobalScopes()
             ->where('restaurant_id', $restaurantId)
-            ->whereNotIn('payment_status', ['paid', 'refunded'])
+            ->whereNotIn('payment_status', ['paid', 'refunded', 'cancelled'])
             ->where('status', '!=', 'cancelled')
             ->whereDate('created_at', '>=', Carbon::today()->subDays(3))
             ->orderBy('created_at', 'desc')
@@ -1487,7 +1487,7 @@ class POSController extends Controller
                 'id' => $o->id,
                 'customer_name' => $o->customer_name,
                 'total' => (float) $o->total_amount,
-                'payment_method' => $o->payment_method === 'credit_card' ? 'אשראי' : 'מזומן',
+                'payment_method' => $o->effectiveCollectedPaymentMethod() === 'credit_card' ? 'אשראי' : 'מזומן',
                 'payment_status' => $payLabel,
                 'status' => $o->status,
                 'source' => $o->source ?? 'website',
@@ -1581,6 +1581,8 @@ class POSController extends Controller
             'delivery_address' => $order->delivery_address,
             'delivery_notes' => $order->delivery_notes,
             'payment_method' => $order->payment_method,
+            'display_payment_method' => $order->effectiveCollectedPaymentMethod(),
+            'actual_payment_method' => $order->actual_payment_method,
             'payment_transaction_id' => $order->payment_transaction_id,
             'payment_status' => $order->payment_status,
             'total_price' => (float) $order->total_amount,

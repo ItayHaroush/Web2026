@@ -1,3 +1,11 @@
+/** אמצעי תשלום לתצוגה (אחרי מסירה: actual אם קיים) */
+export function getOrderDisplayPaymentMethod(order) {
+    if (!order) return 'cash';
+    if (order.display_payment_method) return order.display_payment_method;
+    if (order.actual_payment_method) return order.actual_payment_method;
+    return order.payment_method || 'cash';
+}
+
 /**
  * סטטוס הזמנה: "ממתין לתשלום" כמו תמיד.
  * תגית נפרדת עם אייקון כרטיס — רק כששולם באשראי (ירוק) או תשלום אשראי נכשל (אדום),
@@ -14,12 +22,12 @@ export function shouldShowPaymentStatusBadge(order) {
 /** טקסט תגית תשלום (מזומן / אשראי) — לאשראי: רק paid / failed בממשק הרשימה */
 export function paymentStatusBadgeLabel(order) {
     const ps = order?.payment_status;
-    const pm = order?.payment_method;
+    const pm = getOrderDisplayPaymentMethod(order);
     if (ps === 'paid') {
         return pm === 'credit_card' ? 'שולם באשראי' : 'שולם במזומן';
     }
     if (ps === 'failed') {
-        return pm === 'credit_card' ? 'תשלום אשראי נכשל' : 'תשלום נכשל';
+        return order?.payment_method === 'credit_card' ? 'תשלום אשראי נכשל' : 'תשלום נכשל';
     }
     if (ps === 'pending') {
         return 'ממתין לתשלום';

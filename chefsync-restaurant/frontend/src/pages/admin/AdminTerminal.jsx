@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import AdminLayout from '../../layouts/AdminLayout';
 import api from '../../services/apiClient';
-import { paymentStatusBadgeLabel, shouldShowPaymentStatusBadge } from '../../utils/orderPaymentLabels';
+import { getOrderDisplayPaymentMethod, paymentStatusBadgeLabel, shouldShowPaymentStatusBadge } from '../../utils/orderPaymentLabels';
 import { reprintOrder } from '../../services/printerService';
 import CancelOrderModal from '../../components/CancelOrderModal';
 import {
@@ -15,7 +15,8 @@ import {
     FaTimes,
     FaBoxOpen,
     FaRedoAlt,
-    FaCreditCard
+    FaCreditCard,
+    FaMoneyBillWave
 } from 'react-icons/fa';
 
 // מסוף סניף לעובדים/שליחים: מציג הזמנות פתוחות ומאפשר עדכון סטטוס מהיר
@@ -104,8 +105,12 @@ export default function AdminTerminal() {
                 const allOrders = response.data.orders.data || response.data.orders;
                 const openOrders = allOrders.filter((order) => {
                     if (order.status === 'delivered' || order.status === 'cancelled') return false;
-                    // הזמנה עתידית — רק אחרי שנכנסה לפעולה (למשל received והלאה אחרי שעובדת ה-cron)
-                    if (order.is_future_order && !['received', 'preparing', 'ready', 'delivering'].includes(order.status)) return false;
+                    // הזמנה עתידית — במטבח (received+) או שולמה ועדיין pending (חלון לפני/אחרי cron)
+                    if (order.is_future_order) {
+                        const inKitchen = ['received', 'preparing', 'ready', 'delivering'].includes(order.status);
+                        const paidBeforeReceived = order.status === 'pending' && order.payment_status === 'paid';
+                        if (!inKitchen && !paidBeforeReceived) return false;
+                    }
                     // אשראי — רק אחרי תשלום מלא
                     if (order.payment_method === 'credit_card' && order.payment_status !== 'paid') return false;
                     return true;
@@ -121,14 +126,21 @@ export default function AdminTerminal() {
 
     const updateStatus = async (orderId, status, cancellationReason) => {
         // בעת מסירה - אם התשלום במזומן או שהתשלום באשראי נכשל, הקפצת אישור גבייה
+        let actualPaymentMethod = null;
         if (status === 'delivered') {
             const order = orders.find(o => o.id === orderId);
-            if (order && (order.payment_method === 'cash' || order.payment_status === 'failed')) {
+            if (order) {
                 const total = Number(order.total).toFixed(2);
-                const confirmed = confirm(
-                    `💰 יש לגבות ₪${total} במזומן מ${order.customer_name} (הזמנה #${order.id})\n\nהאם התשלום התקבל?`
-                );
-                if (!confirmed) return;
+                const needsCollection =
+                    order.payment_method === 'cash' ||
+                    order.payment_status === 'failed' ||
+                    order.payment_status === 'pending';
+                if (needsCollection) {
+                    const cash = window.confirm(
+                        `💰 מסירה #${order.id} — ${order.customer_name}, ₪${total}\n\nאישור = שולם במזומן\nביטול = שולם באשראי (רישום בלבד; חיוב במסוף)`
+                    );
+                    actualPaymentMethod = cash ? 'cash' : 'credit_card';
+                }
             }
         }
 
@@ -136,6 +148,9 @@ export default function AdminTerminal() {
             const payload = { status };
             if (status === 'cancelled' && cancellationReason) {
                 payload.cancellation_reason = cancellationReason;
+            }
+            if (status === 'delivered' && actualPaymentMethod) {
+                payload.actual_payment_method = actualPaymentMethod;
             }
             await api.patch(`/admin/orders/${orderId}/status`, payload, { headers: getAuthHeaders() });
             fetchOrders();
@@ -404,7 +419,7 @@ export default function AdminTerminal() {
                                                         order.payment_status === 'failed' ? 'bg-red-100 text-red-700 border border-red-200' :
                                                             'bg-gray-100 text-gray-600 border border-gray-200'
                                                     }`}>
-                                                    {order.payment_method === 'credit_card' ? <FaCreditCard size={10} /> : null}
+                                                    {getOrderDisplayPaymentMethod(order) === 'credit_card' ? <FaCreditCard size={10} /> : (order.payment_status === 'paid' ? <FaMoneyBillWave size={10} /> : null)}
                                                     {paymentStatusBadgeLabel(order)}
                                                 </div>
                                             )}

@@ -4,12 +4,28 @@ import { FaClock, FaTimes, FaCreditCard, FaCalendarAlt, FaCheckCircle } from 're
 const ENGLISH_DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const HEBREW_DAYS = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 
+function localYmd(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+}
+
+/** מועד מוקדם ביותר: max(שעה, זמן_הכנה + 30 דקות) לפי משלוח/איסוף */
+export function getMinimumScheduledDate(restaurant, deliveryMethod = 'delivery') {
+    const prep = deliveryMethod === 'delivery'
+        ? Number(restaurant?.delivery_time_minutes) || 0
+        : Number(restaurant?.pickup_time_minutes) || 0;
+    const minutes = Math.max(60, prep + 30);
+    return new Date(Date.now() + minutes * 60 * 1000);
+}
+
 /**
  * מודל בחירת תאריך ושעה להזמנה עתידית
  * נפתח כשהמסעדה סגורה + allow_future_orders (+אשראי או משתמש רשום).
  * הודעת «תשלום באשראי מראש» מוצגת רק לאורחים.
  */
-export default function FutureOrderModal({ isOpen, onClose, onConfirm, restaurant, isRegisteredCustomer = false }) {
+export default function FutureOrderModal({ isOpen, onClose, onConfirm, restaurant, isRegisteredCustomer = false, deliveryMethod = 'delivery' }) {
     const [selectedDate, setSelectedDate] = useState('');
     const [selectedTime, setSelectedTime] = useState('');
     const [error, setError] = useState('');
@@ -17,18 +33,30 @@ export default function FutureOrderModal({ isOpen, onClose, onConfirm, restauran
     const operatingHours = restaurant?.operating_hours || {};
     const operatingDays = restaurant?.operating_days || {};
 
-    // טווח תאריכים מותר: מחר עד 30 יום קדימה
+    const minScheduled = useMemo(
+        () => getMinimumScheduledDate(restaurant, deliveryMethod),
+        [restaurant, deliveryMethod]
+    );
+
+    const earliestTimeLabel = useMemo(
+        () => minScheduled.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }),
+        [minScheduled]
+    );
+
+    const earliestDateLabel = useMemo(
+        () => minScheduled.toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit' }),
+        [minScheduled]
+    );
+
+    // טווח תאריכים: מהמועד המוקדם המותר (כולל היום) עד 30 יום קדימה
     const dateRange = useMemo(() => {
-        const now = new Date();
-        const min = new Date(now);
-        min.setDate(min.getDate() + 1);
-        const max = new Date(now);
+        const max = new Date();
         max.setDate(max.getDate() + 30);
         return {
-            min: min.toISOString().split('T')[0],
-            max: max.toISOString().split('T')[0],
+            min: localYmd(minScheduled),
+            max: localYmd(max),
         };
-    }, []);
+    }, [minScheduled]);
 
     // שעות פעילות ליום שנבחר
     const hoursForSelectedDay = useMemo(() => {
@@ -94,6 +122,16 @@ export default function FutureOrderModal({ isOpen, onClose, onConfirm, restauran
         return selectedTime >= open && selectedTime <= close;
     }, [selectedTime, hoursForSelectedDay]);
 
+    const timeInputMin = useMemo(() => {
+        if (!selectedDate || !hoursForSelectedDay || hoursForSelectedDay.closed) return undefined;
+        const minDay = localYmd(minScheduled);
+        if (selectedDate < minDay) return '00:00';
+        if (selectedDate > minDay) return undefined;
+        const h = String(minScheduled.getHours()).padStart(2, '0');
+        const mi = String(minScheduled.getMinutes()).padStart(2, '0');
+        return `${h}:${mi}`;
+    }, [selectedDate, minScheduled, hoursForSelectedDay]);
+
     const handleConfirm = () => {
         setError('');
 
@@ -116,11 +154,9 @@ export default function FutureOrderModal({ isOpen, onClose, onConfirm, restauran
             return;
         }
 
-        // בדיקת 60 דקות מינימום מעכשיו
         const scheduledDateTime = new Date(`${selectedDate}T${selectedTime}`);
-        const minTime = new Date(Date.now() + 60 * 60 * 1000);
-        if (scheduledDateTime < minTime) {
-            setError('יש לבחור זמן לפחות שעה קדימה מעכשיו');
+        if (scheduledDateTime < minScheduled) {
+            setError(`ניתן להזמין החל מ-${earliestTimeLabel} (לפחות ${Math.max(60, (deliveryMethod === 'delivery' ? Number(restaurant?.delivery_time_minutes) || 0 : Number(restaurant?.pickup_time_minutes) || 0) + 30)} דקות מראש)`);
             return;
         }
 
@@ -161,6 +197,10 @@ export default function FutureOrderModal({ isOpen, onClose, onConfirm, restauran
                 <div className="p-6 space-y-5 overflow-y-auto min-h-0 flex-1">
                     <p className="text-gray-600 dark:text-brand-dark-muted text-sm leading-relaxed">
                         בחר תאריך ושעה שבהם המסעדה פתוחה. ההזמנה תישמר במערכת ותועבר למטבח בזמן.
+                    </p>
+                    <p className="text-sm font-bold text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/25 border border-amber-200 dark:border-amber-800 rounded-xl px-3 py-2">
+                        הזמנה מוקדמת ביותר: {earliestTimeLabel}
+                        {localYmd(minScheduled) !== localYmd(new Date()) ? ` (${earliestDateLabel})` : ''}
                     </p>
 
                     {/* אורחים: הזמנה עתידית דורשת אשראי מראש. משתמש רשום יכול גם במזומן — בלי הודעה */}
@@ -218,6 +258,7 @@ export default function FutureOrderModal({ isOpen, onClose, onConfirm, restauran
                                 type="time"
                                 dir="ltr"
                                 value={selectedTime}
+                                min={timeInputMin || undefined}
                                 onChange={(e) => {
                                     setSelectedTime(e.target.value);
                                     setError('');

@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import { useRestaurantStatus } from '../context/RestaurantStatusContext';
 import api from '../services/apiClient';
+import { listenForegroundMessages } from '../services/fcm';
 import { PRODUCT_NAME } from '../constants/brand';
 import DashboardSidebar from '../components/admin/DashboardSidebar';
 import DashboardHeader from '../components/admin/DashboardHeader';
@@ -32,6 +33,81 @@ export default function AdminLayout({ children }) {
     const { restaurantStatus, setRestaurantStatus, setSubscriptionInfo } = useRestaurantStatus();
     const location = useLocation();
     const navigate = useNavigate();
+    const lastFcmMessageIdsRef = useRef(new Set());
+    const fcmNotifCountRef = useRef(0);
+
+    // FCM בכל דפי האדמין — צלצול רק ל-new_order (מטבח)
+    useEffect(() => {
+        if (!user) return undefined;
+        const unsubscribe = listenForegroundMessages((payload) => {
+            const msgId = payload?.messageId || payload?.data?.messageId || payload?.data?.google?.message_id;
+            if (msgId) {
+                if (lastFcmMessageIdsRef.current.has(msgId)) return;
+                lastFcmMessageIdsRef.current.add(msgId);
+                setTimeout(() => lastFcmMessageIdsRef.current.delete(msgId), 30_000);
+            }
+
+            const dataType = payload?.data?.type;
+            if (dataType === 'new_order') {
+                try {
+                    const audio = new Audio('/sounds/Order-up-bell-sound.mp3');
+                    audio.volume = 0.6;
+                    audio.play().catch(() => {});
+                } catch (_) {
+                    /* ignore */
+                }
+            }
+
+            const title = payload?.notification?.title || payload?.data?.title || PRODUCT_NAME;
+            const body = payload?.notification?.body || payload?.data?.body || 'התראה חדשה';
+
+            // future_order_created — בלי חלון מערכת (רק לוגיקת אחרות אם תתווסף); צלצול כבר מדולג
+            if (dataType === 'future_order_created') {
+                return;
+            }
+
+            if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+                try {
+                    const n = new Notification(title, { body, icon: '/icon-192.png' });
+                    n.onclick = () => {
+                        n.close();
+                        window.focus();
+                        fcmNotifCountRef.current = Math.max(0, fcmNotifCountRef.current - 1);
+                        if (fcmNotifCountRef.current > 0) {
+                            if (navigator.setAppBadge) navigator.setAppBadge(fcmNotifCountRef.current).catch(() => {});
+                        } else if (navigator.clearAppBadge) {
+                            navigator.clearAppBadge().catch(() => {});
+                        }
+                        const url = payload?.data?.url;
+                        if (url && typeof url === 'string' && url.startsWith('/')) {
+                            navigate(url);
+                        } else if (payload?.data?.orderId) {
+                            navigate('/admin/orders');
+                        }
+                    };
+                    fcmNotifCountRef.current += 1;
+                    if (navigator.setAppBadge) navigator.setAppBadge(fcmNotifCountRef.current).catch(() => {});
+                } catch (e) {
+                    console.warn('[FCM] Notification() failed', e);
+                }
+            }
+        });
+        return () => {
+            if (typeof unsubscribe === 'function') unsubscribe();
+        };
+    }, [user, navigate]);
+
+    useEffect(() => {
+        const clearBadge = () => {
+            if (document.visibilityState === 'visible') {
+                fcmNotifCountRef.current = 0;
+                if (navigator.clearAppBadge) navigator.clearAppBadge().catch(() => {});
+            }
+        };
+        clearBadge();
+        document.addEventListener('visibilitychange', clearBadge);
+        return () => document.removeEventListener('visibilitychange', clearBadge);
+    }, []);
 
     // טען סטטוס המסעדה בכל טעינה של layout
     useEffect(() => {

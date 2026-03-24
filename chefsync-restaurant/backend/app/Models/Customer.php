@@ -19,6 +19,9 @@ class Customer extends Model
         'pin_hash',
         'password_hash',
         'default_delivery_address',
+        'default_delivery_city',
+        'default_delivery_street',
+        'default_delivery_house_number',
         'default_delivery_lat',
         'default_delivery_lng',
         'default_delivery_notes',
@@ -82,5 +85,39 @@ class Customer extends Model
     public function restaurantNotificationOptIns(): HasMany
     {
         return $this->hasMany(CustomerRestaurantNotificationOptIn::class);
+    }
+
+    /**
+     * סנכרון שדות default_delivery_* מטבלת כתובות שמורות (אחרי מחיקה/שינוי ברירת מחדל).
+     * בלי זה הלקוח עדיין רואה בפרופיל ובסל את הכתובת שנמחקה מהרשימה.
+     */
+    public function syncDefaultDeliveryFromSavedAddresses(): void
+    {
+        $default = $this->addresses()->where('is_default', true)->first()
+            ?? $this->addresses()->orderByDesc('updated_at')->first();
+
+        if (! $default || $default->lat === null || $default->lng === null) {
+            $this->forceFill([
+                'default_delivery_address' => null,
+                'default_delivery_city' => null,
+                'default_delivery_street' => null,
+                'default_delivery_house_number' => null,
+                'default_delivery_lat' => null,
+                'default_delivery_lng' => null,
+                'default_delivery_notes' => null,
+            ])->save();
+
+            return;
+        }
+
+        $this->forceFill([
+            'default_delivery_address' => $default->full_address,
+            'default_delivery_city' => $default->city,
+            'default_delivery_street' => $default->street,
+            'default_delivery_house_number' => $default->house_number ?: null,
+            'default_delivery_lat' => $default->lat,
+            'default_delivery_lng' => $default->lng,
+            'default_delivery_notes' => $default->notes,
+        ])->save();
     }
 }

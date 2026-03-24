@@ -12,6 +12,28 @@ import {
     clearStoredCustomerFcmToken,
 } from '../services/fcm';
 import { FaTimes, FaSignOutAlt, FaEdit, FaRedo, FaPhone, FaArrowRight, FaClock, FaStore, FaCheck, FaMapMarkerAlt, FaPlus, FaTrash, FaStar, FaEnvelope, FaExclamationTriangle, FaLock, FaBell, FaHome, FaCog, FaShoppingBag, FaLightbulb } from 'react-icons/fa';
+import LocationPickerModal from './LocationPickerModal';
+
+/** אם המשתמש מחק כתובת — לא להשאיר את אותה נקודה ב-localStorage (הסל היה טוען אותה מחדש) */
+function clearStoredDeliveryIfMatchesAddressCoords(lat, lng) {
+    if (lat == null || lng == null) return;
+    try {
+        const raw = localStorage.getItem('user_delivery_location');
+        if (!raw) return;
+        const p = JSON.parse(raw);
+        const la = parseFloat(p.lat);
+        const ln = parseFloat(p.lng);
+        if (Number.isNaN(la) || Number.isNaN(ln)) return;
+        const tLat = parseFloat(lat);
+        const tLng = parseFloat(lng);
+        if (Number.isNaN(tLat) || Number.isNaN(tLng)) return;
+        if (Math.abs(la - tLat) < 1e-5 && Math.abs(ln - tLng) < 1e-5) {
+            localStorage.removeItem('user_delivery_location');
+        }
+    } catch {
+        /* ignore */
+    }
+}
 
 /**
  * מודל פרופיל משתמש — התחברות, הרשמה, פרופיל והזמנות
@@ -21,7 +43,7 @@ export default function UserProfileModal({ isOpen, onClose }) {
     const navigate = useNavigate();
     const {
         customer, customerToken, isRecognized,
-        checkPhone, loginWithPhone, loginWithPassword, setPassword, logout, updateProfile, closeUserModal,
+        checkPhone, loginWithPhone, loginWithPassword, setPassword, logout, updateProfile, refreshCustomerProfile, closeUserModal,
     } = useCustomer();
 
     // State machine: phone-input → otp-verify → register → profile
@@ -76,7 +98,14 @@ export default function UserProfileModal({ isOpen, onClose }) {
     const [addresses, setAddresses] = useState([]);
     const [showAddressForm, setShowAddressForm] = useState(false);
     const [editingAddress, setEditingAddress] = useState(null);
-    const [addressForm, setAddressForm] = useState({ label: 'בית', street: '', house_number: '', apartment: '', floor: '', entrance: '', city: '', notes: '' });
+    const [addressForm, setAddressForm] = useState({
+        label: 'בית', street: '', house_number: '', apartment: '', floor: '', entrance: '', city: '', notes: '', lat: null, lng: null,
+    });
+    const [addressMapOpen, setAddressMapOpen] = useState(false);
+
+    const emptyAddressForm = () => ({
+        label: 'בית', street: '', house_number: '', apartment: '', floor: '', entrance: '', city: '', notes: '', lat: null, lng: null,
+    });
 
     const phoneInputRef = useRef(null);
     const otpInputRef = useRef(null);
@@ -465,35 +494,48 @@ export default function UserProfileModal({ isOpen, onClose }) {
 
     // שמירת/עדכון כתובת
     const handleSaveAddress = async () => {
-        if (!addressForm.street.trim() || !addressForm.house_number.trim() || !addressForm.city.trim()) {
-            setError('נא למלא רחוב, מספר בית ועיר');
+        if (!addressForm.street.trim() || !addressForm.city.trim()) {
+            setError('נא למלא רחוב ועיר');
+            return;
+        }
+        if (addressForm.lat == null || addressForm.lng == null || Number.isNaN(Number(addressForm.lat)) || Number.isNaN(Number(addressForm.lng))) {
+            setError('נא לבחור מיקום במפה לפני השמירה');
             return;
         }
         setLoading(true);
         setError('');
         try {
             const headers = { Authorization: `Bearer ${customerToken}` };
+            const payload = {
+                ...addressForm,
+                lat: Number(addressForm.lat),
+                lng: Number(addressForm.lng),
+                house_number: addressForm.house_number?.trim() || '',
+            };
             if (editingAddress) {
-                await apiClient.put(`/customer/addresses/${editingAddress}`, addressForm, { headers });
+                await apiClient.put(`/customer/addresses/${editingAddress}`, payload, { headers });
             } else {
-                await apiClient.post('/customer/addresses', addressForm, { headers });
+                await apiClient.post('/customer/addresses', payload, { headers });
             }
             setShowAddressForm(false);
             setEditingAddress(null);
-            setAddressForm({ label: 'בית', street: '', house_number: '', apartment: '', floor: '', entrance: '', city: '', notes: '' });
+            setAddressForm(emptyAddressForm());
             fetchAddresses(customerToken || localStorage.getItem('customer_token'));
+            await refreshCustomerProfile();
         } catch (err) {
             setError(err?.response?.data?.message || 'שגיאה בשמירת כתובת');
         }
         setLoading(false);
     };
 
-    const handleDeleteAddress = async (id) => {
+    const handleDeleteAddress = async (addr) => {
+        clearStoredDeliveryIfMatchesAddressCoords(addr.lat, addr.lng);
         try {
-            await apiClient.delete(`/customer/addresses/${id}`, {
+            await apiClient.delete(`/customer/addresses/${addr.id}`, {
                 headers: { Authorization: `Bearer ${customerToken}` },
             });
             fetchAddresses(customerToken);
+            await refreshCustomerProfile();
         } catch { /* ignore */ }
     };
 
@@ -503,6 +545,7 @@ export default function UserProfileModal({ isOpen, onClose }) {
                 headers: { Authorization: `Bearer ${customerToken}` },
             });
             fetchAddresses(customerToken);
+            await refreshCustomerProfile();
         } catch { /* ignore */ }
     };
 
@@ -1246,7 +1289,7 @@ export default function UserProfileModal({ isOpen, onClose }) {
                                             onClick={() => {
                                                 setShowAddressForm(true);
                                                 setEditingAddress(null);
-                                                setAddressForm({ label: 'בית', street: '', house_number: '', apartment: '', floor: '', entrance: '', city: '', notes: '' });
+                                                setAddressForm(emptyAddressForm());
                                                 setError('');
                                             }}
                                             className="text-brand-primary hover:text-brand-secondary transition text-xs font-bold flex items-center gap-1"
@@ -1273,13 +1316,24 @@ export default function UserProfileModal({ isOpen, onClose }) {
                                         </div>
                                         <div className="grid grid-cols-2 gap-2">
                                             <input placeholder="רחוב *" value={addressForm.street} onChange={e => setAddressForm(p => ({ ...p, street: e.target.value }))} className="col-span-2 border border-gray-200 dark:border-brand-dark-border rounded-lg px-3 py-2 text-sm focus:border-brand-primary outline-none dark:bg-brand-dark-surface dark:text-brand-dark-text" />
-                                            <input placeholder="מספר בית *" value={addressForm.house_number} onChange={e => setAddressForm(p => ({ ...p, house_number: e.target.value }))} className="border border-gray-200 dark:border-brand-dark-border rounded-lg px-3 py-2 text-sm focus:border-brand-primary outline-none dark:bg-brand-dark-surface dark:text-brand-dark-text" />
+                                            <input placeholder="מספר בית (אופציונלי)" value={addressForm.house_number} onChange={e => setAddressForm(p => ({ ...p, house_number: e.target.value }))} className="border border-gray-200 dark:border-brand-dark-border rounded-lg px-3 py-2 text-sm focus:border-brand-primary outline-none dark:bg-brand-dark-surface dark:text-brand-dark-text" />
                                             <input placeholder="עיר *" value={addressForm.city} onChange={e => setAddressForm(p => ({ ...p, city: e.target.value }))} className="border border-gray-200 dark:border-brand-dark-border rounded-lg px-3 py-2 text-sm focus:border-brand-primary outline-none dark:bg-brand-dark-surface dark:text-brand-dark-text" />
                                             <input placeholder="דירה" value={addressForm.apartment} onChange={e => setAddressForm(p => ({ ...p, apartment: e.target.value }))} className="border border-gray-200 dark:border-brand-dark-border rounded-lg px-3 py-2 text-sm focus:border-brand-primary outline-none dark:bg-brand-dark-surface dark:text-brand-dark-text" />
                                             <input placeholder="קומה" value={addressForm.floor} onChange={e => setAddressForm(p => ({ ...p, floor: e.target.value }))} className="border border-gray-200 dark:border-brand-dark-border rounded-lg px-3 py-2 text-sm focus:border-brand-primary outline-none dark:bg-brand-dark-surface dark:text-brand-dark-text" />
                                             <input placeholder="כניסה" value={addressForm.entrance} onChange={e => setAddressForm(p => ({ ...p, entrance: e.target.value }))} className="border border-gray-200 dark:border-brand-dark-border rounded-lg px-3 py-2 text-sm focus:border-brand-primary outline-none dark:bg-brand-dark-surface dark:text-brand-dark-text" />
                                             <input placeholder="הערות למשלוח" value={addressForm.notes} onChange={e => setAddressForm(p => ({ ...p, notes: e.target.value }))} className="border border-gray-200 dark:border-brand-dark-border rounded-lg px-3 py-2 text-sm focus:border-brand-primary outline-none dark:bg-brand-dark-surface dark:text-brand-dark-text" />
                                         </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => setAddressMapOpen(true)}
+                                            className="w-full flex items-center justify-center gap-2 py-2 rounded-lg border-2 border-brand-primary/40 text-brand-primary text-xs font-black hover:bg-brand-primary/5 transition"
+                                        >
+                                            <FaMapMarkerAlt />
+                                            {addressForm.lat != null && addressForm.lng != null ? 'עדכן מיקום במפה' : 'בחר נקודה במפה (חובה)'}
+                                        </button>
+                                        {addressForm.lat != null && addressForm.lng != null && (
+                                            <p className="text-[10px] text-gray-500 dark:text-brand-dark-muted">מיקום נבחר ✓</p>
+                                        )}
                                         {error && <p className="text-xs text-red-600 text-center">{error}</p>}
                                         <div className="flex gap-2">
                                             <button onClick={handleSaveAddress} disabled={loading} className="flex-1 bg-brand-primary text-white rounded-lg px-3 py-2 text-xs font-bold hover:bg-brand-secondary transition disabled:opacity-50">
@@ -1319,7 +1373,18 @@ export default function UserProfileModal({ isOpen, onClose }) {
                                                     <button
                                                         onClick={() => {
                                                             setEditingAddress(addr.id);
-                                                            setAddressForm({ label: addr.label, street: addr.street, house_number: addr.house_number, apartment: addr.apartment || '', floor: addr.floor || '', entrance: addr.entrance || '', city: addr.city, notes: addr.notes || '' });
+                                                            setAddressForm({
+                                                                label: addr.label,
+                                                                street: addr.street,
+                                                                house_number: addr.house_number || '',
+                                                                apartment: addr.apartment || '',
+                                                                floor: addr.floor || '',
+                                                                entrance: addr.entrance || '',
+                                                                city: addr.city,
+                                                                notes: addr.notes || '',
+                                                                lat: addr.lat != null ? Number(addr.lat) : null,
+                                                                lng: addr.lng != null ? Number(addr.lng) : null,
+                                                            });
                                                             setShowAddressForm(true);
                                                             setError('');
                                                         }}
@@ -1328,7 +1393,7 @@ export default function UserProfileModal({ isOpen, onClose }) {
                                                     >
                                                         <FaEdit size={12} />
                                                     </button>
-                                                    <button onClick={() => handleDeleteAddress(addr.id)} className="p-1.5 text-gray-400 hover:text-red-500 transition" title="מחק">
+                                                    <button onClick={() => handleDeleteAddress(addr)} className="p-1.5 text-gray-400 hover:text-red-500 transition" title="מחק">
                                                         <FaTrash size={11} />
                                                     </button>
                                                 </div>
@@ -1385,6 +1450,22 @@ export default function UserProfileModal({ isOpen, onClose }) {
                         </button>
                     </nav>
                 )}
+
+                <LocationPickerModal
+                    open={addressMapOpen}
+                    onClose={() => setAddressMapOpen(false)}
+                    onLocationSelected={(loc) => {
+                        setAddressForm((p) => ({
+                            ...p,
+                            lat: loc.lat,
+                            lng: loc.lng,
+                            street: loc.street || p.street,
+                            city: loc.cityName || p.city,
+                            house_number: loc.house_number || p.house_number || '',
+                        }));
+                        setAddressMapOpen(false);
+                    }}
+                />
             </div>
         </div>
     );

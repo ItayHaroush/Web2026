@@ -50,7 +50,7 @@ class ExpireAwaitingPaymentOrders extends Command
 
                         $order->update([
                             'status' => Order::STATUS_CANCELLED,
-                            'payment_status' => Order::PAYMENT_FAILED,
+                            'payment_status' => Order::PAYMENT_CANCELLED,
                             'cancellation_reason' => 'תשלום לא הושלם בזמן (בוטל אוטומטית)',
                         ]);
                     });

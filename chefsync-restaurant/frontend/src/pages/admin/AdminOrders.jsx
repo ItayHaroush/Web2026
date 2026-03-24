@@ -5,7 +5,7 @@ import { useAdminAuth } from '../../context/AdminAuthContext';
 import { useRestaurantStatus } from '../../context/RestaurantStatusContext';
 import AdminLayout from '../../layouts/AdminLayout';
 import api from '../../services/apiClient';
-import { ORDER_STATUS_AWAITING_PAYMENT_HE, paymentStatusBadgeLabel, shouldShowPaymentStatusBadge } from '../../utils/orderPaymentLabels';
+import { ORDER_STATUS_AWAITING_PAYMENT_HE, getOrderDisplayPaymentMethod, paymentStatusBadgeLabel, shouldShowPaymentStatusBadge } from '../../utils/orderPaymentLabels';
 import reportService from '../../services/reportService';
 import RatingWidget from '../../components/RatingWidget';
 import CancelOrderModal from '../../components/CancelOrderModal';
@@ -66,7 +66,8 @@ export default function AdminOrders() {
     const [customerSectionOpen, setCustomerSectionOpen] = useState(false);
     const [cancelModal, setCancelModal] = useState({ isOpen: false, orderId: null });
     const [paymentLinkBusy, setPaymentLinkBusy] = useState(false);
-    const previousOrdersCount = useRef(0);
+    /** מזהים של הזמנות שכבר הוצגו ברשימה (אחרי סינון עתידיות) — לצלצול polling */
+    const previousVisibleOrderIds = useRef(new Set());
     const orderPanelRef = useRef(null);
     const isLocked = restaurantStatus?.is_approved === false;
 
@@ -122,6 +123,16 @@ export default function AdminOrders() {
         return groups;
     };
 
+    /** עתידיות לפני כניסה למטבח — מוצגות בדשבורד בלבד */
+    const hidePreKitchenFutureOrders = (list) =>
+        list.filter(
+            (o) =>
+                !(
+                    o.is_future_order &&
+                    (o.status === 'pending' || o.status === 'awaiting_payment')
+                )
+        );
+
     // פילטר הזמנות מהיום הנוכחי בלבד
     const getTodayOrders = (ordersList) => {
         const today = new Date();
@@ -144,9 +155,9 @@ export default function AdminOrders() {
     // פתיחת הזמנה אוטומטית מ-URL query params
     useEffect(() => {
         const orderIdParam = searchParams.get('orderId');
-        if (orderIdParam && orders.length > 0) {
+        if (orderIdParam && allOrders.length > 0) {
             const orderId = parseInt(orderIdParam);
-            const order = orders.find(o => o.id === orderId);
+            const order = allOrders.find(o => o.id === orderId);
             if (order) {
                 console.log('🔍 Selected order data:', {
                     id: order.id,
@@ -159,7 +170,7 @@ export default function AdminOrders() {
                 setSearchParams({});
             }
         }
-    }, [orders, searchParams, setSearchParams]);
+    }, [allOrders, searchParams, setSearchParams]);
 
     useEffect(() => {
         if (!selectedOrder) return;
@@ -183,32 +194,27 @@ export default function AdminOrders() {
             });
             if (response.data.success) {
                 const newOrders = response.data.orders.data || response.data.orders;
+                const withoutPreKitchenFuture = hidePreKitchenFutureOrders(newOrders);
+                const visibleForUi = filterStatus
+                    ? withoutPreKitchenFuture.filter((o) => o.status === filterStatus)
+                    : withoutPreKitchenFuture;
 
-                // Debug: בדוק את הנתונים שמגיעים
-                console.log('📦 Fetched orders:', newOrders.length);
-                const order9 = newOrders.find(o => o.id === 9);
-                if (order9) {
-                    console.log('🔍 Order #9 from API:', {
-                        id: order9.id,
-                        rating: order9.rating,
-                        review_text: order9.review_text,
-                        reviewed_at: order9.reviewed_at
-                    });
-                }
-
-                // בדיקה אם יש הזמנות חדשות (רק כשמציגים הכל או הזמנות ממתינות)
-                if (!filterStatus && previousOrdersCount.current > 0 && newOrders.length > previousOrdersCount.current) {
-                    setNewOrderAlert(true);
-                    playNotificationSound();
-                    setTimeout(() => setNewOrderAlert(false), 5000);
+                // צלצול polling: רק הזמנה חדשה אמיתית (מזהה שלא היה) ולא עתידית לפני מטבח
+                if (!filterStatus && previousVisibleOrderIds.current.size > 0) {
+                    const newlyAppeared = visibleForUi.filter((o) => !previousVisibleOrderIds.current.has(o.id));
+                    const highlightNew = newlyAppeared.some((o) => !o.is_future_order);
+                    if (highlightNew) {
+                        setNewOrderAlert(true);
+                        setTimeout(() => setNewOrderAlert(false), 5000);
+                    }
                 }
 
                 if (!filterStatus) {
-                    previousOrdersCount.current = newOrders.length;
+                    previousVisibleOrderIds.current = new Set(visibleForUi.map((o) => o.id));
                     setAllOrders(newOrders);
                 }
 
-                setOrders(newOrders);
+                setOrders(visibleForUi);
 
                 return newOrders;
             }
@@ -221,33 +227,28 @@ export default function AdminOrders() {
         return null;
     };
 
-    const playNotificationSound = () => {
-        try {
-            const audio = new Audio('/sounds/Order-up-bell-sound.mp3');
-            audio.volume = 0.6;
-            audio.play().catch(err => {
-                console.log('לא ניתן להשמיע התראה:', err);
-            });
-        } catch (e) {
-            console.log('שגיאה בהשמעת התראה:', e);
-        }
-    };
-
     const updateStatus = async (orderId, newStatus, cancellationReason) => {
         if (isLocked) {
             alert('המסעדה ממתינה לאישור מנהל מערכת. פעולות על הזמנות נעולות זמנית.');
             return;
         }
 
-        // בעת מסירה - אם התשלום במזומן או שהתשלום באשראי נכשל, הקפצת אישור גבייה
+        // מסירה: אישור גבייה + רישום אמצעי בפועל (actual_payment_method) בלי לדרוס payment_method בשרת
+        let actualPaymentMethod = null;
         if (newStatus === 'delivered') {
             const order = allOrders.find(o => o.id === orderId) || selectedOrder;
-            if (order && (order.payment_method === 'cash' || order.payment_status === 'failed')) {
+            if (order) {
                 const total = Number(order.total).toFixed(2);
-                const confirmed = confirm(
-                    `💰 יש לגבות ₪${total} במזומן מ${order.customer_name} (הזמנה #${order.id})\n\nהאם התשלום התקבל?`
-                );
-                if (!confirmed) return;
+                const needsCollection =
+                    order.payment_method === 'cash' ||
+                    order.payment_status === 'failed' ||
+                    order.payment_status === 'pending';
+                if (needsCollection) {
+                    const cash = window.confirm(
+                        `💰 מסירה #${order.id} — ${order.customer_name}, ₪${total}\n\nאישור = שולם במזומן\nביטול = שולם באשראי (רישום בלבד; חיוב במסוף)`
+                    );
+                    actualPaymentMethod = cash ? 'cash' : 'credit_card';
+                }
             }
         }
 
@@ -255,6 +256,9 @@ export default function AdminOrders() {
             const payload = { status: newStatus };
             if (newStatus === 'cancelled' && cancellationReason) {
                 payload.cancellation_reason = cancellationReason;
+            }
+            if (newStatus === 'delivered' && actualPaymentMethod) {
+                payload.actual_payment_method = actualPaymentMethod;
             }
             console.log('Updating order', orderId, 'to status:', newStatus);
             const response = await api.patch(`/admin/orders/${orderId}/status`,
@@ -610,7 +614,7 @@ export default function AdminOrders() {
                                                                         order.payment_status === 'failed' ? 'bg-red-50 text-red-700 border-red-200' :
                                                                             'bg-gray-50 text-gray-600 border-gray-200'
                                                                     }`}>
-                                                                    {order.payment_method === 'credit_card' ? <FaCreditCard size={9} /> : <FaMoneyBillWave size={9} />}
+                                                                    {getOrderDisplayPaymentMethod(order) === 'credit_card' ? <FaCreditCard size={9} /> : <FaMoneyBillWave size={9} />}
                                                                     {paymentStatusBadgeLabel(order)}
                                                                 </div>
                                                             )}
@@ -1162,8 +1166,8 @@ export default function AdminOrders() {
                                         <div className="space-y-3">
                                             <div className="flex items-center justify-between">
                                                 <div className="flex items-center gap-2 text-sm font-bold text-gray-700">
-                                                    {selectedOrder.payment_method === 'credit_card' ? <FaCreditCard size={14} className="text-brand-primary" /> : <FaMoneyBillWave size={14} className="text-green-500" />}
-                                                    {selectedOrder.payment_method === 'credit_card' ? 'כרטיס אשראי' : 'מזומן'}
+                                                    {getOrderDisplayPaymentMethod(selectedOrder) === 'credit_card' ? <FaCreditCard size={14} className="text-brand-primary" /> : <FaMoneyBillWave size={14} className="text-green-500" />}
+                                                    {getOrderDisplayPaymentMethod(selectedOrder) === 'credit_card' ? 'כרטיס אשראי' : 'מזומן'}
                                                 </div>
                                                 <div className={`px-2.5 py-1 rounded-lg text-[10px] font-black border ${selectedOrder.payment_status === 'paid' ? 'bg-green-50 text-green-700 border-green-200' :
                                                     selectedOrder.payment_status === 'pending' ? 'bg-orange-50 text-orange-700 border-orange-200' :

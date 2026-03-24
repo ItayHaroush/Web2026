@@ -287,7 +287,7 @@ class ReportController extends Controller
                     $o->customer_name ?? '',
                     $o->phone ?? '',
                     $o->total_amount,
-                    $o->payment_method ?? '',
+                    $o->effectiveCollectedPaymentMethod(),
                     $o->delivery_method ?? '',
                     $o->status,
                 ]);

@@ -299,11 +299,30 @@ class CustomerAuthController extends Controller
             'name' => 'sometimes|string|max:100',
             'email' => 'sometimes|nullable|email|max:255',
             'default_delivery_address' => 'sometimes|nullable|string|max:255',
+            'default_delivery_city' => 'sometimes|nullable|string|max:120',
+            'default_delivery_street' => 'sometimes|nullable|string|max:255',
+            'default_delivery_house_number' => 'sometimes|nullable|string|max:32',
             'default_delivery_lat' => 'sometimes|nullable|numeric|between:-90,90',
             'default_delivery_lng' => 'sometimes|nullable|numeric|between:-180,180',
             'default_delivery_notes' => 'sometimes|nullable|string|max:500',
             'preferred_payment_method' => 'sometimes|nullable|in:cash,credit_card',
         ]);
+
+        $hasAddressHint = !empty($validated['default_delivery_address'])
+            || !empty($validated['default_delivery_city'])
+            || !empty($validated['default_delivery_street']);
+        $lat = array_key_exists('default_delivery_lat', $validated)
+            ? $validated['default_delivery_lat']
+            : $request->customer->default_delivery_lat;
+        $lng = array_key_exists('default_delivery_lng', $validated)
+            ? $validated['default_delivery_lng']
+            : $request->customer->default_delivery_lng;
+        if ($hasAddressHint && ($lat === null || $lng === null)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'כתובת משลוח בפרופיל חייבת לכלול מיקום מפה (lat/lng)',
+            ], 422);
+        }
 
         $customer = $request->customer;
 
@@ -510,6 +529,9 @@ class CustomerAuthController extends Controller
             'has_pin' => !empty($customer->password_hash),
             'has_google' => !empty($customer->google_id),
             'default_delivery_address' => $customer->default_delivery_address,
+            'default_delivery_city' => $customer->default_delivery_city,
+            'default_delivery_street' => $customer->default_delivery_street,
+            'default_delivery_house_number' => $customer->default_delivery_house_number,
             'default_delivery_lat' => $customer->default_delivery_lat,
             'default_delivery_lng' => $customer->default_delivery_lng,
             'default_delivery_notes' => $customer->default_delivery_notes,

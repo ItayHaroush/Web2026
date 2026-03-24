@@ -10,6 +10,8 @@ import RatingWidget from '../components/RatingWidget';
 import api from '../services/apiClient';
 import CountdownTimer from '../components/CountdownTimer';
 import TopDismissibleBanner from '../components/TopDismissibleBanner';
+import { getOrderDisplayPaymentMethod } from '../utils/orderPaymentLabels';
+import { notifyActiveOrdersStorageChanged } from '../utils/activeOrdersStorage';
 
 /**
  * פורמט מספר טלפון ישראלי
@@ -205,7 +207,8 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
                         let arr = JSON.parse(localStorage.getItem(arrKey)) || [];
                         arr = arr.filter(id => String(id) !== String(orderId));
                         arr.length ? localStorage.setItem(arrKey, JSON.stringify(arr)) : localStorage.removeItem(arrKey);
-                    } catch { localStorage.removeItem(arrKey); }
+                        notifyActiveOrdersStorageChanged();
+                    } catch { localStorage.removeItem(arrKey); notifyActiveOrdersStorageChanged(); }
                 }
             } else if (!shouldPoll) {
                 setShouldPoll(true);
@@ -240,7 +243,8 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
                         let arr = JSON.parse(localStorage.getItem(arrKey)) || [];
                         arr = arr.filter(id => String(id) !== String(orderId));
                         arr.length ? localStorage.setItem(arrKey, JSON.stringify(arr)) : localStorage.removeItem(arrKey);
-                    } catch { localStorage.removeItem(arrKey); }
+                        notifyActiveOrdersStorageChanged();
+                    } catch { localStorage.removeItem(arrKey); notifyActiveOrdersStorageChanged(); }
 
                     // הוסף לרשימת ממתינות לביקורת (אם אין דירוג עדיין)
                     if (!data.data?.rating) {
@@ -250,6 +254,7 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
                             if (!pr.includes(String(orderId))) {
                                 pr.push(String(orderId));
                                 localStorage.setItem(prKey, JSON.stringify(pr));
+                                notifyActiveOrdersStorageChanged();
                             }
                         } catch { /* ignore */ }
                     }
@@ -424,6 +429,7 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
                         let pr = JSON.parse(localStorage.getItem(prKey)) || [];
                         pr = pr.filter(id => String(id) !== String(orderId));
                         pr.length ? localStorage.setItem(prKey, JSON.stringify(pr)) : localStorage.removeItem(prKey);
+                        notifyActiveOrdersStorageChanged();
                     } catch { /* ignore */ }
                 }
             }
@@ -643,10 +649,13 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
                     {order.payment_status && order.payment_status !== 'not_required' && (
                         <div className="flex items-start gap-3 bg-gray-50 dark:bg-brand-dark-border/30 rounded-xl p-4 border border-gray-100 dark:border-brand-dark-border">
                             <div className="mt-0.5">
-                                {order.payment_method === 'credit_card'
-                                    ? <FaCreditCard className="text-lg text-blue-500" />
-                                    : <FaMoneyBillWave className="text-lg text-green-600" />
-                                }
+                                {order.payment_status === 'paid'
+                                    ? (getOrderDisplayPaymentMethod(order) === 'credit_card'
+                                        ? <FaCreditCard className="text-lg text-blue-500" />
+                                        : <FaMoneyBillWave className="text-lg text-green-600" />)
+                                    : (order.payment_method === 'credit_card'
+                                        ? <FaCreditCard className="text-lg text-blue-500" />
+                                        : <FaMoneyBillWave className="text-lg text-green-600" />)}
                             </div>
                             <div>
                                 <p className="text-xs font-semibold text-gray-500 dark:text-brand-dark-muted uppercase tracking-wide mb-1">אמצעי תשלום</p>
@@ -659,7 +668,7 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
                                             : 'text-gray-900 dark:text-brand-dark-text'
                                     }`}>
                                     {order.payment_status === 'paid'
-                                        ? (order.payment_method === 'credit_card' ? 'שולם באשראי' : 'שולם במזומן')
+                                        ? (getOrderDisplayPaymentMethod(order) === 'credit_card' ? 'שולם באשראי' : 'שולם במזומן')
                                         : order.payment_status === 'pending'
                                             ? (order.payment_method === 'credit_card'
                                                 ? (isFutureOrder ? 'ממתין לתשלום — ההזמנה תטופל לאחר התשלום' : 'ממתין לתשלום באשראי')

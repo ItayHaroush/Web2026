@@ -78,8 +78,13 @@ class GenerateDailyReportsJob extends Command
         $totalRevenue = (float) $activeOrders->sum('total_amount');
         $pickupOrders = $activeOrders->where('delivery_method', 'pickup')->count();
         $deliveryOrders = $activeOrders->where('delivery_method', 'delivery')->count();
-        $cashTotal = (float) $activeOrders->where('payment_method', 'cash')->sum('total_amount');
-        $creditTotal = (float) $activeOrders->where('payment_method', 'credit_card')->sum('total_amount');
+        // אמצעי גבייה בפועל (כמו POS/ייצוא מס): actual_payment_method אם הוגדר, אחרת payment_method
+        $cashTotal = (float) $activeOrders
+            ->filter(fn (Order $o) => $o->effectiveCollectedPaymentMethod() === 'cash')
+            ->sum('total_amount');
+        $creditTotal = (float) $activeOrders
+            ->filter(fn (Order $o) => $o->effectiveCollectedPaymentMethod() === 'credit_card')
+            ->sum('total_amount');
 
         // פילוח לפי מקור הזמנה
         $webOrders = $activeOrders->filter(fn($o) => in_array($o->source, ['web', null, '']))->count();
@@ -98,14 +103,15 @@ class GenerateDailyReportsJob extends Command
         $avgOrderValue = $totalOrders > 0 ? round($totalRevenue / $totalOrders, 2) : 0;
 
         // פירוט עסקאות
-        $transactions = $activeOrders->map(function ($order) {
+        $transactions = $activeOrders->map(function (Order $order) {
             return [
                 'order_id' => $order->id,
                 'time' => Carbon::parse($order->created_at)->setTimezone('Asia/Jerusalem')->format('H:i'),
                 'type' => $order->delivery_method ?? 'pickup',
                 'source' => $order->source ?? 'web',
                 'order_type' => $order->order_type,
-                'payment_method' => $order->payment_method ?? 'cash',
+                'payment_method' => $order->effectiveCollectedPaymentMethod(),
+                'payment_method_ordered' => $order->payment_method ?? 'cash',
                 'amount' => (float) $order->total_amount,
                 'status' => $order->status,
                 'items_count' => $order->items()->count(),

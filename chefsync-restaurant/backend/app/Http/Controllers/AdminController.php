@@ -148,24 +148,27 @@ class AdminController extends Controller
             ->get();
 
         // הזמנות עתידיות ממתינות
+        // עתידיות לפני כניסה למטבח — מוצגות בדשבורד בלבד (לא ברשימת ההזמנות הראשית)
         $futureOrders = Order::where('restaurant_id', $restaurantId)
             ->visibleToRestaurant()
             ->when($restaurant, fn ($q) => $q->forOwnerReporting($restaurant))
             ->where('is_test', false)
             ->where('is_future_order', true)
-            ->whereIn('status', ['pending', 'received', 'confirmed'])
+            ->whereIn('status', [Order::STATUS_PENDING, Order::STATUS_AWAITING_PAYMENT])
             ->where('scheduled_for', '>', now())
             ->orderBy('scheduled_for', 'asc')
-            ->with('items.menuItem')
+            ->with('items.menuItem.category')
             ->take(20)
             ->get();
 
         $stats['future_orders_count'] = $futureOrders->count();
 
         // הזמנות אתר שדורשות טיפול בתשלום (HYP — ממתין או נכשל)
+        // הזמנה עתידית לפני כניסה למטבח — לא מופיעה כאן; תופיע רק אחרי received אם תידרש (בפועל אשראי עתידי שולם לפני ה-cron)
         $manualPaymentOrders = Order::where('restaurant_id', $restaurantId)
             ->when($restaurant, fn ($q) => $q->forOwnerReporting($restaurant))
             ->where('is_test', false)
+            ->where('is_future_order', false)
             ->where('status', Order::STATUS_AWAITING_PAYMENT)
             ->where('payment_method', 'credit_card')
             ->whereIn('payment_status', [Order::PAYMENT_PENDING, Order::PAYMENT_FAILED])
@@ -2513,6 +2516,7 @@ class AdminController extends Controller
         $request->validate([
             'status' => 'required|in:pending,received,preparing,ready,delivering,delivered,cancelled',
             'cancellation_reason' => 'nullable|string|max:500',
+            'actual_payment_method' => 'nullable|in:cash,credit_card',
         ]);
 
         // ולידציה: בדיקה שהמעבר מותר לפי transition map
@@ -2533,16 +2537,20 @@ class AdminController extends Controller
         $order->updated_by_name = $user->name;
         $order->updated_by_user_id = $user->id;
 
-        // כשהזמנה נמסרה - סמן תשלום כשולם אוטומטית (מזומן נגבה בעת מסירה)
-        if ($request->status === 'delivered' && $order->payment_status === 'pending') {
-            $order->payment_status = 'paid';
-            if ($order->payment_method === 'cash') {
+        if ($request->status === 'delivered' && $request->filled('actual_payment_method')) {
+            $order->actual_payment_method = $request->input('actual_payment_method');
+        }
+
+        // כשהזמנה נמסרה - סמן תשלום כשולם אוטומטית כשנגבה מזומן בפועל (לפי actual או מקור)
+        if ($request->status === 'delivered' && $order->payment_status === Order::PAYMENT_PENDING) {
+            $order->payment_status = Order::PAYMENT_PAID;
+            if ($order->effectiveCollectedPaymentMethod() === 'cash') {
                 $order->paid_at = now();
             }
         }
 
         // רישום תנועת מזומן במשמרת פתוחה (גם להזמנות שלא נוצרו מהקופה)
-        if ($request->status === 'delivered' && $order->payment_method === 'cash') {
+        if ($request->status === 'delivered' && $order->effectiveCollectedPaymentMethod() === 'cash') {
             $openShift = CashRegisterShift::where('restaurant_id', $order->restaurant_id)
                 ->whereNull('closed_at')
                 ->first();
@@ -2565,10 +2573,10 @@ class AdminController extends Controller
             }
         }
 
-        // כשהזמנה מבוטלת - בטל המתנה לתשלום ושמור סיבת ביטול
+        // כשהזמנה מבוטלת - נקה סטטוס תשלום שלא הושלם (כולל אשראי שנכשל)
         if ($request->status === 'cancelled') {
-            if ($order->payment_status === 'pending') {
-                $order->payment_status = 'cancelled';
+            if (in_array($order->payment_status, [Order::PAYMENT_PENDING, Order::PAYMENT_FAILED], true)) {
+                $order->payment_status = Order::PAYMENT_CANCELLED;
             }
             if ($request->filled('cancellation_reason')) {
                 $order->cancellation_reason = $request->cancellation_reason;

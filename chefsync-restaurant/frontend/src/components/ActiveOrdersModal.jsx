@@ -8,6 +8,8 @@ const STATUS_LABELS = {
     preparing: { label: 'בהכנה', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400' },
     ready: { label: 'מוכנה', color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' },
     delivering: { label: 'במשלוח', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400' },
+    delivered: { label: 'נמסרה', color: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400' },
+    cancelled: { label: 'בוטלה', color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' },
 };
 
 /**

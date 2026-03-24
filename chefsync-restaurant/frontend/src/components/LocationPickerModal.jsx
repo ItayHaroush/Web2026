@@ -51,6 +51,7 @@ export default function LocationPickerModal({ open, onClose, onLocationSelected 
     const [position, setPosition] = useState([32.0853, 34.7818]); // Default: Tel Aviv
     const [cityName, setCityName] = useState('');
     const [street, setStreet] = useState('');
+    const [houseNumber, setHouseNumber] = useState('');
     const [fullAddress, setFullAddress] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -70,10 +71,10 @@ export default function LocationPickerModal({ open, onClose, onLocationSelected 
 
             let city = data.address?.city || data.address?.town || data.address?.village || '';
             let road = data.address?.road || '';
-            let houseNumber = data.address?.house_number || '';
+            let numFromGeo = data.address?.house_number || '';
 
             // אם לא מצאנו מספר בית, נסה Photon
-            if (!houseNumber) {
+            if (!numFromGeo) {
                 try {
                     const photonResponse = await fetch(
                         `https://photon.komoot.io/reverse?lon=${lng}&lat=${lat}&lang=he`
@@ -83,7 +84,7 @@ export default function LocationPickerModal({ open, onClose, onLocationSelected 
                     if (photonData.features?.[0]) {
                         const props = photonData.features[0].properties;
                         road = road || props.street || '';
-                        houseNumber = houseNumber || props.housenumber || '';
+                        numFromGeo = numFromGeo || props.housenumber || '';
                         city = city || props.city || '';
                     }
                 } catch (photonErr) {
@@ -94,7 +95,7 @@ export default function LocationPickerModal({ open, onClose, onLocationSelected 
             // Build full address
             let addressParts = [];
             if (road) {
-                addressParts.push(houseNumber ? `${road} ${houseNumber}` : road);
+                addressParts.push(numFromGeo ? `${road} ${numFromGeo}` : road);
             }
             if (city) {
                 addressParts.push(city);
@@ -102,6 +103,7 @@ export default function LocationPickerModal({ open, onClose, onLocationSelected 
 
             setCityName(city);
             setStreet(road);
+            setHouseNumber(numFromGeo || '');
             setFullAddress(addressParts.join(', '));
         } catch (err) {
             console.warn('Could not get address:', err);
@@ -305,6 +307,7 @@ export default function LocationPickerModal({ open, onClose, onLocationSelected 
             lng: position[1],
             cityName: cityName || '',
             street: street || '',
+            house_number: houseNumber || '',
             fullAddress: fullAddress || '',
             needsCompletion: !street || !cityName || !hasHouseNumber, // דגל שמסמן שצריך להשלים פרטים
         };

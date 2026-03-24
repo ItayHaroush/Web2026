@@ -1,10 +1,9 @@
-import { useMemo, useRef, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import AdminLayout from '../../layouts/AdminLayout';
 import api from '../../services/apiClient';
-import { clearStoredFcmToken, disableFcm, getStoredFcmToken, listenForegroundMessages, requestFcmToken } from '../../services/fcm';
-import { PRODUCT_NAME } from '../../constants/brand';
+import { clearStoredFcmToken, disableFcm, getStoredFcmToken, requestFcmToken } from '../../services/fcm';
 import AiCreditsBadge from '../../components/AiCreditsBadge';
 import AiInsightsPanel from '../../components/AiInsightsPanel';
 import UpgradeBanner from '../../components/UpgradeBanner';
@@ -27,6 +26,7 @@ import {
     FaHandPaper
 } from 'react-icons/fa';
 import OrderManualPaymentModal from '../../components/admin/OrderManualPaymentModal';
+import FutureOrderDetailModal from '../../components/admin/FutureOrderDetailModal';
 import { ORDER_STATUS_AWAITING_PAYMENT_HE, paymentStatusBadgeLabel, shouldShowPaymentStatusBadge } from '../../utils/orderPaymentLabels';
 
 export default function AdminDashboard() {
@@ -37,81 +37,19 @@ export default function AdminDashboard() {
     const [futureOrders, setFutureOrders] = useState([]);
     const [manualPaymentOrders, setManualPaymentOrders] = useState([]);
     const [manualPaymentModalOrder, setManualPaymentModalOrder] = useState(null);
+    const [futureDetailOrder, setFutureDetailOrder] = useState(null);
     const [loading, setLoading] = useState(true);
     const [pushState, setPushState] = useState({ status: 'idle', message: '' });
 
     const permission = typeof Notification !== 'undefined' ? Notification.permission : 'unsupported';
     const storedToken = useMemo(() => getStoredFcmToken(), [pushState.status]);
     const isPushEnabled = permission === 'granted' && !!storedToken;
-    const lastMessageIdsRef = useRef(new Set());
-    const notifCountRef = useRef(0);
-
     // רק בעלים ומנהלים רואים הכנסות
     const canViewRevenue = isOwner() || isManager();
     const canManualPaymentTools = isOwner() || isManager();
 
     useEffect(() => {
         fetchDashboard();
-    }, []);
-
-    // When the dashboard is open (foreground), FCM messages won't be shown automatically.
-    // This listener makes it obvious the message arrived.
-    useEffect(() => {
-        const unsubscribe = listenForegroundMessages((payload) => {
-            console.log('[FCM] foreground message', payload);
-
-            const msgId = payload?.messageId || payload?.data?.messageId || payload?.data?.google?.message_id;
-            if (msgId) {
-                if (lastMessageIdsRef.current.has(msgId)) return;
-                lastMessageIdsRef.current.add(msgId);
-                setTimeout(() => lastMessageIdsRef.current.delete(msgId), 30_000);
-            }
-
-            const title = payload?.notification?.title || payload?.data?.title || PRODUCT_NAME;
-            const body = payload?.notification?.body || payload?.data?.body || 'התראה חדשה';
-
-            if (Notification?.permission === 'granted') {
-                try {
-                    const n = new Notification(title, { body, icon: '/icon-192.png' });
-                    n.onclick = () => {
-                        n.close();
-                        window.focus();
-                        notifCountRef.current = Math.max(0, notifCountRef.current - 1);
-                        if (notifCountRef.current > 0) {
-                            if (navigator.setAppBadge) navigator.setAppBadge(notifCountRef.current).catch(() => { });
-                        } else {
-                            if (navigator.clearAppBadge) navigator.clearAppBadge().catch(() => { });
-                        }
-                        if (payload?.data?.orderId) {
-                            navigate('/admin/orders');
-                        }
-                    };
-                    // PWA App Badge – show actual count
-                    notifCountRef.current += 1;
-                    if (navigator.setAppBadge) navigator.setAppBadge(notifCountRef.current).catch(() => { });
-                } catch (e) {
-                    // Some browsers block Notification() in certain contexts; fallback to console.
-                    console.warn('[FCM] Notification() failed', e);
-                }
-            }
-        });
-
-        return () => {
-            if (typeof unsubscribe === 'function') unsubscribe();
-        };
-    }, []);
-
-    // Clear PWA app badge when the user opens / returns to the app
-    useEffect(() => {
-        const clearBadge = () => {
-            if (document.visibilityState === 'visible') {
-                notifCountRef.current = 0;
-                if (navigator.clearAppBadge) navigator.clearAppBadge().catch(() => { });
-            }
-        };
-        clearBadge(); // clear on mount (dashboard opened)
-        document.addEventListener('visibilitychange', clearBadge);
-        return () => document.removeEventListener('visibilitychange', clearBadge);
     }, []);
 
     const fetchDashboard = async () => {
@@ -349,14 +287,22 @@ export default function AdminDashboard() {
                                     onClick={() => navigate('/admin/orders')}
                                     className="text-[10px] font-black text-indigo-600 hover:underline shrink-0"
                                 >
-                                    הכל
+                                    מסך הזמנות
                                 </button>
                             </div>
                             <div className="space-y-2 max-h-52 overflow-y-auto flex-1 min-h-0">
                                 {futureOrders.map(order => (
                                     <div
                                         key={order.id}
-                                        onClick={() => navigate('/admin/orders')}
+                                        role="button"
+                                        tabIndex={0}
+                                        onClick={() => setFutureDetailOrder(order)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' || e.key === ' ') {
+                                                e.preventDefault();
+                                                setFutureDetailOrder(order);
+                                            }
+                                        }}
                                         className="flex items-center justify-between p-2.5 bg-indigo-50/50 rounded-xl border border-indigo-100/50 cursor-pointer hover:bg-indigo-100/50 transition-colors text-sm"
                                     >
                                         <div className="flex items-center gap-2 min-w-0">
@@ -609,6 +555,18 @@ export default function AdminDashboard() {
                     onUpdated={() => {
                         fetchDashboard();
                         setManualPaymentModalOrder(null);
+                    }}
+                />
+            )}
+
+            {futureDetailOrder && (
+                <FutureOrderDetailModal
+                    order={futureDetailOrder}
+                    onClose={() => setFutureDetailOrder(null)}
+                    getAuthHeaders={getAuthHeaders}
+                    onOrderCancelled={() => {
+                        fetchDashboard();
+                        setFutureDetailOrder(null);
                     }}
                 />
             )}

@@ -65,13 +65,12 @@ class ProcessFutureOrders extends Command
                     ]);
                 }
 
-                // MonitoringAlert
                 MonitoringAlert::create([
                     'tenant_id' => $order->tenant_id,
                     'restaurant_id' => $order->restaurant_id,
                     'alert_type' => 'new_order',
-                    'title' => "הזמנה עתידית נכנסה למטבח #{$order->id}",
-                    'body' => "{$order->customer_name} - ₪{$order->total_amount} — מתוכננת ל-{$scheduledTime}",
+                    'title' => "הזמנה חדשה #{$order->id}",
+                    'body' => "{$order->customer_name} - ₪{$order->total_amount} (עתידית ל-{$scheduledTime})",
                     'severity' => 'info',
                     'metadata' => ['order_id' => $order->id, 'scheduled_for' => $order->scheduled_for],
                     'is_read' => false,

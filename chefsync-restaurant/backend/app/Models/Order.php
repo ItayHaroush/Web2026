@@ -20,6 +20,7 @@ class Order extends Model
         'customer_phone',
         'delivery_method',
         'payment_method',
+        'actual_payment_method',
         'payment_status',
         'payment_transaction_id',
         'payment_amount',
@@ -31,6 +32,9 @@ class Order extends Model
         'order_type',
         'table_number',
         'delivery_address',
+        'delivery_city',
+        'delivery_street',
+        'delivery_house_number',
         'delivery_notes',
         'delivery_zone_id',
         'delivery_fee',
@@ -57,7 +61,7 @@ class Order extends Model
         'pending_customer_reminder_sent_at',
     ];
 
-    protected $appends = ['total'];
+    protected $appends = ['total', 'display_payment_method'];
 
     protected $casts = [
         'total_amount' => 'decimal:2',
@@ -88,6 +92,14 @@ class Order extends Model
     }
 
     /**
+     * אמצעי גבייה לתצוגה (אחרי מסירה: actual_payment_method אם הוגדר).
+     */
+    public function getDisplayPaymentMethodAttribute(): string
+    {
+        return $this->effectiveCollectedPaymentMethod();
+    }
+
+    /**
      * סטטוסים אפשריים
      */
     const STATUS_PENDING = 'pending';        // ממתין
@@ -108,6 +120,21 @@ class Order extends Model
     const PAYMENT_PAID = 'paid';                  // שולם
     const PAYMENT_FAILED = 'failed';              // תשלום נכשל
     const PAYMENT_REFUNDED = 'refunded';          // הוחזר
+    /** בוטל / לא שולם — הזמנה בוטלה או בוטל תשלום */
+    const PAYMENT_CANCELLED = 'cancelled';
+
+    /**
+     * אמצעי גבייה בפועל במסירה; אם לא נרשם — נופל חזרה ל-payment_method (איך הוזמן).
+     */
+    public function effectiveCollectedPaymentMethod(): string
+    {
+        $actual = $this->actual_payment_method;
+        if (is_string($actual) && $actual !== '') {
+            return $actual;
+        }
+
+        return (string) $this->payment_method;
+    }
 
     public static function validStatuses(): array
     {

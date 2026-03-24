@@ -218,19 +218,30 @@ class HypOrderCallbackController extends Controller
             'amount'         => $expectedAmount,
         ]);
 
-        // FCM push
+        // FCM — רגילה: new_order למטבח; עתידית: future_order_created בלבד (new_order יישלח ב-ProcessFutureOrders)
         try {
             $isFutureOrder = (bool) $order->is_future_order;
-            if ($isFutureOrder && $order->scheduled_for) {
-                $scheduledTime = \Carbon\Carbon::parse($order->scheduled_for)->timezone('Asia/Jerusalem')->format('d/m H:i');
-                $notificationTitle = "הזמנה עתידית #{$order->id}";
-                $notificationBody = "{$order->customer_name} - ₪{$expectedAmount} — מתוכנן ל-{$scheduledTime}";
-                $notificationType = 'future_order';
+            $baseBody = "{$order->customer_name} - ₪{$expectedAmount}";
+
+            if ($isFutureOrder) {
+                $scheduledTime = $order->scheduled_for
+                    ? \Carbon\Carbon::parse($order->scheduled_for)->timezone('Asia/Jerusalem')->format('d/m H:i')
+                    : '';
+                $notificationTitle = "הזמנה עתידית נרשמה #{$order->id}";
+                $notificationBody = $scheduledTime !== ''
+                    ? "{$baseBody} — מתוכננת ל-{$scheduledTime}"
+                    : $baseBody;
+                $notificationType = 'future_order_created';
+                $alertType = 'future_order_created';
+                $deepLink = '/admin/dashboard';
             } else {
                 $notificationTitle = "הזמנה חדשה #{$order->id}";
-                $notificationBody = "{$order->customer_name} - ₪{$expectedAmount}";
+                $notificationBody = $baseBody;
                 $notificationType = 'new_order';
+                $alertType = 'new_order';
+                $deepLink = '/admin/orders';
             }
+
             $this->sendOrderNotification(
                 tenantId: $restaurant->tenant_id,
                 title: $notificationTitle,
@@ -238,23 +249,21 @@ class HypOrderCallbackController extends Controller
                 data: [
                     'orderId' => (string) $order->id,
                     'type'    => $notificationType,
-                    'url'     => '/admin/orders',
+                    'url'     => $deepLink,
                 ]
             );
 
-            // יצירת התראה לפופאפ (רשימת התראות למנהל מסעדה)
             MonitoringAlert::create([
                 'tenant_id'     => $restaurant->tenant_id,
                 'restaurant_id' => $restaurant->id,
-                'alert_type'    => 'new_order',
-                'title'         => "הזמנה חדשה #{$order->id}",
+                'alert_type'    => $alertType,
+                'title'         => $notificationTitle,
                 'body'          => $notificationBody,
                 'severity'      => 'info',
-                'metadata'      => ['order_id' => $order->id],
+                'metadata'      => ['order_id' => $order->id, 'scheduled_for' => $order->scheduled_for],
                 'is_read'       => false,
             ]);
 
-            // התראת סופר אדמין (הזמנה בתשלום אשראי)
             $this->sendSuperAdminOrderAlert($order, $restaurant);
         } catch (\Throwable $e) {
             Log::warning('Failed to send FCM notification after HYP payment', [

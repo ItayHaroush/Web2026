@@ -21,6 +21,7 @@ import MenuItemModal from '../components/MenuItemModal';
 import FutureOrderModal from '../components/FutureOrderModal';
 import CartCheckoutWizard from '../components/CartCheckoutWizard';
 import { resolveAssetUrl } from '../utils/assets';
+import { notifyActiveOrdersStorageChanged } from '../utils/activeOrdersStorage';
 
 /**
  * עמוד סל קניות
@@ -59,9 +60,19 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
     const isRegisteredCustomer = isRecognized && !!customer?.id;
     // הזמנה עתידית — זמינה גם כשהמסעדה פתוחה, כל עוד allow_future_orders פעיל
     const canFutureOrder = restaurant?.allow_future_orders && (restaurant?.accepts_credit_card || isRegisteredCustomer);
+
+    const paymentMethodsPublic = restaurant?.available_payment_methods || ['cash'];
+    const creditAvailableForCheckout = paymentMethodsPublic.includes('credit_card');
+    /** תשלום אפקטיבי ל-UI ולשליחה — לא להציג/לשלוח אשראי אם המסעדה לא מציעה */
+    const effectivePaymentMethod =
+        creditAvailableForCheckout && customerInfo.payment_method === 'credit_card'
+            ? 'credit_card'
+            : 'cash';
     const [showFutureOrderModal, setShowFutureOrderModal] = useState(false);
     /** מודל: אחרי מפה / כתובת חסרה — להציע כתובת שמורה למשתמש רשום */
     const [showSavedAddressChoiceModal, setShowSavedAddressChoiceModal] = useState(false);
+    /** כתובת שמורה שנבחרה — לרזולוציית lat/lng בשרת אם צריך */
+    const [selectedCustomerAddressId, setSelectedCustomerAddressId] = useState(null);
 
     /** שלבי תשלום חכמים: 1=סל, 2=פרטים+סיכום, 3=סיום (בלי לשנות לוגיקת submit) */
     const [checkoutStep, setCheckoutStep] = useState(1);
@@ -75,6 +86,16 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
     useEffect(() => {
         setCheckoutStep(1);
     }, [tenantId]);
+
+    // אשראי לא זמין למסעדה — לא להשאיר payment_method על credit_card (למשל אחרי בחירת עתידית כאורח)
+    useEffect(() => {
+        if (!restaurant) return;
+        if (!creditAvailableForCheckout) {
+            setCustomerInfo((prev) =>
+                prev.payment_method === 'credit_card' ? { ...prev, payment_method: 'cash' } : prev
+            );
+        }
+    }, [restaurant?.id, creditAvailableForCheckout, setCustomerInfo]);
 
     // Fetch menu for category quick-add modal
     useEffect(() => {
@@ -164,9 +185,82 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
         }
     };
 
+    /**
+     * נקודת משלוח מפרופיל הלקוח (default_delivery_lat/lng) — בלי לפתוח מפה אם יש נ.צ. מעודכן.
+     */
+    const syncDeliveryFromCustomerProfile = React.useCallback(() => {
+        if (!customer?.default_delivery_lat || !customer?.default_delivery_lng) {
+            return false;
+        }
+        const lat = parseFloat(customer.default_delivery_lat);
+        const lng = parseFloat(customer.default_delivery_lng);
+        if (Number.isNaN(lat) || Number.isNaN(lng)) {
+            return false;
+        }
+
+        let fullAddress = (customer.default_delivery_address || '').trim();
+        const street = customer.default_delivery_street || '';
+        const city = customer.default_delivery_city || '';
+        const hn = customer.default_delivery_house_number || '';
+        if (!fullAddress && (street || city)) {
+            fullAddress = `${street} ${hn}, ${city}`.replace(/\s+/g, ' ').trim();
+        }
+        if (!fullAddress) {
+            fullAddress = 'כתובת מפרופיל';
+        }
+
+        const locationData = {
+            lat,
+            lng,
+            fullAddress,
+            street,
+            cityName: city,
+            house_number: hn || '',
+            needsCompletion: false,
+        };
+        setDeliveryLocation(locationData);
+        setSelectedCustomerAddressId(null);
+        try {
+            localStorage.setItem('user_delivery_location', JSON.stringify(locationData));
+        } catch {
+            /* ignore */
+        }
+
+        setCustomerInfo((prev) => {
+            if (prev.delivery_address?.trim()) {
+                return prev;
+            }
+            const line = fullAddress === 'כתובת מפרופיל' ? '' : fullAddress;
+            return line ? { ...prev, delivery_address: line } : prev;
+        });
+        return true;
+    }, [customer, setCustomerInfo]);
+
+    /** ניסיון לטעון מיקום מ-localStorage כשעוברים למשלוח (אחרי פרופיל) */
+    const tryHydrateDeliveryFromLocalStorage = React.useCallback(() => {
+        try {
+            const stored = localStorage.getItem('user_delivery_location');
+            if (!stored) {
+                return false;
+            }
+            const parsed = JSON.parse(stored);
+            const la = parseFloat(parsed.lat);
+            const ln = parseFloat(parsed.lng);
+            if (Number.isNaN(la) || Number.isNaN(ln)) {
+                return false;
+            }
+            setDeliveryLocation(parsed);
+            setSelectedCustomerAddressId(null);
+            return true;
+        } catch {
+            return false;
+        }
+    }, []);
+
     /** החלת כתובת שמורה — מזינה כתובת, מיקום, localStorage ובדיקת אזור */
     const applySavedAddress = (addr) => {
-        const fullAddress = `${addr.street} ${addr.house_number}${addr.apartment ? `, דירה ${addr.apartment}` : ''}, ${addr.city}`;
+        const fullAddress = `${addr.street} ${addr.house_number || ''}${addr.apartment ? `, דירה ${addr.apartment}` : ''}, ${addr.city}`.replace(/\s+/g, ' ').trim();
+        setSelectedCustomerAddressId(addr.id ?? null);
         setCustomerInfo((prev) => ({
             ...prev,
             delivery_address: fullAddress,
@@ -180,6 +274,7 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                 lng,
                 cityName: addr.city || '',
                 street: addr.street || '',
+                house_number: addr.house_number || '',
                 fullAddress,
                 needsCompletion: false,
             };
@@ -191,17 +286,59 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
             }
             checkDeliveryZoneAvailability(lat, lng);
         } else {
-            setDeliveryLocation((prev) => ({
-                ...(prev && typeof prev === 'object' ? prev : {}),
+            try {
+                localStorage.removeItem('user_delivery_location');
+            } catch {
+                /* ignore */
+            }
+            setDeliveryLocation({
                 fullAddress,
-                street: addr.street,
-                cityName: addr.city,
-                needsCompletion: false,
-            }));
+                street: addr.street || '',
+                cityName: addr.city || '',
+                house_number: addr.house_number || '',
+                needsCompletion: true,
+            });
+            setDeliveryZoneAvailable(false);
+            setDeliveryFee(0);
+            setShowLocationModal(true);
         }
         setError(null);
         setShowSavedAddressChoiceModal(false);
     };
+
+    // משלוח ללא מודל מפה אם יש נ.צ.: פרופיל → localStorage → כתובת שמורה כברירת מחדל
+    React.useEffect(() => {
+        if (customerInfo.delivery_method !== 'delivery') {
+            return;
+        }
+        if (deliveryLocation?.lat != null && deliveryLocation?.lng != null) {
+            return;
+        }
+        if (syncDeliveryFromCustomerProfile()) {
+            return;
+        }
+        if (tryHydrateDeliveryFromLocalStorage()) {
+            return;
+        }
+        const defAddr = savedAddresses.find((a) => a.is_default && a.lat != null && a.lng != null);
+        if (defAddr) {
+            applySavedAddress(defAddr);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- applySavedAddress יציב לוגית; נמנע לולאת רינדור
+    }, [
+        customerInfo.delivery_method,
+        deliveryLocation?.lat,
+        deliveryLocation?.lng,
+        syncDeliveryFromCustomerProfile,
+        tryHydrateDeliveryFromLocalStorage,
+        savedAddresses,
+    ]);
+
+    const deliveryHasValidCoords =
+        deliveryLocation?.lat != null &&
+        deliveryLocation?.lng != null &&
+        !Number.isNaN(parseFloat(deliveryLocation.lat)) &&
+        !Number.isNaN(parseFloat(deliveryLocation.lng));
 
     const handleQuantityChange = (itemKey, newQuantity) => {
         if (newQuantity < 1) {
@@ -295,13 +432,23 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                 customer_name: customerInfo.name,
                 customer_phone: customerInfo.phone,
                 delivery_method: customerInfo.delivery_method || 'pickup',
-                payment_method: customerInfo.payment_method || 'cash',
+                payment_method: effectivePaymentMethod,
                 delivery_address: customerInfo.delivery_method === 'delivery'
-                    ? (customerInfo.delivery_address || deliveryLocation?.address || 'מיקום GPS')
+                    ? (customerInfo.delivery_address || deliveryLocation?.fullAddress || deliveryLocation?.address || 'מיקום GPS')
+                    : undefined,
+                delivery_city: customerInfo.delivery_method === 'delivery'
+                    ? (deliveryLocation?.cityName || undefined)
+                    : undefined,
+                delivery_street: customerInfo.delivery_method === 'delivery'
+                    ? (deliveryLocation?.street || undefined)
+                    : undefined,
+                delivery_house_number: customerInfo.delivery_method === 'delivery'
+                    ? (deliveryLocation?.house_number || undefined)
                     : undefined,
                 delivery_notes: customerInfo.delivery_notes || undefined,
                 delivery_lat: customerInfo.delivery_method === 'delivery' ? deliveryLocation?.lat : undefined,
                 delivery_lng: customerInfo.delivery_method === 'delivery' ? deliveryLocation?.lng : undefined,
+                customer_address_id: customerInfo.delivery_method === 'delivery' ? (selectedCustomerAddressId ?? undefined) : undefined,
                 items: cartItems.map((item) => ({
                     menu_item_id: item.menuItemId,
                     variant_id: item.variant?.id ?? null,
@@ -334,6 +481,7 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                 }
                 localStorage.setItem(key, JSON.stringify(activeOrders));
                 localStorage.setItem(`order_tenant_${response.data.id}`, resolvedTenantSlug);
+                notifyActiveOrdersStorageChanged();
             }
             clearCart();
             setShowConfirmation(false);
@@ -498,6 +646,7 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                     open={showLocationModal}
                     onClose={() => setShowLocationModal(false)}
                     onLocationSelected={(location) => {
+                        setSelectedCustomerAddressId(null);
                         setDeliveryLocation(location);
                         setShowLocationModal(false);
 
@@ -1036,9 +1185,26 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                                             checked={customerInfo.delivery_method === 'delivery'}
                                             onChange={(e) => {
                                                 setCustomerInfo({ ...customerInfo, delivery_method: e.target.value });
-                                                if (!deliveryLocation) {
-                                                    setShowLocationModal(true);
+                                                if (e.target.value !== 'delivery') {
+                                                    return;
                                                 }
+                                                if (deliveryHasValidCoords) {
+                                                    return;
+                                                }
+                                                if (syncDeliveryFromCustomerProfile()) {
+                                                    return;
+                                                }
+                                                if (tryHydrateDeliveryFromLocalStorage()) {
+                                                    return;
+                                                }
+                                                const defAddr = savedAddresses.find(
+                                                    (a) => a.is_default && a.lat != null && a.lng != null
+                                                );
+                                                if (defAddr) {
+                                                    applySavedAddress(defAddr);
+                                                    return;
+                                                }
+                                                setShowLocationModal(true);
                                             }}
                                             className="w-4 h-4"
                                         />
@@ -1075,7 +1241,7 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                                         </div>
                                     )}
 
-                                    {!deliveryLocation && (
+                                    {!deliveryHasValidCoords && (
                                         <button
                                             type="button"
                                             onClick={() => setShowLocationModal(true)}
@@ -1320,7 +1486,7 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                             disabled={submitting}
                             className="flex-1 bg-gradient-to-r from-brand-primary to-orange-600 text-white font-black py-4 rounded-xl hover:from-orange-600 hover:to-orange-700 transition-all shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed"
                         >
-                            {customerInfo.payment_method === 'credit_card' ? 'שלם באשראי' : 'המשך לאישור'}
+                            {effectivePaymentMethod === 'credit_card' ? 'שלם באשראי' : 'המשך לאישור'}
                         </button>
                         <a
                             href={tenantId ? `/${tenantId}/menu` : '/'}
@@ -1360,7 +1526,7 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                     deliveryMethod={customerInfo.delivery_method || 'pickup'}
                     deliveryAddress={customerInfo.delivery_address}
                     deliveryNotes={customerInfo.delivery_notes}
-                    paymentMethod={customerInfo.payment_method || 'cash'}
+                    paymentMethod={effectivePaymentMethod}
                     onConfirmOrder={handleConfirmOrder}
                     submitting={submitting}
                     onRemoveItem={removeFromCart}
@@ -1611,10 +1777,16 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
             <FutureOrderModal
                 isOpen={showFutureOrderModal}
                 onClose={() => setShowFutureOrderModal(false)}
+                deliveryMethod={customerInfo.delivery_method || 'pickup'}
                 onConfirm={(isoString) => {
                     setScheduledFor(isoString);
-                    if (!isRegisteredCustomer) {
-                        setCustomerInfo(prev => ({ ...prev, payment_method: 'credit_card' }));
+                    // אשראי מקדים רק כשהמסעדה סגורה + אורח + המסעדה באמת מקבלת אשראי (אחרת נשבר שלב 3 / 422)
+                    const needGuestPrepayCredit =
+                        !isRegisteredCustomer &&
+                        restaurant?.accepts_credit_card &&
+                        restaurant?.is_open_now === false;
+                    if (needGuestPrepayCredit) {
+                        setCustomerInfo((prev) => ({ ...prev, payment_method: 'credit_card' }));
                     }
                     setShowFutureOrderModal(false);
                 }}

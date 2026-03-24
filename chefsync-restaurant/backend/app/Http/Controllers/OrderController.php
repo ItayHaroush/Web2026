@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Customer;
+use App\Models\CustomerAddress;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\MenuItem;
@@ -60,9 +61,13 @@ class OrderController extends Controller
                 'delivery_method' => 'required|in:pickup,delivery',
                 'payment_method' => 'required|in:' . (config('payment.credit_card_enabled') ? 'cash,credit_card' : 'cash'),
                 'delivery_address' => 'nullable|string|max:255',
+                'delivery_city' => 'nullable|string|max:120',
+                'delivery_street' => 'nullable|string|max:255',
+                'delivery_house_number' => 'nullable|string|max:32',
                 'delivery_notes' => 'nullable|string|max:500',
                 'delivery_lat' => 'nullable|numeric|between:-90,90',
                 'delivery_lng' => 'nullable|numeric|between:-180,180',
+                'customer_address_id' => 'nullable|integer|exists:customer_addresses,id',
                 'items' => 'required|array|min:1',
                 'items.*.menu_item_id' => 'required|integer|exists:menu_items,id',
                 'items.*.variant_id' => 'nullable|integer',
@@ -74,7 +79,7 @@ class OrderController extends Controller
                 'items.*.quantity' => 'nullable|integer|min:1',
                 'is_test' => 'nullable|boolean',        // הזמנת בדיקה (מצב preview)
                 'test_note' => 'nullable|string|max:255', // הערה להזמנת בדיקה
-                'scheduled_for' => 'nullable|date|after:now', // הזמנה עתידית
+                'scheduled_for' => 'nullable|date', // הזמנה עתידית — מינימום זמן נבדק מול המסעדה
                 'applied_promotions' => 'nullable|array',
                 'applied_promotions.*.promotion_id' => 'required|integer',
                 'applied_promotions.*.gift_items' => 'nullable|array',
@@ -91,13 +96,6 @@ class OrderController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => 'נא להזין כתובת למשלוח',
-                ], 422);
-            }
-
-            if ($validated['delivery_method'] === 'delivery' && (!isset($validated['delivery_lat']) || !isset($validated['delivery_lng']))) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'נא לאשר מיקום למשלוח',
                 ], 422);
             }
 
@@ -159,9 +157,19 @@ class OrderController extends Controller
                 }
             }
 
-            // ולידציה: הזמנה עתידית — וידאו שהזמן תואם לשעות הפעילות
+            // ולידציה: הזמנה עתידית — מינימום זמן (max(שעה, הכנה+30 דק')) + שעות פעילות
             if (!empty($validated['scheduled_for'])) {
                 $scheduledCarbon = \Carbon\Carbon::parse($validated['scheduled_for'])->timezone('Asia/Jerusalem');
+                $minScheduled = $this->minimumScheduledAt($restaurant, $validated['delivery_method']);
+                if ($scheduledCarbon->lt($minScheduled)) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'ניתן להזמין החל מ-' . $minScheduled->format('H:i') . ' בתאריך ' . $minScheduled->format('d/m/Y'),
+                        'data' => [
+                            'min_scheduled_at' => $minScheduled->toIso8601String(),
+                        ],
+                    ], 422);
+                }
                 $isOpenAtScheduled = Restaurant::calculateIsOpen(
                     $restaurant->operating_days ?? [],
                     $restaurant->operating_hours ?? [],
@@ -194,8 +202,36 @@ class OrderController extends Controller
             $deliveryZone = null;
             $deliveryFee = 0.0;
             $deliveryDistanceKm = null;
-            $deliveryLat = $validated['delivery_lat'] ?? null;
-            $deliveryLng = $validated['delivery_lng'] ?? null;
+
+            $deliveryLat = isset($validated['delivery_lat']) && $validated['delivery_lat'] !== null && $validated['delivery_lat'] !== ''
+                ? (float) $validated['delivery_lat']
+                : null;
+            $deliveryLng = isset($validated['delivery_lng']) && $validated['delivery_lng'] !== null && $validated['delivery_lng'] !== ''
+                ? (float) $validated['delivery_lng']
+                : null;
+
+            if ($validated['delivery_method'] === 'delivery') {
+                if (($deliveryLat === null || $deliveryLng === null) && !empty($validated['customer_address_id'])) {
+                    $addrCustomer = Customer::where('phone', $normalizedCustomerPhone)->first();
+                    if ($addrCustomer) {
+                        $savedAddr = CustomerAddress::query()
+                            ->where('id', (int) $validated['customer_address_id'])
+                            ->where('customer_id', $addrCustomer->id)
+                            ->first();
+                        if ($savedAddr && $savedAddr->lat !== null && $savedAddr->lng !== null) {
+                            $deliveryLat = (float) $savedAddr->lat;
+                            $deliveryLng = (float) $savedAddr->lng;
+                        }
+                    }
+                }
+
+                if ($deliveryLat === null || $deliveryLng === null) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'נא לאשר מיקום למשלוח',
+                    ], 422);
+                }
+            }
 
             if ($validated['delivery_method'] === 'delivery') {
                 // Validate delivery location and calculate fee
@@ -469,6 +505,9 @@ class OrderController extends Controller
                 'payment_method' => $paymentMethod,
                 'payment_status' => $paymentStatus,
                 'delivery_address' => $validated['delivery_address'] ?? null,
+                'delivery_city' => $validated['delivery_city'] ?? null,
+                'delivery_street' => $validated['delivery_street'] ?? null,
+                'delivery_house_number' => $validated['delivery_house_number'] ?? null,
                 'delivery_notes' => $validated['delivery_notes'] ?? null,
                 'delivery_zone_id' => $deliveryZone?->id,
                 'delivery_fee' => $deliveryFee,
@@ -548,8 +587,11 @@ class OrderController extends Controller
                 if ($validated['delivery_method'] === 'delivery' && !$customer->default_delivery_address) {
                     $customer->update([
                         'default_delivery_address' => $validated['delivery_address'] ?? null,
-                        'default_delivery_lat' => $validated['delivery_lat'] ?? null,
-                        'default_delivery_lng' => $validated['delivery_lng'] ?? null,
+                        'default_delivery_city' => $validated['delivery_city'] ?? null,
+                        'default_delivery_street' => $validated['delivery_street'] ?? null,
+                        'default_delivery_house_number' => $validated['delivery_house_number'] ?? null,
+                        'default_delivery_lat' => $deliveryLat,
+                        'default_delivery_lng' => $deliveryLng,
                         'default_delivery_notes' => $validated['delivery_notes'] ?? null,
                         'preferred_payment_method' => $validated['payment_method'],
                     ]);
@@ -558,39 +600,73 @@ class OrderController extends Controller
                 Log::warning('Failed to link customer to order', ['error' => $e->getMessage()]);
             }
 
-            // שליחת פוש לטאבלטים של המסעדה (רק אם לא הזמנת test)
-            // חשוב: עבור תשלום באשראי, נשלח את ההתראה רק אחרי אישור תשלום ב-HYP (ב-HypOrderCallbackController)
+            // פוש למסעדה: הזמנה רגילה = new_order מיד; עתידית = רק future_order_created (המטבח מקבל new_order ב-cron)
+            // באשראי — new_order רק אחרי HYP (ב-HypOrderCallbackController)
             if (!($validated['is_test'] ?? false) && $paymentMethod !== 'credit_card') {
                 $notificationBody = "{$order->customer_name} - ₪{$order->total_amount}";
+                $isFuture = (bool) $order->is_future_order;
 
-                $this->sendOrderNotification(
-                    tenantId: $tenantId,
-                    title: "הזמנה חדשה #{$order->id}",
-                    body: $notificationBody,
-                    data: [
-                        'orderId' => (string) $order->id,
-                        'type' => 'new_order',
-                        'url' => '/admin/orders'
-                    ]
-                );
+                if (! $isFuture) {
+                    $this->sendOrderNotification(
+                        tenantId: $tenantId,
+                        title: "הזמנה חדשה #{$order->id}",
+                        body: $notificationBody,
+                        data: [
+                            'orderId' => (string) $order->id,
+                            'type' => 'new_order',
+                            'url' => '/admin/orders',
+                        ]
+                    );
 
-                // יצירת התראה לפופאפ (רשימת התראות למנהל מסעדה)
-                try {
-                    MonitoringAlert::create([
-                        'tenant_id'     => $tenantId,
-                        'restaurant_id' => $restaurantId,
-                        'alert_type'    => 'new_order',
-                        'title'         => "הזמנה חדשה #{$order->id}",
-                        'body'          => $notificationBody,
-                        'severity'      => 'info',
-                        'metadata'      => ['order_id' => $order->id],
-                        'is_read'       => false,
-                    ]);
-                } catch (\Throwable $e) {
-                    Log::warning('Failed to create MonitoringAlert for new order', ['error' => $e->getMessage()]);
+                    try {
+                        MonitoringAlert::create([
+                            'tenant_id'     => $tenantId,
+                            'restaurant_id' => $restaurantId,
+                            'alert_type'    => 'new_order',
+                            'title'         => "הזמנה חדשה #{$order->id}",
+                            'body'          => $notificationBody,
+                            'severity'      => 'info',
+                            'metadata'      => ['order_id' => $order->id],
+                            'is_read'       => false,
+                        ]);
+                    } catch (\Throwable $e) {
+                        Log::warning('Failed to create MonitoringAlert for new order', ['error' => $e->getMessage()]);
+                    }
+                } else {
+                    $scheduledHe = $order->scheduled_for
+                        ? \Carbon\Carbon::parse($order->scheduled_for)->timezone('Asia/Jerusalem')->format('d/m H:i')
+                        : '';
+                    $futureBody = $scheduledHe !== ''
+                        ? "{$notificationBody} — מתוכננת ל-{$scheduledHe}"
+                        : $notificationBody;
+
+                    $this->sendOrderNotification(
+                        tenantId: $tenantId,
+                        title: "הזמנה עתידית נרשמה #{$order->id}",
+                        body: $futureBody,
+                        data: [
+                            'orderId' => (string) $order->id,
+                            'type' => 'future_order_created',
+                            'url' => '/admin/dashboard',
+                        ]
+                    );
+
+                    try {
+                        MonitoringAlert::create([
+                            'tenant_id'     => $tenantId,
+                            'restaurant_id' => $restaurantId,
+                            'alert_type'    => 'future_order_created',
+                            'title'         => "הזמנה עתידית נרשמה #{$order->id}",
+                            'body'          => $futureBody,
+                            'severity'      => 'info',
+                            'metadata'      => ['order_id' => $order->id, 'scheduled_for' => $order->scheduled_for],
+                            'is_read'       => false,
+                        ]);
+                    } catch (\Throwable $e) {
+                        Log::warning('Failed to create MonitoringAlert for future order', ['error' => $e->getMessage()]);
+                    }
                 }
 
-                // התראת סופר אדמין על הזמנה חדשה
                 $this->sendSuperAdminOrderAlert($order, $tenantId);
             }
 
@@ -898,7 +974,13 @@ class OrderController extends Controller
             }
 
             $oldStatus = $order->status;
-            $order->update(['status' => $validated['status']]);
+            $updates = ['status' => $validated['status']];
+            if ($validated['status'] === Order::STATUS_CANCELLED) {
+                if (in_array($order->payment_status, [Order::PAYMENT_PENDING, Order::PAYMENT_FAILED], true)) {
+                    $updates['payment_status'] = Order::PAYMENT_CANCELLED;
+                }
+            }
+            $order->update($updates);
 
             // Event Log - רישום שינוי סטטוס
             try {
@@ -1051,6 +1133,19 @@ class OrderController extends Controller
         } catch (\Throwable $e) {
             Log::warning('Failed to send super admin order alert', ['error' => $e->getMessage()]);
         }
+    }
+
+    /**
+     * זמן הזמנה עתידית המוקדם ביותר: לפחות 60 דקות, ולפחות זמן הכנה (משלוח/איסוף) + 30 דקות.
+     */
+    private function minimumScheduledAt(Restaurant $restaurant, string $deliveryMethod): \Carbon\Carbon
+    {
+        $prep = $deliveryMethod === 'delivery'
+            ? (int) ($restaurant->delivery_time_minutes ?? 0)
+            : (int) ($restaurant->pickup_time_minutes ?? 0);
+        $minutesLead = max(60, $prep + 30);
+
+        return \Carbon\Carbon::now('Asia/Jerusalem')->addMinutes($minutesLead);
     }
 
     /**

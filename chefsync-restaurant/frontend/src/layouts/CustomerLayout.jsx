@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useAdminAuth } from '../context/AdminAuthContext';
@@ -12,6 +12,7 @@ import ActiveOrdersModal from '../components/ActiveOrdersModal';
 import OrderHistoryModal from '../components/OrderHistoryModal';
 import orderService from '../services/orderService';
 import { FaUser, FaShoppingBag, FaBars, FaTimes } from 'react-icons/fa';
+import { ACTIVE_ORDERS_STORAGE_CHANGED } from '../utils/activeOrdersStorage';
 
 /**
  * Layout ראשי עם ניווט עליון (לקוח).
@@ -29,6 +30,15 @@ export function CustomerLayout({ children }) {
     const [showOrdersModal, setShowOrdersModal] = useState(false);
     const [ordersModalData, setOrdersModalData] = useState([]);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    /** ספירה שמתעדכנת כש-localStorage של הזמנות פעילות משתנה (גם מעמוד סטטוס בלי ניווט) */
+    const [activeOrdersStorageRev, setActiveOrdersStorageRev] = useState(0);
+    const modalOrderIdsRef = useRef([]);
+
+    useEffect(() => {
+        const bump = () => setActiveOrdersStorageRev((n) => n + 1);
+        window.addEventListener(ACTIVE_ORDERS_STORAGE_CHANGED, bump);
+        return () => window.removeEventListener(ACTIVE_ORDERS_STORAGE_CHANGED, bump);
+    }, []);
 
     // חישוב מספר הזמנות מ-localStorage
     const allOrderIds = useMemo(() => {
@@ -40,7 +50,7 @@ export function CustomerLayout({ children }) {
         // מיזוג ללא כפילויות
         const set = new Set([...active.map(String), ...pending.map(String)]);
         return [...set];
-    }, [tenantId, children]); // children משתנה בכל ניווט — כדי לרענן
+    }, [tenantId, children, activeOrdersStorageRev]); // activeOrdersStorageRev — אחרי עדכון מעמוד סטטוס / סל
 
     const totalOrdersBadge = allOrderIds.length;
 
@@ -60,6 +70,35 @@ export function CustomerLayout({ children }) {
             setShowOrdersModal(true);
         } catch { /* ignore */ }
     };
+
+    useEffect(() => {
+        if (showOrdersModal && ordersModalData.length > 0) {
+            modalOrderIdsRef.current = ordersModalData.map((o) => o.id);
+        }
+    }, [showOrdersModal, ordersModalData]);
+
+    // רענון תגיות סטטוס במודל כשהשרת משתנה (למשל מעבר אשראי→מזומן) בלי לסגור ולפתוח מחדש
+    useEffect(() => {
+        if (!showOrdersModal) return undefined;
+        const refreshModalOrders = async () => {
+            const ids = modalOrderIdsRef.current;
+            if (!ids.length) return;
+            try {
+                const results = await Promise.all(
+                    ids.map((id) => orderService.getOrder(id).then((r) => r.data).catch(() => null))
+                );
+                const next = results.filter(Boolean);
+                if (next.length > 0) {
+                    setOrdersModalData(next);
+                }
+            } catch {
+                /* ignore */
+            }
+        };
+        refreshModalOrders();
+        const interval = setInterval(refreshModalOrders, 5000);
+        return () => clearInterval(interval);
+    }, [showOrdersModal]);
 
     // Smart dismiss logic — הצעת הרשמה אוטומטית
     useEffect(() => {

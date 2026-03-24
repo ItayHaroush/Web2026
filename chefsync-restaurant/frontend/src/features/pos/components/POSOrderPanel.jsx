@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { FaCheckCircle, FaFire, FaBell, FaTruck, FaBan, FaClock, FaShekelSign, FaClipboardList, FaMotorcycle, FaPrint, FaUtensils, FaUndo, FaGlobe, FaMapMarkerAlt, FaCreditCard, FaMoneyBillWave } from 'react-icons/fa';
 import posApi from '../api/posApi';
 import CancelOrderModal from '../../../components/CancelOrderModal';
-import { ORDER_STATUS_AWAITING_PAYMENT_HE, paymentStatusBadgeLabel, shouldShowPaymentStatusBadge } from '../../../utils/orderPaymentLabels';
+import { ORDER_STATUS_AWAITING_PAYMENT_HE, getOrderDisplayPaymentMethod, paymentStatusBadgeLabel, shouldShowPaymentStatusBadge } from '../../../utils/orderPaymentLabels';
 import POSManagerAuth from './POSManagerAuth';
 
 const SOURCE_LABELS = {
@@ -73,6 +73,8 @@ function normalizeOrder(raw) {
         delivery_address: raw.delivery_address || null,
         delivery_notes: raw.delivery_notes || null,
         payment_method: raw.payment_method,
+        display_payment_method: raw.display_payment_method,
+        actual_payment_method: raw.actual_payment_method,
         payment_status: raw.payment_status != null && raw.payment_status !== ''
             ? String(raw.payment_status).trim()
             : null,
@@ -337,8 +339,8 @@ function OrderCard({
                     </p>
                     {paymentCaption && (
                         <span className={`inline-flex items-center justify-end gap-1 text-xs font-black px-2 py-0.5 rounded-lg ${paymentStatusBadgeClass(order)}`}>
-                            {order.payment_method === 'credit_card' && <FaCreditCard className="opacity-90 shrink-0" size={11} />}
-                            {order.payment_method === 'cash' && order.payment_status === 'paid' && <FaMoneyBillWave className="opacity-90 shrink-0" size={11} />}
+                            {getOrderDisplayPaymentMethod(order) === 'credit_card' && <FaCreditCard className="opacity-90 shrink-0" size={11} />}
+                            {getOrderDisplayPaymentMethod(order) === 'cash' && order.payment_status === 'paid' && <FaMoneyBillWave className="opacity-90 shrink-0" size={11} />}
                             {paymentCaption}
                         </span>
                     )}

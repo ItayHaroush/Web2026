@@ -63,6 +63,24 @@ export function CustomerProvider({ children }) {
         }
     };
 
+    /** ריענון פרופיל מהשרת (אחרי מחיקת כתובת וכו׳) */
+    const refreshCustomerProfile = useCallback(async () => {
+        const token = customerToken || localStorage.getItem(CUSTOMER_TOKEN_KEY);
+        if (!token) return;
+        try {
+            const response = await apiClient.get('/customer/me', {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            if (response.data?.success) {
+                const data = response.data.data;
+                setCustomer(data);
+                persistCustomerData(data);
+            }
+        } catch {
+            /* ignore */
+        }
+    }, [customerToken]);
+
     /**
      * בדיקה אם טלפון שייך ללקוח קיים (אחרי OTP)
      */
@@ -249,6 +267,7 @@ export function CustomerProvider({ children }) {
         setPassword,
         logout,
         updateProfile,
+        refreshCustomerProfile,
         clearCustomer,
         isUserModalOpen,
         openUserModal,
