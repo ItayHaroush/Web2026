@@ -52,6 +52,14 @@ export default function AdminDashboard() {
         fetchDashboard();
     }, []);
 
+    // #region agent log
+    useEffect(() => {
+        const unpaidMatches = recentOrders.filter(o => o.payment_status === 'pending' || o.payment_status === 'failed');
+        if (unpaidMatches.length === 0) return;
+        fetch('http://127.0.0.1:7242/ingest/8df4a825-2af7-44b5-b28d-f1fe14cba861', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '18de27' }, body: JSON.stringify({ sessionId: '18de27', location: 'AdminDashboard.jsx:unpaidBannerEffect', message: 'orange banner state snapshot', data: { unpaidCount: unpaidMatches.length, manualPaymentOrdersCount: manualPaymentOrders.length, unpaidMatches: unpaidMatches.map(o => ({ id: o.id, status: o.status, payment_status: o.payment_status, payment_method: o.payment_method })), manualSnapshot: manualPaymentOrders.map(o => ({ id: o.id, status: o.status, payment_status: o.payment_status, payment_method: o.payment_method })) }, timestamp: Date.now(), hypothesisId: 'H2-H3-H4' }) }).catch(() => { });
+    }, [recentOrders, manualPaymentOrders]);
+    // #endregion
+
     const fetchDashboard = async () => {
         try {
             const response = await api.get('/admin/dashboard', {
@@ -64,6 +72,18 @@ export default function AdminDashboard() {
                 setRecentOrders(realOrders);
                 setFutureOrders(response.data.future_orders || []);
                 setManualPaymentOrders(response.data.manual_payment_orders || []);
+                // #region agent log
+                {
+                    const manual = response.data.manual_payment_orders || [];
+                    const recentUnpaid = realOrders.filter(o => o.payment_status === 'pending' || o.payment_status === 'failed');
+                    const cancelledInRecentUnpaid = recentUnpaid.filter(o => o.status === 'cancelled').length;
+                    const manualIds = new Set(manual.map(o => o.id));
+                    const recentIds = new Set(recentUnpaid.map(o => o.id));
+                    const inManualNotRecent = [...manualIds].filter(id => !recentIds.has(id)).length;
+                    const inRecentNotManual = [...recentIds].filter(id => !manualIds.has(id)).length;
+                    fetch('http://127.0.0.1:7242/ingest/8df4a825-2af7-44b5-b28d-f1fe14cba861', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '18de27' }, body: JSON.stringify({ sessionId: '18de27', location: 'AdminDashboard.jsx:fetchDashboard', message: 'dashboard API unpaid vs manual', data: { recentUnpaidCount: recentUnpaid.length, cancelledInRecentUnpaid, inManualNotRecent, inRecentNotManual, recentUnpaid: recentUnpaid.map(o => ({ id: o.id, status: o.status, payment_status: o.payment_status, payment_method: o.payment_method, is_future_order: o.is_future_order })), manualCount: manual.length, manual: manual.map(o => ({ id: o.id, status: o.status, payment_status: o.payment_status, payment_method: o.payment_method })), statsManualCount: response.data.stats?.manual_payment_attention_count }, timestamp: Date.now(), hypothesisId: 'H1-H5' }) }).catch(() => { });
+                }
+                // #endregion
             }
         } catch (error) {
             console.error('Failed to fetch dashboard:', error);
