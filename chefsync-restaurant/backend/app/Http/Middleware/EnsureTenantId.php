@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Restaurant;
 use Closure;
 use Illuminate\Http\Request;
 
@@ -21,6 +22,13 @@ class EnsureTenantId
         // עבור נתיבי אימות קופה (verify-pin, unlock) - fallback מ-restaurant של המשתמש
         if (!$tenantId && $request->user()?->restaurant) {
             $tenantId = $request->user()->restaurant->tenant_id;
+        }
+
+        // אותו מסלול כמו CheckRestaurantAccess: משתמש עם restaurant_id בלי כותרת tenant
+        // (למשל localStorage נוקה / קשר restaurant לא נטען) — טען tenant ישירות מהטבלה בלי scope
+        if (!$tenantId && $request->user()?->restaurant_id) {
+            $restaurant = Restaurant::withoutGlobalScopes()->find($request->user()->restaurant_id);
+            $tenantId = $restaurant?->tenant_id;
         }
 
         if (!$tenantId) {

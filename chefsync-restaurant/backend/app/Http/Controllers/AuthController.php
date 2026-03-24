@@ -80,6 +80,10 @@ class AuthController extends Controller
     public function me(Request $request)
     {
         $user = $request->user();
+        $restaurant = $user->restaurant;
+        if (! $restaurant && $user->restaurant_id) {
+            $restaurant = Restaurant::withoutGlobalScopes()->find($user->restaurant_id);
+        }
 
         return response()->json([
             'success' => true,
@@ -91,8 +95,8 @@ class AuthController extends Controller
                 'role' => $user->role,
                 'is_super_admin' => $user->is_super_admin ?? false,
                 'restaurant_id' => $user->restaurant_id,
-                'restaurant' => $user->restaurant,
-                'tenant_id' => $user->restaurant->tenant_id ?? null,
+                'restaurant' => $restaurant,
+                'tenant_id' => $restaurant?->tenant_id,
                 'hourly_rate' => $user->hourly_rate,
                 'has_pin' => !is_null($user->pos_pin_hash),
             ],

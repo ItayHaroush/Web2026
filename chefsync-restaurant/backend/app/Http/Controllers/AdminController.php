@@ -179,38 +179,6 @@ class AdminController extends Controller
 
         $stats['manual_payment_attention_count'] = $manualPaymentOrders->count();
 
-        // #region agent log
-        try {
-            $dbgPath = dirname(base_path()).DIRECTORY_SEPARATOR.'.cursor'.DIRECTORY_SEPARATOR.'debug-18de27.log';
-            $recentUnpaid = $recentOrders->filter(fn ($o) => in_array($o->payment_status, [Order::PAYMENT_PENDING, Order::PAYMENT_FAILED], true));
-            $dbgPayload = [
-                'sessionId' => '18de27',
-                'location' => 'AdminController.php:dashboard',
-                'message' => 'dashboard unpaid snapshot',
-                'timestamp' => (int) round(microtime(true) * 1000),
-                'hypothesisId' => 'H1-H5',
-                'data' => [
-                    'manual_count' => $manualPaymentOrders->count(),
-                    'manual' => $manualPaymentOrders->map(fn ($o) => [
-                        'id' => $o->id,
-                        'status' => $o->status,
-                        'payment_status' => $o->payment_status,
-                        'payment_method' => $o->payment_method,
-                    ])->values()->all(),
-                    'recent_unpaid_count' => $recentUnpaid->count(),
-                    'recent_unpaid' => $recentUnpaid->map(fn ($o) => [
-                        'id' => $o->id,
-                        'status' => $o->status,
-                        'payment_status' => $o->payment_status,
-                        'payment_method' => $o->payment_method,
-                    ])->values()->all(),
-                ],
-            ];
-            @file_put_contents($dbgPath, json_encode($dbgPayload, JSON_UNESCAPED_UNICODE)."\n", FILE_APPEND | LOCK_EX);
-        } catch (\Throwable $e) {
-        }
-        // #endregion
-
         return response()->json([
             'success' => true,
             'stats' => $stats,
