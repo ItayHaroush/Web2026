@@ -57,4 +57,22 @@ class DailyReport extends Model
             }
         });
     }
+
+    /**
+     * JSON/API: עמודת date היא יום עסקים (DATE), לא רגע UTC.
+     * parent::toArray() ממיר Carbon ל-ISO ב-UTC ואז split('T')[0] בפרונט מקדים יום בישראל.
+     */
+    public function toArray(): array
+    {
+        $array = parent::toArray();
+
+        $raw = $this->getRawOriginal('date');
+        if (is_string($raw) && strlen($raw) >= 10 && preg_match('/^\d{4}-\d{2}-\d{2}/', substr($raw, 0, 10))) {
+            $array['date'] = substr($raw, 0, 10);
+        } elseif ($this->date !== null) {
+            $array['date'] = $this->date->copy()->timezone('Asia/Jerusalem')->format('Y-m-d');
+        }
+
+        return $array;
+    }
 }

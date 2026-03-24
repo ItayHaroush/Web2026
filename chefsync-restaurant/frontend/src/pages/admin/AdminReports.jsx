@@ -28,6 +28,7 @@ import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     PieChart, Pie, Cell
 } from 'recharts';
+import { formatDailyReportCalendarDate } from '../../utils/dailyReportDate';
 
 const COLORS = ['#f97316', '#3b82f6', '#8b5cf6', '#22c55e', '#ef4444', '#eab308'];
 
@@ -142,7 +143,7 @@ export default function AdminReports({ embedded = false }) {
 
     // Chart data
     const chartData = [...reports].reverse().map(r => ({
-        date: r.date?.split('T')[0]?.substring(5) || '',
+        date: formatDailyReportCalendarDate(r.date)?.substring(5) || '',
         הכנסות: parseFloat(r.total_revenue || 0),
         הזמנות: r.total_orders || 0,
     }));
@@ -448,7 +449,7 @@ export default function AdminReports({ embedded = false }) {
                                                     className="rounded border-gray-300"
                                                 />
                                             </td>
-                                            <td className="p-3 font-bold">{r.date?.split('T')[0]}</td>
+                                            <td className="p-3 font-bold">{formatDailyReportCalendarDate(r.date)}</td>
                                             <td className="p-3">{r.total_orders}</td>
                                             <td className="p-3 font-bold text-emerald-600">₪{parseFloat(r.total_revenue || 0).toLocaleString()}</td>
                                             <td className="p-3">{r.pickup_orders}</td>
@@ -528,7 +529,7 @@ export default function AdminReports({ embedded = false }) {
                             <ul className="p-4 overflow-y-auto max-h-[60vh] space-y-2 text-sm">
                                 {waLinksModal.map((row) => (
                                     <li key={row.report_id} className="flex flex-wrap items-center gap-2 justify-between border border-gray-100 rounded-xl p-2">
-                                        <span className="text-gray-600">{row.date}</span>
+                                        <span className="text-gray-600">{formatDailyReportCalendarDate(row.date)}</span>
                                         <a
                                             href={row.url}
                                             target="_blank"
@@ -589,7 +590,7 @@ function ReportDetailModal({ report, onClose, onDownloadPdf }) {
                 onClick={e => e.stopPropagation()}
             >
                 <div className="p-6 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white rounded-t-3xl z-10">
-                    <h2 className="text-xl font-black text-gray-900">דוח יומי — {report.date?.split('T')[0]}</h2>
+                    <h2 className="text-xl font-black text-gray-900">דוח יומי — {formatDailyReportCalendarDate(report.date)}</h2>
                     <div className="flex items-center gap-2">
                         <button onClick={onDownloadPdf} className="p-2 text-red-600 hover:bg-red-50 rounded-xl transition-colors">
                             <FaFilePdf size={18} />
