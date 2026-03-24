@@ -33,7 +33,9 @@ class FcmTokenController extends Controller
 
         $dedupeQuery->delete();
 
-        FcmToken::updateOrCreate(
+        // token ייחודי גלובלית ב-DB; ה-global scope על FcmToken מסתיר שורות מ-tenant אחר
+        // ואז updateOrCreate חושב שאין רשומה ומנסה INSERT → 1062 Duplicate entry
+        FcmToken::withoutGlobalScopes()->updateOrCreate(
             ['token' => $data['token']],
             [
                 'tenant_id' => $tenantId,

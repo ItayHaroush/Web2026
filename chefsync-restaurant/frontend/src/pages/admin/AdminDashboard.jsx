@@ -48,6 +48,18 @@ export default function AdminDashboard() {
     const canViewRevenue = isOwner() || isManager();
     const canManualPaymentTools = isOwner() || isManager();
 
+    /** כרטיס "טיפול בתשלום" (HYP) מהשרת; אם ריק — נופלים ל-10 האחרונות עם pending/failed */
+    const bannerUnpaidOrders = useMemo(() => {
+        if (manualPaymentOrders.length > 0) {
+            return manualPaymentOrders;
+        }
+        return recentOrders.filter(
+            (o) =>
+                (o.payment_status === 'pending' || o.payment_status === 'failed') &&
+                o.status !== 'cancelled'
+        );
+    }, [manualPaymentOrders, recentOrders]);
+
     useEffect(() => {
         fetchDashboard();
     }, []);
@@ -232,22 +244,56 @@ export default function AdminDashboard() {
                 </div>
             </div>
 
-            {/* התראה על הזמנות לא שולמו */}
-            {(() => {
-                const unpaidCount = recentOrders.filter(o => o.payment_status === 'pending' || o.payment_status === 'failed').length;
-                if (unpaidCount === 0) return null;
-                return (
-                    <div
-                        onClick={() => navigate('/admin/orders')}
-                        className="bg-orange-50 border border-orange-200 rounded-2xl p-4 mb-6 flex items-center gap-3 cursor-pointer hover:bg-orange-100 transition-colors"
-                    >
-                        <FaExclamationTriangle className="text-orange-500 flex-shrink-0" />
+            {/* התראה על הזמנות לא שולמו — מספר הזמנה + סיבה; לחיצה פותחת את ההזמנה במסך ההזמנות כשיש אחת */}
+            {bannerUnpaidOrders.length > 0 && (
+                <div
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            if (bannerUnpaidOrders.length === 1) {
+                                navigate(`/admin/orders?orderId=${bannerUnpaidOrders[0].id}`);
+                            } else {
+                                navigate('/admin/orders');
+                            }
+                        }
+                    }}
+                    onClick={() => {
+                        if (bannerUnpaidOrders.length === 1) {
+                            navigate(`/admin/orders?orderId=${bannerUnpaidOrders[0].id}`);
+                        } else {
+                            navigate('/admin/orders');
+                        }
+                    }}
+                    className="bg-orange-50 border border-orange-200 rounded-2xl p-4 mb-6 flex flex-col sm:flex-row sm:items-start gap-3 cursor-pointer hover:bg-orange-100 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2"
+                >
+                    <FaExclamationTriangle className="text-orange-500 flex-shrink-0 mt-0.5" />
+                    <div className="min-w-0 flex-1">
                         <p className="text-sm font-bold text-orange-800">
-                            {unpaidCount === 1 ? 'יש הזמנה אחת בהמתנה לתשלום' : `יש ${unpaidCount} הזמנות בהמתנה לתשלום`}
+                            {bannerUnpaidOrders.length === 1
+                                ? 'יש הזמנה אחת בהמתנה לתשלום'
+                                : `יש ${bannerUnpaidOrders.length} הזמנות בהמתנה לתשלום`}
                         </p>
+                        <ul className="mt-2 space-y-1 text-xs font-bold text-orange-900/90">
+                            {bannerUnpaidOrders.slice(0, 6).map((o) => {
+                                const reason =
+                                    paymentStatusBadgeLabel(o) ||
+                                    (o.payment_status === 'failed' ? 'תשלום נכשל' : 'ממתין לתשלום');
+                                return (
+                                    <li key={o.id} className="flex flex-wrap gap-x-2 gap-y-0.5">
+                                        <span className="font-black tabular-nums">#{o.id}</span>
+                                        <span className="text-orange-800/90">{reason}</span>
+                                    </li>
+                                );
+                            })}
+                        </ul>
+                        {bannerUnpaidOrders.length > 6 && (
+                            <p className="text-[10px] font-bold text-orange-700 mt-1.5">ועוד {bannerUnpaidOrders.length - 6}…</p>
+                        )}
                     </div>
-                );
-            })()}
+                </div>
+            )}
 
             {/* כרטיסי סטטיסטיקה מצומצמים */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
