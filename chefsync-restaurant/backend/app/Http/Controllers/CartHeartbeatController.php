@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\CartSession;
 use App\Models\Restaurant;
+use App\Services\PhoneValidationService;
 use Illuminate\Http\Request;
 
 class CartHeartbeatController extends Controller
@@ -33,7 +34,10 @@ class CartHeartbeatController extends Controller
         ]);
 
         $cart = $validated['cart'];
-        $customerPhone = $validated['customer_phone'] ?? null;
+        $customerPhoneRaw = isset($validated['customer_phone']) ? trim((string) $validated['customer_phone']) : '';
+        $customerPhone = $customerPhoneRaw !== '' ? $customerPhoneRaw : null;
+        $normalizedPhone = $customerPhone ? PhoneValidationService::normalizeIsraeliMobileE164($customerPhone) : null;
+        $storedPhone = $normalizedPhone ?? $customerPhone;
         $customerId = $validated['customer_id'] ?? null;
         $customerName = $validated['customer_name'] ?? null;
 
@@ -51,14 +55,24 @@ class CartHeartbeatController extends Controller
             ->where('restaurant_id', $restaurant->id);
 
         // חייב טלפון או customer_id כדי לשלוח תזכורת
-        if (!$customerPhone && !$customerId) {
+        if (!$storedPhone && !$customerId) {
             return response()->json(['success' => true]); // לא שומרים אורחים ללא מזהה
         }
 
         if ($customerId) {
             $query->where('customer_id', $customerId);
         } else {
-            $query->where('customer_phone', $customerPhone)->whereNull('customer_id');
+            $query->whereNull('customer_id');
+            if ($normalizedPhone) {
+                $query->where(function ($q) use ($normalizedPhone, $customerPhone) {
+                    $q->where('customer_phone', $normalizedPhone);
+                    if ($customerPhone !== null && $customerPhone !== $normalizedPhone) {
+                        $q->orWhere('customer_phone', $customerPhone);
+                    }
+                });
+            } elseif ($customerPhone !== null) {
+                $query->where('customer_phone', $customerPhone);
+            }
         }
 
         $session = $query->first();
@@ -71,14 +85,14 @@ class CartHeartbeatController extends Controller
 
         if ($session) {
             $session->update(array_merge($data, [
-                'customer_phone' => $customerPhone ?? $session->customer_phone,
+                'customer_phone' => $storedPhone ?? $session->customer_phone,
                 'customer_id' => $customerId ?? $session->customer_id,
             ]));
         } else {
             CartSession::create([
                 'tenant_id' => $tenantId,
                 'restaurant_id' => $restaurant->id,
-                'customer_phone' => $customerPhone,
+                'customer_phone' => $storedPhone,
                 'customer_id' => $customerId,
                 'customer_name' => $customerName,
                 'cart_data' => $cart,

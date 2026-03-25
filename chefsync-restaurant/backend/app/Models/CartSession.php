@@ -43,24 +43,45 @@ class CartSession extends Model
 
     /**
      * סימון סלי לקוח כהושלמו לאחר תשלום (או מזומן) — לא לפני אישור אשראי B2C.
+     *
+     * ההזמנה שומרת טלפון ב-E164; ה-heartbeat עלול לשמור פורמט גולמי (050…).
+     * לכן משווים אחרי נרמול, ולא מסמנים סשן של לקוח רשום אחר עם אותו מספר.
      */
     public static function markCompletedForB2COrder(Order $order): void
     {
-        $normalized = PhoneValidationService::normalizeIsraeliMobileE164($order->customer_phone ?? '');
-        $q = static::query()
+        $order = $order->fresh();
+        $normalizedOrderPhone = PhoneValidationService::normalizeIsraeliMobileE164($order->customer_phone ?? '');
+
+        $candidates = static::query()
             ->where('tenant_id', $order->tenant_id)
             ->where('restaurant_id', $order->restaurant_id)
-            ->whereNull('completed_order_id');
+            ->whereNull('completed_order_id')
+            ->get();
 
-        $q->where(function ($sub) use ($order, $normalized) {
-            if ($order->customer_id) {
-                $sub->where('customer_id', $order->customer_id);
+        $ids = [];
+        foreach ($candidates as $session) {
+            if ($order->customer_id && $session->customer_id && (int) $session->customer_id === (int) $order->customer_id) {
+                $ids[] = $session->id;
+                continue;
             }
-            if ($normalized) {
-                $sub->orWhere('customer_phone', $normalized);
-            }
-        });
 
-        $q->update(['completed_order_id' => $order->id]);
+            if (!$normalizedOrderPhone || $session->customer_phone === null || $session->customer_phone === '') {
+                continue;
+            }
+
+            $sessionNorm = PhoneValidationService::normalizeIsraeliMobileE164($session->customer_phone);
+            if ($sessionNorm !== $normalizedOrderPhone) {
+                continue;
+            }
+
+            if ($session->customer_id === null) {
+                $ids[] = $session->id;
+            }
+        }
+
+        $ids = array_values(array_unique($ids));
+        if ($ids !== []) {
+            static::whereIn('id', $ids)->update(['completed_order_id' => $order->id]);
+        }
     }
 }
