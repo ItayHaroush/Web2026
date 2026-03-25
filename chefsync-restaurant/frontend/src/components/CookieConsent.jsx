@@ -31,7 +31,7 @@ export default function CookieConsent() {
                         <FaCookie className="text-orange-500 text-2xl flex-shrink-0 mt-1 hidden sm:block" />
                         <div>
                             <p className="text-sm sm:text-base leading-relaxed">
-                                <span className="font-semibold">אנחנו משתמשים בעוקבים (Cookies)</span> כדי לשפר את חווית המשתמש ולנתח את השימוש באתר.
+                                <span className="font-semibold">אנחנו משתמשים בעוקבים (Cookies)</span> כדי לשפר את חווית המשתמש ולנתח את השימוש באתר, ובמזהה מבקר אנונימי בדפדפן (לא מבוסס טלפון) לספירת כניסות לדפים.
                                 המשך גלישה באתר מהווה הסכמה לשימוש בעוקבים אלו.
                                 <a
                                     href="/legal/privacy"

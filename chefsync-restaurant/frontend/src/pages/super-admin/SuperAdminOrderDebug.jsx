@@ -79,6 +79,9 @@ export default function SuperAdminOrderDebug() {
     const [errors, setErrors] = useState([]);
     const [loadingErrors, setLoadingErrors] = useState(false);
     const [severityFilter, setSeverityFilter] = useState('');
+    const [includeResolved, setIncludeResolved] = useState(false);
+    const [errorsPage, setErrorsPage] = useState(1);
+    const [errorsPaginator, setErrorsPaginator] = useState(null);
 
     const handleSearch = async () => {
         const params = {};
@@ -134,17 +137,33 @@ export default function SuperAdminOrderDebug() {
         }
     };
 
-    const loadErrors = async () => {
+    const loadErrors = async (page = 1, opts = {}) => {
+        const showAllResolved = opts.includeResolved !== undefined ? opts.includeResolved : includeResolved;
         setLoadingErrors(true);
         try {
-            const params = {};
+            const params = { page };
             if (severityFilter) params.severity = severityFilter;
+            if (showAllResolved) {
+                params.resolved = 'all';
+            }
             const res = await api.get('/super-admin/system-errors', {
                 params,
                 headers: getAuthHeaders(),
             });
             if (res.data?.success) {
-                setErrors(res.data.data?.data || []);
+                const p = res.data.data;
+                setErrors(Array.isArray(p?.data) ? p.data : []);
+                setErrorsPaginator(
+                    p && typeof p.current_page === 'number'
+                        ? {
+                              current_page: p.current_page,
+                              last_page: p.last_page ?? 1,
+                              total: p.total ?? 0,
+                              per_page: p.per_page ?? 50,
+                          }
+                        : null
+                );
+                setErrorsPage(page);
             }
         } catch (e) {
             toast.error(e.response?.data?.message || 'שגיאה בטעינת שגיאות');
@@ -160,7 +179,20 @@ export default function SuperAdminOrderDebug() {
             });
             if (res.data?.success) {
                 toast.success('השגיאה סומנה כפתורה');
-                setErrors(prev => prev.map(e => e.id === id ? { ...e, resolved: true, resolved_at: new Date().toISOString() } : e));
+                if (!includeResolved) {
+                    setErrors(prev => prev.filter(e => e.id !== id));
+                    setErrorsPaginator(p =>
+                        p && typeof p.total === 'number'
+                            ? { ...p, total: Math.max(0, p.total - 1) }
+                            : p
+                    );
+                } else {
+                    setErrors(prev =>
+                        prev.map(e =>
+                            e.id === id ? { ...e, resolved: true, resolved_at: new Date().toISOString() } : e
+                        )
+                    );
+                }
             }
         } catch (e) {
             toast.error('שגיאה בעדכון');
@@ -207,7 +239,7 @@ export default function SuperAdminOrderDebug() {
                             אירועי הזמנות
                         </button>
                         <button
-                            onClick={() => { setActiveTab('errors'); loadErrors(); }}
+                            onClick={() => { setActiveTab('errors'); loadErrors(1); }}
                             className={`px-5 py-2.5 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'errors'
                                 ? 'bg-red-500 text-white shadow-lg shadow-red-500/20'
                                 : 'bg-white border border-gray-200 text-gray-500 hover:bg-gray-50'
@@ -455,11 +487,31 @@ export default function SuperAdminOrderDebug() {
                         {/* Filters */}
                         <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
                             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                                <h2 className="text-lg font-black text-gray-900 flex items-center gap-2">
-                                    <FaExclamationTriangle className="text-red-500" size={16} />
-                                    שגיאות מערכת
-                                </h2>
-                                <div className="flex items-center gap-3">
+                                <div>
+                                    <h2 className="text-lg font-black text-gray-900 flex items-center gap-2">
+                                        <FaExclamationTriangle className="text-red-500" size={16} />
+                                        שגיאות מערכת
+                                    </h2>
+                                    <p className="text-[11px] text-gray-500 mt-1 max-w-xl leading-relaxed">
+                                        ברירת מחדל: רק שגיאות פתוחות (לא מסומנות כטופל). לפרטים טכניים נוספים ראה גם{' '}
+                                        <code className="text-[10px] bg-gray-100 px-1 rounded" dir="ltr">storage/logs/laravel.log</code>{' '}
+                                        בשרת.
+                                    </p>
+                                </div>
+                                <div className="flex flex-wrap items-center gap-3">
+                                    <label className="flex items-center gap-2 text-xs font-bold text-gray-600 cursor-pointer select-none">
+                                        <input
+                                            type="checkbox"
+                                            checked={includeResolved}
+                                            onChange={e => {
+                                                const v = e.target.checked;
+                                                setIncludeResolved(v);
+                                                loadErrors(1, { includeResolved: v });
+                                            }}
+                                            className="rounded border-gray-300 text-brand-primary focus:ring-brand-primary/30"
+                                        />
+                                        הצג גם שגיאות שטופלו
+                                    </label>
                                     <div className="relative">
                                         <FaFilter className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs" />
                                         <select
@@ -475,7 +527,7 @@ export default function SuperAdminOrderDebug() {
                                         </select>
                                     </div>
                                     <button
-                                        onClick={loadErrors}
+                                        onClick={() => loadErrors(1)}
                                         disabled={loadingErrors}
                                         className="px-4 py-2 bg-brand-primary text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-brand-primary/95 transition-all disabled:opacity-50 flex items-center gap-2"
                                     >
@@ -494,9 +546,13 @@ export default function SuperAdminOrderDebug() {
                                     <p className="text-xs font-bold text-gray-400 uppercase">טוען שגיאות...</p>
                                 </div>
                             ) : errors.length === 0 ? (
-                                <div className="py-12 text-center">
+                                <div className="py-12 text-center px-4">
                                     <FaCheck className="mx-auto mb-3 text-green-300" size={32} />
-                                    <p className="text-xs font-bold text-gray-400 uppercase">אין שגיאות פעילות</p>
+                                    <p className="text-xs font-bold text-gray-500">
+                                        {includeResolved
+                                            ? 'אין רשומות שגיאות במערכת'
+                                            : 'אין שגיאות פתוחות (לא מטופלות)'}
+                                    </p>
                                 </div>
                             ) : (
                                 <div className="overflow-x-auto">
@@ -544,6 +600,30 @@ export default function SuperAdminOrderDebug() {
                                             ))}
                                         </tbody>
                                     </table>
+                                </div>
+                            )}
+                            {errorsPaginator && errorsPaginator.last_page > 1 && (
+                                <div className="flex flex-wrap items-center justify-center gap-3 py-4 border-t border-gray-100 bg-gray-50/50">
+                                    <button
+                                        type="button"
+                                        disabled={errorsPage <= 1 || loadingErrors}
+                                        onClick={() => loadErrors(errorsPage - 1)}
+                                        className="px-3 py-1.5 rounded-lg text-xs font-black bg-white border border-gray-200 disabled:opacity-40 hover:bg-gray-50"
+                                    >
+                                        הקודם
+                                    </button>
+                                    <span className="text-xs font-bold text-gray-600">
+                                        עמוד {errorsPaginator.current_page} מתוך {errorsPaginator.last_page}
+                                        {typeof errorsPaginator.total === 'number' ? ` (${errorsPaginator.total} רשומות)` : ''}
+                                    </span>
+                                    <button
+                                        type="button"
+                                        disabled={errorsPage >= errorsPaginator.last_page || loadingErrors}
+                                        onClick={() => loadErrors(errorsPage + 1)}
+                                        className="px-3 py-1.5 rounded-lg text-xs font-black bg-white border border-gray-200 disabled:opacity-40 hover:bg-gray-50"
+                                    >
+                                        הבא
+                                    </button>
                                 </div>
                             )}
                         </div>

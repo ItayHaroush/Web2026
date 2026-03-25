@@ -204,6 +204,9 @@ export default function NotificationSettings() {
                         </div>
                         {smtpStatus ? (
                             <div className="space-y-1">
+                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">
+                                    מנוע: {smtpStatus.driver || '-'}
+                                </p>
                                 <p className="text-sm font-black text-gray-900">
                                     {smtpStatus.host || 'לא מוגדר'}
                                 </p>
@@ -211,8 +214,19 @@ export default function NotificationSettings() {
                                     פורט: {smtpStatus.port || '-'} | הצפנה: {smtpStatus.encryption || '-'}
                                 </p>
                                 <p className={`text-xs font-bold ${smtpStatus.connected ? 'text-green-600' : 'text-red-500'}`}>
-                                    {smtpStatus.connected ? 'מחובר ופעיל' : 'לא מחובר'}
+                                    {smtpStatus.connection_test === 'skipped' && smtpStatus.connection_note
+                                        ? smtpStatus.connection_note
+                                        : smtpStatus.connection_test === 'not_applicable' && smtpStatus.connection_note
+                                            ? smtpStatus.connection_note
+                                            : smtpStatus.connected
+                                                ? (smtpStatus.connection_test === 'smtp_socket' ? 'חיבור SMTP אומת בהצלחה' : 'תקין')
+                                                : 'לא מחובר לשרת SMTP'}
                                 </p>
+                                {smtpStatus.connection_error && (
+                                    <p className="text-[10px] text-red-600 font-mono break-all" dir="ltr">
+                                        {smtpStatus.connection_error}
+                                    </p>
+                                )}
                             </div>
                         ) : (
                             <p className="text-xs text-gray-400">טוען...</p>

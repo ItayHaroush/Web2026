@@ -3,15 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Models\CartSession;
-use App\Models\Order;
-use App\Models\PaymentSession;
-use App\Models\Restaurant;
 use App\Models\FcmToken;
 use App\Models\MonitoringAlert;
 use App\Models\NotificationLog;
+use App\Models\Order;
+use App\Models\PaymentSession;
+use App\Models\Restaurant;
 use App\Models\User;
-use App\Services\RestaurantPaymentService;
 use App\Services\FcmService;
+use App\Services\RestaurantPaymentService;
+use App\Services\SystemErrorReporter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -39,6 +40,7 @@ class HypOrderCallbackController extends Controller
     public function handleSuccess(Request $request)
     {
         $result = $this->processSuccess($request->all());
+
         return $this->redirectToOrderStatus($result['restaurant_id'], $result['order_id'], $result['status']);
     }
 
@@ -53,8 +55,8 @@ class HypOrderCallbackController extends Controller
         $redirectUrl = $this->buildOrderStatusUrl($result['restaurant_id'], $result['order_id'], $result['status']);
 
         return response()->json([
-            'success'      => $result['status'] === 'success',
-            'message'      => $result['message'],
+            'success' => $result['status'] === 'success',
+            'message' => $result['message'],
             'redirect_url' => $redirectUrl,
         ]);
     }
@@ -66,6 +68,7 @@ class HypOrderCallbackController extends Controller
     public function handleError(Request $request)
     {
         $result = $this->processError($request->all());
+
         return $this->redirectToOrderStatus($result['restaurant_id'], $result['order_id'], 'failed');
     }
 
@@ -80,8 +83,8 @@ class HypOrderCallbackController extends Controller
         $redirectUrl = $this->buildOrderStatusUrl($result['restaurant_id'], $result['order_id'], 'failed');
 
         return response()->json([
-            'success'      => false,
-            'message'      => $result['message'],
+            'success' => false,
+            'message' => $result['message'],
             'redirect_url' => $redirectUrl,
         ]);
     }
@@ -100,12 +103,12 @@ class HypOrderCallbackController extends Controller
 
         Log::info('HYP order payment success callback', [
             'transaction_id' => $transactionId,
-            'ccode'          => $ccode,
-            'amount'         => $amount,
-            'hyp_order'      => $hypOrderId,
-            'fild1'          => $params['fild1'],
-            'fild2'          => $params['fild2'],
-            'fild3'          => $params['fild3'],
+            'ccode' => $ccode,
+            'amount' => $amount,
+            'hyp_order' => $hypOrderId,
+            'fild1' => $params['fild1'],
+            'fild2' => $params['fild2'],
+            'fild3' => $params['fild3'],
         ]);
 
         // מציאת הזמנה לפני בדיקת CCode — כדי לעדכן payment_status=failed בדשבורד/קופה
@@ -123,17 +126,18 @@ class HypOrderCallbackController extends Controller
             return $this->resolveOrderContext($params, 'failed', 'התשלום לא אושר');
         }
 
-        if (!$order) {
+        if (! $order) {
             Log::error('HYP order callback: order not found', [
                 'hyp_order' => $hypOrderId,
-                'fild3'     => $params['fild3'],
+                'fild3' => $params['fild3'],
             ]);
+
             return ['restaurant_id' => '', 'order_id' => '', 'status' => 'failed', 'message' => 'הזמנה לא נמצאה'];
         }
 
         $restaurant = Restaurant::withoutGlobalScope('tenant')->find($order->restaurant_id);
 
-        if (!$restaurant) {
+        if (! $restaurant) {
             Log::error('HYP order callback: restaurant not found', ['restaurant_id' => $order->restaurant_id]);
             $this->markOrderCreditPaymentFailed($order, 'מסעדה לא נמצאה');
 
@@ -151,6 +155,7 @@ class HypOrderCallbackController extends Controller
                     Log::warning('CartSession markCompleted (idempotent)', ['order_id' => $order->id, 'error' => $e->getMessage()]);
                 }
             }
+
             return ['restaurant_id' => $restaurant->id, 'order_id' => $order->id, 'status' => 'success', 'message' => 'התשלום כבר בוצע'];
         }
 
@@ -184,9 +189,9 @@ class HypOrderCallbackController extends Controller
             }
 
             $session->update([
-                'status'             => 'completed',
+                'status' => 'completed',
                 'hyp_transaction_id' => $transactionId,
-                'completed_at'       => now(),
+                'completed_at' => now(),
             ]);
 
             $expectedAmount = $session->amount;
@@ -196,10 +201,10 @@ class HypOrderCallbackController extends Controller
 
         // עדכון הזמנה — מעבר מ-awaiting_payment ל-pending (תור מטבח) אחרי תשלום מאושר
         $orderUpdates = [
-            'payment_status'         => Order::PAYMENT_PAID,
+            'payment_status' => Order::PAYMENT_PAID,
             'payment_transaction_id' => $transactionId,
-            'payment_amount'         => $expectedAmount,
-            'paid_at'                => now(),
+            'payment_amount' => $expectedAmount,
+            'paid_at' => now(),
         ];
         if ($order->status === Order::STATUS_AWAITING_PAYMENT) {
             $orderUpdates['status'] = Order::STATUS_PENDING;
@@ -213,9 +218,9 @@ class HypOrderCallbackController extends Controller
         }
 
         Log::info('HYP order payment completed', [
-            'order_id'       => $order->id,
+            'order_id' => $order->id,
             'transaction_id' => $transactionId,
-            'amount'         => $expectedAmount,
+            'amount' => $expectedAmount,
         ]);
 
         // FCM — רגילה: new_order למטבח; עתידית: future_order_created בלבד (new_order יישלח ב-ProcessFutureOrders)
@@ -248,27 +253,27 @@ class HypOrderCallbackController extends Controller
                 body: $notificationBody,
                 data: [
                     'orderId' => (string) $order->id,
-                    'type'    => $notificationType,
-                    'url'     => $deepLink,
+                    'type' => $notificationType,
+                    'url' => $deepLink,
                 ]
             );
 
             MonitoringAlert::create([
-                'tenant_id'     => $restaurant->tenant_id,
+                'tenant_id' => $restaurant->tenant_id,
                 'restaurant_id' => $restaurant->id,
-                'alert_type'    => $alertType,
-                'title'         => $notificationTitle,
-                'body'          => $notificationBody,
-                'severity'      => 'info',
-                'metadata'      => ['order_id' => $order->id, 'scheduled_for' => $order->scheduled_for],
-                'is_read'       => false,
+                'alert_type' => $alertType,
+                'title' => $notificationTitle,
+                'body' => $notificationBody,
+                'severity' => 'info',
+                'metadata' => ['order_id' => $order->id, 'scheduled_for' => $order->scheduled_for],
+                'is_read' => false,
             ]);
 
             $this->sendSuperAdminOrderAlert($order, $restaurant);
         } catch (\Throwable $e) {
             Log::warning('Failed to send FCM notification after HYP payment', [
                 'order_id' => $order->id,
-                'error'    => $e->getMessage(),
+                'error' => $e->getMessage(),
             ]);
         }
 
@@ -283,8 +288,8 @@ class HypOrderCallbackController extends Controller
         $params = $this->normalizeParams($inputParams);
 
         Log::warning('HYP order payment error callback', [
-            'ccode'     => $params['ccode'],
-            'error'     => $params['errMsg'],
+            'ccode' => $params['ccode'],
+            'error' => $params['errMsg'],
             'hyp_order' => $params['order_field'],
         ]);
 
@@ -293,6 +298,17 @@ class HypOrderCallbackController extends Controller
         if ($order) {
             $order->update(['payment_status' => Order::PAYMENT_FAILED]);
 
+            SystemErrorReporter::report(
+                'payment_failure',
+                'תשלום אשראי (HYP) נכשל: '.($params['errMsg'] ?: 'לא צוינה סיבה'),
+                'warning',
+                $order->tenant_id,
+                $order->id,
+                $order->correlation_id,
+                null,
+                ['ccode' => $params['ccode'] ?? null, 'hyp_order' => $params['order_field'] ?? null]
+            );
+
             $session = PaymentSession::where('order_id', $order->id)
                 ->where('status', '!=', 'completed')
                 ->latest()
@@ -300,7 +316,7 @@ class HypOrderCallbackController extends Controller
 
             if ($session) {
                 $session->update([
-                    'status'        => 'failed',
+                    'status' => 'failed',
                     'error_message' => $params['errMsg'] ?: 'payment_declined',
                 ]);
             }
@@ -316,7 +332,7 @@ class HypOrderCallbackController extends Controller
                         'restaurant_id' => $order->restaurant_id,
                         'alert_type' => 'payment_failed',
                         'title' => "תשלום נכשל — הזמנה #{$order->id}",
-                        'body' => "תשלום באשראי נכשל עבור הזמנה #{$order->id} ({$order->customer_name}, ₪{$order->total_amount}). " . ($params['errMsg'] ?: 'סיבה לא ידועה'),
+                        'body' => "תשלום באשראי נכשל עבור הזמנה #{$order->id} ({$order->customer_name}, ₪{$order->total_amount}). ".($params['errMsg'] ?: 'סיבה לא ידועה'),
                         'severity' => 'critical',
                         'metadata' => ['order_id' => $order->id, 'error' => $params['errMsg']],
                         'is_read' => false,
@@ -328,8 +344,8 @@ class HypOrderCallbackController extends Controller
                     NotificationLog::create([
                         'channel' => 'system',
                         'type' => 'order_alert',
-                        'title' => "תשלום נכשל: " . ($restaurant->name ?? $tenantId) . " — #{$order->id}",
-                        'body' => "תשלום באשראי נכשל עבור הזמנה #{$order->id} (₪{$order->total_amount}). " . ($params['errMsg'] ?: ''),
+                        'title' => 'תשלום נכשל: '.($restaurant->name ?? $tenantId)." — #{$order->id}",
+                        'body' => "תשלום באשראי נכשל עבור הזמנה #{$order->id} (₪{$order->total_amount}). ".($params['errMsg'] ?: ''),
                         'sender_id' => null,
                         'target_restaurant_ids' => [$order->restaurant_id],
                         'tokens_targeted' => 0,
@@ -343,9 +359,9 @@ class HypOrderCallbackController extends Controller
 
             return [
                 'restaurant_id' => $restaurant?->id ?? '',
-                'order_id'      => $order->id,
-                'status'        => 'failed',
-                'message'       => $params['errMsg'] ?: 'התשלום נכשל',
+                'order_id' => $order->id,
+                'status' => 'failed',
+                'message' => $params['errMsg'] ?: 'התשלום נכשל',
             ];
         }
 
@@ -387,14 +403,14 @@ class HypOrderCallbackController extends Controller
     {
         return [
             'transaction_id' => $input['Id'] ?? '',
-            'ccode'          => (int) ($input['CCode'] ?? -1),
-            'amount'         => $input['Amount'] ?? '',
-            'order_field'    => $input['Order'] ?? '',
-            'fild1'          => $input['Fild1'] ?? '',
-            'fild2'          => $input['Fild2'] ?? '',
-            'fild3'          => $input['Fild3'] ?? '',
-            'errMsg'         => $input['errMsg'] ?? $input['ErrMsg'] ?? '',
-            'sign'           => $input['Sign'] ?? '',
+            'ccode' => (int) ($input['CCode'] ?? -1),
+            'amount' => $input['Amount'] ?? '',
+            'order_field' => $input['Order'] ?? '',
+            'fild1' => $input['Fild1'] ?? '',
+            'fild2' => $input['Fild2'] ?? '',
+            'fild3' => $input['Fild3'] ?? '',
+            'errMsg' => $input['errMsg'] ?? $input['ErrMsg'] ?? '',
+            'sign' => $input['Sign'] ?? '',
         ];
     }
 
@@ -407,14 +423,18 @@ class HypOrderCallbackController extends Controller
         $orderId = $params['order_field'];
         if ($orderId && is_numeric($orderId)) {
             $order = Order::withoutGlobalScope('tenant')->find((int) $orderId);
-            if ($order) return $order;
+            if ($order) {
+                return $order;
+            }
         }
 
         // fallback: Fild3 (אם HYP לא דרס אותו)
         $fild3 = $params['fild3'];
         if ($fild3 && is_numeric($fild3)) {
             $order = Order::withoutGlobalScope('tenant')->find((int) $fild3);
-            if ($order) return $order;
+            if ($order) {
+                return $order;
+            }
         }
 
         return null;
@@ -427,14 +447,18 @@ class HypOrderCallbackController extends Controller
     {
         try {
             $superAdmins = User::where('is_super_admin', true)->pluck('id');
-            if ($superAdmins->isEmpty()) return;
+            if ($superAdmins->isEmpty()) {
+                return;
+            }
 
             $tokens = FcmToken::withoutGlobalScopes()
                 ->where('tenant_id', '__super_admin__')
                 ->whereIn('user_id', $superAdmins)
                 ->pluck('token');
 
-            if ($tokens->isEmpty()) return;
+            if ($tokens->isEmpty()) {
+                return;
+            }
 
             $title = "הזמנה חדשה (אשראי) - {$restaurant->name}";
             $body = "#{$order->id} | {$order->customer_name} | ₪{$order->total_amount}";
@@ -471,7 +495,9 @@ class HypOrderCallbackController extends Controller
     {
         try {
             $tokens = FcmToken::where('tenant_id', $tenantId)->pluck('token');
-            if ($tokens->isEmpty()) return;
+            if ($tokens->isEmpty()) {
+                return;
+            }
 
             $fcm = app(FcmService::class);
             foreach ($tokens as $token) {
@@ -494,15 +520,16 @@ class HypOrderCallbackController extends Controller
 
         return [
             'restaurant_id' => $restaurant?->id ?? '',
-            'order_id'      => $order?->id ?? '',
-            'status'        => $status,
-            'message'       => $message,
+            'order_id' => $order?->id ?? '',
+            'status' => $status,
+            'message' => $message,
         ];
     }
 
     private function redirectToOrderStatus(string $restaurantId, string $orderId, string $paymentStatus): \Illuminate\Http\RedirectResponse
     {
         $url = $this->buildOrderStatusUrl($restaurantId, $orderId, $paymentStatus);
+
         return redirect()->away($url);
     }
 

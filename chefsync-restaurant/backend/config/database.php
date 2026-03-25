@@ -105,7 +105,7 @@ return [
 
         'options' => [
             'cluster' => env('REDIS_CLUSTER', 'redis'),
-            'prefix' => env('REDIS_PREFIX', Str::slug(env('APP_NAME', 'laravel'), '_') . '_database_'),
+            'prefix' => env('REDIS_PREFIX', Str::slug(env('APP_NAME', 'laravel'), '_').'_database_'),
             'persistent' => env('REDIS_PERSISTENT', false),
         ],
 
@@ -128,5 +128,10 @@ return [
         ],
 
     ],
+
+    /*
+    | Optional full path to mysqldump binary (super-admin DB backup). If empty, PATH is searched.
+    */
+    'mysqldump_path' => env('MYSQLDUMP_PATH'),
 
 ];

@@ -210,7 +210,7 @@ export default function DatabaseMaintenance() {
                             </div>
                         </div>
                         <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">שגיאות פתוחות</p>
-                        <p className="text-2xl font-black text-orange-600">{status?.unresolved_errors ?? '-'}</p>
+                        <p className="text-2xl font-black text-orange-600">{status?.system_errors_unresolved ?? '-'}</p>
                     </div>
                 </div>
 

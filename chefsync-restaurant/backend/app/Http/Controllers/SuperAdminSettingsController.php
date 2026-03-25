@@ -6,10 +6,12 @@ use App\Models\PolicyVersion;
 use App\Models\SystemError;
 use App\Models\SystemSetting;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Symfony\Component\Mailer\Transport\Smtp\EsmtpTransport;
+use Symfony\Component\Process\ExecutableFinder;
+use Symfony\Component\Process\Process;
 
 class SuperAdminSettingsController extends Controller
 {
@@ -317,6 +319,14 @@ class SuperAdminSettingsController extends Controller
         try {
             $dbName = DB::selectOne('SELECT DATABASE() as db')->db;
 
+            $tableCountRow = DB::selectOne(<<<'SQL'
+                SELECT COUNT(*) as c
+                FROM information_schema.TABLES
+                WHERE TABLE_SCHEMA = ?
+                  AND TABLE_TYPE = 'BASE TABLE'
+            SQL, [$dbName]);
+            $tableCount = (int) ($tableCountRow->c ?? 0);
+
             // Table sizes
             $tables = DB::select(<<<'SQL'
                 SELECT TABLE_NAME as table_name,
@@ -352,6 +362,7 @@ class SuperAdminSettingsController extends Controller
                 'success' => true,
                 'data' => [
                     'database_name' => $dbName,
+                    'table_count' => $tableCount,
                     'tables' => $tables,
                     'total_migrations' => count($ranMigrations),
                     'queue_pending' => $queueJobs,
@@ -371,7 +382,7 @@ class SuperAdminSettingsController extends Controller
     }
 
     /**
-     * Run database backup (triggers artisan command)
+     * Run database backup via mysqldump (requires MySQL client on the app server).
      */
     public function runBackup(Request $request)
     {
@@ -380,39 +391,115 @@ class SuperAdminSettingsController extends Controller
                 'user_id' => $request->user()->id,
             ]);
 
-            // Run mysqldump
-            $dbName = config('database.connections.mysql.database');
-            $dbUser = config('database.connections.mysql.username');
-            $dbPass = config('database.connections.mysql.password');
-            $dbHost = config('database.connections.mysql.host');
-            $timestamp = now()->format('Y-m-d_H-i-s');
-            $backupPath = storage_path("app/backups/{$timestamp}_{$dbName}.sql");
+            $connectionName = config('database.default');
+            $connection = config("database.connections.{$connectionName}", []);
+            $driver = $connection['driver'] ?? '';
 
-            // Ensure backup directory exists
+            if (! in_array($driver, ['mysql', 'mariadb'], true)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'גיבוי דרך mysqldump זמין רק עבור חיבור MySQL/MariaDB. השתמש בגיבוי של ספק ה-DB או ב-SQLite העתקת קובץ.',
+                ], 422);
+            }
+
+            $dbName = $connection['database'] ?? '';
+            $dbUser = $connection['username'] ?? '';
+            $dbPass = (string) ($connection['password'] ?? '');
+            $dbHost = $connection['host'] ?? '127.0.0.1';
+            $dbPort = (string) ($connection['port'] ?? '3306');
+            $dbSocket = $connection['unix_socket'] ?? '';
+
+            if ($dbName === '') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'שם בסיס הנתונים לא מוגדר.',
+                ], 422);
+            }
+
+            $mysqldump = $this->resolveMysqldumpBinary();
+
+            if ($mysqldump === null) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'לא נמצאה תוכנית mysqldump. התקן לקוח MySQL/MariaDB (למשל macOS: brew install mysql-client), או הוסף ב-.env את MYSQLDUMP_PATH עם נתיב מלא (לדוגמה /opt/homebrew/bin/mysqldump). שים לב: תהליך ה-PHP חייב לראות את הקובץ ב-PATH או בנתיב המפורש.',
+                ], 500);
+            }
+
+            $timestamp = now()->format('Y-m-d_H-i-s');
+            $safeBase = preg_replace('/[^a-zA-Z0-9._-]+/', '_', $dbName) ?: 'database';
+            $backupPath = storage_path("app/backups/{$timestamp}_{$safeBase}.sql");
+
             if (! is_dir(storage_path('app/backups'))) {
                 mkdir(storage_path('app/backups'), 0755, true);
             }
 
-            $command = sprintf(
-                'mysqldump -h%s -u%s -p%s %s > %s 2>&1',
-                escapeshellarg($dbHost),
-                escapeshellarg($dbUser),
-                escapeshellarg($dbPass),
-                escapeshellarg($dbName),
-                escapeshellarg($backupPath)
-            );
+            $args = [$mysqldump];
+            if ($dbSocket !== '') {
+                $args[] = '--socket='.$dbSocket;
+            } else {
+                $args[] = '-h';
+                $args[] = $dbHost;
+                $args[] = '-P';
+                $args[] = $dbPort;
+            }
+            $args = array_merge($args, [
+                '-u', $dbUser,
+                '--password='.$dbPass,
+                '--single-transaction',
+                '--quick',
+                '--skip-lock-tables',
+                $dbName,
+            ]);
 
-            exec($command, $output, $returnVar);
+            $process = new Process($args);
+            $process->setTimeout(3600);
+            $process->run();
 
-            if ($returnVar !== 0) {
+            $stderr = trim($process->getErrorOutput());
+            $stdout = trim($process->getOutput());
+            $combined = trim($stderr !== '' ? $stderr : $stdout);
+
+            if (! $process->isSuccessful()) {
+                Log::warning('mysqldump failed', [
+                    'exit_code' => $process->getExitCode(),
+                    'error' => $combined,
+                ]);
+
                 return response()->json([
                     'success' => false,
-                    'message' => 'גיבוי נכשל',
-                    'error' => implode("\n", $output),
+                    'message' => 'גיבוי נכשל (mysqldump)',
+                    'error' => $combined !== '' ? $combined : 'קוד יציאה: '.$process->getExitCode(),
                 ], 500);
             }
 
-            $fileSize = file_exists($backupPath) ? round(filesize($backupPath) / 1024 / 1024, 2) : 0;
+            if ($stdout === '') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'גיבוי הושלם ללא פלט — בדוק הרשאות וחיבור לבסיס הנתונים.',
+                    'error' => $stderr,
+                ], 500);
+            }
+
+            if (! $this->isPlausibleMysqldumpOutput($stdout)) {
+                Log::warning('mysqldump output rejected (not a valid SQL dump)', [
+                    'excerpt' => mb_substr($stdout, 0, 200),
+                ]);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'הפלט אינו גיבוי SQL תקין (למשל שגיאת shell במקום mysqldump). התקן mysql-client והגדר MYSQLDUMP_PATH ב-.env.',
+                    'error' => mb_substr($stdout, 0, 500),
+                ], 500);
+            }
+
+            if (file_put_contents($backupPath, $stdout) === false) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'לא ניתן לכתוב קובץ גיבוי ל-storage/app/backups',
+                ], 500);
+            }
+
+            $fileSize = round(filesize($backupPath) / 1024 / 1024, 2);
 
             return response()->json([
                 'success' => true,
@@ -430,6 +517,153 @@ class SuperAdminSettingsController extends Controller
                 'success' => false,
                 'message' => 'שגיאה בגיבוי: '.$e->getMessage(),
             ], 500);
+        }
+    }
+
+    /**
+     * True if stdout looks like mysqldump (not a shell error accidentally saved as .sql).
+     */
+    private function isPlausibleMysqldumpOutput(string $stdout): bool
+    {
+        $s = ltrim($stdout);
+        if ($s === '') {
+            return false;
+        }
+
+        if (preg_match('/command not found|not found$/mi', $s)) {
+            return false;
+        }
+
+        if (preg_match('/^sh:\\s*\\S+:\\s*command not found/mi', $s)) {
+            return false;
+        }
+
+        if (preg_match('/^--\s*(MySQL|MariaDB)\s+dump\b/mi', $s)) {
+            return true;
+        }
+
+        if (str_contains($s, 'CREATE TABLE') || str_contains($s, '/*!40') || str_contains($s, 'LOCK TABLES `')) {
+            return true;
+        }
+
+        return strlen($s) > 200 && str_starts_with($s, '--');
+    }
+
+    /**
+     * Locate mysqldump: MYSQLDUMP_PATH, enriched PATH + sh, ExecutableFinder extra dirs, Cellar globs, fixed paths.
+     */
+    private function resolveMysqldumpBinary(): ?string
+    {
+        $candidates = [];
+
+        $configured = config('database.mysqldump_path');
+        if (is_string($configured) && $configured !== '') {
+            $candidates[] = $configured;
+        }
+
+        $extraDirs = [
+            '/opt/homebrew/bin',
+            '/opt/homebrew/sbin',
+            '/opt/homebrew/opt/mysql-client/bin',
+            '/opt/homebrew/opt/mysql/bin',
+            '/opt/homebrew/opt/mariadb/bin',
+            '/usr/local/bin',
+            '/usr/local/sbin',
+            '/usr/local/mysql/bin',
+            '/usr/bin',
+            '/bin',
+            '/usr/sbin',
+            '/sbin',
+        ];
+
+        $finderPath = (new ExecutableFinder)->find('mysqldump', null, $extraDirs);
+        if (is_string($finderPath) && $finderPath !== '') {
+            $candidates[] = $finderPath;
+        }
+
+        if (PHP_OS_FAMILY !== 'Windows') {
+            $pathEnv = getenv('PATH') ?: '/usr/bin:/bin';
+            $enrichedPath = implode(':', array_unique(array_merge(
+                $extraDirs,
+                explode(PATH_SEPARATOR, $pathEnv)
+            )));
+            try {
+                $probe = new Process(
+                    ['sh', '-c', 'command -v mysqldump 2>/dev/null'],
+                    null,
+                    ['PATH' => $enrichedPath]
+                );
+                $probe->setTimeout(8);
+                $probe->run();
+                $line = trim($probe->getOutput());
+                if ($line !== '' && str_contains($line, 'mysqldump')) {
+                    $candidates[] = preg_split('/\s+/', $line, 2)[0];
+                }
+            } catch (\Throwable) {
+                // ignore
+            }
+        }
+
+        foreach ([
+            '/opt/homebrew/Cellar/mysql-client/*/bin/mysqldump',
+            '/opt/homebrew/Cellar/mysql/*/bin/mysqldump',
+            '/opt/homebrew/Cellar/mariadb/*/bin/mysqldump',
+            '/usr/local/Cellar/mysql-client/*/bin/mysqldump',
+            '/usr/local/Cellar/mysql/*/bin/mysqldump',
+        ] as $pattern) {
+            foreach (glob($pattern, GLOB_NOSORT) ?: [] as $p) {
+                $candidates[] = $p;
+            }
+        }
+
+        $candidates = array_merge($candidates, [
+            '/opt/homebrew/bin/mysqldump',
+            '/opt/homebrew/opt/mysql-client/bin/mysqldump',
+            '/opt/homebrew/opt/mysql/bin/mysqldump',
+            '/opt/homebrew/opt/mariadb/bin/mysqldump',
+            '/usr/local/bin/mysqldump',
+            '/usr/local/mysql/bin/mysqldump',
+            '/usr/bin/mysqldump',
+            '/bin/mysqldump',
+        ]);
+
+        foreach (array_unique(array_filter($candidates)) as $path) {
+            if (! is_string($path) || $path === '') {
+                continue;
+            }
+            if ($this->mysqldumpBinaryWorks($path)) {
+                return $path;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * True if path is a runnable mysqldump (handles PHP-FPM PATH / is_executable edge cases).
+     */
+    private function mysqldumpBinaryWorks(string $path): bool
+    {
+        if (! is_file($path)) {
+            return false;
+        }
+
+        if (PHP_OS_FAMILY === 'Windows') {
+            return str_ends_with(strtolower($path), '.exe') || is_executable($path);
+        }
+
+        if (is_executable($path)) {
+            return true;
+        }
+
+        try {
+            $p = new Process([$path, '--version']);
+            $p->setTimeout(10);
+            $p->run();
+
+            return $p->isSuccessful();
+        } catch (\Throwable) {
+            return false;
         }
     }
 
@@ -508,7 +742,7 @@ class SuperAdminSettingsController extends Controller
     // ==========================================
 
     /**
-     * Get SMTP status
+     * Get SMTP status — uses the same Symfony transport Laravel resolves for the default mailer (incl. smtps/ssl on 465).
      */
     public function getSmtpStatus()
     {
@@ -517,6 +751,7 @@ class SuperAdminSettingsController extends Controller
             $port = config('mail.mailers.smtp.port');
             $encryption = config('mail.mailers.smtp.encryption');
             $configured = ! empty($host) && $host !== '127.0.0.1' && $host !== 'localhost';
+            $driver = config('mail.default');
 
             $fromAddress = (string) config('mail.from.address', '');
             $fromDomain = null;
@@ -528,31 +763,40 @@ class SuperAdminSettingsController extends Controller
             $tlsWarning = $configured && ($encLower === '' || $encLower === 'none');
 
             $connected = false;
-            if ($configured) {
+            $connectionTest = 'smtp_socket';
+            $connectionNote = null;
+            $connectionError = null;
+
+            if (in_array($driver, ['log', 'array'], true)) {
+                $connectionTest = 'skipped';
+                $connected = true;
+                $connectionNote = 'מצב פיתוח: המייל נכתב ללוג/זיכרון בלבד — לא נשלח דרך SMTP.';
+            } elseif ($driver !== 'smtp') {
+                $connectionTest = 'not_applicable';
+                $connected = true;
+                $connectionNote = 'המיילר הפעיל אינו smtp — בדיקת חיבור לשרת SMTP אינה משקפת את שליחת הדוא״ל בפועל.';
+            } elseif ($configured) {
                 try {
-                    $transport = new \Symfony\Component\Mailer\Transport\Smtp\EsmtpTransport(
-                        $host,
-                        (int) $port,
-                        $encryption === 'tls',
-                    );
-                    $username = config('mail.mailers.smtp.username');
-                    $password = config('mail.mailers.smtp.password');
-                    if ($username && $password && $username !== 'null' && $password !== 'null') {
-                        $transport->setUsername($username);
-                        $transport->setPassword($password);
+                    $transport = Mail::mailer()->getSymfonyTransport();
+                    if ($transport instanceof EsmtpTransport) {
+                        $transport->start();
+                        $transport->stop();
+                        $connected = true;
+                    } else {
+                        $connectionTest = 'not_applicable';
+                        $connectionNote = 'Transport אינו SMTP — לא נבדק חיבור לשרת.';
                     }
-                    $transport->start();
-                    $transport->stop();
-                    $connected = true;
-                } catch (\Exception $e) {
+                } catch (\Throwable $e) {
                     Log::debug('SMTP connection test failed', ['error' => $e->getMessage()]);
+                    $connected = false;
+                    $connectionError = $e->getMessage();
                 }
             }
 
             return response()->json([
                 'success' => true,
                 'data' => [
-                    'driver' => config('mail.default'),
+                    'driver' => $driver,
                     'host' => $host,
                     'port' => $port,
                     'encryption' => $encryption,
@@ -560,6 +804,9 @@ class SuperAdminSettingsController extends Controller
                     'from_name' => config('mail.from.name'),
                     'configured' => $configured,
                     'connected' => $connected,
+                    'connection_test' => $connectionTest,
+                    'connection_note' => $connectionNote,
+                    'connection_error' => $connectionError,
                     'bulk_delay_seconds' => (int) config('mail.bulk_delay_seconds', 2),
                     'deliverability' => [
                         'from_domain' => $fromDomain,
@@ -680,8 +927,13 @@ class SuperAdminSettingsController extends Controller
             $query->where('severity', $request->severity);
         }
 
-        if ($request->has('resolved')) {
-            $query->where('resolved', filter_var($request->resolved, FILTER_VALIDATE_BOOLEAN));
+        $resolved = $request->query('resolved');
+        if ($resolved === 'all') {
+            // no filter
+        } elseif ($resolved === null) {
+            $query->where('resolved', false);
+        } else {
+            $query->where('resolved', filter_var($resolved, FILTER_VALIDATE_BOOLEAN));
         }
 
         if ($request->has('error_type')) {

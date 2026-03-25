@@ -9,6 +9,8 @@ import DashboardSidebar from '../components/admin/DashboardSidebar';
 import DashboardHeader from '../components/admin/DashboardHeader';
 import FloatingRestaurantAssistant from '../components/admin/FloatingRestaurantAssistant';
 import ImpersonationBanner from '../components/admin/ImpersonationBanner';
+import { resolveRestaurantAdminPageKey } from '../utils/pageViewMap';
+import { sendRestaurantAdminPageView } from '../services/analyticsBeacon';
 import {
     FaChartPie,
     FaClipboardList,
@@ -35,6 +37,7 @@ export default function AdminLayout({ children }) {
     const navigate = useNavigate();
     const lastFcmMessageIdsRef = useRef(new Set());
     const fcmNotifCountRef = useRef(0);
+    const lastAnalyticsSigRef = useRef('');
 
     // FCM בכל דפי האדמין — צלצול רק ל-new_order (מטבח)
     useEffect(() => {
@@ -108,6 +111,18 @@ export default function AdminLayout({ children }) {
         document.addEventListener('visibilitychange', clearBadge);
         return () => document.removeEventListener('visibilitychange', clearBadge);
     }, []);
+
+    useEffect(() => {
+        if (!user) return;
+        const pageKey = resolveRestaurantAdminPageKey(location.pathname);
+        if (!pageKey) return;
+        const sig = `${pageKey}|${location.pathname}|${location.search}|${user?.id ?? ''}`;
+        if (lastAnalyticsSigRef.current === sig) return;
+        lastAnalyticsSigRef.current = sig;
+        sendRestaurantAdminPageView(pageKey, getAuthHeaders, {
+            path: location.pathname + location.search,
+        });
+    }, [location.pathname, location.search, user?.id, getAuthHeaders]);
 
     // טען סטטוס המסעדה בכל טעינה של layout
     useEffect(() => {

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\AnalyticsPageViewController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\CustomerAddressController;
@@ -24,6 +25,7 @@ use App\Http\Controllers\PromotionController;
 use App\Http\Controllers\RegisterRestaurantController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RestaurantController;
+use App\Http\Controllers\SuperAdminAnalyticsController;
 use App\Http\Controllers\SuperAdminBillingController;
 use App\Http\Controllers\SuperAdminCartSessionsController;
 use App\Http\Controllers\SuperAdminController;
@@ -66,6 +68,11 @@ Route::post('/register-restaurant', [RegisterRestaurantController::class, 'store
 
 // ערים - ציבורי (לשימוש בטופס הרשמה ואזורי משלוח)
 Route::get('/cities', [SuperAdminController::class, 'getCities'])->name('cities.list');
+
+// אנליטיקות כניסה — ציבורי (ללא tenant)
+Route::post('/analytics/page-view', [AnalyticsPageViewController::class, 'store'])
+    ->middleware('throttle:120,1')
+    ->name('analytics.page-view');
 
 // ============================================
 // פאנל Super Admin - ניהול כללי
@@ -219,6 +226,12 @@ Route::prefix('super-admin')->middleware(['auth:sanctum', 'super_admin'])->group
 
     // לוג מיילים
     Route::get('/email-log', [SuperAdminCustomerController::class, 'emailLog'])->name('super-admin.email-log');
+
+    // אנליטיקות כניסה (פלטפורמה)
+    Route::post('/analytics/page-view', [SuperAdminAnalyticsController::class, 'record'])->name('super-admin.analytics.record');
+    Route::get('/analytics/summary', [SuperAdminAnalyticsController::class, 'summary'])->name('super-admin.analytics.summary');
+    Route::get('/analytics/top-entities', [SuperAdminAnalyticsController::class, 'topEntities'])->name('super-admin.analytics.top');
+    Route::get('/analytics/menu-insights', [SuperAdminAnalyticsController::class, 'menuInsights'])->name('super-admin.analytics.menu-insights');
 });
 
 // ============================================
@@ -231,6 +244,10 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'tenant'])->group(function (
     Route::post('/subscription/create-payment-session', [AdminController::class, 'createPaymentSession'])->name('admin.subscription.payment-session');
     Route::post('/subscription/check-pending', [AdminController::class, 'checkPendingPayment'])->name('admin.subscription.check-pending');
     Route::get('/billing/info', [AdminController::class, 'billingInfo'])->name('admin.billing.info');
+
+    Route::post('/analytics/page-view', [AnalyticsPageViewController::class, 'storeRestaurantAdmin'])
+        ->middleware('throttle:120,1')
+        ->name('admin.analytics.page-view');
 
     // POS auth - מחוץ ל-CheckRestaurantAccess כדי שסיסמא שגויה תחזיר 401 ולא 404
     Route::post('pos/set-pin', [\App\Http\Controllers\POSController::class, 'setPin'])->name('admin.pos.set-pin');

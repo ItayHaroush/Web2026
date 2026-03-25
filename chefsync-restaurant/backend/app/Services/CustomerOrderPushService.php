@@ -22,7 +22,7 @@ class CustomerOrderPushService
     public function sendPendingOrderReminder(Order $order): bool
     {
         $customer = $this->resolveCustomer($order);
-        if (!$customer) {
+        if (! $customer) {
             return false;
         }
 
@@ -31,7 +31,7 @@ class CustomerOrderPushService
             return false;
         }
 
-        if (!$this->customerAllowsPushForTenant($customer, $tenantId)) {
+        if (! $this->customerAllowsPushForTenant($customer, $tenantId)) {
             return false;
         }
 
@@ -43,7 +43,7 @@ class CustomerOrderPushService
             ? ($messages['need_payment'] ?? null)
             : ($messages['awaiting_restaurant'] ?? null);
 
-        if (!$message || empty($message['title']) || empty($message['body'])) {
+        if (! $message || empty($message['title']) || empty($message['body'])) {
             return false;
         }
 
@@ -52,7 +52,7 @@ class CustomerOrderPushService
             return false;
         }
 
-        $path = '/' . rawurlencode($tenantId) . '/order-status/' . $order->id . '?continue=1';
+        $path = '/'.rawurlencode($tenantId).'/order-status/'.$order->id.'?continue=1';
         $data = [
             'type' => 'customer_pending_order',
             'orderId' => (string) $order->id,
@@ -78,6 +78,19 @@ class CustomerOrderPushService
             }
         }
 
+        if (! $anyOk && $tokens->isNotEmpty()) {
+            SystemErrorReporter::report(
+                'push_failure',
+                'כל ניסיונות FCM לתזכורת הזמנה ממתינה נכשלו',
+                'warning',
+                $tenantId,
+                $order->id,
+                $order->correlation_id,
+                null,
+                ['customer_id' => $customer->id, 'tokens' => $tokens->count(), 'context' => 'customer_pending_reminder']
+            );
+        }
+
         return $anyOk;
     }
 
@@ -91,7 +104,7 @@ class CustomerOrderPushService
         }
 
         $customer = $this->resolveCustomer($order);
-        if (!$customer) {
+        if (! $customer) {
             return;
         }
 
@@ -100,12 +113,12 @@ class CustomerOrderPushService
             return;
         }
 
-        if (!$this->customerAllowsPushForTenant($customer, $tenantId)) {
+        if (! $this->customerAllowsPushForTenant($customer, $tenantId)) {
             return;
         }
 
         $message = $this->resolveMessage($order, $status);
-        if (!$message) {
+        if (! $message) {
             return;
         }
 
@@ -117,9 +130,12 @@ class CustomerOrderPushService
         $data = $this->buildDataPayload($order, $status, $tenantId);
         $fcm = app(FcmService::class);
 
+        $ok = 0;
         foreach ($tokens as $token) {
             try {
-                $fcm->sendToToken($token, $message['title'], $message['body'], $data);
+                if ($fcm->sendToToken($token, $message['title'], $message['body'], $data)) {
+                    $ok++;
+                }
             } catch (\Throwable $e) {
                 Log::warning('Customer order status FCM failed', [
                     'error' => $e->getMessage(),
@@ -127,6 +143,19 @@ class CustomerOrderPushService
                     'customer_id' => $customer->id,
                 ]);
             }
+        }
+
+        if ($ok === 0) {
+            SystemErrorReporter::report(
+                'push_failure',
+                'כל ניסיונות FCM לעדכון סטטוס הזמנה ללקוח נכשלו',
+                'warning',
+                $tenantId,
+                $order->id,
+                $order->correlation_id,
+                null,
+                ['customer_id' => $customer->id, 'status' => $status, 'tokens' => $tokens->count()]
+            );
         }
     }
 
@@ -144,7 +173,7 @@ class CustomerOrderPushService
         }
 
         $phone = PhoneValidationService::normalizeIsraeliMobileE164((string) $order->customer_phone);
-        if (!$phone) {
+        if (! $phone) {
             return null;
         }
 
@@ -165,8 +194,8 @@ class CustomerOrderPushService
         $messageKey = $status;
         if ($status === 'ready' || $status === 'delivered') {
             $messageKey = $order->delivery_method === 'pickup'
-                ? $status . '_pickup'
-                : $status . '_delivery';
+                ? $status.'_pickup'
+                : $status.'_delivery';
         }
 
         return $messageKey;
@@ -209,7 +238,7 @@ class CustomerOrderPushService
      */
     private function buildDataPayload(Order $order, string $status, string $tenantId): array
     {
-        $path = '/' . rawurlencode($tenantId) . '/order-status/' . $order->id;
+        $path = '/'.rawurlencode($tenantId).'/order-status/'.$order->id;
 
         $data = [
             'type' => 'customer_order_status',
@@ -221,7 +250,7 @@ class CustomerOrderPushService
 
         if ($status === Order::STATUS_DELIVERED) {
             $data['action'] = 'review';
-            $data['url'] = $path . '?review=1';
+            $data['url'] = $path.'?review=1';
         }
 
         return $data;

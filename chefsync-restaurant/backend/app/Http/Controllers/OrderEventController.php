@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Order;
 use App\Models\OrderEvent;
 use App\Models\SystemError;
-use App\Models\Order;
 use Illuminate\Http\Request;
 
 class OrderEventController extends Controller
@@ -30,19 +30,19 @@ class OrderEventController extends Controller
         // Collect order IDs from various search criteria
         $orderIdFilters = [];
 
-        if (!empty($validated['order_id'])) {
+        if (! empty($validated['order_id'])) {
             $orderIdFilters[] = [(int) $validated['order_id']];
         }
 
-        if (!empty($validated['phone'])) {
+        if (! empty($validated['phone'])) {
             $ids = Order::withoutGlobalScopes()
-                ->where('customer_phone', 'like', '%' . $validated['phone'] . '%')
+                ->where('customer_phone', 'like', '%'.$validated['phone'].'%')
                 ->pluck('id')
                 ->toArray();
             $orderIdFilters[] = $ids;
         }
 
-        if (!empty($validated['transaction_id'])) {
+        if (! empty($validated['transaction_id'])) {
             $ids = Order::withoutGlobalScopes()
                 ->where('payment_transaction_id', $validated['transaction_id'])
                 ->pluck('id')
@@ -50,7 +50,7 @@ class OrderEventController extends Controller
             $orderIdFilters[] = $ids;
         }
 
-        if (!empty($orderIdFilters)) {
+        if (! empty($orderIdFilters)) {
             $matchedIds = $orderIdFilters[0];
             for ($i = 1; $i < count($orderIdFilters); $i++) {
                 $matchedIds = array_intersect($matchedIds, $orderIdFilters[$i]);
@@ -58,30 +58,30 @@ class OrderEventController extends Controller
             $query->whereIn('order_id', $matchedIds);
         }
 
-        if (!empty($validated['correlation_id'])) {
+        if (! empty($validated['correlation_id'])) {
             $query->where('correlation_id', $validated['correlation_id']);
         }
 
-        if (!empty($validated['tenant_id'])) {
+        if (! empty($validated['tenant_id'])) {
             $query->where('tenant_id', $validated['tenant_id']);
         }
 
-        if (!empty($validated['event_type'])) {
+        if (! empty($validated['event_type'])) {
             $query->where('event_type', $validated['event_type']);
         }
 
-        if (!empty($validated['from'])) {
+        if (! empty($validated['from'])) {
             $query->where('created_at', '>=', $validated['from']);
         }
 
-        if (!empty($validated['to'])) {
+        if (! empty($validated['to'])) {
             $query->where('created_at', '<=', $validated['to']);
         }
 
         $events = $query->orderByDesc('created_at')->paginate(50);
 
         // If searching by order_id and no events found, still return the order info
-        if ($events->isEmpty() && !empty($validated['order_id'])) {
+        if ($events->isEmpty() && ! empty($validated['order_id'])) {
             $order = Order::withoutGlobalScopes()
                 ->select('id', 'customer_name', 'customer_phone', 'status', 'total_amount', 'correlation_id', 'tenant_id', 'created_at')
                 ->find($validated['order_id']);
@@ -147,8 +147,13 @@ class OrderEventController extends Controller
             $query->where('severity', $request->severity);
         }
 
-        if ($request->has('resolved') && $request->resolved !== '') {
-            $query->where('resolved', filter_var($request->resolved, FILTER_VALIDATE_BOOLEAN));
+        $resolved = $request->query('resolved');
+        if ($resolved === 'all') {
+            // no filter
+        } elseif ($resolved === null) {
+            $query->where('resolved', false);
+        } else {
+            $query->where('resolved', filter_var($resolved, FILTER_VALIDATE_BOOLEAN));
         }
 
         if ($request->has('error_type')) {

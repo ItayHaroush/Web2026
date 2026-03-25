@@ -2,28 +2,28 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CartSession;
 use App\Models\Customer;
 use App\Models\CustomerAddress;
-use App\Models\Order;
-use App\Models\OrderItem;
-use App\Models\MenuItem;
-use App\Models\Restaurant;
-use App\Models\FcmToken;
 use App\Models\DeliveryZone;
-use App\Services\FcmService;
-use App\Services\PhoneValidationService;
-use App\Services\BasePriceService;
-use App\Services\PromotionService;
-use App\Services\OrderEventService;
-use App\Services\RestaurantPaymentService;
-use App\Models\PaymentSession;
-use App\Models\SystemError;
-use App\Models\User;
+use App\Models\FcmToken;
+use App\Models\MenuItem;
 use App\Models\MonitoringAlert;
 use App\Models\NotificationLog;
-use App\Models\CartSession;
+use App\Models\Order;
+use App\Models\OrderItem;
+use App\Models\PaymentSession;
+use App\Models\Restaurant;
+use App\Models\User;
+use App\Services\BasePriceService;
 use App\Services\CustomerOrderMailService;
 use App\Services\CustomerOrderPushService;
+use App\Services\FcmService;
+use App\Services\OrderEventService;
+use App\Services\PhoneValidationService;
+use App\Services\PromotionService;
+use App\Services\RestaurantPaymentService;
+use App\Services\SystemErrorReporter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
@@ -34,7 +34,9 @@ use Illuminate\Validation\ValidationException;
 class OrderController extends Controller
 {
     private const DEFAULT_SALAD_GROUP_NAME = 'סלטים קבועים';
+
     private const DEFAULT_HOT_GROUP_NAME = 'תוספות חמות';
+
     /**
      * צור הזמנה חדשה עם וריאציות ותוספות
      *
@@ -59,7 +61,7 @@ class OrderController extends Controller
                 'customer_name' => 'required|string|max:100',
                 'customer_phone' => 'required|string|max:20',
                 'delivery_method' => 'required|in:pickup,delivery',
-                'payment_method' => 'required|in:' . (config('payment.credit_card_enabled') ? 'cash,credit_card' : 'cash'),
+                'payment_method' => 'required|in:'.(config('payment.credit_card_enabled') ? 'cash,credit_card' : 'cash'),
                 'delivery_address' => 'nullable|string|max:255',
                 'delivery_city' => 'nullable|string|max:120',
                 'delivery_street' => 'nullable|string|max:255',
@@ -89,7 +91,7 @@ class OrderController extends Controller
             Log::info('Order request received', [
                 'delivery_method' => $validated['delivery_method'],
                 'delivery_address' => $validated['delivery_address'] ?? null,
-                'all_data' => $request->all()
+                'all_data' => $request->all(),
             ]);
 
             if ($validated['delivery_method'] === 'delivery' && empty($validated['delivery_address'])) {
@@ -100,7 +102,7 @@ class OrderController extends Controller
             }
 
             $normalizedCustomerPhone = PhoneValidationService::normalizeIsraeliMobileE164($validated['customer_phone']);
-            if (!$normalizedCustomerPhone) {
+            if (! $normalizedCustomerPhone) {
                 return response()->json([
                     'success' => false,
                     'message' => 'מספר טלפון לא תקין (נייד ישראלי בלבד)',
@@ -121,7 +123,7 @@ class OrderController extends Controller
                 },
             ])->where('tenant_id', $tenantId)->first();
 
-            if (!$restaurant) {
+            if (! $restaurant) {
                 throw new \Exception('Restaurant not found for tenant');
             }
 
@@ -129,7 +131,7 @@ class OrderController extends Controller
             $isPreviewMode = $request->header('X-Preview-Mode') === 'true';
             $isTestOrder = $validated['is_test'] ?? false;
 
-            if (!$restaurant->is_approved && !$isPreviewMode && !$isTestOrder) {
+            if (! $restaurant->is_approved && ! $isPreviewMode && ! $isTestOrder) {
                 return response()->json([
                     'success' => false,
                     'message' => 'המסעדה ממתינה לאישור מנהל מערכת ולא ניתן לבצע הזמנה',
@@ -137,14 +139,14 @@ class OrderController extends Controller
                 ], 403);
             }
 
-            if (!($restaurant->is_open_now ?? false)) {
-                $isFutureOrder = !empty($validated['scheduled_for']);
+            if (! ($restaurant->is_open_now ?? false)) {
+                $isFutureOrder = ! empty($validated['scheduled_for']);
                 $isCreditPayment = ($validated['payment_method'] ?? 'cash') === 'credit_card';
-                $isRegisteredCustomer = !empty($validated['customer_id']) || (!empty($validated['customer_phone']) && Customer::where('phone', $validated['customer_phone'])->where('is_registered', true)->exists());
+                $isRegisteredCustomer = ! empty($validated['customer_id']) || (! empty($validated['customer_phone']) && Customer::where('phone', $validated['customer_phone'])->where('is_registered', true)->exists());
 
                 // סגורה — חובה הזמנה עתידית; לקוח רשום יכול לשלם מזומן, אורח רק אשראי
                 $paymentOk = $isCreditPayment || $isRegisteredCustomer;
-                if (!$isFutureOrder || !$paymentOk || !$restaurant->allow_future_orders) {
+                if (! $isFutureOrder || ! $paymentOk || ! $restaurant->allow_future_orders) {
                     return response()->json([
                         'success' => false,
                         'message' => 'המסעדה סגורה כרגע ולא ניתן לבצע הזמנה',
@@ -158,13 +160,13 @@ class OrderController extends Controller
             }
 
             // ולידציה: הזמנה עתידית — מינימום זמן (max(שעה, הכנה+30 דק')) + שעות פעילות
-            if (!empty($validated['scheduled_for'])) {
+            if (! empty($validated['scheduled_for'])) {
                 $scheduledCarbon = \Carbon\Carbon::parse($validated['scheduled_for'])->timezone('Asia/Jerusalem');
                 $minScheduled = $this->minimumScheduledAt($restaurant, $validated['delivery_method']);
                 if ($scheduledCarbon->lt($minScheduled)) {
                     return response()->json([
                         'success' => false,
-                        'message' => 'ניתן להזמין החל מ-' . $minScheduled->format('H:i') . ' בתאריך ' . $minScheduled->format('d/m/Y'),
+                        'message' => 'ניתן להזמין החל מ-'.$minScheduled->format('H:i').' בתאריך '.$minScheduled->format('d/m/Y'),
                         'data' => [
                             'min_scheduled_at' => $minScheduled->toIso8601String(),
                         ],
@@ -175,7 +177,7 @@ class OrderController extends Controller
                     $restaurant->operating_hours ?? [],
                     $scheduledCarbon
                 );
-                if (!$isOpenAtScheduled) {
+                if (! $isOpenAtScheduled) {
                     return response()->json([
                         'success' => false,
                         'message' => 'השעה שנבחרה אינה בשעות הפעילות של המסעדה',
@@ -187,7 +189,7 @@ class OrderController extends Controller
 
             // ולידציה: אם בחרו אשראי, לוודא שהמסעדה תומכת (מסוף מאומת + שיטה מופעלת)
             if (($validated['payment_method'] ?? 'cash') === 'credit_card') {
-                if (!$restaurant->acceptsCreditCard()) {
+                if (! $restaurant->acceptsCreditCard()) {
                     return response()->json([
                         'success' => false,
                         'message' => 'המסעדה אינה מקבלת תשלום באשראי כרגע',
@@ -211,7 +213,7 @@ class OrderController extends Controller
                 : null;
 
             if ($validated['delivery_method'] === 'delivery') {
-                if (($deliveryLat === null || $deliveryLng === null) && !empty($validated['customer_address_id'])) {
+                if (($deliveryLat === null || $deliveryLng === null) && ! empty($validated['customer_address_id'])) {
                     $addrCustomer = Customer::where('phone', $normalizedCustomerPhone)->first();
                     if ($addrCustomer) {
                         $savedAddr = CustomerAddress::query()
@@ -242,7 +244,7 @@ class OrderController extends Controller
                     $restaurant
                 );
 
-                if (!$deliveryValidation['success']) {
+                if (! $deliveryValidation['success']) {
                     return response()->json([
                         'success' => false,
                         'message' => $deliveryValidation['message'],
@@ -279,7 +281,7 @@ class OrderController extends Controller
                                 ->with([
                                     'addons' => function ($addonQuery) {
                                         $addonQuery->where('is_active', true)->orderBy('sort_order');
-                                    }
+                                    },
                                 ]);
                         },
                         'restaurant',
@@ -304,21 +306,21 @@ class OrderController extends Controller
                 $variantSourceIsRestaurant = $menuItem->use_variants;
                 $availableVariants = $variantSourceIsRestaurant ? $restaurantVariants : $menuItem->variants;
 
-                if (array_key_exists('variant_id', $itemData) && !is_null($itemData['variant_id'])) {
+                if (array_key_exists('variant_id', $itemData) && ! is_null($itemData['variant_id'])) {
                     $variantId = (int) $itemData['variant_id'];
                     $selectedVariant = $availableVariants->firstWhere('id', $variantId);
-                    if (!$selectedVariant) {
+                    if (! $selectedVariant) {
                         throw ValidationException::withMessages([
                             "items.$index.variant_id" => ['וריאציה שנבחרה אינה זמינה לפריט זה'],
                         ]);
                     }
                     $variantDelta = $variantSourceIsRestaurant
-                        ? round((new BasePriceService())->calculateBasePrice($menuItem->id, $menuItem->category_id, $variantId), 2)
+                        ? round((new BasePriceService)->calculateBasePrice($menuItem->id, $menuItem->category_id, $variantId), 2)
                         : round((float) $selectedVariant->price_delta, 2);
                 }
 
                 $addonEntries = collect($itemData['addons'] ?? [])
-                    ->filter(fn($entry) => is_array($entry) && isset($entry['addon_id']))
+                    ->filter(fn ($entry) => is_array($entry) && isset($entry['addon_id']))
                     ->unique('addon_id')
                     ->values();
 
@@ -334,14 +336,14 @@ class OrderController extends Controller
 
                     foreach ($availableAddonGroups as $group) {
                         $groupAddons = $group->addons ?? collect();
-                        $matchedAddon = $groupAddons->first(fn($a) => (string) $a->id === (string) $addonId);
+                        $matchedAddon = $groupAddons->first(fn ($a) => (string) $a->id === (string) $addonId);
                         if ($matchedAddon) {
                             $matchedGroup = $group;
                             break;
                         }
                     }
 
-                    if (!$matchedAddon || !$matchedGroup) {
+                    if (! $matchedAddon || ! $matchedGroup) {
                         throw ValidationException::withMessages([
                             "items.$index.addons" => ['תוספת שנבחרה אינה זמינה עבור הפריט'],
                         ]);
@@ -365,6 +367,7 @@ class OrderController extends Controller
                     $weightedCount = $selectedForGroup->sum(function ($sel) {
                         $weight = (int) ($sel['addon']->selection_weight ?? 1);
                         $qty = (int) ($sel['quantity'] ?? 1);
+
                         return $weight * $qty;
                     });
 
@@ -385,7 +388,7 @@ class OrderController extends Controller
                         $groupIds = json_decode($scope, true);
                         // אם זה array עם קבוצה אחת בלבד, או פורמט ישן שאינו 'both'
                         if ((is_array($groupIds) && count($groupIds) === 1) ||
-                            (!is_array($groupIds) && $scope !== 'both')
+                            (! is_array($groupIds) && $scope !== 'both')
                         ) {
                             $maxAllowed = $menuItem->max_addons;
                         }
@@ -474,7 +477,7 @@ class OrderController extends Controller
             $promotionDiscount = 0;
             $giftLineItems = [];
             $promotionService = null;
-            if (!empty($validated['applied_promotions'])) {
+            if (! empty($validated['applied_promotions'])) {
                 $promotionService = app(PromotionService::class);
                 $result = $promotionService->validateAndApply($lineItems, $validated['applied_promotions'], $tenantId);
                 $promotionDiscount = $result['promotion_discount'];
@@ -523,7 +526,7 @@ class OrderController extends Controller
                 'is_test' => $validated['is_test'] ?? false,           // הזמנת בדיקה
                 'test_note' => $validated['test_note'] ?? null,         // הערה להזמנת בדיקה
                 'scheduled_for' => $validated['scheduled_for'] ?? null,
-                'is_future_order' => !empty($validated['scheduled_for']),
+                'is_future_order' => ! empty($validated['scheduled_for']),
                 'promotion_discount' => $promotionDiscount,
                 'total_amount' => $totalAmount + $deliveryFee - $promotionDiscount,
             ]);
@@ -564,7 +567,7 @@ class OrderController extends Controller
             }
 
             // שמירת שימוש במבצעים
-            if ($promotionService && !empty($validated['applied_promotions'])) {
+            if ($promotionService && ! empty($validated['applied_promotions'])) {
                 foreach ($validated['applied_promotions'] as $ap) {
                     $promotionService->recordUsage($ap['promotion_id'], $order->id, $normalizedCustomerPhone);
                 }
@@ -584,7 +587,7 @@ class OrderController extends Controller
                 ]);
 
                 // שמור כתובת משלוח כברירת מחדל אם חסרה
-                if ($validated['delivery_method'] === 'delivery' && !$customer->default_delivery_address) {
+                if ($validated['delivery_method'] === 'delivery' && ! $customer->default_delivery_address) {
                     $customer->update([
                         'default_delivery_address' => $validated['delivery_address'] ?? null,
                         'default_delivery_city' => $validated['delivery_city'] ?? null,
@@ -602,7 +605,7 @@ class OrderController extends Controller
 
             // פוש למסעדה: הזמנה רגילה = new_order מיד; עתידית = רק future_order_created (המטבח מקבל new_order ב-cron)
             // באשראי — new_order רק אחרי HYP (ב-HypOrderCallbackController)
-            if (!($validated['is_test'] ?? false) && $paymentMethod !== 'credit_card') {
+            if (! ($validated['is_test'] ?? false) && $paymentMethod !== 'credit_card') {
                 $notificationBody = "{$order->customer_name} - ₪{$order->total_amount}";
                 $isFuture = (bool) $order->is_future_order;
 
@@ -620,14 +623,14 @@ class OrderController extends Controller
 
                     try {
                         MonitoringAlert::create([
-                            'tenant_id'     => $tenantId,
+                            'tenant_id' => $tenantId,
                             'restaurant_id' => $restaurantId,
-                            'alert_type'    => 'new_order',
-                            'title'         => "הזמנה חדשה #{$order->id}",
-                            'body'          => $notificationBody,
-                            'severity'      => 'info',
-                            'metadata'      => ['order_id' => $order->id],
-                            'is_read'       => false,
+                            'alert_type' => 'new_order',
+                            'title' => "הזמנה חדשה #{$order->id}",
+                            'body' => $notificationBody,
+                            'severity' => 'info',
+                            'metadata' => ['order_id' => $order->id],
+                            'is_read' => false,
                         ]);
                     } catch (\Throwable $e) {
                         Log::warning('Failed to create MonitoringAlert for new order', ['error' => $e->getMessage()]);
@@ -653,14 +656,14 @@ class OrderController extends Controller
 
                     try {
                         MonitoringAlert::create([
-                            'tenant_id'     => $tenantId,
+                            'tenant_id' => $tenantId,
                             'restaurant_id' => $restaurantId,
-                            'alert_type'    => 'future_order_created',
-                            'title'         => "הזמנה עתידית נרשמה #{$order->id}",
-                            'body'          => $futureBody,
-                            'severity'      => 'info',
-                            'metadata'      => ['order_id' => $order->id, 'scheduled_for' => $order->scheduled_for],
-                            'is_read'       => false,
+                            'alert_type' => 'future_order_created',
+                            'title' => "הזמנה עתידית נרשמה #{$order->id}",
+                            'body' => $futureBody,
+                            'severity' => 'info',
+                            'metadata' => ['order_id' => $order->id, 'scheduled_for' => $order->scheduled_for],
+                            'is_read' => false,
                         ]);
                     } catch (\Throwable $e) {
                         Log::warning('Failed to create MonitoringAlert for future order', ['error' => $e->getMessage()]);
@@ -682,7 +685,7 @@ class OrderController extends Controller
                         'payment_method' => $validated['payment_method'],
                         'total_amount' => $order->total_amount,
                         'items_count' => count($lineItems),
-                        'has_promotions' => !empty($validated['applied_promotions']),
+                        'has_promotions' => ! empty($validated['applied_promotions']),
                     ],
                     $request
                 );
@@ -709,13 +712,13 @@ class OrderController extends Controller
 
                 if ($restaurant && $restaurantPaymentService->isRestaurantReady($restaurant)) {
                     $session = PaymentSession::create([
-                        'tenant_id'     => $tenantId,
+                        'tenant_id' => $tenantId,
                         'restaurant_id' => $restaurantId,
-                        'order_id'      => $order->id,
+                        'order_id' => $order->id,
                         'session_token' => \Illuminate\Support\Str::uuid()->toString(),
-                        'amount'        => $order->total_amount,
-                        'status'        => 'pending',
-                        'expires_at'    => now()->addMinutes(config('payment.order_payment.session_timeout_minutes', 15)),
+                        'amount' => $order->total_amount,
+                        'status' => 'pending',
+                        'expires_at' => now()->addMinutes(config('payment.order_payment.session_timeout_minutes', 15)),
                     ]);
 
                     $paymentUrl = $restaurantPaymentService->generateOrderPaymentUrl($restaurant, $order, $session);
@@ -750,6 +753,18 @@ class OrderController extends Controller
                 'payload' => $request->all(),
             ]);
 
+            $tid = app()->bound('tenant_id') ? app('tenant_id') : null;
+            SystemErrorReporter::report(
+                'order_creation_failed',
+                $e->getMessage(),
+                'critical',
+                is_string($tid) ? $tid : null,
+                null,
+                null,
+                $e->getTraceAsString(),
+                ['route' => 'orders.store']
+            );
+
             return response()->json([
                 'success' => false,
                 'message' => 'שגיאה ביצירת הזמנה',
@@ -782,7 +797,7 @@ class OrderController extends Controller
             $restaurant = Restaurant::withoutGlobalScope('tenant')->find($order->restaurant_id);
             $restaurantPaymentService = app(RestaurantPaymentService::class);
 
-            if (!$restaurant || !$restaurantPaymentService->isRestaurantReady($restaurant)) {
+            if (! $restaurant || ! $restaurantPaymentService->isRestaurantReady($restaurant)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'תשלום באשראי אינו זמין כרגע למסעדה זו',
@@ -795,13 +810,13 @@ class OrderController extends Controller
                 ->update(['status' => 'expired']);
 
             $session = PaymentSession::create([
-                'tenant_id'     => $tenantId,
+                'tenant_id' => $tenantId,
                 'restaurant_id' => $order->restaurant_id,
-                'order_id'      => $order->id,
+                'order_id' => $order->id,
                 'session_token' => \Illuminate\Support\Str::uuid()->toString(),
-                'amount'        => $order->total_amount,
-                'status'        => 'pending',
-                'expires_at'    => now()->addMinutes(config('payment.order_payment.session_timeout_minutes', 15)),
+                'amount' => $order->total_amount,
+                'status' => 'pending',
+                'expires_at' => now()->addMinutes(config('payment.order_payment.session_timeout_minutes', 15)),
             ]);
 
             $paymentUrl = $restaurantPaymentService->generateOrderPaymentUrl($restaurant, $order, $session);
@@ -817,6 +832,18 @@ class OrderController extends Controller
             ]);
         } catch (\Throwable $e) {
             Log::error('Retry payment failed', ['order_id' => $id, 'error' => $e->getMessage()]);
+            $tenantId = app()->bound('tenant_id') ? app('tenant_id') : null;
+            SystemErrorReporter::report(
+                'payment_retry_failed',
+                $e->getMessage(),
+                'error',
+                is_string($tenantId) ? $tenantId : null,
+                (int) $id,
+                null,
+                $e->getTraceAsString(),
+                ['route' => 'orders.retryPayment']
+            );
+
             return response()->json(['success' => false, 'message' => 'שגיאה ביצירת קישור תשלום'], 500);
         }
     }
@@ -847,7 +874,7 @@ class OrderController extends Controller
 
     /**
      * Check if delivery is available for given location
-     * 
+     *
      * POST /check-delivery-zone
      * Body: { delivery_lat: float, delivery_lng: float }
      * Returns: { available: bool, zone: object|null, fee: float, distance_km: float|null, message: string }
@@ -863,7 +890,7 @@ class OrderController extends Controller
             $tenantId = app('tenant_id');
             $restaurant = Restaurant::where('tenant_id', $tenantId)->first();
 
-            if (!$restaurant) {
+            if (! $restaurant) {
                 return response()->json([
                     'success' => false,
                     'available' => false,
@@ -935,7 +962,7 @@ class OrderController extends Controller
 
     /**
      * עדכן סטטוס הזמנה
-     * 
+     *
      * בקשה:
      * {
      *   "status": "preparing" // received, preparing, ready, delivered
@@ -945,7 +972,7 @@ class OrderController extends Controller
     {
         try {
             $validated = $request->validate([
-                'status' => 'required|in:' . implode(',', Order::validStatuses()),
+                'status' => 'required|in:'.implode(',', Order::validStatuses()),
             ]);
 
             $tenantId = app('tenant_id');
@@ -960,10 +987,10 @@ class OrderController extends Controller
             }
 
             // ולידציה: בדיקה שהמעבר מותר לפי transition map
-            if (!$order->canTransitionTo($validated['status'])) {
+            if (! $order->canTransitionTo($validated['status'])) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'מעבר סטטוס לא מותר. ' .
+                    'message' => 'מעבר סטטוס לא מותר. '.
                         ($order->delivery_method === 'pickup' && $validated['status'] === 'delivering'
                             ? 'הזמנות איסוף עצמי אינן דורשות סטטוס "במשלוח"'
                             : 'מעבר זה אינו אפשרי במצב הנוכחי'),
@@ -1001,7 +1028,7 @@ class OrderController extends Controller
                 try {
                     app(\App\Services\PrintService::class)->printOrder($order);
                 } catch (\Exception $e) {
-                    Log::error('Print failed: ' . $e->getMessage());
+                    Log::error('Print failed: '.$e->getMessage());
                 }
             }
 
@@ -1030,6 +1057,18 @@ class OrderController extends Controller
                 'errors' => $e->errors(),
             ], 422);
         } catch (\Exception $e) {
+            $o = isset($order) && $order instanceof Order ? $order : null;
+            SystemErrorReporter::report(
+                'order_status_update_failed',
+                $e->getMessage(),
+                'error',
+                $o?->tenant_id,
+                $o?->id,
+                $o?->correlation_id,
+                $e->getTraceAsString(),
+                ['route' => 'orders.updateStatus', 'order_param_id' => $id]
+            );
+
             return response()->json([
                 'success' => false,
                 'message' => 'שגיאה בעדכון הסטטוס',
@@ -1049,8 +1088,8 @@ class OrderController extends Controller
         $messageKey = $status;
         if ($status === 'ready' || $status === 'delivered') {
             $messageKey = $order->delivery_method === 'pickup'
-                ? $status . '_pickup'
-                : $status . '_delivery';
+                ? $status.'_pickup'
+                : $status.'_delivery';
         }
 
         // אם יש הודעה ספציפית - השתמש בה, אחרת נסה הודעה כללית
@@ -1075,13 +1114,43 @@ class OrderController extends Controller
             }
 
             $fcm = app(FcmService::class);
+            $ok = 0;
             foreach ($tokens as $token) {
-                $fcm->sendToToken($token, $title, $body, $data);
+                if ($fcm->sendToToken($token, $title, $body, $data)) {
+                    $ok++;
+                }
+            }
+            if ($ok === 0) {
+                $orderId = isset($data['orderId']) ? (int) $data['orderId'] : null;
+                SystemErrorReporter::report(
+                    'push_failure',
+                    'כל ניסיונות FCM לצוות המסעדה נכשלו',
+                    'warning',
+                    $tenantId,
+                    $orderId,
+                    null,
+                    null,
+                    [
+                        'channel' => 'restaurant_staff',
+                        'tokens' => $tokens->count(),
+                        'title' => $title,
+                    ]
+                );
             }
         } catch (\Throwable $e) {
             Log::warning('Failed to send FCM notification', [
                 'error' => $e->getMessage(),
             ]);
+            SystemErrorReporter::report(
+                'push_failure',
+                'FCM למסעדה: '.$e->getMessage(),
+                'error',
+                $tenantId,
+                isset($data['orderId']) ? (int) $data['orderId'] : null,
+                null,
+                $e->getTraceAsString(),
+                ['channel' => 'restaurant_staff']
+            );
         }
     }
 
@@ -1089,14 +1158,18 @@ class OrderController extends Controller
     {
         try {
             $superAdmins = User::where('is_super_admin', true)->pluck('id');
-            if ($superAdmins->isEmpty()) return;
+            if ($superAdmins->isEmpty()) {
+                return;
+            }
 
             $tokens = FcmToken::withoutGlobalScopes()
                 ->where('tenant_id', '__super_admin__')
                 ->whereIn('user_id', $superAdmins)
                 ->pluck('token');
 
-            if ($tokens->isEmpty()) return;
+            if ($tokens->isEmpty()) {
+                return;
+            }
 
             $restaurant = Restaurant::where('tenant_id', $tenantId)->first();
             $restaurantName = $restaurant?->name ?? $tenantId;
@@ -1105,8 +1178,9 @@ class OrderController extends Controller
             $body = "#{$order->id} | {$order->customer_name} | ₪{$order->total_amount}";
 
             $fcm = app(FcmService::class);
+            $sentOk = 0;
             foreach ($tokens as $token) {
-                $fcm->sendToToken(
+                if ($fcm->sendToToken(
                     $token,
                     $title,
                     $body,
@@ -1115,6 +1189,20 @@ class OrderController extends Controller
                         'orderId' => (string) $order->id,
                         'tenantId' => $tenantId,
                     ]
+                )) {
+                    $sentOk++;
+                }
+            }
+            if ($sentOk === 0) {
+                SystemErrorReporter::report(
+                    'push_failure',
+                    'כל ניסיונות FCM להתראת סופר-אדמין על הזמנה נכשלו',
+                    'warning',
+                    null,
+                    $order->id,
+                    $order->correlation_id,
+                    null,
+                    ['channel' => 'super_admin_order_alert', 'tenant_id' => $tenantId, 'tokens' => $tokens->count()]
                 );
             }
 
@@ -1127,7 +1215,7 @@ class OrderController extends Controller
                 'sender_id' => null,
                 'target_restaurant_ids' => [],
                 'tokens_targeted' => $tokens->count(),
-                'sent_ok' => $tokens->count(),
+                'sent_ok' => $sentOk,
                 'metadata' => ['order_id' => $order->id, 'tenant_id' => $tenantId],
             ]);
         } catch (\Throwable $e) {
@@ -1150,11 +1238,11 @@ class OrderController extends Controller
 
     /**
      * Validate delivery location and calculate delivery fee
-     * 
-     * @param float|null $lat Customer latitude
-     * @param float|null $lng Customer longitude
-     * @param int $restaurantId Restaurant ID
-     * @param Restaurant $restaurant Restaurant model
+     *
+     * @param  float|null  $lat  Customer latitude
+     * @param  float|null  $lng  Customer longitude
+     * @param  int  $restaurantId  Restaurant ID
+     * @param  Restaurant  $restaurant  Restaurant model
      * @return array ['success' => bool, 'zone' => DeliveryZone|null, 'distance_km' => float|null, 'fee' => float, 'message' => string|null]
      */
     private function validateDeliveryLocation(?float $lat, ?float $lng, int $restaurantId, Restaurant $restaurant): array
@@ -1202,7 +1290,7 @@ class OrderController extends Controller
                     'zone_name' => $zone->name,
                     'city_radius' => $cityRadius,
                     'distance_to_city' => $distanceToCity,
-                    'is_within' => $distanceToCity <= $cityRadius
+                    'is_within' => $distanceToCity <= $cityRadius,
                 ]);
 
                 if ($distanceToCity <= $cityRadius) {
@@ -1213,13 +1301,13 @@ class OrderController extends Controller
 
             // Check polygon-based zone
             $polygon = $zone->polygon ?? [];
-            if (!empty($polygon) && $this->isPointInPolygon($lat, $lng, $polygon)) {
+            if (! empty($polygon) && $this->isPointInPolygon($lat, $lng, $polygon)) {
                 $matchedZone = $zone;
                 break;
             }
         }
 
-        if (!$matchedZone) {
+        if (! $matchedZone) {
             return [
                 'success' => false,
                 'message' => 'הכתובת מחוץ לאזורי המשלוח של המסעדה',
@@ -1292,6 +1380,7 @@ class OrderController extends Controller
         $a = sin($dLat / 2) ** 2
             + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($dLng / 2) ** 2;
         $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
+
         return round($earthRadius * $c, 2);
     }
 
@@ -1314,7 +1403,7 @@ class OrderController extends Controller
                 && ($lng < ($lngJ - $lngI) * ($lat - $latI) / (($latJ - $latI) ?: 1e-9) + $lngI);
 
             if ($intersect) {
-                $inside = !$inside;
+                $inside = ! $inside;
             }
             $j = $i;
         }
@@ -1336,16 +1425,17 @@ class OrderController extends Controller
 
         if ($pricingType === 'per_km') {
             $fee = (float) ($zone->per_km_fee ?? 0) * $distanceKm;
+
             return round($fee, 2);
         }
 
         if ($pricingType === 'tiered') {
             $tiers = $zone->tiered_fees ?? [];
-            if (!is_array($tiers) || empty($tiers)) {
+            if (! is_array($tiers) || empty($tiers)) {
                 return 0.0;
             }
 
-            usort($tiers, fn($a, $b) => ($a['upto_km'] ?? 0) <=> ($b['upto_km'] ?? 0));
+            usort($tiers, fn ($a, $b) => ($a['upto_km'] ?? 0) <=> ($b['upto_km'] ?? 0));
             foreach ($tiers as $tier) {
                 $upto = (float) ($tier['upto_km'] ?? 0);
                 $fee = (float) ($tier['fee'] ?? 0);
@@ -1355,6 +1445,7 @@ class OrderController extends Controller
             }
 
             $last = end($tiers);
+
             return round((float) ($last['fee'] ?? 0), 2);
         }
 
@@ -1368,7 +1459,7 @@ class OrderController extends Controller
     private function resolveAddonGroups($groups)
     {
         return $groups->map(function ($group) {
-            if (($group->source_type ?? null) !== 'category' || !($group->source_category_id ?? null)) {
+            if (($group->source_type ?? null) !== 'category' || ! ($group->source_category_id ?? null)) {
                 return $group;
             }
 
@@ -1383,16 +1474,18 @@ class OrderController extends Controller
             $syntheticAddons = $items->map(function ($item) use ($group, $groupDefaultWeight) {
                 $weight = $item->addon_selection_weight !== null ? (int) $item->addon_selection_weight : $groupDefaultWeight;
                 $weight = max(1, min(10, $weight));
-                $addon = new \stdClass();
-                $addon->id = 'cat_item_' . $item->id;
+                $addon = new \stdClass;
+                $addon->id = 'cat_item_'.$item->id;
                 $addon->name = $item->name;
                 $addon->price_delta = $group->syntheticAddonPriceDelta((float) $item->price);
                 $addon->selection_weight = $weight;
                 $addon->is_default = false;
+
                 return $addon;
             });
 
             $group->setRelation('addons', $syntheticAddons);
+
             return $group;
         });
     }
@@ -1411,7 +1504,7 @@ class OrderController extends Controller
         // ניסיון לפרסר כ-JSON (פורמט חדש - array של IDs)
         $groupIds = json_decode($scope, true);
 
-        if (is_array($groupIds) && !empty($groupIds)) {
+        if (is_array($groupIds) && ! empty($groupIds)) {
             // פורמט חדש - array של IDs
             $filteredGroups = $groups->filter(function ($group) use ($groupIds) {
                 return in_array($group->id, $groupIds, true);
@@ -1421,9 +1514,9 @@ class OrderController extends Controller
             if ($scope === 'both') {
                 $filteredGroups = $groups;
             } elseif ($scope === 'salads') {
-                $filteredGroups = $groups->filter(fn($g) => $g->name === self::DEFAULT_SALAD_GROUP_NAME)->values();
+                $filteredGroups = $groups->filter(fn ($g) => $g->name === self::DEFAULT_SALAD_GROUP_NAME)->values();
             } elseif ($scope === 'hot') {
-                $filteredGroups = $groups->filter(fn($g) => $g->name === self::DEFAULT_HOT_GROUP_NAME)->values();
+                $filteredGroups = $groups->filter(fn ($g) => $g->name === self::DEFAULT_HOT_GROUP_NAME)->values();
             } else {
                 // אם זה לא ערך מוכר, נציג הכל
                 $filteredGroups = $groups;
@@ -1436,7 +1529,7 @@ class OrderController extends Controller
 
     private function filterAddonGroupsByCategory($groups, ?int $categoryId)
     {
-        if (!$categoryId) {
+        if (! $categoryId) {
             return $groups;
         }
 
@@ -1455,7 +1548,7 @@ class OrderController extends Controller
                         }
 
                         $normalized = collect((array) $categoryIds)
-                            ->map(fn($id) => (int) $id)
+                            ->map(fn ($id) => (int) $id)
                             ->all();
 
                         return in_array((int) $categoryId, $normalized, true);
@@ -1463,9 +1556,10 @@ class OrderController extends Controller
                     ->values();
 
                 $group->setRelation('addons', $filteredAddons);
+
                 return $group;
             })
-            ->filter(fn($group) => ($group->addons ?? collect())->isNotEmpty())
+            ->filter(fn ($group) => ($group->addons ?? collect())->isNotEmpty())
             ->values();
     }
 
@@ -1477,15 +1571,15 @@ class OrderController extends Controller
                 return clone $addon;
             });
             $clone->setRelation('addons', $addons);
+
             return $clone;
         });
     }
 
     /**
      * שליחת דירוג וביקורת על הזמנה
-     * 
-     * @param Request $request
-     * @param int $id - מזהה הזמנה
+     *
+     * @param  int  $id  - מזהה הזמנה
      * @return \Illuminate\Http\JsonResponse
      */
     public function submitReview(Request $request, $id)

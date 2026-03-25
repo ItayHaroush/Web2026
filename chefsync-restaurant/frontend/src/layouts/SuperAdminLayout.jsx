@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import { PRODUCT_NAME } from '../constants/brand';
@@ -16,14 +16,30 @@ import {
     FaUsers,
     FaShoppingCart,
     FaCoins,
+    FaChartBar,
 } from 'react-icons/fa';
+import { resolveSuperAdminPageKey } from '../utils/pageViewMap';
+import { sendSuperAdminPageView } from '../services/analyticsBeacon';
 
 export default function SuperAdminLayout({ children }) {
     const navigate = useNavigate();
     const location = useLocation();
-    const { user, logout } = useAdminAuth();
+    const { user, logout, getAuthHeaders } = useAdminAuth();
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [isCollapsed, setIsCollapsed] = useState(true); // התחל במצב מצומצם
+    const lastAnalyticsSigRef = useRef('');
+
+    useEffect(() => {
+        if (!user?.is_super_admin) return;
+        const pageKey = resolveSuperAdminPageKey(location.pathname);
+        if (!pageKey) return;
+        const sig = `${pageKey}|${location.pathname}|${location.search}|${user?.id ?? ''}`;
+        if (lastAnalyticsSigRef.current === sig) return;
+        lastAnalyticsSigRef.current = sig;
+        sendSuperAdminPageView(pageKey, getAuthHeaders, {
+            path: location.pathname + location.search,
+        });
+    }, [location.pathname, location.search, user?.id, user?.is_super_admin, getAuthHeaders]);
 
     const handleLogout = async () => {
         await logout();
@@ -35,6 +51,11 @@ export default function SuperAdminLayout({ children }) {
             label: 'דשבורד',
             path: '/super-admin/dashboard',
             icon: <FaChartPie />,
+        },
+        {
+            label: 'אנליטיקות כניסה',
+            path: '/super-admin/analytics',
+            icon: <FaChartBar />,
         },
         {
             label: 'מרכז התראות',

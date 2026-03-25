@@ -2,21 +2,22 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\WelcomeMail;
+use App\Models\City;
+use App\Models\PhoneVerification;
 use App\Models\Restaurant;
 use App\Models\RestaurantPayment;
 use App\Models\RestaurantSubscription;
-use App\Models\PhoneVerification;
 use App\Models\User;
-use App\Models\City;
 use App\Services\PhoneValidationService;
+use App\Services\SystemErrorReporter;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
-use App\Mail\WelcomeMail;
 
 class RegisterRestaurantController extends Controller
 {
@@ -45,7 +46,7 @@ class RegisterRestaurantController extends Controller
 
         // אימות קוד טלפון לבעלים
         $ownerPhoneNormalized = PhoneValidationService::normalizeIsraeliMobileE164($validated['owner_phone']);
-        if (!$ownerPhoneNormalized) {
+        if (! $ownerPhoneNormalized) {
             return response()->json([
                 'success' => false,
                 'message' => 'מספר טלפון בעלים לא תקין (נייד ישראלי בלבד)',
@@ -55,7 +56,7 @@ class RegisterRestaurantController extends Controller
             ->orderByDesc('id')
             ->first();
 
-        if (!$verification) {
+        if (! $verification) {
             return response()->json(['success' => false, 'message' => 'קוד אימות לא נמצא'], 400);
         }
         if ($verification->verified_at) {
@@ -70,7 +71,7 @@ class RegisterRestaurantController extends Controller
             $verification->attempts++;
             $verification->save();
 
-            if (!Hash::check($validated['verification_code'], $verification->code_hash)) {
+            if (! Hash::check($validated['verification_code'], $verification->code_hash)) {
                 return response()->json(['success' => false, 'message' => 'קוד שגוי'], 400);
             }
             $verification->verified_at = Carbon::now();
@@ -87,7 +88,7 @@ class RegisterRestaurantController extends Controller
         $monthlyPrice = $pricing[$tier]['monthly'];
         $yearlyPrice = $pricing[$tier]['yearly'];
         // אם Pro בניסיון (לא שילם מראש) - רק 50 credits, אחרת מלא
-        $aiCreditsMonthly = $tier === 'pro' && !$paidUpfront
+        $aiCreditsMonthly = $tier === 'pro' && ! $paidUpfront
             ? $pricing[$tier]['trial_ai_credits']
             : $pricing[$tier]['ai_credits'];
 
@@ -105,8 +106,8 @@ class RegisterRestaurantController extends Controller
         $logoUrl = null;
         if ($request->hasFile('logo') && $request->file('logo')->isValid()) {
             $logoPath = $request->file('logo')->store('logos', 'public');
-            $logoUrl = '/storage/' . $logoPath;
-        } elseif (!empty($request->input('logo_url'))) {
+            $logoUrl = '/storage/'.$logoPath;
+        } elseif (! empty($request->input('logo_url'))) {
             // שמור תאימות אחורה אם נשלח URL ישיר
             $logoUrl = $request->input('logo_url');
         }
@@ -233,7 +234,20 @@ class RegisterRestaurantController extends Controller
                     'email' => $owner->email,
                     'error' => $mailError->getMessage(),
                 ]);
-                try { \App\Services\EmailLogService::log($owner->email, 'restaurant_welcome', 'ברוכים הבאים - הרשמת מסעדה', null, 'failed', $mailError->getMessage()); } catch (\Throwable $ignore) {}
+                SystemErrorReporter::report(
+                    'email_failure',
+                    'מייל welcome להרשמת מסעדה נכשל: '.$mailError->getMessage(),
+                    'warning',
+                    $restaurant->tenant_id,
+                    null,
+                    null,
+                    $mailError->getTraceAsString(),
+                    ['restaurant_id' => $restaurant->id, 'context' => 'restaurant_registration_welcome']
+                );
+                try {
+                    \App\Services\EmailLogService::log($owner->email, 'restaurant_welcome', 'ברוכים הבאים - הרשמת מסעדה', null, 'failed', $mailError->getMessage());
+                } catch (\Throwable $ignore) {
+                }
             }
 
             return response()->json([
@@ -246,9 +260,20 @@ class RegisterRestaurantController extends Controller
             ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
+            SystemErrorReporter::report(
+                'registration_failed',
+                'הרשמת מסעדה נכשלה: '.$e->getMessage(),
+                'error',
+                null,
+                null,
+                null,
+                $e->getTraceAsString(),
+                ['context' => 'register_restaurant_store']
+            );
+
             return response()->json([
                 'success' => false,
-                'message' => 'שגיאה בהרשמה: ' . $e->getMessage(),
+                'message' => 'שגיאה בהרשמה: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -259,12 +284,12 @@ class RegisterRestaurantController extends Controller
 
         // נייד: 05X-XXXXXXX (10 ספרות)
         if (strlen($phone) === 10 && str_starts_with($phone, '05')) {
-            return substr($phone, 0, 3) . '-' . substr($phone, 3);
+            return substr($phone, 0, 3).'-'.substr($phone, 3);
         }
 
         // נייח: 0X-XXXXXXX (9 ספרות)
         if (strlen($phone) === 9 && str_starts_with($phone, '0')) {
-            return substr($phone, 0, 2) . '-' . substr($phone, 2);
+            return substr($phone, 0, 2).'-'.substr($phone, 2);
         }
 
         return $raw; // החזר מקורי אם לא תואם

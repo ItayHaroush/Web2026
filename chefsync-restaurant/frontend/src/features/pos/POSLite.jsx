@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { useRestaurantStatus } from '../../context/RestaurantStatusContext';
@@ -14,10 +14,12 @@ import POSTablesView from './components/POSTablesView';
 import POSPendingPaymentModal from './components/POSPendingPaymentModal';
 import useBrowserPrint from './hooks/useBrowserPrint';
 import posApi from './api/posApi';
+import { sendRestaurantAdminPageView } from '../../services/analyticsBeacon';
 
 export default function POSLite() {
     const navigate = useNavigate();
-    const { isManager: isManagerFn } = useAdminAuth();
+    const { isManager: isManagerFn, getAuthHeaders } = useAdminAuth();
+    const posAnalyticsSentRef = useRef(false);
     const { subscriptionInfo } = useRestaurantStatus();
     const isManager = isManagerFn();
     const {
@@ -97,6 +99,14 @@ export default function POSLite() {
     const handleLock = useCallback(() => {
         lock();
     }, [lock]);
+
+    useEffect(() => {
+        if (!isAuthenticated || posAnalyticsSentRef.current) return;
+        posAnalyticsSentRef.current = true;
+        sendRestaurantAdminPageView('admin_pos', getAuthHeaders, {
+            path: typeof window !== 'undefined' ? window.location.pathname : '/admin/pos',
+        });
+    }, [isAuthenticated, getAuthHeaders]);
 
     const handleShiftChange = useCallback((s) => {
         setShift(s);

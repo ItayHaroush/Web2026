@@ -10,6 +10,7 @@ use App\Models\CustomerToken;
 use App\Models\Order;
 use App\Models\PhoneVerification;
 use App\Services\PhoneValidationService;
+use App\Services\SystemErrorReporter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
@@ -26,7 +27,7 @@ class CustomerAuthController extends Controller
         $request->validate(['phone' => 'required|string']);
 
         $phone = PhoneValidationService::normalizeIsraeliMobileE164($request->phone);
-        if (!$phone) {
+        if (! $phone) {
             return response()->json(['success' => false, 'message' => 'מספר טלפון לא תקין'], 422);
         }
 
@@ -35,7 +36,7 @@ class CustomerAuthController extends Controller
             ->where('verified_at', '>=', now()->subMinutes(10))
             ->exists();
 
-        if (!$verified) {
+        if (! $verified) {
             return response()->json(['success' => false, 'message' => 'יש לאמת את מספר הטלפון תחילה'], 403);
         }
 
@@ -43,7 +44,7 @@ class CustomerAuthController extends Controller
 
         return response()->json([
             'success' => true,
-            'exists' => !!$customer,
+            'exists' => (bool) $customer,
             'customer_name' => $customer?->name,
         ]);
     }
@@ -60,7 +61,7 @@ class CustomerAuthController extends Controller
         ]);
 
         $phone = PhoneValidationService::normalizeIsraeliMobileE164($request->phone);
-        if (!$phone) {
+        if (! $phone) {
             return response()->json([
                 'success' => false,
                 'message' => 'מספר טלפון לא תקין',
@@ -73,7 +74,7 @@ class CustomerAuthController extends Controller
             ->where('verified_at', '>=', now()->subMinutes(10))
             ->exists();
 
-        if (!$verified) {
+        if (! $verified) {
             return response()->json([
                 'success' => false,
                 'message' => 'יש לאמת את מספר הטלפון תחילה',
@@ -89,7 +90,7 @@ class CustomerAuthController extends Controller
             }
         } else {
             // לקוח חדש — שם נדרש
-            if (!$request->filled('name')) {
+            if (! $request->filled('name')) {
                 return response()->json([
                     'success' => false,
                     'message' => 'שם נדרש עבור לקוחות חדשים',
@@ -109,7 +110,7 @@ class CustomerAuthController extends Controller
             ->update(['customer_id' => $customer->id]);
 
         // קישור למשתמש מערכת (admin) לפי מספר טלפון
-        if (!$customer->user_id) {
+        if (! $customer->user_id) {
             $linkedUser = \App\Models\User::where('phone', $phone)->first();
             if ($linkedUser) {
                 $customer->update(['user_id' => $linkedUser->id]);
@@ -144,7 +145,7 @@ class CustomerAuthController extends Controller
 
         // Verify Google ID token
         $googleUser = $this->verifyGoogleToken($request->id_token);
-        if (!$googleUser) {
+        if (! $googleUser) {
             return response()->json([
                 'success' => false,
                 'message' => 'טוקן Google לא תקין',
@@ -154,7 +155,7 @@ class CustomerAuthController extends Controller
         // מצא לקוח קיים לפי google_id או email
         $customer = Customer::where('google_id', $googleUser['sub'])->first();
 
-        if (!$customer && !empty($googleUser['email'])) {
+        if (! $customer && ! empty($googleUser['email'])) {
             $customer = Customer::where('email', $googleUser['email'])->first();
         }
 
@@ -203,7 +204,7 @@ class CustomerAuthController extends Controller
         ]);
 
         $phone = PhoneValidationService::normalizeIsraeliMobileE164($request->phone);
-        if (!$phone) {
+        if (! $phone) {
             return response()->json([
                 'success' => false,
                 'message' => 'מספר טלפון לא תקין',
@@ -211,14 +212,14 @@ class CustomerAuthController extends Controller
         }
 
         $customer = Customer::where('phone', $phone)->first();
-        if (!$customer || !$customer->password_hash) {
+        if (! $customer || ! $customer->password_hash) {
             return response()->json([
                 'success' => false,
                 'message' => 'מספר טלפון או סיסמה שגויים',
             ], 401);
         }
 
-        if (!Hash::check($request->password, $customer->password_hash)) {
+        if (! Hash::check($request->password, $customer->password_hash)) {
             return response()->json([
                 'success' => false,
                 'message' => 'מספר טלפון או סיסמה שגויים',
@@ -257,7 +258,7 @@ class CustomerAuthController extends Controller
         $request->validate($rules);
 
         if ($customer->password_hash) {
-            if (!Hash::check($request->input('current_password'), $customer->password_hash)) {
+            if (! Hash::check($request->input('current_password'), $customer->password_hash)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'הסיסמה הנוכחית שגויה',
@@ -308,9 +309,9 @@ class CustomerAuthController extends Controller
             'preferred_payment_method' => 'sometimes|nullable|in:cash,credit_card',
         ]);
 
-        $hasAddressHint = !empty($validated['default_delivery_address'])
-            || !empty($validated['default_delivery_city'])
-            || !empty($validated['default_delivery_street']);
+        $hasAddressHint = ! empty($validated['default_delivery_address'])
+            || ! empty($validated['default_delivery_city'])
+            || ! empty($validated['default_delivery_street']);
         $lat = array_key_exists('default_delivery_lat', $validated)
             ? $validated['default_delivery_lat']
             : $request->customer->default_delivery_lat;
@@ -346,7 +347,21 @@ class CustomerAuthController extends Controller
                 \App\Services\EmailLogService::log($validated['email'], 'email_verification', 'אימות כתובת אימייל', $customer->id, 'sent');
             } catch (\Throwable $e) {
                 Log::warning('Failed to send email verification on profile update', ['error' => $e->getMessage()]);
-                try { \App\Services\EmailLogService::log($validated['email'], 'email_verification', 'אימות כתובת אימייל', $customer->id, 'failed', $e->getMessage()); } catch (\Throwable $ignore) {}
+                $tid = app()->bound('tenant_id') ? app('tenant_id') : null;
+                SystemErrorReporter::report(
+                    'email_failure',
+                    'מייל אימות אימייל (עדכון פרופיל) נכשל: '.$e->getMessage(),
+                    'warning',
+                    is_string($tid) ? $tid : null,
+                    null,
+                    null,
+                    $e->getTraceAsString(),
+                    ['customer_id' => $customer->id, 'context' => 'profile_email_change']
+                );
+                try {
+                    \App\Services\EmailLogService::log($validated['email'], 'email_verification', 'אימות כתובת אימייל', $customer->id, 'failed', $e->getMessage());
+                } catch (\Throwable $ignore) {
+                }
                 $emailSendOk = false;
             }
         }
@@ -355,6 +370,7 @@ class CustomerAuthController extends Controller
         if ($emailChanged) {
             $message = $emailSendOk ? 'הפרופיל עודכן — מייל אימות נשלח' : 'הפרופיל עודכן. שליחת מייל אימות נכשלה — ניתן לנסות שוב';
         }
+
         return response()->json([
             'success' => true,
             'message' => $message,
@@ -398,10 +414,26 @@ class CustomerAuthController extends Controller
         try {
             Mail::to($request->email)->send(new CustomerEmailVerificationMail($customer, $token));
             \App\Services\EmailLogService::log($request->email, 'email_verification', 'אימות כתובת אימייל', $customer->id, 'sent');
+
             return response()->json(['success' => true, 'message' => 'מייל אימות נשלח']);
         } catch (\Throwable $e) {
             Log::warning('Failed to send email verification', ['error' => $e->getMessage()]);
-            try { \App\Services\EmailLogService::log($request->email, 'email_verification', 'אימות כתובת אימייל', $customer->id, 'failed', $e->getMessage()); } catch (\Throwable $ignore) {}
+            $tid = app()->bound('tenant_id') ? app('tenant_id') : null;
+            SystemErrorReporter::report(
+                'email_failure',
+                'מייל אימות אימייל נכשל: '.$e->getMessage(),
+                'warning',
+                is_string($tid) ? $tid : null,
+                null,
+                null,
+                $e->getTraceAsString(),
+                ['customer_id' => $customer->id, 'context' => 'send_email_verification']
+            );
+            try {
+                \App\Services\EmailLogService::log($request->email, 'email_verification', 'אימות כתובת אימייל', $customer->id, 'failed', $e->getMessage());
+            } catch (\Throwable $ignore) {
+            }
+
             return response()->json(['success' => false, 'message' => 'שליחת המייל נכשלה. נסה שוב או פנה לתמיכה.'], 500);
         }
     }
@@ -414,7 +446,7 @@ class CustomerAuthController extends Controller
         $request->validate(['token' => 'required|string']);
 
         $customer = Customer::where('email_verification_token', $request->token)->first();
-        if (!$customer) {
+        if (! $customer) {
             return response()->json(['success' => false, 'message' => 'קישור לא תקין'], 400);
         }
 
@@ -428,7 +460,21 @@ class CustomerAuthController extends Controller
             \App\Services\EmailLogService::log($customer->email, 'welcome', 'ברוכים הבאים', $customer->id, 'sent');
         } catch (\Throwable $e) {
             Log::warning('Failed to send welcome email after verification', ['customer_id' => $customer->id, 'error' => $e->getMessage()]);
-            try { \App\Services\EmailLogService::log($customer->email, 'welcome', 'ברוכים הבאים', $customer->id, 'failed', $e->getMessage()); } catch (\Throwable $ignore) {}
+            $tid = app()->bound('tenant_id') ? app('tenant_id') : null;
+            SystemErrorReporter::report(
+                'email_failure',
+                'מייל welcome לאחר אימות אימייל נכשל: '.$e->getMessage(),
+                'warning',
+                is_string($tid) ? $tid : null,
+                null,
+                null,
+                $e->getTraceAsString(),
+                ['customer_id' => $customer->id, 'context' => 'welcome_after_verify']
+            );
+            try {
+                \App\Services\EmailLogService::log($customer->email, 'welcome', 'ברוכים הבאים', $customer->id, 'failed', $e->getMessage());
+            } catch (\Throwable $ignore) {
+            }
         }
 
         return response()->json(['success' => true, 'message' => 'האימייל אומת בהצלחה']);
@@ -455,10 +501,26 @@ class CustomerAuthController extends Controller
                 $request->message
             ));
             \App\Services\EmailLogService::log($request->friend_email, 'share', "שיתוף: {$request->restaurant_name}", $customer->id);
+
             return response()->json(['success' => true, 'message' => 'ההמלצה נשלחה']);
         } catch (\Throwable $e) {
             Log::warning('Failed to send share email', ['error' => $e->getMessage()]);
-            try { \App\Services\EmailLogService::log($request->friend_email, 'share', "שיתוף: {$request->restaurant_name}", $customer->id, 'failed', $e->getMessage()); } catch (\Throwable $ignore) {}
+            $tid = app()->bound('tenant_id') ? app('tenant_id') : null;
+            SystemErrorReporter::report(
+                'email_failure',
+                'מייל שיתוף מסעדה נכשל: '.$e->getMessage(),
+                'warning',
+                is_string($tid) ? $tid : null,
+                null,
+                null,
+                $e->getTraceAsString(),
+                ['customer_id' => $customer->id, 'context' => 'share_restaurant']
+            );
+            try {
+                \App\Services\EmailLogService::log($request->friend_email, 'share', "שיתוף: {$request->restaurant_name}", $customer->id, 'failed', $e->getMessage());
+            } catch (\Throwable $ignore) {
+            }
+
             return response()->json(['success' => false, 'message' => 'שליחת המייל נכשלה. נסה שוב.'], 500);
         }
     }
@@ -524,10 +586,10 @@ class CustomerAuthController extends Controller
             'phone' => $customer->phone,
             'name' => $customer->name,
             'email' => $customer->email,
-            'email_verified' => !empty($customer->email_verified_at),
+            'email_verified' => ! empty($customer->email_verified_at),
             'is_registered' => $customer->is_registered,
-            'has_pin' => !empty($customer->password_hash),
-            'has_google' => !empty($customer->google_id),
+            'has_pin' => ! empty($customer->password_hash),
+            'has_google' => ! empty($customer->google_id),
             'default_delivery_address' => $customer->default_delivery_address,
             'default_delivery_city' => $customer->default_delivery_city,
             'default_delivery_street' => $customer->default_delivery_street,
@@ -551,6 +613,7 @@ class CustomerAuthController extends Controller
 
             if ($response->successful()) {
                 $data = $response->json();
+
                 // אם צריך, ודא aud = Google Client ID שלך
                 return $data;
             }

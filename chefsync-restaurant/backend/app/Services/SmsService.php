@@ -2,12 +2,11 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
 use App\Services\Otp\OtpProviderInterface;
 use App\Services\Otp\Sms019OtpService;
 use App\Services\Otp\TwilioOtpProvider;
-use App\Services\PhoneValidationService;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class SmsService
 {
@@ -26,6 +25,7 @@ class SmsService
         $normalized = PhoneValidationService::normalizeIsraeliMobileE164($phone);
         if ($normalized === null) {
             Log::warning('SMS OTP blocked: invalid phone', ['phone' => $phone]);
+
             return false;
         }
 
@@ -34,6 +34,7 @@ class SmsService
                 'phone' => $normalized,
                 'code' => $code,
             ]);
+
             return true;
         }
 
@@ -61,6 +62,7 @@ class SmsService
                 'phone' => $normalized,
                 'code' => $code,
             ]);
+
             return [
                 'sent' => true,
                 'resolved_source' => 'local-bypass',
@@ -79,6 +81,7 @@ class SmsService
         if (is_callable([$provider, 'sendOtpDetailed'])) {
             /** @var array $result */
             $result = call_user_func([$provider, 'sendOtpDetailed'], $normalized, $code);
+
             return $result;
         }
 
@@ -104,6 +107,7 @@ class SmsService
     public static function sendApprovalMessage(string $phone, string $restaurantName): bool
     {
         $message = sprintf('המסעדה "%s" אושרה. ניתן להתחבר ולפתוח את המסעדה.', $restaurantName);
+
         return self::sendPlainText($phone, $message);
     }
 
@@ -112,6 +116,7 @@ class SmsService
         $normalized = PhoneValidationService::normalizeIsraeliMobileE164($phone);
         if ($normalized === null) {
             Log::warning('SMS plain text blocked: invalid phone', ['phone' => $phone]);
+
             return false;
         }
 
@@ -120,6 +125,7 @@ class SmsService
                 'phone' => $normalized,
                 'message' => $message,
             ]);
+
             return true;
         }
 
@@ -138,18 +144,20 @@ class SmsService
         $messagingServiceSid = config('sms.providers.twilio.messaging_service_sid');
         $from = config('sms.providers.twilio.from');
 
-        if (!$sid || !$token) {
+        if (! $sid || ! $token) {
             Log::warning('Twilio config missing for plain SMS', [
                 'sid' => (bool) $sid,
                 'token' => (bool) $token,
                 'messagingServiceSid' => (bool) $messagingServiceSid,
                 'from' => (bool) $from,
             ]);
+
             return false;
         }
 
-        if (!$messagingServiceSid && !$from) {
+        if (! $messagingServiceSid && ! $from) {
             Log::warning('Twilio destination missing (MessagingServiceSid/From) for plain SMS');
+
             return false;
         }
 
@@ -171,16 +179,37 @@ class SmsService
                 ->withBasicAuth($sid, $token)
                 ->post($twilioUrl, $payload);
 
-            if (!$response->successful()) {
+            if (! $response->successful()) {
                 Log::error('Twilio SMS failed (plain)', [
                     'status' => $response->status(),
                     'response' => $response->body(),
                 ]);
+                SystemErrorReporter::report(
+                    'sms_failure',
+                    'Twilio SMS (plain): HTTP '.$response->status(),
+                    'warning',
+                    app()->bound('tenant_id') && is_string(app('tenant_id')) ? app('tenant_id') : null,
+                    null,
+                    null,
+                    null,
+                    ['provider' => 'twilio', 'response_excerpt' => mb_substr($response->body(), 0, 500)]
+                );
             }
 
             return $response->successful();
         } catch (\Throwable $e) {
             Log::error('Twilio SMS exception (plain)', ['message' => $e->getMessage()]);
+            SystemErrorReporter::report(
+                'sms_failure',
+                'Twilio SMS (plain) exception: '.$e->getMessage(),
+                'warning',
+                app()->bound('tenant_id') && is_string(app('tenant_id')) ? app('tenant_id') : null,
+                null,
+                null,
+                $e->getTraceAsString(),
+                ['provider' => 'twilio']
+            );
+
             return false;
         }
     }
@@ -198,17 +227,20 @@ class SmsService
                 'endpoint' => (bool) $endpoint,
                 'token' => (bool) $token,
             ]);
+
             return false;
         }
 
         if ($username === '') {
             Log::warning('019sms username missing for plain SMS');
+
             return false;
         }
 
         $normalizedPhone = self::normalizeIsraeliPhoneTo972($phone);
         if ($normalizedPhone === null) {
             Log::warning('019sms invalid phone for plain SMS', ['phone' => $phone]);
+
             return false;
         }
 
@@ -238,11 +270,21 @@ class SmsService
             $status = is_array($data) ? ($data['status'] ?? null) : null;
             $isSuccess = (string) $status === '0' || $status === 0;
 
-            if (!$isSuccess) {
+            if (! $isSuccess) {
                 Log::error('019sms send failed (plain)', [
                     'http_status' => $response->status(),
                     'response' => $response->body(),
                 ]);
+                SystemErrorReporter::report(
+                    'sms_failure',
+                    '019 SMS (plain) נכשל: HTTP '.$response->status(),
+                    'warning',
+                    app()->bound('tenant_id') && is_string(app('tenant_id')) ? app('tenant_id') : null,
+                    null,
+                    null,
+                    null,
+                    ['provider' => '019', 'response_excerpt' => mb_substr($response->body(), 0, 500)]
+                );
             }
 
             return $isSuccess;
@@ -251,6 +293,17 @@ class SmsService
                 'message' => $e->getMessage(),
                 'endpoint' => $endpoint,
             ]);
+            SystemErrorReporter::report(
+                'sms_failure',
+                '019 SMS (plain) exception: '.$e->getMessage(),
+                'warning',
+                app()->bound('tenant_id') && is_string(app('tenant_id')) ? app('tenant_id') : null,
+                null,
+                null,
+                $e->getTraceAsString(),
+                ['provider' => '019']
+            );
+
             return false;
         }
     }
@@ -258,6 +311,7 @@ class SmsService
     private static function resolveProvider(): string
     {
         $pilot = filter_var(config('sms.pilot', false), FILTER_VALIDATE_BOOLEAN);
+
         return $pilot ? 'twilio' : (string) config('sms.provider', 'twilio');
     }
 
@@ -269,11 +323,11 @@ class SmsService
         }
 
         if (str_starts_with($digits, '05') && strlen($digits) === 10) {
-            return '972' . substr($digits, 1);
+            return '972'.substr($digits, 1);
         }
 
         if (str_starts_with($digits, '5') && strlen($digits) === 9) {
-            return '972' . $digits;
+            return '972'.$digits;
         }
 
         if (str_starts_with($digits, '972')) {
@@ -282,12 +336,12 @@ class SmsService
                 $rest = substr($rest, 1);
             }
             if ($rest !== '' && $rest[0] === '5') {
-                return '972' . $rest;
+                return '972'.$rest;
             }
         }
 
         if (str_starts_with($digits, '0') && strlen($digits) >= 9 && strlen($digits) <= 10) {
-            $candidate = '972' . substr($digits, 1);
+            $candidate = '972'.substr($digits, 1);
             if (strlen($candidate) >= 11 && str_starts_with(substr($candidate, 3), '5')) {
                 return $candidate;
             }
@@ -304,9 +358,9 @@ class SmsService
             : (string) config('sms.provider', 'twilio');
 
         return match ($provider) {
-            'sms019', '019sms', '019' => new Sms019OtpService(),
-            'twilio' => new TwilioOtpProvider(),
-            default => tap(new TwilioOtpProvider(), function () use ($provider) {
+            'sms019', '019sms', '019' => new Sms019OtpService,
+            'twilio' => new TwilioOtpProvider,
+            default => tap(new TwilioOtpProvider, function () use ($provider) {
                 Log::warning('Unknown SMS provider, falling back to twilio', ['provider' => $provider]);
             }),
         };

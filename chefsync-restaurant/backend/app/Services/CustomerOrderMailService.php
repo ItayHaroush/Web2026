@@ -18,7 +18,7 @@ class CustomerOrderMailService
      */
     public static function sendOnStatusChange(Order $order, string $newStatus): void
     {
-        if (!in_array($newStatus, ['delivered', 'cancelled'])) {
+        if (! in_array($newStatus, ['delivered', 'cancelled'])) {
             return;
         }
 
@@ -27,12 +27,12 @@ class CustomerOrderMailService
                 ? Customer::find($order->customer_id)
                 : Customer::where('phone', $order->customer_phone)->first();
 
-            if (!$customer || empty($customer->email) || empty($customer->email_verified_at)) {
+            if (! $customer || empty($customer->email) || empty($customer->email_verified_at)) {
                 return;
             }
 
             $restaurant = Restaurant::withoutGlobalScope('tenant')->find($order->restaurant_id);
-            if (!$restaurant) {
+            if (! $restaurant) {
                 return;
             }
 
@@ -66,10 +66,21 @@ class CustomerOrderMailService
                 'error' => $e->getMessage(),
             ]);
 
+            SystemErrorReporter::report(
+                'email_failure',
+                'מייל סטטוס הזמנה ללקוח נכשל: '.$e->getMessage(),
+                'warning',
+                $order->tenant_id,
+                $order->id,
+                $order->correlation_id,
+                $e->getTraceAsString(),
+                ['new_status' => $newStatus, 'customer_id' => isset($customer) ? $customer->id : null]
+            );
+
             try {
                 $customerId = isset($customer) ? $customer->id : null;
                 $email = isset($customer) ? $customer->email : 'unknown';
-                EmailLogService::log($email, 'order_' . $newStatus, "Failed: order #{$order->id}", $customerId, 'failed', $e->getMessage());
+                EmailLogService::log($email, 'order_'.$newStatus, "Failed: order #{$order->id}", $customerId, 'failed', $e->getMessage());
             } catch (\Throwable $logErr) {
                 // Silently ignore logging failures
             }

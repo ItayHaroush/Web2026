@@ -9,6 +9,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import { CustomerProvider } from './context/CustomerContext';
 import DevModeBanner from './components/DevModeBanner';
 import CookieConsent from './components/CookieConsent';
+import AnalyticsPublicTracker from './components/AnalyticsPublicTracker';
 import FacebookInAppWarning from './components/FacebookInAppWarning';
 import PWAInstallBanner from './components/PWAInstallBanner';
 import PwaCustomerEngagement from './components/PwaCustomerEngagement';
@@ -62,6 +63,7 @@ import PolicySettings from './pages/super-admin/settings/PolicySettings';
 import DatabaseMaintenance from './pages/super-admin/settings/DatabaseMaintenance';
 import DebugAuth from './pages/super-admin/DebugAuth';
 import SuperAdminAbandonedCarts from './pages/super-admin/SuperAdminAbandonedCarts';
+import SuperAdminAnalytics from './pages/super-admin/SuperAdminAnalytics';
 import SuperAdminCustomers from './pages/super-admin/SuperAdminCustomers';
 import SuperAdminCustomerDetail from './pages/super-admin/SuperAdminCustomerDetail';
 import SuperAdminNotificationCenter from './pages/super-admin/SuperAdminNotificationCenter';
@@ -130,6 +132,7 @@ function AppRoutes() {
   console.log("Tenant ID:", tenantId);
   return (
     <>
+    <AnalyticsPublicTracker />
     <Routes>
       {/* Debug */}
       <Route path="/debug-api" element={<DebugAPI />} />
@@ -391,6 +394,14 @@ function AppRoutes() {
         element={
           <SuperAdminRoute>
             <SuperAdminDashboard />
+          </SuperAdminRoute>
+        }
+      />
+      <Route
+        path="/super-admin/analytics"
+        element={
+          <SuperAdminRoute>
+            <SuperAdminAnalytics />
           </SuperAdminRoute>
         }
       />
