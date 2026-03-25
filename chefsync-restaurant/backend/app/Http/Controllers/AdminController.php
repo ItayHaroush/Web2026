@@ -1632,6 +1632,7 @@ class AdminController extends Controller
             'source_type' => 'sometimes|in:manual,category',
             'source_category_id' => 'nullable|integer|exists:categories,id',
             'source_include_prices' => 'sometimes|boolean',
+            'source_addon_fixed_price' => 'nullable|numeric|min:0',
             'source_selection_weight' => 'sometimes|nullable|integer|min:1|max:10',
         ]);
 
@@ -1647,11 +1648,16 @@ class AdminController extends Controller
         $sourceType = $request->input('source_type', 'manual');
         $sourceCategoryId = null;
         $sourceIncludePrices = $request->boolean('source_include_prices', true);
+        $sourceAddonFixedPrice = null;
         $sourceSelectionWeight = max(1, min(10, (int) ($request->input('source_selection_weight', 1) ?: 1)));
         if ($sourceType === 'category') {
             $sourceCategoryId = $request->input('source_category_id');
             if ($sourceCategoryId) {
                 Category::where('restaurant_id', $restaurant->id)->findOrFail($sourceCategoryId);
+            }
+            $fixedRaw = $request->input('source_addon_fixed_price');
+            if ($fixedRaw !== null && $fixedRaw !== '') {
+                $sourceAddonFixedPrice = round((float) $fixedRaw, 2);
             }
         }
 
@@ -1682,6 +1688,7 @@ class AdminController extends Controller
             'source_type' => $sourceType,
             'source_category_id' => $sourceCategoryId,
             'source_include_prices' => $sourceIncludePrices,
+            'source_addon_fixed_price' => $sourceAddonFixedPrice,
             'source_selection_weight' => $sourceSelectionWeight,
         ]);
 
@@ -1713,6 +1720,7 @@ class AdminController extends Controller
             'source_type' => 'sometimes|in:manual,category',
             'source_category_id' => 'nullable|integer|exists:categories,id',
             'source_include_prices' => 'sometimes|boolean',
+            'source_addon_fixed_price' => 'nullable|numeric|min:0',
             'source_selection_weight' => 'sometimes|nullable|integer|min:1|max:10',
         ]);
 
@@ -1740,11 +1748,19 @@ class AdminController extends Controller
                 $payload['source_category_id'] = $sourceCategoryId;
             } else {
                 $payload['source_category_id'] = null;
+                $payload['source_addon_fixed_price'] = null;
             }
         }
 
         if ($request->has('source_include_prices')) {
             $payload['source_include_prices'] = $request->boolean('source_include_prices');
+        }
+
+        if ($request->has('source_addon_fixed_price')) {
+            $fixedRaw = $request->input('source_addon_fixed_price');
+            $payload['source_addon_fixed_price'] = ($fixedRaw === null || $fixedRaw === '')
+                ? null
+                : round((float) $fixedRaw, 2);
         }
 
         if ($request->has('source_selection_weight')) {
@@ -1856,6 +1872,7 @@ class AdminController extends Controller
             'source_type' => $originalGroup->source_type ?? 'manual',
             'source_category_id' => $originalGroup->source_category_id,
             'source_include_prices' => $originalGroup->source_include_prices ?? true,
+            'source_addon_fixed_price' => $originalGroup->source_addon_fixed_price,
             'source_selection_weight' => $originalGroup->source_selection_weight ?? 1,
         ]);
 

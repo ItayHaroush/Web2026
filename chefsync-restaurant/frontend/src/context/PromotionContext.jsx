@@ -94,7 +94,11 @@ export function PromotionProvider({ children }) {
     }, [cartItems]);
 
     const getEffectiveMax = useCallback((promo) => {
-        const baseMax = promo?.rewards?.[0]?.max_selectable ?? 1;
+        const freeRewards = (promo?.rewards || []).filter((r) => r.reward_type === 'free_item');
+        const baseMax =
+            freeRewards.length > 0
+                ? Math.max(...freeRewards.map((r) => r.max_selectable ?? 1))
+                : (promo?.rewards?.[0]?.max_selectable ?? 1);
         const timesQualified = promo?.progress?.times_qualified ?? 1;
         return baseMax * timesQualified;
     }, []);

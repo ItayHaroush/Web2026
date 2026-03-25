@@ -48,6 +48,14 @@ export default function MenuPage({ isPreviewMode = false }) {
     const [suggestionAddonPicker, setSuggestionAddonPicker] = useState(null);
     const [suggestionSelectedAddons, setSuggestionSelectedAddons] = useState({});
     const [showPromoPopup, setShowPromoPopup] = useState(false);
+    const bannerPromotions = useMemo(
+        () => activePromotions.filter((p) => p.show_menu_banner !== false),
+        [activePromotions]
+    );
+    const popupPromotions = useMemo(
+        () => activePromotions.filter((p) => p.show_entry_popup !== false),
+        [activePromotions]
+    );
     /** פופ־אפ עליון: מסעדה סגורה (במקום טוסט) */
     const [closedRestaurantNotice, setClosedRestaurantNotice] = useState(null);
 
@@ -330,7 +338,8 @@ export default function MenuPage({ isPreviewMode = false }) {
             const promos = result?.data || [];
             setActivePromotions(promos);
             const key = `promoPopupShown_${effectiveTenantId}`;
-            if (promos.length > 0 && !localStorage.getItem(key)) {
+            const popupEligible = promos.filter((p) => p.show_entry_popup !== false);
+            if (popupEligible.length > 0 && !localStorage.getItem(key)) {
                 localStorage.setItem(key, '1');
                 setShowPromoPopup(true);
             }
@@ -775,14 +784,14 @@ export default function MenuPage({ isPreviewMode = false }) {
             </div>
 
             {/* באנר מבצעים פעילים */}
-            {activePromotions.length > 0 && (
+            {bannerPromotions.length > 0 && (
                 <div className="mb-6 space-y-2">
-                    {activePromotions.map((promo) => {
+                    {bannerPromotions.map((promo) => {
                         const rewardText = promo.rewards?.map(r => {
                             if (r.reward_type === 'free_item' && r.reward_menu_item_name) return `${r.reward_menu_item_name} במתנה`;
                             if (r.reward_type === 'free_item' && r.reward_category_name) return `${r.reward_category_name} במתנה`;
-                            if (r.reward_type === 'discount_percent') return `${r.reward_value}% הנחה`;
-                            if (r.reward_type === 'discount_fixed') return `₪${r.reward_value} הנחה`;
+                            if (r.reward_type === 'discount_percent') return `${r.reward_value}% הנחה${r.discount_scope === 'selected_items' ? ' (נבחרים)' : ''}`;
+                            if (r.reward_type === 'discount_fixed') return `₪${r.reward_value} הנחה${r.discount_scope === 'selected_items' ? ' ליחידה' : ''}`;
                             if (r.reward_type === 'fixed_price') return `במחיר מיוחד ₪${r.reward_value}`;
                             return 'הטבה מיוחדת';
                         }).join(' + ') || 'הטבה מיוחדת';
@@ -1423,7 +1432,7 @@ export default function MenuPage({ isPreviewMode = false }) {
             )}
 
             {/* פופאפ מבצע בכניסה לתפריט */}
-            {showPromoPopup && activePromotions.length > 0 && (
+            {showPromoPopup && popupPromotions.length > 0 && (
                 <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setShowPromoPopup(false)}>
                     <div className="bg-white dark:bg-brand-dark-card rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-fade-in" onClick={e => e.stopPropagation()}>
                         {/* Header */}
@@ -1439,12 +1448,12 @@ export default function MenuPage({ isPreviewMode = false }) {
 
                         {/* Promotions list */}
                         <div className="max-h-[60vh] overflow-y-auto p-4 space-y-4">
-                            {activePromotions.map((promo) => {
+                            {popupPromotions.map((promo) => {
                                 const rewardText = promo.rewards?.map(r => {
                                     if (r.reward_type === 'free_item' && r.reward_menu_item_name) return `${r.reward_menu_item_name} במתנה`;
                                     if (r.reward_type === 'free_item' && r.reward_category_name) return `${r.reward_category_name} במתנה`;
-                                    if (r.reward_type === 'discount_percent') return `${r.reward_value}% הנחה`;
-                                    if (r.reward_type === 'discount_fixed') return `₪${r.reward_value} הנחה`;
+                                    if (r.reward_type === 'discount_percent') return `${r.reward_value}% הנחה${r.discount_scope === 'selected_items' ? ' (פריטים נבחרים)' : ''}`;
+                                    if (r.reward_type === 'discount_fixed') return `₪${r.reward_value} הנחה${r.discount_scope === 'selected_items' ? ' ליחידה (נבחרים)' : ''}`;
                                     if (r.reward_type === 'fixed_price') return `במחיר מיוחד ₪${r.reward_value}`;
                                     return 'הטבה מיוחדת';
                                 }).join(' + ') || 'הטבה מיוחדת';

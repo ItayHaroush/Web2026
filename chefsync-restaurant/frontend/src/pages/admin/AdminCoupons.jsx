@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import AdminLayout from '../../layouts/AdminLayout';
 import MobileAddFab from '../../components/admin/MobileAddFab';
 import { FaTicketAlt, FaPlus, FaEdit, FaTrash, FaToggleOn, FaToggleOff, FaTimes } from 'react-icons/fa';
@@ -33,8 +33,19 @@ const emptyForm = () => ({
     auto_apply: true,
     gift_required: false,
     stackable: false,
+    show_menu_banner: true,
+    show_entry_popup: true,
     rules: [{ required_category_id: '', min_quantity: 1 }],
-    rewards: [{ reward_type: 'free_item', reward_category_id: '', reward_menu_item_id: '', reward_value: '', max_selectable: 1, _mode: 'specific' }],
+    rewards: [{
+        reward_type: 'free_item',
+        reward_category_id: '',
+        reward_menu_item_id: '',
+        reward_value: '',
+        max_selectable: 1,
+        discount_scope: 'whole_cart',
+        discount_menu_item_ids: [],
+        _mode: 'specific',
+    }],
 });
 
 function getPromotionStatus(promo) {
@@ -57,9 +68,9 @@ function summarizeRewards(rewards) {
             case 'free_item':
                 return `פריט חינם מ-${r.reward_category?.name || 'קטגוריה'}`;
             case 'discount_percent':
-                return `${r.reward_value}% הנחה`;
+                return `${r.reward_value}% הנחה${r.discount_scope === 'selected_items' ? ' (על פריטים נבחרים)' : ''}`;
             case 'discount_fixed':
-                return `${r.reward_value} ש"ח הנחה`;
+                return `${r.reward_value} ש"ח הנחה${r.discount_scope === 'selected_items' ? ' ליחידה (פריטים נבחרים)' : ''}`;
             case 'fixed_price':
                 return `מחיר קבוע ${r.reward_value} ש"ח`;
             default:
@@ -80,6 +91,54 @@ export default function AdminCoupons() {
     const [editingPromo, setEditingPromo] = useState(null);
     const [promoWizardStep, setPromoWizardStep] = useState(1);
     const [form, setForm] = useState(emptyForm());
+    const [serverErrors, setServerErrors] = useState({});
+
+    const formErrors = useMemo(() => {
+        const err = {};
+        if (!form.name?.trim()) err.name = 'נא למלא שם מבצע';
+        const rules = form.rules || [];
+        const validRuleCount = rules.filter((r) => {
+            const cid = r.required_category_id;
+            return cid !== '' && cid != null && Number(cid) > 0;
+        }).length;
+        if (rules.length > 0 && validRuleCount === 0) {
+            err.rules_global = 'נא לבחור קטגוריה בכל תנאי';
+        }
+        rules.forEach((rule, i) => {
+            if (!rule.required_category_id || Number(rule.required_category_id) <= 0) {
+                err[`rules.${i}.required_category_id`] = 'בחר קטגוריה';
+            }
+            if (!rule.min_quantity || Number(rule.min_quantity) < 1) {
+                err[`rules.${i}.min_quantity`] = 'מינימום 1';
+            }
+        });
+        (form.rewards || []).forEach((reward, i) => {
+            if (reward.reward_type === 'discount_percent' || reward.reward_type === 'discount_fixed') {
+                const v = reward.reward_value;
+                if (v === '' || v === null || v === undefined || Number(v) < 0) {
+                    err[`rewards.${i}.reward_value`] = 'נא למלא ערך הנחה תקין';
+                }
+                if (reward.discount_scope === 'selected_items' && (!reward.discount_menu_item_ids || reward.discount_menu_item_ids.length === 0)) {
+                    err[`rewards.${i}.discount_menu_item_ids`] = 'נא לבחור לפחות מוצר אחד';
+                }
+            }
+            if (reward.reward_type === 'fixed_price') {
+                const v = reward.reward_value;
+                if (v === '' || v === null || v === undefined || Number(v) < 0) {
+                    err[`rewards.${i}.reward_value`] = 'נא למלא מחיר תקין';
+                }
+            }
+            if (reward.reward_type === 'free_item') {
+                if (reward._mode === 'specific' && !reward.reward_menu_item_id) {
+                    err[`rewards.${i}.free`] = 'נא לבחור מוצר מתנה';
+                }
+                if (reward._mode === 'category' && !reward.reward_category_id) {
+                    err[`rewards.${i}.free`] = 'נא לבחור קטגוריית מתנה';
+                }
+            }
+        });
+        return err;
+    }, [form]);
 
     const fetchData = useCallback(async () => {
         try {
@@ -109,12 +168,42 @@ export default function AdminCoupons() {
     const openCreate = () => {
         setEditingPromo(null);
         setForm(emptyForm());
+        setServerErrors({});
         setPromoWizardStep(1);
         setModalOpen(true);
     };
 
     const openEdit = (promo) => {
         setEditingPromo(promo);
+        let rules = (promo.rules || []).map(r => ({
+            required_category_id: r.required_category_id || '',
+            min_quantity: r.min_quantity || 1,
+        }));
+        if (rules.length === 0) {
+            rules = [{ required_category_id: '', min_quantity: 1 }];
+        }
+        let rewards = (promo.rewards || []).map(r => ({
+            reward_type: r.reward_type || 'free_item',
+            reward_category_id: r.reward_category_id || '',
+            reward_menu_item_id: r.reward_menu_item_id || '',
+            reward_value: r.reward_value ?? '',
+            max_selectable: r.max_selectable || 1,
+            discount_scope: r.discount_scope || 'whole_cart',
+            discount_menu_item_ids: Array.isArray(r.discount_menu_item_ids) ? r.discount_menu_item_ids : [],
+            _mode: r.reward_menu_item_id ? 'specific' : (r.reward_category_id ? 'category' : 'specific'),
+        }));
+        if (rewards.length === 0) {
+            rewards = [{
+                reward_type: 'free_item',
+                reward_category_id: '',
+                reward_menu_item_id: '',
+                reward_value: '',
+                max_selectable: 1,
+                discount_scope: 'whole_cart',
+                discount_menu_item_ids: [],
+                _mode: 'specific',
+            }];
+        }
         setForm({
             name: promo.name || '',
             description: promo.description || '',
@@ -131,29 +220,26 @@ export default function AdminCoupons() {
             auto_apply: promo.auto_apply ?? true,
             gift_required: promo.gift_required ?? false,
             stackable: promo.stackable ?? false,
-            rules: (promo.rules || []).map(r => ({
-                required_category_id: r.required_category_id || '',
-                min_quantity: r.min_quantity || 1,
-            })),
-            rewards: (promo.rewards || []).map(r => ({
-                reward_type: r.reward_type || 'free_item',
-                reward_category_id: r.reward_category_id || '',
-                reward_menu_item_id: r.reward_menu_item_id || '',
-                reward_value: r.reward_value || '',
-                max_selectable: r.max_selectable || 1,
-                _mode: r.reward_menu_item_id ? 'specific' : (r.reward_category_id ? 'category' : 'specific'),
-            })),
+            show_menu_banner: promo.show_menu_banner !== false,
+            show_entry_popup: promo.show_entry_popup !== false,
+            rules,
+            rewards,
         });
-        if (form.rules.length === 0) setForm(f => ({ ...f, rules: [{ required_category_id: '', min_quantity: 1 }] }));
-        if (form.rewards.length === 0) setForm(f => ({ ...f, rewards: [{ reward_type: 'free_item', reward_category_id: '', reward_menu_item_id: '', reward_value: '', max_selectable: 1, _mode: 'specific' }] }));
+        setServerErrors({});
         setPromoWizardStep(1);
         setModalOpen(true);
     };
 
     const goPromoWizardNext = () => {
-        if (!editingPromo && promoWizardStep === 1 && !form.name?.trim()) {
-            alert('נא למלא שם מבצע');
-            return;
+        if (!editingPromo && promoWizardStep === 1) {
+            if (!form.name?.trim()) return;
+        }
+        if (!editingPromo && promoWizardStep === 2) {
+            const validRuleCount = (form.rules || []).filter((r) => {
+                const cid = r.required_category_id;
+                return cid !== '' && cid != null && Number(cid) > 0;
+            }).length;
+            if (validRuleCount === 0) return;
         }
         setPromoWizardStep((s) => Math.min(3, s + 1));
     };
@@ -161,11 +247,20 @@ export default function AdminCoupons() {
     const goPromoWizardPrev = () => setPromoWizardStep((s) => Math.max(1, s - 1));
 
     const handleSave = async () => {
+        if (Object.keys(formErrors).length > 0) {
+            return;
+        }
         try {
             setSaving(true);
+            setServerErrors({});
             const { imagePreview, removeImage, ...rest } = form;
+            const validRules = (form.rules || []).filter((r) => {
+                const cid = r.required_category_id;
+                return cid !== '' && cid != null && Number(cid) > 0;
+            });
             const payload = {
                 ...rest,
+                rules: validRules,
                 start_at: form.start_at || null,
                 end_at: form.end_at || null,
                 active_hours_start: form.active_hours_start || null,
@@ -184,10 +279,16 @@ export default function AdminCoupons() {
         } catch (err) {
             console.error('Save failed', err);
             const st = err.response?.status;
+            if (err.response?.data?.errors && typeof err.response.data.errors === 'object') {
+                setServerErrors(err.response.data.errors);
+            }
             if (st === 413) {
                 alert('הבקשה גדולה מדי לשרת (לרוב תמונה). התמונה מכווצת אוטומטית — נסה שוב; אם נמשך, השתמש בתמונה קטנה יותר או בקש מהתמיכה להגדיל את מגבלת ההעלאה בשרת.');
             } else {
-                alert(err.response?.data?.message || 'שגיאה בשמירה');
+                const msgs = err.response?.data?.errors && typeof err.response.data.errors === 'object'
+                    ? Object.values(err.response.data.errors).flat().filter(Boolean)
+                    : [];
+                alert(msgs[0] || err.response?.data?.message || 'שגיאה בשמירה');
             }
         } finally {
             setSaving(false);
@@ -239,7 +340,19 @@ export default function AdminCoupons() {
     };
 
     const addReward = () => {
-        setForm(f => ({ ...f, rewards: [...f.rewards, { reward_type: 'free_item', reward_category_id: '', reward_menu_item_id: '', reward_value: '', max_selectable: 1, _mode: 'specific' }] }));
+        setForm(f => ({
+            ...f,
+            rewards: [...f.rewards, {
+                reward_type: 'free_item',
+                reward_category_id: '',
+                reward_menu_item_id: '',
+                reward_value: '',
+                max_selectable: 1,
+                discount_scope: 'whole_cart',
+                discount_menu_item_ids: [],
+                _mode: 'specific',
+            }],
+        }));
     };
 
     const removeReward = (index) => {
@@ -252,6 +365,37 @@ export default function AdminCoupons() {
             const next = current.includes(day) ? current.filter(d => d !== day) : [...current, day];
             return { ...f, active_days: next.length > 0 ? next : null };
         });
+    };
+
+    const setRewardTypeAt = (index, reward_type) => {
+        setForm((f) => {
+            const rewards = [...f.rewards];
+            const r = { ...rewards[index], reward_type };
+            if (reward_type !== 'discount_percent' && reward_type !== 'discount_fixed') {
+                r.discount_scope = 'whole_cart';
+                r.discount_menu_item_ids = [];
+            }
+            rewards[index] = r;
+            return { ...f, rewards };
+        });
+    };
+
+    const canPromoWizardNext = () => {
+        if (editingPromo) return false;
+        if (promoWizardStep === 1) return !!form.name?.trim();
+        if (promoWizardStep === 2) {
+            return (form.rules || []).some((r) => {
+                const cid = r.required_category_id;
+                return cid !== '' && cid != null && Number(cid) > 0;
+            });
+        }
+        return true;
+    };
+
+    const serverErrorText = (key) => {
+        const e = serverErrors[key];
+        if (!e) return null;
+        return Array.isArray(e) ? e[0] : String(e);
     };
 
     return (
@@ -385,7 +529,7 @@ export default function AdminCoupons() {
                                     </p>
                                 )}
                             </div>
-                            <button type="button" onClick={() => { setModalOpen(false); setPromoWizardStep(1); }} className="p-2 text-gray-400 hover:text-gray-600 rounded-xl hover:bg-gray-50 shrink-0">
+                            <button type="button" onClick={() => { setModalOpen(false); setPromoWizardStep(1); setServerErrors({}); }} className="p-2 text-gray-400 hover:text-gray-600 rounded-xl hover:bg-gray-50 shrink-0">
                                 <FaTimes size={18} />
                             </button>
                         </div>
@@ -401,9 +545,12 @@ export default function AdminCoupons() {
                                         type="text"
                                         value={form.name}
                                         onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                                        className="w-full min-w-0 border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none text-base"
+                                        className={`w-full min-w-0 border rounded-xl px-4 py-3 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none text-base ${formErrors.name || serverErrorText('name') ? 'border-red-300' : 'border-gray-200'}`}
                                         placeholder="למשל: קנה 2 פיצות וקבל קינוח"
                                     />
+                                    {(formErrors.name || serverErrorText('name')) && (
+                                        <p className="text-xs text-red-600 mt-1 font-medium">{formErrors.name || serverErrorText('name')}</p>
+                                    )}
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">תיאור</label>
@@ -552,26 +699,51 @@ export default function AdminCoupons() {
                                         </label>
                                     ))}
                                 </div>
+
+                                <div className="rounded-xl border border-orange-100 bg-orange-50/50 p-4 space-y-3">
+                                    <p className="text-xs font-bold text-orange-800 uppercase tracking-wide">תצוגה בתפריט לקוח</p>
+                                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                                        <input
+                                            type="checkbox"
+                                            checked={form.show_menu_banner}
+                                            onChange={e => setForm(f => ({ ...f, show_menu_banner: e.target.checked }))}
+                                            className="w-5 h-5 rounded-lg border-gray-300 text-brand-primary focus:ring-brand-primary/20"
+                                        />
+                                        <span className="text-sm font-medium text-gray-800">הצג באנר מבצעים מעל התפריט</span>
+                                    </label>
+                                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                                        <input
+                                            type="checkbox"
+                                            checked={form.show_entry_popup}
+                                            onChange={e => setForm(f => ({ ...f, show_entry_popup: e.target.checked }))}
+                                            className="w-5 h-5 rounded-lg border-gray-300 text-brand-primary focus:ring-brand-primary/20"
+                                        />
+                                        <span className="text-sm font-medium text-gray-800">הצג חלון כניסה עם מבצעים (פעם אחת לדפדפן)</span>
+                                    </label>
+                                </div>
                             </div>
                             )}
 
                             {(editingPromo || promoWizardStep === 2) && (
                             <div className="space-y-4">
                                 <h3 className="font-bold text-gray-800 border-b border-gray-100 pb-2">תנאים (AND)</h3>
+                                {(formErrors.rules_global || serverErrorText('rules')) && (
+                                    <p className="text-sm text-red-600 font-medium">{formErrors.rules_global || serverErrorText('rules')}</p>
+                                )}
                                 {form.rules.map((rule, i) => (
                                     <div key={i} className="flex flex-col sm:flex-row sm:items-center gap-3 bg-gray-50 rounded-xl p-3 min-w-0">
                                         <input
                                             type="number"
                                             value={rule.min_quantity}
-                                            onChange={e => updateRule(i, 'min_quantity', parseInt(e.target.value) || 1)}
-                                            className="w-20 border border-gray-200 rounded-lg px-3 py-2 text-center focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none"
+                                            onChange={e => updateRule(i, 'min_quantity', parseInt(e.target.value, 10) || 1)}
+                                            className={`w-20 border rounded-lg px-3 py-2 text-center focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none ${formErrors[`rules.${i}.min_quantity`] || serverErrorText(`rules.${i}.min_quantity`) ? 'border-red-300' : 'border-gray-200'}`}
                                             min={1}
                                         />
                                         <span className="text-sm text-gray-500 font-medium">פריטים מ-</span>
                                         <select
-                                            value={rule.required_category_id}
-                                            onChange={e => updateRule(i, 'required_category_id', parseInt(e.target.value) || '')}
-                                            className="flex-1 min-w-0 border border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none text-base"
+                                            value={rule.required_category_id === '' ? '' : String(rule.required_category_id)}
+                                            onChange={e => updateRule(i, 'required_category_id', e.target.value === '' ? '' : parseInt(e.target.value, 10))}
+                                            className={`flex-1 min-w-0 border rounded-lg px-3 py-2 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none text-base ${formErrors[`rules.${i}.required_category_id`] || serverErrorText(`rules.${i}.required_category_id`) ? 'border-red-300' : 'border-gray-200'}`}
                                         >
                                             <option value="">בחר קטגוריה</option>
                                             {categories.map(cat => (
@@ -582,6 +754,11 @@ export default function AdminCoupons() {
                                             <button type="button" onClick={() => removeRule(i)} className="p-2 text-red-400 hover:text-red-600 self-end sm:self-auto">
                                                 <FaTimes size={14} />
                                             </button>
+                                        )}
+                                        {(formErrors[`rules.${i}.required_category_id`] || formErrors[`rules.${i}.min_quantity`] || serverErrorText(`rules.${i}.required_category_id`) || serverErrorText(`rules.${i}.min_quantity`)) && (
+                                            <p className="text-xs text-red-600 sm:col-span-full w-full">
+                                                {formErrors[`rules.${i}.required_category_id`] || serverErrorText(`rules.${i}.required_category_id`) || formErrors[`rules.${i}.min_quantity`] || serverErrorText(`rules.${i}.min_quantity`)}
+                                            </p>
                                         )}
                                     </div>
                                 ))}
@@ -599,7 +776,7 @@ export default function AdminCoupons() {
                                         <div className="flex items-center gap-3">
                                             <select
                                                 value={reward.reward_type}
-                                                onChange={e => updateReward(i, 'reward_type', e.target.value)}
+                                                onChange={e => setRewardTypeAt(i, e.target.value)}
                                                 className="border border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none"
                                             >
                                                 {Object.entries(REWARD_TYPE_LABELS).map(([val, label]) => (
@@ -683,19 +860,82 @@ export default function AdminCoupons() {
                                         )}
 
                                         {(reward.reward_type === 'discount_percent' || reward.reward_type === 'discount_fixed' || reward.reward_type === 'fixed_price') && (
-                                            <div>
-                                                <label className="block text-xs text-gray-500 mb-1">
-                                                    {reward.reward_type === 'discount_percent' ? 'אחוז הנחה' : reward.reward_type === 'discount_fixed' ? 'סכום הנחה (ש"ח)' : 'מחיר קבוע (ש"ח)'}
-                                                </label>
-                                                <input
-                                                    type="number"
-                                                    value={reward.reward_value}
-                                                    onChange={e => updateReward(i, 'reward_value', e.target.value)}
-                                                    className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none"
-                                                    min={0}
-                                                    step={reward.reward_type === 'discount_percent' ? 1 : 0.01}
-                                                />
+                                            <div className="space-y-3">
+                                                {(reward.reward_type === 'discount_percent' || reward.reward_type === 'discount_fixed') && (
+                                                    <div>
+                                                        <p className="text-xs font-bold text-gray-600 mb-2">היקף ההנחה</p>
+                                                        <div className="flex flex-wrap gap-2">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    setForm((f) => {
+                                                                        const rewards = [...f.rewards];
+                                                                        rewards[i] = {
+                                                                            ...rewards[i],
+                                                                            discount_scope: 'whole_cart',
+                                                                            discount_menu_item_ids: [],
+                                                                        };
+                                                                        return { ...f, rewards };
+                                                                    });
+                                                                }}
+                                                                className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-colors ${(reward.discount_scope || 'whole_cart') === 'whole_cart' ? 'bg-brand-primary text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                                                            >
+                                                                כל הסל
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => updateReward(i, 'discount_scope', 'selected_items')}
+                                                                className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-colors ${reward.discount_scope === 'selected_items' ? 'bg-brand-primary text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                                                            >
+                                                                מוצרים נבחרים
+                                                            </button>
+                                                        </div>
+                                                        {reward.discount_scope === 'selected_items' && (
+                                                            <div className="mt-2">
+                                                                <label className="block text-xs text-gray-500 mb-1">בחר מוצרים (Ctrl/Cmd לבחירה מרובה)</label>
+                                                                <select
+                                                                    multiple
+                                                                    size={Math.min(8, Math.max(4, menuItems.length))}
+                                                                    value={(reward.discount_menu_item_ids || []).map(String)}
+                                                                    onChange={(e) => {
+                                                                        const selected = Array.from(e.target.selectedOptions, (opt) => parseInt(opt.value, 10));
+                                                                        updateReward(i, 'discount_menu_item_ids', selected);
+                                                                    }}
+                                                                    className={`w-full border rounded-lg px-2 py-1 text-sm focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none ${formErrors[`rewards.${i}.discount_menu_item_ids`] || serverErrorText(`rewards.${i}.discount_menu_item_ids`) ? 'border-red-300' : 'border-gray-200'}`}
+                                                                >
+                                                                    {menuItems.map((item) => (
+                                                                        <option key={item.id} value={item.id}>
+                                                                            {item.name} ({item.category_name})
+                                                                        </option>
+                                                                    ))}
+                                                                </select>
+                                                                {(formErrors[`rewards.${i}.discount_menu_item_ids`] || serverErrorText(`rewards.${i}.discount_menu_item_ids`)) && (
+                                                                    <p className="text-xs text-red-600 mt-1">{formErrors[`rewards.${i}.discount_menu_item_ids`] || serverErrorText(`rewards.${i}.discount_menu_item_ids`)}</p>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+                                                <div>
+                                                    <label className="block text-xs text-gray-500 mb-1">
+                                                        {reward.reward_type === 'discount_percent' ? 'אחוז הנחה' : reward.reward_type === 'discount_fixed' ? 'סכום הנחה ליחידה (ש"ח)' : 'מחיר קבוע (ש"ח)'}
+                                                    </label>
+                                                    <input
+                                                        type="number"
+                                                        value={reward.reward_value}
+                                                        onChange={e => updateReward(i, 'reward_value', e.target.value)}
+                                                        className={`w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none ${formErrors[`rewards.${i}.reward_value`] || serverErrorText(`rewards.${i}.reward_value`) ? 'border-red-300' : 'border-gray-200'}`}
+                                                        min={0}
+                                                        step={reward.reward_type === 'discount_percent' ? 1 : 0.01}
+                                                    />
+                                                    {(formErrors[`rewards.${i}.reward_value`] || serverErrorText(`rewards.${i}.reward_value`)) && (
+                                                        <p className="text-xs text-red-600 mt-1">{formErrors[`rewards.${i}.reward_value`] || serverErrorText(`rewards.${i}.reward_value`)}</p>
+                                                    )}
+                                                </div>
                                             </div>
+                                        )}
+                                        {reward.reward_type === 'free_item' && (formErrors[`rewards.${i}.free`] || serverErrorText(`rewards.${i}.reward_menu_item_id`) || serverErrorText(`rewards.${i}.reward_category_id`)) && (
+                                            <p className="text-xs text-red-600">{formErrors[`rewards.${i}.free`] || serverErrorText(`rewards.${i}.reward_menu_item_id`) || serverErrorText(`rewards.${i}.reward_category_id`)}</p>
                                         )}
                                     </div>
                                 ))}
@@ -721,14 +961,15 @@ export default function AdminCoupons() {
                                 <button
                                     type="button"
                                     onClick={goPromoWizardNext}
-                                    className="order-1 sm:order-2 flex-1 sm:flex-none px-6 py-3 rounded-xl bg-brand-primary text-white font-bold hover:bg-brand-dark min-w-[8rem]"
+                                    disabled={!canPromoWizardNext()}
+                                    className="order-1 sm:order-2 flex-1 sm:flex-none px-6 py-3 rounded-xl bg-brand-primary text-white font-bold hover:bg-brand-dark min-w-[8rem] disabled:opacity-40 disabled:pointer-events-none"
                                 >
                                     הבא
                                 </button>
                             )}
                             <button
                                 type="button"
-                                onClick={() => { setModalOpen(false); setPromoWizardStep(1); }}
+                                onClick={() => { setModalOpen(false); setPromoWizardStep(1); setServerErrors({}); }}
                                 className="order-3 px-6 py-3 rounded-xl text-gray-600 font-bold hover:bg-gray-50 w-full sm:w-auto"
                             >
                                 ביטול
@@ -737,7 +978,7 @@ export default function AdminCoupons() {
                                 <button
                                     type="button"
                                     onClick={handleSave}
-                                    disabled={saving || !form.name}
+                                    disabled={saving || !form.name?.trim() || Object.keys(formErrors).length > 0}
                                     className="order-1 sm:order-4 px-8 py-3 rounded-xl bg-gray-900 text-white font-bold hover:bg-black transition-colors disabled:opacity-50 w-full sm:w-auto"
                                 >
                                     {saving ? 'שומר...' : editingPromo ? 'עדכן' : 'צור מבצע'}

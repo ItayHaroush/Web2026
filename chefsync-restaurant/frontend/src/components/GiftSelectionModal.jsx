@@ -8,37 +8,46 @@ export default function GiftSelectionModal({ promotion, onClose }) {
     const [menuItems, setMenuItems] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    const reward = promotion?.rewards?.[0];
     const timesQualified = promotion?.progress?.times_qualified ?? 1;
     const maxSelectable = getEffectiveMax(promotion);
-    const rewardCategoryId = reward?.reward_category_id;
     const promoIdStr = String(promotion?.promotion_id);
     const currentGifts = selectedGifts[promoIdStr] || [];
 
-    // בדיקה האם כל הפרסים הם מוצר ספציפי
     const freeItemRewards = (promotion?.rewards || []).filter(r => r.reward_type === 'free_item');
     const isSpecificMode = freeItemRewards.length > 0 && freeItemRewards.every(r => r.reward_menu_item_id);
+    /** מתנה מבחירה בקטגוריה — לא תלוי בסדר הפרסים (למשל fixed_price לפני free_item) */
+    const categoryGiftReward = freeItemRewards.find(
+        (r) => !r.reward_menu_item_id && r.reward_category_id
+    );
+    const rewardCategoryId = categoryGiftReward?.reward_category_id;
 
     useEffect(() => {
-        // מצב ספציפי - לא צריך לטעון פריטים
         if (isSpecificMode) {
             setLoading(false);
             return;
         }
 
-        if (!rewardCategoryId) return;
+        if (!rewardCategoryId) {
+            setLoading(false);
+            setMenuItems([]);
+            return;
+        }
 
         const fetchItems = async () => {
             try {
                 setLoading(true);
                 const res = await apiClient.get('/menu');
                 const categories = res.data?.data || res.data?.categories || [];
+                const list = Array.isArray(categories) ? categories : [];
 
-                const rewardCategory = (Array.isArray(categories) ? categories : []).find(cat => cat.id === rewardCategoryId);
+                const rewardCategory = list.find(
+                    (cat) => Number(cat.id) === Number(rewardCategoryId)
+                );
                 const items = rewardCategory?.items || [];
-                setMenuItems(items.filter(item => item.is_available !== false));
+                setMenuItems(items.filter((item) => item.is_available !== false));
             } catch (err) {
                 console.error('Failed to load gift items', err);
+                setMenuItems([]);
             } finally {
                 setLoading(false);
             }

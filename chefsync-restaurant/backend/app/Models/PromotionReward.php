@@ -17,11 +17,14 @@ class PromotionReward extends Model
         'reward_menu_item_id',
         'reward_value',
         'max_selectable',
+        'discount_scope',
+        'discount_menu_item_ids',
     ];
 
     protected $casts = [
         'reward_value' => 'decimal:2',
         'max_selectable' => 'integer',
+        'discount_menu_item_ids' => 'array',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];

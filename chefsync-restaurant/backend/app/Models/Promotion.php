@@ -27,6 +27,8 @@ class Promotion extends Model
         'auto_apply',
         'gift_required',
         'stackable',
+        'show_menu_banner',
+        'show_entry_popup',
     ];
 
     protected $casts = [
@@ -34,6 +36,8 @@ class Promotion extends Model
         'auto_apply' => 'boolean',
         'gift_required' => 'boolean',
         'stackable' => 'boolean',
+        'show_menu_banner' => 'boolean',
+        'show_entry_popup' => 'boolean',
         'active_days' => 'array',
         'start_at' => 'datetime',
         'end_at' => 'datetime',

@@ -2,9 +2,10 @@
 
 namespace App\Services;
 
-use App\Models\Promotion;
-use App\Models\PromotionUsage;
 use App\Models\MenuItem;
+use App\Models\Promotion;
+use App\Models\PromotionReward;
+use App\Models\PromotionUsage;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 
@@ -146,6 +147,8 @@ class PromotionService
                     'reward_menu_item_name' => $reward->rewardMenuItem?->name ?? '',
                     'reward_value' => $reward->reward_value,
                     'max_selectable' => $reward->max_selectable,
+                    'discount_scope' => $reward->discount_scope ?? 'whole_cart',
+                    'discount_menu_item_ids' => $reward->discount_menu_item_ids ?? [],
                 ];
             })->toArray();
 
@@ -301,14 +304,33 @@ class PromotionService
                         }
                     }
                 } elseif ($reward->reward_type === 'discount_percent') {
-                    $itemsTotal = array_sum(array_map(
-                        fn($li) => round((float) $li['price_at_order'] * (int) ($li['quantity'] ?? 1), 2),
-                        $lineItems
-                    ));
+                    $itemsTotal = $this->discountableItemsSubtotal($lineItems, $reward);
                     $totalDiscount += round($itemsTotal * ((float) $reward->reward_value / 100), 2) * $timesQualified;
                 } elseif ($reward->reward_type === 'discount_fixed') {
-                    $totalDiscount += (float) $reward->reward_value * $timesQualified;
+                    $scope = $reward->discount_scope ?? 'whole_cart';
+                    $ids = $reward->discount_menu_item_ids ?? [];
+                    if ($scope === 'selected_items' && is_array($ids) && count($ids) > 0) {
+                        $totalDiscount += $this->fixedDiscountSelectedItems(
+                            $lineItems,
+                            $ids,
+                            (float) $reward->reward_value,
+                            $timesQualified
+                        );
+                    } else {
+                        $totalDiscount += (float) $reward->reward_value * $timesQualified;
+                    }
                 }
+            }
+
+            // מחיר קבוע לחבילה: סכום יחידות לפי כללי הקטגוריות פחות (reward_value × פעמים שעומד)
+            $fixedPriceRewards = $promotion->rewards->filter(fn ($r) => $r->reward_type === 'fixed_price');
+            if ($fixedPriceRewards->isNotEmpty() && $promotion->rules->isNotEmpty()) {
+                $targetTotal = 0.0;
+                foreach ($fixedPriceRewards as $fr) {
+                    $targetTotal += round((float) $fr->reward_value * $timesQualified, 2);
+                }
+                $allocated = $this->bundleAllocatedSubtotalForPromotionRules($promotion, $lineItems, $timesQualified);
+                $totalDiscount += max(0, round($allocated - $targetTotal, 2));
             }
 
             if (!$promotion->stackable) {
@@ -326,6 +348,134 @@ class PromotionService
             'promotion_discount' => round($totalDiscount, 2),
             'gift_items' => $giftItems,
         ];
+    }
+
+    /**
+     * סכום שורות רלוונטיות להנחה באחוזים / בסיס משותף
+     *
+     * @param  array<int, array<string, mixed>>  $lineItems
+     */
+    private function discountableItemsSubtotal(array $lineItems, PromotionReward $reward): float
+    {
+        $scope = $reward->discount_scope ?? 'whole_cart';
+        $ids = $reward->discount_menu_item_ids ?? [];
+        if ($scope === 'selected_items' && is_array($ids) && count($ids) > 0) {
+            return $this->itemsSubtotalForMenuItemIds($lineItems, $ids);
+        }
+
+        return round(array_sum(array_map(
+            fn ($li) => $this->lineSubtotal($li),
+            $lineItems
+        )), 2);
+    }
+
+    /**
+     * @param  array<string, mixed>  $li
+     */
+    private function lineSubtotal(array $li): float
+    {
+        return round((float) ($li['price_at_order'] ?? 0) * (int) ($li['quantity'] ?? 1), 2);
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $lineItems
+     * @param  array<int, int|string>  $menuItemIds
+     */
+    private function itemsSubtotalForMenuItemIds(array $lineItems, array $menuItemIds): float
+    {
+        $idSet = array_flip(array_map(static fn ($id) => (int) $id, $menuItemIds));
+        $sum = 0.0;
+        foreach ($lineItems as $li) {
+            $mid = (int) ($li['menu_item_id'] ?? 0);
+            if ($mid > 0 && isset($idSet[$mid])) {
+                $sum += $this->lineSubtotal($li);
+            }
+        }
+
+        return round($sum, 2);
+    }
+
+    /**
+     * הנחה קבועה ליחידה על מוצרים נבחרים: לכל שורה min(סכום_שורה, reward_value × כמות), מוכפל ב-timesQualified
+     *
+     * @param  array<int, array<string, mixed>>  $lineItems
+     * @param  array<int, int|string>  $menuItemIds
+     */
+    private function fixedDiscountSelectedItems(array $lineItems, array $menuItemIds, float $perUnit, int $timesQualified): float
+    {
+        $idSet = array_flip(array_map(static fn ($id) => (int) $id, $menuItemIds));
+        $perApplication = 0.0;
+        foreach ($lineItems as $li) {
+            $mid = (int) ($li['menu_item_id'] ?? 0);
+            if ($mid <= 0 || !isset($idSet[$mid])) {
+                continue;
+            }
+            $qty = (int) ($li['quantity'] ?? 1);
+            $lineTotal = $this->lineSubtotal($li);
+            $perApplication += min($perUnit * $qty, $lineTotal);
+        }
+
+        return round($perApplication * $timesQualified, 2);
+    }
+
+    /**
+     * סכום מחירון של היחידות שנספרות לתנאי המבצע (למחיר קבוע לחבילה)
+     *
+     * @param  array<int, array<string, mixed>>  $lineItems
+     */
+    private function bundleAllocatedSubtotalForPromotionRules(Promotion $promotion, array $lineItems, int $timesQualified): float
+    {
+        if ($timesQualified < 1 || $promotion->rules->isEmpty()) {
+            return 0.0;
+        }
+
+        $remainingByIndex = [];
+        foreach ($lineItems as $idx => $li) {
+            $remainingByIndex[$idx] = (int) ($li['quantity'] ?? 1);
+        }
+
+        $allocated = 0.0;
+        foreach ($promotion->rules as $rule) {
+            $catId = (int) $rule->required_category_id;
+            $need = (int) $rule->min_quantity * $timesQualified;
+            $allocated += $this->takeSubtotalFromCategoryLines($lineItems, $remainingByIndex, $catId, $need);
+        }
+
+        return round($allocated, 2);
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $lineItems
+     * @param  array<int, int>  $remainingByIndex
+     */
+    private function takeSubtotalFromCategoryLines(array $lineItems, array &$remainingByIndex, int $categoryId, int $unitsNeeded): float
+    {
+        if ($unitsNeeded <= 0) {
+            return 0.0;
+        }
+
+        $remaining = $unitsNeeded;
+        $sum = 0.0;
+        foreach ($lineItems as $idx => $line) {
+            if ($remaining <= 0) {
+                break;
+            }
+            if ((int) ($line['category_id'] ?? 0) !== $categoryId) {
+                continue;
+            }
+            $avail = (int) ($remainingByIndex[$idx] ?? 0);
+            if ($avail <= 0) {
+                continue;
+            }
+            $qLine = max(1, (int) ($line['quantity'] ?? 1));
+            $lineSub = $this->lineSubtotal($line);
+            $take = min($remaining, $avail);
+            $sum += ($lineSub / $qLine) * $take;
+            $remainingByIndex[$idx] = $avail - $take;
+            $remaining -= $take;
+        }
+
+        return round($sum, 2);
     }
 
     /**

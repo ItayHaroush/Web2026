@@ -32,7 +32,11 @@ class PromotionService {
         if (active_days && Array.isArray(active_days)) {
             active_days.forEach((d, i) => fd.append(`active_days[${i}]`, d));
         }
-        (rules || []).forEach((r, i) => {
+        const validRules = (rules || []).filter((r) => {
+            const cid = r.required_category_id;
+            return cid !== '' && cid !== null && cid !== undefined && Number(cid) > 0;
+        });
+        validRules.forEach((r, i) => {
             fd.append(`rules[${i}][required_category_id]`, r.required_category_id);
             fd.append(`rules[${i}][min_quantity]`, r.min_quantity);
         });
@@ -42,6 +46,15 @@ class PromotionService {
             if (r.reward_menu_item_id) fd.append(`rewards[${i}][reward_menu_item_id]`, r.reward_menu_item_id);
             if (r.reward_value !== '' && r.reward_value !== null && r.reward_value !== undefined) fd.append(`rewards[${i}][reward_value]`, r.reward_value);
             if (r.max_selectable) fd.append(`rewards[${i}][max_selectable]`, r.max_selectable);
+            const scope = r.discount_scope || 'whole_cart';
+            if (r.reward_type === 'discount_percent' || r.reward_type === 'discount_fixed') {
+                fd.append(`rewards[${i}][discount_scope]`, scope);
+                if (scope === 'selected_items' && Array.isArray(r.discount_menu_item_ids)) {
+                    r.discount_menu_item_ids.forEach((id, j) => {
+                        if (id !== '' && id != null) fd.append(`rewards[${i}][discount_menu_item_ids][${j}]`, id);
+                    });
+                }
+            }
         });
         return fd;
     }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import PhoneVerificationModal from '../components/PhoneVerificationModal';
 import LocationPickerModal from '../components/LocationPickerModal';
 import OrderConfirmationSheet from '../components/OrderConfirmationSheet';
@@ -22,6 +22,7 @@ import FutureOrderModal from '../components/FutureOrderModal';
 import CartCheckoutWizard from '../components/CartCheckoutWizard';
 import { resolveAssetUrl } from '../utils/assets';
 import { notifyActiveOrdersStorageChanged } from '../utils/activeOrdersStorage';
+import { computeClientPromotionDiscount } from '../utils/promotionDiscountPreview';
 
 /**
  * עמוד סל קניות
@@ -525,6 +526,16 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
         }
     };
 
+    const menuItemNameById = useMemo(() => {
+        const m = new Map();
+        for (const cat of menuCategories || []) {
+            for (const item of cat.items || []) {
+                m.set(Number(item.id), item.name);
+            }
+        }
+        return m;
+    }, [menuCategories]);
+
     if (cartItems.length === 0) {
         return (
             <CustomerLayout>
@@ -584,17 +595,7 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
     const metPromotions = eligiblePromotions.filter(p => p.progress?.met);
 
     // חישוב הנחת מבצעים בצד הלקוח (לתצוגה — הבקאנד מחשב סופית)
-    const promotionDiscount = metPromotions.reduce((sum, promo) => {
-        const times = promo.progress?.times_qualified || 1;
-        for (const reward of (promo.rewards || [])) {
-            if (reward.reward_type === 'discount_percent') {
-                sum += Math.round(total * (parseFloat(reward.reward_value) / 100) * 100) / 100 * times;
-            } else if (reward.reward_type === 'discount_fixed') {
-                sum += parseFloat(reward.reward_value) * times;
-            }
-        }
-        return sum;
-    }, 0);
+    const promotionDiscount = computeClientPromotionDiscount(total, cartItems, metPromotions, menuCategories);
     const totalWithDelivery = total + deliveryFee - promotionDiscount;
     const isBelowMinimum = customerInfo.delivery_method === 'delivery' && deliveryMinimum > 0 && total < deliveryMinimum;
     // בניית רשימת מתנות נבחרות (עם שמות) מ-selectedGifts
@@ -618,9 +619,12 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                 }
             });
         } else if (promoGifts.length > 0) {
-            // מתנות שנבחרו ידנית מקטגוריה
-            promoGifts.forEach(itemId => {
-                selectedGiftItems.push({ menu_item_id: itemId, name: `מתנה ממבצע: ${promo.name}` });
+            promoGifts.forEach((itemId) => {
+                const label = menuItemNameById.get(Number(itemId));
+                selectedGiftItems.push({
+                    menu_item_id: itemId,
+                    name: label ? `מתנה: ${label}` : `מתנה ממבצע (${promo.name})`,
+                });
             });
         }
     }
@@ -1051,7 +1055,7 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
 
                     {promotionDiscount > 0 && (
                         <div className="flex justify-between items-center text-lg text-green-600 dark:text-green-400">
-                            <span className="font-medium flex items-center gap-1"><FaGift size={14} /> הנחת מבצעים</span>
+                            <span className="font-medium flex items-center gap-1"><FaGift size={14} /> הטבת מבצע</span>
                             <span className="font-bold">-₪{promotionDiscount.toFixed(2)}</span>
                         </div>
                     )}

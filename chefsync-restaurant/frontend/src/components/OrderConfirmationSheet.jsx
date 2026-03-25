@@ -155,7 +155,7 @@ export default function OrderConfirmationSheet({
                                             <span className="font-bold text-brand-primary dark:text-orange-400 text-sm">{gift.name}</span>
                                             <span className="bg-brand-light text-brand-primary text-xs px-2 py-0.5 rounded-full font-bold">מתנה</span>
                                         </div>
-                                        <span className="font-bold text-brand-primary text-sm">{'\u20aa'}0.00</span>
+                                        <span className="font-bold text-brand-primary text-sm">חינם</span>
                                     </div>
                                 ))}
                             </div>
@@ -180,21 +180,10 @@ export default function OrderConfirmationSheet({
                             <div className="flex justify-between items-center text-sm">
                                 <span className="text-brand-primary dark:text-orange-400 flex items-center gap-1">
                                     <FaGift size={12} />
-                                    הנחת מבצע
+                                    הטבת מבצע
                                 </span>
                                 <span className="font-bold text-brand-primary dark:text-orange-400">
                                     -{'\u20aa'}{promotionDiscount.toFixed(2)}
-                                </span>
-                            </div>
-                        )}
-                        {!promotionDiscount && metPromotions.length > 0 && (
-                            <div className="flex justify-between items-center text-sm">
-                                <span className="text-brand-primary dark:text-orange-400 flex items-center gap-1">
-                                    <FaGift size={12} />
-                                    {metPromotions.map(p => p.name).join(', ')}
-                                </span>
-                                <span className="font-bold text-brand-primary dark:text-orange-400 text-sm">
-                                    מתנה
                                 </span>
                             </div>
                         )}

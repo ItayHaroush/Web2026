@@ -22,6 +22,7 @@ class RestaurantAddonGroup extends Model
         'source_type',
         'source_category_id',
         'source_include_prices',
+        'source_addon_fixed_price',
         'source_selection_weight',
     ];
 
@@ -33,8 +34,21 @@ class RestaurantAddonGroup extends Model
         'sort_order' => 'integer',
         'source_category_id' => 'integer',
         'source_include_prices' => 'boolean',
+        'source_addon_fixed_price' => 'decimal:2',
         'source_selection_weight' => 'integer',
     ];
+
+    /**
+     * מחיר תוספת סינתטית לפריט מקושר מקטגוריה: מחיר קבוע לקבוצה (אם הוגדר) או מחיר מהתפריט / 0
+     */
+    public function syntheticAddonPriceDelta(float $itemMenuPrice): float
+    {
+        if ($this->source_addon_fixed_price !== null) {
+            return round((float) $this->source_addon_fixed_price, 2);
+        }
+
+        return ($this->source_include_prices ?? true) ? round($itemMenuPrice, 2) : 0.0;
+    }
 
     protected static function booted()
     {

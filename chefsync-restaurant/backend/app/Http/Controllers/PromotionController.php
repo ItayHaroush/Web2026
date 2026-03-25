@@ -10,7 +10,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 /**
  * PromotionController - ניהול מבצעים
@@ -54,33 +56,8 @@ class PromotionController extends Controller
     public function store(Request $request)
     {
         try {
-            $validated = $request->validate([
-                'name' => 'required|string|max:100',
-                'description' => 'nullable|string|max:500',
-                'image' => 'nullable|image|max:12288',
-                'start_at' => 'nullable|date',
-                'end_at' => 'nullable|date|after_or_equal:start_at',
-                'active_hours_start' => 'nullable|date_format:H:i',
-                'active_hours_end' => 'nullable|date_format:H:i',
-                'active_days' => 'nullable|array',
-                'active_days.*' => 'integer|between:0,6',
-                'is_active' => 'boolean',
-                'priority' => 'nullable|integer|min:0',
-                'auto_apply' => 'boolean',
-                'gift_required' => 'boolean',
-                'stackable' => 'boolean',
-                'rules' => 'required|array|min:1',
-                'rules.*.required_category_id' => 'required|integer|exists:categories,id',
-                'rules.*.min_quantity' => 'required|integer|min:1',
-                'rewards' => 'required|array|min:1',
-                'rewards.*.reward_type' => 'required|in:free_item,discount_percent,discount_fixed,fixed_price',
-                'rewards.*.reward_category_id' => 'nullable|integer|exists:categories,id',
-                'rewards.*.reward_menu_item_id' => 'nullable|integer|exists:menu_items,id',
-                'rewards.*.reward_value' => 'nullable|numeric|min:0',
-                'rewards.*.max_selectable' => 'nullable|integer|min:1',
-            ]);
-
             $tenantId = app('tenant_id');
+            $validated = $this->validatePromotionPayload($request, $tenantId, false);
             $restaurant = \App\Models\Restaurant::where('tenant_id', $tenantId)->first();
 
             if (!$restaurant) {
@@ -112,6 +89,8 @@ class PromotionController extends Controller
                     'auto_apply' => $validated['auto_apply'] ?? true,
                     'gift_required' => $validated['gift_required'] ?? false,
                     'stackable' => $validated['stackable'] ?? false,
+                    'show_menu_banner' => $validated['show_menu_banner'] ?? true,
+                    'show_entry_popup' => $validated['show_entry_popup'] ?? true,
                 ]);
 
                 foreach ($validated['rules'] as $rule) {
@@ -123,13 +102,16 @@ class PromotionController extends Controller
                 }
 
                 foreach ($validated['rewards'] as $reward) {
+                    $nr = $this->normalizeRewardForPersistence($reward);
                     PromotionReward::create([
                         'promotion_id' => $promotion->id,
-                        'reward_type' => $reward['reward_type'],
-                        'reward_category_id' => $reward['reward_category_id'] ?? null,
-                        'reward_menu_item_id' => $reward['reward_menu_item_id'] ?? null,
-                        'reward_value' => $reward['reward_value'] ?? null,
-                        'max_selectable' => $reward['max_selectable'] ?? 1,
+                        'reward_type' => $nr['reward_type'],
+                        'reward_category_id' => $nr['reward_category_id'],
+                        'reward_menu_item_id' => $nr['reward_menu_item_id'],
+                        'reward_value' => $nr['reward_value'],
+                        'max_selectable' => $nr['max_selectable'],
+                        'discount_scope' => $nr['discount_scope'],
+                        'discount_menu_item_ids' => $nr['discount_menu_item_ids'],
                     ]);
                 }
 
@@ -183,32 +165,8 @@ class PromotionController extends Controller
     public function update(Request $request, $id)
     {
         try {
-            $validated = $request->validate([
-                'name' => 'required|string|max:100',
-                'description' => 'nullable|string|max:500',
-                'image' => 'nullable|image|max:12288',
-                'remove_image' => 'nullable|boolean',
-                'start_at' => 'nullable|date',
-                'end_at' => 'nullable|date|after_or_equal:start_at',
-                'active_hours_start' => 'nullable|date_format:H:i',
-                'active_hours_end' => 'nullable|date_format:H:i',
-                'active_days' => 'nullable|array',
-                'active_days.*' => 'integer|between:0,6',
-                'is_active' => 'boolean',
-                'priority' => 'nullable|integer|min:0',
-                'auto_apply' => 'boolean',
-                'gift_required' => 'boolean',
-                'stackable' => 'boolean',
-                'rules' => 'required|array|min:1',
-                'rules.*.required_category_id' => 'required|integer|exists:categories,id',
-                'rules.*.min_quantity' => 'required|integer|min:1',
-                'rewards' => 'required|array|min:1',
-                'rewards.*.reward_type' => 'required|in:free_item,discount_percent,discount_fixed,fixed_price',
-                'rewards.*.reward_category_id' => 'nullable|integer|exists:categories,id',
-                'rewards.*.reward_menu_item_id' => 'nullable|integer|exists:menu_items,id',
-                'rewards.*.reward_value' => 'nullable|numeric|min:0',
-                'rewards.*.max_selectable' => 'nullable|integer|min:1',
-            ]);
+            $tenantId = app('tenant_id');
+            $validated = $this->validatePromotionPayload($request, $tenantId, true);
 
             $promotion = Promotion::findOrFail($id);
 
@@ -246,6 +204,8 @@ class PromotionController extends Controller
                     'auto_apply' => $validated['auto_apply'] ?? true,
                     'gift_required' => $validated['gift_required'] ?? false,
                     'stackable' => $validated['stackable'] ?? false,
+                    'show_menu_banner' => $validated['show_menu_banner'] ?? true,
+                    'show_entry_popup' => $validated['show_entry_popup'] ?? true,
                 ]);
 
                 // Sync rules
@@ -261,13 +221,16 @@ class PromotionController extends Controller
                 // Sync rewards
                 $promotion->rewards()->delete();
                 foreach ($validated['rewards'] as $reward) {
+                    $nr = $this->normalizeRewardForPersistence($reward);
                     PromotionReward::create([
                         'promotion_id' => $promotion->id,
-                        'reward_type' => $reward['reward_type'],
-                        'reward_category_id' => $reward['reward_category_id'] ?? null,
-                        'reward_menu_item_id' => $reward['reward_menu_item_id'] ?? null,
-                        'reward_value' => $reward['reward_value'] ?? null,
-                        'max_selectable' => $reward['max_selectable'] ?? 1,
+                        'reward_type' => $nr['reward_type'],
+                        'reward_category_id' => $nr['reward_category_id'],
+                        'reward_menu_item_id' => $nr['reward_menu_item_id'],
+                        'reward_value' => $nr['reward_value'],
+                        'max_selectable' => $nr['max_selectable'],
+                        'discount_scope' => $nr['discount_scope'],
+                        'discount_menu_item_ids' => $nr['discount_menu_item_ids'],
                     ]);
                 }
             });
@@ -356,6 +319,8 @@ class PromotionController extends Controller
                     'gift_required' => $promotion->gift_required,
                     'stackable' => $promotion->stackable,
                     'auto_apply' => $promotion->auto_apply,
+                    'show_menu_banner' => $promotion->show_menu_banner ?? true,
+                    'show_entry_popup' => $promotion->show_entry_popup ?? true,
                     'rules' => $promotion->rules->map(function ($rule) {
                         return [
                             'required_category_id' => $rule->required_category_id,
@@ -373,6 +338,8 @@ class PromotionController extends Controller
                             'reward_menu_item_name' => $reward->rewardMenuItem?->name ?? '',
                             'reward_value' => $reward->reward_value,
                             'max_selectable' => $reward->max_selectable,
+                            'discount_scope' => $reward->discount_scope ?? 'whole_cart',
+                            'discount_menu_item_ids' => $reward->discount_menu_item_ids ?? [],
                         ];
                     }),
                 ];
@@ -424,5 +391,115 @@ class PromotionController extends Controller
                 'error' => $e->getMessage(),
             ], 500);
         }
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function validatePromotionPayload(Request $request, string $tenantId, bool $isUpdate): array
+    {
+        $rules = [
+            'name' => 'required|string|max:100',
+            'description' => 'nullable|string|max:500',
+            'start_at' => 'nullable|date',
+            'end_at' => 'nullable|date|after_or_equal:start_at',
+            'active_hours_start' => 'nullable|date_format:H:i',
+            'active_hours_end' => 'nullable|date_format:H:i',
+            'active_days' => 'nullable|array',
+            'active_days.*' => 'integer|between:0,6',
+            'is_active' => 'boolean',
+            'priority' => 'nullable|integer|min:0',
+            'auto_apply' => 'boolean',
+            'gift_required' => 'boolean',
+            'stackable' => 'boolean',
+            'show_menu_banner' => 'sometimes|boolean',
+            'show_entry_popup' => 'sometimes|boolean',
+            'rules' => 'required|array|min:1',
+            'rules.*.required_category_id' => ['required', 'integer', Rule::exists('categories', 'id')->where('tenant_id', $tenantId)],
+            'rules.*.min_quantity' => 'required|integer|min:1',
+            'rewards' => 'required|array|min:1',
+            'rewards.*.reward_type' => 'required|in:free_item,discount_percent,discount_fixed,fixed_price',
+            'rewards.*.reward_category_id' => ['nullable', 'integer', Rule::exists('categories', 'id')->where('tenant_id', $tenantId)],
+            'rewards.*.reward_menu_item_id' => ['nullable', 'integer', Rule::exists('menu_items', 'id')->where('tenant_id', $tenantId)],
+            'rewards.*.reward_value' => 'nullable|numeric|min:0',
+            'rewards.*.max_selectable' => 'nullable|integer|min:1',
+            'rewards.*.discount_scope' => 'nullable|in:whole_cart,selected_items',
+            'rewards.*.discount_menu_item_ids' => 'nullable|array',
+            'rewards.*.discount_menu_item_ids.*' => ['integer', Rule::exists('menu_items', 'id')->where('tenant_id', $tenantId)],
+        ];
+        $rules['image'] = 'nullable|image|max:12288';
+        if ($isUpdate) {
+            $rules['remove_image'] = 'nullable|boolean';
+        }
+
+        $validator = Validator::make($request->all(), $rules);
+
+        $validator->after(function ($validator) use ($request) {
+            $rewards = $request->input('rewards', []);
+            if (!is_array($rewards)) {
+                return;
+            }
+            foreach ($rewards as $i => $reward) {
+                if (!is_array($reward)) {
+                    continue;
+                }
+                $type = $reward['reward_type'] ?? '';
+                $scope = $reward['discount_scope'] ?? 'whole_cart';
+                if (!in_array($type, ['discount_percent', 'discount_fixed'], true)) {
+                    continue;
+                }
+                if ($scope !== 'selected_items') {
+                    continue;
+                }
+                $ids = $reward['discount_menu_item_ids'] ?? [];
+                if (!is_array($ids)) {
+                    $validator->errors()->add("rewards.{$i}.discount_menu_item_ids", 'נא לבחור לפחות מוצר אחד להנחה על פריטים נבחרים.');
+
+                    continue;
+                }
+                $nonEmpty = array_filter($ids, fn ($v) => $v !== '' && $v !== null);
+                if (count($nonEmpty) === 0) {
+                    $validator->errors()->add("rewards.{$i}.discount_menu_item_ids", 'נא לבחור לפחות מוצר אחד להנחה על פריטים נבחרים.');
+                }
+            }
+        });
+
+        return $validator->validate();
+    }
+
+    /**
+     * @param  array<string, mixed>  $reward
+     * @return array{reward_type: string, reward_category_id: ?int, reward_menu_item_id: ?int, reward_value: mixed, max_selectable: int, discount_scope: string, discount_menu_item_ids: ?array}
+     */
+    private function normalizeRewardForPersistence(array $reward): array
+    {
+        $type = $reward['reward_type'];
+        $discountScope = 'whole_cart';
+        $discountMenuItemIds = null;
+        if (in_array($type, ['discount_percent', 'discount_fixed'], true)) {
+            $scope = $reward['discount_scope'] ?? 'whole_cart';
+            $rawIds = $reward['discount_menu_item_ids'] ?? [];
+            if ($scope === 'selected_items' && is_array($rawIds) && count($rawIds) > 0) {
+                $discountScope = 'selected_items';
+                $discountMenuItemIds = array_values(array_unique(array_map(
+                    static fn ($v) => (int) $v,
+                    array_filter($rawIds, static fn ($v) => $v !== '' && $v !== null)
+                )));
+                if ($discountMenuItemIds === []) {
+                    $discountScope = 'whole_cart';
+                    $discountMenuItemIds = null;
+                }
+            }
+        }
+
+        return [
+            'reward_type' => $type,
+            'reward_category_id' => isset($reward['reward_category_id']) && $reward['reward_category_id'] !== '' ? (int) $reward['reward_category_id'] : null,
+            'reward_menu_item_id' => isset($reward['reward_menu_item_id']) && $reward['reward_menu_item_id'] !== '' ? (int) $reward['reward_menu_item_id'] : null,
+            'reward_value' => $reward['reward_value'] ?? null,
+            'max_selectable' => (int) ($reward['max_selectable'] ?? 1),
+            'discount_scope' => $discountScope,
+            'discount_menu_item_ids' => $discountMenuItemIds,
+        ];
     }
 }

@@ -62,6 +62,7 @@ export default function AdminSalads({ embedded = false }) {
         source_type: 'manual',
         source_category_id: '',
         source_include_prices: true,
+        source_addon_fixed_price: '',
         source_selection_weight: '1',
     });
 
@@ -270,6 +271,10 @@ export default function AdminSalads({ embedded = false }) {
                 source_type: group.source_type || 'manual',
                 source_category_id: group.source_category_id ? String(group.source_category_id) : '',
                 source_include_prices: group.source_include_prices !== undefined ? Boolean(group.source_include_prices) : true,
+                source_addon_fixed_price:
+                    group.source_addon_fixed_price !== null && group.source_addon_fixed_price !== undefined && group.source_addon_fixed_price !== ''
+                        ? String(group.source_addon_fixed_price)
+                        : '',
                 source_selection_weight: typeof group.source_selection_weight === 'number' ? String(group.source_selection_weight) : (group.source_selection_weight || '1'),
             });
         } else {
@@ -283,6 +288,7 @@ export default function AdminSalads({ embedded = false }) {
                 source_type: 'manual',
                 source_category_id: '',
                 source_include_prices: true,
+                source_addon_fixed_price: '',
                 source_selection_weight: '1',
             });
         }
@@ -303,6 +309,7 @@ export default function AdminSalads({ embedded = false }) {
             source_type: 'manual',
             source_category_id: '',
             source_include_prices: true,
+            source_addon_fixed_price: '',
             source_selection_weight: '1',
         });
     };
@@ -335,6 +342,17 @@ export default function AdminSalads({ embedded = false }) {
             ? null
             : Number(groupForm.max_selections);
 
+        const fixedTrim = (groupForm.source_addon_fixed_price || '').trim();
+        let source_addon_fixed_price = null;
+        if (groupForm.source_type === 'category' && fixedTrim !== '') {
+            const n = Number(fixedTrim);
+            if (Number.isNaN(n) || n < 0) {
+                alert('נא להזין מחיר קבוע תקין (מספר ≥ 0)');
+                return;
+            }
+            source_addon_fixed_price = n;
+        }
+
         const payload = {
             name: groupForm.name.trim(),
             min_selections: Number(groupForm.min_selections) || 0,
@@ -348,6 +366,7 @@ export default function AdminSalads({ embedded = false }) {
             source_include_prices: groupForm.source_type === 'category'
                 ? Boolean(groupForm.source_include_prices)
                 : true,
+            source_addon_fixed_price: groupForm.source_type === 'category' ? source_addon_fixed_price : null,
             source_selection_weight: groupForm.source_type === 'category'
                 ? Math.max(1, Math.min(10, Number(groupForm.source_selection_weight) || 1))
                 : 1,
@@ -793,9 +812,27 @@ export default function AdminSalads({ embedded = false }) {
                                     <p className="text-gray-400 mt-2 text-sm font-bold">
                                         שינוי זמינות פריט בתפריט ישפיע אוטומטית על הקבוצה הזו
                                     </p>
-                                    <div className={`mt-4 px-5 py-2 rounded-2xl text-sm font-black inline-block ${selectedGroup?.source_include_prices ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                                        {selectedGroup?.source_include_prices ? '+₪ מחירי הפריטים מתווספים' : '₪0 כלול במנה (ללא תוספת מחיר)'}
-                                    </div>
+                                    {(() => {
+                                        const g = selectedGroup;
+                                        const raw = g?.source_addon_fixed_price;
+                                        const hasFixed = raw !== null && raw !== undefined && raw !== '' && Number(raw) >= 0;
+                                        const fixedNum = hasFixed ? Number(raw) : null;
+                                        const badgeClass = hasFixed
+                                            ? 'bg-amber-100 text-amber-900'
+                                            : g?.source_include_prices
+                                                ? 'bg-blue-100 text-blue-700'
+                                                : 'bg-emerald-100 text-emerald-700';
+                                        const badgeText = hasFixed
+                                            ? `+₪${fixedNum.toFixed(2)} קבוע לכל בחירה`
+                                            : g?.source_include_prices
+                                                ? '+₪ מחירי הפריטים מתווספים'
+                                                : '₪0 כלול במנה (ללא תוספת מחיר)';
+                                        return (
+                                            <div className={`mt-4 px-5 py-2 rounded-2xl text-sm font-black inline-block ${badgeClass}`}>
+                                                {badgeText}
+                                            </div>
+                                        );
+                                    })()}
                                 </div>
                             ) : (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -1146,7 +1183,7 @@ export default function AdminSalads({ embedded = false }) {
                                     <div className="grid grid-cols-2 gap-3 sm:gap-4">
                                         <button
                                             type="button"
-                                            onClick={() => setGroupForm({ ...groupForm, source_type: 'manual', source_category_id: '' })}
+                                            onClick={() => setGroupForm({ ...groupForm, source_type: 'manual', source_category_id: '', source_addon_fixed_price: '' })}
                                             className={`p-4 sm:p-5 rounded-2xl sm:rounded-[1.5rem] font-black text-sm sm:text-base transition-all flex flex-col items-center gap-2 ${groupForm.source_type === 'manual'
                                                 ? 'bg-brand-primary text-white shadow-lg ring-2 ring-brand-primary ring-offset-2'
                                                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -1197,32 +1234,69 @@ export default function AdminSalads({ embedded = false }) {
                                         {/* Price Impact Toggle */}
                                         <div className="mt-4 pt-4 border-t border-blue-100">
                                             <label className="text-xs font-black text-gray-500 mr-2 uppercase tracking-[0.2em] mb-3 block">השפעת מחיר</label>
-                                            <div className="grid grid-cols-2 gap-3">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setGroupForm({ ...groupForm, source_include_prices: true })}
-                                                    className={`p-3 sm:p-4 rounded-2xl font-black text-xs sm:text-sm transition-all flex flex-col items-center gap-1.5 ${groupForm.source_include_prices
-                                                        ? 'bg-blue-600 text-white shadow-lg ring-2 ring-blue-600 ring-offset-2'
-                                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                                        }`}
-                                                >
-                                                    <span className="text-lg">+₪</span>
-                                                    <span>עם מחיר</span>
-                                                    <span className="text-[9px] opacity-70 font-bold">מחיר הפריט יתווסף</span>
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setGroupForm({ ...groupForm, source_include_prices: false })}
-                                                    className={`p-3 sm:p-4 rounded-2xl font-black text-xs sm:text-sm transition-all flex flex-col items-center gap-1.5 ${!groupForm.source_include_prices
-                                                        ? 'bg-emerald-600 text-white shadow-lg ring-2 ring-emerald-600 ring-offset-2'
-                                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                                        }`}
-                                                >
-                                                    <span className="text-lg">₪0</span>
-                                                    <span>ללא מחיר</span>
-                                                    <span className="text-[9px] opacity-70 font-bold">כלול במנה</span>
-                                                </button>
-                                            </div>
+                                            {(() => {
+                                                const fixedTrim = (groupForm.source_addon_fixed_price || '').trim();
+                                                const isFixed = fixedTrim !== '';
+                                                return (
+                                                    <>
+                                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setGroupForm({ ...groupForm, source_include_prices: true, source_addon_fixed_price: '' })}
+                                                                className={`p-3 sm:p-4 rounded-2xl font-black text-xs sm:text-sm transition-all flex flex-col items-center gap-1.5 ${!isFixed && groupForm.source_include_prices
+                                                                    ? 'bg-blue-600 text-white shadow-lg ring-2 ring-blue-600 ring-offset-2'
+                                                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                                                    }`}
+                                                            >
+                                                                <span className="text-lg">+₪</span>
+                                                                <span>מחיר מהתפריט</span>
+                                                                <span className="text-[9px] opacity-70 font-bold text-center">לפי מחיר כל פריט</span>
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setGroupForm({ ...groupForm, source_include_prices: false, source_addon_fixed_price: '' })}
+                                                                className={`p-3 sm:p-4 rounded-2xl font-black text-xs sm:text-sm transition-all flex flex-col items-center gap-1.5 ${!isFixed && !groupForm.source_include_prices
+                                                                    ? 'bg-emerald-600 text-white shadow-lg ring-2 ring-emerald-600 ring-offset-2'
+                                                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                                                    }`}
+                                                            >
+                                                                <span className="text-lg">₪0</span>
+                                                                <span>ללא מחיר</span>
+                                                                <span className="text-[9px] opacity-70 font-bold text-center">כלול במנה</span>
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setGroupForm({
+                                                                    ...groupForm,
+                                                                    source_include_prices: true,
+                                                                    source_addon_fixed_price: fixedTrim === '' ? '0' : groupForm.source_addon_fixed_price,
+                                                                })}
+                                                                className={`p-3 sm:p-4 rounded-2xl font-black text-xs sm:text-sm transition-all flex flex-col items-center gap-1.5 ${isFixed
+                                                                    ? 'bg-amber-500 text-white shadow-lg ring-2 ring-amber-500 ring-offset-2'
+                                                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                                                    }`}
+                                                            >
+                                                                <span className="text-lg">₪</span>
+                                                                <span>מחיר קבוע</span>
+                                                                <span className="text-[9px] opacity-70 font-bold text-center">אותו תוספת לכל בחירה</span>
+                                                            </button>
+                                                        </div>
+                                                        {isFixed && (
+                                                            <div className="mt-3 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                                                                <label className="text-xs font-black text-amber-800 shrink-0">סכום לכל בחירה (₪)</label>
+                                                                <input
+                                                                    type="number"
+                                                                    min="0"
+                                                                    step="0.01"
+                                                                    value={groupForm.source_addon_fixed_price}
+                                                                    onChange={(e) => setGroupForm({ ...groupForm, source_addon_fixed_price: e.target.value })}
+                                                                    className="w-full sm:max-w-[10rem] px-4 py-3 bg-amber-50 border-2 border-amber-200 rounded-2xl focus:ring-4 focus:ring-amber-300/40 text-gray-900 font-black text-center text-lg"
+                                                                />
+                                                            </div>
+                                                        )}
+                                                    </>
+                                                );
+                                            })()}
                                         </div>
 
                                         {/* משקל בחירה לפריטים מהקטגוריה */}
