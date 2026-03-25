@@ -84,9 +84,9 @@ class CustomerOrderCancelledMail extends Mailable
 
         $body .= EmailLayoutHelper::infoBox($infoContent, '#ef4444', '#fef2f2');
 
-        // CTA להזמנה חדשה
+        // CTA להזמנה חדשה — תפריט ציבורי (App.jsx: /:tenantId/menu)
         $tenantId = $this->restaurant->tenant_id ?? '';
-        $menuUrl = EmailLayoutHelper::siteUrl("/{$tenantId}");
+        $menuUrl = EmailLayoutHelper::siteUrl('/' . rawurlencode((string) $tenantId) . '/menu');
 
         $body .= EmailLayoutHelper::paragraph('<span style="text-align: center; display: block; margin-top: 8px;">נשמח לראות אותך שוב!</span>');
         $body .= EmailLayoutHelper::ctaButton('הזמן מחדש', $menuUrl);

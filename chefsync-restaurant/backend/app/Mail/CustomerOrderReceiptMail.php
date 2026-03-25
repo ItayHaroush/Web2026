@@ -93,9 +93,9 @@ class CustomerOrderReceiptMail extends Mailable
 
         $body .= EmailLayoutHelper::infoBox($infoContent);
 
-        // Reorder CTA
+        // Reorder CTA — תפריט ציבורי (App.jsx: /:tenantId/menu)
         $tenantId = $this->restaurant->tenant_id ?? '';
-        $menuUrl = EmailLayoutHelper::siteUrl("/{$tenantId}");
+        $menuUrl = EmailLayoutHelper::siteUrl('/' . rawurlencode((string) $tenantId) . '/menu');
         $body .= EmailLayoutHelper::ctaButton('הזמן שוב', $menuUrl);
 
         // WhatsApp share
