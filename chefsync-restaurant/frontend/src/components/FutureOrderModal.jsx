@@ -168,37 +168,42 @@ export default function FutureOrderModal({ isOpen, onClose, onConfirm, restauran
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-[999] flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={onClose}>
+        <div
+            className="fixed inset-0 z-[999] flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-x-hidden overscroll-contain"
+            onClick={onClose}
+        >
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" />
             <div
-                className="relative bg-white dark:bg-brand-dark-surface rounded-t-[1.75rem] sm:rounded-3xl shadow-2xl w-full max-w-md max-h-[min(92dvh,92vh)] overflow-hidden flex flex-col min-h-0 animate-slideUp sm:m-0"
+                className="relative bg-white dark:bg-brand-dark-surface rounded-t-[1.75rem] sm:rounded-3xl shadow-2xl w-full min-w-0 max-w-[min(100%,28rem)] max-h-[min(92dvh,92vh)] overflow-hidden overflow-x-hidden flex flex-col min-h-0 animate-slideUp sm:m-0 [contain:layout]"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
-                <div className="bg-gradient-to-r from-amber-500 to-orange-500 px-6 py-5 text-white relative">
+                <div className="bg-gradient-to-r from-amber-500 to-orange-500 px-4 sm:px-6 py-4 sm:py-5 text-white relative shrink-0">
                     <button
+                        type="button"
                         onClick={onClose}
-                        className="absolute top-4 left-4 w-8 h-8 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors"
+                        className="absolute top-3 left-3 sm:top-4 sm:left-4 w-9 h-9 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors z-10"
+                        aria-label="סגור"
                     >
                         <FaTimes className="text-sm" />
                     </button>
-                    <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
-                            <FaClock className="text-2xl" />
+                    <div className="flex items-center gap-3 pr-2 min-w-0">
+                        <div className="w-11 h-11 sm:w-12 sm:h-12 shrink-0 bg-white/20 rounded-xl flex items-center justify-center">
+                            <FaClock className="text-xl sm:text-2xl" />
                         </div>
-                        <div>
-                            <h2 className="text-xl font-bold">הזמנה עתידית</h2>
-                            <p className="text-white/80 text-sm">בחר מועד לקבלת ההזמנה</p>
+                        <div className="min-w-0 flex-1 pt-1">
+                            <h2 className="text-lg sm:text-xl font-bold leading-tight break-words">הזמנה עתידית</h2>
+                            <p className="text-white/80 text-xs sm:text-sm mt-0.5 leading-snug">בחר מועד לקבלת ההזמנה</p>
                         </div>
                     </div>
                 </div>
 
                 {/* Body */}
-                <div className="p-6 space-y-5 overflow-y-auto min-h-0 flex-1">
+                <div className="px-4 sm:px-6 py-5 space-y-4 sm:space-y-5 overflow-y-auto overflow-x-hidden min-h-0 flex-1 touch-pan-y">
                     <p className="text-gray-600 dark:text-brand-dark-muted text-sm leading-relaxed">
                         בחר תאריך ושעה שבהם המסעדה פתוחה. ההזמנה תישמר במערכת ותועבר למטבח בזמן.
                     </p>
-                    <p className="text-sm font-bold text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/25 border border-amber-200 dark:border-amber-800 rounded-xl px-3 py-2">
+                    <p className="text-sm font-bold text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/25 border border-amber-200 dark:border-amber-800 rounded-xl px-3 py-2 break-words">
                         הזמנה מוקדמת ביותר: {earliestTimeLabel}
                         {localYmd(minScheduled) !== localYmd(new Date()) ? ` (${earliestDateLabel})` : ''}
                     </p>
@@ -213,25 +218,29 @@ export default function FutureOrderModal({ isOpen, onClose, onConfirm, restauran
                         </div>
                     )}
 
-                    {/* Date Picker */}
-                    <div>
+                    {/* Date Picker — עטיפה LTR + min-w-0 מונעת גלישה במובייל (RTL / iOS) */}
+                    <div className="w-full min-w-0 max-w-full">
                         <label className="block text-sm font-bold text-gray-700 dark:text-brand-dark-text mb-2">
                             <FaCalendarAlt className="inline ml-1 text-brand-primary" />
                             בחר תאריך
                         </label>
-                        <input
-                            type="date"
-                            dir="ltr"
-                            value={selectedDate}
-                            onChange={(e) => {
-                                setSelectedDate(e.target.value);
-                                setSelectedTime('');
-                                setError('');
-                            }}
-                            min={dateRange.min}
-                            max={dateRange.max}
-                            className="w-full min-w-0 max-w-full box-border px-4 py-3 border-2 border-gray-200 dark:border-brand-dark-border rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all bg-white dark:bg-brand-dark-bg dark:text-brand-dark-text text-base"
-                        />
+                        <div
+                            className="w-full min-w-0 max-w-full rounded-xl border-2 border-gray-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-bg overflow-hidden [direction:ltr]"
+                            style={{ WebkitTapHighlightColor: 'transparent' }}
+                        >
+                            <input
+                                type="date"
+                                value={selectedDate}
+                                onChange={(e) => {
+                                    setSelectedDate(e.target.value);
+                                    setSelectedTime('');
+                                    setError('');
+                                }}
+                                min={dateRange.min}
+                                max={dateRange.max}
+                                className="w-full min-w-0 max-w-full box-border block px-3 sm:px-4 py-3 border-0 rounded-none focus:outline-none focus:ring-2 focus:ring-inset focus:ring-amber-500 bg-transparent text-gray-900 dark:text-brand-dark-text text-base leading-normal touch-manipulation [color-scheme:light] dark:[color-scheme:dark]"
+                            />
+                        </div>
                     </div>
 
                     {/* Operating hours hint */}
@@ -249,22 +258,26 @@ export default function FutureOrderModal({ isOpen, onClose, onConfirm, restauran
 
                     {/* Time Picker */}
                     {selectedDate && !hoursForSelectedDay?.closed && (
-                        <div>
+                        <div className="w-full min-w-0 max-w-full">
                             <label className="block text-sm font-bold text-gray-700 dark:text-brand-dark-text mb-2">
                                 <FaClock className="inline ml-1 text-brand-primary" />
                                 בחר שעה
                             </label>
-                            <input
-                                type="time"
-                                dir="ltr"
-                                value={selectedTime}
-                                min={timeInputMin || undefined}
-                                onChange={(e) => {
-                                    setSelectedTime(e.target.value);
-                                    setError('');
-                                }}
-                                className="w-full min-w-0 max-w-full box-border px-4 py-3 border-2 border-gray-200 dark:border-brand-dark-border rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all bg-white dark:bg-brand-dark-bg dark:text-brand-dark-text text-base"
-                            />
+                            <div
+                                className="w-full min-w-0 max-w-full rounded-xl border-2 border-gray-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-bg overflow-hidden [direction:ltr]"
+                                style={{ WebkitTapHighlightColor: 'transparent' }}
+                            >
+                                <input
+                                    type="time"
+                                    value={selectedTime}
+                                    min={timeInputMin || undefined}
+                                    onChange={(e) => {
+                                        setSelectedTime(e.target.value);
+                                        setError('');
+                                    }}
+                                    className="w-full min-w-0 max-w-full box-border block px-3 sm:px-4 py-3 border-0 rounded-none focus:outline-none focus:ring-2 focus:ring-inset focus:ring-amber-500 bg-transparent text-gray-900 dark:text-brand-dark-text text-base leading-normal touch-manipulation [color-scheme:light] dark:[color-scheme:dark]"
+                                />
+                            </div>
                         </div>
                     )}
 
@@ -277,17 +290,19 @@ export default function FutureOrderModal({ isOpen, onClose, onConfirm, restauran
                 </div>
 
                 {/* Footer */}
-                <div className="px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-2 flex gap-3 shrink-0 border-t border-gray-100 dark:border-brand-dark-border bg-white dark:bg-brand-dark-surface">
+                <div className="px-4 sm:px-6 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-3 flex flex-col-reverse sm:flex-row gap-2 sm:gap-3 shrink-0 border-t border-gray-100 dark:border-brand-dark-border bg-white dark:bg-brand-dark-surface min-w-0">
                     <button
+                        type="button"
                         onClick={onClose}
-                        className="flex-1 py-3 rounded-xl border-2 border-gray-200 dark:border-brand-dark-border text-gray-600 dark:text-brand-dark-muted font-bold hover:bg-gray-50 dark:hover:bg-brand-dark-bg transition-colors"
+                        className="flex-1 min-h-[48px] py-3 rounded-xl border-2 border-gray-200 dark:border-brand-dark-border text-gray-600 dark:text-brand-dark-muted font-bold hover:bg-gray-50 dark:hover:bg-brand-dark-bg transition-colors touch-manipulation"
                     >
                         ביטול
                     </button>
                     <button
+                        type="button"
                         onClick={handleConfirm}
                         disabled={!selectedDate || !selectedTime || hoursForSelectedDay?.closed}
-                        className="flex-1 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold hover:from-amber-600 hover:to-orange-600 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        className="flex-1 min-h-[48px] py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold hover:from-amber-600 hover:to-orange-600 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 touch-manipulation"
                     >
                         <FaCheckCircle />
                         <span>אישור</span>

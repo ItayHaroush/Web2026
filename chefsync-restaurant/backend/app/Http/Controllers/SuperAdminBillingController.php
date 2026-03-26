@@ -1088,27 +1088,109 @@ class SuperAdminBillingController extends Controller
     public function updateInvoice(Request $request, int $id, PlatformCommissionService $service)
     {
         $validated = $request->validate([
-            'status' => 'required|string|in:pending,paid,overdue',
+            'status' => 'nullable|string|in:draft,pending,paid,overdue',
             'payment_link' => 'nullable|string|max:500',
             'notes' => 'nullable|string|max:1000',
+            'base_fee' => 'nullable|numeric|min:0',
+            'original_base_fee' => 'nullable|numeric|min:0',
+            'commission_fee' => 'nullable|numeric|min:0',
+            'abandoned_cart_fee' => 'nullable|numeric|min:0',
+            'setup_fee' => 'nullable|numeric|min:0',
+            'total_due' => 'nullable|numeric|min:0',
         ]);
 
         $invoice = MonthlyInvoice::findOrFail($id);
 
-        if ($validated['status'] === 'paid') {
-            $invoice = $service->markInvoicePaid($id, $validated['payment_link'] ?? null);
-        } else {
-            $invoice->update([
-                'status' => $validated['status'],
-                'payment_link' => $validated['payment_link'] ?? $invoice->payment_link,
-                'notes' => $validated['notes'] ?? $invoice->notes,
-            ]);
+        $amountFieldKeys = ['base_fee', 'original_base_fee', 'commission_fee', 'abandoned_cart_fee', 'setup_fee', 'total_due'];
+        $hasAmountPatch = $request->hasAny($amountFieldKeys);
+
+        $hasStatus = $request->filled('status');
+        $hasMeta = $request->has('notes') || $request->has('payment_link');
+
+        if (! $hasAmountPatch && ! $hasStatus && ! $hasMeta) {
+            return response()->json([
+                'success' => false,
+                'message' => 'לא סופקו שדות לעדכון',
+            ], 422);
+        }
+
+        if ($hasAmountPatch && $invoice->status === 'paid') {
+            return response()->json([
+                'success' => false,
+                'message' => 'לא ניתן לערוך סכומים בחשבונית שסומנה כשולמה',
+            ], 422);
+        }
+
+        if ($hasAmountPatch) {
+            $updates = [];
+
+            foreach (['base_fee', 'commission_fee', 'abandoned_cart_fee', 'setup_fee'] as $key) {
+                if ($request->has($key)) {
+                    $updates[$key] = round((float) $validated[$key], 2);
+                }
+            }
+
+            if ($request->has('original_base_fee')) {
+                $updates['original_base_fee'] = $validated['original_base_fee'] === null
+                    ? null
+                    : round((float) $validated['original_base_fee'], 2);
+            }
+
+            $base = array_key_exists('base_fee', $updates) ? $updates['base_fee'] : (float) $invoice->base_fee;
+            $commission = array_key_exists('commission_fee', $updates) ? $updates['commission_fee'] : (float) $invoice->commission_fee;
+            $abandoned = array_key_exists('abandoned_cart_fee', $updates) ? $updates['abandoned_cart_fee'] : (float) $invoice->abandoned_cart_fee;
+            $setup = array_key_exists('setup_fee', $updates) ? $updates['setup_fee'] : (float) $invoice->setup_fee;
+
+            if ($request->has('total_due')) {
+                $updates['total_due'] = round((float) $validated['total_due'], 2);
+            } else {
+                $updates['total_due'] = round($base + $commission + $abandoned + $setup, 2);
+            }
+
+            $invoice->update($updates);
+            $invoice->refresh();
+
+            if (in_array($invoice->status, ['pending', 'overdue'], true)) {
+                $service->syncSubscriptionOutstandingFromOpenInvoices($invoice->restaurant_id);
+            }
+        }
+
+        if ($hasMeta) {
+            $meta = [];
+            if ($request->has('notes')) {
+                $meta['notes'] = $validated['notes'];
+            }
+            if ($request->has('payment_link')) {
+                $meta['payment_link'] = $validated['payment_link'];
+            }
+            if ($meta !== []) {
+                $invoice->update($meta);
+                $invoice->refresh();
+            }
+        }
+
+        if ($hasStatus) {
+            if ($validated['status'] === 'paid') {
+                $invoice = $service->markInvoicePaid($id, $validated['payment_link'] ?? $invoice->payment_link);
+            } else {
+                $invoice->update([
+                    'status' => $validated['status'],
+                    'payment_link' => $request->exists('payment_link')
+                        ? $validated['payment_link']
+                        : $invoice->payment_link,
+                    'notes' => $request->exists('notes') ? $validated['notes'] : $invoice->notes,
+                ]);
+                $invoice->refresh();
+                if (in_array($validated['status'], ['pending', 'overdue'], true)) {
+                    $service->syncSubscriptionOutstandingFromOpenInvoices($invoice->restaurant_id);
+                }
+            }
         }
 
         return response()->json([
             'success' => true,
             'message' => 'החשבונית עודכנה בהצלחה',
-            'invoice' => $invoice->fresh()->load('restaurant:id,name,tenant_id'),
+            'invoice' => $invoice->fresh()->load('restaurant:id,name,tenant_id,tier'),
         ]);
     }
 

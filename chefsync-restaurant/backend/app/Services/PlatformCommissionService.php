@@ -209,18 +209,25 @@ class PlatformCommissionService
             'payment_link' => $paymentLink ?? $invoice->payment_link,
         ]);
 
-        // Update subscription outstanding amount
-        $totalUnpaid = MonthlyInvoice::where('restaurant_id', $invoice->restaurant_id)
+        $this->syncSubscriptionOutstandingFromOpenInvoices($invoice->restaurant_id);
+
+        RestaurantSubscription::where('restaurant_id', $invoice->restaurant_id)
+            ->update(['last_paid_at' => now()]);
+
+        return $invoice->fresh();
+    }
+
+    /**
+     * סכום חשבוניות פתוחות (ממתינה / באיחור) למסעדה — לעדכון חוב במנוי.
+     */
+    public function syncSubscriptionOutstandingFromOpenInvoices(int $restaurantId): void
+    {
+        $totalUnpaid = (float) MonthlyInvoice::where('restaurant_id', $restaurantId)
             ->whereIn('status', ['pending', 'overdue'])
             ->sum('total_due');
 
-        RestaurantSubscription::where('restaurant_id', $invoice->restaurant_id)
-            ->update([
-                'outstanding_amount' => $totalUnpaid,
-                'last_paid_at' => now(),
-            ]);
-
-        return $invoice->fresh();
+        RestaurantSubscription::where('restaurant_id', $restaurantId)
+            ->update(['outstanding_amount' => $totalUnpaid]);
     }
 
     /**

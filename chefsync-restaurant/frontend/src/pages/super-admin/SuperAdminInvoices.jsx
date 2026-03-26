@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import SuperAdminLayout from '../../layouts/SuperAdminLayout';
 import api from '../../services/apiClient';
@@ -21,7 +21,8 @@ import {
     FaChevronLeft,
     FaChevronRight,
     FaFilePdf,
-    FaEnvelope
+    FaEnvelope,
+    FaEdit
 } from 'react-icons/fa';
 
 export default function SuperAdminInvoices() {
@@ -37,6 +38,17 @@ export default function SuperAdminInvoices() {
     const [previewInvoice, setPreviewInvoice] = useState(null);
     const [pdfUrl, setPdfUrl] = useState(null);
     const [sendingEmail, setSendingEmail] = useState(false);
+    const [editInvoice, setEditInvoice] = useState(null);
+    const [editForm, setEditForm] = useState({
+        base_fee: '',
+        commission_fee: '',
+        abandoned_cart_fee: '',
+        setup_fee: '',
+        original_base_fee: '',
+        total_due_override: '',
+        notes: '',
+    });
+    const [editSaving, setEditSaving] = useState(false);
 
     useEffect(() => {
         fetchInvoices();
@@ -156,6 +168,58 @@ export default function SuperAdminInvoices() {
         }
     };
 
+    const openEditModal = (inv) => {
+        setEditInvoice(inv);
+        setEditForm({
+            base_fee: String(inv.base_fee ?? ''),
+            commission_fee: String(inv.commission_fee ?? ''),
+            abandoned_cart_fee: String(inv.abandoned_cart_fee ?? ''),
+            setup_fee: String(inv.setup_fee ?? ''),
+            original_base_fee: inv.original_base_fee != null ? String(inv.original_base_fee) : '',
+            total_due_override: '',
+            notes: inv.notes ?? '',
+        });
+    };
+
+    const closeEditModal = () => {
+        setEditInvoice(null);
+        setEditSaving(false);
+    };
+
+    const handleSaveInvoiceEdit = async () => {
+        if (!editInvoice) return;
+        setEditSaving(true);
+        try {
+            const body = {
+                base_fee: parseFloat(editForm.base_fee) || 0,
+                commission_fee: parseFloat(editForm.commission_fee) || 0,
+                abandoned_cart_fee: parseFloat(editForm.abandoned_cart_fee) || 0,
+                setup_fee: parseFloat(editForm.setup_fee) || 0,
+            };
+            if (editForm.original_base_fee.trim() !== '') {
+                body.original_base_fee = parseFloat(editForm.original_base_fee);
+            } else if (editInvoice.original_base_fee != null) {
+                body.original_base_fee = null;
+            }
+            if (editForm.total_due_override.trim() !== '') {
+                body.total_due = parseFloat(editForm.total_due_override);
+            }
+            if (editForm.notes !== (editInvoice.notes ?? '')) {
+                body.notes = editForm.notes;
+            }
+            await api.patch(`/super-admin/billing/invoices/${editInvoice.id}`, body, {
+                headers: getAuthHeaders(),
+            });
+            toast.success('החשבונית עודכנה');
+            closeEditModal();
+            fetchInvoices();
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'שגיאה בשמירת החשבונית');
+        } finally {
+            setEditSaving(false);
+        }
+    };
+
     // Month navigation
     const changeMonth = (direction) => {
         const d = new Date(selectedMonth + '-01');
@@ -246,6 +310,15 @@ export default function SuperAdminInvoices() {
         percentage: 'אחוזים',
         hybrid: 'משולב',
     };
+
+    const computedEditTotal =
+        Math.round(
+            ((parseFloat(editForm.base_fee) || 0) +
+                (parseFloat(editForm.commission_fee) || 0) +
+                (parseFloat(editForm.abandoned_cart_fee) || 0) +
+                (parseFloat(editForm.setup_fee) || 0)) *
+                100
+        ) / 100;
 
     const StatCard = ({ title, value, subtitle, accent = 'blue', icon }) => {
         const colorClasses = {
@@ -536,6 +609,15 @@ export default function SuperAdminInvoices() {
                                             </td>
                                             <td className="px-6 py-4 text-center">
                                                 <div className="flex justify-center gap-2">
+                                                    {inv.status !== 'paid' && (
+                                                        <button
+                                                            onClick={() => openEditModal(inv)}
+                                                            title="עריכת סכומים"
+                                                            className="p-2 bg-slate-50 text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-700 hover:text-white transition-all"
+                                                        >
+                                                            <FaEdit size={12} />
+                                                        </button>
+                                                    )}
                                                     <button
                                                         onClick={() => handlePreview(inv)}
                                                         title="תצוגה מקדימה PDF"
@@ -589,6 +671,138 @@ export default function SuperAdminInvoices() {
                     onDownload={() => handleDownloadPdf(previewInvoice)}
                     sendingEmail={sendingEmail}
                 />
+            )}
+
+            {editInvoice && (
+                <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                    <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto border border-gray-100">
+                        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+                            <h3 className="text-lg font-black text-gray-900">עריכת חשבונית</h3>
+                            <button
+                                type="button"
+                                onClick={closeEditModal}
+                                className="p-2 rounded-xl text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+                            >
+                                <FaTimes size={18} />
+                            </button>
+                        </div>
+                        <div className="p-6 space-y-4 text-right">
+                            <p className="text-sm text-gray-500 font-medium">
+                                {editInvoice.restaurant?.name} · {formatMonth(editInvoice.month)}
+                            </p>
+                            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-xl py-2 px-3">
+                                לא ניתן לערוך חשבונית שסומנה כשולמה. סה״כ מחושב אוטומטית מסכום השורות אלא אם ממלאים &quot;סה״כ ידני&quot;.
+                            </p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <label className="block text-xs font-bold text-gray-500">
+                                    דמי בסיס (מנוי)
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        className="mt-1 w-full border border-gray-200 rounded-xl px-3 py-2 font-bold text-gray-900"
+                                        value={editForm.base_fee}
+                                        onChange={(e) => setEditForm((f) => ({ ...f, base_fee: e.target.value }))}
+                                    />
+                                </label>
+                                <label className="block text-xs font-bold text-gray-500">
+                                    עמלה
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        className="mt-1 w-full border border-gray-200 rounded-xl px-3 py-2 font-bold text-gray-900"
+                                        value={editForm.commission_fee}
+                                        onChange={(e) => setEditForm((f) => ({ ...f, commission_fee: e.target.value }))}
+                                    />
+                                </label>
+                                <label className="block text-xs font-bold text-gray-500">
+                                    תזכורות סל נטוש
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        className="mt-1 w-full border border-gray-200 rounded-xl px-3 py-2 font-bold text-gray-900"
+                                        value={editForm.abandoned_cart_fee}
+                                        onChange={(e) => setEditForm((f) => ({ ...f, abandoned_cart_fee: e.target.value }))}
+                                    />
+                                </label>
+                                <label className="block text-xs font-bold text-gray-500">
+                                    דמי הקמת מסוף
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        className="mt-1 w-full border border-gray-200 rounded-xl px-3 py-2 font-bold text-gray-900"
+                                        value={editForm.setup_fee}
+                                        onChange={(e) => setEditForm((f) => ({ ...f, setup_fee: e.target.value }))}
+                                    />
+                                </label>
+                                <label className="block text-xs font-bold text-gray-500 sm:col-span-2">
+                                    מחיר מנוי מקורי (לתצוגה עם קו — ריק למחיקה)
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        className="mt-1 w-full border border-gray-200 rounded-xl px-3 py-2 font-bold text-gray-900"
+                                        value={editForm.original_base_fee}
+                                        onChange={(e) => setEditForm((f) => ({ ...f, original_base_fee: e.target.value }))}
+                                    />
+                                </label>
+                                <label className="block text-xs font-bold text-gray-500 sm:col-span-2">
+                                    סה״כ ידני (ריק = חישוב אוטומטי)
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        placeholder={`מחושב: ₪${computedEditTotal.toLocaleString()}`}
+                                        className="mt-1 w-full border border-gray-200 rounded-xl px-3 py-2 font-bold text-gray-900"
+                                        value={editForm.total_due_override}
+                                        onChange={(e) => setEditForm((f) => ({ ...f, total_due_override: e.target.value }))}
+                                    />
+                                </label>
+                            </div>
+                            <label className="block text-xs font-bold text-gray-500">
+                                הערות פנימיות
+                                <textarea
+                                    rows={2}
+                                    className="mt-1 w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800"
+                                    value={editForm.notes}
+                                    onChange={(e) => setEditForm((f) => ({ ...f, notes: e.target.value }))}
+                                />
+                            </label>
+                            <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                                <span className="text-sm text-gray-500">
+                                    סה״כ משוער:{' '}
+                                    <strong className="text-gray-900">
+                                        ₪
+                                        {(editForm.total_due_override.trim() !== ''
+                                            ? parseFloat(editForm.total_due_override) || 0
+                                            : computedEditTotal
+                                        ).toLocaleString()}
+                                    </strong>
+                                </span>
+                                <div className="flex gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={closeEditModal}
+                                        className="px-4 py-2 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-100"
+                                    >
+                                        ביטול
+                                    </button>
+                                    <button
+                                        type="button"
+                                        disabled={editSaving}
+                                        onClick={handleSaveInvoiceEdit}
+                                        className="px-5 py-2 rounded-xl text-sm font-black text-white bg-brand-primary hover:opacity-90 disabled:opacity-50"
+                                    >
+                                        {editSaving ? 'שומר…' : 'שמור'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             )}
         </SuperAdminLayout>
     );
