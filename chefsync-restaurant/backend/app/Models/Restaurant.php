@@ -342,11 +342,25 @@ class Restaurant extends Model
 
     /**
      * בדיקה האם המנוי פעיל
+     *
+     * next_payment_at: אם קיים ואינו בעתיד — המנוי אינו פעיל (גם כש-subscription_ends_at null,
+     * אחרת מסעדות active עם ends_at ריק נשארות פתוחות לנצח למרות חיוב שחלף).
      */
     public function hasActiveSubscription(): bool
     {
-        return $this->subscription_status === 'active'
-            && (!$this->subscription_ends_at || $this->subscription_ends_at->isFuture());
+        if ($this->subscription_status !== 'active') {
+            return false;
+        }
+
+        if ($this->subscription_ends_at && ! $this->subscription_ends_at->isFuture()) {
+            return false;
+        }
+
+        if ($this->next_payment_at && ! $this->next_payment_at->isFuture()) {
+            return false;
+        }
+
+        return true;
     }
 
     /**
