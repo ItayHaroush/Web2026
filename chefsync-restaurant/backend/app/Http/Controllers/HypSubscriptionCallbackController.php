@@ -246,6 +246,7 @@ class HypSubscriptionCallbackController extends Controller
         if ($includesSetupFee && $setupFeeAmount > 0) {
             RestaurantPayment::create([
                 'restaurant_id' => $restaurant->id,
+                'type'          => 'terminal_setup',
                 'amount'        => $setupFeeAmount,
                 'currency'      => 'ILS',
                 'period_start'  => now(),

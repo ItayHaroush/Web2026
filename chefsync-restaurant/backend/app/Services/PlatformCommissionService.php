@@ -141,13 +141,13 @@ class PlatformCommissionService
             })
             ->sum('amount');
 
-        // דמי פתיחת מסוף — חד-פעמי, מופיע בחשבונית הראשונה אחרי שהמסעדן אישר ופתח מסוף
+        // דמי פתיחת מסוף — חד-פעמי בחשבונית רק אם עדיין לא שולמו בפועל (HYP / סופר־אדמין)
         $setupFee = 0;
-        if ($restaurant->hyp_setup_fee_charged) {
+        if ($restaurant->hyp_setup_fee_charged && ! $this->restaurantHasPaidTerminalSetupFee($restaurant->id)) {
             $alreadyInvoiced = MonthlyInvoice::where('restaurant_id', $restaurant->id)
                 ->where('setup_fee', '>', 0)
                 ->exists();
-            if (!$alreadyInvoiced) {
+            if (! $alreadyInvoiced) {
                 $setupFee = ($restaurant->tier === 'pro') ? 100 : 200;
             }
         }
@@ -221,6 +221,26 @@ class PlatformCommissionService
             ]);
 
         return $invoice->fresh();
+    }
+
+    /**
+     * דמי הקמה ששולמו בפועל — לא לשקול שוב בחשבונית חודשית.
+     */
+    private function restaurantHasPaidTerminalSetupFee(int $restaurantId): bool
+    {
+        if (RestaurantPayment::where('restaurant_id', $restaurantId)
+            ->where('status', 'paid')
+            ->where('type', 'terminal_setup')
+            ->exists()) {
+            return true;
+        }
+
+        $references = RestaurantPayment::where('restaurant_id', $restaurantId)
+            ->where('status', 'paid')
+            ->whereNotNull('reference')
+            ->pluck('reference');
+
+        return $references->contains(fn ($ref) => str_ends_with((string) $ref, '_setup'));
     }
 
     /**

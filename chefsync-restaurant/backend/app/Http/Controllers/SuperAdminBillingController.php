@@ -264,7 +264,7 @@ class SuperAdminBillingController extends Controller
                 RestaurantPayment::create([
                     'restaurant_id' => $restaurant->id,
                     'type'          => 'subscription',
-                    'amount'        => $baseCharge + $setupFee,
+                    'amount'        => $baseCharge,
                     'currency'      => 'ILS',
                     'period_start'  => $periodStart,
                     'period_end'    => $periodEnd,
@@ -273,6 +273,21 @@ class SuperAdminBillingController extends Controller
                     'reference'     => $ref,
                     'status'        => 'paid',
                 ]);
+
+                if ($setupFee > 0) {
+                    RestaurantPayment::create([
+                        'restaurant_id' => $restaurant->id,
+                        'type'          => 'terminal_setup',
+                        'amount'        => $setupFee,
+                        'currency'      => 'ILS',
+                        'period_start'  => $periodStart,
+                        'period_end'    => $periodEnd,
+                        'paid_at'       => now(),
+                        'method'        => 'hyp_credit_card',
+                        'reference'     => $ref . '_setup',
+                        'status'        => 'paid',
+                    ]);
+                }
 
                 if ($packageAmount > 0) {
                     RestaurantPayment::create([
