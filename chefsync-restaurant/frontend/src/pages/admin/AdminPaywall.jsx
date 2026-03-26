@@ -113,7 +113,24 @@ export default function AdminPaywall() {
     const isUpgrade = billing?.current_tier === 'basic' && selectedTier === 'pro';
     const isTrialActive = billing?.subscription_status === 'trial' && billing?.days_left_in_trial > 0;
     const isActive = billing?.subscription_status === 'active';
-    const planPrice = pricing[selectedTier]?.[billingCycle] || 0;
+
+    const sp = billing?.subscription_pricing;
+    const catalogPlanPrice = pricing[selectedTier]?.[billingCycle] || 0;
+    let planPrice = catalogPlanPrice;
+    let negotiatedCatalogForSelection = catalogPlanPrice;
+    const showNegotiatedBenefit =
+        sp &&
+        selectedTier === sp.restaurant_tier &&
+        billingCycle === sp.restaurant_plan &&
+        sp.has_negotiated_rate === true;
+    if (showNegotiatedBenefit) {
+        const your = billingCycle === 'yearly' ? sp.your_yearly : sp.your_monthly;
+        const cat = billingCycle === 'yearly' ? sp.catalog_yearly : sp.catalog_monthly;
+        if (your > 0) {
+            planPrice = your;
+            negotiatedCatalogForSelection = cat > 0 ? cat : catalogPlanPrice;
+        }
+    }
     // דמי הקמת חיבור מסוף — נגבים רק לאחר אישור בדף הגדרות תשלום (בחירת אשראי + אישור)
     const totalAmount = planPrice;
 
@@ -206,6 +223,23 @@ export default function AdminPaywall() {
                 )}
 
                 {/* Downgrade Warning */}
+                {showNegotiatedBenefit && planPrice < negotiatedCatalogForSelection && (
+                    <div className="bg-emerald-50 border-2 border-emerald-200 rounded-2xl p-5 max-w-2xl mx-auto animate-in fade-in duration-300">
+                        <div className="flex items-start gap-3">
+                            <FaCheckCircle className="text-emerald-600 mt-0.5 text-xl flex-shrink-0" />
+                            <div className="text-right flex-1">
+                                <h3 className="font-black text-emerald-900 text-lg mb-1">קיבלת הטבה</h3>
+                                <p className="text-emerald-800 font-medium text-sm leading-relaxed">
+                                    מחיר מוסכם לחבילה הנוכחית שלך:{' '}
+                                    <span className="line-through text-emerald-600/80">₪{negotiatedCatalogForSelection.toLocaleString()}</span>{' '}
+                                    <span className="font-black text-emerald-900">₪{planPrice.toLocaleString()}</span>
+                                    {billingCycle === 'yearly' ? ' לשנה' : ' לחודש'}.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {showDowngradeWarning && (
                     <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-6 max-w-2xl mx-auto animate-in fade-in duration-300">
                         <div className="flex items-start gap-3">

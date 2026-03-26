@@ -30,6 +30,7 @@ export default function PaymentDemo() {
     const [checkingHyp, setCheckingHyp] = useState(true);
     const [hypReady, setHypReady] = useState(false);
     const [hypBillingData, setHypBillingData] = useState(null);
+    const [hypRedirectNote, setHypRedirectNote] = useState(null);
 
     if (!tier || !billingCycle || !amount) {
         navigate('/admin/paywall');
@@ -46,15 +47,31 @@ export default function PaymentDemo() {
                     setHypReady(true);
                     setHypBillingData({
                         planAmount: data.plan_amount,
+                        catalogPlanAmount: data.catalog_plan_amount,
                         setupFee: data.setup_fee,
                         totalAmount: data.total_amount,
                         includesSetupFee: data.includes_setup_fee,
+                        hasNegotiatedRate: Boolean(data.has_negotiated_rate),
                     });
+                    if (data.has_negotiated_rate && data.catalog_plan_amount != null) {
+                        setHypRedirectNote({
+                            catalog: data.catalog_plan_amount,
+                            amount: data.plan_amount,
+                        });
+                        await new Promise((r) => setTimeout(r, 750));
+                    }
                     window.location.href = data.payment_url;
                     return;
                 }
 
                 setHypReady(false);
+                if (data.plan_amount != null) {
+                    setHypBillingData({
+                        planAmount: data.plan_amount,
+                        catalogPlanAmount: data.catalog_plan_amount,
+                        hasNegotiatedRate: Boolean(data.has_negotiated_rate),
+                    });
+                }
             } catch (error) {
                 console.error('Failed to check HYP:', error);
                 setHypReady(false);
@@ -83,19 +100,31 @@ export default function PaymentDemo() {
 
     if (checkingHyp || hypReady) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-gray-100 flex items-center justify-center">
-                <div className="text-center">
+            <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-gray-100 flex items-center justify-center px-4">
+                <div className="text-center max-w-md">
                     <FaSpinner className="animate-spin text-brand-primary text-4xl mx-auto mb-4" />
                     <p className="text-gray-600 font-medium">
                         {hypReady ? 'מעביר לדף תשלום מאובטח...' : 'בודק זמינות תשלום...'}
                     </p>
+                    {hypReady && hypRedirectNote && hypRedirectNote.catalog > hypRedirectNote.amount && (
+                        <p className="mt-4 text-sm text-emerald-800 font-bold bg-emerald-50 border border-emerald-200 rounded-xl py-3 px-4">
+                            קיבלת הטבה: מחיר מוסכם ₪{Number(hypRedirectNote.amount).toLocaleString()}
+                            {billingCycle === 'yearly' ? ' לשנה' : ' לחודש'} (מחיר מחירון ₪
+                            {Number(hypRedirectNote.catalog).toLocaleString()})
+                        </p>
+                    )}
                 </div>
             </div>
         );
     }
 
-    const displayPlanAmount = planAmount || amount;
+    const displayPlanAmount =
+        hypBillingData?.planAmount != null ? hypBillingData.planAmount : planAmount || amount;
     const displayTotal = displayPlanAmount;
+    const vPathNegotiated =
+        hypBillingData?.hasNegotiatedRate &&
+        hypBillingData?.catalogPlanAmount != null &&
+        hypBillingData.catalogPlanAmount > displayPlanAmount;
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-gray-100 py-12 px-4">
@@ -151,8 +180,24 @@ export default function PaymentDemo() {
 
                     {/* Billing breakdown */}
                     <div className="space-y-3 mb-6">
+                        {vPathNegotiated && (
+                            <div className="bg-emerald-50 border border-emerald-200 rounded-xl py-2 px-3 text-sm text-emerald-900 font-bold text-right mb-2">
+                                קיבלת הטבה — מחיר מוסכם לעומת מחירון
+                            </div>
+                        )}
                         <div className="flex justify-between items-center">
-                            <span className="font-bold text-gray-900">₪{displayPlanAmount.toLocaleString()}</span>
+                            <span className="font-bold text-gray-900">
+                                {vPathNegotiated ? (
+                                    <>
+                                        <span className="line-through text-gray-400 font-medium text-sm ml-2">
+                                            ₪{Number(hypBillingData.catalogPlanAmount).toLocaleString()}
+                                        </span>
+                                        ₪{displayPlanAmount.toLocaleString()}
+                                    </>
+                                ) : (
+                                    <>₪{displayPlanAmount.toLocaleString()}</>
+                                )}
+                            </span>
                             <span className="text-gray-600 font-medium">
                                 חבילת {tier === 'pro' ? 'Pro' : 'Basic'} ({billingCycle === 'yearly' ? 'שנתי' : 'חודשי'})
                             </span>

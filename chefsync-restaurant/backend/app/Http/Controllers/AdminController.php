@@ -25,6 +25,7 @@ use App\Services\OrderEventService;
 use App\Services\RestaurantPaymentService;
 use App\Services\CustomerOrderPushService;
 use App\Services\HypPaymentService;
+use App\Services\SubscriptionPricingService;
 use App\Models\RestaurantPayment;
 use App\Models\RestaurantSubscription;
 use Illuminate\Http\Request;
@@ -2853,11 +2854,10 @@ class AdminController extends Controller
         $isDowngrade = ($previousTier === 'pro' && $tier === 'basic');
 
         $prices = SuperAdminSettingsController::getPricingArray();
-
-        $chargeAmount = $prices[$tier][$planType === 'yearly' ? 'yearly' : 'monthly'];
-        $monthlyFeeForTracking = $planType === 'yearly'
-            ? round($chargeAmount / 12, 2)
-            : $chargeAmount;
+        $pricingService = app(SubscriptionPricingService::class);
+        $resolved = $pricingService->resolve($restaurant, $tier, $planType);
+        $chargeAmount = $resolved['amount'];
+        $monthlyFeeForTracking = $resolved['monthly_fee_for_tracking'];
 
         $periodStart = $restaurant->trial_ends_at && now()->lt($restaurant->trial_ends_at)
             ? $restaurant->trial_ends_at->copy()->startOfDay()
@@ -2972,18 +2972,24 @@ class AdminController extends Controller
         $hypService = app(HypPaymentService::class);
 
         if (!$hypService->isConfigured()) {
+            $pricingService = app(SubscriptionPricingService::class);
+            $resolvedNoHyp = $pricingService->resolve($restaurant, $validated['tier'], $validated['plan_type']);
+
             return response()->json([
-                'success' => true,
-                'hyp_ready' => false,
-                'message' => 'HYP לא מוגדר — השתמש בדף V',
+                'success'               => true,
+                'hyp_ready'             => false,
+                'message'               => 'HYP לא מוגדר — השתמש בדף V',
+                'plan_amount'           => $resolvedNoHyp['amount'],
+                'catalog_plan_amount'   => $resolvedNoHyp['catalog_amount'],
+                'has_negotiated_rate'   => $resolvedNoHyp['has_negotiated_rate'],
             ]);
         }
 
-        $prices = SuperAdminSettingsController::getPricingArray();
-
         $tier = $validated['tier'];
         $planType = $validated['plan_type'];
-        $planAmount = $prices[$tier][$planType === 'yearly' ? 'yearly' : 'monthly'];
+        $pricingService = app(SubscriptionPricingService::class);
+        $resolved = $pricingService->resolve($restaurant, $tier, $planType);
+        $planAmount = $resolved['amount'];
 
         // דמי הקמה — נגבים רק לאחר אישור בדף הגדרות תשלום (בחירת אשראי + אישור דמי הקמה)
         // לא לכלול בתשלום ראשון של מנוי — הדמי הקמה מתווספים ל-outstanding כשמאשרים בהגדרות
@@ -2996,15 +3002,17 @@ class AdminController extends Controller
         \Illuminate\Support\Facades\Cache::put(
             "hyp_session:{$restaurant->id}",
             [
-                'tier'               => $tier,
-                'plan_type'          => $planType,
-                'amount'             => $totalAmount,
-                'plan_amount'        => $planAmount,
-                'includes_setup_fee' => $includesSetupFee,
-                'setup_fee_amount'   => $setupFee,
-                'client_name'        => $owner->name ?? '',
-                'email'              => $owner->email ?? '',
-                'phone'              => $restaurant->phone ?? '',
+                'tier'                  => $tier,
+                'plan_type'             => $planType,
+                'amount'                => $totalAmount,
+                'plan_amount'           => $planAmount,
+                'catalog_plan_amount'   => $resolved['catalog_amount'],
+                'has_negotiated_rate'   => $resolved['has_negotiated_rate'],
+                'includes_setup_fee'    => $includesSetupFee,
+                'setup_fee_amount'      => $setupFee,
+                'client_name'           => $owner->name ?? '',
+                'email'                 => $owner->email ?? '',
+                'phone'                 => $restaurant->phone ?? '',
             ],
             now()->addMinutes(15)
         );
@@ -3013,13 +3021,15 @@ class AdminController extends Controller
         $redirectUrl = "{$backendUrl}/pay/hyp/subscription/{$restaurant->id}";
 
         return response()->json([
-            'success'            => true,
-            'hyp_ready'          => true,
-            'payment_url'        => $redirectUrl,
-            'plan_amount'        => $planAmount,
-            'setup_fee'          => $setupFee,
-            'includes_setup_fee' => $includesSetupFee,
-            'total_amount'       => $totalAmount,
+            'success'               => true,
+            'hyp_ready'             => true,
+            'payment_url'           => $redirectUrl,
+            'plan_amount'           => $planAmount,
+            'catalog_plan_amount'   => $resolved['catalog_amount'],
+            'has_negotiated_rate'   => $resolved['has_negotiated_rate'],
+            'setup_fee'             => $setupFee,
+            'includes_setup_fee'    => $includesSetupFee,
+            'total_amount'          => $totalAmount,
         ]);
     }
 
@@ -3039,6 +3049,7 @@ class AdminController extends Controller
 
         $subscription = $restaurant->subscription;
         $prices = SuperAdminSettingsController::getPricingArray();
+        $pricingService = app(SubscriptionPricingService::class);
         $currentTier = $restaurant->tier ?? 'basic';
         $currentPlan = $restaurant->subscription_plan ?? 'monthly';
 
@@ -3066,6 +3077,7 @@ class AdminController extends Controller
                 'pending_setup_fee'     => $setupFee,
                 'outstanding_amount'    => $subscription?->outstanding_amount ?? 0,
                 'pricing'               => $prices,
+                'subscription_pricing'  => $pricingService->subscriptionPricingPayload($restaurant, $prices),
                 'recent_payments'       => $recentPayments,
                 'has_card_on_file'      => !empty($restaurant->hyp_card_token),
                 'card_last4'            => $restaurant->hyp_card_last4,

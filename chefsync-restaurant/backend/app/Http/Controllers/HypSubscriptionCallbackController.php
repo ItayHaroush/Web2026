@@ -6,6 +6,7 @@ use App\Models\Restaurant;
 use App\Models\RestaurantPayment;
 use App\Models\RestaurantSubscription;
 use App\Services\HypPaymentService;
+use App\Services\SubscriptionPricingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -131,8 +132,21 @@ class HypSubscriptionCallbackController extends Controller
             'previous_tier'     => $restaurant->tier,
         ]);
 
+        $expectedTotal = is_array($sessionData) ? (float) ($sessionData['amount'] ?? 0) : 0;
+        $hypAmountRaw = $params['amount'] ?? null;
+        $hypAmount = is_numeric($hypAmountRaw)
+            ? (float) $hypAmountRaw
+            : (float) str_replace(',', '', (string) $hypAmountRaw);
+        if ($sessionData !== null && $expectedTotal > 0 && $hypAmount > 0 && abs($hypAmount - $expectedTotal) > 0.05) {
+            Log::warning('[HYP-SUB] Charged amount differs from session total (continuing with session plan_amount)', [
+                'restaurant_id'   => $restaurant->id,
+                'expected_total'  => $expectedTotal,
+                'hyp_amount'      => $hypAmount,
+            ]);
+        }
+
         // הפעלת מנוי
-        $this->activateSubscription($restaurant, $tier, $planType, $transactionId, $includesSetupFee, $setupFeeAmount);
+        $this->activateSubscription($restaurant, $tier, $planType, $transactionId, $includesSetupFee, $setupFeeAmount, $sessionData);
 
         Log::info('[HYP-SUB] Step 7/7: Subscription activated — redirecting to frontend', [
             'restaurant_id'  => $restaurant->id,
@@ -175,12 +189,20 @@ class HypSubscriptionCallbackController extends Controller
         string $planType,
         string $transactionId,
         bool $includesSetupFee = false,
-        float $setupFeeAmount = 0
+        float $setupFeeAmount = 0,
+        ?array $sessionData = null
     ): void {
         $prices = SuperAdminSettingsController::getPricingArray();
 
-        $planAmount = $prices[$tier][$planType === 'yearly' ? 'yearly' : 'monthly'];
-        $totalCharged = $planAmount + ($includesSetupFee ? $setupFeeAmount : 0);
+        $planAmount = null;
+        if (is_array($sessionData) && isset($sessionData['plan_amount'])) {
+            $planAmount = (float) $sessionData['plan_amount'];
+        }
+        if ($planAmount === null || $planAmount < 0.01) {
+            $resolved = app(SubscriptionPricingService::class)->resolve($restaurant, $tier, $planType);
+            $planAmount = $resolved['amount'];
+        }
+
         $monthlyFeeForTracking = $planType === 'yearly'
             ? round($planAmount / 12, 2)
             : $planAmount;
