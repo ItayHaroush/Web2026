@@ -10,6 +10,15 @@ import { compressPromotionImage } from '../../utils/compressPromotionImage';
 
 const DAY_NAMES = ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳'];
 
+/** ימי שבוע 0–6 (א׳–ש׳) כמספרים — תואם PHP/Carbon dayOfWeek ו-JSON שמחזיר מחרוזות */
+function normalizeActiveDays(days) {
+    if (days == null) return null;
+    const raw = Array.isArray(days) ? days : (typeof days === 'object' ? Object.values(days) : []);
+    if (raw.length === 0) return null;
+    const nums = [...new Set(raw.map((d) => Number(d)).filter((n) => !Number.isNaN(n) && n >= 0 && n <= 6))].sort((a, b) => a - b);
+    return nums.length > 0 ? nums : null;
+}
+
 const REWARD_TYPE_LABELS = {
     free_item: 'פריט חינם',
     discount_percent: 'הנחה באחוזים',
@@ -214,7 +223,7 @@ export default function AdminCoupons() {
             end_at: promo.end_at ? promo.end_at.slice(0, 16) : '',
             active_hours_start: (promo.active_hours_start || '').slice(0, 5),
             active_hours_end: (promo.active_hours_end || '').slice(0, 5),
-            active_days: promo.active_days || null,
+            active_days: normalizeActiveDays(promo.active_days),
             is_active: promo.is_active,
             priority: promo.priority || 0,
             auto_apply: promo.auto_apply ?? true,
@@ -361,8 +370,8 @@ export default function AdminCoupons() {
 
     const toggleDay = (day) => {
         setForm(f => {
-            const current = f.active_days || [];
-            const next = current.includes(day) ? current.filter(d => d !== day) : [...current, day];
+            const current = normalizeActiveDays(f.active_days) ?? [];
+            const next = current.includes(day) ? current.filter((d) => d !== day) : [...current, day].sort((a, b) => a - b);
             return { ...f, active_days: next.length > 0 ? next : null };
         });
     };
@@ -660,7 +669,7 @@ export default function AdminCoupons() {
                                                 key={i}
                                                 type="button"
                                                 onClick={() => toggleDay(i)}
-                                                className={`w-10 h-10 rounded-xl text-sm font-bold transition-colors ${(form.active_days || []).includes(i)
+                                                className={`w-10 h-10 rounded-xl text-sm font-bold transition-colors ${(normalizeActiveDays(form.active_days) ?? []).includes(i)
                                                     ? 'bg-brand-primary text-white'
                                                     : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
                                                     }`}

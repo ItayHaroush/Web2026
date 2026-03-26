@@ -58,6 +58,7 @@ class PromotionController extends Controller
         try {
             $tenantId = app('tenant_id');
             $validated = $this->validatePromotionPayload($request, $tenantId, false);
+            $validated = $this->mergeActiveDaysFromRequest($request, $validated);
             $restaurant = \App\Models\Restaurant::where('tenant_id', $tenantId)->first();
 
             if (!$restaurant) {
@@ -167,6 +168,7 @@ class PromotionController extends Controller
         try {
             $tenantId = app('tenant_id');
             $validated = $this->validatePromotionPayload($request, $tenantId, true);
+            $validated = $this->mergeActiveDaysFromRequest($request, $validated);
 
             $promotion = Promotion::findOrFail($id);
 
@@ -190,7 +192,7 @@ class PromotionController extends Controller
             }
 
             DB::transaction(function () use ($promotion, $validated, $imageUrl) {
-                $promotion->update([
+                $updateData = [
                     'name' => $validated['name'],
                     'description' => $validated['description'] ?? null,
                     'image_url' => $imageUrl,
@@ -198,7 +200,6 @@ class PromotionController extends Controller
                     'end_at' => $validated['end_at'] ?? null,
                     'active_hours_start' => $validated['active_hours_start'] ?? null,
                     'active_hours_end' => $validated['active_hours_end'] ?? null,
-                    'active_days' => $validated['active_days'] ?? null,
                     'is_active' => $validated['is_active'] ?? true,
                     'priority' => $validated['priority'] ?? 0,
                     'auto_apply' => $validated['auto_apply'] ?? true,
@@ -206,7 +207,12 @@ class PromotionController extends Controller
                     'stackable' => $validated['stackable'] ?? false,
                     'show_menu_banner' => $validated['show_menu_banner'] ?? true,
                     'show_entry_popup' => $validated['show_entry_popup'] ?? true,
-                ]);
+                ];
+                // FormData ללא active_days כש"כל הימים" — לא לדרוס ערך שמור ב-DB
+                if (array_key_exists('active_days', $validated)) {
+                    $updateData['active_days'] = $validated['active_days'];
+                }
+                $promotion->update($updateData);
 
                 // Sync rules
                 $promotion->rules()->delete();
@@ -414,6 +420,7 @@ class PromotionController extends Controller
             'stackable' => 'boolean',
             'show_menu_banner' => 'sometimes|boolean',
             'show_entry_popup' => 'sometimes|boolean',
+            'active_days_reset' => 'sometimes|boolean',
             'rules' => 'required|array|min:1',
             'rules.*.required_category_id' => ['required', 'integer', Rule::exists('categories', 'id')->where('tenant_id', $tenantId)],
             'rules.*.min_quantity' => 'required|integer|min:1',
@@ -465,6 +472,48 @@ class PromotionController extends Controller
         });
 
         return $validator->validate();
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     * @return array<string, mixed>
+     */
+    private function mergeActiveDaysFromRequest(Request $request, array $validated): array
+    {
+        if ($request->boolean('active_days_reset')) {
+            $validated['active_days'] = null;
+        } elseif (array_key_exists('active_days', $validated)) {
+            $validated['active_days'] = $this->normalizeActiveDaysPayload($validated['active_days']);
+        }
+
+        return $validated;
+    }
+
+    /**
+     * @return list<int>|null
+     */
+    private function normalizeActiveDaysPayload(mixed $value): ?array
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+        if (! is_array($value)) {
+            return null;
+        }
+        $nums = [];
+        foreach ($value as $d) {
+            if ($d === '' || $d === null) {
+                continue;
+            }
+            $n = (int) $d;
+            if ($n >= 0 && $n <= 6) {
+                $nums[$n] = $n;
+            }
+        }
+        $out = array_values($nums);
+        sort($out, SORT_NUMERIC);
+
+        return $out === [] ? null : $out;
     }
 
     /**
