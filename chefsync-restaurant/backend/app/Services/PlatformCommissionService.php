@@ -143,7 +143,7 @@ class PlatformCommissionService
 
         // דמי פתיחת מסוף — חד-פעמי בחשבונית רק אם עדיין לא שולמו בפועל (HYP / סופר־אדמין)
         $setupFee = 0;
-        if ($restaurant->hyp_setup_fee_charged && ! $this->restaurantHasPaidTerminalSetupFee($restaurant->id)) {
+        if ($restaurant->hyp_setup_fee_charged && ! $this->restaurantHasPaidTerminalSetupFee($restaurant)) {
             $alreadyInvoiced = MonthlyInvoice::where('restaurant_id', $restaurant->id)
                 ->where('setup_fee', '>', 0)
                 ->exists();
@@ -225,9 +225,14 @@ class PlatformCommissionService
 
     /**
      * דמי הקמה ששולמו בפועל — לא לשקול שוב בחשבונית חודשית.
+     *
+     * כולל: שורת terminal_setup, סיומת _setup ב-HYP, סימון ב-notes אחרי HYP,
+     * ותשלום הפעלה ישן (מנוי+הקמה בשורת subscription אחת לפני פיצול התשלומים).
      */
-    private function restaurantHasPaidTerminalSetupFee(int $restaurantId): bool
+    private function restaurantHasPaidTerminalSetupFee(Restaurant $restaurant): bool
     {
+        $restaurantId = $restaurant->id;
+
         if (RestaurantPayment::where('restaurant_id', $restaurantId)
             ->where('status', 'paid')
             ->where('type', 'terminal_setup')
@@ -240,7 +245,77 @@ class PlatformCommissionService
             ->whereNotNull('reference')
             ->pluck('reference');
 
-        return $references->contains(fn ($ref) => str_ends_with((string) $ref, '_setup'));
+        if ($references->contains(fn ($ref) => str_ends_with((string) $ref, '_setup'))) {
+            return true;
+        }
+
+        $subscription = $restaurant->subscription;
+        $notes = (string) ($subscription?->notes ?? '');
+        if ($notes !== '' && str_contains($notes, 'דמי הקמת חיבור אשראי') && str_contains($notes, 'נגבו בתשלום ראשון')) {
+            return true;
+        }
+
+        if (! $restaurant->hyp_setup_fee_charged || ! $subscription) {
+            return false;
+        }
+
+        $expectedSetup = ($restaurant->tier === 'pro') ? 100.0 : 200.0;
+        $base = $this->activationSubscriptionBaseAmount($restaurant, $subscription);
+        if ($base < 0.01) {
+            return false;
+        }
+
+        $threshold = $base + $expectedSetup - 0.02;
+
+        $payments = RestaurantPayment::where('restaurant_id', $restaurantId)
+            ->where('status', 'paid')
+            ->where(function ($q) {
+                $q->where('type', 'subscription')->orWhereNull('type');
+            })
+            ->orderBy('paid_at')
+            ->orderBy('id')
+            ->get(['amount', 'reference']);
+
+        foreach ($payments as $p) {
+            $ref = (string) ($p->reference ?? '');
+            if (str_ends_with($ref, '_setup')) {
+                continue;
+            }
+            if ((float) $p->amount >= $threshold) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * סכום המנוי בעת הפעלה (חודשי או שנתי מלא) לפי מחיר מסעדה / מנוי / לוח.
+     */
+    private function activationSubscriptionBaseAmount(Restaurant $restaurant, RestaurantSubscription $subscription): float
+    {
+        $prices = SuperAdminSettingsController::getPricingArray();
+        $tier = $restaurant->tier ?: 'basic';
+        $yearly = ($subscription->plan_type ?? 'monthly') === 'yearly';
+
+        if ($yearly) {
+            $y = (float) ($restaurant->yearly_price ?? 0);
+            if ($y < 0.01) {
+                $y = (float) ($prices[$tier]['yearly'] ?? 0);
+            }
+
+            return $y;
+        }
+
+        $m = (float) ($restaurant->monthly_price ?? 0);
+        if ($m < 0.01) {
+            $m = (float) ($subscription->monthly_fee ?? 0);
+        }
+        if ($m < 0.01) {
+            $m = (float) ($prices[$tier]['monthly'] ?? 0);
+        }
+
+        return $m;
     }
 
     /**
