@@ -933,12 +933,18 @@ class SuperAdminBillingController extends Controller
         );
 
         $subscription->update(['next_charge_at' => $at]);
-        $restaurant->update(['next_payment_at' => $at]);
+        // subscription_ends_at נבדק ב-Restaurant::hasActiveSubscription() / hasAccess();
+        // בלי סנכרון — תאריך חיוב ידני בעבר לא חוסם גישה כי next_payment_at לא נכנס ללוגיקת החסימה.
+        $restaurant->update([
+            'next_payment_at' => $at,
+            'subscription_ends_at' => $at,
+        ]);
 
         return response()->json([
             'success' => true,
-            'message' => 'תאריך החיוב הבא עודכן',
+            'message' => 'תאריך החיוב הבא עודכן (כולל סוף תקופת מנוי לצורך חסימת גישה)',
             'next_charge_at' => $at->toIso8601String(),
+            'subscription_ends_at' => $restaurant->fresh()->subscription_ends_at?->toIso8601String(),
             'subscription' => $subscription->fresh(),
         ]);
     }
