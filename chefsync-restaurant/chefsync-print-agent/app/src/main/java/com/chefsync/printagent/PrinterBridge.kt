@@ -8,21 +8,22 @@ import java.nio.charset.Charset
 object PrinterBridge {
     private const val TAG = "PrinterBridge"
 
-    // ESC/POS commands
-    private val ESC_INIT = byteArrayOf(0x1B, 0x40)           // Initialize printer
+    private val ESC_INIT = byteArrayOf(0x1B, 0x40)
+
     /**
-     * SNBC BTP-S80: Hebrew = ESC t 8. Table uses IBM862 (CP862) positions, not Windows-1255
-     * (1255 bytes under this table look like Cyrillic).
+     * SNBC BTP-S80: Hebrew CP table 10 (ESC t 0x0A) + CP862. LTR printer → RTL prep before encode.
      */
-    private val ESC_HEBREW_TABLE = byteArrayOf(0x1B, 0x74, 0x08)
+    private val ESC_HEBREW_TABLE = byteArrayOf(0x1B, 0x74, 0x0A)
 
     private val cp862: Charset = Charset.forName("IBM862")
-    private val ESC_CUT = byteArrayOf(0x1D, 0x56, 0x00)       // Full cut
+    private val ESC_CUT = byteArrayOf(0x1D, 0x56, 0x00)
     private val FEED = "\n\n\n\n".toByteArray()
+
+    private val hebrewInWord = Regex("[\\u0590-\\u05FF]")
 
     data class PrintResult(
         val success: Boolean,
-        val errorMessage: String? = null
+        val errorMessage: String? = null,
     )
 
     fun print(ip: String, port: Int, payload: String, timeoutMs: Int = 5000): PrintResult {
@@ -32,10 +33,11 @@ object PrinterBridge {
             socket.soTimeout = timeoutMs
 
             val out: OutputStream = socket.getOutputStream()
+            val prepared = prepareThermalRtlPayload(payload)
 
             out.write(ESC_INIT)
             out.write(ESC_HEBREW_TABLE)
-            out.write(payload.toByteArray(cp862))
+            out.write(prepared.toByteArray(cp862))
             out.write(FEED)
             out.write(ESC_CUT)
             out.flush()
@@ -48,5 +50,31 @@ object PrinterBridge {
             Log.e(TAG, msg, e)
             PrintResult(success = false, errorMessage = e.message ?: "Unknown error")
         }
+    }
+
+    private fun prepareThermalRtlPayload(text: String): String =
+        text
+            .replace("\r\n", "\n")
+            .replace("\r", "\n")
+            .lines()
+            .joinToString("\n") { smartReverseHebrewLine(it) }
+
+    private fun smartReverseHebrewLine(line: String): String {
+        if (line.isEmpty() || !line.contains(hebrewInWord)) {
+            return line
+        }
+        val words = line.split(Regex("\\s+")).filter { it.isNotEmpty() }
+        if (words.isEmpty()) {
+            return line
+        }
+        val mapped =
+            words.map { word ->
+                if (word.contains(hebrewInWord)) {
+                    word.reversed()
+                } else {
+                    word
+                }
+            }
+        return mapped.reversed().joinToString(" ")
     }
 }
