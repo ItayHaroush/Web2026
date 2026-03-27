@@ -3,13 +3,17 @@ package com.chefsync.printagent
 import android.util.Log
 import java.io.OutputStream
 import java.net.Socket
+import java.nio.charset.Charset
 
 object PrinterBridge {
     private const val TAG = "PrinterBridge"
 
     // ESC/POS commands
     private val ESC_INIT = byteArrayOf(0x1B, 0x40)           // Initialize printer
-    private val ESC_HEBREW_CP = byteArrayOf(0x1B, 0x74, 0x24) // Select CP862 (Hebrew)
+    /** SNBC BTP-S80: Hebrew code page = ESC t 8; payload must be Windows-1255, not UTF-8 */
+    private val ESC_HEBREW_TABLE = byteArrayOf(0x1B, 0x74, 0x08)
+
+    private val windows1255: Charset = Charset.forName("Windows-1255")
     private val ESC_CUT = byteArrayOf(0x1D, 0x56, 0x00)       // Full cut
     private val FEED = "\n\n\n\n".toByteArray()
 
@@ -27,8 +31,8 @@ object PrinterBridge {
             val out: OutputStream = socket.getOutputStream()
 
             out.write(ESC_INIT)
-            out.write(ESC_HEBREW_CP)
-            out.write(payload.toByteArray(Charsets.UTF_8))
+            out.write(ESC_HEBREW_TABLE)
+            out.write(payload.toByteArray(windows1255))
             out.write(FEED)
             out.write(ESC_CUT)
             out.flush()
