@@ -7,11 +7,12 @@ use Illuminate\Support\Facades\Log;
 /**
  * שליחת ESC/POS דרך TCP (פורט 9100).
  *
- * SNBC BTP-S80 (לפי מדריך): עברית = ESC t 8 + טקסט ב-Windows-1255, לא UTF-8 ולא CP862.
+ * SNBC BTP-S80: לפי מדריך «Hebrew» = ESC t 8. הטבלה ממופה ל־IBM862 (CP862), לא ל־Windows-1255 —
+ * שליחת 1255 תחת אותה טבלה נראית כקירילית/ג'יבריש. UTF-8 מהאפליקציה מומר ל־CP862 לפני שליחה.
  */
 class NetworkPrinterAdapter implements PrinterAdapter
 {
-    /** ESC t n — Hebrew לפי מדריך SNBC BTP-S80 (לא 36/PC862 של Epson) */
+    /** ESC t n — Hebrew במדריך SNBC BTP-S80 */
     private const ESC_POS_CODE_PAGE_HEBREW = 8;
 
     /** ESC ! — כפול גובה בלבד (קריא יותר, רוחב שורה לא משתנה) */
@@ -47,12 +48,12 @@ class NetworkPrinterAdapter implements PrinterAdapter
         }
 
         try {
-            $binary = $this->encodePayloadForWindows1255Hebrew($payload);
+            $binary = $this->encodePayloadForCp862Hebrew($payload);
 
             // ESC @ — אתחול (חובה לפני ESC t כדי לא להישאר על טבלה קודמת)
             fwrite($socket, "\x1B\x40");
 
-            // ESC t 8 — Hebrew (SNBC BTP-S80)
+            // ESC t 8 — Hebrew (SNBC); הנתונים חייבים להיות CP862/IBM862
             fwrite($socket, "\x1B\x74".chr(self::ESC_POS_CODE_PAGE_HEBREW));
 
             if ($doubleHeight) {
@@ -85,35 +86,35 @@ class NetworkPrinterAdapter implements PrinterAdapter
     }
 
     /**
-     * המרת UTF-8 ל-Windows-1255 (עברית) לפני שליחה למדפסת.
+     * המרת UTF-8 ל-CP862 (עברית DOS) — תואם טבלת Hebrew של BTP-S80.
      */
-    private function encodePayloadForWindows1255Hebrew(string $utf8): string
+    private function encodePayloadForCp862Hebrew(string $utf8): string
     {
         if ($utf8 === '') {
             return '';
         }
 
-        $normalized = $this->normalizeUnicodeForWindows1255($utf8);
+        $normalized = $this->normalizeUnicodeForCp862($utf8);
 
-        $converted = @iconv('UTF-8', 'WINDOWS-1255//IGNORE', $normalized);
+        $converted = @iconv('UTF-8', 'CP862//IGNORE', $normalized);
         if ($converted !== false && $converted !== '') {
             return $this->normalizeNewlinesForPrinter($converted);
         }
 
-        $converted = @iconv('UTF-8', 'CP1255//IGNORE', $normalized);
+        $converted = @iconv('UTF-8', 'IBM862//IGNORE', $normalized);
         if ($converted !== false && $converted !== '') {
             return $this->normalizeNewlinesForPrinter($converted);
         }
 
-        Log::warning('NetworkPrinterAdapter: Windows-1255 iconv failed, using ASCII-safe fallback');
+        Log::warning('NetworkPrinterAdapter: CP862 iconv failed, using ASCII-safe fallback');
 
         return $this->normalizeNewlinesForPrinter(preg_replace('/[^\x09\x0A\x0D\x20-\x7E]/', '?', $normalized) ?? '');
     }
 
     /**
-     * תווים שאין להם מקביל נוח ב-Windows-1255 — מחליפים לפני iconv.
+     * תווים שאין להם מקביל ב-CP862 — מחליפים לפני iconv.
      */
-    private function normalizeUnicodeForWindows1255(string $s): string
+    private function normalizeUnicodeForCp862(string $s): string
     {
         $map = [
             '₪' => 'ש"ח',
