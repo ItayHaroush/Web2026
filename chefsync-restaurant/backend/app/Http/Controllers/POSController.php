@@ -593,6 +593,15 @@ class POSController extends Controller
             } catch (\Exception $e) {
                 Log::error('POS print failed: '.$e->getMessage());
             }
+        } elseif ($isHold) {
+            // השהיה / שלב יצירה לתשלום מפוצל — בון למטבח מיד; קבלה רק אחרי סגירת תשלום
+            try {
+                $printService = app(PrintService::class);
+                $freshOrder = $order->fresh()->load('items.menuItem.category', 'restaurant');
+                $printResults['kitchen'] = $printService->printOrder($freshOrder);
+            } catch (\Exception $e) {
+                Log::error('POS hold kitchen print failed: '.$e->getMessage());
+            }
         }
 
         $this->notifyPosOrder($order, $tenantId, $restaurantId, $paymentMethod);
@@ -831,12 +840,19 @@ class POSController extends Controller
                 ->where('restaurant_id', $restaurantId)
                 ->with('items.menuItem.category', 'restaurant')
                 ->find($orderId);
-            // הזמנת קופה ללא שולחן: בון לא הודפס בהשהיה — אחרי אשראי מלא
+            // קופה ללא שולחן: אחרי השהיה הבון כבר יצא; אחרי יצירת אשראי שנכשלה — בון + קבלה
             if ($fresh && $fresh->source === 'pos' && empty($fresh->table_number)) {
                 try {
                     $printService = app(PrintService::class);
-                    $printService->printOrder($fresh);
-                    $printService->printReceipt($fresh);
+                    $wasHoldCashPending = $order->payment_method === 'cash'
+                        && $order->payment_status === Order::PAYMENT_PENDING
+                        && $order->status === Order::STATUS_RECEIVED;
+                    if ($wasHoldCashPending) {
+                        $printService->printReceipt($fresh);
+                    } else {
+                        $printService->printOrder($fresh);
+                        $printService->printReceipt($fresh);
+                    }
                 } catch (\Exception $e) {
                     Log::error('POS chargeOrderCredit print failed: '.$e->getMessage());
                 }
@@ -910,10 +926,10 @@ class POSController extends Controller
         if ($order->status === Order::STATUS_AWAITING_PAYMENT) {
             $paidUpdates['status'] = Order::STATUS_PENDING;
         }
-        $printKitchenAfterPay = $order->source === 'pos'
+        $movePosToPreparing = $order->source === 'pos'
             && $order->status === Order::STATUS_RECEIVED
             && empty($order->table_number);
-        if ($printKitchenAfterPay) {
+        if ($movePosToPreparing) {
             $paidUpdates['status'] = Order::STATUS_PREPARING;
         }
         $order->update($paidUpdates);
@@ -935,15 +951,11 @@ class POSController extends Controller
             ]);
         }
 
-        // הדפס קבלה (ומטבח אם הייתה הזמנת קופה בהשהיה ללא שולחן — בון לא הודפס ביצירה)
+        // קבלה בלבד — בון למטבח כבר יצא ביצירת השהיה / פיצול
         $printResult = 0;
-        $printKitchenJobs = 0;
         try {
             $printService = app(PrintService::class);
             $freshOrder = $order->fresh()->load('items.menuItem.category', 'restaurant');
-            if ($printKitchenAfterPay) {
-                $printKitchenJobs = $printService->printOrder($freshOrder);
-            }
             $printResult = $printService->printReceipt($freshOrder, ['change' => $change]);
         } catch (\Exception $e) {
             Log::error('Print receipt failed for pending order cash payment: '.$e->getMessage());
@@ -977,7 +989,6 @@ class POSController extends Controller
             'total' => $total,
             'closed_tab' => $closedTab,
             'print_jobs' => $printResult,
-            'print_kitchen_jobs' => $printKitchenJobs,
         ]);
     }
 
@@ -1088,12 +1099,12 @@ class POSController extends Controller
             }
         });
 
+        // בון כבר הודפס ביצירת ההזמנה (hold); כאן רק קבלה
         $printResults = ['kitchen' => 0, 'receipt' => 0];
         if ($order->source === 'pos') {
             try {
                 $printService = app(PrintService::class);
                 $freshOrder = $order->fresh()->load('items.menuItem.category', 'restaurant');
-                $printResults['kitchen'] = $printService->printOrder($freshOrder);
                 $printResults['receipt'] = $printService->printReceipt($freshOrder);
             } catch (\Exception $e) {
                 Log::error('POS split payment print failed: '.$e->getMessage());
