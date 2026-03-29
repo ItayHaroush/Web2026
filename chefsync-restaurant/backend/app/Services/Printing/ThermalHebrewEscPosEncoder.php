@@ -93,6 +93,10 @@ final class ThermalHebrewEscPosEncoder
             return false;
         }
 
+        if (preg_match('/^\d{1,2}\.\d{1,2}\.\d{2,4}\s+\d{1,2}:\d{2}$/u', $trimmed)) {
+            return false;
+        }
+
         return (bool) preg_match('/\p{Hebrew}/u', $trimmed);
     }
 

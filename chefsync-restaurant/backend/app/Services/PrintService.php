@@ -75,7 +75,7 @@ class PrintService
      */
     public function printReceipt(Order $order, array $extraData = []): int
     {
-        $order->loadMissing('items.menuItem', 'restaurant');
+        $order->loadMissing('items.menuItem.category', 'restaurant');
 
         $printers = Printer::where('restaurant_id', $order->restaurant_id)
             ->where('is_active', true)
@@ -206,7 +206,10 @@ class PrintService
         $lines[] = $this->centerText("הזמנה #{$order->id}", $printer);
         $lines[] = $separator;
 
-        $lines[] = $order->created_at->format('d.m.Y').' | '.$order->created_at->format('H:i');
+        $lines[] = $this->centerText(
+            $order->created_at->format('d.m.Y').' | '.$order->created_at->format('H:i'),
+            $printer
+        );
 
         $orderInfo = [];
         if ($order->source === 'kiosk') {
@@ -228,7 +231,7 @@ class PrintService
             $lines[] = $order->customer_name;
         }
         if ($order->customer_phone && $order->customer_phone !== '0000000000') {
-            $lines[] = $order->customer_phone;
+            $lines[] = PhoneValidationService::formatIsraeliForDisplay($order->customer_phone);
         }
         if ($order->delivery_address) {
             $lines[] = "כתובת: {$order->delivery_address}";
@@ -236,27 +239,43 @@ class PrintService
 
         $lines[] = $dash;
 
-        foreach ($items as $item) {
-            $name = $item->menuItem?->name ?? $item->name ?? 'פריט';
-            $qty = $item->quantity ?? 1;
-            $lines[] = "{$qty}x {$name}";
+        $kitchenGroups = $this->groupOrderItemsByCategory($items);
+        $kitchenItemTotal = 0;
+        foreach ($kitchenGroups as $b) {
+            $kitchenItemTotal += count($b);
+        }
+        $kitchenItemDone = 0;
 
-            if (! empty($item->variant_name)) {
-                $lines[] = "  סוג: {$item->variant_name}";
-            }
+        foreach ($kitchenGroups as $categoryLabel => $bucket) {
+            $lines[] = $this->centerText($categoryLabel, $printer);
 
-            $addons = is_array($item->addons) ? $item->addons : [];
-            foreach ($addons as $addon) {
-                $addonName = is_string($addon) ? $addon : ($addon['name'] ?? $addon['addon_name'] ?? '');
-                $onSide = is_array($addon) && ! empty($addon['on_side']);
-                if ($addonName) {
-                    $prefix = $onSide ? '  בצד:' : '  +';
-                    $lines[] = "{$prefix} {$addonName}";
+            foreach ($bucket as $item) {
+                $name = $item->menuItem?->name ?? $item->name ?? 'פריט';
+                $qty = $item->quantity ?? 1;
+                $lines[] = "{$qty}x {$name}";
+
+                if (! empty($item->variant_name)) {
+                    $lines[] = "  סוג: {$item->variant_name}";
                 }
-            }
 
-            if (! empty($item->notes)) {
-                $lines[] = "  הערה: {$item->notes}";
+                $addons = is_array($item->addons) ? $item->addons : [];
+                foreach ($addons as $addon) {
+                    $addonName = is_string($addon) ? $addon : ($addon['name'] ?? $addon['addon_name'] ?? '');
+                    $onSide = is_array($addon) && ! empty($addon['on_side']);
+                    if ($addonName) {
+                        $prefix = $onSide ? '  בצד:' : '  +';
+                        $lines[] = "{$prefix} {$addonName}";
+                    }
+                }
+
+                if (! empty($item->notes)) {
+                    $lines[] = "  הערה: {$item->notes}";
+                }
+
+                $kitchenItemDone++;
+                if ($kitchenItemDone < $kitchenItemTotal) {
+                    $lines[] = '';
+                }
             }
         }
 
@@ -299,30 +318,49 @@ class PrintService
         $lines[] = $separator;
         $lines[] = $this->centerText("קבלה — הזמנה #{$order->id}", $printer);
         $lines[] = $separator;
-        $lines[] = $order->created_at->format('d.m.Y H:i');
+        $lines[] = $this->centerText($order->created_at->format('d.m.Y H:i'), $printer);
         if ($order->customer_name && $order->customer_name !== 'POS') {
-            $lines[] = "לקוח: {$order->customer_name}";
+            $lines[] = $this->centerText("לקוח: {$order->customer_name}", $printer);
+        }
+        if ($order->customer_phone && $order->customer_phone !== '0000000000') {
+            $lines[] = $this->centerText(
+                'טלפון: '.PhoneValidationService::formatIsraeliForDisplay($order->customer_phone),
+                $printer
+            );
         }
         $lines[] = $dash;
 
-        foreach ($order->items as $item) {
-            $name = $item->menuItem?->name ?? $item->name ?? 'פריט';
-            $qty = $item->quantity ?? 1;
-            $unitPrice = $item->price_at_order ?? $item->menuItem?->price ?? 0;
-            $lineTotal = number_format($unitPrice * $qty, 2);
-            $lines[] = "{$qty}x {$name}";
-            $lines[] = str_pad("  ₪{$lineTotal}", $width, ' ', STR_PAD_LEFT);
+        $receiptGroups = $this->groupOrderItemsByCategory($order->items);
+        $receiptItemTotal = 0;
+        foreach ($receiptGroups as $b) {
+            $receiptItemTotal += count($b);
+        }
+        $receiptItemDone = 0;
 
-            if (! empty($item->variant_name)) {
-                $lines[] = "  סוג: {$item->variant_name}";
-            }
-            $addons = is_array($item->addons) ? $item->addons : [];
-            foreach ($addons as $addon) {
-                $addonName = is_string($addon) ? $addon : ($addon['name'] ?? '');
-                $addonPrice = is_array($addon) ? ($addon['price'] ?? 0) : 0;
-                if ($addonName) {
-                    $priceFmt = $addonPrice > 0 ? ' ₪'.number_format($addonPrice, 2) : '';
-                    $lines[] = "  + {$addonName}{$priceFmt}";
+        foreach ($receiptGroups as $categoryLabel => $bucket) {
+            $lines[] = $this->centerText($categoryLabel, $printer);
+
+            foreach ($bucket as $item) {
+                $name = $item->menuItem?->name ?? $item->name ?? 'פריט';
+                $qty = $item->quantity ?? 1;
+                $lines[] = "{$qty}x {$name}";
+
+                if (! empty($item->variant_name)) {
+                    $lines[] = "  סוג: {$item->variant_name}";
+                }
+                $addons = is_array($item->addons) ? $item->addons : [];
+                foreach ($addons as $addon) {
+                    $addonName = is_string($addon) ? $addon : ($addon['name'] ?? '');
+                    $addonPrice = is_array($addon) ? (float) ($addon['price'] ?? 0) : 0.0;
+                    if ($addonName) {
+                        $priceFmt = $addonPrice > 0 ? ' '.$this->formatShekelAmount($addonPrice) : '';
+                        $lines[] = "  + {$addonName}{$priceFmt}";
+                    }
+                }
+
+                $receiptItemDone++;
+                if ($receiptItemDone < $receiptItemTotal) {
+                    $lines[] = '';
                 }
             }
         }
@@ -330,11 +368,11 @@ class PrintService
         $lines[] = $separator;
 
         if ($order->delivery_fee > 0) {
-            $lines[] = 'דמי משלוח: ₪'.number_format($order->delivery_fee, 2);
+            $lines[] = 'דמי משלוח: '.$this->formatShekelAmount((float) $order->delivery_fee);
         }
 
         $totalAmount = $order->total_amount ?? 0;
-        $lines[] = $this->centerText('סה"כ: ₪'.number_format($totalAmount, 2), $printer);
+        $lines[] = $this->centerText('סה"כ: '.$this->formatShekelAmount((float) $totalAmount), $printer);
 
         $paymentLabel = match ($order->payment_method) {
             'cash' => 'מזומן',
@@ -344,7 +382,7 @@ class PrintService
         $lines[] = "תשלום: {$paymentLabel}";
 
         if (! empty($extraData['change']) && $extraData['change'] > 0) {
-            $lines[] = 'עודף: ₪'.number_format($extraData['change'], 2);
+            $lines[] = 'עודף: '.$this->formatShekelAmount((float) $extraData['change']);
         }
 
         if (! empty($extraData['receipt_number'])) {
@@ -487,5 +525,37 @@ class PrintService
         $padding = (int) (($width - $textLen) / 2);
 
         return str_repeat(' ', $padding).$text;
+    }
+
+    /**
+     * סכום להדפסה: רווח בין המספר לבין ש"ח (בלי ₪ כדי שלא יידבק אחרי iconv).
+     */
+    private function formatShekelAmount(float $amount): string
+    {
+        return number_format($amount, 2, '.', '').' ש"ח';
+    }
+
+    /**
+     * קיבוץ פריטים לפי קטגוריה (סדר הופעה ראשונה בהזמנה).
+     *
+     * @param  \Illuminate\Support\Collection|\Illuminate\Database\Eloquent\Collection|iterable  $items
+     * @return array<string, array<int, mixed>>
+     */
+    private function groupOrderItemsByCategory(iterable $items): array
+    {
+        $groups = [];
+
+        foreach ($items as $item) {
+            $label = $item->category_name
+                ?: $item->menuItem?->category?->name
+                ?: 'ללא קטגוריה';
+
+            if (! array_key_exists($label, $groups)) {
+                $groups[$label] = [];
+            }
+            $groups[$label][] = $item;
+        }
+
+        return $groups;
     }
 }
