@@ -48,6 +48,15 @@ export default function usePosSession() {
     const headersRef = useRef(headers);
     headersRef.current = headers;
 
+    const lock = useCallback(async () => {
+        if (posToken) {
+            try {
+                await posApi.lockSession(headersRef.current, posToken);
+            } catch { }
+        }
+        setIsLocked(true);
+    }, [posToken]);
+
     const resetInactivityTimer = useCallback(() => {
         if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
         if (!posToken || isLocked) return;
@@ -112,15 +121,6 @@ export default function usePosSession() {
         }
         throw new Error(res.data.message);
     }, []);
-
-    const lock = useCallback(async () => {
-        if (posToken) {
-            try {
-                await posApi.lockSession(headersRef.current, posToken);
-            } catch { }
-        }
-        setIsLocked(true);
-    }, [posToken]);
 
     const unlock = useCallback(async (pin) => {
         const res = await posApi.unlockSession(pin, headersRef.current);
