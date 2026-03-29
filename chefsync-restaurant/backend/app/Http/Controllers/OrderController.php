@@ -1005,6 +1005,10 @@ class OrderController extends Controller
             if ($validated['status'] === Order::STATUS_CANCELLED) {
                 if (in_array($order->payment_status, [Order::PAYMENT_PENDING, Order::PAYMENT_FAILED], true)) {
                     $updates['payment_status'] = Order::PAYMENT_CANCELLED;
+                } elseif ($order->payment_status === Order::PAYMENT_PAID
+                    && ! $order->refund_waived_at
+                    && $order->refund_pending_at === null) {
+                    $updates['refund_pending_at'] = now();
                 }
             }
             $order->update($updates);

@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.IBinder
+import android.util.Base64
 import android.util.Log
 import kotlinx.coroutines.*
 
@@ -104,7 +105,14 @@ class PrintAgentService : Service() {
             updateNotification("מדפיס הזמנה #${job.order_id ?: job.id}...")
 
             val result = withContext(Dispatchers.IO) {
-                PrinterBridge.print(ip, port, job.text)
+                val suffix = job.escpos_binary_suffix?.let { b64 ->
+                    try {
+                        Base64.decode(b64, Base64.DEFAULT)
+                    } catch (_: Exception) {
+                        null
+                    }
+                }
+                PrinterBridge.print(ip, port, job.text, suffix)
             }
 
             ackJob(

@@ -16,6 +16,54 @@ import useBrowserPrint from './hooks/useBrowserPrint';
 import posApi from './api/posApi';
 import { sendRestaurantAdminPageView } from '../../services/analyticsBeacon';
 
+function isAnyFullscreenActive() {
+    return !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement);
+}
+
+function enterPosFullscreen() {
+    const el = document.documentElement;
+    try {
+        if (typeof el.requestFullscreen === 'function') {
+            const p = el.requestFullscreen({ navigationUI: 'hide' });
+            if (p && typeof p.catch === 'function') {
+                p.catch(() => {
+                    try {
+                        el.webkitRequestFullscreen?.();
+                    } catch {
+                        /* ignore */
+                    }
+                });
+            }
+            return;
+        }
+    } catch {
+        /* fall through */
+    }
+    try {
+        el.webkitRequestFullscreen?.();
+    } catch {
+        /* ignore */
+    }
+    try {
+        el.mozRequestFullScreen?.();
+    } catch {
+        /* ignore */
+    }
+}
+
+function exitPosFullscreen() {
+    try {
+        if (document.fullscreenElement) document.exitFullscreen?.();
+    } catch {
+        /* ignore */
+    }
+    try {
+        if (document.webkitFullscreenElement) document.webkitExitFullscreen?.();
+    } catch {
+        /* ignore */
+    }
+}
+
 export default function POSLite() {
     const navigate = useNavigate();
     const { isManager: isManagerFn, getAuthHeaders } = useAdminAuth();
@@ -39,6 +87,7 @@ export default function POSLite() {
     const [shift, setShift] = useState(null);
     const [showPendingModal, setShowPendingModal] = useState(false);
     const [pendingCount, setPendingCount] = useState(0);
+    const [needFullscreenRestore, setNeedFullscreenRestore] = useState(false);
 
     useBrowserPrint(headers, posToken, isAuthenticated);
 
@@ -58,41 +107,59 @@ export default function POSLite() {
         fetchShift();
     }, [isAuthenticated, headers, posToken]);
 
-    // Poll pending payment count
-    useEffect(() => {
-        if (!isAuthenticated) return;
-        const fetchCount = async () => {
-            try {
-                const res = await posApi.getPendingPaymentOrders(headers, posToken);
-                if (res.data.success) {
-                    setPendingCount((res.data.orders || []).length);
-                }
-            } catch { }
-        };
-        fetchCount();
-        const interval = setInterval(fetchCount, 15000);
-        return () => clearInterval(interval);
+    const fetchPendingQueueCount = useCallback(async () => {
+        if (!isAuthenticated || !headers) return;
+        try {
+            const res = await posApi.getPendingPaymentOrders(headers, posToken);
+            if (res.data.success) {
+                setPendingCount((res.data.orders || []).length);
+            }
+        } catch {
+            /* ignore */
+        }
     }, [isAuthenticated, headers, posToken]);
 
-    // Fullscreen on enter
+    // Poll pending payment + refund queue count
+    useEffect(() => {
+        if (!isAuthenticated) return;
+        fetchPendingQueueCount();
+        const interval = setInterval(fetchPendingQueueCount, 15000);
+        return () => clearInterval(interval);
+    }, [isAuthenticated, fetchPendingQueueCount]);
+
+    // Fullscreen on enter (כולל Safari / webkit)
     useEffect(() => {
         if (isAuthenticated) {
-            try {
-                document.documentElement.requestFullscreen?.();
-            } catch { }
+            enterPosFullscreen();
         }
         return () => {
-            try {
-                if (document.fullscreenElement) document.exitFullscreen?.();
-            } catch { }
+            exitPosFullscreen();
+        };
+    }, [isAuthenticated]);
+
+    useEffect(() => {
+        if (!isAuthenticated) return;
+        const onLost = () => setNeedFullscreenRestore(true);
+        window.addEventListener('takeeat:pos-fullscreen-lost', onLost);
+        return () => window.removeEventListener('takeeat:pos-fullscreen-lost', onLost);
+    }, [isAuthenticated]);
+
+    useEffect(() => {
+        if (!isAuthenticated) return;
+        const onFs = () => {
+            if (isAnyFullscreenActive()) setNeedFullscreenRestore(false);
+        };
+        document.addEventListener('fullscreenchange', onFs);
+        document.addEventListener('webkitfullscreenchange', onFs);
+        return () => {
+            document.removeEventListener('fullscreenchange', onFs);
+            document.removeEventListener('webkitfullscreenchange', onFs);
         };
     }, [isAuthenticated]);
 
     const handleExit = useCallback(() => {
         logout();
-        try {
-            if (document.fullscreenElement) document.exitFullscreen?.();
-        } catch { }
+        exitPosFullscreen();
         navigate('/admin/dashboard');
     }, [logout, navigate]);
 
@@ -111,6 +178,13 @@ export default function POSLite() {
     const handleShiftChange = useCallback((s) => {
         setShift(s);
     }, []);
+
+    // סשן POS בוטל בשרת (מכשיר אחר, פג תוקף, נעילה) — חזרה למסך PIN
+    useEffect(() => {
+        const onSessionLost = () => logout();
+        window.addEventListener('takeeat:pos-session-lost', onSessionLost);
+        return () => window.removeEventListener('takeeat:pos-session-lost', onSessionLost);
+    }, [logout]);
 
     if (isBasicTier) {
         return <ProFeatureGate featureName="קופה POS" />;
@@ -194,9 +268,25 @@ export default function POSLite() {
                     posToken={posToken}
                     onClose={() => setShowPendingModal(false)}
                     onPaid={() => {
-                        setPendingCount(prev => Math.max(0, prev - 1));
+                        fetchPendingQueueCount();
                     }}
                 />
+            )}
+
+            {needFullscreenRestore && (
+                <button
+                    type="button"
+                    className="fixed inset-0 z-[5000] flex flex-col items-center justify-center gap-3 bg-black/90 text-white px-8 cursor-pointer border-0 font-black"
+                    onClick={() => {
+                        enterPosFullscreen();
+                        setNeedFullscreenRestore(false);
+                    }}
+                >
+                    <span className="text-xl sm:text-2xl text-center">הקשו כאן לחזרה למסך מלא</span>
+                    <span className="text-sm font-medium text-slate-400 text-center max-w-sm">
+                        הדפדפן יוצא ממסך מלא בעת הדפסה; אם לא חזר אוטומטית — לחיצה אחת מחזירה לקופה.
+                    </span>
+                </button>
             )}
         </div>
     );

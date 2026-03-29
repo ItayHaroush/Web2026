@@ -344,7 +344,8 @@ class CustomInvoiceController extends Controller
                                     <a href="mailto:itayyharoush@gmail.com" style="color:#7c3aed; text-decoration:none;">itayyharoush@gmail.com</a> &nbsp;|&nbsp;
                                     <a href="https://itaysolutions.com" style="color:#7c3aed; text-decoration:none;">itaysolutions.com</a>
                                 </p>
-                                <p style="margin:8px 0 0; font-size:10px; color:#d1d5db;">חשבונית זו הופקה אוטומטית ממערכת TakeEat</p>
+                                <p style="margin:8px 0 0; font-size:10px; font-weight:bold; color:#9ca3af;">Powered by TakeEat</p>
+                                <p style="margin:4px 0 0; font-size:10px; color:#d1d5db;">חשבונית זו הופקה אוטומטית ממערכת TakeEat</p>
                             </div>
                         </td>
                     </tr>

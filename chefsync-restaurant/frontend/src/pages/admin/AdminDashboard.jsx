@@ -69,7 +69,9 @@ export default function AdminDashboard() {
             const response = await api.get('/admin/dashboard', {
                 headers: getAuthHeaders()
             });
-            console.log('Dashboard response:', response.data);
+            if (import.meta.env.DEV) {
+                console.log('Dashboard response:', response.data);
+            }
             if (response.data.success) {
                 setStats(response.data.stats);
                 const realOrders = (response.data.recent_orders || []).filter(order => !order.is_test);

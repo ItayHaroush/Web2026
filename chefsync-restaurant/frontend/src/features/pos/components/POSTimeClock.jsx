@@ -49,7 +49,7 @@ ${data.total_pay != null ? `
 <div class="big">לתשלום: ₪${data.total_pay}</div>
 ` : ''}
 <div class="divider"></div>
-<p class="footer">הופק אוטומטית ממערכת POS</p>
+<p class="footer">Powered by TakeEat</p>
 <script>window.onload = function() { window.print(); }</script>
 </body>
 </html>`;

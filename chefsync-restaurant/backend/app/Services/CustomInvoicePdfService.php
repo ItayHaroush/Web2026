@@ -34,6 +34,7 @@ class CustomInvoicePdfService
                             &#9742; <a href="tel:0547466508" style="color:#7c3aed; text-decoration:none;">054-7466508</a> &nbsp;|&nbsp;
                             &#9993; <a href="mailto:itayyharoush@gmail.com" style="color:#7c3aed; text-decoration:none;">itayyharoush@gmail.com</a> &nbsp;|&nbsp;
                             &#187; <a href="https://itaysolutions.com" style="color:#7c3aed; text-decoration:none;">itaysolutions.com</a><br>
+                            <strong style="color:#6b7280;">Powered by TakeEat</strong><br>
                             <span style="color:#9ca3af; font-size: 9px;">חשבונית זו הופקה אוטומטית ממערכת TakeEat</span>
                         </td>
                     </tr>

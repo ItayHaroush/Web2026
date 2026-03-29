@@ -363,6 +363,8 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'tenant'])->group(function (
         // ניהול הזמנות
         Route::get('/orders', [AdminController::class, 'getOrders'])->name('admin.orders.index');
         Route::patch('/orders/{id}/status', [AdminController::class, 'updateOrderStatus'])->name('admin.orders.status');
+        Route::post('/orders/{id}/refund', [AdminController::class, 'refundCancelledOrder'])->name('admin.orders.refund');
+        Route::post('/orders/{id}/waive-refund', [AdminController::class, 'waiveCancelledOrderRefund'])->name('admin.orders.waive-refund');
         Route::patch('/orders/{id}/eta', [AdminController::class, 'updateOrderEta'])->name('admin.orders.eta');
         Route::post('/orders/{id}/mark-paid', [AdminController::class, 'markOrderPaid'])->name('admin.orders.mark-paid');
         Route::post('/orders/{id}/payment-link', [AdminController::class, 'createOrderPaymentLink'])->name('admin.orders.payment-link');
@@ -462,6 +464,7 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'tenant'])->group(function (
 
                 Route::post('/orders/{id}/print-receipt', [\App\Http\Controllers\POSController::class, 'printReceipt'])->name('admin.pos.orders.print-receipt');
                 Route::post('/orders/{id}/print-kitchen', [\App\Http\Controllers\POSController::class, 'printKitchenTicket'])->name('admin.pos.orders.print-kitchen');
+                Route::post('/print-share-qr', [\App\Http\Controllers\POSController::class, 'printShareQrSlip'])->name('admin.pos.print-share-qr');
 
                 Route::get('/print-jobs/pending', [\App\Http\Controllers\POSController::class, 'getPendingPrintJobs'])->name('admin.pos.print-jobs.pending');
             });

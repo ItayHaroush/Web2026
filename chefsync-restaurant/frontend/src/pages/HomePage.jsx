@@ -170,11 +170,15 @@ export default function HomePage() {
                             setCurrentCityName(city);
                         }
                     } catch (error) {
-                        console.log('Could not get city name from coordinates:', error);
+                        if (import.meta.env.DEV) {
+                            console.log('Could not get city name from coordinates:', error);
+                        }
                     }
                 },
                 (error) => {
-                    console.log('Location access denied or unavailable:', error);
+                    if (import.meta.env.DEV) {
+                        console.log('Location access denied or unavailable:', error);
+                    }
                 }
             );
         }
@@ -204,7 +208,9 @@ export default function HomePage() {
 
             // טען מסעדות
             const result = await getAllRestaurants(selectedCity || null);
-            console.log('Restaurants loaded:', result);
+            if (import.meta.env.DEV) {
+                console.log('Restaurants loaded:', result);
+            }
 
             let restaurantsList = result.data || [];
 
@@ -239,7 +245,9 @@ export default function HomePage() {
             // טען רשימת ערים
             if (cities.length === 0) {
                 const citiesList = await getCities();
-                console.log('Cities loaded:', citiesList);
+                if (import.meta.env.DEV) {
+                    console.log('Cities loaded:', citiesList);
+                }
                 setCities(citiesList);
             }
         } catch (err) {

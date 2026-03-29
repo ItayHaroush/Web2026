@@ -31,7 +31,7 @@ object PrinterBridge {
         val errorMessage: String? = null,
     )
 
-    fun print(ip: String, port: Int, payload: String, timeoutMs: Int = 5000): PrintResult {
+    fun print(ip: String, port: Int, payload: String, binarySuffix: ByteArray? = null, timeoutMs: Int = 5000): PrintResult {
         return try {
             val socket = Socket()
             socket.connect(java.net.InetSocketAddress(ip, port), timeoutMs)
@@ -46,6 +46,9 @@ object PrinterBridge {
             out.write(ESC_DOUBLE_HEIGHT)
             out.write(prepared.toByteArray(cp862))
             out.write(ESC_FONT_NORMAL)
+            if (binarySuffix != null && binarySuffix.isNotEmpty()) {
+                out.write(binarySuffix)
+            }
             out.write(FEED)
             out.write(ESC_CUT)
             out.flush()

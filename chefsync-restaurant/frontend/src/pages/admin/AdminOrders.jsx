@@ -66,6 +66,7 @@ export default function AdminOrders() {
     const [customerSectionOpen, setCustomerSectionOpen] = useState(false);
     const [cancelModal, setCancelModal] = useState({ isOpen: false, orderId: null });
     const [paymentLinkBusy, setPaymentLinkBusy] = useState(false);
+    const [refundActionBusy, setRefundActionBusy] = useState(false);
     /** מזהים של הזמנות שכבר הוצגו ברשימה (אחרי סינון עתידיות) — לצלצול polling */
     const previousVisibleOrderIds = useRef(new Set());
     const orderPanelRef = useRef(null);
@@ -187,7 +188,12 @@ export default function AdminOrders() {
 
     const fetchOrders = async () => {
         try {
-            const params = filterStatus ? { status: filterStatus } : {};
+            const params = {};
+            if (filterStatus === 'pending_refund') {
+                params.pending_refund = 1;
+            } else if (filterStatus) {
+                params.status = filterStatus;
+            }
             const response = await api.get('/admin/orders', {
                 headers: getAuthHeaders(),
                 params
@@ -196,7 +202,9 @@ export default function AdminOrders() {
                 const newOrders = response.data.orders.data || response.data.orders;
                 const withoutPreKitchenFuture = hidePreKitchenFutureOrders(newOrders);
                 const visibleForUi = filterStatus
-                    ? withoutPreKitchenFuture.filter((o) => o.status === filterStatus)
+                    ? (filterStatus === 'pending_refund'
+                        ? withoutPreKitchenFuture
+                        : withoutPreKitchenFuture.filter((o) => o.status === filterStatus))
                     : withoutPreKitchenFuture;
 
                 // צלצול polling: רק הזמנה חדשה אמיתית (מזהה שלא היה) ולא עתידית לפני מטבח
@@ -334,6 +342,7 @@ export default function AdminOrders() {
 
     const statusOptions = [
         { value: '', label: 'הכל', icon: <FaReceipt /> },
+        { value: 'pending_refund', label: 'ממתינות להחזר', icon: <FaExclamationTriangle /> },
         { value: 'awaiting_payment', label: ORDER_STATUS_AWAITING_PAYMENT_HE, icon: <FaClock /> },
         { value: 'pending', label: 'ממתין', icon: <FaClock /> },
         { value: 'received', label: 'התקבל', icon: <FaBell /> },
@@ -628,6 +637,12 @@ export default function AdminOrders() {
                                                                 <div className="px-2.5 py-0.5 rounded-lg text-[9px] font-black uppercase border bg-indigo-50 text-indigo-700 border-indigo-200 flex items-center gap-1.5">
                                                                     <FaClock size={9} />
                                                                     הזמנה עתידית
+                                                                </div>
+                                                            )}
+                                                            {order.awaiting_refund && (
+                                                                <div className="px-2.5 py-0.5 rounded-lg text-[9px] font-black uppercase border bg-rose-50 text-rose-800 border-rose-200 flex items-center gap-1.5">
+                                                                    <FaExclamationTriangle size={9} />
+                                                                    ממתין להחזר
                                                                 </div>
                                                             )}
                                                         </div>
@@ -1284,6 +1299,90 @@ export default function AdminOrders() {
                                                         </button>
                                                     </div>
                                                 )}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* ביטול אחרי תשלום — תור החזר */}
+                                {selectedOrder.awaiting_refund && (isOwner() || isManager()) && !isLocked && (
+                                    <div className="bg-rose-50 border-2 border-rose-200 rounded-3xl p-5 shadow-sm space-y-3">
+                                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-rose-800 flex items-center gap-2">
+                                            <FaExclamationTriangle />
+                                            ממתין להחזר כספי
+                                        </h4>
+                                        <p className="text-sm font-bold text-rose-900">
+                                            סכום שחויב בפועל:{' '}
+                                            <span className="font-black">
+                                                ₪{Number(selectedOrder.payment_amount ?? selectedOrder.total ?? 0).toFixed(2)}
+                                            </span>
+                                        </p>
+                                        <p className="text-xs text-rose-800/80 leading-snug">
+                                            לאחר ההחזר סטטוס התשלום יעודכן ל&quot;הוחזר&quot;. ויתור על החזר משאיר את התשלום כמוכר בדוחות (ללא זיכוי ללקוח).
+                                        </p>
+                                        <div className="flex flex-col sm:flex-row gap-2 pt-1">
+                                            <button
+                                                type="button"
+                                                disabled={refundActionBusy}
+                                                onClick={async () => {
+                                                    if (!confirm(`לבצע החזר של ₪${Number(selectedOrder.payment_amount ?? selectedOrder.total ?? 0).toFixed(2)} להזמנה #${selectedOrder.id}?`)) return;
+                                                    setRefundActionBusy(true);
+                                                    try {
+                                                        const res = await api.post(
+                                                            `/admin/orders/${selectedOrder.id}/refund`,
+                                                            {},
+                                                            { headers: getAuthHeaders() }
+                                                        );
+                                                        if (res.data.success) {
+                                                            await fetchOrders();
+                                                            setSelectedOrder(res.data.order || { ...selectedOrder, payment_status: 'refunded', refund_pending_at: null, awaiting_refund: false });
+                                                        } else {
+                                                            alert(res.data?.message || 'ההחזר נכשל');
+                                                        }
+                                                    } catch (err) {
+                                                        alert(err.response?.data?.message || 'שגיאה בביצוע ההחזר');
+                                                    } finally {
+                                                        setRefundActionBusy(false);
+                                                    }
+                                                }}
+                                                className="flex-1 flex items-center justify-center gap-2 bg-rose-600 text-white py-3 rounded-2xl font-black text-xs uppercase tracking-wider hover:bg-rose-700 transition-all disabled:opacity-50"
+                                            >
+                                                {refundActionBusy ? <FaSpinner className="animate-spin" /> : <FaCreditCard />}
+                                                בצע החזר
+                                            </button>
+                                            <button
+                                                type="button"
+                                                disabled={refundActionBusy}
+                                                onClick={async () => {
+                                                    const note = window.prompt('הערה לויתור (אופציונלי):') || '';
+                                                    if (!confirm('לוותר על החזר? ההכנסה תישאר בדוחות.')) return;
+                                                    setRefundActionBusy(true);
+                                                    try {
+                                                        const res = await api.post(
+                                                            `/admin/orders/${selectedOrder.id}/waive-refund`,
+                                                            note.trim() ? { note: note.trim() } : {},
+                                                            { headers: getAuthHeaders() }
+                                                        );
+                                                        if (res.data.success) {
+                                                            await fetchOrders();
+                                                            setSelectedOrder(res.data.order || {
+                                                                ...selectedOrder,
+                                                                refund_pending_at: null,
+                                                                refund_waived_at: new Date().toISOString(),
+                                                                awaiting_refund: false,
+                                                            });
+                                                        } else {
+                                                            alert(res.data?.message || 'פעולה נכשלה');
+                                                        }
+                                                    } catch (err) {
+                                                        alert(err.response?.data?.message || 'שגיאה בויתור ההחזר');
+                                                    } finally {
+                                                        setRefundActionBusy(false);
+                                                    }
+                                                }}
+                                                className="flex-1 flex items-center justify-center gap-2 bg-white text-rose-800 border-2 border-rose-300 py-3 rounded-2xl font-black text-xs uppercase tracking-wider hover:bg-rose-100 transition-all disabled:opacity-50"
+                                            >
+                                                ויתור על החזר
+                                            </button>
                                         </div>
                                     </div>
                                 )}

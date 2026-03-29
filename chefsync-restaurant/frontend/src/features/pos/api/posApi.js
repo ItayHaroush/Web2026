@@ -140,6 +140,8 @@ export const posApi = {
         api.post(`/admin/pos/orders/${orderId}/print-receipt`, {}, { headers: posHeaders(headers, token) }),
     printKitchenTicket: (orderId, headers, token) =>
         api.post(`/admin/pos/orders/${orderId}/print-kitchen`, {}, { headers: posHeaders(headers, token) }),
+    printShareQrSlip: (headers, token) =>
+        api.post('/admin/pos/print-share-qr', {}, { headers: posHeaders(headers, token) }),
     getPendingPrintJobs: (headers, token) =>
         api.get('/admin/pos/print-jobs/pending', { headers: posHeaders(headers, token) }),
 };

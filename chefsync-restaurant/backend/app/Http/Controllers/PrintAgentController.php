@@ -6,7 +6,6 @@ use App\Models\PrintDevice;
 use App\Models\PrintJob;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 
 class PrintAgentController extends Controller
 {
@@ -26,12 +25,12 @@ class PrintAgentController extends Controller
                         $q->whereNotNull('role');
                     } else {
                         $q->where('role', $device->role)
-                          ->orWhere('role', 'general');
+                            ->orWhere('role', 'general');
                     }
                 })
                 ->where(function ($q) use ($device) {
                     $q->whereNull('device_id')
-                      ->orWhere('device_id', $device->id);
+                        ->orWhere('device_id', $device->id);
                 })
                 ->lockForUpdate()
                 ->limit(5)
@@ -51,16 +50,23 @@ class PrintAgentController extends Controller
 
         return response()->json([
             'success' => true,
-            'jobs' => $jobs->map(fn ($job) => [
-                'id' => $job->id,
-                'role' => $job->role,
-                'order_id' => $job->order_id,
-                'type' => $job->payload['type'] ?? 'custom',
-                'text' => $job->payload['text'] ?? '',
-                'target_ip' => $job->target_ip,
-                'target_port' => $job->target_port,
-                'created_at' => $job->created_at?->toIso8601String(),
-            ]),
+            'jobs' => $jobs->map(function ($job) {
+                $row = [
+                    'id' => $job->id,
+                    'role' => $job->role,
+                    'order_id' => $job->order_id,
+                    'type' => $job->payload['type'] ?? 'custom',
+                    'text' => $job->payload['text'] ?? '',
+                    'target_ip' => $job->target_ip,
+                    'target_port' => $job->target_port,
+                    'created_at' => $job->created_at?->toIso8601String(),
+                ];
+                if (! empty($job->payload['escpos_binary_suffix']) && is_string($job->payload['escpos_binary_suffix'])) {
+                    $row['escpos_binary_suffix'] = $job->payload['escpos_binary_suffix'];
+                }
+
+                return $row;
+            }),
         ]);
     }
 
@@ -114,6 +120,7 @@ class PrintAgentController extends Controller
             ->get()
             ->map(function ($device) {
                 $device->is_connected = $device->is_connected;
+
                 return $device;
             });
 
@@ -127,7 +134,7 @@ class PrintAgentController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isManager()) {
+        if (! $user->isManager()) {
             return response()->json([
                 'success' => false,
                 'message' => 'אין לך הרשאה לרשום מכשירי הדפסה',
@@ -142,7 +149,7 @@ class PrintAgentController extends Controller
         ]);
 
         $restaurant = $user->restaurant;
-        if (!$restaurant) {
+        if (! $restaurant) {
             return response()->json([
                 'success' => false,
                 'message' => 'לא נמצאה מסעדה למשתמש',
@@ -170,7 +177,7 @@ class PrintAgentController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isManager()) {
+        if (! $user->isManager()) {
             return response()->json([
                 'success' => false,
                 'message' => 'אין לך הרשאה לעדכן מכשירי הדפסה',
@@ -198,7 +205,7 @@ class PrintAgentController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isManager()) {
+        if (! $user->isManager()) {
             return response()->json([
                 'success' => false,
                 'message' => 'אין לך הרשאה למחוק מכשירי הדפסה',
@@ -218,7 +225,7 @@ class PrintAgentController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isManager()) {
+        if (! $user->isManager()) {
             return response()->json([
                 'success' => false,
                 'message' => 'אין לך הרשאה לשנות סטטוס מכשיר',
@@ -226,7 +233,7 @@ class PrintAgentController extends Controller
         }
 
         $device = PrintDevice::where('restaurant_id', $user->restaurant_id)->findOrFail($id);
-        $device->is_active = !$device->is_active;
+        $device->is_active = ! $device->is_active;
         $device->save();
 
         return response()->json([

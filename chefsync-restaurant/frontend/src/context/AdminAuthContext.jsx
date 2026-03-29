@@ -2,6 +2,26 @@ import { createContext, useContext, useState, useEffect } from 'react';
 import api from '../services/apiClient';
 import { getAdminFcmTokenIfPermitted } from '../services/fcm';
 
+const isDev = import.meta.env.DEV;
+
+/** הודעה קריאה מ-422 של Laravel (errors לפני message הגנרי באנגלית) */
+function laravelApiErrorMessage(data, fallback) {
+    if (!data || typeof data !== 'object') return fallback;
+    const errs = data.errors;
+    if (errs && typeof errs === 'object') {
+        for (const v of Object.values(errs)) {
+            if (Array.isArray(v) && v[0] != null && String(v[0]).trim()) {
+                return String(v[0]).trim();
+            }
+        }
+    }
+    if (typeof data.message === 'string' && data.message.trim()) {
+        const m = data.message.trim();
+        if (m !== 'The given data was invalid.') return m;
+    }
+    return fallback;
+}
+
 /**
  * לאחר התחברות: אם הדפדפן כבר אישר התראות — מרענן טוקן FCM ורושם בשרת.
  * לא מבצע ביטול או מחיקה ב-logout — כדי לשמור על רציפות אחרי התחברות מחדש.
@@ -62,10 +82,6 @@ export function AdminAuthProvider({ children }) {
                 setUser(response.data.user);
                 setTenantFromUser(response.data.user);
 
-                // DEBUG: ודא שה-tenant נשמר
-                console.log('👤 User loaded:', response.data.user);
-                console.log('🏪 Tenant ID set:', localStorage.getItem('tenantId'));
-
                 void syncAdminFcmWithBackend(response.data.user, token);
             } else {
                 logout();
@@ -95,7 +111,6 @@ export function AdminAuthProvider({ children }) {
     };
 
     const login = (newToken, userData) => {
-        console.log('🔐 AdminAuth Login:', { token: newToken?.substring(0, 30) + '...', user: userData });
         localStorage.setItem('authToken', newToken);
         localStorage.setItem('user', JSON.stringify(userData));
         setTenantFromUser(userData);
@@ -105,19 +120,22 @@ export function AdminAuthProvider({ children }) {
 
     const loginWithCredentials = async (email, password) => {
         try {
-            console.log('🔑 Attempting login for:', email);
             const response = await api.post('/auth/login', { email, password });
-            console.log('✅ Login response:', response.data);
 
             if (response.data.success) {
                 const { token: newToken, user: userData } = response.data;
                 login(newToken, userData);
                 return { success: true };
             }
-            return { success: false, message: response.data.message };
+            return {
+                success: false,
+                message: laravelApiErrorMessage(response.data, 'שגיאה בהתחברות'),
+            };
         } catch (error) {
-            console.error('❌ Login failed:', error.response?.data);
-            const message = error.response?.data?.message || 'שגיאה בהתחברות';
+            if (isDev) {
+                console.error('Login failed:', error.response?.data ?? error);
+            }
+            const message = laravelApiErrorMessage(error.response?.data, 'שגיאה בהתחברות');
             return { success: false, message };
         }
     };
@@ -146,9 +164,10 @@ export function AdminAuthProvider({ children }) {
     const isDelivery = () => user?.role === 'delivery';
     const isSuperAdmin = () => user?.is_super_admin === true;
 
-    const getAuthHeaders = () => ({
-        Authorization: `Bearer ${token}`
-    });
+    const getAuthHeaders = () => {
+        if (!token) return {};
+        return { Authorization: `Bearer ${token}` };
+    };
 
     const refreshUser = async () => {
         if (token) await checkAuth();

@@ -2,6 +2,34 @@ import { useState } from 'react';
 import { FaBackspace, FaLock, FaTimes } from 'react-icons/fa';
 import posApi from '../api/posApi';
 
+function managerAuthErrorMessage(err, fallback = 'קוד מנהל שגוי') {
+    const status = err?.response?.status;
+    const d = err?.response?.data;
+
+    if (d && typeof d.message === 'string' && d.message.trim()) {
+        return d.message.trim();
+    }
+
+    if (d?.errors && typeof d.errors === 'object') {
+        for (const v of Object.values(d.errors)) {
+            if (Array.isArray(v) && v[0] && typeof v[0] === 'string') {
+                return v[0];
+            }
+            if (typeof v === 'string') return v;
+        }
+    }
+
+    if (status === 422 || status === 401) return fallback;
+    if (status === 404) return 'המסעדה לא נמצאה — נסה להתחבר מחדש';
+    if (status >= 500) return 'שגיאת שרת — נסה שוב';
+    if (!err?.response) {
+        return err?.code === 'ERR_NETWORK' || err?.message?.toLowerCase?.().includes('network')
+            ? 'אין חיבור לשרת'
+            : fallback;
+    }
+    return fallback;
+}
+
 /**
  * Reusable manager PIN verification modal.
  * Props:
@@ -36,7 +64,7 @@ export default function POSManagerAuth({ title, subtitle, headers, onVerified, o
             await posApi.verifyManagerPin(code, headers);
             onVerified();
         } catch (err) {
-            setError(err.response?.data?.message || 'קוד מנהל שגוי');
+            setError(managerAuthErrorMessage(err));
             setPin('');
         } finally {
             setLoading(false);

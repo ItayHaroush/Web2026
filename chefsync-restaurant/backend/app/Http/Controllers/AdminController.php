@@ -26,6 +26,7 @@ use App\Services\BasePriceService;
 use App\Services\CustomerOrderPushService;
 use App\Services\HypPaymentService;
 use App\Services\OrderEventService;
+use App\Services\OrderRefundService;
 use App\Services\RestaurantPaymentService;
 use App\Services\SubscriptionPricingService;
 use Illuminate\Http\Request;
@@ -2521,6 +2522,13 @@ class AdminController extends Controller
             $query->whereDate('created_at', $request->date);
         }
 
+        if ($request->boolean('pending_refund')) {
+            $query->where('status', Order::STATUS_CANCELLED)
+                ->whereNotNull('refund_pending_at')
+                ->whereNull('refund_waived_at')
+                ->where('payment_status', Order::PAYMENT_PAID);
+        }
+
         $orders = $query->orderBy('created_at', 'desc')
             ->paginate($request->get('per_page', 20));
 
@@ -2612,6 +2620,11 @@ class AdminController extends Controller
             if ($request->filled('cancellation_reason')) {
                 $order->cancellation_reason = $request->cancellation_reason;
             }
+            if ($order->payment_status === Order::PAYMENT_PAID
+                && ! $order->refund_waived_at
+                && $order->refund_pending_at === null) {
+                $order->refund_pending_at = now();
+            }
         }
 
         $order->save();
@@ -2638,6 +2651,67 @@ class AdminController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'סטטוס ההזמנה עודכן!',
+            'order' => $order->load('items.menuItem.category'),
+        ]);
+    }
+
+    public function refundCancelledOrder(Request $request, $id)
+    {
+        $user = $request->user();
+        $order = Order::where('restaurant_id', $this->resolveRestaurantId($request))
+            ->findOrFail($id);
+
+        $result = app(OrderRefundService::class)->refund($order, $user, null, true);
+
+        if (! $result['success']) {
+            return response()->json([
+                'success' => false,
+                'message' => $result['message'],
+            ], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => $result['message'],
+            'order' => $order->fresh()->load('items.menuItem.category'),
+        ]);
+    }
+
+    public function waiveCancelledOrderRefund(Request $request, $id)
+    {
+        $user = $request->user();
+        $request->validate([
+            'note' => 'nullable|string|max:500',
+        ]);
+
+        $order = Order::where('restaurant_id', $this->resolveRestaurantId($request))
+            ->findOrFail($id);
+
+        if ($order->status !== Order::STATUS_CANCELLED) {
+            return response()->json(['success' => false, 'message' => 'רק הזמנה שבוטלה ניתנת לויתור החזר'], 422);
+        }
+        if ($order->refund_pending_at === null) {
+            return response()->json(['success' => false, 'message' => 'ההזמנה אינה מסומנת כממתינה להחזר'], 422);
+        }
+        if ($order->refund_waived_at !== null) {
+            return response()->json(['success' => false, 'message' => 'כבר סומן ויתור החזר'], 422);
+        }
+        if ($order->payment_status !== Order::PAYMENT_PAID) {
+            return response()->json(['success' => false, 'message' => 'ויתור החזר רלוונטי רק להזמנה ששולמה'], 422);
+        }
+
+        $order->refund_waived_at = now();
+        $order->refund_waived_by_user_id = $user->id;
+        $order->refund_pending_at = null;
+        if ($request->filled('note')) {
+            $suffix = ' [ויתור החזר: '.$request->input('note').']';
+            $order->cancellation_reason = trim((string) $order->cancellation_reason).$suffix;
+        }
+        $order->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'סומן ויתור על החזר — ההכנסה תשוקף בדוחות',
             'order' => $order->load('items.menuItem.category'),
         ]);
     }

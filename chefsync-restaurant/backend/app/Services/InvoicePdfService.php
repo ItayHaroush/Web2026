@@ -2,20 +2,18 @@
 
 namespace App\Services;
 
-use App\Models\MonthlyInvoice;
-use App\Models\Restaurant;
-use App\Models\RestaurantSubscription;
-use App\Models\Order;
 use App\Models\AiUsageLog;
-use App\Models\AiCredit;
-use App\Models\MenuItem;
 use App\Models\Category;
 use App\Models\DisplayScreen;
 use App\Models\Kiosk;
+use App\Models\MenuItem;
+use App\Models\MonthlyInvoice;
+use App\Models\Order;
+use App\Models\Restaurant;
+use App\Models\RestaurantSubscription;
 use App\Models\User;
 use App\Support\MpdfWritableConfig;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\Log;
 use Mpdf\Mpdf;
 
 class InvoicePdfService
@@ -85,16 +83,16 @@ class InvoicePdfService
         $restaurant = $invoice->restaurant;
 
         $logoFilePath = null;
-        if (!empty($restaurant->logo_url) && str_starts_with($restaurant->logo_url, '/storage/')) {
+        if (! empty($restaurant->logo_url) && str_starts_with($restaurant->logo_url, '/storage/')) {
             $relativePath = str_replace('/storage/', '', $restaurant->logo_url);
-            $candidate = storage_path('app/public/' . $relativePath);
+            $candidate = storage_path('app/public/'.$relativePath);
             if (file_exists($candidate)) {
                 $logoFilePath = $candidate;
             }
         }
-        if (!$logoFilePath) {
+        if (! $logoFilePath) {
             $candidate = storage_path('app/public/email-logo.png');
-            if (!file_exists($candidate)) {
+            if (! file_exists($candidate)) {
                 $candidate = storage_path('app/public/logo.png');
             }
             if (file_exists($candidate)) {
@@ -105,10 +103,10 @@ class InvoicePdfService
         $monthParts = explode('-', $invoice->month);
         $year = $monthParts[0] ?? '';
         $monthNum = $monthParts[1] ?? '';
-        $monthHebrew = (self::HEBREW_MONTHS[$monthNum] ?? $monthNum) . ' ' . $year;
+        $monthHebrew = (self::HEBREW_MONTHS[$monthNum] ?? $monthNum).' '.$year;
 
         // Period dates for queries
-        $periodStart = Carbon::parse($invoice->month . '-01')->startOfMonth();
+        $periodStart = Carbon::parse($invoice->month.'-01')->startOfMonth();
         $periodEnd = (clone $periodStart)->endOfMonth();
 
         // Subscription info
@@ -127,28 +125,43 @@ class InvoicePdfService
 
         $activeOrders = $orders->where('status', '!=', 'cancelled');
         $cancelledOrders = $orders->where('status', 'cancelled');
+        $waivedCancelled = $cancelledOrders->filter(fn ($o) => $o->refund_waived_at !== null
+            && $o->payment_status === Order::PAYMENT_PAID);
+        $revenueForWaived = static fn ($o) => (float) ($o->payment_amount ?? $o->total_amount);
         $totalOrdersAll = $orders->count();
         $totalOrders = $activeOrders->count();
         $cancelledCount = $cancelledOrders->count();
         $cancelledRevenue = $cancelledOrders->sum('total_amount');
-        $totalRevenue = $activeOrders->sum('total_amount');
+        $totalRevenue = (float) $activeOrders->sum('total_amount')
+            + (float) $waivedCancelled->sum($revenueForWaived);
         $avgOrderValue = $totalOrders > 0
             ? round($totalRevenue / $totalOrders, 2)
             : 0;
 
         // Orders by status
         $ordersByStatus = $orders->groupBy('status')
-            ->map(fn($g) => ['count' => $g->count(), 'revenue' => $g->sum('total_amount')])
+            ->map(fn ($g) => ['count' => $g->count(), 'revenue' => $g->sum('total_amount')])
             ->toArray();
 
-        // Orders by payment method
-        $ordersByPayment = $activeOrders->groupBy('payment_method')
-            ->map(fn($g) => ['count' => $g->count(), 'total' => $g->sum('total_amount')])
+        // Orders by payment method (כולל בוטל עם ויתור החזר — סכום לפי חיוב בפועל)
+        $ordersForPaymentBreakdown = $activeOrders->concat($waivedCancelled);
+        $ordersByPayment = $ordersForPaymentBreakdown->groupBy('payment_method')
+            ->map(fn ($g) => [
+                'count' => $g->count(),
+                'total' => $g->sum(fn ($o) => ($o->status === 'cancelled' && $o->refund_waived_at)
+                    ? $revenueForWaived($o)
+                    : (float) $o->total_amount),
+            ])
             ->toArray();
 
         // Orders by source (web / kiosk)
-        $ordersBySource = $activeOrders->groupBy(fn($o) => $o->source ?? 'web')
-            ->map(fn($g) => ['count' => $g->count(), 'total' => $g->sum('total_amount')])
+        $ordersBySource = $ordersForPaymentBreakdown->groupBy(fn ($o) => $o->source ?? 'web')
+            ->map(fn ($g) => [
+                'count' => $g->count(),
+                'total' => $g->sum(fn ($o) => ($o->status === 'cancelled' && $o->refund_waived_at)
+                    ? $revenueForWaived($o)
+                    : (float) $o->total_amount),
+            ])
             ->toArray();
 
         // AI usage
@@ -156,7 +169,7 @@ class InvoicePdfService
         try {
             $aiUsage = AiUsageLog::where('restaurant_id', $restaurant->id)
                 ->whereBetween('created_at', [$periodStart, $periodEnd])
-                ->selectRaw("feature, COUNT(*) as total, COALESCE(SUM(credits_used), 0) as credits")
+                ->selectRaw('feature, COUNT(*) as total, COALESCE(SUM(credits_used), 0) as credits')
                 ->groupBy('feature')
                 ->get()
                 ->keyBy('feature')
@@ -226,7 +239,7 @@ class InvoicePdfService
         // Footer on all pages
         $mpdf->SetHTMLFooter('
             <div style="border-top: 1px solid #e5e7eb; padding-top: 6px; text-align: center; color: #9ca3af; font-size: 9px; direction: rtl;">
-                <strong>TakeEat Platform</strong><br>
+                <strong>Powered by TakeEat</strong><br>
                 חשבונית זו הופקה אוטומטית ואינה דורשת חתימה | לשאלות ובירורים: billing@takeeat.co.il
             </div>
         ');
@@ -248,7 +261,7 @@ class InvoicePdfService
 
         return response($mpdf->Output($filename, \Mpdf\Output\Destination::STRING_RETURN), 200, [
             'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="' . $filename . '"',
+            'Content-Disposition' => 'inline; filename="'.$filename.'"',
         ]);
     }
 
@@ -260,13 +273,14 @@ class InvoicePdfService
 
         return response($mpdf->Output($filename, \Mpdf\Output\Destination::STRING_RETURN), 200, [
             'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
         ]);
     }
 
     public function getPdfContent(MonthlyInvoice $invoice): string
     {
         $mpdf = $this->generatePdf($invoice);
+
         return $mpdf->Output('', \Mpdf\Output\Destination::STRING_RETURN);
     }
 
@@ -285,7 +299,8 @@ class InvoicePdfService
             return ['', $html];
         }
         $css = substr($html, $contentStart, $styleEnd - $contentStart);
-        $body = substr($html, 0, $styleStart) . substr($html, $styleEnd + 8);
+        $body = substr($html, 0, $styleStart).substr($html, $styleEnd + 8);
+
         return [$css, $body];
     }
 

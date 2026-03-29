@@ -27,6 +27,9 @@ class Order extends Model
         'paid_at',
         'marked_paid_by',
         'marked_paid_at',
+        'refund_pending_at',
+        'refund_waived_at',
+        'refund_waived_by_user_id',
         'source',
         'kiosk_id',
         'order_type',
@@ -80,6 +83,8 @@ class Order extends Model
         'reviewed_at' => 'datetime',
         'paid_at' => 'datetime',
         'marked_paid_at' => 'datetime',
+        'refund_pending_at' => 'datetime',
+        'refund_waived_at' => 'datetime',
         'pending_customer_reminder_sent_at' => 'datetime',
     ];
 
@@ -134,6 +139,19 @@ class Order extends Model
         }
 
         return (string) $this->payment_method;
+    }
+
+    /**
+     * סכום שחויב בפועל (להחזר / דיווח): payment_amount אם קיים וחיובי, אחרת total_amount.
+     */
+    public function effectiveChargedAmount(): float
+    {
+        $paid = $this->payment_amount;
+        if ($paid !== null && (float) $paid > 0) {
+            return round((float) $paid, 2);
+        }
+
+        return round((float) $this->total_amount, 2);
     }
 
     public static function validStatuses(): array

@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { FaShekelSign, FaBackspace, FaCheckCircle, FaTimes, FaMoneyBillWave } from 'react-icons/fa';
+import { FaShekelSign, FaCheckCircle, FaTimes, FaMoneyBillWave } from 'react-icons/fa';
 import posApi from '../api/posApi';
+import POSAmountKeypad from './POSAmountKeypad';
 
 export default function POSPaymentModal({ cart, total, headers, posToken, orderType = 'takeaway', onClose, onSuccess, discountData }) {
     const [amountTendered, setAmountTendered] = useState('');
@@ -13,20 +14,8 @@ export default function POSPaymentModal({ cart, total, headers, posToken, orderT
 
     const quickAmounts = [10, 20, 50, 100, 200].filter(a => a >= total);
 
-    const handleDigit = (d) => {
-        if (loading || result) return;
-        setAmountTendered(prev => {
-            if (d === '.' && prev.includes('.')) return prev;
-            return prev + d;
-        });
-    };
-
-    const handleDelete = () => {
-        if (loading || result) return;
-        setAmountTendered(prev => prev.slice(0, -1));
-    };
-
     const handleExact = () => {
+        if (loading || result) return;
         setAmountTendered(total.toFixed(2));
     };
 
@@ -54,8 +43,6 @@ export default function POSPaymentModal({ cart, total, headers, posToken, orderT
             setLoading(false);
         }
     };
-
-    const digits = ['7', '8', '9', '4', '5', '6', '1', '2', '3', '.', '0', 'del'];
 
     return (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[300] flex items-center justify-center p-4" onClick={onClose}>
@@ -139,23 +126,11 @@ export default function POSPaymentModal({ cart, total, headers, posToken, orderT
                                 )}
                             </div>
 
-                            {/* Keypad */}
-                            <div className="grid grid-cols-3 gap-2" dir="ltr">
-                                {digits.map((d, idx) => {
-                                    if (d === 'del') {
-                                        return (
-                                            <button key={idx} onClick={handleDelete} className="h-14 rounded-xl bg-slate-700/50 hover:bg-slate-700 text-slate-300 flex items-center justify-center active:scale-90">
-                                                <FaBackspace size={20} />
-                                            </button>
-                                        );
-                                    }
-                                    return (
-                                        <button key={idx} onClick={() => handleDigit(d)} className="h-14 rounded-xl bg-slate-700/80 hover:bg-slate-600 text-white text-xl font-black active:scale-90 border border-slate-600/30">
-                                            {d}
-                                        </button>
-                                    );
-                                })}
-                            </div>
+                            <POSAmountKeypad
+                                value={amountTendered}
+                                onChange={setAmountTendered}
+                                disabled={loading || !!result}
+                            />
 
                             {/* Pay button */}
                             <button

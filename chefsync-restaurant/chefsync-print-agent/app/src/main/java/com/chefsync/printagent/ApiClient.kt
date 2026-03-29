@@ -21,7 +21,8 @@ data class PrintJobData(
     val text: String,
     val target_ip: String?,
     val target_port: Int?,
-    val created_at: String?
+    val created_at: String?,
+    val escpos_binary_suffix: String? = null,
 )
 
 data class AckRequest(

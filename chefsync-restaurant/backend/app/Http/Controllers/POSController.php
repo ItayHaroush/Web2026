@@ -17,6 +17,7 @@ use App\Models\Restaurant;
 use App\Models\TableTab;
 use App\Models\User;
 use App\Services\FcmService;
+use App\Services\OrderRefundService;
 use App\Services\PosPaymentService;
 use App\Services\PrintService;
 use App\Services\Reporting\ReportingOrderQuery;
@@ -734,6 +735,61 @@ class POSController extends Controller
         }
     }
 
+    public function printShareQrSlip(Request $request)
+    {
+        try {
+            $user = $request->user();
+            $restaurantId = $user->restaurant_id;
+
+            if (! $restaurantId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'לא משויכת מסעדה למשתמש — לא ניתן להדפיס',
+                ], 400);
+            }
+
+            $receiptPrinters = Printer::where('restaurant_id', $restaurantId)
+                ->where('is_active', true)
+                ->whereIn('role', ['receipt', 'general'])
+                ->count();
+
+            if ($receiptPrinters === 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'אין מדפסת קבלות מוגדרת. הגדר מדפסת בהגדרות לפני הדפסה.',
+                ], 422);
+            }
+
+            $restaurant = Restaurant::where('id', $restaurantId)->firstOrFail();
+
+            if (! $restaurant->slug && ! $restaurant->tenant_id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'חסר מזהה לעמוד שיתוף (slug או tenant) — עדכן בהגדרות המסעדה.',
+                ], 422);
+            }
+
+            $jobs = app(PrintService::class)->printRestaurantShareQrSlip($restaurant);
+
+            return response()->json([
+                'success' => true,
+                'message' => $jobs > 0
+                    ? "נשלחו {$jobs} הדפסות QR שיתוף"
+                    : 'המדפסת מוגדרת אך לא נוצרה משימת הדפסה (בדוק slug/tenant או לוג שרת).',
+                'jobs' => $jobs,
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Share QR slip print failed: '.$e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'שגיאה בהדפסת QR שיתוף: '.$e->getMessage(),
+            ], 500);
+        }
+    }
+
     // ─── Credit Card Payment (PinPad) ───
 
     /**
@@ -872,7 +928,7 @@ class POSController extends Controller
         $user = $request->user();
         $restaurantId = $user->restaurant_id;
 
-        $orders = Order::withoutGlobalScopes()
+        $pendingPay = Order::withoutGlobalScopes()
             ->where('restaurant_id', $restaurantId)
             ->whereNotIn('payment_status', ['paid', 'refunded', 'cancelled'])
             ->where('status', '!=', 'cancelled')
@@ -885,7 +941,28 @@ class POSController extends Controller
                 'table_number' => $o->table_number,
                 'order_type' => $o->order_type,
                 'delivery_method' => $o->delivery_method,
+                'awaiting_refund' => false,
             ]));
+
+        $pendingRefund = Order::withoutGlobalScopes()
+            ->where('restaurant_id', $restaurantId)
+            ->where('status', Order::STATUS_CANCELLED)
+            ->whereNotNull('refund_pending_at')
+            ->whereNull('refund_waived_at')
+            ->where('payment_status', Order::PAYMENT_PAID)
+            ->whereDate('created_at', '>=', Carbon::today()->subDays(14))
+            ->orderBy('refund_pending_at', 'desc')
+            ->with('items.menuItem')
+            ->limit(30)
+            ->get()
+            ->map(fn ($o) => array_merge($this->formatOrder($o), [
+                'table_number' => $o->table_number,
+                'order_type' => $o->order_type,
+                'delivery_method' => $o->delivery_method,
+                'awaiting_refund' => true,
+            ]));
+
+        $orders = $pendingRefund->concat($pendingPay)->values();
 
         return response()->json(['success' => true, 'orders' => $orders]);
     }
@@ -1135,96 +1212,14 @@ class POSController extends Controller
             ->where('restaurant_id', $restaurantId)
             ->findOrFail($orderId);
 
-        if ($order->payment_status !== 'paid') {
-            return response()->json(['success' => false, 'message' => 'ההזמנה לא שולמה — לא ניתן לבצע החזר'], 422);
-        }
+        $posSession = $request->pos_session ?? null;
+        $result = app(OrderRefundService::class)->refund($order, $user, $posSession, false);
 
-        // מציאת עסקת האשראי
-        $payment = Payment::where('order_id', $order->id)
-            ->where('status', 'approved')
-            ->latest()
-            ->first();
-
-        $referenceNumber = $payment?->transaction_id ?? $order->payment_transaction_id;
-
-        $isCreditRefund = $order->payment_method === 'credit_card'
-            || ($payment && $payment->provider === 'zcredit')
-            || ($referenceNumber && str_starts_with((string) $referenceNumber, 'MOCK_'));
-
-        if ($isCreditRefund && $referenceNumber) {
-            // החזר דרך ZCredit (כולל מוק — ZCreditService::refundTransaction)
-            $restaurant = Restaurant::find($restaurantId);
-            $zcredit = $restaurant
-                ? app(ZCreditResolver::class)->forOrder($order, $request->pos_session)
-                : new ZCreditService(null, null, null, false);
-            $result = $zcredit->refundTransaction($referenceNumber, (float) $order->total_amount);
-
-            if (! $result['success']) {
-                return response()->json([
-                    'success' => false,
-                    'message' => $result['data']['error_message'] ?? 'שגיאה בביצוע ההחזר',
-                ], 422);
-            }
-
-            if ($payment) {
-                $payment->update([
-                    'status' => 'refunded',
-                    'provider_response' => $result['data']['full_response'],
-                ]);
-            }
-        }
-
-        DB::transaction(function () use ($order, $restaurantId, $user, $isCreditRefund) {
-            $order->update([
-                'payment_status' => 'refunded',
-            ]);
-
-            $shift = CashRegisterShift::where('restaurant_id', $restaurantId)
-                ->whereNull('closed_at')
-                ->first();
-
-            if ($shift) {
-                CashMovement::create([
-                    'shift_id' => $shift->id,
-                    'order_id' => $order->id,
-                    'user_id' => $user->id,
-                    'type' => 'refund',
-                    'payment_method' => $isCreditRefund ? 'credit' : 'cash',
-                    'amount' => (float) $order->total_amount,
-                    'description' => "החזר הזמנה #{$order->id}",
-                ]);
-            }
-        });
-
-        // --- Refund notifications ---
-        try {
-            $restaurant = Restaurant::find($restaurantId);
-            $tenantId = $restaurant?->tenant_id;
-            if ($tenantId) {
-                MonitoringAlert::create([
-                    'tenant_id' => $tenantId,
-                    'restaurant_id' => $restaurantId,
-                    'alert_type' => 'order_refunded',
-                    'title' => "החזר כספי — הזמנה #{$order->id}",
-                    'body' => "בוצע החזר כספי בסך ₪{$order->total_amount} עבור הזמנה #{$order->id} ({$order->customer_name}) על ידי {$user->name}.",
-                    'severity' => 'warning',
-                    'metadata' => ['order_id' => $order->id, 'amount' => $order->total_amount, 'refunded_by' => $user->name],
-                    'is_read' => false,
-                ]);
-                NotificationLog::create([
-                    'channel' => 'system',
-                    'type' => 'order_alert',
-                    'title' => 'החזר POS: '.($restaurant->name ?? '')." — #{$order->id}",
-                    'body' => "החזר ₪{$order->total_amount} בוצע להזמנה #{$order->id} ({$order->customer_name}) על ידי {$user->name}.",
-                    'sender_id' => null,
-                    'target_restaurant_ids' => [$restaurantId],
-                    'tokens_targeted' => 0,
-                    'sent_ok' => 0,
-                    'metadata' => ['action' => 'pos_refund', 'order_id' => $order->id, 'amount' => $order->total_amount],
-                ]);
-            }
-        } catch (\Throwable $e) {
-            Log::warning('Failed to create refund notification', ['error' => $e->getMessage()]);
+        if (! $result['success']) {
+            return response()->json([
+                'success' => false,
+                'message' => $result['message'],
+            ], 422);
         }
 
         return response()->json([
@@ -1263,13 +1258,31 @@ class POSController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => "כבר יש חשבון פתוח לשולחן {$request->table_number}",
-                'tab' => $this->formatTab($existingTab->load('order.items.menuItem')),
+                'tab' => $this->formatTab($existingTab->load(['order.items.menuItem', 'openedBy'])),
             ], 409);
         }
 
-        // חישוב סכום פריטים ראשוניים
-        $totalAmount = 0;
         $items = $request->items ?? [];
+
+        // שולחן ריק: רק טאב — הזמנה תיווצר בהוספת הפריט הראשון (מונע הזמנות ריקות לביטול)
+        if (count($items) === 0) {
+            $tab = TableTab::create([
+                'restaurant_id' => $restaurantId,
+                'table_number' => $request->table_number,
+                'order_id' => null,
+                'status' => 'open',
+                'opened_by' => $user->id,
+                'opened_at' => Carbon::now(),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'tab' => $this->formatTab($tab->load('openedBy')),
+            ]);
+        }
+
+        // פתיחה עם פריטים בבקשה אחת (API): יוצרים הזמנה + בון מטבח לפריטים אלו בלבד
+        $totalAmount = 0;
         foreach ($items as $item) {
             $totalAmount += $item['price'] * $item['quantity'];
             if (! empty($item['addons'])) {
@@ -1279,23 +1292,9 @@ class POSController extends Controller
             }
         }
 
-        $order = Order::create([
-            'restaurant_id' => $restaurantId,
-            'tenant_id' => $tenantId,
-            'correlation_id' => Str::uuid()->toString(),
-            'customer_name' => "שולחן {$request->table_number}",
-            'customer_phone' => '0000000000',
-            'delivery_method' => 'pickup',
-            'payment_method' => 'cash',
-            'payment_status' => 'pending',
-            'status' => 'received',
-            'total_amount' => $totalAmount,
-            'source' => 'pos',
-            'order_type' => 'dine_in',
-            'table_number' => $request->table_number,
-        ]);
+        $order = $this->createDineInTabOrder($restaurantId, $tenantId, $request->table_number, $totalAmount);
 
-        // פריטים ראשוניים
+        $newLineItems = collect();
         foreach ($items as $item) {
             $addonTotal = 0;
             $addonsArray = [];
@@ -1305,14 +1304,14 @@ class POSController extends Controller
                     $addonsArray[] = ['name' => $a['name'] ?? '', 'price' => $a['price'] ?? 0];
                 }
             }
-            $order->items()->create([
+            $newLineItems->push($order->items()->create([
                 'menu_item_id' => $item['menu_item_id'],
                 'quantity' => $item['quantity'],
                 'price_at_order' => $item['price'],
                 'variant_name' => $item['variant_name'] ?? null,
                 'addons' => ! empty($addonsArray) ? $addonsArray : null,
                 'addons_total' => $addonTotal,
-            ]);
+            ]));
         }
 
         $tab = TableTab::create([
@@ -1324,20 +1323,17 @@ class POSController extends Controller
             'opened_at' => Carbon::now(),
         ]);
 
-        // הדפסת מטבח אם יש פריטים
-        if (count($items) > 0) {
-            try {
-                $printService = app(PrintService::class);
-                $freshOrder = $order->fresh()->load('items.menuItem.category', 'restaurant');
-                $printService->printOrder($freshOrder);
-            } catch (\Exception $e) {
-                Log::error('Tab kitchen print failed: '.$e->getMessage());
-            }
+        try {
+            $printService = app(PrintService::class);
+            $newLineItems->load('menuItem.category');
+            $printService->printKitchenTicketForItems($order->fresh()->load('restaurant'), $newLineItems);
+        } catch (\Exception $e) {
+            Log::error('Tab kitchen print failed: '.$e->getMessage());
         }
 
         return response()->json([
             'success' => true,
-            'tab' => $this->formatTab($tab->load('order.items.menuItem')),
+            'tab' => $this->formatTab($tab->load(['order.items.menuItem', 'openedBy'])),
         ]);
     }
 
@@ -1387,9 +1383,18 @@ class POSController extends Controller
             ->where('status', 'open')
             ->findOrFail($id);
 
-        $order = Order::withoutGlobalScopes()->findOrFail($tab->order_id);
+        $restaurant = Restaurant::find($restaurantId);
+        $tenantId = $restaurant?->tenant_id ?? '';
+
+        if ($tab->order_id) {
+            $order = Order::withoutGlobalScopes()->findOrFail($tab->order_id);
+        } else {
+            $order = $this->createDineInTabOrder($restaurantId, $tenantId, $tab->table_number, 0);
+            $tab->update(['order_id' => $order->id]);
+        }
 
         $addedAmount = 0;
+        $newLineItems = collect();
         foreach ($request->items as $item) {
             $addonTotal = 0;
             $addonsArray = [];
@@ -1403,32 +1408,32 @@ class POSController extends Controller
             $itemTotal = ($item['price'] + $addonTotal) * $item['quantity'];
             $addedAmount += $itemTotal;
 
-            $order->items()->create([
+            $newLineItems->push($order->items()->create([
                 'menu_item_id' => $item['menu_item_id'],
                 'quantity' => $item['quantity'],
                 'price_at_order' => $item['price'],
                 'variant_name' => $item['variant_name'] ?? null,
                 'addons' => ! empty($addonsArray) ? $addonsArray : null,
                 'addons_total' => $addonTotal,
-            ]);
+            ]));
         }
 
         $order->update([
             'total_amount' => (float) $order->total_amount + $addedAmount,
         ]);
 
-        // הדפסת מטבח לפריטים חדשים
+        // בון מטבח בלבד לפריטים שנוספו בבקשה זו (לא הדפסה חוזרת של כל ההזמנה)
         try {
             $printService = app(PrintService::class);
-            $freshOrder = $order->fresh()->load('items.menuItem.category', 'restaurant');
-            $printService->printOrder($freshOrder);
+            $newLineItems->load('menuItem.category');
+            $printService->printKitchenTicketForItems($order->fresh()->load('restaurant'), $newLineItems);
         } catch (\Exception $e) {
             Log::error('Tab add items kitchen print failed: '.$e->getMessage());
         }
 
         return response()->json([
             'success' => true,
-            'tab' => $this->formatTab($tab->fresh()->load('order.items.menuItem')),
+            'tab' => $this->formatTab($tab->fresh()->load(['order.items.menuItem', 'openedBy'])),
         ]);
     }
 
@@ -1440,6 +1445,20 @@ class POSController extends Controller
         $tab = TableTab::where('restaurant_id', $restaurantId)
             ->where('status', 'open')
             ->findOrFail($id);
+
+        if ($tab->order_id === null) {
+            $tab->update([
+                'status' => 'closed',
+                'closed_at' => Carbon::now(),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => "שולחן {$tab->table_number} נסגר",
+                'order_id' => null,
+                'total' => 0,
+            ]);
+        }
 
         $order = Order::withoutGlobalScopes()
             ->where('restaurant_id', $restaurantId)
@@ -1507,6 +1526,13 @@ class POSController extends Controller
             ->where('status', 'open')
             ->findOrFail($tabId);
 
+        if ($tab->order_id === null) {
+            return response()->json([
+                'success' => false,
+                'message' => 'אין הזמנה פעילה לשולחן זה',
+            ], 422);
+        }
+
         $order = Order::withoutGlobalScopes()->findOrFail($tab->order_id);
 
         $item = $order->items()->findOrFail($itemId);
@@ -1525,7 +1551,29 @@ class POSController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'הפריט הוסר',
-            'tab' => $this->formatTab($tab->fresh()->load('order.items.menuItem')),
+            'tab' => $this->formatTab($tab->fresh()->load(['order.items.menuItem', 'openedBy'])),
+        ]);
+    }
+
+    /**
+     * הזמנת dine-in לטאב שולחן (לפני פריטים: total_amount יכול להיות 0).
+     */
+    private function createDineInTabOrder(int $restaurantId, string $tenantId, string $tableNumber, float $totalAmount): Order
+    {
+        return Order::create([
+            'restaurant_id' => $restaurantId,
+            'tenant_id' => $tenantId,
+            'correlation_id' => Str::uuid()->toString(),
+            'customer_name' => "שולחן {$tableNumber}",
+            'customer_phone' => '0000000000',
+            'delivery_method' => 'pickup',
+            'payment_method' => 'cash',
+            'payment_status' => 'pending',
+            'status' => 'received',
+            'total_amount' => $totalAmount,
+            'source' => 'pos',
+            'order_type' => 'dine_in',
+            'table_number' => $tableNumber,
         ]);
     }
 
@@ -1722,6 +1770,7 @@ class POSController extends Controller
             'actual_payment_method' => $order->actual_payment_method,
             'payment_transaction_id' => $order->payment_transaction_id,
             'payment_status' => $order->payment_status,
+            'payment_amount' => $order->payment_amount !== null ? (float) $order->payment_amount : null,
             'total_price' => (float) $order->total_amount,
             'source' => $order->source ?? 'website',
             'order_type' => $order->order_type,

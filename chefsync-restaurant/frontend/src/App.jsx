@@ -129,7 +129,9 @@ function AppRoutes() {
   if (isLoading) {
     return <div className="flex items-center justify-center min-h-screen">טוען...</div>;
   }
-  console.log("Tenant ID:", tenantId);
+  if (import.meta.env.DEV) {
+    console.log('Tenant ID:', tenantId);
+  }
   return (
     <>
     <AnalyticsPublicTracker />

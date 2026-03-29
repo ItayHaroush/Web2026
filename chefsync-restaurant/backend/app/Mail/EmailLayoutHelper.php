@@ -128,7 +128,7 @@ HTML;
                 <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                     <tr>
                         <td style="border-top: 1px solid #e5e7eb; padding: 20px 0; text-align: center;">
-                            <p style="margin: 0 0 4px; font-size: 12px; color: #9ca3af; font-weight: bold;">TakeEat Platform</p>
+                            <p style="margin: 0 0 4px; font-size: 12px; color: #9ca3af; font-weight: bold;">Powered by TakeEat</p>
                             <p style="margin: 0 0 4px; font-size: 11px; color: #d1d5db;">הודעה זו נשלחה אוטומטית ממערכת TakeEat</p>
                             <p style="margin: 0 0 2px; font-size: 11px; color: #d1d5db;">{$contactLabel}: <a href="mailto:{$contactEmail}" style="color: #f97316; text-decoration: none;">{$contactEmail}</a></p>
                             <p style="margin: 8px 0 0; font-size: 10px; color: #e5e7eb;">&copy; {$year} TakeEat. כל הזכויות שמורות.</p>

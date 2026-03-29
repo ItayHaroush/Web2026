@@ -1,10 +1,12 @@
 import { useState, useRef } from 'react';
 import { FaShekelSign, FaCreditCard, FaMoneyBillWave, FaTimes, FaCheckCircle, FaExclamationTriangle } from 'react-icons/fa';
 import posApi from '../api/posApi';
+import POSAmountKeypad from './POSAmountKeypad';
 
 export default function POSSplitPaymentModal({ cart, total, headers, posToken, orderType = 'takeaway', discountData, onClose, onSuccess }) {
     const [cashAmount, setCashAmount] = useState('');
     const [creditAmount, setCreditAmount] = useState('');
+    const [amountFocus, setAmountFocus] = useState('cash'); // 'cash' | 'credit'
     const [loading, setLoading] = useState(false);
     const [loadingText, setLoadingText] = useState('');
     const [result, setResult] = useState(null);
@@ -173,45 +175,49 @@ export default function POSSplitPaymentModal({ cart, total, headers, posToken, o
                                     חלוקה 50/50
                                 </button>
 
-                                {/* Cash input */}
+                                {/* Cash + credit — בחירת שדה ולוח מקשים */}
                                 <div className="space-y-2">
                                     <label className="flex items-center gap-2 text-emerald-400 font-black text-sm">
                                         <FaMoneyBillWave /> מזומן
                                     </label>
-                                    <div className="relative">
-                                        <FaShekelSign className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 text-sm" />
-                                        <input
-                                            type="number"
-                                            dir="ltr"
-                                            value={cashAmount}
-                                            onChange={e => handleCashChange(e.target.value)}
-                                            className="w-full pr-10 pl-4 py-3 bg-slate-900 text-white rounded-xl border border-slate-700 focus:border-emerald-500 focus:outline-none text-lg font-bold text-left"
-                                            placeholder="0.00"
-                                            min="0"
-                                            step="0.01"
-                                        />
-                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setAmountFocus('cash')}
+                                        className={`w-full relative pr-10 pl-4 py-3 bg-slate-900 text-white rounded-xl border text-left transition-all ${amountFocus === 'cash'
+                                            ? 'border-emerald-500 ring-2 ring-emerald-500/25'
+                                            : 'border-slate-700 hover:border-slate-600'
+                                            }`}
+                                    >
+                                        <FaShekelSign className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 text-sm pointer-events-none" />
+                                        <span dir="ltr" className="block text-lg font-bold tabular-nums">{cashAmount || '0'}</span>
+                                    </button>
                                 </div>
 
-                                {/* Credit input */}
                                 <div className="space-y-2">
                                     <label className="flex items-center gap-2 text-blue-400 font-black text-sm">
                                         <FaCreditCard /> אשראי
                                     </label>
-                                    <div className="relative">
-                                        <FaShekelSign className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 text-sm" />
-                                        <input
-                                            type="number"
-                                            dir="ltr"
-                                            value={creditAmount}
-                                            onChange={e => handleCreditChange(e.target.value)}
-                                            className="w-full pr-10 pl-4 py-3 bg-slate-900 text-white rounded-xl border border-slate-700 focus:border-blue-500 focus:outline-none text-lg font-bold text-left"
-                                            placeholder="0.00"
-                                            min="0"
-                                            step="0.01"
-                                        />
-                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setAmountFocus('credit')}
+                                        className={`w-full relative pr-10 pl-4 py-3 bg-slate-900 text-white rounded-xl border text-left transition-all ${amountFocus === 'credit'
+                                            ? 'border-blue-500 ring-2 ring-blue-500/25'
+                                            : 'border-slate-700 hover:border-slate-600'
+                                            }`}
+                                    >
+                                        <FaShekelSign className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 text-sm pointer-events-none" />
+                                        <span dir="ltr" className="block text-lg font-bold tabular-nums">{creditAmount || '0'}</span>
+                                    </button>
                                 </div>
+
+                                <POSAmountKeypad
+                                    value={amountFocus === 'cash' ? cashAmount : creditAmount}
+                                    onChange={(next) => {
+                                        if (amountFocus === 'cash') handleCashChange(next);
+                                        else handleCreditChange(next);
+                                    }}
+                                    disabled={loading}
+                                />
 
                                 {remaining > 0.01 && (
                                     <p className="text-red-400 text-sm font-bold text-center">חסר: ₪{remaining.toFixed(2)}</p>

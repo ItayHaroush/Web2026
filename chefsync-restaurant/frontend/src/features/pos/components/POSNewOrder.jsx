@@ -8,6 +8,7 @@ import POSPaymentMethodModal from './POSPaymentMethodModal';
 import { FaCashRegister } from 'react-icons/fa';
 import POSSplitPaymentModal from './POSSplitPaymentModal';
 import POSMenuItemModal, { posItemNeedsConfiguration } from './POSMenuItemModal';
+import POSAmountKeypad from './POSAmountKeypad';
 import { buildCartKey } from '../../../utils/cart';
 
 export default function POSNewOrder({ headers, posToken, onOrderCreated, shift }) {
@@ -303,15 +304,15 @@ function POSNewOrderInner({ headers, posToken, onOrderCreated }) {
                                 <FaShekelSign size={10} /> סכום קבוע
                             </button>
                         </div>
-                        <input
-                            type="number"
-                            dir="ltr"
-                            value={discountValue}
-                            onChange={e => setDiscountValue(e.target.value)}
-                            className="w-full px-3 py-2 bg-slate-800 text-white rounded-lg border border-slate-700 focus:border-orange-500 focus:outline-none text-sm text-left"
-                            placeholder={discountType === 'percentage' ? '10' : '20.00'}
-                            min="0"
-                        />
+                        <div className="rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm">
+                            <p className="text-slate-500 text-[10px] font-bold mb-1">
+                                {discountType === 'percentage' ? 'אחוז' : 'סכום (₪)'}
+                            </p>
+                            <p dir="ltr" className="text-white font-black text-lg text-center tabular-nums min-h-[28px]">
+                                {discountValue || '0'}
+                            </p>
+                        </div>
+                        <POSAmountKeypad value={discountValue} onChange={setDiscountValue} size="compact" className="mt-2" />
                         <input
                             type="text"
                             value={discountReason}

@@ -1,6 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
-import { FaTimes, FaShekelSign, FaCreditCard, FaMoneyBillWave, FaClock, FaGlobe, FaDesktop, FaCashRegister, FaCheckCircle, FaExclamationTriangle, FaBackspace, FaUtensils, FaMapMarkerAlt } from 'react-icons/fa';
+import { FaTimes, FaShekelSign, FaCreditCard, FaMoneyBillWave, FaClock, FaGlobe, FaDesktop, FaCashRegister, FaCheckCircle, FaExclamationTriangle, FaUtensils, FaMapMarkerAlt, FaSpinner } from 'react-icons/fa';
+import api from '../../../services/apiClient';
 import posApi from '../api/posApi';
+import POSAmountKeypad from './POSAmountKeypad';
+
+function orderTotalSafe(order) {
+    const n = Number(order?.total_price ?? order?.total ?? 0);
+    return Number.isFinite(n) ? n : 0;
+}
 
 const SOURCE_CONFIG = {
     web: { label: 'אתר', icon: FaGlobe, color: 'text-blue-400 bg-blue-500/10' },
@@ -20,6 +27,7 @@ export default function POSPendingPaymentModal({ headers, posToken, onClose, onP
     // Credit payment flow
     const [creditOrder, setCreditOrder] = useState(null);
     const [processing, setProcessing] = useState(false);
+    const [refundBusyId, setRefundBusyId] = useState(null);
 
     // Result state
     const [result, setResult] = useState(null); // { type, message, orderId, change, closedTab }
@@ -31,6 +39,8 @@ export default function POSPendingPaymentModal({ headers, posToken, onClose, onP
                 const list = res.data.orders || [];
                 setOrders(
                     [...list].sort((a, b) => {
+                        if (a.awaiting_refund && !b.awaiting_refund) return -1;
+                        if (b.awaiting_refund && !a.awaiting_refund) return 1;
                         if (a.payment_status === 'failed' && b.payment_status !== 'failed') return -1;
                         if (b.payment_status === 'failed' && a.payment_status !== 'failed') return 1;
                         return 0;
@@ -53,21 +63,10 @@ export default function POSPendingPaymentModal({ headers, posToken, onClose, onP
     // ─── Cash keypad handlers ───
 
     const amount = parseFloat(amountTendered) || 0;
-    const cashTotal = cashOrder ? parseFloat(cashOrder.total_price) : 0;
+    const cashTotal = cashOrder ? orderTotalSafe(cashOrder) : 0;
     const change = amount - cashTotal;
     const canPay = amount >= cashTotal;
     const quickAmounts = [10, 20, 50, 100, 200].filter(a => a >= cashTotal);
-
-    const handleDigit = (d) => {
-        setAmountTendered(prev => {
-            if (d === '.' && prev.includes('.')) return prev;
-            return prev + d;
-        });
-    };
-
-    const handleDelete = () => {
-        setAmountTendered(prev => prev.slice(0, -1));
-    };
 
     const handleExact = () => {
         setAmountTendered(cashTotal.toFixed(2));
@@ -154,8 +153,6 @@ export default function POSPendingPaymentModal({ headers, posToken, onClose, onP
         setResult(null);
     };
 
-    const digits = ['7', '8', '9', '4', '5', '6', '1', '2', '3', '.', '0', 'del'];
-
     // ─── Cash keypad view ───
     if (cashOrder && !result) {
         return (
@@ -224,22 +221,11 @@ export default function POSPendingPaymentModal({ headers, posToken, onClose, onP
                             </div>
 
                             {/* Keypad */}
-                            <div className="grid grid-cols-3 gap-2" dir="ltr">
-                                {digits.map((d, idx) => {
-                                    if (d === 'del') {
-                                        return (
-                                            <button key={idx} onClick={handleDelete} className="h-14 rounded-xl bg-slate-700/50 hover:bg-slate-700 text-slate-300 flex items-center justify-center active:scale-90">
-                                                <FaBackspace size={20} />
-                                            </button>
-                                        );
-                                    }
-                                    return (
-                                        <button key={idx} onClick={() => handleDigit(d)} className="h-14 rounded-xl bg-slate-700/80 hover:bg-slate-600 text-white text-xl font-black active:scale-90 border border-slate-600/30">
-                                            {d}
-                                        </button>
-                                    );
-                                })}
-                            </div>
+                            <POSAmountKeypad
+                                value={amountTendered}
+                                onChange={setAmountTendered}
+                                disabled={processing}
+                            />
 
                             {/* Pay button */}
                             <button
@@ -273,20 +259,22 @@ export default function POSPendingPaymentModal({ headers, posToken, onClose, onP
                                 <p className="text-white text-2xl font-black">הזמנה #{result.orderId}</p>
                                 <p className="text-emerald-400 text-lg font-bold mt-2">{result.message}</p>
                             </div>
-                            <div className="bg-slate-900/50 rounded-2xl p-5 space-y-3">
-                                {result.total != null && (
-                                    <div className="flex justify-between text-slate-300 font-semibold">
-                                        <span>סה״כ</span>
-                                        <span>₪{result.total.toFixed(2)}</span>
-                                    </div>
-                                )}
-                                {result.change != null && result.change > 0 && (
-                                    <div className="flex justify-between text-amber-400 font-black text-xl pt-2 border-t border-slate-700">
-                                        <span>עודף</span>
-                                        <span>₪{result.change.toFixed(2)}</span>
-                                    </div>
-                                )}
-                            </div>
+                            {(result.total != null || (result.change != null && result.change > 0)) && (
+                                <div className="bg-slate-900/50 rounded-2xl p-5 space-y-3">
+                                    {result.total != null && Number.isFinite(Number(result.total)) && (
+                                        <div className="flex justify-between text-slate-300 font-semibold">
+                                            <span>סה״כ</span>
+                                            <span>₪{Number(result.total).toFixed(2)}</span>
+                                        </div>
+                                    )}
+                                    {result.change != null && result.change > 0 && (
+                                        <div className="flex justify-between text-amber-400 font-black text-xl pt-2 border-t border-slate-700">
+                                            <span>עודף</span>
+                                            <span>₪{Number(result.change).toFixed(2)}</span>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                             {result.closedTab && (
                                 <div className="bg-indigo-500/10 border border-indigo-500/30 rounded-2xl p-4 flex items-center gap-3 justify-center">
                                     <FaUtensils className="text-indigo-400" />
@@ -301,7 +289,7 @@ export default function POSPendingPaymentModal({ headers, posToken, onClose, onP
                         </>
                     ) : (
                         <>
-                            <p className="text-white text-xl font-black">התשלום נדחה</p>
+                            <p className="text-white text-xl font-black">הפעולה לא הצליחה</p>
                             <p className="text-red-400 font-bold">{result.message}</p>
                             <div className="flex gap-3 justify-center">
                                 <button onClick={resetAll} className="px-6 py-3 bg-slate-700 text-white font-black rounded-2xl active:scale-95">
@@ -326,7 +314,7 @@ export default function POSPendingPaymentModal({ headers, posToken, onClose, onP
                             <FaClock className="text-amber-400 text-xl" />
                         </div>
                         <div>
-                            <h2 className="text-2xl font-black text-white">ממתינות לתשלום</h2>
+                            <h2 className="text-2xl font-black text-white">ממתינות לתשלום / החזר</h2>
                             <p className="text-slate-400 text-sm">{orders.length} הזמנות</p>
                         </div>
                     </div>
@@ -361,7 +349,7 @@ export default function POSPendingPaymentModal({ headers, posToken, onClose, onP
                     ) : orders.length === 0 ? (
                         <div className="text-center py-16">
                             <FaCheckCircle className="text-5xl text-emerald-500/30 mx-auto mb-4" />
-                            <p className="text-slate-500 text-lg font-black">אין הזמנות ממתינות לתשלום</p>
+                            <p className="text-slate-500 text-lg font-black">אין הזמנות ממתינות לתשלום או להחזר</p>
                         </div>
                     ) : (
                         orders.map(order => {
@@ -369,6 +357,7 @@ export default function POSPendingPaymentModal({ headers, posToken, onClose, onP
                             const source = SOURCE_CONFIG[srcKey] || SOURCE_CONFIG.website;
                             const SourceIcon = source.icon;
                             const isFailed = order.payment_status === 'failed';
+                            const awaitingRefund = Boolean(order.awaiting_refund);
                             return (
                                 <div
                                     key={order.id}
@@ -383,6 +372,11 @@ export default function POSPendingPaymentModal({ headers, posToken, onClose, onP
                                                 <span className={`text-xs font-black px-2 py-1 rounded-lg flex items-center gap-1 ${source.color}`}>
                                                     <SourceIcon size={10} /> {source.label}
                                                 </span>
+                                                {awaitingRefund && (
+                                                    <span className="text-xs font-black px-2 py-1 rounded-lg bg-rose-600/35 text-rose-100 flex items-center gap-1 ring-1 ring-rose-500/50">
+                                                        <FaExclamationTriangle size={10} /> ממתין להחזר
+                                                    </span>
+                                                )}
                                                 {isFailed && (
                                                     <span className="text-xs font-black px-2 py-1 rounded-lg bg-red-600/35 text-red-100 flex items-center gap-1 ring-1 ring-red-500/50">
                                                         <FaExclamationTriangle size={10} />{' '}
@@ -402,7 +396,7 @@ export default function POSPendingPaymentModal({ headers, posToken, onClose, onP
                                             </div>
                                             <div className="text-left">
                                                 <p className="text-white font-black text-lg flex items-center gap-1">
-                                                    <FaShekelSign className="text-sm" />{order.total_price.toFixed(2)}
+                                                    <FaShekelSign className="text-sm" />{orderTotalSafe(order).toFixed(2)}
                                                 </p>
                                                 <p className="text-slate-500 text-xs">{order.created_at}</p>
                                             </div>
@@ -423,29 +417,131 @@ export default function POSPendingPaymentModal({ headers, posToken, onClose, onP
                                                 )}
                                             </div>
                                         )}
-                                        <p className="text-slate-500 text-xs font-black mb-2 border-t border-slate-700 pt-3">בקופה</p>
+                                        <p className="text-slate-500 text-xs font-black mb-2 border-t border-slate-700 pt-3">
+                                            {awaitingRefund ? 'פעולות החזר' : 'בקופה'}
+                                        </p>
                                         <div className="flex flex-col gap-2">
-                                            <div className="flex gap-2">
-                                                <button
-                                                    onClick={() => { setCashOrder(order); setAmountTendered(''); }}
-                                                    disabled={processing}
-                                                    className="flex-1 flex items-center justify-center gap-2 py-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-xl font-black text-sm active:scale-95 hover:bg-emerald-500/20 transition-all disabled:opacity-30"
-                                                >
-                                                    <FaMoneyBillWave /> מזומן בקופה
-                                                </button>
-                                                <button
-                                                    onClick={() => handlePayCredit(order)}
-                                                    disabled={processing}
-                                                    className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2.5 bg-blue-500/10 border border-blue-500/30 text-blue-400 rounded-xl font-black text-sm active:scale-95 hover:bg-blue-500/20 transition-all disabled:opacity-30"
-                                                >
-                                                    <span className="flex items-center gap-1.5">
-                                                        <FaCreditCard /> אשראי
-                                                    </span>
-                                                    <span className="text-[10px] font-semibold text-blue-300/80 leading-tight text-center px-1">
-                                                        מסוף פיזי (PinPad) — לא קישור
-                                                    </span>
-                                                </button>
-                                            </div>
+                                            {awaitingRefund ? (
+                                                <div className="flex flex-col gap-2">
+                                                    <p className="text-rose-200/90 text-xs font-bold">
+                                                        לזכות ₪{(order.payment_amount != null && order.payment_amount !== ''
+                                                            ? Number(order.payment_amount)
+                                                            : orderTotalSafe(order)).toFixed(2)} — הזמנה בוטלה לאחר תשלום
+                                                    </p>
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            type="button"
+                                                            disabled={processing || refundBusyId === order.id}
+                                                            onClick={async () => {
+                                                                if (!window.confirm(`לבצע החזר להזמנה #${order.id}?`)) return;
+                                                                setRefundBusyId(order.id);
+                                                                try {
+                                                                    const res = await posApi.refundOrder(order.id, headers, posToken);
+                                                                    if (res.data?.success) {
+                                                                        setResult({
+                                                                            type: 'success',
+                                                                            message: res.data.message || 'ההחזר בוצע',
+                                                                            orderId: order.id,
+                                                                        });
+                                                                        try {
+                                                                            await fetchOrders();
+                                                                        } catch (err) {
+                                                                            console.error('fetchOrders after refund', err);
+                                                                        }
+                                                                        onPaid?.();
+                                                                    } else {
+                                                                        setResult({
+                                                                            type: 'error',
+                                                                            message: res.data?.message || 'ההחזר לא הושלם',
+                                                                            orderId: order.id,
+                                                                        });
+                                                                    }
+                                                                } catch (e) {
+                                                                    setResult({
+                                                                        type: 'error',
+                                                                        message: e.response?.data?.message || 'שגיאה בהחזר',
+                                                                        orderId: order.id,
+                                                                    });
+                                                                } finally {
+                                                                    setRefundBusyId(null);
+                                                                }
+                                                            }}
+                                                            className="flex-1 flex items-center justify-center gap-2 py-3 bg-rose-600/80 border border-rose-500 text-white rounded-xl font-black text-sm active:scale-95 hover:bg-rose-600 transition-all disabled:opacity-30"
+                                                        >
+                                                            {refundBusyId === order.id ? <FaSpinner className="animate-spin" /> : <FaCreditCard />}
+                                                            בצע החזר
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            disabled={processing || refundBusyId === order.id}
+                                                            onClick={async () => {
+                                                                const note = window.prompt('הערה לויתור (אופציונלי):') || '';
+                                                                if (!window.confirm('לוותר על החזר? ההכנסה תישאר בדוחות.')) return;
+                                                                setRefundBusyId(order.id);
+                                                                try {
+                                                                    const res = await api.post(
+                                                                        `/admin/orders/${order.id}/waive-refund`,
+                                                                        note.trim() ? { note: note.trim() } : {},
+                                                                        { headers }
+                                                                    );
+                                                                    if (res.data?.success) {
+                                                                        setResult({
+                                                                            type: 'success',
+                                                                            message: res.data.message || 'סומן ויתור',
+                                                                            orderId: order.id,
+                                                                        });
+                                                                        try {
+                                                                            await fetchOrders();
+                                                                        } catch (err) {
+                                                                            console.error('fetchOrders after waive', err);
+                                                                        }
+                                                                        onPaid?.();
+                                                                    } else {
+                                                                        setResult({
+                                                                            type: 'error',
+                                                                            message: res.data?.message || 'הפעולה לא הושלמה',
+                                                                            orderId: order.id,
+                                                                        });
+                                                                    }
+                                                                } catch (e) {
+                                                                    setResult({
+                                                                        type: 'error',
+                                                                        message: e.response?.data?.message || 'שגיאה בויתור',
+                                                                        orderId: order.id,
+                                                                    });
+                                                                } finally {
+                                                                    setRefundBusyId(null);
+                                                                }
+                                                            }}
+                                                            className="flex-1 py-3 bg-slate-700/80 border border-slate-500 text-slate-100 rounded-xl font-black text-sm active:scale-95 hover:bg-slate-600 transition-all disabled:opacity-30"
+                                                        >
+                                                            ויתור החזר
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        onClick={() => { setCashOrder(order); setAmountTendered(''); }}
+                                                        disabled={processing}
+                                                        className="flex-1 flex items-center justify-center gap-2 py-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-xl font-black text-sm active:scale-95 hover:bg-emerald-500/20 transition-all disabled:opacity-30"
+                                                    >
+                                                        <FaMoneyBillWave /> מזומן בקופה
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handlePayCredit(order)}
+                                                        disabled={processing}
+                                                        className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2.5 bg-blue-500/10 border border-blue-500/30 text-blue-400 rounded-xl font-black text-sm active:scale-95 hover:bg-blue-500/20 transition-all disabled:opacity-30"
+                                                    >
+                                                        <span className="flex items-center gap-1.5">
+                                                            <FaCreditCard /> אשראי
+                                                        </span>
+                                                        <span className="text-[10px] font-semibold text-blue-300/80 leading-tight text-center px-1">
+                                                            מסוף פיזי (PinPad) — לא קישור
+                                                        </span>
+                                                    </button>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </div>

@@ -4,7 +4,7 @@ export default function ViewerFooter({ screen, preset }) {
     return (
         <div className={`${preset.header} px-6 py-3 text-center shrink-0`}>
             <p className={`text-xs font-medium ${preset.desc}`}>
-                Powered by <span className="font-black">ChefSync</span>
+                Powered by <span className="font-black">TakeEat</span>
             </p>
         </div>
     );

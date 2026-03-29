@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { FaPlus, FaMinus, FaTrash, FaShekelSign, FaClock, FaTimes, FaUtensils, FaSearch, FaCreditCard, FaMoneyBillWave, FaCheckCircle, FaBackspace, FaExclamationTriangle, FaBan, FaCashRegister } from 'react-icons/fa';
+import { FaPlus, FaMinus, FaTrash, FaShekelSign, FaClock, FaTimes, FaUtensils, FaSearch, FaCreditCard, FaMoneyBillWave, FaCheckCircle, FaExclamationTriangle, FaBan, FaCashRegister } from 'react-icons/fa';
 import api from '../../../services/apiClient';
 import posApi from '../api/posApi';
+import POSAmountKeypad from './POSAmountKeypad';
 import POSManagerAuth from './POSManagerAuth';
 import POSMenuItemModal, { posItemNeedsConfiguration } from './POSMenuItemModal';
 import { buildCartKey } from '../../../utils/cart';
@@ -270,15 +271,6 @@ function TabDetailModal({ tab: initialTab, headers, posToken, onClose, onUpdated
     const change = amount - total;
     const canPay = amount >= total;
     const quickAmounts = [10, 20, 50, 100, 200].filter(a => a >= total);
-    const digits = ['7', '8', '9', '4', '5', '6', '1', '2', '3', '.', '0', 'del'];
-
-    const handleDigit = (d) => {
-        setAmountTendered(prev => {
-            if (d === '.' && prev.includes('.')) return prev;
-            return prev + d;
-        });
-    };
-    const handleDelete = () => setAmountTendered(prev => prev.slice(0, -1));
     const handleExact = () => setAmountTendered(total.toFixed(2));
 
     const handlePayCash = async () => {
@@ -427,22 +419,11 @@ function TabDetailModal({ tab: initialTab, headers, posToken, onClose, onUpdated
                                 )}
                             </div>
 
-                            <div className="grid grid-cols-3 gap-2" dir="ltr">
-                                {digits.map((d, idx) => {
-                                    if (d === 'del') {
-                                        return (
-                                            <button key={idx} onClick={handleDelete} className="h-14 rounded-xl bg-slate-700/50 hover:bg-slate-700 text-slate-300 flex items-center justify-center active:scale-90">
-                                                <FaBackspace size={20} />
-                                            </button>
-                                        );
-                                    }
-                                    return (
-                                        <button key={idx} onClick={() => handleDigit(d)} className="h-14 rounded-xl bg-slate-700/80 hover:bg-slate-600 text-white text-xl font-black active:scale-90 border border-slate-600/30">
-                                            {d}
-                                        </button>
-                                    );
-                                })}
-                            </div>
+                            <POSAmountKeypad
+                                value={amountTendered}
+                                onChange={setAmountTendered}
+                                disabled={processing}
+                            />
 
                             <button onClick={handlePayCash} disabled={!canPay}
                                 className="w-full py-4 bg-gradient-to-r from-emerald-500 to-green-500 text-white font-black text-lg rounded-2xl disabled:opacity-30 transition-all active:scale-95 shadow-lg shadow-emerald-500/20">

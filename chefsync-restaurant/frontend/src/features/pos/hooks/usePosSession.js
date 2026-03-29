@@ -31,15 +31,18 @@ function clearBypass() {
 }
 
 export default function usePosSession() {
-    const { user } = useAdminAuth();
+    const { token: adminBearerToken } = useAdminAuth();
     const [posToken, setPosToken] = useState(null);
     const [posUser, setPosUser] = useState(null);
     const [isLocked, setIsLocked] = useState(false);
     const [expiresAt, setExpiresAt] = useState(null);
-    const [bypassAttempted, setBypassAttempted] = useState(false);
     const inactivityTimer = useRef(null);
-    const token = (typeof localStorage !== 'undefined' && (localStorage.getItem('authToken') || localStorage.getItem('admin_token'))) || '';
-    const headers = useMemo(() => (token ? { Authorization: `Bearer ${token}` } : {}), [token]);
+    const bearer =
+        adminBearerToken ||
+        (typeof localStorage !== 'undefined' &&
+            (localStorage.getItem('authToken') || localStorage.getItem('admin_token'))) ||
+        '';
+    const headers = useMemo(() => (bearer ? { Authorization: `Bearer ${bearer}` } : {}), [bearer]);
 
     // Ref for async callbacks that need latest headers
     const headersRef = useRef(headers);
@@ -47,12 +50,13 @@ export default function usePosSession() {
 
     const resetInactivityTimer = useCallback(() => {
         if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
-        if (posToken && !isLocked) {
-            inactivityTimer.current = setTimeout(() => {
-                lock();
-            }, INACTIVITY_TIMEOUT);
-        }
-    }, [posToken, isLocked]);
+        if (!posToken || isLocked) return;
+        // "זכור אותי ל-4 שעות" — ללא נעילת מסך אוטומטית במהלך תוקף ה-bypass
+        if (getBypass()) return;
+        inactivityTimer.current = setTimeout(() => {
+            lock();
+        }, INACTIVITY_TIMEOUT);
+    }, [posToken, isLocked, lock]);
 
     useEffect(() => {
         if (!posToken) return;
@@ -67,29 +71,32 @@ export default function usePosSession() {
         };
     }, [posToken, resetInactivityTimer]);
 
-    // Auto-login with bypass on mount
+    // Auto-login עם bypass — עם ביטול על unmount (חשוב ב-React Strict Mode: שני verifyPin מבטלים סשן קודם).
     useEffect(() => {
-        if (posToken || bypassAttempted) return;
+        if (posToken) return;
         const bypass = getBypass();
-        if (bypass?.pin) {
-            setBypassAttempted(true);
-            (async () => {
-                try {
-                    const res = await posApi.verifyPin(bypass.pin, headersRef.current, null);
-                    if (res.data.success) {
-                        setPosToken(res.data.token);
-                        setPosUser(res.data.user);
-                        setExpiresAt(res.data.expires_at);
-                        setIsLocked(false);
-                    }
-                } catch {
-                    clearBypass();
+        if (!bypass?.pin) return;
+
+        let cancelled = false;
+        (async () => {
+            try {
+                const res = await posApi.verifyPin(bypass.pin, headersRef.current, null);
+                if (cancelled) return;
+                if (res.data.success) {
+                    setPosToken(res.data.token);
+                    setPosUser(res.data.user);
+                    setExpiresAt(res.data.expires_at);
+                    setIsLocked(false);
                 }
-            })();
-        } else {
-            setBypassAttempted(true);
-        }
-    }, [posToken, bypassAttempted]);
+            } catch {
+                if (!cancelled) clearBypass();
+            }
+        })();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [posToken]);
 
     const login = useCallback(async (pin, bypassHours = 0, paymentTerminalId = null) => {
         const res = await posApi.verifyPin(pin, headersRef.current, paymentTerminalId);
@@ -125,15 +132,24 @@ export default function usePosSession() {
         throw new Error(res.data.message);
     }, [resetInactivityTimer]);
 
-    const logout = useCallback(() => {
+    const clearPosSessionState = useCallback(() => {
         setPosToken(null);
         setPosUser(null);
         setIsLocked(false);
         setExpiresAt(null);
-        setBypassAttempted(false);
-        // Don't clear bypass — it should persist for re-entry within the bypass window
         if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
     }, []);
+
+    const logout = useCallback(() => {
+        clearPosSessionState();
+        // Don't clear bypass — it should persist for re-entry within the bypass window
+    }, [clearPosSessionState]);
+
+    useEffect(() => {
+        const onLost = () => clearPosSessionState();
+        window.addEventListener('takeeat:pos-session-lost', onLost);
+        return () => window.removeEventListener('takeeat:pos-session-lost', onLost);
+    }, [clearPosSessionState]);
 
     return {
         posToken,

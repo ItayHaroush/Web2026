@@ -29,23 +29,38 @@ final class OrderPeriodMetricsService
         $activeOrders = $orders->where('status', '!=', 'cancelled');
         $cancelledOrders = $orders->where('status', 'cancelled');
 
+        $waivedCancelled = $cancelledOrders->filter(fn (Order $o) => $o->refund_waived_at !== null
+            && $o->payment_status === Order::PAYMENT_PAID);
+
+        $revenueForWaived = static fn (Order $o): float => (float) ($o->payment_amount ?? $o->total_amount);
+
         $totalOrders = $activeOrders->count();
-        $totalRevenue = (float) $activeOrders->sum('total_amount');
+        $totalRevenue = (float) $activeOrders->sum('total_amount')
+            + (float) $waivedCancelled->sum($revenueForWaived);
         $pickupOrders = $activeOrders->where('delivery_method', 'pickup')->count();
         $deliveryOrders = $activeOrders->where('delivery_method', 'delivery')->count();
         $cashTotal = (float) $activeOrders
             ->filter(fn (Order $o) => $o->effectiveCollectedPaymentMethod() === 'cash')
-            ->sum('total_amount');
+            ->sum('total_amount')
+            + (float) $waivedCancelled
+                ->filter(fn (Order $o) => $o->effectiveCollectedPaymentMethod() === 'cash')
+                ->sum($revenueForWaived);
         $creditTotal = (float) $activeOrders
             ->filter(fn (Order $o) => $o->effectiveCollectedPaymentMethod() === 'credit_card')
-            ->sum('total_amount');
+            ->sum('total_amount')
+            + (float) $waivedCancelled
+                ->filter(fn (Order $o) => $o->effectiveCollectedPaymentMethod() === 'credit_card')
+                ->sum($revenueForWaived);
 
         $webOrders = $activeOrders->filter(fn ($o) => in_array($o->source, ['web', null, '']))->count();
-        $webRevenue = (float) $activeOrders->filter(fn ($o) => in_array($o->source, ['web', null, '']))->sum('total_amount');
+        $webRevenue = (float) $activeOrders->filter(fn ($o) => in_array($o->source, ['web', null, '']))->sum('total_amount')
+            + (float) $waivedCancelled->filter(fn ($o) => in_array($o->source, ['web', null, '']))->sum($revenueForWaived);
         $kioskOrders = $activeOrders->where('source', 'kiosk')->count();
-        $kioskRevenue = (float) $activeOrders->where('source', 'kiosk')->sum('total_amount');
+        $kioskRevenue = (float) $activeOrders->where('source', 'kiosk')->sum('total_amount')
+            + (float) $waivedCancelled->where('source', 'kiosk')->sum($revenueForWaived);
         $posOrders = $activeOrders->where('source', 'pos')->count();
-        $posRevenue = (float) $activeOrders->where('source', 'pos')->sum('total_amount');
+        $posRevenue = (float) $activeOrders->where('source', 'pos')->sum('total_amount')
+            + (float) $waivedCancelled->where('source', 'pos')->sum($revenueForWaived);
 
         $dineInOrders = $activeOrders->where('order_type', 'dine_in')->count();
         $takeawayOrders = $activeOrders->where('order_type', 'takeaway')->count();

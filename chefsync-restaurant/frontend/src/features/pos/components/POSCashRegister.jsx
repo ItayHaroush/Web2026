@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { FaCashRegister, FaPlus, FaMinus, FaLock, FaShekelSign, FaArrowDown, FaArrowUp, FaReceipt, FaHistory, FaTimesCircle, FaPrint, FaCheckCircle, FaExclamationTriangle, FaUsers, FaCreditCard } from 'react-icons/fa';
+import { FaCashRegister, FaPlus, FaMinus, FaLock, FaShekelSign, FaArrowDown, FaArrowUp, FaReceipt, FaHistory, FaTimesCircle, FaPrint, FaCheckCircle, FaExclamationTriangle, FaUsers, FaCreditCard, FaQrcode } from 'react-icons/fa';
 import posApi from '../api/posApi';
 import POSManagerAuth from './POSManagerAuth';
+import POSAmountKeypad from './POSAmountKeypad';
 
 function formatDuration(totalMinutes) {
     const mins = Math.round(totalMinutes);
@@ -109,7 +110,7 @@ ${(r.movements || []).length > 0 ? `
 <table>${movementsHtml}</table>
 ` : ''}
 
-<p class="footer">הופק אוטומטית ממערכת POS • ${new Date().toLocaleDateString('he-IL')}</p>
+<p class="footer">Powered by TakeEat • ${new Date().toLocaleDateString('he-IL')}</p>
 
 <script>window.onload = function() { window.print(); }</script>
 </body>
@@ -144,6 +145,13 @@ export default function POSCashRegister({ headers, posToken, isManager, onShiftC
     const [clockedInWarning, setClockedInWarning] = useState(null);
     const [pendingWarning, setPendingWarning] = useState(null);
     const [managerAuthAction, setManagerAuthAction] = useState(null); // 'history' | null
+    const [shareQrLoading, setShareQrLoading] = useState(false);
+    const [printMsg, setPrintMsg] = useState(null);
+
+    const showPrintMsg = (text, isError = false) => {
+        setPrintMsg({ text, isError });
+        setTimeout(() => setPrintMsg(null), 3200);
+    };
 
     const fetchData = useCallback(async () => {
         try {
@@ -180,8 +188,10 @@ export default function POSCashRegister({ headers, posToken, isManager, onShiftC
             // בדוק הזמנות ממתינות לתשלום
             const pendingRes = await posApi.getPendingPaymentOrders(headers, posToken);
             const pendingOrders = pendingRes.data.orders || pendingRes.data || [];
-            if (pendingOrders.length > 0) {
-                setPendingWarning(pendingOrders.length);
+            // רק הזמנות שבאמת חסר תשלום — לא תור החזר (כבר שולמו ובוטלו)
+            const unpaidOnly = pendingOrders.filter((o) => !o.awaiting_refund);
+            if (unpaidOnly.length > 0) {
+                setPendingWarning(unpaidOnly.length);
                 return;
             }
 
@@ -292,6 +302,21 @@ export default function POSCashRegister({ headers, posToken, isManager, onShiftC
         }
     };
 
+    const handlePrintShareQr = async () => {
+        setShareQrLoading(true);
+        try {
+            const res = await posApi.printShareQrSlip(headers, posToken);
+            const jobs = res.data?.jobs ?? 0;
+            const msg = res.data?.message || (res.data?.success ? 'נשלח להדפסה' : 'ההדפסה נכשלה');
+            const isError = !res.data?.success || (res.data?.success && jobs === 0);
+            showPrintMsg(msg, isError);
+        } catch (e) {
+            showPrintMsg(e.response?.data?.message || 'שגיאה בהדפסת QR שיתוף', true);
+        } finally {
+            setShareQrLoading(false);
+        }
+    };
+
     if (loading) {
         return (
             <div className="flex items-center justify-center h-full">
@@ -314,17 +339,12 @@ export default function POSCashRegister({ headers, posToken, isManager, onShiftC
                         </div>
                         <div className="space-y-4">
                             <div className="relative">
-                                <FaShekelSign className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500" />
-                                <input
-                                    type="number"
-                                    value={openBalance}
-                                    onChange={(e) => setOpenBalance(e.target.value)}
-                                    className="w-full pr-10 pl-4 py-4 bg-slate-900 text-white text-2xl font-black text-center rounded-2xl border border-slate-700 focus:border-orange-500 focus:outline-none"
-                                    placeholder="0.00"
-                                    min="0"
-                                    step="0.01"
-                                />
+                                <FaShekelSign className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 z-10" />
+                                <div className="w-full pr-10 pl-4 py-4 bg-slate-900 text-white text-2xl font-black text-center rounded-2xl border border-slate-700 min-h-[60px] flex items-center justify-center tabular-nums">
+                                    {openBalance || '0'}
+                                </div>
                             </div>
+                            <POSAmountKeypad value={openBalance} onChange={setOpenBalance} />
                             <button
                                 onClick={handleOpenShift}
                                 disabled={!openBalance && openBalance !== '0'}
@@ -368,7 +388,17 @@ export default function POSCashRegister({ headers, posToken, isManager, onShiftC
     }
 
     return (
-        <div className="h-full overflow-y-auto p-4 space-y-4 custom-scrollbar">
+        <div className="h-full overflow-y-auto p-4 space-y-4 custom-scrollbar relative">
+            {printMsg && (
+                <div
+                    className={`fixed top-6 left-1/2 -translate-x-1/2 z-[600] px-6 py-3 rounded-2xl font-bold text-sm shadow-2xl max-w-[min(90vw,24rem)] text-center animate-in fade-in slide-in-from-top-4 duration-300 ${printMsg.isError
+                        ? 'bg-red-500 text-white'
+                        : 'bg-emerald-500 text-white'
+                        }`}
+                >
+                    {printMsg.text}
+                </div>
+            )}
             {summary && (
                 <>
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
@@ -379,9 +409,23 @@ export default function POSCashRegister({ headers, posToken, isManager, onShiftC
                         <StatCard label="הזמנות" value={summary.order_count} color="purple" />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
-                        <StatCard label="כניסות מזומן" value={`₪${summary.cash_in}`} color="emerald" small />
-                        <StatCard label="יציאות מזומן" value={`₪${summary.cash_out}`} color="red" small />
+                    <div className="flex gap-2 sm:gap-3 items-stretch">
+                        <div className="flex-1 min-w-0">
+                            <StatCard label="כניסות מזומן" value={`₪${summary.cash_in}`} color="emerald" small />
+                        </div>
+                        <button
+                            type="button"
+                            onClick={handlePrintShareQr}
+                            disabled={shareQrLoading}
+                            title="הדפסת QR לעמוד שיתוף והזמנה מהירה"
+                            className="shrink-0 w-[4.25rem] sm:w-[5rem] flex flex-col items-center justify-center gap-0.5 self-center py-2 px-1 bg-violet-500/10 border border-violet-500/30 rounded-xl text-violet-300 font-black text-[9px] sm:text-[10px] leading-tight transition-all active:scale-95 hover:bg-violet-500/20 disabled:opacity-50"
+                        >
+                            <FaQrcode size={18} className="shrink-0" />
+                            {shareQrLoading ? '…' : 'QR שיתוף'}
+                        </button>
+                        <div className="flex-1 min-w-0">
+                            <StatCard label="יציאות מזומן" value={`₪${summary.cash_out}`} color="red" small />
+                        </div>
                     </div>
                 </>
             )}
@@ -390,6 +434,7 @@ export default function POSCashRegister({ headers, posToken, isManager, onShiftC
                 <div className="space-y-3">
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                         <button
+                            type="button"
                             onClick={() => setMovementModal('cash_in')}
                             className="flex flex-col items-center gap-2 py-4 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl text-emerald-400 font-black text-sm transition-all active:scale-95 hover:bg-emerald-500/20"
                         >
@@ -397,6 +442,7 @@ export default function POSCashRegister({ headers, posToken, isManager, onShiftC
                             הכנסת מזומן
                         </button>
                         <button
+                            type="button"
                             onClick={() => setCreditChargeOpen(true)}
                             className="flex flex-col items-center gap-2 py-4 bg-violet-500/10 border border-violet-500/30 rounded-2xl text-violet-300 font-black text-sm transition-all active:scale-95 hover:bg-violet-500/20"
                         >
@@ -404,6 +450,7 @@ export default function POSCashRegister({ headers, posToken, isManager, onShiftC
                             תשלום אשראי
                         </button>
                         <button
+                            type="button"
                             onClick={() => setMovementModal('cash_out')}
                             className="flex flex-col items-center gap-2 py-4 bg-red-500/10 border border-red-500/30 rounded-2xl text-red-400 font-black text-sm transition-all active:scale-95 hover:bg-red-500/20"
                         >
@@ -438,7 +485,7 @@ export default function POSCashRegister({ headers, posToken, isManager, onShiftC
                         </h3>
                     </div>
                     <div className="divide-y divide-slate-700/50 max-h-60 overflow-y-auto">
-                        {summary.movements.map(m => (
+                        {[...summary.movements].reverse().map(m => (
                             <div key={m.id} className="flex items-center justify-between px-5 py-3">
                                 <div className="flex items-center gap-3">
                                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm ${m.type === 'payment' && m.payment_method === 'credit' ? 'bg-violet-500/20 text-violet-400' :
@@ -479,16 +526,13 @@ export default function POSCashRegister({ headers, posToken, isManager, onShiftC
                     {movementModal === 'cash_in' && (
                         <p className="text-slate-500 text-xs mb-4">הסכום מתווסף ליתרת המזומן בקופה.</p>
                     )}
-                    <input
-                        type="number"
-                        value={movementAmount}
-                        onChange={(e) => setMovementAmount(e.target.value)}
-                        className="w-full py-4 bg-slate-900 text-white text-2xl font-black text-center rounded-2xl border border-slate-700 focus:border-orange-500 focus:outline-none mb-3"
-                        placeholder="₪ סכום"
-                        min="0.01"
-                        step="0.01"
-                        autoFocus
-                    />
+                    <div className="relative mb-3">
+                        <FaShekelSign className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 z-10" />
+                        <div className="w-full pr-10 pl-4 py-4 bg-slate-900 text-white text-2xl font-black text-center rounded-2xl border border-slate-700 min-h-[56px] flex items-center justify-center tabular-nums">
+                            {movementAmount || '0'}
+                        </div>
+                    </div>
+                    <POSAmountKeypad value={movementAmount} onChange={setMovementAmount} className="mb-3" />
                     <input
                         type="text"
                         value={movementDesc}
@@ -514,17 +558,13 @@ export default function POSCashRegister({ headers, posToken, isManager, onShiftC
                     <p className="text-slate-500 text-xs mb-4">
                         חיוב דרך מסופון כמו בתשלום הזמנה. לאחר אישור — נרשם באשראי במכירות (לא במזומן בקופה).
                     </p>
-                    <input
-                        type="number"
-                        value={creditChargeAmount}
-                        onChange={(e) => setCreditChargeAmount(e.target.value)}
-                        className="w-full py-4 bg-slate-900 text-white text-2xl font-black text-center rounded-2xl border border-slate-700 focus:border-orange-500 focus:outline-none mb-3"
-                        placeholder="₪ סכום"
-                        min="0.01"
-                        step="0.01"
-                        disabled={creditChargeLoading}
-                        autoFocus
-                    />
+                    <div className="relative mb-3">
+                        <FaShekelSign className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 z-10" />
+                        <div className={`w-full pr-10 pl-4 py-4 bg-slate-900 text-white text-2xl font-black text-center rounded-2xl border border-slate-700 min-h-[56px] flex items-center justify-center tabular-nums ${creditChargeLoading ? 'opacity-50' : ''}`}>
+                            {creditChargeAmount || '0'}
+                        </div>
+                    </div>
+                    <POSAmountKeypad value={creditChargeAmount} onChange={setCreditChargeAmount} disabled={creditChargeLoading} className="mb-3" />
                     <input
                         type="text"
                         value={creditChargeDesc}
@@ -551,16 +591,13 @@ export default function POSCashRegister({ headers, posToken, isManager, onShiftC
                 <Modal onClose={() => setShowCloseConfirm(false)}>
                     <h3 className="text-xl font-black text-white mb-2">סגירת משמרת</h3>
                     <p className="text-slate-400 text-sm mb-4">ספור את המזומן בקופה (צפי: ₪{summary?.expected_in_register})</p>
-                    <input
-                        type="number"
-                        value={closeBalance}
-                        onChange={(e) => setCloseBalance(e.target.value)}
-                        className="w-full py-4 bg-slate-900 text-white text-2xl font-black text-center rounded-2xl border border-slate-700 focus:border-orange-500 focus:outline-none mb-3"
-                        placeholder="₪ סכום בפועל"
-                        min="0"
-                        step="0.01"
-                        autoFocus
-                    />
+                    <div className="relative mb-3">
+                        <FaShekelSign className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 z-10" />
+                        <div className="w-full pr-10 pl-4 py-4 bg-slate-900 text-white text-2xl font-black text-center rounded-2xl border border-slate-700 min-h-[56px] flex items-center justify-center tabular-nums">
+                            {closeBalance || '0'}
+                        </div>
+                    </div>
+                    <POSAmountKeypad value={closeBalance} onChange={setCloseBalance} className="mb-3" />
                     <textarea
                         value={closeNotes}
                         onChange={(e) => setCloseNotes(e.target.value)}

@@ -55,6 +55,10 @@ class NetworkPrinterAdapter implements PrinterAdapter
 
         try {
             $binary = $this->hebrewEncoder->encodeUtf8ToCp862($payload, true, $lineWidth);
+            $escposSuffix = $config['escpos_binary_suffix'] ?? '';
+            if (! is_string($escposSuffix)) {
+                $escposSuffix = '';
+            }
 
             fwrite($socket, "\x1B\x40");
             fwrite($socket, "\x1B\x74".chr(self::ESC_POS_CODE_PAGE_HEBREW));
@@ -66,8 +70,10 @@ class NetworkPrinterAdapter implements PrinterAdapter
 
             fwrite($socket, $binary);
 
-            if ($doubleHeight) {
-                fwrite($socket, "\x1B\x21".chr(self::MODE_NORMAL));
+            fwrite($socket, "\x1B\x21".chr(self::MODE_NORMAL));
+
+            if ($escposSuffix !== '') {
+                fwrite($socket, $escposSuffix);
             }
 
             fwrite($socket, "\n\n\n\n");

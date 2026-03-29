@@ -125,6 +125,25 @@ apiClient.interceptors.response.use(
 
             // Customer and POS routes handle their own 401 logic
             if (isPosRoute || isCustomerRoute) {
+                if (isPosRoute) {
+                    const posNoSessionPath = [
+                        '/pos/verify-pin',
+                        '/pos/unlock',
+                        '/pos/lock',
+                        '/pos/set-pin',
+                        '/pos/verify-manager',
+                    ];
+                    const isPosSessionProtected =
+                        requestUrl.includes('/admin/pos/') &&
+                        !posNoSessionPath.some((p) => requestUrl.includes(p));
+                    if (isPosSessionProtected) {
+                        try {
+                            window.dispatchEvent(new CustomEvent('takeeat:pos-session-lost'));
+                        } catch {
+                            /* ignore */
+                        }
+                    }
+                }
                 return Promise.reject(error);
             }
 

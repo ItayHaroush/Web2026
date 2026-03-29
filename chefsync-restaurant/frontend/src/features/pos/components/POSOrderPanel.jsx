@@ -137,12 +137,20 @@ export default function POSOrderPanel({ headers, posToken, mode = 'active' }) {
         setRefunding(orderId);
         try {
             const res = await posApi.refundOrder(orderId, headers, posToken);
-            if (res.data.success) {
-                showPrintMsg('החזר כספי בוצע בהצלחה');
+            if (res.data?.success) {
+                showPrintMsg(res.data?.message || 'החזר כספי בוצע בהצלחה');
                 fetchOrders();
+            } else {
+                showPrintMsg(res.data?.message || 'לא ניתן לבצע החזר — בדוק סטטוס תשלום או הרשאות', true);
             }
         } catch (e) {
-            showPrintMsg(e.response?.data?.message || 'שגיאה בביצוע החזר כספי', true);
+            const d = e.response?.data;
+            let msg = d?.message;
+            if (!msg && d?.errors && typeof d.errors === 'object') {
+                const first = Object.values(d.errors)[0];
+                msg = Array.isArray(first) ? first[0] : first;
+            }
+            showPrintMsg(msg || 'שגיאה בביצוע החזר כספי', true);
         } finally {
             setRefunding(null);
         }

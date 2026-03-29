@@ -7,8 +7,11 @@ use App\Models\Order;
 use App\Models\PrintDevice;
 use App\Models\Printer;
 use App\Models\PrintJob;
+use App\Models\Restaurant;
+use App\Services\Printing\EscPosQrHelper;
 use App\Services\Printing\NetworkPrinterAdapter;
 use App\Services\Printing\PrinterAdapter;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Facades\Log;
 
 class PrintService
@@ -20,6 +23,26 @@ class PrintService
     public function printOrder(Order $order): int
     {
         $order->loadMissing('items.menuItem.category', 'restaurant');
+
+        return $this->printKitchenTicketForItems($order, $order->items);
+    }
+
+    /**
+     * בון מטבח בלבד (ללא קבלה) עבור קבוצת שורות — למשל פריטים שנוספו עכשיו לטאב שולחן.
+     *
+     * @param  iterable<int, \App\Models\OrderItem>|\Illuminate\Support\Collection<int, \App\Models\OrderItem>  $items
+     */
+    public function printKitchenTicketForItems(Order $order, iterable $items): int
+    {
+        $raw = $items instanceof \Illuminate\Support\Collection ? $items->all() : (is_array($items) ? $items : iterator_to_array($items));
+        /** @var EloquentCollection<int, \App\Models\OrderItem> $lineItems */
+        $lineItems = EloquentCollection::make($raw)->filter()->values();
+        if ($lineItems->isEmpty()) {
+            return 0;
+        }
+
+        $order->loadMissing('restaurant');
+        $lineItems->loadMissing('menuItem.category');
 
         $printers = Printer::where('restaurant_id', $order->restaurant_id)
             ->where('is_active', true)
@@ -38,7 +61,7 @@ class PrintService
         foreach ($printers as $printer) {
             $categoryIds = $printer->categories->pluck('id')->toArray();
 
-            $relevantItems = $order->items->filter(function ($item) use ($categoryIds) {
+            $relevantItems = $lineItems->filter(function ($item) use ($categoryIds) {
                 $categoryId = $item->menuItem?->category_id ?? $item->category_id ?? null;
 
                 return empty($categoryIds) || in_array($categoryId, $categoryIds);
@@ -196,6 +219,75 @@ class PrintService
         return $jobCount;
     }
 
+    /**
+     * בון QR לעמוד שיתוף המסעדה (הזמנה מהירה) — מדפסות receipt/general בלבד.
+     */
+    public function printRestaurantShareQrSlip(Restaurant $restaurant): int
+    {
+        $base = rtrim((string) config('app.frontend_url', 'https://www.takeeat.co.il'), '/');
+        $slugPart = $restaurant->slug ?: $restaurant->tenant_id;
+        if ($slugPart === null || $slugPart === '') {
+            Log::warning('PrintService: Cannot build share URL — missing slug and tenant_id', [
+                'restaurant_id' => $restaurant->id,
+            ]);
+
+            return 0;
+        }
+
+        $shareUrl = $base.'/r/'.rawurlencode((string) $slugPart);
+        $qrBinary = EscPosQrHelper::centeredQrCode($shareUrl);
+        $qrB64 = base64_encode($qrBinary);
+
+        $printers = Printer::where('restaurant_id', $restaurant->id)
+            ->where('is_active', true)
+            ->whereIn('role', ['receipt', 'general'])
+            ->get();
+
+        if ($printers->isEmpty()) {
+            Log::info("PrintService: No receipt printers for share QR slip, restaurant {$restaurant->id}");
+
+            return 0;
+        }
+
+        $tenantId = $restaurant->tenant_id;
+        if ($tenantId === null || $tenantId === '') {
+            $tenantId = app()->has('tenant_id') ? app('tenant_id') : null;
+        }
+        if ($tenantId === null || $tenantId === '') {
+            Log::error('PrintService: share QR slip — missing tenant_id', [
+                'restaurant_id' => $restaurant->id,
+            ]);
+
+            return 0;
+        }
+
+        $jobCount = 0;
+
+        foreach ($printers as $printer) {
+            $payload = $this->buildShareQrSlipTextPayload($restaurant, $printer);
+
+            $job = PrintJob::create([
+                'tenant_id' => $tenantId,
+                'restaurant_id' => $restaurant->id,
+                'printer_id' => $printer->id,
+                'order_id' => null,
+                'role' => 'receipt',
+                'status' => 'pending',
+                'payload' => [
+                    'text' => $payload,
+                    'type' => 'share_qr_slip',
+                    'escpos_binary_suffix' => $qrB64,
+                    'qr_url' => $shareUrl,
+                ],
+            ]);
+
+            $this->executeJob($job, $printer, $payload);
+            $jobCount++;
+        }
+
+        return $jobCount;
+    }
+
     public function testPrint(Printer $printer): bool
     {
         $separator = str_repeat('=', $this->getLineWidth($printer));
@@ -223,6 +315,8 @@ class PrintService
             $dash,
             '',
             $this->centerText('המדפסת פועלת תקין!', $printer),
+            '',
+            $this->centerText('Powered by TakeEat', $printer),
             '',
             $separator,
         ];
@@ -422,6 +516,7 @@ class PrintService
         if ($restaurantName) {
             $lines[] = $this->centerText($restaurantName, $printer);
         }
+        $lines[] = $this->centerText('Powered by TakeEat', $printer);
         $lines[] = '';
 
         return implode("\n", $lines);
@@ -536,6 +631,7 @@ class PrintService
 
         $lines[] = $separator;
         $lines[] = $this->centerText('תודה שבחרתם בנו!', $printer);
+        $lines[] = $this->centerText('Powered by TakeEat', $printer);
         $lines[] = '';
 
         return implode("\n", $lines);
@@ -577,7 +673,29 @@ class PrintService
         $lines[] = $dash;
         $lines[] = $this->centerText('דוח PDF מלא: ניהול > דוחות', $printer);
         $lines[] = $separator;
+        $lines[] = $this->centerText('Powered by TakeEat', $printer);
         $lines[] = '';
+
+        return implode("\n", $lines);
+    }
+
+    private function buildShareQrSlipTextPayload(Restaurant $restaurant, Printer $printer): string
+    {
+        $width = $this->getLineWidth($printer);
+        $separator = str_repeat('=', $width);
+        $name = $restaurant->name ?? 'המסעדה';
+
+        $lines = [
+            $separator,
+            $this->centerText('הזמנה מהירה מהנייד', $printer),
+            $this->centerText('סרקו לעמוד המסעדה', $printer),
+            $separator,
+            $this->centerText($name, $printer),
+            str_repeat('-', $width),
+            '',
+            $this->centerText('Powered by TakeEat', $printer),
+            '',
+        ];
 
         return implode("\n", $lines);
     }
@@ -618,10 +736,19 @@ class PrintService
             $adapter = $this->getAdapter($printer);
             $job->update(['status' => 'printing', 'attempts' => $job->attempts + 1]);
 
+            $suffixRaw = null;
+            if (! empty($job->payload['escpos_binary_suffix']) && is_string($job->payload['escpos_binary_suffix'])) {
+                $suffixRaw = base64_decode($job->payload['escpos_binary_suffix'], true);
+                if ($suffixRaw === false) {
+                    $suffixRaw = '';
+                }
+            }
+
             $success = $adapter->print($payload, [
                 'ip_address' => $printer->ip_address,
                 'port' => $printer->port,
                 'line_width' => $this->getLineWidth($printer),
+                'escpos_binary_suffix' => $suffixRaw ?? '',
             ]);
 
             $job->update([
@@ -657,7 +784,7 @@ class PrintService
         $result = [];
 
         foreach ($jobs as $job) {
-            $result[] = [
+            $row = [
                 'id' => $job->id,
                 'type' => $job->payload['type'] ?? 'custom',
                 'role' => $job->role ?? $job->printer->role ?? 'kitchen',
@@ -665,6 +792,10 @@ class PrintService
                 'order_id' => $job->order_id,
                 'created_at' => $job->created_at->format('H:i'),
             ];
+            if (! empty($job->payload['qr_url']) && is_string($job->payload['qr_url'])) {
+                $row['qr_url'] = $job->payload['qr_url'];
+            }
+            $result[] = $row;
             $job->update(['status' => 'done']);
         }
 
@@ -777,6 +908,7 @@ class PrintService
             $this->centerText('תשלום: מזומן', $printer),
             $separator,
             $this->centerText('תודה שבחרתם בנו!', $printer),
+            $this->centerText('Powered by TakeEat', $printer),
             '',
         ];
 
