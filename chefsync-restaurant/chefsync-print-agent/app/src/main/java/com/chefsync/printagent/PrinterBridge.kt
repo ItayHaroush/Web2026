@@ -60,10 +60,16 @@ object PrinterBridge {
             .joinToString("\n") { smartReverseHebrewLine(it) }
 
     private fun smartReverseHebrewLine(line: String): String {
-        if (line.isEmpty() || !line.contains(hebrewInWord)) {
+        if (line.isEmpty()) {
             return line
         }
-        val words = line.split(Regex("\\s+")).filter { it.isNotEmpty() }
+        val leadMatch = Regex("^(\\s*)(.*)$", RegexOption.DOT_MATCHES_ALL).find(line) ?: return line
+        val leading = leadMatch.groupValues[1]
+        val rest = leadMatch.groupValues[2]
+        if (rest.isEmpty() || !rest.contains(hebrewInWord)) {
+            return line
+        }
+        val words = rest.split(Regex("\\s+")).filter { it.isNotEmpty() }
         if (words.isEmpty()) {
             return line
         }
@@ -75,6 +81,6 @@ object PrinterBridge {
                     word
                 }
             }
-        return mapped.reversed().joinToString(" ")
+        return leading + mapped.reversed().joinToString(" ")
     }
 }

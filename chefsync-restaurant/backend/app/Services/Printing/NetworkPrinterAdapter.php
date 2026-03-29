@@ -7,18 +7,23 @@ use Illuminate\Support\Facades\Log;
 /**
  * שליחת ESC/POS דרך TCP (פורט 9100).
  *
- * SNBC BTP-S80: CP862 + ESC t 10 (0x0A) — עברית תקינה בטבלה זו (נבדק על המדפסת).
- * המדפסת מדפיסה LTR; מכינים טקסט RTL חכם (מילים עבריות מתהפכות + סדר מילים) לפני iconv.
+ * SNBC BTP-S80: CP862 + ESC t 10 (0x0A). מדפסת LTR — עברית עוברת דרך ThermalHebrewEscPosEncoder.
  */
 class NetworkPrinterAdapter implements PrinterAdapter
 {
-    /** ESC t n — Hebrew code page על BTP-S80 (CP:10 בתיעוד היצרן) */
+    /** ESC t n — Hebrew code page על BTP-S80 (CP:10) */
     private const ESC_POS_CODE_PAGE_HEBREW = 10;
 
-    /** ESC ! — כפול גובה בלבד (קריא יותר, רוחב שורה לא משתנה) */
+    /** ESC ! — כפול גובה בלבד */
     private const MODE_DOUBLE_HEIGHT = 0x10;
 
     private const MODE_NORMAL = 0x00;
+
+    public function __construct(
+        private ?ThermalHebrewEscPosEncoder $hebrewEncoder = null,
+    ) {
+        $this->hebrewEncoder ??= new ThermalHebrewEscPosEncoder;
+    }
 
     /**
      * שליחת ESC/POS דרך TCP socket
@@ -48,12 +53,9 @@ class NetworkPrinterAdapter implements PrinterAdapter
         }
 
         try {
-            $binary = $this->encodePayloadForCp862Hebrew($payload);
+            $binary = $this->hebrewEncoder->encodeUtf8ToCp862($payload, true);
 
-            // ESC @ — אתחול (חובה לפני ESC t כדי לא להישאר על טבלה קודמת)
             fwrite($socket, "\x1B\x40");
-
-            // ESC t 10 — Hebrew (BTP-S80); גוף ב-CP862 אחרי הכנת RTL
             fwrite($socket, "\x1B\x74".chr(self::ESC_POS_CODE_PAGE_HEBREW));
 
             if ($doubleHeight) {
@@ -67,7 +69,7 @@ class NetworkPrinterAdapter implements PrinterAdapter
             }
 
             fwrite($socket, "\n\n\n\n");
-            fwrite($socket, "\x1D\x56\x00"); // Full cut
+            fwrite($socket, "\x1D\x56\x00");
 
             fclose($socket);
 
@@ -83,110 +85,6 @@ class NetworkPrinterAdapter implements PrinterAdapter
 
             return false;
         }
-    }
-
-    /**
-     * UTF-8 → הכנה ל־RTL תרמי → CP862.
-     */
-    private function encodePayloadForCp862Hebrew(string $utf8): string
-    {
-        if ($utf8 === '') {
-            return '';
-        }
-
-        $normalized = $this->normalizeNewlinesForPrinter($utf8);
-        $normalized = $this->normalizeUnicodeForCp862($normalized);
-        $normalized = $this->prepareThermalRtlPayload($normalized);
-
-        $converted = @iconv('UTF-8', 'CP862//IGNORE', $normalized);
-        if ($converted !== false && $converted !== '') {
-            return $this->normalizeNewlinesForPrinter($converted);
-        }
-
-        $converted = @iconv('UTF-8', 'IBM862//IGNORE', $normalized);
-        if ($converted !== false && $converted !== '') {
-            return $this->normalizeNewlinesForPrinter($converted);
-        }
-
-        Log::warning('NetworkPrinterAdapter: CP862 iconv failed, using ASCII-safe fallback');
-
-        return $this->normalizeNewlinesForPrinter(preg_replace('/[^\x09\x0A\x0D\x20-\x7E]/', '?', $normalized) ?? '');
-    }
-
-    /**
-     * שורה-שורה: מילים עם עברית מתהפכות תו-תו, ואז סדר המילים בשורה מתהפך (מתאים למדפסת LTR).
-     */
-    private function prepareThermalRtlPayload(string $utf8): string
-    {
-        if ($utf8 === '') {
-            return '';
-        }
-
-        $lines = explode("\n", $utf8);
-
-        return implode("\n", array_map(fn (string $line) => $this->smartReverseHebrewLine($line), $lines));
-    }
-
-    private function smartReverseHebrewLine(string $line): string
-    {
-        if ($line === '' || ! preg_match('/\p{Hebrew}/u', $line)) {
-            return $line;
-        }
-
-        $words = preg_split('/\s+/u', $line, -1, PREG_SPLIT_NO_EMPTY);
-        if ($words === false || $words === []) {
-            return $line;
-        }
-
-        $mapped = array_map(function (string $word) {
-            return preg_match('/\p{Hebrew}/u', $word)
-                ? $this->reverseUtf8String($word)
-                : $word;
-        }, $words);
-
-        return implode(' ', array_reverse($mapped));
-    }
-
-    private function reverseUtf8String(string $s): string
-    {
-        if ($s === '') {
-            return '';
-        }
-
-        $chars = mb_str_split($s, 1, 'UTF-8');
-
-        return implode('', array_reverse($chars));
-    }
-
-    /**
-     * תווים שאין להם מקביל ב-CP862 — מחליפים לפני RTL (כדי שלא יתהפך "ש\"ח" למחרוזת שבורה).
-     */
-    private function normalizeUnicodeForCp862(string $s): string
-    {
-        $map = [
-            '₪' => 'ש"ח',
-            '־' => '-',
-            '–' => '-',
-            '—' => '-',
-            '…' => '...',
-            '"' => '"',
-            '"' => '"',
-            '„' => '"',
-            '‟' => '"',
-            "'" => "'",
-            "'" => "'",
-            '‚' => "'",
-            '‛' => "'",
-            '°' => ' ',
-            '×' => 'x',
-        ];
-
-        return strtr($s, $map);
-    }
-
-    private function normalizeNewlinesForPrinter(string $s): string
-    {
-        return str_replace(["\r\n", "\r"], "\n", $s);
     }
 
     /**

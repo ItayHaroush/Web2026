@@ -1,0 +1,227 @@
+{
+  "version": "1.0.0",
+  "producer": "Java AppCAT CLI",
+  "metadata": {
+    "analysisStartTime": "2026-03-16T18:06:32.076624Z",
+    "analysisEndTime": "2026-03-16T18:13:20.858414Z",
+    "status": "completed",
+    "privacyMode": "Protected",
+    "privacyModeHelpUrl": "https://aka.ms/appcat-privacy-mode",
+    "targetIds": [
+      "azure-aks",
+      "azure-appservice",
+      "azure-container-apps"
+    ],
+    "targetDisplayNames": [
+      "Azure Kubernetes Service",
+      "Azure App Service",
+      "Azure Container Apps"
+    ],
+    "capabilities": [],
+    "os": [],
+    "id": "1773684392076",
+    "name": "Report_202603162006",
+    "domains": [
+      "cloud-readiness",
+      "java-upgrade"
+    ],
+    "mode": "issue-only"
+  },
+  "summary": {
+    "totalProjects": 1,
+    "totalIssues": 1,
+    "totalIncidents": 6,
+    "totalEffort": 6,
+    "charts": {
+      "severity": {
+        "mandatory": 0,
+        "optional": 6,
+        "potential": 0,
+        "information": 0
+      },
+      "category": {
+        "containerization": 6
+      }
+    },
+    "security": {}
+  },
+  "projects": [
+    {
+      "path": ".",
+      "issues": 1,
+      "storyPoints": 6,
+      "properties": {
+        "appName": "chefsync-restaurant",
+        "jdkVersion": "Unknown",
+        "frameworks": [
+          "Laravel",
+          "React"
+        ],
+        "languages": [
+          "JavaScript",
+          "PHP",
+          "Hack",
+          "Java"
+        ],
+        "tools": [
+          "NodeJs"
+        ]
+      },
+      "incidents": [
+        {
+          "ruleId": "dockerfile-00010",
+          "incidentId": "b85ce777-d4d5-4774-a05d-dddca4ab5c22",
+          "location": "backend/vendor/laravel/sail/runtimes/8.1/Dockerfile",
+          "locationKind": "File",
+          "line": 22,
+          "column": 0,
+          "targets": {
+            "azure-aks": {
+              "effort": 1,
+              "severity": "optional"
+            },
+            "azure-container-apps": {
+              "effort": 1,
+              "severity": "optional"
+            }
+          },
+          "labels": [
+            "type=violation",
+            "ruleset=cloud-readiness"
+          ]
+        },
+        {
+          "ruleId": "dockerfile-00010",
+          "incidentId": "c98b4d4a-c881-4d05-bce7-85477dedcebe",
+          "location": "backend/vendor/laravel/sail/runtimes/8.0/Dockerfile",
+          "locationKind": "File",
+          "line": 22,
+          "column": 0,
+          "targets": {
+            "azure-aks": {
+              "effort": 1,
+              "severity": "optional"
+            },
+            "azure-container-apps": {
+              "effort": 1,
+              "severity": "optional"
+            }
+          },
+          "labels": [
+            "type=violation",
+            "ruleset=cloud-readiness"
+          ]
+        },
+        {
+          "ruleId": "dockerfile-00010",
+          "incidentId": "d29f429d-1c0e-4fe3-a9dc-61d5c4e8ac38",
+          "location": "backend/vendor/laravel/sail/runtimes/8.5/Dockerfile",
+          "locationKind": "File",
+          "line": 24,
+          "column": 0,
+          "targets": {
+            "azure-aks": {
+              "effort": 1,
+              "severity": "optional"
+            },
+            "azure-container-apps": {
+              "effort": 1,
+              "severity": "optional"
+            }
+          },
+          "labels": [
+            "type=violation",
+            "ruleset=cloud-readiness"
+          ]
+        },
+        {
+          "ruleId": "dockerfile-00010",
+          "incidentId": "ac7e4e1b-8b54-4840-971e-4623b7625bca",
+          "location": "backend/vendor/laravel/sail/runtimes/8.3/Dockerfile",
+          "locationKind": "File",
+          "line": 24,
+          "column": 0,
+          "targets": {
+            "azure-aks": {
+              "effort": 1,
+              "severity": "optional"
+            },
+            "azure-container-apps": {
+              "effort": 1,
+              "severity": "optional"
+            }
+          },
+          "labels": [
+            "type=violation",
+            "ruleset=cloud-readiness"
+          ]
+        },
+        {
+          "ruleId": "dockerfile-00010",
+          "incidentId": "e1923834-2a8d-4c53-a304-df682e088fbb",
+          "location": "backend/vendor/laravel/sail/runtimes/8.2/Dockerfile",
+          "locationKind": "File",
+          "line": 22,
+          "column": 0,
+          "targets": {
+            "azure-aks": {
+              "effort": 1,
+              "severity": "optional"
+            },
+            "azure-container-apps": {
+              "effort": 1,
+              "severity": "optional"
+            }
+          },
+          "labels": [
+            "type=violation",
+            "ruleset=cloud-readiness"
+          ]
+        },
+        {
+          "ruleId": "dockerfile-00010",
+          "incidentId": "5c9d46e7-011d-4f44-bc7a-930eb950bfea",
+          "location": "backend/vendor/laravel/sail/runtimes/8.4/Dockerfile",
+          "locationKind": "File",
+          "line": 24,
+          "column": 0,
+          "targets": {
+            "azure-aks": {
+              "effort": 1,
+              "severity": "optional"
+            },
+            "azure-container-apps": {
+              "effort": 1,
+              "severity": "optional"
+            }
+          },
+          "labels": [
+            "type=violation",
+            "ruleset=cloud-readiness"
+          ]
+        }
+      ]
+    }
+  ],
+  "rules": {
+    "dockerfile-00010": {
+      "id": "dockerfile-00010",
+      "description": "Running apt-get upgrade in a Dockerfile is generally discouraged because it can lead to unintended changes in the container's state, which can break the application or dependencies. \nInstead, it is recommended to use specific version tags for the base image and to install only the necessary packages with apt-get install to ensure reproducibility and stability.",
+      "title": "Avoid Docker apt upgrade command",
+      "severity": "optional",
+      "effort": 1,
+      "labels": [
+        "target=azure-aks",
+        "target=azure-container-apps",
+        "capability=containerization",
+        "source",
+        "domain=cloud-readiness",
+        "category=containerization",
+        "containerization",
+        "os=windows",
+        "os=linux"
+      ]
+    }
+  },
+  "security": []
+}
