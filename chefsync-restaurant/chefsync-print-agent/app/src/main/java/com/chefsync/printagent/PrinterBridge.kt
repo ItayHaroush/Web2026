@@ -14,6 +14,9 @@ object PrinterBridge {
      * SNBC BTP-S80: Hebrew CP table 10 (ESC t 0x0A) + CP862. LTR printer → RTL prep before encode.
      */
     private val ESC_HEBREW_TABLE = byteArrayOf(0x1B, 0x74, 0x0A)
+    /** ריווח קל בין תווים; אחרי גוף מאפסים */
+    private val ESC_CHAR_SPACING_1 = byteArrayOf(0x1B, 0x20, 0x01)
+    private val ESC_CHAR_SPACING_0 = byteArrayOf(0x1B, 0x20, 0x00)
 
     private val cp862: Charset = Charset.forName("IBM862")
     private val ESC_CUT = byteArrayOf(0x1D, 0x56, 0x00)
@@ -37,7 +40,9 @@ object PrinterBridge {
 
             out.write(ESC_INIT)
             out.write(ESC_HEBREW_TABLE)
+            out.write(ESC_CHAR_SPACING_1)
             out.write(prepared.toByteArray(cp862))
+            out.write(ESC_CHAR_SPACING_0)
             out.write(FEED)
             out.write(ESC_CUT)
             out.flush()
@@ -75,12 +80,22 @@ object PrinterBridge {
         }
         val mapped =
             words.map { word ->
-                if (word.contains(hebrewInWord)) {
+                if (word.contains(hebrewInWord) && !shouldSkipCharReverseForToken(word)) {
                     word.reversed()
                 } else {
                     word
                 }
             }
         return leading + mapped.reversed().joinToString(" ")
+    }
+
+    private fun shouldSkipCharReverseForToken(word: String): Boolean {
+        if (word.matches(Regex("^\\d+([.,]\\d+)?$"))) return true
+        if (word.matches(Regex("^#\\d+$"))) return true
+        if (word.matches(Regex("^\\d+x$", RegexOption.IGNORE_CASE))) return true
+        if (word.matches(Regex("^₪\\s*\\d+([.,]\\d+)?$"))) return true
+        if (word.matches(Regex("^ש\"ח[\\d.,]+$"))) return true
+        if (word == "ש\"ח") return true
+        return false
     }
 }

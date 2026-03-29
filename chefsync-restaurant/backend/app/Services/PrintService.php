@@ -3,11 +3,11 @@
 namespace App\Services;
 
 use App\Models\Order;
-use App\Models\Printer;
 use App\Models\PrintDevice;
+use App\Models\Printer;
 use App\Models\PrintJob;
-use App\Services\Printing\PrinterAdapter;
 use App\Services\Printing\NetworkPrinterAdapter;
+use App\Services\Printing\PrinterAdapter;
 use Illuminate\Support\Facades\Log;
 
 class PrintService
@@ -28,6 +28,7 @@ class PrintService
 
         if ($printers->isEmpty()) {
             Log::info("PrintService: No active kitchen printers for restaurant {$order->restaurant_id}");
+
             return 0;
         }
 
@@ -38,6 +39,7 @@ class PrintService
 
             $relevantItems = $order->items->filter(function ($item) use ($categoryIds) {
                 $categoryId = $item->menuItem?->category_id ?? $item->category_id ?? null;
+
                 return empty($categoryIds) || in_array($categoryId, $categoryIds);
             });
 
@@ -82,6 +84,7 @@ class PrintService
 
         if ($printers->isEmpty()) {
             Log::info("PrintService: No active receipt printers for restaurant {$order->restaurant_id}");
+
             return 0;
         }
 
@@ -171,7 +174,7 @@ class PrintService
             "IP: {$printer->ip_address}:{$printer->port}",
             "רוחב נייר: {$printer->paper_width}",
             "תפקיד: {$roleLabel}",
-            "קטגוריות: " . ($printer->categories->pluck('name')->join(', ') ?: 'הכל'),
+            'קטגוריות: '.($printer->categories->pluck('name')->join(', ') ?: 'הכל'),
             $dash,
             '',
             $this->centerText('המדפסת פועלת תקין!', $printer),
@@ -185,6 +188,7 @@ class PrintService
         return $adapter->print($payload, [
             'ip_address' => $printer->ip_address,
             'port' => $printer->port,
+            'line_width' => $this->getLineWidth($printer),
         ]);
     }
 
@@ -202,7 +206,7 @@ class PrintService
         $lines[] = $this->centerText("הזמנה #{$order->id}", $printer);
         $lines[] = $separator;
 
-        $lines[] = $order->created_at->format('d.m.Y') . ' | ' . $order->created_at->format('H:i');
+        $lines[] = $order->created_at->format('d.m.Y').' | '.$order->created_at->format('H:i');
 
         $orderInfo = [];
         if ($order->source === 'kiosk') {
@@ -237,21 +241,21 @@ class PrintService
             $qty = $item->quantity ?? 1;
             $lines[] = "{$qty}x {$name}";
 
-            if (!empty($item->variant_name)) {
+            if (! empty($item->variant_name)) {
                 $lines[] = "  סוג: {$item->variant_name}";
             }
 
             $addons = is_array($item->addons) ? $item->addons : [];
             foreach ($addons as $addon) {
                 $addonName = is_string($addon) ? $addon : ($addon['name'] ?? $addon['addon_name'] ?? '');
-                $onSide = is_array($addon) && !empty($addon['on_side']);
+                $onSide = is_array($addon) && ! empty($addon['on_side']);
                 if ($addonName) {
                     $prefix = $onSide ? '  בצד:' : '  +';
                     $lines[] = "{$prefix} {$addonName}";
                 }
             }
 
-            if (!empty($item->notes)) {
+            if (! empty($item->notes)) {
                 $lines[] = "  הערה: {$item->notes}";
             }
         }
@@ -309,7 +313,7 @@ class PrintService
             $lines[] = "{$qty}x {$name}";
             $lines[] = str_pad("  ₪{$lineTotal}", $width, ' ', STR_PAD_LEFT);
 
-            if (!empty($item->variant_name)) {
+            if (! empty($item->variant_name)) {
                 $lines[] = "  סוג: {$item->variant_name}";
             }
             $addons = is_array($item->addons) ? $item->addons : [];
@@ -317,7 +321,7 @@ class PrintService
                 $addonName = is_string($addon) ? $addon : ($addon['name'] ?? '');
                 $addonPrice = is_array($addon) ? ($addon['price'] ?? 0) : 0;
                 if ($addonName) {
-                    $priceFmt = $addonPrice > 0 ? " ₪" . number_format($addonPrice, 2) : '';
+                    $priceFmt = $addonPrice > 0 ? ' ₪'.number_format($addonPrice, 2) : '';
                     $lines[] = "  + {$addonName}{$priceFmt}";
                 }
             }
@@ -326,11 +330,11 @@ class PrintService
         $lines[] = $separator;
 
         if ($order->delivery_fee > 0) {
-            $lines[] = "דמי משלוח: ₪" . number_format($order->delivery_fee, 2);
+            $lines[] = 'דמי משלוח: ₪'.number_format($order->delivery_fee, 2);
         }
 
         $totalAmount = $order->total_amount ?? 0;
-        $lines[] = $this->centerText("סה\"כ: ₪" . number_format($totalAmount, 2), $printer);
+        $lines[] = $this->centerText('סה"כ: ₪'.number_format($totalAmount, 2), $printer);
 
         $paymentLabel = match ($order->payment_method) {
             'cash' => 'מזומן',
@@ -339,11 +343,11 @@ class PrintService
         };
         $lines[] = "תשלום: {$paymentLabel}";
 
-        if (!empty($extraData['change']) && $extraData['change'] > 0) {
-            $lines[] = "עודף: ₪" . number_format($extraData['change'], 2);
+        if (! empty($extraData['change']) && $extraData['change'] > 0) {
+            $lines[] = 'עודף: ₪'.number_format($extraData['change'], 2);
         }
 
-        if (!empty($extraData['receipt_number'])) {
+        if (! empty($extraData['receipt_number'])) {
             $lines[] = $dash;
             $lines[] = "מס׳ קבלה: {$extraData['receipt_number']}";
         }
@@ -374,6 +378,7 @@ class PrintService
                 'status' => 'pending_bridge',
                 'attempts' => $job->attempts + 1,
             ]);
+
             return;
         }
 
@@ -382,6 +387,7 @@ class PrintService
                 'status' => 'pending_browser',
                 'attempts' => $job->attempts + 1,
             ]);
+
             return;
         }
 
@@ -392,6 +398,7 @@ class PrintService
             $success = $adapter->print($payload, [
                 'ip_address' => $printer->ip_address,
                 'port' => $printer->port,
+                'line_width' => $this->getLineWidth($printer),
             ]);
 
             $job->update([
@@ -460,8 +467,8 @@ class PrintService
     private function getAdapter(Printer $printer): PrinterAdapter
     {
         return match ($printer->type) {
-            'network' => new NetworkPrinterAdapter(),
-            default => new NetworkPrinterAdapter(),
+            'network' => new NetworkPrinterAdapter,
+            default => new NetworkPrinterAdapter,
         };
     }
 
@@ -478,6 +485,7 @@ class PrintService
             return $text;
         }
         $padding = (int) (($width - $textLen) / 2);
-        return str_repeat(' ', $padding) . $text;
+
+        return str_repeat(' ', $padding).$text;
     }
 }

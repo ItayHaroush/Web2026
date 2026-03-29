@@ -34,6 +34,7 @@ class NetworkPrinterAdapter implements PrinterAdapter
         $port = $config['port'] ?? 9100;
         $timeout = $config['timeout'] ?? 5;
         $doubleHeight = $config['double_height'] ?? true;
+        $lineWidth = isset($config['line_width']) ? (int) $config['line_width'] : null;
 
         if (! $ip) {
             Log::error('NetworkPrinterAdapter: Missing IP address');
@@ -53,10 +54,12 @@ class NetworkPrinterAdapter implements PrinterAdapter
         }
 
         try {
-            $binary = $this->hebrewEncoder->encodeUtf8ToCp862($payload, true);
+            $binary = $this->hebrewEncoder->encodeUtf8ToCp862($payload, true, $lineWidth);
 
             fwrite($socket, "\x1B\x40");
             fwrite($socket, "\x1B\x74".chr(self::ESC_POS_CODE_PAGE_HEBREW));
+            // ESC SP n — ריווח קל בין תווים (Epson/SNBC תואם)
+            fwrite($socket, "\x1B\x20\x01");
 
             if ($doubleHeight) {
                 fwrite($socket, "\x1B\x21".chr(self::MODE_DOUBLE_HEIGHT));
@@ -67,6 +70,8 @@ class NetworkPrinterAdapter implements PrinterAdapter
             if ($doubleHeight) {
                 fwrite($socket, "\x1B\x21".chr(self::MODE_NORMAL));
             }
+
+            fwrite($socket, "\x1B\x20\x00");
 
             fwrite($socket, "\n\n\n\n");
             fwrite($socket, "\x1D\x56\x00");

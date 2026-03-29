@@ -6,14 +6,15 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * UTF-8 → הכנת RTL למדפסת תרמית LTR → CP862 (IBM862).
- * אותה לוגיקה כמו ב־php -r גולמי, אבל עם היפוך חכם כדי שהעברית לא תודפס הפוכה.
+ * מחירים/מספרים: בלי היפוך תווים. אופציונלי: מרכוז שורות עבריות קצרות אחרי RTL.
  */
 final class ThermalHebrewEscPosEncoder
 {
     /**
-     * @param  bool  $applyRtl  כבה לבדיקות (כמו one-liner גולמי)
+     * @param  bool  $applyRtl  כבה לבדיקות
+     * @param  int|null  $lineWidth  רוחב שורה (תווים) למרכוז שורות עבריות קצרות; null = בלי מרכוז נוסף
      */
-    public function encodeUtf8ToCp862(string $utf8, bool $applyRtl = true): string
+    public function encodeUtf8ToCp862(string $utf8, bool $applyRtl = true, ?int $lineWidth = null): string
     {
         if ($utf8 === '') {
             return '';
@@ -23,6 +24,9 @@ final class ThermalHebrewEscPosEncoder
         $normalized = $this->normalizeUnicodeForCp862($normalized);
         if ($applyRtl) {
             $normalized = $this->prepareThermalRtlPayload($normalized);
+        }
+        if ($lineWidth !== null && $lineWidth > 0) {
+            $normalized = $this->applySelectiveCentering($normalized, $lineWidth);
         }
 
         $converted = @iconv('UTF-8', 'CP862//IGNORE', $normalized);
@@ -41,9 +45,57 @@ final class ThermalHebrewEscPosEncoder
     }
 
     /**
-     * שורה-שורה: מילים עם עברית מתהפכות תו-תו, ואז סדר המילים מתהפך.
-     * ריווח מוביל (למשל מרכוז) נשמר ולא נכנס לפיצול מילים.
+     * מרכוז אחרי RTL לשורות עבריות קצרות בלבד (לא מפרידים, לא שורות מלאות, לא תוספות, לא IP/תאריך).
      */
+    private function applySelectiveCentering(string $text, int $width): string
+    {
+        $lines = explode("\n", $text);
+
+        return implode("\n", array_map(function (string $line) use ($width) {
+            if (! $this->shouldCenterLineAfterRtl($line, $width)) {
+                return $line;
+            }
+
+            $trimmed = ltrim($line, ' ');
+            $len = mb_strlen($trimmed, 'UTF-8');
+            if ($len >= $width) {
+                return $trimmed;
+            }
+            $pad = (int) (($width - $len) / 2);
+
+            return str_repeat(' ', $pad).$trimmed;
+        }, $lines));
+    }
+
+    private function shouldCenterLineAfterRtl(string $line, int $width): bool
+    {
+        if ($line === '') {
+            return false;
+        }
+        if (mb_strlen($line, 'UTF-8') >= $width) {
+            return false;
+        }
+
+        $trimmed = ltrim($line, ' ');
+        if ($trimmed === '') {
+            return false;
+        }
+
+        if (preg_match('/^\s{2,}\+/u', $line)) {
+            return false;
+        }
+
+        if (preg_match('/^IP:/iu', $trimmed)) {
+            return false;
+        }
+
+        if (preg_match('/\d{1,2}\.\d{1,2}\.\d{2,4}\s*\|\s*\d{1,2}:\d{2}/u', $trimmed)) {
+            return false;
+        }
+
+        return (bool) preg_match('/\p{Hebrew}/u', $trimmed);
+    }
+
     private function prepareThermalRtlPayload(string $utf8): string
     {
         if ($utf8 === '') {
@@ -78,12 +130,48 @@ final class ThermalHebrewEscPosEncoder
         }
 
         $mapped = array_map(function (string $word) {
+            if ($this->shouldSkipCharReverseForToken($word)) {
+                return $word;
+            }
+
             return preg_match('/\p{Hebrew}/u', $word)
                 ? $this->reverseUtf8String($word)
                 : $word;
         }, $words);
 
         return $leading.implode(' ', array_reverse($mapped));
+    }
+
+    /**
+     * מחירים ומספרים — לא מפעילים היפוך תווים (נשמר סדר ספרות וש\"ח צמוד למספר).
+     */
+    private function shouldSkipCharReverseForToken(string $word): bool
+    {
+        if (preg_match('/^[\d]+([.,][\d]+)?$/u', $word)) {
+            return true;
+        }
+
+        if (preg_match('/^#\d+$/u', $word)) {
+            return true;
+        }
+
+        if (preg_match('/^\d+x$/iu', $word)) {
+            return true;
+        }
+
+        if (preg_match('/^₪\s*[\d]+([.,][\d]+)?$/u', $word)) {
+            return true;
+        }
+
+        if (preg_match('/^ש"ח[\d.,]+$/u', $word)) {
+            return true;
+        }
+
+        if (preg_match('/^ש"ח$/u', $word)) {
+            return true;
+        }
+
+        return false;
     }
 
     private function reverseUtf8String(string $s): string
