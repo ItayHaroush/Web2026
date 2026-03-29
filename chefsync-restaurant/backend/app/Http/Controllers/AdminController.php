@@ -2,37 +2,37 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
-use App\Models\MenuItem;
-use App\Models\Category;
-use App\Models\Order;
-use App\Models\Restaurant;
-use App\Models\City;
-use App\Models\RestaurantAddon;
-use App\Models\RestaurantAddonGroup;
-use App\Models\RestaurantVariant;
-use App\Models\CategoryBasePrice;
-use App\Models\MenuItemVariant;
-use App\Models\MenuItemAddonGroup;
-use App\Models\MenuItemAddon;
-use App\Models\PriceRule;
-use App\Models\DeliveryZone;
 use App\Models\CashMovement;
 use App\Models\CashRegisterShift;
+use App\Models\Category;
+use App\Models\CategoryBasePrice;
+use App\Models\City;
+use App\Models\DeliveryZone;
+use App\Models\MenuItem;
+use App\Models\MenuItemAddon;
+use App\Models\MenuItemAddonGroup;
+use App\Models\MenuItemVariant;
+use App\Models\Order;
 use App\Models\PaymentSession;
-use App\Services\BasePriceService;
-use App\Services\OrderEventService;
-use App\Services\RestaurantPaymentService;
-use App\Services\CustomerOrderPushService;
-use App\Services\HypPaymentService;
-use App\Services\SubscriptionPricingService;
+use App\Models\PriceRule;
+use App\Models\Restaurant;
+use App\Models\RestaurantAddon;
+use App\Models\RestaurantAddonGroup;
 use App\Models\RestaurantPayment;
 use App\Models\RestaurantSubscription;
+use App\Models\RestaurantVariant;
+use App\Models\User;
+use App\Services\BasePriceService;
+use App\Services\CustomerOrderPushService;
+use App\Services\HypPaymentService;
+use App\Services\OrderEventService;
+use App\Services\RestaurantPaymentService;
+use App\Services\SubscriptionPricingService;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class AdminController extends Controller
 {
@@ -52,6 +52,7 @@ class AdminController extends Controller
             $tenantId = app()->has('tenant_id') ? app('tenant_id') : $request->header('X-Tenant-ID');
             if ($tenantId) {
                 $restaurant = Restaurant::withoutGlobalScopes()->where('tenant_id', $tenantId)->first();
+
                 return $restaurant?->id;
             }
         }
@@ -220,7 +221,7 @@ class AdminController extends Controller
         $user = $request->user();
         $restaurant = $this->resolveRestaurant($request);
 
-        if (!$restaurant) {
+        if (! $restaurant) {
             return response()->json([
                 'success' => false,
                 'message' => 'לא נמצאה מסעדה למשתמש זה',
@@ -271,7 +272,7 @@ class AdminController extends Controller
         $dineInVal = $request->input('dine_in_adjustment');
         if ($dineInVal !== null && $dineInVal !== '' && (float) $dineInVal != 0) {
             $restaurant = $this->resolveRestaurant($request);
-            if ($restaurant && !$restaurant->enable_dine_in_pricing) {
+            if ($restaurant && ! $restaurant->enable_dine_in_pricing) {
                 $restaurant->update(['enable_dine_in_pricing' => true]);
             }
         }
@@ -348,7 +349,7 @@ class AdminController extends Controller
         $category = Category::where('restaurant_id', $this->resolveRestaurantId($request))
             ->findOrFail($id);
 
-        $category->is_active = !$category->is_active;
+        $category->is_active = ! $category->is_active;
         $category->save();
 
         return response()->json([
@@ -362,7 +363,7 @@ class AdminController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isManager() && !$user->is_super_admin) {
+        if (! $user->isManager() && ! $user->is_super_admin) {
             return response()->json([
                 'success' => false,
                 'message' => 'אין לך הרשאה להעתיק קטגוריות',
@@ -370,7 +371,7 @@ class AdminController extends Controller
         }
 
         $restaurant = $this->resolveRestaurant($request);
-        if (!$restaurant) {
+        if (! $restaurant) {
             return response()->json([
                 'success' => false,
                 'message' => 'לא נמצאה מסעדה למשתמש',
@@ -389,23 +390,23 @@ class AdminController extends Controller
 
         $newCategory = Category::create([
             'restaurant_id' => $restaurant->id,
-            'tenant_id'     => $restaurant->tenant_id,
-            'name'          => $originalCategory->name . ' (עותק)',
-            'description'   => $originalCategory->description,
-            'icon'          => $originalCategory->icon,
-            'sort_order'    => $maxSortOrder + 1,
-            'is_active'     => $originalCategory->is_active,
-            'dish_type'     => $originalCategory->dish_type,
+            'tenant_id' => $restaurant->tenant_id,
+            'name' => $originalCategory->name.' (עותק)',
+            'description' => $originalCategory->description,
+            'icon' => $originalCategory->icon,
+            'sort_order' => $maxSortOrder + 1,
+            'is_active' => $originalCategory->is_active,
+            'dish_type' => $originalCategory->dish_type,
             'dine_in_adjustment' => $originalCategory->dine_in_adjustment,
         ]);
 
         // העתקת תמחור בסיס לקטגוריה
         foreach ($originalCategory->basePrices as $basePrice) {
             CategoryBasePrice::create([
-                'category_id'          => $newCategory->id,
+                'category_id' => $newCategory->id,
                 'restaurant_variant_id' => $basePrice->restaurant_variant_id,
-                'tenant_id'            => $restaurant->tenant_id,
-                'price_delta'          => $basePrice->price_delta,
+                'tenant_id' => $restaurant->tenant_id,
+                'price_delta' => $basePrice->price_delta,
             ]);
         }
 
@@ -424,8 +425,8 @@ class AdminController extends Controller
                 $oldPath = str_replace('/storage/', 'public/', $storagePath);
                 if (Storage::exists($oldPath)) {
                     $extension = pathinfo($oldPath, PATHINFO_EXTENSION);
-                    $newFilename = Str::uuid() . '.' . $extension;
-                    $newPath = 'public/menu-items/' . $newFilename;
+                    $newFilename = Str::uuid().'.'.$extension;
+                    $newPath = 'public/menu-items/'.$newFilename;
                     Storage::copy($oldPath, $newPath);
                     $newImageUrl = Storage::url($newPath);
                 } else {
@@ -435,19 +436,19 @@ class AdminController extends Controller
             }
 
             $newItem = MenuItem::create([
-                'restaurant_id'      => $restaurant->id,
-                'category_id'        => $newCategory->id,
-                'tenant_id'          => $restaurant->tenant_id,
-                'name'               => $originalItem->name,
-                'description'        => $originalItem->description,
-                'allergen_tags'      => $originalItem->allergen_tags,
-                'price'              => $originalItem->price,
-                'image_url'          => $newImageUrl,
-                'is_available'       => $originalItem->is_available,
-                'use_variants'       => $originalItem->use_variants,
-                'use_addons'         => $originalItem->use_addons,
+                'restaurant_id' => $restaurant->id,
+                'category_id' => $newCategory->id,
+                'tenant_id' => $restaurant->tenant_id,
+                'name' => $originalItem->name,
+                'description' => $originalItem->description,
+                'allergen_tags' => $originalItem->allergen_tags,
+                'price' => $originalItem->price,
+                'image_url' => $newImageUrl,
+                'is_available' => $originalItem->is_available,
+                'use_variants' => $originalItem->use_variants,
+                'use_addons' => $originalItem->use_addons,
                 'addons_group_scope' => $originalItem->addons_group_scope,
-                'max_addons'         => $originalItem->max_addons,
+                'max_addons' => $originalItem->max_addons,
                 'dine_in_adjustment' => $originalItem->dine_in_adjustment,
             ]);
 
@@ -455,40 +456,40 @@ class AdminController extends Controller
             foreach ($originalItem->variants as $variant) {
                 MenuItemVariant::create([
                     'menu_item_id' => $newItem->id,
-                    'tenant_id'    => $restaurant->tenant_id,
-                    'name'         => $variant->name,
-                    'price_delta'  => $variant->price_delta,
-                    'is_default'   => $variant->is_default,
-                    'is_active'    => $variant->is_active,
-                    'sort_order'   => $variant->sort_order,
+                    'tenant_id' => $restaurant->tenant_id,
+                    'name' => $variant->name,
+                    'price_delta' => $variant->price_delta,
+                    'is_default' => $variant->is_default,
+                    'is_active' => $variant->is_active,
+                    'sort_order' => $variant->sort_order,
                 ]);
             }
 
             // העתקת קבוצות תוספות ברמת פריט
             foreach ($originalItem->addonGroups as $originalGroup) {
                 $newGroup = MenuItemAddonGroup::create([
-                    'menu_item_id'   => $newItem->id,
-                    'tenant_id'      => $restaurant->tenant_id,
-                    'name'           => $originalGroup->name,
+                    'menu_item_id' => $newItem->id,
+                    'tenant_id' => $restaurant->tenant_id,
+                    'name' => $originalGroup->name,
                     'selection_type' => $originalGroup->selection_type,
                     'min_selections' => $originalGroup->min_selections,
                     'max_selections' => $originalGroup->max_selections,
-                    'is_required'    => $originalGroup->is_required,
-                    'is_active'      => $originalGroup->is_active,
-                    'sort_order'     => $originalGroup->sort_order,
+                    'is_required' => $originalGroup->is_required,
+                    'is_active' => $originalGroup->is_active,
+                    'sort_order' => $originalGroup->sort_order,
                 ]);
 
                 // העתקת תוספות בודדות בקבוצה
                 foreach ($originalGroup->addons as $addon) {
                     MenuItemAddon::create([
                         'addon_group_id' => $newGroup->id,
-                        'menu_item_id'   => $newItem->id,
-                        'tenant_id'      => $restaurant->tenant_id,
-                        'name'           => $addon->name,
-                        'price_delta'    => $addon->price_delta,
-                        'is_default'     => $addon->is_default,
-                        'is_active'      => $addon->is_active,
-                        'sort_order'     => $addon->sort_order,
+                        'menu_item_id' => $newItem->id,
+                        'tenant_id' => $restaurant->tenant_id,
+                        'name' => $addon->name,
+                        'price_delta' => $addon->price_delta,
+                        'is_default' => $addon->is_default,
+                        'is_active' => $addon->is_active,
+                        'sort_order' => $addon->sort_order,
                     ]);
                 }
             }
@@ -497,8 +498,8 @@ class AdminController extends Controller
         $newCategory->loadCount('items');
 
         return response()->json([
-            'success'  => true,
-            'message'  => 'הקטגוריה הועתקה בהצלחה!',
+            'success' => true,
+            'message' => 'הקטגוריה הועתקה בהצלחה!',
             'category' => $newCategory,
         ], 201);
     }
@@ -530,7 +531,7 @@ class AdminController extends Controller
 
         Log::info('Found items', [
             'count' => $items->count(),
-            'items' => $items->map(fn($item) => [
+            'items' => $items->map(fn ($item) => [
                 'id' => $item->id,
                 'name' => $item->name,
                 'category_id' => $item->category_id,
@@ -688,7 +689,7 @@ class AdminController extends Controller
         // הפעלה אוטומטית של תמחור ישיבה כשמגדירים התאמה
         if (isset($payload['dine_in_adjustment']) && $payload['dine_in_adjustment'] !== null && (float) $payload['dine_in_adjustment'] != 0) {
             $restaurant = $this->resolveRestaurant($request);
-            if ($restaurant && !$restaurant->enable_dine_in_pricing) {
+            if ($restaurant && ! $restaurant->enable_dine_in_pricing) {
                 $restaurant->update(['enable_dine_in_pricing' => true]);
             }
         }
@@ -770,7 +771,7 @@ class AdminController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isManager() && !$user->is_super_admin) {
+        if (! $user->isManager() && ! $user->is_super_admin) {
             return response()->json([
                 'success' => false,
                 'message' => 'אין לך הרשאה לצפות בסלטים',
@@ -778,7 +779,7 @@ class AdminController extends Controller
         }
 
         $restaurant = $this->resolveRestaurant($request);
-        if (!$restaurant) {
+        if (! $restaurant) {
             return response()->json([
                 'success' => false,
                 'message' => 'לא נמצאה מסעדה למשתמש',
@@ -803,7 +804,7 @@ class AdminController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isManager() && !$user->is_super_admin) {
+        if (! $user->isManager() && ! $user->is_super_admin) {
             return response()->json([
                 'success' => false,
                 'message' => 'אין לך הרשאה להוסיף סלטים',
@@ -822,7 +823,7 @@ class AdminController extends Controller
         ]);
 
         $restaurant = $this->resolveRestaurant($request);
-        if (!$restaurant) {
+        if (! $restaurant) {
             return response()->json([
                 'success' => false,
                 'message' => 'לא נמצאה מסעדה למשתמש',
@@ -835,15 +836,15 @@ class AdminController extends Controller
             : RestaurantAddonGroup::where('restaurant_id', $restaurant->id)->orderBy('sort_order')->firstOrFail();
         $maxOrder = RestaurantAddon::where('addon_group_id', $group->id)->max('sort_order') ?? 0;
         $categoryIds = collect($request->input('category_ids', []))
-            ->filter(fn($id) => is_numeric($id))
-            ->map(fn($id) => (int) $id)
+            ->filter(fn ($id) => is_numeric($id))
+            ->map(fn ($id) => (int) $id)
             ->values();
 
         if ($categoryIds->isNotEmpty()) {
             $allowedCategoryIds = Category::where('restaurant_id', $restaurant->id)
                 ->whereIn('id', $categoryIds)
                 ->pluck('id')
-                ->map(fn($id) => (int) $id)
+                ->map(fn ($id) => (int) $id)
                 ->values();
             $categoryIds = $allowedCategoryIds;
         }
@@ -872,7 +873,7 @@ class AdminController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isManager() && !$user->is_super_admin) {
+        if (! $user->isManager() && ! $user->is_super_admin) {
             return response()->json([
                 'success' => false,
                 'message' => 'אין לך הרשאה לעדכן סלטים',
@@ -892,7 +893,7 @@ class AdminController extends Controller
         ]);
 
         $restaurant = $this->resolveRestaurant($request);
-        if (!$restaurant) {
+        if (! $restaurant) {
             return response()->json([
                 'success' => false,
                 'message' => 'לא נמצאה מסעדה למשתמש',
@@ -905,15 +906,15 @@ class AdminController extends Controller
         $payload = $request->only(['name', 'price_delta', 'selection_weight', 'max_quantity', 'is_active', 'sort_order']);
         if ($request->has('category_ids')) {
             $categoryIds = collect($request->input('category_ids', []))
-                ->filter(fn($id) => is_numeric($id))
-                ->map(fn($id) => (int) $id)
+                ->filter(fn ($id) => is_numeric($id))
+                ->map(fn ($id) => (int) $id)
                 ->values();
 
             if ($categoryIds->isNotEmpty()) {
                 $categoryIds = Category::where('restaurant_id', $restaurant->id)
                     ->whereIn('id', $categoryIds)
                     ->pluck('id')
-                    ->map(fn($id) => (int) $id)
+                    ->map(fn ($id) => (int) $id)
                     ->values();
             }
 
@@ -938,7 +939,7 @@ class AdminController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isManager() && !$user->is_super_admin) {
+        if (! $user->isManager() && ! $user->is_super_admin) {
             return response()->json([
                 'success' => false,
                 'message' => 'אין לך הרשאה למחוק סלטים',
@@ -946,7 +947,7 @@ class AdminController extends Controller
         }
 
         $restaurant = $this->resolveRestaurant($request);
-        if (!$restaurant) {
+        if (! $restaurant) {
             return response()->json([
                 'success' => false,
                 'message' => 'לא נמצאה מסעדה למשתמש',
@@ -972,7 +973,7 @@ class AdminController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isManager() && !$user->is_super_admin) {
+        if (! $user->isManager() && ! $user->is_super_admin) {
             return response()->json([
                 'success' => false,
                 'message' => 'אין לך הרשאה לצפות באזורי משלוח',
@@ -980,7 +981,7 @@ class AdminController extends Controller
         }
 
         $restaurant = $this->resolveRestaurant($request);
-        if (!$restaurant) {
+        if (! $restaurant) {
             return response()->json([
                 'success' => false,
                 'message' => 'לא נמצאה מסעדה למשתמש',
@@ -1001,7 +1002,7 @@ class AdminController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isManager() && !$user->is_super_admin) {
+        if (! $user->isManager() && ! $user->is_super_admin) {
             return response()->json([
                 'success' => false,
                 'message' => 'אין לך הרשאה להוסיף אזורי משלוח',
@@ -1025,7 +1026,7 @@ class AdminController extends Controller
         ]);
 
         // אימות שיש לפחות city_id או polygon
-        if (!$request->filled('city_id') && !$request->filled('polygon')) {
+        if (! $request->filled('city_id') && ! $request->filled('polygon')) {
             return response()->json([
                 'success' => false,
                 'message' => 'חובה לבחור עיר או לצייר פוליגון',
@@ -1033,7 +1034,7 @@ class AdminController extends Controller
         }
 
         $restaurant = $this->resolveRestaurant($request);
-        if (!$restaurant) {
+        if (! $restaurant) {
             return response()->json([
                 'success' => false,
                 'message' => 'לא נמצאה מסעדה למשתמש',
@@ -1041,13 +1042,13 @@ class AdminController extends Controller
         }
 
         $pricingType = $request->input('pricing_type');
-        if ($pricingType === 'fixed' && !$request->filled('fixed_fee')) {
+        if ($pricingType === 'fixed' && ! $request->filled('fixed_fee')) {
             return response()->json([
                 'success' => false,
                 'message' => 'חובה להזין מחיר קבוע',
             ], 422);
         }
-        if ($pricingType === 'per_km' && !$request->filled('per_km_fee')) {
+        if ($pricingType === 'per_km' && ! $request->filled('per_km_fee')) {
             return response()->json([
                 'success' => false,
                 'message' => 'חובה להזין מחיר לק"מ',
@@ -1055,14 +1056,14 @@ class AdminController extends Controller
         }
         if ($pricingType === 'tiered') {
             $tiers = $request->input('tiered_fees', []);
-            if (!is_array($tiers) || empty($tiers)) {
+            if (! is_array($tiers) || empty($tiers)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'חובה להזין מדרגות מחיר',
                 ], 422);
             }
             foreach ($tiers as $tier) {
-                if (!is_array($tier) || !isset($tier['upto_km'], $tier['fee'])) {
+                if (! is_array($tier) || ! isset($tier['upto_km'], $tier['fee'])) {
                     return response()->json([
                         'success' => false,
                         'message' => 'מדרגות מחיר לא תקינות',
@@ -1098,7 +1099,7 @@ class AdminController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isManager() && !$user->is_super_admin) {
+        if (! $user->isManager() && ! $user->is_super_admin) {
             return response()->json([
                 'success' => false,
                 'message' => 'אין לך הרשאה לעדכן אזורי משלוח',
@@ -1122,7 +1123,7 @@ class AdminController extends Controller
         ]);
 
         $restaurant = $this->resolveRestaurant($request);
-        if (!$restaurant) {
+        if (! $restaurant) {
             return response()->json([
                 'success' => false,
                 'message' => 'לא נמצאה מסעדה למשתמש',
@@ -1146,7 +1147,7 @@ class AdminController extends Controller
         }
         if ($pricingType === 'tiered' && $request->has('tiered_fees')) {
             $tiers = $request->input('tiered_fees', []);
-            if (!is_array($tiers) || empty($tiers)) {
+            if (! is_array($tiers) || empty($tiers)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'חובה להזין מדרגות מחיר',
@@ -1181,7 +1182,7 @@ class AdminController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isManager() && !$user->is_super_admin) {
+        if (! $user->isManager() && ! $user->is_super_admin) {
             return response()->json([
                 'success' => false,
                 'message' => 'אין לך הרשאה למחוק אזורי משלוח',
@@ -1189,7 +1190,7 @@ class AdminController extends Controller
         }
 
         $restaurant = $this->resolveRestaurant($request);
-        if (!$restaurant) {
+        if (! $restaurant) {
             return response()->json([
                 'success' => false,
                 'message' => 'לא נמצאה מסעדה למשתמש',
@@ -1213,7 +1214,7 @@ class AdminController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isManager() && !$user->is_super_admin) {
+        if (! $user->isManager() && ! $user->is_super_admin) {
             return response()->json([
                 'success' => false,
                 'message' => 'אין לך הרשאה לצפות בבסיסים',
@@ -1221,7 +1222,7 @@ class AdminController extends Controller
         }
 
         $restaurant = $this->resolveRestaurant($request);
-        if (!$restaurant) {
+        if (! $restaurant) {
             return response()->json([
                 'success' => false,
                 'message' => 'לא נמצאה מסעדה למשתמש',
@@ -1242,7 +1243,7 @@ class AdminController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isManager() && !$user->is_super_admin) {
+        if (! $user->isManager() && ! $user->is_super_admin) {
             return response()->json([
                 'success' => false,
                 'message' => 'אין לך הרשאה להוסיף בסיסים',
@@ -1256,7 +1257,7 @@ class AdminController extends Controller
         ]);
 
         $restaurant = $this->resolveRestaurant($request);
-        if (!$restaurant) {
+        if (! $restaurant) {
             return response()->json([
                 'success' => false,
                 'message' => 'לא נמצאה מסעדה למשתמש',
@@ -1291,7 +1292,7 @@ class AdminController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isManager() && !$user->is_super_admin) {
+        if (! $user->isManager() && ! $user->is_super_admin) {
             return response()->json([
                 'success' => false,
                 'message' => 'אין לך הרשאה לעדכן בסיסים',
@@ -1306,7 +1307,7 @@ class AdminController extends Controller
         ]);
 
         $restaurant = $this->resolveRestaurant($request);
-        if (!$restaurant) {
+        if (! $restaurant) {
             return response()->json([
                 'success' => false,
                 'message' => 'לא נמצאה מסעדה למשתמש',
@@ -1337,7 +1338,7 @@ class AdminController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isManager() && !$user->is_super_admin) {
+        if (! $user->isManager() && ! $user->is_super_admin) {
             return response()->json([
                 'success' => false,
                 'message' => 'אין לך הרשאה למחוק בסיסים',
@@ -1345,7 +1346,7 @@ class AdminController extends Controller
         }
 
         $restaurant = $this->resolveRestaurant($request);
-        if (!$restaurant) {
+        if (! $restaurant) {
             return response()->json([
                 'success' => false,
                 'message' => 'לא נמצאה מסעדה למשתמש',
@@ -1371,7 +1372,7 @@ class AdminController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isManager() && !$user->is_super_admin) {
+        if (! $user->isManager() && ! $user->is_super_admin) {
             return response()->json([
                 'success' => false,
                 'message' => 'אין לך הרשאה לצפות במחירי בסיסים',
@@ -1379,7 +1380,7 @@ class AdminController extends Controller
         }
 
         $restaurant = $this->resolveRestaurant($request);
-        if (!$restaurant) {
+        if (! $restaurant) {
             return response()->json([
                 'success' => false,
                 'message' => 'לא נמצאה מסעדה למשתמש',
@@ -1412,7 +1413,7 @@ class AdminController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isManager() && !$user->is_super_admin) {
+        if (! $user->isManager() && ! $user->is_super_admin) {
             return response()->json([
                 'success' => false,
                 'message' => 'אין לך הרשאה לעדכן מחירי בסיסים',
@@ -1429,7 +1430,7 @@ class AdminController extends Controller
         ]);
 
         $restaurant = $this->resolveRestaurant($request);
-        if (!$restaurant) {
+        if (! $restaurant) {
             return response()->json([
                 'success' => false,
                 'message' => 'לא נמצאה מסעדה למשתמש',
@@ -1450,8 +1451,8 @@ class AdminController extends Controller
         // וודא שהבסיסים שייכים למסעדה
         $validVariantIds = $variantIds->isNotEmpty()
             ? RestaurantVariant::where('restaurant_id', $restaurant->id)
-            ->whereIn('id', $variantIds)
-            ->pluck('id')
+                ->whereIn('id', $variantIds)
+                ->pluck('id')
             : collect();
 
         // מחק כללי מחיר קיימים ברמת קטגוריה עבור כל הקטגוריות
@@ -1466,9 +1467,15 @@ class AdminController extends Controller
         // הכנס כללי מחיר חדשים (רק ערכים שונים מ-0)
         $count = 0;
         foreach ($request->input('prices', []) as $priceData) {
-            if (!$validCategoryIds->contains($priceData['category_id'])) continue;
-            if (!$validVariantIds->contains($priceData['restaurant_variant_id'])) continue;
-            if ((float) $priceData['price_delta'] == 0) continue;
+            if (! $validCategoryIds->contains($priceData['category_id'])) {
+                continue;
+            }
+            if (! $validVariantIds->contains($priceData['restaurant_variant_id'])) {
+                continue;
+            }
+            if ((float) $priceData['price_delta'] == 0) {
+                continue;
+            }
 
             PriceRule::create([
                 'tenant_id' => $restaurant->tenant_id,
@@ -1496,7 +1503,7 @@ class AdminController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isManager() && !$user->is_super_admin) {
+        if (! $user->isManager() && ! $user->is_super_admin) {
             return response()->json([
                 'success' => false,
                 'message' => 'אין לך הרשאה לצפות במחירי בסיסים',
@@ -1504,7 +1511,7 @@ class AdminController extends Controller
         }
 
         $restaurant = $this->resolveRestaurant($request);
-        if (!$restaurant) {
+        if (! $restaurant) {
             return response()->json([
                 'success' => false,
                 'message' => 'לא נמצאה מסעדה למשתמש',
@@ -1522,7 +1529,7 @@ class AdminController extends Controller
             ->orderBy('sort_order')
             ->get();
 
-        $priceService = new BasePriceService();
+        $priceService = new BasePriceService;
         $categoryPrices = $priceService->getCategoryPrices($menuItem->category_id);
         $itemAdjustments = $priceService->getItemAdjustments($menuItem->id);
         $calculatedPrices = $priceService->calculateBasePricesForItem($menuItem->id, $menuItem->category_id, $bases);
@@ -1549,7 +1556,7 @@ class AdminController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isManager() && !$user->is_super_admin) {
+        if (! $user->isManager() && ! $user->is_super_admin) {
             return response()->json([
                 'success' => false,
                 'message' => 'אין לך הרשאה לעדכן מחירי בסיסים',
@@ -1563,7 +1570,7 @@ class AdminController extends Controller
         ]);
 
         $restaurant = $this->resolveRestaurant($request);
-        if (!$restaurant) {
+        if (! $restaurant) {
             return response()->json([
                 'success' => false,
                 'message' => 'לא נמצאה מסעדה למשתמש',
@@ -1589,8 +1596,12 @@ class AdminController extends Controller
         // הכנס כללי מחיר חדשים (רק אם delta != 0)
         $count = 0;
         foreach ($request->input('adjustments') as $adj) {
-            if (!$validBaseIds->contains($adj['base_id'])) continue;
-            if ((float) $adj['price_delta'] == 0) continue;
+            if (! $validBaseIds->contains($adj['base_id'])) {
+                continue;
+            }
+            if ((float) $adj['price_delta'] == 0) {
+                continue;
+            }
 
             PriceRule::create([
                 'tenant_id' => $restaurant->tenant_id,
@@ -1618,7 +1629,7 @@ class AdminController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isManager() && !$user->is_super_admin) {
+        if (! $user->isManager() && ! $user->is_super_admin) {
             return response()->json([
                 'success' => false,
                 'message' => 'אין לך הרשאה ליצור קבוצות תוספות',
@@ -1638,7 +1649,7 @@ class AdminController extends Controller
         ]);
 
         $restaurant = $this->resolveRestaurant($request);
-        if (!$restaurant) {
+        if (! $restaurant) {
             return response()->json([
                 'success' => false,
                 'message' => 'לא נמצאה מסעדה למשתמש',
@@ -1704,7 +1715,7 @@ class AdminController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isManager() && !$user->is_super_admin) {
+        if (! $user->isManager() && ! $user->is_super_admin) {
             return response()->json([
                 'success' => false,
                 'message' => 'אין לך הרשאה לעדכן קבוצות תוספות',
@@ -1726,7 +1737,7 @@ class AdminController extends Controller
         ]);
 
         $restaurant = $this->resolveRestaurant($request);
-        if (!$restaurant) {
+        if (! $restaurant) {
             return response()->json([
                 'success' => false,
                 'message' => 'לא נמצאה מסעדה למשתמש',
@@ -1802,7 +1813,7 @@ class AdminController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isManager() && !$user->is_super_admin) {
+        if (! $user->isManager() && ! $user->is_super_admin) {
             return response()->json([
                 'success' => false,
                 'message' => 'אין לך הרשאה למחוק קבוצות תוספות',
@@ -1810,7 +1821,7 @@ class AdminController extends Controller
         }
 
         $restaurant = $this->resolveRestaurant($request);
-        if (!$restaurant) {
+        if (! $restaurant) {
             return response()->json([
                 'success' => false,
                 'message' => 'לא נמצאה מסעדה למשתמש',
@@ -1838,7 +1849,7 @@ class AdminController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isManager() && !$user->is_super_admin) {
+        if (! $user->isManager() && ! $user->is_super_admin) {
             return response()->json([
                 'success' => false,
                 'message' => 'אין לך הרשאה להעתיק קבוצות תוספות',
@@ -1846,7 +1857,7 @@ class AdminController extends Controller
         }
 
         $restaurant = $this->resolveRestaurant($request);
-        if (!$restaurant) {
+        if (! $restaurant) {
             return response()->json([
                 'success' => false,
                 'message' => 'לא נמצאה מסעדה למשתמש',
@@ -1863,7 +1874,7 @@ class AdminController extends Controller
         $newGroup = RestaurantAddonGroup::create([
             'restaurant_id' => $restaurant->id,
             'tenant_id' => $restaurant->tenant_id,
-            'name' => $originalGroup->name . ' (עותק)',
+            'name' => $originalGroup->name.' (עותק)',
             'selection_type' => $originalGroup->selection_type,
             'min_selections' => $originalGroup->min_selections,
             'max_selections' => $originalGroup->max_selections,
@@ -1920,7 +1931,7 @@ class AdminController extends Controller
                 \App\Models\Order::STATUS_RECEIVED,
                 \App\Models\Order::STATUS_PREPARING,
                 \App\Models\Order::STATUS_READY,
-                \App\Models\Order::STATUS_DELIVERING
+                \App\Models\Order::STATUS_DELIVERING,
             ])
             ->count();
 
@@ -1934,7 +1945,7 @@ class AdminController extends Controller
         }
         $restaurant->payment_failure_grace_days_left = $daysLeftInGrace;
         $restaurant->is_in_grace_period = $restaurant->isInGracePeriod();
-        $restaurant->subscription_paused = !$restaurant->hasAccess();
+        $restaurant->subscription_paused = ! $restaurant->hasAccess();
 
         return response()->json([
             'success' => true,
@@ -1947,7 +1958,7 @@ class AdminController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isOwner() && !$user->is_super_admin) {
+        if (! $user->isOwner() && ! $user->is_super_admin) {
             return response()->json([
                 'success' => false,
                 'message' => 'רק בעל המסעדה יכול לעדכן פרטים',
@@ -2176,16 +2187,16 @@ class AdminController extends Controller
         if ($hasExplicitIsOpen) {
             $updateData['is_open'] = $isOpen;
             $updateData['is_override_status'] = true;
-            Log::debug('🔒 Override status to: ' . ($isOpen ? 'true' : 'false'));
-        } elseif ($restaurant->is_override_status && !($hasExplicitOverrideFlag && $overrideFlag === false)) {
+            Log::debug('🔒 Override status to: '.($isOpen ? 'true' : 'false'));
+        } elseif ($restaurant->is_override_status && ! ($hasExplicitOverrideFlag && $overrideFlag === false)) {
             // שמור כפייה קיימת גם אם לא נשלח is_open בבקשה
             $updateData['is_override_status'] = true;
             $updateData['is_open'] = $restaurant->is_open;
-            Log::debug('🔒 Preserve existing override: ' . ($restaurant->is_open ? 'true' : 'false'));
+            Log::debug('🔒 Preserve existing override: '.($restaurant->is_open ? 'true' : 'false'));
         }
 
         // עבוד עם JSON strings מ-FormData
-        if ($request->has('operating_days') && !empty($request->input('operating_days'))) {
+        if ($request->has('operating_days') && ! empty($request->input('operating_days'))) {
             try {
                 $operatingDays = json_decode($request->input('operating_days'), true);
                 if (is_array($operatingDays)) {
@@ -2196,7 +2207,7 @@ class AdminController extends Controller
             }
         }
 
-        if ($request->has('operating_hours') && !empty($request->input('operating_hours'))) {
+        if ($request->has('operating_hours') && ! empty($request->input('operating_hours'))) {
             try {
                 $operatingHours = json_decode($request->input('operating_hours'), true);
                 if (is_array($operatingHours)) {
@@ -2220,7 +2231,7 @@ class AdminController extends Controller
                         if ($hasSpecial) {
                             $validSpecial = [];
                             foreach ($operatingHours['special_days'] as $date => $special) {
-                                if (!is_array($special)) {
+                                if (! is_array($special)) {
                                     continue;
                                 }
                                 $validSpecial[$date] = [
@@ -2236,7 +2247,7 @@ class AdminController extends Controller
                         if ($hasPerDay) {
                             $validDays = [];
                             foreach ($operatingHours['days'] as $dayName => $dayCfg) {
-                                if (!is_array($dayCfg)) {
+                                if (! is_array($dayCfg)) {
                                     continue;
                                 }
                                 $validDays[$dayName] = [
@@ -2257,29 +2268,29 @@ class AdminController extends Controller
         }
 
         // אם בוטלה כפייה (is_override_status = false) ואין is_open מפורש - חשב מחדש תמיד
-        $shouldRecalculateAfterClear = ($hasExplicitOverrideFlag && $overrideFlag === false && !$hasExplicitIsOpen);
+        $shouldRecalculateAfterClear = ($hasExplicitOverrideFlag && $overrideFlag === false && ! $hasExplicitIsOpen);
         if ($shouldRecalculateAfterClear) {
             $operatingDays = $updateData['operating_days'] ?? $restaurant->operating_days ?? [];
             $operatingHours = $updateData['operating_hours'] ?? $restaurant->operating_hours ?? [];
 
             $calculated = $this->isRestaurantOpen($operatingDays, $operatingHours);
             $updateData['is_open'] = $calculated;
-            Log::debug('🔓 Override cleared. Recalculated status: ' . ($calculated ? 'true' : 'false'));
+            Log::debug('🔓 Override cleared. Recalculated status: '.($calculated ? 'true' : 'false'));
         }
 
         // חשב סטטוס פתיחה אוטומטי רק אם אין כפייה ידנית (חדשה או קיימת)
-        $shouldAutoCalculate = !$hasExplicitIsOpen && !($updateData['is_override_status'] ?? false);
+        $shouldAutoCalculate = ! $hasExplicitIsOpen && ! ($updateData['is_override_status'] ?? false);
         if ($shouldAutoCalculate && (isset($updateData['operating_days']) || isset($updateData['operating_hours']))) {
             $operatingDays = $updateData['operating_days'] ?? $restaurant->operating_days ?? [];
             $operatingHours = $updateData['operating_hours'] ?? $restaurant->operating_hours ?? [];
 
             $calculated = $this->isRestaurantOpen($operatingDays, $operatingHours);
             $updateData['is_open'] = $calculated;
-            Log::debug('📅 Calculated status: ' . ($calculated ? 'true' : 'false'));
+            Log::debug('📅 Calculated status: '.($calculated ? 'true' : 'false'));
         }
 
         // אין פתיחה/כפייה לפני אישור סופר אדמין
-        if (!$isApproved) {
+        if (! $isApproved) {
             $updateData['is_open'] = false;
             $updateData['is_override_status'] = false;
         }
@@ -2314,12 +2325,13 @@ class AdminController extends Controller
             if (in_array($key, $nullableFields)) {
                 return true; // שמור גם null
             }
+
             // שאר השדות - אל תשמור null
             return $value !== null;
         }, ARRAY_FILTER_USE_BOTH);
 
         // אם נשלחה עיר, נרמול לשם העברי לפי טבלת הערים
-        if (!empty($updateData['city'])) {
+        if (! empty($updateData['city'])) {
             $inputCity = $updateData['city'];
             $cityModel = City::where('hebrew_name', $inputCity)
                 ->orWhere('name', $inputCity)
@@ -2349,7 +2361,7 @@ class AdminController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isOwner() && !$user->is_super_admin) {
+        if (! $user->isOwner() && ! $user->is_super_admin) {
             return response()->json([
                 'success' => false,
                 'message' => 'רק בעל המסעדה יכול לבטל כפייה',
@@ -2381,7 +2393,7 @@ class AdminController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isManager() && !$user->is_super_admin) {
+        if (! $user->isManager() && ! $user->is_super_admin) {
             return response()->json([
                 'success' => false,
                 'message' => 'אין לך הרשאה לצפות בעובדים',
@@ -2393,8 +2405,9 @@ class AdminController extends Controller
             ->orderBy('name')
             ->get(['id', 'name', 'email', 'phone', 'role', 'is_active', 'created_at', 'hourly_rate', 'pos_pin_hash'])
             ->map(function ($emp) {
-                $emp->has_pin = !is_null($emp->pos_pin_hash);
+                $emp->has_pin = ! is_null($emp->pos_pin_hash);
                 unset($emp->pos_pin_hash);
+
                 return $emp;
             });
 
@@ -2408,7 +2421,7 @@ class AdminController extends Controller
     {
         $currentUser = $request->user();
 
-        if (!$currentUser->isManager()) {
+        if (! $currentUser->isManager()) {
             return response()->json([
                 'success' => false,
                 'message' => 'אין לך הרשאה לעדכן עובדים',
@@ -2463,7 +2476,7 @@ class AdminController extends Controller
     {
         $currentUser = $request->user();
 
-        if (!$currentUser->isOwner()) {
+        if (! $currentUser->isOwner()) {
             return response()->json([
                 'success' => false,
                 'message' => 'רק בעל המסעדה יכול למחוק עובדים',
@@ -2538,10 +2551,10 @@ class AdminController extends Controller
         ]);
 
         // ולידציה: בדיקה שהמעבר מותר לפי transition map
-        if (!$order->canTransitionTo($request->status)) {
+        if (! $order->canTransitionTo($request->status)) {
             return response()->json([
                 'success' => false,
-                'message' => 'מעבר סטטוס לא מותר. ' .
+                'message' => 'מעבר סטטוס לא מותר. '.
                     ($order->delivery_method === 'pickup' && $request->status === 'delivering'
                         ? 'הזמנות איסוף עצמי אינן דורשות סטטוס "במשלוח"'
                         : 'מעבר זה אינו אפשרי במצב הנוכחי'),
@@ -2577,7 +2590,7 @@ class AdminController extends Controller
                     ->where('order_id', $order->id)
                     ->where('type', 'payment')
                     ->exists();
-                if (!$existingMovement) {
+                if (! $existingMovement) {
                     CashMovement::create([
                         'shift_id' => $openShift->id,
                         'order_id' => $order->id,
@@ -2603,12 +2616,12 @@ class AdminController extends Controller
 
         $order->save();
 
-        // הפעלת הדפסה למטבח כשהזמנה מאושרת
-        if ($request->status === 'preparing') {
+        // הפעלת הדפסה למטבח כשהזמנה מאושרת (קופה כבר מדפיסה בון בעת תשלום / מעבר ל-preparing)
+        if ($request->status === 'preparing' && ($order->source ?? null) !== 'pos') {
             try {
                 app(\App\Services\PrintService::class)->printOrder($order);
             } catch (\Exception $e) {
-                Log::error('Print failed: ' . $e->getMessage());
+                Log::error('Print failed: '.$e->getMessage());
             }
         }
 
@@ -2662,7 +2675,7 @@ class AdminController extends Controller
     {
         $restaurant = $request->user()->restaurant;
 
-        if (!$restaurant) {
+        if (! $restaurant) {
             return response()->json([
                 'success' => false,
                 'message' => 'לא נמצאה מסעדה למשתמש',
@@ -2700,7 +2713,7 @@ class AdminController extends Controller
     {
         $restaurant = $request->user()->restaurant;
 
-        if (!$restaurant) {
+        if (! $restaurant) {
             return response()->json(['success' => false, 'recovered' => false], 404);
         }
 
@@ -2709,7 +2722,7 @@ class AdminController extends Controller
         }
 
         $hypService = app(HypPaymentService::class);
-        if (!$hypService->isConfigured()) {
+        if (! $hypService->isConfigured()) {
             return response()->json(['success' => true, 'recovered' => false, 'reason' => 'hyp_not_configured']);
         }
 
@@ -2718,7 +2731,7 @@ class AdminController extends Controller
             $toDate = now()->format('d/m/Y');
             $result = $hypService->getTransList($fromDate, $toDate);
 
-            if (!$result['success'] || empty($result['transactions'])) {
+            if (! $result['success'] || empty($result['transactions'])) {
                 return response()->json(['success' => true, 'recovered' => false, 'reason' => 'no_transactions']);
             }
 
@@ -2729,7 +2742,7 @@ class AdminController extends Controller
                 $txId = $tx['Id'] ?? '';
                 $txCCode = (int) ($tx['CCode'] ?? -1);
 
-                if ($txCCode !== 0 || !str_starts_with($txOrder, $orderPrefix)) {
+                if ($txCCode !== 0 || ! str_starts_with($txOrder, $orderPrefix)) {
                     continue;
                 }
 
@@ -2743,10 +2756,10 @@ class AdminController extends Controller
                 }
 
                 Log::info('[RECOVERY] Found unprocessed HYP subscription payment', [
-                    'restaurant_id'  => $restaurant->id,
+                    'restaurant_id' => $restaurant->id,
                     'transaction_id' => $txId,
-                    'amount'         => $tx['Amount'] ?? '',
-                    'order'          => $txOrder,
+                    'amount' => $tx['Amount'] ?? '',
+                    'order' => $txOrder,
                 ]);
 
                 $sessionData = \Illuminate\Support\Facades\Cache::pull("hyp_session:{$restaurant->id}");
@@ -2763,61 +2776,61 @@ class AdminController extends Controller
                 RestaurantSubscription::updateOrCreate(
                     ['restaurant_id' => $restaurant->id],
                     [
-                        'plan_type'      => $planType,
-                        'monthly_fee'    => $monthlyFee,
-                        'billing_day'    => now()->day > 28 ? 28 : now()->day,
-                        'currency'       => 'ILS',
-                        'status'         => 'active',
+                        'plan_type' => $planType,
+                        'monthly_fee' => $monthlyFee,
+                        'billing_day' => now()->day > 28 ? 28 : now()->day,
+                        'currency' => 'ILS',
+                        'status' => 'active',
                         'outstanding_amount' => 0,
                         'next_charge_at' => $periodEnd,
-                        'last_paid_at'   => now(),
+                        'last_paid_at' => now(),
                     ]
                 );
 
                 RestaurantPayment::create([
                     'restaurant_id' => $restaurant->id,
-                    'amount'        => $planAmount,
-                    'currency'      => 'ILS',
-                    'period_start'  => $periodStart,
-                    'period_end'    => $periodEnd,
-                    'paid_at'       => now(),
-                    'method'        => 'hyp_credit_card',
-                    'reference'     => $txId,
-                    'status'        => 'paid',
+                    'amount' => $planAmount,
+                    'currency' => 'ILS',
+                    'period_start' => $periodStart,
+                    'period_end' => $periodEnd,
+                    'paid_at' => now(),
+                    'method' => 'hyp_credit_card',
+                    'reference' => $txId,
+                    'status' => 'paid',
                 ]);
 
                 $tokenResult = $hypService->getToken($txId);
                 if ($tokenResult['success']) {
                     $restaurant->update([
-                        'hyp_card_token'  => $tokenResult['token'],
-                        'hyp_card_expiry' => $tokenResult['tmonth'] . $tokenResult['tyear'],
-                        'hyp_card_last4'  => $tokenResult['l4digit'],
+                        'hyp_card_token' => $tokenResult['token'],
+                        'hyp_card_expiry' => $tokenResult['tmonth'].$tokenResult['tyear'],
+                        'hyp_card_last4' => $tokenResult['l4digit'],
                     ]);
                 }
 
                 $restaurant->update([
-                    'subscription_status'   => 'active',
-                    'subscription_plan'     => $planType,
-                    'tier'                  => $tier,
-                    'ai_credits_monthly'    => $prices[$tier]['ai_credits'] ?? 0,
-                    'subscription_ends_at'  => $periodEnd,
-                    'last_payment_at'       => now(),
-                    'next_payment_at'       => $periodEnd,
-                    'payment_failed_at'     => null,
+                    'subscription_status' => 'active',
+                    'subscription_plan' => $planType,
+                    'tier' => $tier,
+                    'ai_credits_monthly' => $prices[$tier]['ai_credits'] ?? 0,
+                    'subscription_ends_at' => $periodEnd,
+                    'last_payment_at' => now(),
+                    'next_payment_at' => $periodEnd,
+                    'payment_failed_at' => null,
                     'payment_failure_count' => 0,
                 ]);
 
                 Log::info('[RECOVERY] Subscription recovered from HYP transaction', [
-                    'restaurant_id'  => $restaurant->id,
-                    'tier'           => $tier,
-                    'plan_type'      => $planType,
+                    'restaurant_id' => $restaurant->id,
+                    'tier' => $tier,
+                    'plan_type' => $planType,
                     'transaction_id' => $txId,
                 ]);
 
                 return response()->json([
-                    'success'   => true,
+                    'success' => true,
                     'recovered' => true,
-                    'tier'      => $tier,
+                    'tier' => $tier,
                     'plan_type' => $planType,
                 ]);
             }
@@ -2826,8 +2839,9 @@ class AdminController extends Controller
         } catch (\Exception $e) {
             Log::error('[RECOVERY] Failed to check HYP transactions', [
                 'restaurant_id' => $restaurant->id,
-                'error'         => $e->getMessage(),
+                'error' => $e->getMessage(),
             ]);
+
             return response()->json(['success' => true, 'recovered' => false, 'reason' => 'error']);
         }
     }
@@ -2836,7 +2850,7 @@ class AdminController extends Controller
     {
         $restaurant = $request->user()->restaurant;
 
-        if (!$restaurant) {
+        if (! $restaurant) {
             return response()->json([
                 'success' => false,
                 'message' => 'לא נמצאה מסעדה למשתמש',
@@ -2870,8 +2884,8 @@ class AdminController extends Controller
         if ($isDowngrade) {
             Log::info('Subscription downgrade', [
                 'restaurant_id' => $restaurant->id,
-                'from'          => $previousTier,
-                'to'            => $tier,
+                'from' => $previousTier,
+                'to' => $tier,
             ]);
         }
 
@@ -2902,14 +2916,14 @@ class AdminController extends Controller
         ]);
 
         $restaurant->update([
-            'subscription_status'   => 'active',
-            'subscription_plan'     => $planType,
-            'tier'                  => $tier,
-            'ai_credits_monthly'    => $prices[$tier]['ai_credits'] ?? 0,
-            'subscription_ends_at'  => $periodEnd,
-            'last_payment_at'       => now(),
-            'next_payment_at'       => $periodEnd,
-            'payment_failed_at'     => null,
+            'subscription_status' => 'active',
+            'subscription_plan' => $planType,
+            'tier' => $tier,
+            'ai_credits_monthly' => $prices[$tier]['ai_credits'] ?? 0,
+            'subscription_ends_at' => $periodEnd,
+            'last_payment_at' => now(),
+            'next_payment_at' => $periodEnd,
+            'payment_failed_at' => null,
             'payment_failure_count' => 0,
         ]);
 
@@ -2918,33 +2932,33 @@ class AdminController extends Controller
             \App\Models\AiCredit::updateOrCreate(
                 ['restaurant_id' => $restaurant->id],
                 [
-                    'tenant_id'           => $restaurant->tenant_id,
-                    'tier'                => $tier,
-                    'monthly_limit'       => $prices[$tier]['ai_credits'],
-                    'credits_remaining'   => $prices[$tier]['ai_credits'],
-                    'credits_used'        => 0,
+                    'tenant_id' => $restaurant->tenant_id,
+                    'tier' => $tier,
+                    'monthly_limit' => $prices[$tier]['ai_credits'],
+                    'credits_remaining' => $prices[$tier]['ai_credits'],
+                    'credits_used' => 0,
                     'billing_cycle_start' => now()->startOfMonth(),
-                    'billing_cycle_end'   => now()->endOfMonth(),
+                    'billing_cycle_end' => now()->endOfMonth(),
                 ]
             );
         } elseif ($tier === 'basic') {
             $aiCredit = \App\Models\AiCredit::where('restaurant_id', $restaurant->id)->first();
             if ($aiCredit) {
                 $aiCredit->update([
-                    'tier'              => 'basic',
-                    'monthly_limit'     => 0,
+                    'tier' => 'basic',
+                    'monthly_limit' => 0,
                     'credits_remaining' => 0,
                 ]);
             }
         }
 
         return response()->json([
-            'success'      => true,
-            'message'      => $isDowngrade ? 'התוכנית עודכנה ל-Basic' : 'המנוי הופעל בהצלחה',
+            'success' => true,
+            'message' => $isDowngrade ? 'התוכנית עודכנה ל-Basic' : 'המנוי הופעל בהצלחה',
             'subscription' => $subscription,
-            'restaurant'   => $restaurant->fresh(),
-            'payment'      => $payment,
-            'downgraded'   => $isDowngrade,
+            'restaurant' => $restaurant->fresh(),
+            'payment' => $payment,
+            'downgraded' => $isDowngrade,
         ]);
     }
 
@@ -2962,7 +2976,7 @@ class AdminController extends Controller
 
         $restaurant = $request->user()->restaurant;
 
-        if (!$restaurant) {
+        if (! $restaurant) {
             return response()->json([
                 'success' => false,
                 'message' => 'לא נמצאה מסעדה למשתמש',
@@ -2971,17 +2985,17 @@ class AdminController extends Controller
 
         $hypService = app(HypPaymentService::class);
 
-        if (!$hypService->isConfigured()) {
+        if (! $hypService->isConfigured()) {
             $pricingService = app(SubscriptionPricingService::class);
             $resolvedNoHyp = $pricingService->resolve($restaurant, $validated['tier'], $validated['plan_type']);
 
             return response()->json([
-                'success'               => true,
-                'hyp_ready'             => false,
-                'message'               => 'HYP לא מוגדר — השתמש בדף V',
-                'plan_amount'           => $resolvedNoHyp['amount'],
-                'catalog_plan_amount'   => $resolvedNoHyp['catalog_amount'],
-                'has_negotiated_rate'   => $resolvedNoHyp['has_negotiated_rate'],
+                'success' => true,
+                'hyp_ready' => false,
+                'message' => 'HYP לא מוגדר — השתמש בדף V',
+                'plan_amount' => $resolvedNoHyp['amount'],
+                'catalog_plan_amount' => $resolvedNoHyp['catalog_amount'],
+                'has_negotiated_rate' => $resolvedNoHyp['has_negotiated_rate'],
             ]);
         }
 
@@ -3002,17 +3016,17 @@ class AdminController extends Controller
         \Illuminate\Support\Facades\Cache::put(
             "hyp_session:{$restaurant->id}",
             [
-                'tier'                  => $tier,
-                'plan_type'             => $planType,
-                'amount'                => $totalAmount,
-                'plan_amount'           => $planAmount,
-                'catalog_plan_amount'   => $resolved['catalog_amount'],
-                'has_negotiated_rate'   => $resolved['has_negotiated_rate'],
-                'includes_setup_fee'    => $includesSetupFee,
-                'setup_fee_amount'      => $setupFee,
-                'client_name'           => $owner->name ?? '',
-                'email'                 => $owner->email ?? '',
-                'phone'                 => $restaurant->phone ?? '',
+                'tier' => $tier,
+                'plan_type' => $planType,
+                'amount' => $totalAmount,
+                'plan_amount' => $planAmount,
+                'catalog_plan_amount' => $resolved['catalog_amount'],
+                'has_negotiated_rate' => $resolved['has_negotiated_rate'],
+                'includes_setup_fee' => $includesSetupFee,
+                'setup_fee_amount' => $setupFee,
+                'client_name' => $owner->name ?? '',
+                'email' => $owner->email ?? '',
+                'phone' => $restaurant->phone ?? '',
             ],
             now()->addMinutes(15)
         );
@@ -3021,15 +3035,15 @@ class AdminController extends Controller
         $redirectUrl = "{$backendUrl}/pay/hyp/subscription/{$restaurant->id}";
 
         return response()->json([
-            'success'               => true,
-            'hyp_ready'             => true,
-            'payment_url'           => $redirectUrl,
-            'plan_amount'           => $planAmount,
-            'catalog_plan_amount'   => $resolved['catalog_amount'],
-            'has_negotiated_rate'   => $resolved['has_negotiated_rate'],
-            'setup_fee'             => $setupFee,
-            'includes_setup_fee'    => $includesSetupFee,
-            'total_amount'          => $totalAmount,
+            'success' => true,
+            'hyp_ready' => true,
+            'payment_url' => $redirectUrl,
+            'plan_amount' => $planAmount,
+            'catalog_plan_amount' => $resolved['catalog_amount'],
+            'has_negotiated_rate' => $resolved['has_negotiated_rate'],
+            'setup_fee' => $setupFee,
+            'includes_setup_fee' => $includesSetupFee,
+            'total_amount' => $totalAmount,
         ]);
     }
 
@@ -3040,7 +3054,7 @@ class AdminController extends Controller
     {
         $restaurant = $this->resolveRestaurant($request);
 
-        if (!$restaurant) {
+        if (! $restaurant) {
             return response()->json([
                 'success' => false,
                 'message' => 'לא נמצאה מסעדה למשתמש',
@@ -3054,7 +3068,7 @@ class AdminController extends Controller
         $currentPlan = $restaurant->subscription_plan ?? 'monthly';
 
         $setupFeeCharged = (bool) $restaurant->hyp_setup_fee_charged;
-        $setupFee = !$setupFeeCharged ? (($currentTier === 'pro') ? 100 : 200) : 0;
+        $setupFee = ! $setupFeeCharged ? (($currentTier === 'pro') ? 100 : 200) : 0;
 
         $recentPayments = RestaurantPayment::where('restaurant_id', $restaurant->id)
             ->orderByDesc('paid_at')
@@ -3064,23 +3078,23 @@ class AdminController extends Controller
         return response()->json([
             'success' => true,
             'data' => [
-                'current_tier'          => $currentTier,
-                'current_plan'          => $currentPlan,
-                'subscription_status'   => $restaurant->subscription_status,
-                'subscription_ends_at'  => $restaurant->subscription_ends_at,
-                'next_payment_at'       => $restaurant->next_payment_at,
-                'last_payment_at'       => $restaurant->last_payment_at,
-                'trial_ends_at'         => $restaurant->trial_ends_at,
-                'has_access'            => $restaurant->hasAccess(),
-                'days_left_in_trial'    => $restaurant->getDaysLeftInTrial(),
-                'setup_fee_charged'     => $setupFeeCharged,
-                'pending_setup_fee'     => $setupFee,
-                'outstanding_amount'    => $subscription?->outstanding_amount ?? 0,
-                'pricing'               => $prices,
-                'subscription_pricing'  => $pricingService->subscriptionPricingPayload($restaurant, $prices),
-                'recent_payments'       => $recentPayments,
-                'has_card_on_file'      => !empty($restaurant->hyp_card_token),
-                'card_last4'            => $restaurant->hyp_card_last4,
+                'current_tier' => $currentTier,
+                'current_plan' => $currentPlan,
+                'subscription_status' => $restaurant->subscription_status,
+                'subscription_ends_at' => $restaurant->subscription_ends_at,
+                'next_payment_at' => $restaurant->next_payment_at,
+                'last_payment_at' => $restaurant->last_payment_at,
+                'trial_ends_at' => $restaurant->trial_ends_at,
+                'has_access' => $restaurant->hasAccess(),
+                'days_left_in_trial' => $restaurant->getDaysLeftInTrial(),
+                'setup_fee_charged' => $setupFeeCharged,
+                'pending_setup_fee' => $setupFee,
+                'outstanding_amount' => $subscription?->outstanding_amount ?? 0,
+                'pricing' => $prices,
+                'subscription_pricing' => $pricingService->subscriptionPricingPayload($restaurant, $prices),
+                'recent_payments' => $recentPayments,
+                'has_card_on_file' => ! empty($restaurant->hyp_card_token),
+                'card_last4' => $restaurant->hyp_card_last4,
             ],
         ]);
     }
@@ -3091,8 +3105,9 @@ class AdminController extends Controller
 
     private function uploadImage($file, $folder)
     {
-        $filename = Str::uuid() . '.' . $file->getClientOriginalExtension();
+        $filename = Str::uuid().'.'.$file->getClientOriginalExtension();
         $path = $file->storeAs("public/{$folder}", $filename);
+
         return Storage::url($path);
     }
 
@@ -3124,18 +3139,18 @@ class AdminController extends Controller
         $perDayOverrides = $operatingHours['days'] ?? [];
 
         // 1) יום מיוחד לפי תאריך גובר על הכל
-        if (!empty($specialDays[$todayDate])) {
+        if (! empty($specialDays[$todayDate])) {
             $special = $specialDays[$todayDate];
-            if (!empty($special['closed'])) {
+            if (! empty($special['closed'])) {
                 return false;
             }
             $open = $special['open'] ?? ($defaultHours['open'] ?? '00:00');
             $close = $special['close'] ?? ($defaultHours['close'] ?? '23:59');
         }
         // 2) override שבועי ליום בשבוע (אם לא היה יום מיוחד)
-        elseif (!empty($perDayOverrides[$currentDayName])) {
+        elseif (! empty($perDayOverrides[$currentDayName])) {
             $dayCfg = $perDayOverrides[$currentDayName];
-            if (!empty($dayCfg['closed'])) {
+            if (! empty($dayCfg['closed'])) {
                 return false;
             }
             $open = $dayCfg['open'] ?? ($defaultHours['open'] ?? '00:00');
@@ -3144,7 +3159,7 @@ class AdminController extends Controller
         // 3) ברירת מחדל: ימים + שעות כלליים
         else {
             // בדוק אם היום הנוכחי הוא יום פתיחה
-            if (!empty($operatingDays) && !($operatingDays[$currentDayName] ?? false)) {
+            if (! empty($operatingDays) && ! ($operatingDays[$currentDayName] ?? false)) {
                 return false;
             }
 
@@ -3292,7 +3307,7 @@ class AdminController extends Controller
         $restaurant = Restaurant::withoutGlobalScope('tenant')->find($order->restaurant_id);
         $restaurantPaymentService = app(RestaurantPaymentService::class);
 
-        if (!$restaurant || !$restaurantPaymentService->isRestaurantReady($restaurant)) {
+        if (! $restaurant || ! $restaurantPaymentService->isRestaurantReady($restaurant)) {
             return response()->json([
                 'success' => false,
                 'message' => 'תשלום באשראי אינו מוגדר או לא זמין למסעדה',
@@ -3306,13 +3321,13 @@ class AdminController extends Controller
             ->update(['status' => 'expired']);
 
         $session = PaymentSession::create([
-            'tenant_id'     => $tenantId,
+            'tenant_id' => $tenantId,
             'restaurant_id' => $order->restaurant_id,
-            'order_id'      => $order->id,
+            'order_id' => $order->id,
             'session_token' => Str::uuid()->toString(),
-            'amount'        => $order->total_amount,
-            'status'        => 'pending',
-            'expires_at'    => now()->addMinutes(config('payment.order_payment.session_timeout_minutes', 15)),
+            'amount' => $order->total_amount,
+            'status' => 'pending',
+            'expires_at' => now()->addMinutes(config('payment.order_payment.session_timeout_minutes', 15)),
         ]);
 
         $paymentUrl = $restaurantPaymentService->generateOrderPaymentUrl($restaurant, $order, $session);
@@ -3327,9 +3342,9 @@ class AdminController extends Controller
         }
 
         return response()->json([
-            'success'       => true,
+            'success' => true,
             'payment_url' => $paymentUrl,
-            'expires_at'  => $session->expires_at?->toIso8601String(),
+            'expires_at' => $session->expires_at?->toIso8601String(),
         ]);
     }
 

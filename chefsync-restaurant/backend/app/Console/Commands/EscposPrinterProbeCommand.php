@@ -17,7 +17,7 @@ class EscposPrinterProbeCommand extends Command
                             {--text=שלום עולם : טקסט UTF-8 לבדיקה}
                             {--no-rtl : בלי הכנת RTL (כמו php -r גולמי — יוצא הפוך על רוב המדפסות)}
                             {--width= : רוחב שורה למרכוז אחרי RTL (למשל 42 ל-80מ״מ)}
-                            {--no-cut : בלי GS V 0 בסוף}';
+                            {--no-cut : בלי GS V 1 (חיתוך חלקי) בסוף}';
 
     protected $description = 'שולח ESC @ + ESC t n + טקסט (CP862) למדפסת תרמית — לבדיקת טבלה/קידוד';
 
@@ -34,9 +34,9 @@ class EscposPrinterProbeCommand extends Command
         $encoder = new ThermalHebrewEscPosEncoder;
         $body = $encoder->encodeUtf8ToCp862($text, $applyRtl, $lineWidth);
 
-        $bin = "\x1B\x40\x1B\x74".chr($cp)."\x1B\x20\x01".$body."\n\n\x1B\x20\x00";
+        $bin = "\x1B\x40\x1B\x74".chr($cp)."\x1B\x20\x00\x1B\x21\x30".$body."\x1B\x21\x00\n\n";
         if (! $this->option('no-cut')) {
-            $bin .= "\x1D\x56\x00";
+            $bin .= "\x1D\x56\x01";
         }
 
         $fp = @fsockopen($ip, $port, $errno, $errstr, 8);

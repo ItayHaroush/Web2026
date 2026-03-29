@@ -14,12 +14,14 @@ object PrinterBridge {
      * SNBC BTP-S80: Hebrew CP table 10 (ESC t 0x0A) + CP862. LTR printer → RTL prep before encode.
      */
     private val ESC_HEBREW_TABLE = byteArrayOf(0x1B, 0x74, 0x0A)
-    /** ריווח קל בין תווים; אחרי גוף מאפסים */
-    private val ESC_CHAR_SPACING_1 = byteArrayOf(0x1B, 0x20, 0x01)
     private val ESC_CHAR_SPACING_0 = byteArrayOf(0x1B, 0x20, 0x00)
+    /** כפול רוחב+גובה — כמו NetworkPrinterAdapter (פחות "צר" על 80מ״מ) */
+    private val ESC_DOUBLE_WIDTH_HEIGHT = byteArrayOf(0x1B, 0x21, 0x30)
+    private val ESC_FONT_NORMAL = byteArrayOf(0x1B, 0x21, 0x00)
 
     private val cp862: Charset = Charset.forName("IBM862")
-    private val ESC_CUT = byteArrayOf(0x1D, 0x56, 0x00)
+    /** GS V 1 — חיתוך חלקי (Epson-תואם); 0 = מלא */
+    private val ESC_CUT = byteArrayOf(0x1D, 0x56, 0x01)
     private val FEED = "\n\n\n\n".toByteArray()
 
     private val hebrewInWord = Regex("[\\u0590-\\u05FF]")
@@ -40,9 +42,10 @@ object PrinterBridge {
 
             out.write(ESC_INIT)
             out.write(ESC_HEBREW_TABLE)
-            out.write(ESC_CHAR_SPACING_1)
-            out.write(prepared.toByteArray(cp862))
             out.write(ESC_CHAR_SPACING_0)
+            out.write(ESC_DOUBLE_WIDTH_HEIGHT)
+            out.write(prepared.toByteArray(cp862))
+            out.write(ESC_FONT_NORMAL)
             out.write(FEED)
             out.write(ESC_CUT)
             out.flush()
@@ -79,7 +82,8 @@ object PrinterBridge {
             return line
         }
         val mapped =
-            words.map { word ->
+            words.map { raw ->
+                val word = transformPriceShekelToken(raw)
                 if (word.contains(hebrewInWord) && !shouldSkipCharReverseForToken(word)) {
                     word.reversed()
                 } else {
@@ -89,13 +93,28 @@ object PrinterBridge {
         return leading + mapped.reversed().joinToString(" ")
     }
 
+    private fun transformPriceShekelToken(word: String): String {
+        Regex("^([\\d.,]+)\\s*ש\"ח$").find(word)?.let {
+            return "${it.groupValues[1]} ${"ש\"ח".reversed()}"
+        }
+        Regex("^([\\d.,]+)ש\"ח$").find(word)?.let {
+            return "${it.groupValues[1]} ${"ש\"ח".reversed()}"
+        }
+        Regex("^ש\"ח\\s*([\\d.,]+)$").find(word)?.let {
+            return "${it.groupValues[1]} ${"ש\"ח".reversed()}"
+        }
+        Regex("^ש\"ח([\\d.,]+)$").find(word)?.let {
+            return "${it.groupValues[1]} ${"ש\"ח".reversed()}"
+        }
+        return word
+    }
+
     private fun shouldSkipCharReverseForToken(word: String): Boolean {
         if (word.matches(Regex("^\\d+([.,]\\d+)?$"))) return true
         if (word.matches(Regex("^#\\d+$"))) return true
         if (word.matches(Regex("^\\d+x$", RegexOption.IGNORE_CASE))) return true
         if (word.matches(Regex("^₪\\s*\\d+([.,]\\d+)?$"))) return true
-        if (word.matches(Regex("^ש\"ח[\\d.,]+$"))) return true
-        if (word == "ש\"ח") return true
+        if (word.matches(Regex("^[\\d.,]+\\s+.+$")) && word.contains(hebrewInWord)) return true
         return false
     }
 }

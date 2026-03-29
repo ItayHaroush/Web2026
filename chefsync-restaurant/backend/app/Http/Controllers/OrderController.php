@@ -1023,8 +1023,8 @@ class OrderController extends Controller
                 Log::warning('Failed to log order status change event', ['error' => $e->getMessage()]);
             }
 
-            // הפעלת הדפסה למטבח כשהזמנה מאושרת
-            if ($validated['status'] === 'preparing') {
+            // הפעלת הדפסה למטבח כשהזמנה מאושרת (קופה כבר מדפיסה בון בעת תשלום / מעבר ל-preparing)
+            if ($validated['status'] === 'preparing' && ($order->source ?? null) !== 'pos') {
                 try {
                     app(\App\Services\PrintService::class)->printOrder($order);
                 } catch (\Exception $e) {

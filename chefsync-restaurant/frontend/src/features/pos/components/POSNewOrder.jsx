@@ -35,6 +35,8 @@ function POSNewOrderInner({ headers, posToken, onOrderCreated }) {
     const [search, setSearch] = useState('');
     const [loading, setLoading] = useState(true);
     const [showPayment, setShowPayment] = useState(false);
+    /** @type {'dine_in' | 'takeaway'} */
+    const [posOrderType, setPosOrderType] = useState('takeaway');
     const [paymentMethod, setPaymentMethod] = useState(null); // 'cash' | 'credit' | 'hold' | 'split'
     const [holdLoading, setHoldLoading] = useState(false);
     const [holdOrderId, setHoldOrderId] = useState(null);
@@ -166,6 +168,7 @@ function POSNewOrderInner({ headers, posToken, onOrderCreated }) {
                 const orderData = {
                     items: cart,
                     payment_method: 'hold',
+                    order_type: posOrderType,
                     ...(discountAmount > 0 && {
                         discount_type: discountType,
                         discount_value: discVal,
@@ -395,6 +398,8 @@ function POSNewOrderInner({ headers, posToken, onOrderCreated }) {
             {showPayment && (
                 <POSPaymentMethodModal
                     total={cartTotal}
+                    orderType={posOrderType}
+                    onOrderTypeChange={setPosOrderType}
                     onSelect={handlePaymentMethodSelect}
                     onClose={() => setShowPayment(false)}
                 />
@@ -406,6 +411,7 @@ function POSNewOrderInner({ headers, posToken, onOrderCreated }) {
                     total={cartTotal}
                     headers={headers}
                     posToken={posToken}
+                    orderType={posOrderType}
                     onClose={handlePaymentClose}
                     onSuccess={handleOrderSuccess}
                     discountData={discountAmount > 0 ? { discount_type: discountType, discount_value: discVal, discount_reason: discountReason } : null}
@@ -418,6 +424,7 @@ function POSNewOrderInner({ headers, posToken, onOrderCreated }) {
                     total={cartTotal}
                     headers={headers}
                     posToken={posToken}
+                    orderType={posOrderType}
                     onClose={handlePaymentClose}
                     onSuccess={handleOrderSuccess}
                 />
@@ -429,6 +436,7 @@ function POSNewOrderInner({ headers, posToken, onOrderCreated }) {
                     total={cartTotal}
                     headers={headers}
                     posToken={posToken}
+                    orderType={posOrderType}
                     discountData={discountAmount > 0 ? { discount_type: discountType, discount_value: discVal, discount_reason: discountReason } : null}
                     onClose={() => { setPaymentMethod(null); }}
                     onSuccess={handleOrderSuccess}

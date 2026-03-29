@@ -134,6 +134,8 @@ final class ThermalHebrewEscPosEncoder
         }
 
         $mapped = array_map(function (string $word) {
+            $word = $this->transformPriceShekelToken($word);
+
             if ($this->shouldSkipCharReverseForToken($word)) {
                 return $word;
             }
@@ -147,7 +149,31 @@ final class ThermalHebrewEscPosEncoder
     }
 
     /**
-     * מחירים ומספרים — לא מפעילים היפוך תווים (נשמר סדר ספרות וש\"ח צמוד למספר).
+     * מספר + ש"ח (מרווח או צמוד): המספר ללא היפוך; ש"ח מופיע כהיפוך תווים לבד.
+     */
+    private function transformPriceShekelToken(string $word): string
+    {
+        if (preg_match('/^([\d.,]+)\s*ש"ח$/u', $word, $m)) {
+            return $m[1].' '.$this->reverseUtf8String('ש"ח');
+        }
+
+        if (preg_match('/^([\d.,]+)ש"ח$/u', $word, $m)) {
+            return $m[1].' '.$this->reverseUtf8String('ש"ח');
+        }
+
+        if (preg_match('/^ש"ח\s*([\d.,]+)$/u', $word, $m)) {
+            return $m[1].' '.$this->reverseUtf8String('ש"ח');
+        }
+
+        if (preg_match('/^ש"ח([\d.,]+)$/u', $word, $m)) {
+            return $m[1].' '.$this->reverseUtf8String('ש"ח');
+        }
+
+        return $word;
+    }
+
+    /**
+     * מספרים טהורים / כמות — בלי היפוך. ש"ח מטופל ב-transformPriceShekelToken או בהיפוך עברית רגיל.
      */
     private function shouldSkipCharReverseForToken(string $word): bool
     {
@@ -167,11 +193,7 @@ final class ThermalHebrewEscPosEncoder
             return true;
         }
 
-        if (preg_match('/^ש"ח[\d.,]+$/u', $word)) {
-            return true;
-        }
-
-        if (preg_match('/^ש"ח$/u', $word)) {
+        if (preg_match('/^[\d.,]+\s+\X+$/u', $word) && preg_match('/\p{Hebrew}/u', $word)) {
             return true;
         }
 

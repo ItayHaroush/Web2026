@@ -68,6 +68,8 @@ class PosPaymentService
                 ];
                 if ($order->status === Order::STATUS_AWAITING_PAYMENT) {
                     $orderUpdates['status'] = Order::STATUS_PENDING;
+                } elseif ($order->source === 'pos' && $order->status === Order::STATUS_RECEIVED) {
+                    $orderUpdates['status'] = Order::STATUS_PREPARING;
                 }
                 $order->update($orderUpdates);
 
@@ -141,6 +143,11 @@ class PosPaymentService
             }
         }
 
+        $orderType = $orderData['order_type'] ?? 'takeaway';
+        if (! in_array($orderType, ['dine_in', 'takeaway'], true)) {
+            $orderType = 'takeaway';
+        }
+
         // יצירת הזמנה בסטטוס pending
         $order = Order::create([
             'restaurant_id' => $restaurantId,
@@ -154,6 +161,7 @@ class PosPaymentService
             'status' => 'received',
             'total_amount' => $totalAmount,
             'source' => 'pos',
+            'order_type' => $orderType,
             'notes' => $orderData['notes'] ?? null,
         ]);
 

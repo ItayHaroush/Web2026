@@ -120,8 +120,11 @@ export default function POSPendingPaymentModal({ headers, posToken, onClose, onP
                         }
                     } catch {}
                 }
-                // הדפס קבלה
-                try { await posApi.printReceipt(order.id, headers, posToken); } catch {}
+                // קבלה (ובון) נשלחים מהשרת עבור קופה ללא שולחן; שולחן — רק קבלה מהלקוח
+                const skipClientReceipt = order.source === 'pos' && !order.table_number;
+                if (!skipClientReceipt) {
+                    try { await posApi.printReceipt(order.id, headers, posToken); } catch {}
+                }
 
                 setResult({
                     type: 'success',

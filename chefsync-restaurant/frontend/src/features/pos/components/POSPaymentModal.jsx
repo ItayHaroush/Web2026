@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { FaShekelSign, FaBackspace, FaCheckCircle, FaTimes, FaMoneyBillWave } from 'react-icons/fa';
 import posApi from '../api/posApi';
 
-export default function POSPaymentModal({ cart, total, headers, posToken, onClose, onSuccess, discountData }) {
+export default function POSPaymentModal({ cart, total, headers, posToken, orderType = 'takeaway', onClose, onSuccess, discountData }) {
     const [amountTendered, setAmountTendered] = useState('');
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState(null);
@@ -37,6 +37,7 @@ export default function POSPaymentModal({ cart, total, headers, posToken, onClos
                 items: cart,
                 payment_method: 'cash',
                 amount_tendered: parseFloat(amountTendered),
+                order_type: orderType,
                 ...(discountData || {}),
             }, headers, posToken);
 

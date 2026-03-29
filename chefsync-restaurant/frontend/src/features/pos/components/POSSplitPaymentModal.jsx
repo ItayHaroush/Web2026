@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { FaShekelSign, FaCreditCard, FaMoneyBillWave, FaTimes, FaCheckCircle, FaExclamationTriangle } from 'react-icons/fa';
 import posApi from '../api/posApi';
 
-export default function POSSplitPaymentModal({ cart, total, headers, posToken, discountData, onClose, onSuccess }) {
+export default function POSSplitPaymentModal({ cart, total, headers, posToken, orderType = 'takeaway', discountData, onClose, onSuccess }) {
     const [cashAmount, setCashAmount] = useState('');
     const [creditAmount, setCreditAmount] = useState('');
     const [loading, setLoading] = useState(false);
@@ -58,6 +58,7 @@ export default function POSSplitPaymentModal({ cart, total, headers, posToken, d
                 const orderData = {
                     items: cart,
                     payment_method: 'hold',
+                    order_type: orderType,
                     ...(discountData && {
                         discount_type: discountData.discount_type,
                         discount_value: discountData.discount_value,

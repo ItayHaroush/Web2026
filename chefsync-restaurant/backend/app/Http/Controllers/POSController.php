@@ -480,6 +480,7 @@ class POSController extends Controller
             'discount_type' => 'nullable|in:percentage,fixed',
             'discount_value' => 'nullable|numeric|min:0',
             'discount_reason' => 'nullable|string|max:255',
+            'order_type' => 'nullable|string|in:dine_in,takeaway',
         ]);
 
         $user = $request->user();
@@ -511,6 +512,9 @@ class POSController extends Controller
         $isHold = $request->payment_method === 'hold';
         $paymentMethod = $isHold ? 'cash' : ($request->payment_method === 'credit' ? 'credit_card' : 'cash');
         $paymentStatus = $isHold ? 'pending' : ($request->payment_method === 'cash' ? 'paid' : 'pending');
+        $orderType = $request->input('order_type', 'takeaway');
+        $cashPaidNow = $request->payment_method === 'cash' && ! $isHold;
+        $initialStatus = $cashPaidNow ? Order::STATUS_PREPARING : Order::STATUS_RECEIVED;
 
         $order = Order::create([
             'restaurant_id' => $restaurantId,
@@ -521,9 +525,10 @@ class POSController extends Controller
             'delivery_method' => 'pickup',
             'payment_method' => $paymentMethod,
             'payment_status' => $paymentStatus,
-            'status' => 'received',
+            'status' => $initialStatus,
             'total_amount' => $totalAmount,
             'source' => 'pos',
+            'order_type' => $orderType,
             'notes' => $request->notes,
             'discount_type' => $request->discount_type,
             'discount_value' => $request->discount_value,
@@ -577,15 +582,17 @@ class POSController extends Controller
         }
 
         $printResults = ['kitchen' => 0, 'receipt' => 0];
-        try {
-            $printService = app(PrintService::class);
-            $freshOrder = $order->fresh()->load('items.menuItem.category', 'restaurant');
-            $printResults['kitchen'] = $printService->printOrder($freshOrder);
-            $printResults['receipt'] = $printService->printReceipt($freshOrder, [
-                'change' => $change,
-            ]);
-        } catch (\Exception $e) {
-            Log::error('POS print failed: '.$e->getMessage());
+        if ($cashPaidNow) {
+            try {
+                $printService = app(PrintService::class);
+                $freshOrder = $order->fresh()->load('items.menuItem.category', 'restaurant');
+                $printResults['kitchen'] = $printService->printOrder($freshOrder);
+                $printResults['receipt'] = $printService->printReceipt($freshOrder, [
+                    'change' => $change,
+                ]);
+            } catch (\Exception $e) {
+                Log::error('POS print failed: '.$e->getMessage());
+            }
         }
 
         $this->notifyPosOrder($order, $tenantId, $restaurantId, $paymentMethod);
@@ -734,6 +741,7 @@ class POSController extends Controller
             'items.*.addons' => 'nullable|array',
             'customer_name' => 'nullable|string|max:100',
             'notes' => 'nullable|string|max:500',
+            'order_type' => 'nullable|string|in:dine_in,takeaway',
         ]);
 
         $user = $request->user();
@@ -747,7 +755,7 @@ class POSController extends Controller
         $paymentService = new PosPaymentService($zcredit);
 
         $result = $paymentService->createOrderAndCharge(
-            $request->only(['items', 'customer_name', 'notes']),
+            $request->only(['items', 'customer_name', 'notes', 'order_type']),
             $restaurantId,
             $tenantId,
             $user->id
@@ -818,6 +826,23 @@ class POSController extends Controller
             $user->id
         );
 
+        if ($result['success']) {
+            $fresh = Order::withoutGlobalScopes()
+                ->where('restaurant_id', $restaurantId)
+                ->with('items.menuItem.category', 'restaurant')
+                ->find($orderId);
+            // הזמנת קופה ללא שולחן: בון לא הודפס בהשהיה — אחרי אשראי מלא
+            if ($fresh && $fresh->source === 'pos' && empty($fresh->table_number)) {
+                try {
+                    $printService = app(PrintService::class);
+                    $printService->printOrder($fresh);
+                    $printService->printReceipt($fresh);
+                } catch (\Exception $e) {
+                    Log::error('POS chargeOrderCredit print failed: '.$e->getMessage());
+                }
+            }
+        }
+
         $statusCode = $result['success'] ? 200 : 422;
 
         return response()->json($result, $statusCode);
@@ -885,6 +910,12 @@ class POSController extends Controller
         if ($order->status === Order::STATUS_AWAITING_PAYMENT) {
             $paidUpdates['status'] = Order::STATUS_PENDING;
         }
+        $printKitchenAfterPay = $order->source === 'pos'
+            && $order->status === Order::STATUS_RECEIVED
+            && empty($order->table_number);
+        if ($printKitchenAfterPay) {
+            $paidUpdates['status'] = Order::STATUS_PREPARING;
+        }
         $order->update($paidUpdates);
 
         // צור תנועת קופה
@@ -904,11 +935,15 @@ class POSController extends Controller
             ]);
         }
 
-        // הדפס קבלה
+        // הדפס קבלה (ומטבח אם הייתה הזמנת קופה בהשהיה ללא שולחן — בון לא הודפס ביצירה)
         $printResult = 0;
+        $printKitchenJobs = 0;
         try {
             $printService = app(PrintService::class);
             $freshOrder = $order->fresh()->load('items.menuItem.category', 'restaurant');
+            if ($printKitchenAfterPay) {
+                $printKitchenJobs = $printService->printOrder($freshOrder);
+            }
             $printResult = $printService->printReceipt($freshOrder, ['change' => $change]);
         } catch (\Exception $e) {
             Log::error('Print receipt failed for pending order cash payment: '.$e->getMessage());
@@ -942,6 +977,7 @@ class POSController extends Controller
             'total' => $total,
             'closed_tab' => $closedTab,
             'print_jobs' => $printResult,
+            'print_kitchen_jobs' => $printKitchenJobs,
         ]);
     }
 
@@ -1010,12 +1046,16 @@ class POSController extends Controller
             }
 
             // עדכון ההזמנה
-            $order->update([
+            $orderPaidUpdates = [
                 'payment_method' => $creditAmount > 0 ? 'credit_card' : 'cash',
                 'payment_status' => 'paid',
                 'payment_transaction_id' => $paymentResult['transaction_id'] ?? null,
                 'paid_at' => now(),
-            ]);
+            ];
+            if ($order->source === 'pos' && $order->status === Order::STATUS_RECEIVED) {
+                $orderPaidUpdates['status'] = Order::STATUS_PREPARING;
+            }
+            $order->update($orderPaidUpdates);
 
             // רישום בקופה
             $shift = CashRegisterShift::where('restaurant_id', $restaurantId)
@@ -1048,6 +1088,18 @@ class POSController extends Controller
             }
         });
 
+        $printResults = ['kitchen' => 0, 'receipt' => 0];
+        if ($order->source === 'pos') {
+            try {
+                $printService = app(PrintService::class);
+                $freshOrder = $order->fresh()->load('items.menuItem.category', 'restaurant');
+                $printResults['kitchen'] = $printService->printOrder($freshOrder);
+                $printResults['receipt'] = $printService->printReceipt($freshOrder);
+            } catch (\Exception $e) {
+                Log::error('POS split payment print failed: '.$e->getMessage());
+            }
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'התשלום המפוצל אושר',
@@ -1056,6 +1108,7 @@ class POSController extends Controller
                 'approval_code' => $paymentResult['approval_code'],
                 'card_last4' => $paymentResult['card_last4'] ?? null,
             ] : null,
+            'print_jobs' => $printResults,
         ]);
     }
 
@@ -1587,6 +1640,7 @@ class POSController extends Controller
             'payment_status' => $order->payment_status,
             'total_price' => (float) $order->total_amount,
             'source' => $order->source ?? 'website',
+            'order_type' => $order->order_type,
             'is_future_order' => (bool) ($order->is_future_order ?? false),
             'scheduled_for' => $order->scheduled_for?->toIso8601String(),
             'notes' => $order->notes,

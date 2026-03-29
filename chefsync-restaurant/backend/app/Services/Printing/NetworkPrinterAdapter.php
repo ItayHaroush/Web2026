@@ -14,8 +14,8 @@ class NetworkPrinterAdapter implements PrinterAdapter
     /** ESC t n — Hebrew code page על BTP-S80 (CP:10) */
     private const ESC_POS_CODE_PAGE_HEBREW = 10;
 
-    /** ESC ! — כפול גובה בלבד */
-    private const MODE_DOUBLE_HEIGHT = 0x10;
+    /** ESC ! — כפול רוחב + גובה (פחות "צר" על נייר 80מ״מ) */
+    private const MODE_DOUBLE_WIDTH_HEIGHT = 0x30;
 
     private const MODE_NORMAL = 0x00;
 
@@ -58,11 +58,10 @@ class NetworkPrinterAdapter implements PrinterAdapter
 
             fwrite($socket, "\x1B\x40");
             fwrite($socket, "\x1B\x74".chr(self::ESC_POS_CODE_PAGE_HEBREW));
-            // ESC SP n — ריווח קל בין תווים (Epson/SNBC תואם)
-            fwrite($socket, "\x1B\x20\x01");
+            fwrite($socket, "\x1B\x20\x00");
 
             if ($doubleHeight) {
-                fwrite($socket, "\x1B\x21".chr(self::MODE_DOUBLE_HEIGHT));
+                fwrite($socket, "\x1B\x21".chr(self::MODE_DOUBLE_WIDTH_HEIGHT));
             }
 
             fwrite($socket, $binary);
@@ -71,10 +70,9 @@ class NetworkPrinterAdapter implements PrinterAdapter
                 fwrite($socket, "\x1B\x21".chr(self::MODE_NORMAL));
             }
 
-            fwrite($socket, "\x1B\x20\x00");
-
             fwrite($socket, "\n\n\n\n");
-            fwrite($socket, "\x1D\x56\x00");
+            // GS V 1 — חיתוך חלקי (חצי); 0 = מלא
+            fwrite($socket, "\x1D\x56\x01");
 
             fclose($socket);
 
