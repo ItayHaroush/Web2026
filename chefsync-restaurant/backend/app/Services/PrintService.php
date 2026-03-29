@@ -368,7 +368,10 @@ class PrintService
         $lines[] = $separator;
 
         if ($order->delivery_fee > 0) {
-            $lines[] = 'דמי משלוח: '.$this->formatShekelAmount((float) $order->delivery_fee);
+            $lines[] = $this->centerText(
+                'דמי משלוח: '.$this->formatShekelAmount((float) $order->delivery_fee),
+                $printer
+            );
         }
 
         $totalAmount = $order->total_amount ?? 0;
@@ -379,10 +382,13 @@ class PrintService
             'credit_card' => 'אשראי',
             default => $order->payment_method ?? '—',
         };
-        $lines[] = "תשלום: {$paymentLabel}";
+        $lines[] = $this->centerText("תשלום: {$paymentLabel}", $printer);
 
         if (! empty($extraData['change']) && $extraData['change'] > 0) {
-            $lines[] = 'עודף: '.$this->formatShekelAmount((float) $extraData['change']);
+            $lines[] = $this->centerText(
+                'עודף: '.$this->formatShekelAmount((float) $extraData['change']),
+                $printer
+            );
         }
 
         if (! empty($extraData['receipt_number'])) {

@@ -34,7 +34,7 @@ class EscposPrinterProbeCommand extends Command
         $encoder = new ThermalHebrewEscPosEncoder;
         $body = $encoder->encodeUtf8ToCp862($text, $applyRtl, $lineWidth);
 
-        $bin = "\x1B\x40\x1B\x74".chr($cp)."\x1B\x20\x00\x1B\x21\x30".$body."\x1B\x21\x00\n\n";
+        $bin = "\x1B\x40\x1B\x74".chr($cp)."\x1B\x20\x00\x1B\x21\x10".$body."\x1B\x21\x00\n\n";
         if (! $this->option('no-cut')) {
             $bin .= "\x1D\x56\x01";
         }

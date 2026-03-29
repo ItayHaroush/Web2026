@@ -14,8 +14,8 @@ class NetworkPrinterAdapter implements PrinterAdapter
     /** ESC t n — Hebrew code page על BTP-S80 (CP:10) */
     private const ESC_POS_CODE_PAGE_HEBREW = 10;
 
-    /** ESC ! — כפול רוחב + גובה (פחות "צר" על נייר 80מ״מ) */
-    private const MODE_DOUBLE_WIDTH_HEIGHT = 0x30;
+    /** ESC ! — כפול גובה בלבד (רוחב רגיל) כדי שלא יישברו שורות מול line_width */
+    private const MODE_DOUBLE_HEIGHT = 0x10;
 
     private const MODE_NORMAL = 0x00;
 
@@ -61,7 +61,7 @@ class NetworkPrinterAdapter implements PrinterAdapter
             fwrite($socket, "\x1B\x20\x00");
 
             if ($doubleHeight) {
-                fwrite($socket, "\x1B\x21".chr(self::MODE_DOUBLE_WIDTH_HEIGHT));
+                fwrite($socket, "\x1B\x21".chr(self::MODE_DOUBLE_HEIGHT));
             }
 
             fwrite($socket, $binary);

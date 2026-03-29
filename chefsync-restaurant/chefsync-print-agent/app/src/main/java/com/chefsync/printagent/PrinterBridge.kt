@@ -15,8 +15,8 @@ object PrinterBridge {
      */
     private val ESC_HEBREW_TABLE = byteArrayOf(0x1B, 0x74, 0x0A)
     private val ESC_CHAR_SPACING_0 = byteArrayOf(0x1B, 0x20, 0x00)
-    /** כפול רוחב+גובה — כמו NetworkPrinterAdapter (פחות "צר" על 80מ״מ) */
-    private val ESC_DOUBLE_WIDTH_HEIGHT = byteArrayOf(0x1B, 0x21, 0x30)
+    /** כפול גובה בלבד — רוחב רגיל, תואם line_width בלי שבירת שורות */
+    private val ESC_DOUBLE_HEIGHT = byteArrayOf(0x1B, 0x21, 0x10)
     private val ESC_FONT_NORMAL = byteArrayOf(0x1B, 0x21, 0x00)
 
     private val cp862: Charset = Charset.forName("IBM862")
@@ -43,7 +43,7 @@ object PrinterBridge {
             out.write(ESC_INIT)
             out.write(ESC_HEBREW_TABLE)
             out.write(ESC_CHAR_SPACING_0)
-            out.write(ESC_DOUBLE_WIDTH_HEIGHT)
+            out.write(ESC_DOUBLE_HEIGHT)
             out.write(prepared.toByteArray(cp862))
             out.write(ESC_FONT_NORMAL)
             out.write(FEED)
