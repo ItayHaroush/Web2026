@@ -207,6 +207,7 @@ export default function POSCashRegister({ headers, posToken, isManager, onShiftC
             if (res.data.z_report) {
                 const report = res.data.z_report;
                 report.clocked_in_employees = res.data.clocked_in_employees || [];
+                report.daily_report = res.data.daily_report ?? null;
                 setZReport(report);
             }
             fetchData();
@@ -753,6 +754,28 @@ function ZReportModal({ report, onClose }) {
                             </div>
                         )}
                     </div>
+
+                    {r.daily_report && (
+                        <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-2xl p-4 space-y-2">
+                            <h4 className="text-cyan-400 text-xs font-black uppercase tracking-wider">דוח יומי מערכתי (PDF בניהול)</h4>
+                            {r.daily_report.generated ? (
+                                <>
+                                    <p className="text-slate-300 text-sm">
+                                        נשמר דוח יומי #{r.daily_report.report_id} — זהה לעמוד ההזמנות/דוחות
+                                    </p>
+                                    {r.daily_report.slip_print_jobs > 0 ? (
+                                        <p className="text-emerald-400 text-sm font-bold">
+                                            נשלחו {r.daily_report.slip_print_jobs} הדפסות בון דוח יומי למדפסת קופה
+                                        </p>
+                                    ) : (
+                                        <p className="text-amber-400 text-sm">{r.daily_report.message || 'לא נשלחה הדפסת בון'}</p>
+                                    )}
+                                </>
+                            ) : (
+                                <p className="text-slate-400 text-sm">{r.daily_report.message || 'לא נוצר דוח יומי מערכתי'}</p>
+                            )}
+                        </div>
+                    )}
 
                     {r.clocked_in_employees?.length > 0 && (
                         <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 space-y-2">

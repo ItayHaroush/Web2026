@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Console\Commands\GenerateDailyReportsJob;
 use App\Models\CashMovement;
 use App\Models\CashRegisterShift;
 use App\Models\EmployeeTimeLog;
@@ -18,6 +19,8 @@ use App\Models\User;
 use App\Services\FcmService;
 use App\Services\PosPaymentService;
 use App\Services\PrintService;
+use App\Services\Reporting\ReportingOrderQuery;
+use App\Services\Reporting\ShiftMovementTotals;
 use App\Services\ZCreditResolver;
 use App\Services\ZCreditService;
 use Carbon\Carbon;
@@ -215,6 +218,8 @@ class POSController extends Controller
             'notes' => $request->notes,
         ]);
 
+        $shift->refresh();
+
         $clockedIn = EmployeeTimeLog::where('restaurant_id', $user->restaurant_id)
             ->whereNull('clock_out')
             ->with('user:id,name,role')
@@ -224,10 +229,16 @@ class POSController extends Controller
                 'clock_in' => $log->clock_in->format('H:i'),
             ]);
 
+        $dailyReportMeta = $this->ensureDailyReportAndPrintSlipForPos(
+            $user->restaurant_id,
+            $shift->closed_at
+        );
+
         return response()->json([
             'success' => true,
             'z_report' => $this->buildZReport($shift->fresh()),
             'clocked_in_employees' => $clockedIn->toArray(),
+            'daily_report' => $dailyReportMeta,
         ]);
     }
 
@@ -382,14 +393,7 @@ class POSController extends Controller
         }
 
         $movements = $shift->movements()->get();
-
-        $cashPayments = $movements->where('type', 'payment')->where('payment_method', 'cash')->sum('amount');
-        $creditPayments = $movements->where('type', 'payment')->where('payment_method', 'credit')->sum('amount');
-        $cashInCash = $movements->where('type', 'cash_in')->where('payment_method', 'cash')->sum('amount');
-        $cashInCredit = $movements->where('type', 'cash_in')->where('payment_method', 'credit')->sum('amount');
-        $cashOut = $movements->where('type', 'cash_out')->sum('amount');
-        $refunds = $movements->where('type', 'refund')->sum('amount');
-        $cashRefunds = $movements->where('type', 'refund')->where('payment_method', 'cash')->sum('amount');
+        $totals = ShiftMovementTotals::fromMovements($movements);
 
         return response()->json([
             'success' => true,
@@ -398,18 +402,15 @@ class POSController extends Controller
                 'opened_at' => $shift->opened_at->format('H:i'),
                 'cashier' => $shift->user->name ?? '—',
                 'opening_balance' => (float) $shift->opening_balance,
-                'cash_payments' => round($cashPayments, 2),
-                'credit_payments' => round($creditPayments, 2),
-                'cash_in' => round($cashInCash, 2),
-                'credit_in' => round($cashInCredit, 2),
-                'cash_out' => round($cashOut, 2),
-                'refunds' => round($refunds, 2),
-                'expected_in_register' => round(
-                    (float) $shift->opening_balance + $cashPayments + $cashInCash - $cashOut - $cashRefunds,
-                    2
-                ),
-                'total_sales' => round($cashPayments + $creditPayments + $cashInCredit, 2),
-                'order_count' => $movements->where('type', 'payment')->whereNotNull('order_id')->count(),
+                'cash_payments' => round($totals->cashPayments, 2),
+                'credit_payments' => round($totals->creditPayments, 2),
+                'cash_in' => round($totals->cashInCash, 2),
+                'credit_in' => round($totals->cashInCredit, 2),
+                'cash_out' => round($totals->cashOut, 2),
+                'refunds' => round($totals->refundsTotal, 2),
+                'expected_in_register' => $totals->expectedRegisterBalance((float) $shift->opening_balance),
+                'total_sales' => $totals->totalSales(),
+                'order_count' => $totals->paymentsWithOrderIdCount,
                 'movements' => $movements->map(fn ($m) => [
                     'id' => $m->id,
                     'type' => $m->type,
@@ -1440,16 +1441,43 @@ class POSController extends Controller
             ->where('status', 'open')
             ->findOrFail($id);
 
-        $tab->update([
-            'status' => 'closed',
-            'closed_at' => Carbon::now(),
-        ]);
+        $order = Order::withoutGlobalScopes()
+            ->where('restaurant_id', $restaurantId)
+            ->findOrFail($tab->order_id);
+
+        if ($order->payment_status !== Order::PAYMENT_PAID) {
+            $hasLineItems = $order->items()->exists();
+            $total = (float) $order->total_amount;
+
+            if ($hasLineItems && $total > 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'לא ניתן לסגור שולחן עם יתרה לפני גבייה',
+                ], 422);
+            }
+        }
+
+        DB::transaction(function () use ($order, $tab) {
+            if ($order->payment_status !== Order::PAYMENT_PAID) {
+                $order->update([
+                    'status' => Order::STATUS_CANCELLED,
+                    'payment_status' => Order::PAYMENT_CANCELLED,
+                ]);
+            }
+
+            $tab->update([
+                'status' => 'closed',
+                'closed_at' => Carbon::now(),
+            ]);
+        });
+
+        $order->refresh();
 
         return response()->json([
             'success' => true,
             'message' => "שולחן {$tab->table_number} נסגר",
             'order_id' => $tab->order_id,
-            'total' => (float) $tab->order?->total_amount,
+            'total' => (float) $order->total_amount,
         ]);
     }
 
@@ -1503,39 +1531,88 @@ class POSController extends Controller
 
     // ─── Helpers ───
 
+    /**
+     * לאחר סגירת משמרת: יוצר/מעדכן את אותו DailyReport כמו בעמוד הזמנות ליום סגירה (Asia/Jerusalem) ומדפיס בון קופה.
+     *
+     * @return array{generated: bool, report_id: int|null, slip_print_jobs: int, message: string|null}
+     */
+    private function ensureDailyReportAndPrintSlipForPos(int $restaurantId, Carbon $closedAt): array
+    {
+        $result = [
+            'generated' => false,
+            'report_id' => null,
+            'slip_print_jobs' => 0,
+            'message' => null,
+        ];
+
+        $restaurant = Restaurant::find($restaurantId);
+        if (! $restaurant) {
+            $result['message'] = 'מסעדה לא נמצאה';
+
+            return $result;
+        }
+
+        $tz = 'Asia/Jerusalem';
+        $dateStr = $closedAt->copy()->timezone($tz)->toDateString();
+
+        if ($restaurant->owner_activity_started_at
+            && $dateStr < $restaurant->owner_activity_started_at->toDateString()) {
+            $result['message'] = 'לפני תאריך תחילת הפעילות — דוח יומי מערכתי לא נוצר';
+
+            return $result;
+        }
+
+        $startOfDay = Carbon::parse($dateStr, $tz)->startOfDay();
+        $endOfDay = Carbon::parse($dateStr, $tz)->endOfDay();
+
+        try {
+            $report = GenerateDailyReportsJob::generateForRestaurant(
+                $restaurant,
+                $dateStr,
+                $startOfDay,
+                $endOfDay
+            );
+
+            if (! $report) {
+                $result['message'] = 'אין הזמנות ביום זה — דוח יומי מערכתי לא נוצר';
+
+                return $result;
+            }
+
+            $result['generated'] = true;
+            $result['report_id'] = $report->id;
+            $result['slip_print_jobs'] = app(PrintService::class)->printDailyReportSlip($report);
+
+            if ($result['slip_print_jobs'] === 0) {
+                $result['message'] = 'דוח יומי נשמר; לא נמצאה מדפסת קופה פעילה להדפת בון';
+            }
+        } catch (\Throwable $e) {
+            Log::warning('POS: daily report or slip after shift close failed', [
+                'restaurant_id' => $restaurantId,
+                'error' => $e->getMessage(),
+            ]);
+            $result['message'] = 'דוח יומי מערכתי: '.$e->getMessage();
+        }
+
+        return $result;
+    }
+
     private function buildZReport(CashRegisterShift $shift): array
     {
-        $movements = $shift->movements()->with('order')->get();
+        $movements = $shift->movements()->get();
+        $totals = ShiftMovementTotals::fromMovements($movements);
 
-        $cashPayments = $movements->where('type', 'payment')->where('payment_method', 'cash')->sum('amount');
-        $creditPayments = $movements->where('type', 'payment')->where('payment_method', 'credit')->sum('amount');
-        $cashInCash = $movements->where('type', 'cash_in')->where('payment_method', 'cash')->sum('amount');
-        $cashInCredit = $movements->where('type', 'cash_in')->where('payment_method', 'credit')->sum('amount');
-        $cashOut = $movements->where('type', 'cash_out')->sum('amount');
-        $refunds = $movements->where('type', 'refund')->sum('amount');
-        $cashRefunds = $movements->where('type', 'refund')->where('payment_method', 'cash')->sum('amount');
-
-        $paymentCount = $movements->where('type', 'payment')->count();
-        $cashPaymentCount = $movements->where('type', 'payment')->where('payment_method', 'cash')->count();
-        $creditPaymentCount = $movements->where('type', 'payment')->where('payment_method', 'credit')->count();
-        $refundCount = $movements->where('type', 'refund')->count();
-
-        $expectedBalance = round(
-            (float) $shift->opening_balance + $cashPayments + $cashInCash - $cashOut - $cashRefunds,
-            2
-        );
+        $expectedBalance = $totals->expectedRegisterBalance((float) $shift->opening_balance);
 
         $variance = $shift->closing_balance !== null
             ? round((float) $shift->closing_balance - $expectedBalance, 2)
             : null;
 
         $endTime = $shift->closed_at ?? Carbon::now();
-        $shiftOrders = Order::withoutGlobalScopes()
-            ->where('restaurant_id', $shift->restaurant_id)
-            ->where('created_at', '>=', $shift->opened_at)
-            ->where('created_at', '<=', $endTime)
-            ->orderBy('id')
-            ->get();
+        $restaurant = Restaurant::find($shift->restaurant_id);
+        $shiftOrders = $restaurant
+            ? ReportingOrderQuery::ordersBetween($restaurant, $shift->opened_at, $endTime)
+            : collect();
 
         $trackedOrderIds = $movements->where('type', 'payment')->pluck('order_id')->filter()->toArray();
 
@@ -1578,18 +1655,18 @@ class POSController extends Controller
             'expected_balance' => $expectedBalance,
             'variance' => $variance,
 
-            'total_sales' => round($cashPayments + $creditPayments + $cashInCredit, 2),
-            'cash_payments' => round($cashPayments, 2),
-            'cash_payment_count' => $cashPaymentCount,
-            'credit_payments' => round($creditPayments, 2),
-            'credit_payment_count' => $creditPaymentCount,
-            'total_payment_count' => $paymentCount,
+            'total_sales' => $totals->totalSales(),
+            'cash_payments' => round($totals->cashPayments, 2),
+            'cash_payment_count' => $totals->cashPaymentCount,
+            'credit_payments' => round($totals->creditPayments, 2),
+            'credit_payment_count' => $totals->creditPaymentCount,
+            'total_payment_count' => $totals->paymentCount,
 
-            'cash_in' => round($cashInCash, 2),
-            'credit_in' => round($cashInCredit, 2),
-            'cash_out' => round($cashOut, 2),
-            'refunds' => round($refunds, 2),
-            'refund_count' => $refundCount,
+            'cash_in' => round($totals->cashInCash, 2),
+            'credit_in' => round($totals->cashInCredit, 2),
+            'cash_out' => round($totals->cashOut, 2),
+            'refunds' => round($totals->refundsTotal, 2),
+            'refund_count' => $totals->refundCount,
 
             'movements' => $movements->map(fn ($m) => [
                 'id' => $m->id,
@@ -1608,13 +1685,9 @@ class POSController extends Controller
 
     private function calculateExpectedBalance(CashRegisterShift $shift): float
     {
-        $movements = $shift->movements()->get();
-        $cashPayments = $movements->where('type', 'payment')->where('payment_method', 'cash')->sum('amount');
-        $cashInCash = $movements->where('type', 'cash_in')->where('payment_method', 'cash')->sum('amount');
-        $cashOut = $movements->where('type', 'cash_out')->sum('amount');
-        $refunds = $movements->where('type', 'refund')->where('payment_method', 'cash')->sum('amount');
+        $totals = ShiftMovementTotals::fromMovements($shift->movements()->get());
 
-        return round((float) $shift->opening_balance + $cashPayments + $cashInCash - $cashOut - $refunds, 2);
+        return $totals->expectedRegisterBalance((float) $shift->opening_balance);
     }
 
     private function formatShift(CashRegisterShift $shift): array

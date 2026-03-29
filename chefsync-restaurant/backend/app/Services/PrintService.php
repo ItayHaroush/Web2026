@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\DailyReport;
 use App\Models\Order;
 use App\Models\PrintDevice;
 use App\Models\Printer;
@@ -136,11 +137,55 @@ class PrintService
                 'tenant_id' => $tenantId,
                 'restaurant_id' => $restaurantId,
                 'printer_id' => $printer->id,
+                'order_id' => null,
                 'role' => $role,
                 'status' => 'pending',
                 'payload' => [
                     'text' => $payload,
                     'type' => 'custom',
+                ],
+            ]);
+
+            $this->executeJob($job, $printer, $payload);
+            $jobCount++;
+        }
+
+        return $jobCount;
+    }
+
+    /**
+     * בון דוח יומי לקופה — מדפסות receipt/general בלבד (לא מטבח).
+     */
+    public function printDailyReportSlip(DailyReport $report): int
+    {
+        $report->loadMissing('restaurant');
+
+        $printers = Printer::where('restaurant_id', $report->restaurant_id)
+            ->where('is_active', true)
+            ->whereIn('role', ['receipt', 'general'])
+            ->get();
+
+        if ($printers->isEmpty()) {
+            Log::info("PrintService: No receipt printers for daily report slip, restaurant {$report->restaurant_id}");
+
+            return 0;
+        }
+
+        $jobCount = 0;
+
+        foreach ($printers as $printer) {
+            $payload = $this->buildDailyReportSlipPayload($report, $printer);
+
+            $job = PrintJob::create([
+                'tenant_id' => $report->tenant_id,
+                'restaurant_id' => $report->restaurant_id,
+                'printer_id' => $printer->id,
+                'order_id' => null,
+                'role' => 'receipt',
+                'status' => 'pending',
+                'payload' => [
+                    'text' => $payload,
+                    'type' => 'daily_report_slip',
                 ],
             ]);
 
@@ -192,6 +237,79 @@ class PrintService
         ]);
     }
 
+    /**
+     * שורת שירות (איך הלקוח מקבל את ההזמנה) — נפרדת מאריזה ומסוג מנה (צלחת/כריך).
+     */
+    private function formatOrderServiceModeLabel(Order $order): string
+    {
+        if ($order->delivery_method === 'delivery') {
+            return '🚗 שירות: משלוח';
+        }
+        if ($order->order_type === 'takeaway') {
+            return '🥡 שירות: טייקאווי';
+        }
+        if ($order->order_type === 'dine_in') {
+            return '🪑 שירות: ישיבה במקום';
+        }
+        if (($order->delivery_method ?? '') === 'pickup') {
+            return '📦 שירות: איסוף עצמי';
+        }
+
+        return '';
+    }
+
+    /**
+     * אריזה — רק כשיש לצאת החוצה (משלוח / טייקאווי). לא מסמן "צלחת" כאילו כל ההזמנה צלחת.
+     */
+    private function formatOrderPackagingLabel(Order $order): string
+    {
+        if ($order->delivery_method === 'delivery') {
+            return '🍱 אריזה: חמגשית (משלוח)';
+        }
+        if ($order->order_type === 'takeaway') {
+            return '🍱 אריזה: חמגשית';
+        }
+
+        return '';
+    }
+
+    /**
+     * צלחת מול כריך לפי dish_type של קטגוריית הפריטים. פיתה/באגט נשארים ב־variant_name ליד הפריט.
+     *
+     * @param  \Illuminate\Support\Collection|\Illuminate\Database\Eloquent\Collection|iterable  $items
+     */
+    private function inferDishPresentationSummaryLine(iterable $items): ?string
+    {
+        $known = [];
+        $missing = false;
+
+        foreach ($items as $item) {
+            $dt = $item->menuItem?->category?->dish_type;
+            if (in_array($dt, ['plate', 'sandwich', 'both'], true)) {
+                $known[$dt] = true;
+            } else {
+                $missing = true;
+            }
+        }
+
+        if ($known === []) {
+            return null;
+        }
+
+        if ($missing || count($known) > 1) {
+            return '🍽🌯 סוג מנה (קטגוריות): מעורב';
+        }
+
+        $only = array_key_first($known);
+
+        return match ($only) {
+            'plate' => '🍽 סוג מנה (קטגוריות): צלחת',
+            'sandwich' => '🌯 סוג מנה (קטגוריות): כריך',
+            'both' => '🍽🌯 סוג מנה (קטגוריות): צלחת/כריך',
+            default => null,
+        };
+    }
+
     // ─── Kitchen Ticket ───
 
     private function buildKitchenTicket(Order $order, $items, Printer $printer): string
@@ -227,6 +345,15 @@ class PrintService
         }
         $lines[] = implode(' | ', $orderInfo);
 
+        $packaging = $this->formatOrderPackagingLabel($order);
+        if ($packaging !== '') {
+            $lines[] = $this->centerText($packaging, $printer);
+        }
+        $dishSummary = $this->inferDishPresentationSummaryLine($items);
+        if ($dishSummary !== null) {
+            $lines[] = $this->centerText($dishSummary, $printer);
+        }
+
         if ($order->customer_name) {
             $lines[] = $order->customer_name;
         }
@@ -247,7 +374,7 @@ class PrintService
         $kitchenItemDone = 0;
 
         foreach ($kitchenGroups as $categoryLabel => $bucket) {
-            $lines[] = $this->centerText($categoryLabel, $printer);
+            $lines[] = $this->centerText("— {$categoryLabel} —", $printer);
 
             foreach ($bucket as $item) {
                 $name = $item->menuItem?->name ?? $item->name ?? 'פריט';
@@ -319,6 +446,20 @@ class PrintService
         $lines[] = $this->centerText("קבלה — הזמנה #{$order->id}", $printer);
         $lines[] = $separator;
         $lines[] = $this->centerText($order->created_at->format('d.m.Y H:i'), $printer);
+
+        $serviceLabel = $this->formatOrderServiceModeLabel($order);
+        if ($serviceLabel !== '') {
+            $lines[] = $this->centerText($serviceLabel, $printer);
+        }
+        $packagingLabel = $this->formatOrderPackagingLabel($order);
+        if ($packagingLabel !== '') {
+            $lines[] = $this->centerText($packagingLabel, $printer);
+        }
+        $dishSummary = $this->inferDishPresentationSummaryLine($order->items);
+        if ($dishSummary !== null) {
+            $lines[] = $this->centerText($dishSummary, $printer);
+        }
+
         if ($order->customer_name && $order->customer_name !== 'POS') {
             $lines[] = $this->centerText("לקוח: {$order->customer_name}", $printer);
         }
@@ -328,41 +469,33 @@ class PrintService
                 $printer
             );
         }
+        if ($order->delivery_address) {
+            $lines[] = $this->centerText("כתובת: {$order->delivery_address}", $printer);
+        }
         $lines[] = $dash;
 
-        $receiptGroups = $this->groupOrderItemsByCategory($order->items);
-        $receiptItemTotal = 0;
-        foreach ($receiptGroups as $b) {
-            $receiptItemTotal += count($b);
-        }
-        $receiptItemDone = 0;
+        foreach ($order->items as $item) {
+            $name = $item->menuItem?->name ?? $item->name ?? 'פריט';
+            $qty = $item->quantity ?? 1;
 
-        foreach ($receiptGroups as $categoryLabel => $bucket) {
-            $lines[] = $this->centerText($categoryLabel, $printer);
+            if (! empty($item->variant_name)) {
+                $name .= " ({$item->variant_name})";
+            }
 
-            foreach ($bucket as $item) {
-                $name = $item->menuItem?->name ?? $item->name ?? 'פריט';
-                $qty = $item->quantity ?? 1;
-                $lines[] = "{$qty}x {$name}";
+            $lines[] = "{$qty}x {$name}";
 
-                if (! empty($item->variant_name)) {
-                    $lines[] = "  סוג: {$item->variant_name}";
-                }
-                $addons = is_array($item->addons) ? $item->addons : [];
-                foreach ($addons as $addon) {
-                    $addonName = is_string($addon) ? $addon : ($addon['name'] ?? '');
-                    $addonPrice = is_array($addon) ? (float) ($addon['price'] ?? 0) : 0.0;
-                    if ($addonName) {
-                        $priceFmt = $addonPrice > 0 ? ' '.$this->formatShekelAmount($addonPrice) : '';
-                        $lines[] = "  + {$addonName}{$priceFmt}";
-                    }
-                }
+            $addons = is_array($item->addons) ? $item->addons : [];
+            foreach ($addons as $addon) {
+                $addonName = is_string($addon) ? $addon : ($addon['name'] ?? '');
+                $addonPrice = is_array($addon) ? (float) ($addon['price'] ?? 0) : 0.0;
 
-                $receiptItemDone++;
-                if ($receiptItemDone < $receiptItemTotal) {
-                    $lines[] = '';
+                if ($addonName) {
+                    $price = $addonPrice > 0 ? ' '.$this->formatShekelAmount($addonPrice) : '';
+                    $lines[] = "  + {$addonName}{$price}";
                 }
             }
+
+            $lines[] = '';
         }
 
         $lines[] = $separator;
@@ -375,7 +508,12 @@ class PrintService
         }
 
         $totalAmount = $order->total_amount ?? 0;
-        $lines[] = $this->centerText('סה"כ: '.$this->formatShekelAmount((float) $totalAmount), $printer);
+        $lines[] = $this->receiptLineLabelAndAmount(
+            'סה"כ:',
+            $this->formatShekelAmount((float) $totalAmount),
+            $width,
+            12
+        );
 
         $paymentLabel = match ($order->payment_method) {
             'cash' => 'מזומן',
@@ -398,6 +536,47 @@ class PrintService
 
         $lines[] = $separator;
         $lines[] = $this->centerText('תודה שבחרתם בנו!', $printer);
+        $lines[] = '';
+
+        return implode("\n", $lines);
+    }
+
+    private function buildDailyReportSlipPayload(DailyReport $report, Printer $printer): string
+    {
+        $width = $this->getLineWidth($printer);
+        $separator = str_repeat('=', $width);
+        $dash = str_repeat('-', $width);
+
+        $restaurantName = $report->restaurant?->name ?? '';
+        $dateLabel = $report->date instanceof \Carbon\Carbon
+            ? $report->date->format('d/m/Y')
+            : (string) $report->date;
+
+        $lines = [
+            $separator,
+            $this->centerText('דוח יומי — קופה', $printer),
+            $separator,
+        ];
+
+        if ($restaurantName !== '') {
+            $lines[] = $this->centerText($restaurantName, $printer);
+        }
+        $lines[] = $this->centerText($dateLabel, $printer);
+        $lines[] = '';
+        $lines[] = $dash;
+        $lines[] = $this->receiptLineLabelAndAmount('הזמנות (פעילות):', (string) $report->total_orders, $width);
+        $lines[] = $this->receiptLineLabelAndAmount('הכנסות:', $this->formatShekelAmount((float) $report->total_revenue), $width);
+        $lines[] = $this->receiptLineLabelAndAmount('איסוף:', (string) $report->pickup_orders, $width);
+        $lines[] = $this->receiptLineLabelAndAmount('משלוח:', (string) $report->delivery_orders, $width);
+        $lines[] = $this->receiptLineLabelAndAmount('מזומן:', $this->formatShekelAmount((float) $report->cash_total), $width);
+        $lines[] = $this->receiptLineLabelAndAmount('אשראי:', $this->formatShekelAmount((float) $report->credit_total), $width);
+        $lines[] = $this->receiptLineLabelAndAmount('ביטולים:', (string) $report->cancelled_orders, $width);
+        if ((float) $report->cancelled_total > 0) {
+            $lines[] = $this->receiptLineLabelAndAmount('סה"כ ביטולים:', $this->formatShekelAmount((float) $report->cancelled_total), $width);
+        }
+        $lines[] = $dash;
+        $lines[] = $this->centerText('דוח PDF מלא: ניהול > דוחות', $printer);
+        $lines[] = $separator;
         $lines[] = '';
 
         return implode("\n", $lines);
@@ -524,13 +703,84 @@ class PrintService
     private function centerText(string $text, Printer $printer): string
     {
         $width = $this->getLineWidth($printer);
-        $textLen = mb_strlen($text);
+        $textLen = mb_strlen($text, 'UTF-8');
         if ($textLen >= $width) {
             return $text;
         }
         $padding = (int) (($width - $textLen) / 2);
 
         return str_repeat(' ', $padding).$text;
+    }
+
+    /**
+     * שורת קבלה בסגנון קופה: תווית משמאל (מילוי עד width−amountCols) + עמודת סכום מיושרת לשמאל (מילוי עד amountCols).
+     * מבוסס על mb — עברית וש"ח נספרים נכון.
+     */
+    private function receiptLineLabelAndAmount(string $label, string $amount, int $width, int $amountColumns = 12): string
+    {
+        $amountColumns = max(1, $amountColumns);
+        $labelWidth = max(0, $width - $amountColumns);
+
+        return $this->mbStrPadRight($label, $labelWidth).$this->mbStrPadLeft($amount, $amountColumns);
+    }
+
+    private function mbStrPadLeft(string $string, int $length): string
+    {
+        $len = mb_strlen($string, 'UTF-8');
+        if ($len >= $length) {
+            return $string;
+        }
+
+        return str_repeat(' ', $length - $len).$string;
+    }
+
+    private function mbStrPadRight(string $string, int $length): string
+    {
+        $len = mb_strlen($string, 'UTF-8');
+        if ($len >= $length) {
+            return $string;
+        }
+
+        return $string.str_repeat(' ', $length - $len);
+    }
+
+    /**
+     * טקסט קבלה לדוגמה (תצוגת ווב / בדיקה) — אותו מבנה כמו buildReceiptPayload, בלי הזמנה אמיתית.
+     */
+    public function sampleReceiptForWebPreview(Printer $printer): string
+    {
+        $width = $this->getLineWidth($printer);
+        $separator = str_repeat('=', $width);
+        $dash = str_repeat('-', $width);
+
+        $lines = [
+            $this->centerText("צ'יפס-טעים בכל ביס (דוגמה)", $printer),
+            $separator,
+            $this->centerText('קבלה — הזמנה #248', $printer),
+            $separator,
+            $this->centerText('29.03.2026 15:30', $printer),
+            $this->centerText('🚗 שירות: משלוח', $printer),
+            $this->centerText('🍱 אריזה: חמגשית (משלוח)', $printer),
+            $this->centerText('🍽🌯 סוג מנה (קטגוריות): מעורב', $printer),
+            $this->centerText('לקוח: איתי חרוש', $printer),
+            $this->centerText('טלפון: '.PhoneValidationService::formatIsraeliForDisplay('0547466508'), $printer),
+            $this->centerText('כתובת: רחוב הדוגמה 12, תל אביב', $printer),
+            $dash,
+            '1x חזה עוף (גריל)',
+            '  + חומוס '.$this->formatShekelAmount(5.00),
+            '',
+            '2x צ׳יפס',
+            '',
+            $separator,
+            $this->centerText('דמי משלוח: '.$this->formatShekelAmount(25.00), $printer),
+            $this->receiptLineLabelAndAmount('סה"כ:', $this->formatShekelAmount(105.00), $width, 12),
+            $this->centerText('תשלום: מזומן', $printer),
+            $separator,
+            $this->centerText('תודה שבחרתם בנו!', $printer),
+            '',
+        ];
+
+        return implode("\n", $lines);
     }
 
     /**

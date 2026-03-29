@@ -8,11 +8,14 @@ use App\Models\User;
 use App\Services\PhoneValidationService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 
 class SuperAdminAnalyticsController extends Controller
 {
     private const VISITOR_FILTER_MODES = ['all', 'exclude_owner', 'owner_only'];
+
+    private const MAX_FOCUS_IDS = 8;
 
     private const SUPER_ADMIN_PAGE_KEYS = [
         'super_admin_dashboard',
@@ -76,20 +79,89 @@ class SuperAdminAnalyticsController extends Controller
     }
 
     /**
+     * GET /super-admin/analytics/entity-suggestions?query=...
+     */
+    public function entitySuggestions(Request $request)
+    {
+        $user = $request->user();
+        if (! $user?->is_super_admin) {
+            return response()->json(['success' => false, 'message' => 'לא מורשה'], 403);
+        }
+
+        $q = trim((string) $request->query('query', ''));
+        if (mb_strlen($q) < 2) {
+            return response()->json([
+                'success' => true,
+                'data' => ['users' => [], 'customers' => []],
+            ]);
+        }
+
+        $like = '%'.addcslashes($q, '%_\\').'%';
+
+        $users = User::query()
+            ->where(function ($w) use ($like) {
+                $w->where('email', 'like', $like)
+                    ->orWhere('name', 'like', $like);
+            })
+            ->orderBy('id')
+            ->limit(12)
+            ->get(['id', 'name', 'email'])
+            ->map(fn ($u) => [
+                'type' => 'admin',
+                'id' => $u->id,
+                'label' => trim((string) ($u->name ?? '')) !== '' ? trim((string) $u->name) : $this->maskEmail((string) $u->email),
+                'sub' => $this->maskEmail((string) $u->email),
+            ])
+            ->values()
+            ->all();
+
+        $customers = Customer::query()
+            ->where(function ($w) use ($like) {
+                $w->where('phone', 'like', $like)
+                    ->orWhere('name', 'like', $like)
+                    ->orWhere('email', 'like', $like);
+            })
+            ->orderBy('id')
+            ->limit(12)
+            ->get(['id', 'name', 'phone', 'email'])
+            ->map(fn ($c) => [
+                'type' => 'customer',
+                'id' => $c->id,
+                'label' => trim((string) ($c->name ?? '')) !== '' ? trim((string) $c->name) : 'לקוח #'.$c->id,
+                'sub' => $this->maskPhone($c->phone ?? '').(trim((string) ($c->email ?? '')) !== '' ? ' · '.$this->maskEmail((string) $c->email) : ''),
+            ])
+            ->values()
+            ->all();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'users' => $users,
+                'customers' => $customers,
+            ],
+        ]);
+    }
+
+    /**
      * GET /super-admin/analytics/summary?days=7&visitor_filter=all|exclude_owner|owner_only
      */
     public function summary(Request $request)
     {
-        $days = min(90, max(1, (int) $request->query('days', 7)));
-        $since = Carbon::now()->subDays($days)->startOfDay();
+        $window = $this->resolveAnalyticsWindow($request);
+        $since = $window['since'];
+        $until = $window['until'];
         $mode = $this->visitorFilterMode($request);
         $ownerId = $this->resolvePlatformOwnerId();
         $ownerCustomerId = $this->resolvePlatformOwnerCustomerId();
         $ownerEmail = trim((string) config('platform.owner_email', ''));
         $ownerPhoneRaw = trim((string) config('platform.owner_customer_phone', ''));
+        [$focusAdmins, $focusCustomers] = $this->parseFocusEntityIds($request);
 
-        $base = PageVisit::query()->where('created_at', '>=', $since);
+        $base = PageVisit::query()
+            ->where('created_at', '>=', $since)
+            ->where('created_at', '<=', $until);
         $this->applyOwnerVisitorScope($base, $mode, $ownerId, $ownerCustomerId);
+        $this->applyFocusEntityScope($base, $focusAdmins, $focusCustomers);
 
         $total = (clone $base)->count();
 
@@ -149,12 +221,39 @@ class SuperAdminAnalyticsController extends Controller
         $ownerUser = $ownerId ? User::query()->find($ownerId) : null;
         $ownerPhoneE164 = $ownerPhoneRaw !== '' ? PhoneValidationService::normalizeIsraeliMobileE164($ownerPhoneRaw) : null;
 
+        $byHour = $this->aggregateVisitsByHour(clone $base, DB::getDriverName());
+
+        $compareYesterday = null;
+        if ($window['period'] === 'today') {
+            $todayStart = Carbon::today();
+            $elapsed = max(1, $todayStart->diffInSeconds($until));
+            $yStart = Carbon::yesterday()->startOfDay();
+            $yEnd = $yStart->copy()->addSeconds($elapsed);
+            $baseY = PageVisit::query()
+                ->where('created_at', '>=', $yStart)
+                ->where('created_at', '<=', $yEnd);
+            $this->applyOwnerVisitorScope($baseY, $mode, $ownerId, $ownerCustomerId);
+            $this->applyFocusEntityScope($baseY, $focusAdmins, $focusCustomers);
+            $yTotal = (clone $baseY)->count();
+            $compareYesterday = [
+                'total_today' => $total,
+                'total_yesterday_same_window' => $yTotal,
+                'delta' => $total - $yTotal,
+            ];
+        }
+
         return response()->json([
             'success' => true,
             'data' => [
                 'since' => $since->toIso8601String(),
-                'days' => $days,
+                'until' => $until->toIso8601String(),
+                'period' => $window['period'],
+                'days' => $window['days'],
+                'focus_admin_ids' => $focusAdmins,
+                'focus_customer_ids' => $focusCustomers,
                 'visitor_filter' => $mode,
+                'by_hour' => $byHour,
+                'compare_yesterday' => $compareYesterday,
                 'platform_owner' => [
                     'email_configured' => $ownerEmail !== '',
                     'email_masked' => $ownerEmail !== '' ? $this->maskEmail($ownerEmail) : null,
@@ -185,17 +284,21 @@ class SuperAdminAnalyticsController extends Controller
      */
     public function menuInsights(Request $request)
     {
-        $days = min(90, max(1, (int) $request->query('days', 7)));
+        $window = $this->resolveAnalyticsWindow($request);
+        $since = $window['since'];
+        $until = $window['until'];
         $limitRecent = min(200, max(10, (int) $request->query('limit_recent', 80)));
-        $since = Carbon::now()->subDays($days)->startOfDay();
         $mode = $this->visitorFilterMode($request);
         $ownerId = $this->resolvePlatformOwnerId();
         $ownerCustomerId = $this->resolvePlatformOwnerCustomerId();
+        [$focusAdmins, $focusCustomers] = $this->parseFocusEntityIds($request);
 
         $recentRows = PageVisit::query()
             ->where('created_at', '>=', $since)
+            ->where('created_at', '<=', $until)
             ->where('page_key', 'menu');
         $this->applyOwnerVisitorScope($recentRows, $mode, $ownerId, $ownerCustomerId);
+        $this->applyFocusEntityScope($recentRows, $focusAdmins, $focusCustomers);
         $recentRows = $recentRows
             ->orderByDesc('id')
             ->limit($limitRecent)
@@ -251,8 +354,10 @@ class SuperAdminAnalyticsController extends Controller
 
         $allMenu = PageVisit::query()
             ->where('created_at', '>=', $since)
+            ->where('created_at', '<=', $until)
             ->where('page_key', 'menu');
         $this->applyOwnerVisitorScope($allMenu, $mode, $ownerId, $ownerCustomerId);
+        $this->applyFocusEntityScope($allMenu, $focusAdmins, $focusCustomers);
         $allMenu = $allMenu->get(['restaurant_id', 'tenant_id', 'restaurant_name', 'visitor_uuid']);
 
         $byRestaurant = [];
@@ -296,7 +401,9 @@ class SuperAdminAnalyticsController extends Controller
             'success' => true,
             'data' => [
                 'since' => $since->toIso8601String(),
-                'days' => $days,
+                'until' => $until->toIso8601String(),
+                'period' => $window['period'],
+                'days' => $window['days'],
                 'visitor_filter' => $mode,
                 'by_restaurant' => $byRestaurantList,
                 'recent_menu_views' => $recent,
@@ -309,18 +416,20 @@ class SuperAdminAnalyticsController extends Controller
      */
     public function topEntities(Request $request)
     {
-        $days = min(90, max(1, (int) $request->query('days', 7)));
+        $window = $this->resolveAnalyticsWindow($request);
+        $since = $window['since'];
+        $until = $window['until'];
         $limit = min(100, max(5, (int) $request->query('limit', 40)));
-        $since = Carbon::now()->subDays($days)->startOfDay();
         $mode = $this->visitorFilterMode($request);
         $ownerId = $this->resolvePlatformOwnerId();
         $ownerCustomerId = $this->resolvePlatformOwnerCustomerId();
+        [$focusAdmins, $focusCustomers] = $this->parseFocusEntityIds($request);
 
         $driver = DB::getDriverName();
         if ($driver === 'sqlite') {
-            $rows = $this->topEntitiesSqlite($since, $limit, $mode, $ownerId, $ownerCustomerId);
+            $rows = $this->topEntitiesSqlite($since, $until, $limit, $mode, $ownerId, $ownerCustomerId, $focusAdmins, $focusCustomers);
         } else {
-            $rows = $this->topEntitiesMysql($since, $limit, $mode, $ownerId, $ownerCustomerId);
+            $rows = $this->topEntitiesMysql($since, $until, $limit, $mode, $ownerId, $ownerCustomerId, $focusAdmins, $focusCustomers);
         }
 
         $adminIds = [];
@@ -385,14 +494,16 @@ class SuperAdminAnalyticsController extends Controller
             'success' => true,
             'data' => [
                 'since' => $since->toIso8601String(),
-                'days' => $days,
+                'until' => $until->toIso8601String(),
+                'period' => $window['period'],
+                'days' => $window['days'],
                 'visitor_filter' => $mode,
                 'rows' => $rows,
             ],
         ]);
     }
 
-    private function topEntitiesMysql(Carbon $since, int $limit, string $mode, ?int $ownerId, ?int $ownerCustomerId): array
+    private function topEntitiesMysql(Carbon $since, Carbon $until, int $limit, string $mode, ?int $ownerId, ?int $ownerCustomerId, array $focusAdmins, array $focusCustomers): array
     {
         $expr = "CASE
             WHEN admin_user_id IS NOT NULL THEN CONCAT('admin:', admin_user_id)
@@ -401,8 +512,10 @@ class SuperAdminAnalyticsController extends Controller
         END";
 
         $q = PageVisit::query()
-            ->where('created_at', '>=', $since);
+            ->where('created_at', '>=', $since)
+            ->where('created_at', '<=', $until);
         $this->applyOwnerVisitorScope($q, $mode, $ownerId, $ownerCustomerId);
+        $this->applyFocusEntityScope($q, $focusAdmins, $focusCustomers);
 
         return $q
             ->selectRaw("$expr as entity_key")
@@ -427,10 +540,13 @@ class SuperAdminAnalyticsController extends Controller
             ->all();
     }
 
-    private function topEntitiesSqlite(Carbon $since, int $limit, string $mode, ?int $ownerId, ?int $ownerCustomerId): array
+    private function topEntitiesSqlite(Carbon $since, Carbon $until, int $limit, string $mode, ?int $ownerId, ?int $ownerCustomerId, array $focusAdmins, array $focusCustomers): array
     {
-        $rawQ = PageVisit::query()->where('created_at', '>=', $since);
+        $rawQ = PageVisit::query()
+            ->where('created_at', '>=', $since)
+            ->where('created_at', '<=', $until);
         $this->applyOwnerVisitorScope($rawQ, $mode, $ownerId, $ownerCustomerId);
+        $this->applyFocusEntityScope($rawQ, $focusAdmins, $focusCustomers);
         $raw = $rawQ->select([
             'visitor_kind',
             'admin_user_id',
@@ -494,6 +610,147 @@ class SuperAdminAnalyticsController extends Controller
         }
 
         return '***'.substr($digits, -4);
+    }
+
+
+    /**
+     * @param  \Illuminate\Database\Eloquent\Builder<\App\Models\PageVisit>  $base
+     * @return list<array{hour: int, count: int}>
+     */
+    private function aggregateVisitsByHour($base, string $driver): array
+    {
+        $q = clone $base;
+        if ($driver === 'sqlite') {
+            $rows = (clone $q)
+                ->selectRaw("cast(strftime('%H', created_at) as integer) as h")
+                ->selectRaw('count(*) as c')
+                ->groupBy('h')
+                ->orderBy('h')
+                ->get();
+        } else {
+            $rows = (clone $q)
+                ->selectRaw('HOUR(created_at) as h')
+                ->selectRaw('count(*) as c')
+                ->groupBy('h')
+                ->orderBy('h')
+                ->get();
+        }
+
+        $map = array_fill(0, 24, 0);
+        foreach ($rows as $row) {
+            $h = (int) $row->h;
+            if ($h >= 0 && $h <= 23) {
+                $map[$h] = (int) $row->c;
+            }
+        }
+
+        $out = [];
+        for ($h = 0; $h < 24; $h++) {
+            $out[] = ['hour' => $h, 'count' => $map[$h]];
+        }
+
+        return $out;
+    }
+
+    /**
+     * @return array{period: string, since: Carbon, until: Carbon, days: int|null}
+     */
+    private function resolveAnalyticsWindow(Request $request): array
+    {
+        $period = (string) $request->query('period', '');
+        if ($period === 'today') {
+            return [
+                'period' => 'today',
+                'since' => Carbon::today(),
+                'until' => Carbon::now(),
+                'days' => null,
+            ];
+        }
+
+        $days = min(90, max(1, (int) $request->query('days', 7)));
+
+        return [
+            'period' => 'days',
+            'since' => Carbon::now()->subDays($days)->startOfDay(),
+            'until' => Carbon::now(),
+            'days' => $days,
+        ];
+    }
+
+    /**
+     * @return array{0: list<int>, 1: list<int>}
+     */
+    private function parseFocusEntityIds(Request $request): array
+    {
+        $adminRaw = $request->query('focus_admin_ids', []);
+        $custRaw = $request->query('focus_customer_ids', []);
+
+        $adminIds = $this->normalizeIdList($adminRaw);
+        $customerIds = $this->normalizeIdList($custRaw);
+
+        if ($adminIds !== []) {
+            $adminIds = User::query()->whereIn('id', $adminIds)->pluck('id')->map(fn ($id) => (int) $id)->all();
+        }
+        if ($customerIds !== []) {
+            $customerIds = Customer::query()->whereIn('id', $customerIds)->pluck('id')->map(fn ($id) => (int) $id)->all();
+        }
+
+        return [$adminIds, $customerIds];
+    }
+
+    /**
+     * @param  mixed  $raw
+     * @return list<int>
+     */
+    private function normalizeIdList($raw): array
+    {
+        $items = Arr::wrap($raw);
+        $flat = [];
+        foreach ($items as $item) {
+            if (is_string($item) && str_contains($item, ',')) {
+                foreach (explode(',', $item) as $part) {
+                    $flat[] = trim($part);
+                }
+            } else {
+                $flat[] = $item;
+            }
+        }
+
+        $ids = [];
+        foreach ($flat as $x) {
+            $n = (int) $x;
+            if ($n > 0) {
+                $ids[] = $n;
+            }
+        }
+
+        return array_values(array_unique(array_slice($ids, 0, self::MAX_FOCUS_IDS)));
+    }
+
+    /**
+     * @param  \Illuminate\Database\Eloquent\Builder<\App\Models\PageVisit>  $query
+     * @param  list<int>  $focusAdminIds
+     * @param  list<int>  $focusCustomerIds
+     */
+    private function applyFocusEntityScope($query, array $focusAdminIds, array $focusCustomerIds): void
+    {
+        if ($focusAdminIds === [] && $focusCustomerIds === []) {
+            return;
+        }
+        if ($focusAdminIds !== [] && $focusCustomerIds !== []) {
+            $query->where(function ($q) use ($focusAdminIds, $focusCustomerIds) {
+                $q->whereIn('admin_user_id', $focusAdminIds)
+                    ->orWhereIn('customer_id', $focusCustomerIds);
+            });
+
+            return;
+        }
+        if ($focusAdminIds !== []) {
+            $query->whereIn('admin_user_id', $focusAdminIds);
+
+            return;
+        }
+        $query->whereIn('customer_id', $focusCustomerIds);
     }
 
     private function visitorFilterMode(Request $request): string

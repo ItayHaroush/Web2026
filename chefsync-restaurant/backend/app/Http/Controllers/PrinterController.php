@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Printer;
 use App\Models\Order;
+use App\Models\Printer;
 use App\Services\PrintService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -34,7 +34,7 @@ class PrinterController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isManager()) {
+        if (! $user->isManager()) {
             return response()->json([
                 'success' => false,
                 'message' => 'אין לך הרשאה להוסיף מדפסות',
@@ -53,7 +53,7 @@ class PrinterController extends Controller
         ]);
 
         $restaurant = $user->restaurant;
-        if (!$restaurant) {
+        if (! $restaurant) {
             return response()->json([
                 'success' => false,
                 'message' => 'לא נמצאה מסעדה למשתמש',
@@ -90,7 +90,7 @@ class PrinterController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isManager()) {
+        if (! $user->isManager()) {
             return response()->json([
                 'success' => false,
                 'message' => 'אין לך הרשאה לעדכן מדפסות',
@@ -109,7 +109,7 @@ class PrinterController extends Controller
         ]);
 
         $restaurant = $user->restaurant;
-        if (!$restaurant) {
+        if (! $restaurant) {
             return response()->json([
                 'success' => false,
                 'message' => 'לא נמצאה מסעדה למשתמש',
@@ -139,7 +139,7 @@ class PrinterController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isManager()) {
+        if (! $user->isManager()) {
             return response()->json([
                 'success' => false,
                 'message' => 'אין לך הרשאה למחוק מדפסות',
@@ -147,7 +147,7 @@ class PrinterController extends Controller
         }
 
         $restaurant = $user->restaurant;
-        if (!$restaurant) {
+        if (! $restaurant) {
             return response()->json([
                 'success' => false,
                 'message' => 'לא נמצאה מסעדה למשתמש',
@@ -171,7 +171,7 @@ class PrinterController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->isManager()) {
+        if (! $user->isManager()) {
             return response()->json([
                 'success' => false,
                 'message' => 'אין לך הרשאה לשנות סטטוס מדפסת',
@@ -179,7 +179,7 @@ class PrinterController extends Controller
         }
 
         $restaurant = $user->restaurant;
-        if (!$restaurant) {
+        if (! $restaurant) {
             return response()->json([
                 'success' => false,
                 'message' => 'לא נמצאה מסעדה למשתמש',
@@ -187,13 +187,49 @@ class PrinterController extends Controller
         }
 
         $printer = Printer::where('restaurant_id', $restaurant->id)->findOrFail($id);
-        $printer->is_active = !$printer->is_active;
+        $printer->is_active = ! $printer->is_active;
         $printer->save();
 
         return response()->json([
             'success' => true,
             'message' => $printer->is_active ? 'המדפסת הופעלה!' : 'המדפסת כובתה',
             'printer' => $printer->load('categories:id,name,icon'),
+        ]);
+    }
+
+    /**
+     * דוגמת קבלה (טקסט) לתצוגת ווב / בדיקת פורמט — לפי רוחב נייר.
+     */
+    public function receiptExample(Request $request)
+    {
+        $user = $request->user();
+        $restaurant = $user->restaurant;
+
+        if (! $restaurant) {
+            return response()->json([
+                'success' => false,
+                'message' => 'לא נמצאה מסעדה למשתמש',
+            ], 404);
+        }
+
+        $paper = $request->query('paper_width', '80mm');
+        if (! in_array($paper, ['80mm', '58mm'], true)) {
+            $paper = '80mm';
+        }
+
+        $printer = Printer::make(['paper_width' => $paper, 'restaurant_id' => $restaurant->id]);
+        $text = app(PrintService::class)->sampleReceiptForWebPreview($printer);
+
+        if ($request->query('format') === 'json') {
+            return response()->json([
+                'success' => true,
+                'paper_width' => $paper,
+                'text' => $text,
+            ]);
+        }
+
+        return response($text, 200, [
+            'Content-Type' => 'text/plain; charset=UTF-8',
         ]);
     }
 
@@ -205,7 +241,7 @@ class PrinterController extends Controller
         $user = $request->user();
         $restaurant = $user->restaurant;
 
-        if (!$restaurant) {
+        if (! $restaurant) {
             return response()->json([
                 'success' => false,
                 'message' => 'לא נמצאה מסעדה למשתמש',
@@ -230,7 +266,7 @@ class PrinterController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'שגיאה בהדפסת ניסיון: ' . $e->getMessage(),
+                'message' => 'שגיאה בהדפסת ניסיון: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -243,7 +279,7 @@ class PrinterController extends Controller
         $user = $request->user();
         $restaurant = $user->restaurant;
 
-        if (!$restaurant) {
+        if (! $restaurant) {
             return response()->json([
                 'success' => false,
                 'message' => 'לא נמצאה מסעדה למשתמש',
@@ -273,7 +309,7 @@ class PrinterController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'שגיאה בהדפסה חוזרת: ' . $e->getMessage(),
+                'message' => 'שגיאה בהדפסה חוזרת: '.$e->getMessage(),
             ], 500);
         }
     }

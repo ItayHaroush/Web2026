@@ -1,9 +1,10 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import SuperAdminLayout from '../../layouts/SuperAdminLayout';
 import api from '../../services/apiClient';
 import { useAdminAuth } from '../../context/AdminAuthContext';
-import { FaChartBar, FaUsers, FaMousePointer, FaUtensils, FaStore, FaUserShield, FaMobileAlt } from 'react-icons/fa';
+import { FaChartBar, FaUsers, FaMousePointer, FaUtensils, FaStore, FaUserShield, FaMobileAlt, FaSearch, FaTimes } from 'react-icons/fa';
 import { pageKeyLabel, describeCustomerPath } from '../../constants/pageViewLabels';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const KIND_LABELS = {
     anonymous: 'מבקר אנונימי',
@@ -14,8 +15,8 @@ const KIND_LABELS = {
 
 const VISITOR_FILTERS = [
     { value: 'all', label: 'הכל' },
-    { value: 'exclude_owner', label: 'בלי כניסות שלי (בעל המערכת)' },
-    { value: 'owner_only', label: 'רק כניסות שלי' },
+    { value: 'exclude_owner', label: 'בלי כניסות שלי' },
+    { value: 'owner_only', label: 'רק שלי' },
 ];
 
 function buildVisitorKindDisplayRows(byKind, adminSplit, registeredSplit) {
@@ -67,25 +68,62 @@ function buildVisitorKindDisplayRows(byKind, adminSplit, registeredSplit) {
     return rows;
 }
 
+function buildAnalyticsQueryString({ rangePreset, days, visitorFilter, focusPicks }) {
+    const sp = new URLSearchParams();
+    sp.set('visitor_filter', visitorFilter);
+    if (rangePreset === 'today') {
+        sp.set('period', 'today');
+    } else {
+        sp.set('days', String(days));
+    }
+    focusPicks.forEach((pick) => {
+        if (pick.type === 'admin') {
+            sp.append('focus_admin_ids[]', String(pick.id));
+        } else {
+            sp.append('focus_customer_ids[]', String(pick.id));
+        }
+    });
+    return sp.toString();
+}
+
+const tableScrollClass =
+    'overflow-x-auto max-h-[min(60vh,520px)] overflow-y-auto rounded-xl border border-gray-50 -mx-1';
+
 export default function SuperAdminAnalytics() {
     const { getAuthHeaders, user } = useAdminAuth();
+    const [rangePreset, setRangePreset] = useState('7d');
     const [days, setDays] = useState(7);
     const [visitorFilter, setVisitorFilter] = useState('all');
+    const [focusPicks, setFocusPicks] = useState([]);
+    const [entityQuery, setEntityQuery] = useState('');
+    const [entityResults, setEntityResults] = useState({ users: [], customers: [] });
+    const [entityLoading, setEntityLoading] = useState(false);
     const [summary, setSummary] = useState(null);
     const [topRows, setTopRows] = useState([]);
     const [menuInsights, setMenuInsights] = useState(null);
     const [loading, setLoading] = useState(true);
+    const searchDebounce = useRef(null);
 
-    const vf = encodeURIComponent(visitorFilter);
+    const queryKey = useMemo(
+        () =>
+            buildAnalyticsQueryString({
+                rangePreset,
+                days,
+                visitorFilter,
+                focusPicks,
+            }),
+        [rangePreset, days, visitorFilter, focusPicks]
+    );
 
     const load = useCallback(async () => {
         setLoading(true);
         try {
             const h = { headers: getAuthHeaders() };
+            const qs = queryKey;
             const [sRes, tRes, mRes] = await Promise.all([
-                api.get(`/super-admin/analytics/summary?days=${days}&visitor_filter=${vf}`, h),
-                api.get(`/super-admin/analytics/top-entities?days=${days}&limit=50&visitor_filter=${vf}`, h),
-                api.get(`/super-admin/analytics/menu-insights?days=${days}&limit_recent=100&visitor_filter=${vf}`, h),
+                api.get(`/super-admin/analytics/summary?${qs}`, h),
+                api.get(`/super-admin/analytics/top-entities?${qs}&limit=50`, h),
+                api.get(`/super-admin/analytics/menu-insights?${qs}&limit_recent=100`, h),
             ]);
             if (sRes.data?.success) setSummary(sRes.data.data);
             if (tRes.data?.success) setTopRows(tRes.data.data?.rows || []);
@@ -95,11 +133,39 @@ export default function SuperAdminAnalytics() {
         } finally {
             setLoading(false);
         }
-    }, [getAuthHeaders, days, vf]);
+    }, [getAuthHeaders, queryKey]);
 
     useEffect(() => {
         load();
     }, [load]);
+
+    useEffect(() => {
+        if (searchDebounce.current) clearTimeout(searchDebounce.current);
+        const q = entityQuery.trim();
+        if (q.length < 2) {
+            setEntityResults({ users: [], customers: [] });
+            return;
+        }
+        searchDebounce.current = setTimeout(async () => {
+            setEntityLoading(true);
+            try {
+                const res = await api.get(
+                    `/super-admin/analytics/entity-suggestions?query=${encodeURIComponent(q)}`,
+                    { headers: getAuthHeaders() }
+                );
+                if (res.data?.success) {
+                    setEntityResults(res.data.data || { users: [], customers: [] });
+                }
+            } catch {
+                setEntityResults({ users: [], customers: [] });
+            } finally {
+                setEntityLoading(false);
+            }
+        }, 320);
+        return () => {
+            if (searchDebounce.current) clearTimeout(searchDebounce.current);
+        };
+    }, [entityQuery, getAuthHeaders]);
 
     const byPage = summary?.by_page_key || {};
     const byKind = summary?.by_visitor_kind || {};
@@ -110,38 +176,106 @@ export default function SuperAdminAnalytics() {
         [byKind, summary?.admin_visit_split, summary?.registered_visit_split]
     );
 
-    const filterHint =
+    const hourChartData = useMemo(
+        () =>
+            (summary?.by_hour || []).map((x) => ({
+                name: `${x.hour}:00`,
+                count: x.count,
+            })),
+        [summary?.by_hour]
+    );
+
+    const filterHintShort =
         visitorFilter === 'exclude_owner'
-            ? 'מוצגים נתונים ללא הכניסות שלך: לא כמשתמש פאנל (לפי אימייל המערכת) ולא כלקוח B2C רשום (לפי מספר הטלפון המוגדר ב־PLATFORM_OWNER_CUSTOMER_PHONE).'
+            ? 'ללא כניסות שמזוהות איתך (פאנל + לקוח B2C לפי הגדרות המערכת).'
             : visitorFilter === 'owner_only'
-              ? 'מוצגות רק כניסות שמקושרות אליך: פאנל ניהול (משתמש עם אימייל בעל המערכת) או אפליקציית לקוח עם אותו מספר טלפון רשום ב־customers.'
+              ? 'רק כניסות שמזוהות איתך.'
               : null;
+
+    const addFocusPick = (type, id, label) => {
+        const key = `${type}-${id}`;
+        if (focusPicks.some((p) => `${p.type}-${p.id}` === key)) return;
+        if (focusPicks.length >= 8) return;
+        setFocusPicks((prev) => [...prev, { type, id, label }]);
+        setEntityQuery('');
+        setEntityResults({ users: [], customers: [] });
+    };
+
+    const removeFocusPick = (key) => {
+        setFocusPicks((prev) => prev.filter((p) => `${p.type}-${p.id}` !== key));
+    };
+
+    const thSticky = 'sticky top-0 z-10 bg-white py-2 px-2 font-black text-gray-500 shadow-sm';
 
     return (
         <SuperAdminLayout>
-            <div className="space-y-8" dir="rtl">
+            <div className="space-y-6 sm:space-y-8" dir="rtl">
                 <div>
-                    <h1 className="text-2xl font-black text-gray-900 flex items-center gap-2">
+                    <h1 className="text-2xl font-black text-gray-900 flex flex-wrap items-center gap-2">
                         <div className="p-2 bg-indigo-100 rounded-lg">
                             <FaChartBar className="text-indigo-600" size={22} />
                         </div>
                         אנליטיקות כניסה
+                        {user?.email ? (
+                            <span className="text-xs font-bold text-gray-400 ltr">
+                                · <span className="font-mono">{user.email}</span>
+                                {user?.is_super_admin ? ' · סופר־אדמין' : ''}
+                            </span>
+                        ) : null}
                     </h1>
-                    <p className="text-sm text-gray-500 mt-1">
-                        כניסות לדפים ציבוריים, פאנל מסעדה וסופר־אדמין — מזהה אנונימי נשמר בדפדפן (לא מבוסס טלפון).
-                    </p>
-                    {user?.email && (
-                        <p className="text-xs text-gray-400 mt-2 ltr text-left">
-                            מחובר כעת: <span className="font-mono">{user.email}</span>
-                            {user?.is_super_admin ? (
-                                <span className="mr-2 text-indigo-600 font-bold">· סופר־אדמין</span>
-                            ) : null}
+                    <p className="text-sm text-gray-500 mt-1">ציבור, פאנל מסעדה וסופר־אדמין — מזהה אנונימי בדפדפן.</p>
+                    {summary?.since && summary?.until ? (
+                        <p className="text-[11px] text-gray-400 mt-1 font-mono ltr text-left">
+                            {summary.period === 'today' ? 'היום: ' : ''}
+                            {new Date(summary.since).toLocaleString('he-IL')} — {new Date(summary.until).toLocaleString('he-IL')}
                         </p>
-                    )}
+                    ) : null}
                 </div>
 
-                <div className="space-y-3">
-                    <p className="text-xs font-black text-gray-500 uppercase tracking-wider">סינון לפי בעל המערכת</p>
+                <div className="flex flex-wrap gap-2 items-center">
+                    <button
+                        type="button"
+                        onClick={() => setRangePreset('today')}
+                        className={`px-4 py-2 rounded-xl text-sm font-black transition-all ${
+                            rangePreset === 'today'
+                                ? 'bg-indigo-600 text-white shadow-md'
+                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                    >
+                        היום
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setRangePreset('7d');
+                            setDays(7);
+                        }}
+                        className={`px-4 py-2 rounded-xl text-sm font-black transition-all ${
+                            rangePreset === '7d'
+                                ? 'bg-indigo-600 text-white shadow-md'
+                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                    >
+                        7 ימים
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setRangePreset('30d');
+                            setDays(30);
+                        }}
+                        className={`px-4 py-2 rounded-xl text-sm font-black transition-all ${
+                            rangePreset === '30d'
+                                ? 'bg-indigo-600 text-white shadow-md'
+                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                    >
+                        30 ימים
+                    </button>
+                </div>
+
+                <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm space-y-3">
+                    <p className="text-xs font-black text-gray-500 uppercase tracking-wider">סינון בעל מערכת</p>
                     <div className="flex flex-wrap gap-2">
                         {VISITOR_FILTERS.map((f) => (
                             <button
@@ -150,7 +284,7 @@ export default function SuperAdminAnalytics() {
                                 onClick={() => setVisitorFilter(f.value)}
                                 className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-black transition-all border ${
                                     visitorFilter === f.value
-                                        ? 'bg-violet-600 text-white border-violet-600 shadow-md'
+                                        ? 'bg-gray-800 text-white border-gray-800'
                                         : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
                                 }`}
                             >
@@ -158,55 +292,95 @@ export default function SuperAdminAnalytics() {
                             </button>
                         ))}
                     </div>
+                    {filterHintShort ? <p className="text-xs text-gray-500">{filterHintShort}</p> : null}
                     {(platformOwner?.email_masked || platformOwner?.customer_phone_masked) && (
-                        <div className="text-xs text-gray-500 space-y-1">
-                            <p className="font-black text-gray-600">מזהים לסינון ובהבדלה בסטטיסטיקה</p>
-                            {platformOwner.email_masked ? (
-                                <p>
-                                    משתמש פאנל (אימייל):{' '}
-                                    <span className="font-mono ltr text-left inline-block">{platformOwner.email_masked}</span>
-                                    {!platformOwner.user_resolved && platformOwner.email_configured ? (
-                                        <span className="text-amber-600 font-bold mr-1 block sm:inline mt-1 sm:mt-0">
-                                            — לא נמצא משתמש עם אימייל זה; סינון לפי פאנל לא יחול.
-                                        </span>
-                                    ) : null}
-                                </p>
-                            ) : null}
-                            {platformOwner.customer_phone_masked ? (
-                                <p>
-                                    לקוח רשום B2C (טלפון):{' '}
-                                    <span className="font-mono ltr text-left inline-block">{platformOwner.customer_phone_masked}</span>
-                                    {!platformOwner.customer_resolved && platformOwner.customer_phone_configured ? (
-                                        <span className="text-amber-600 font-bold mr-1 block sm:inline mt-1 sm:mt-0">
-                                            — לא נמצאה רשומת לקוח עם מספר זה (אחרי נרמול ל־E164); סינון לפי לקוח לא יחול.
-                                        </span>
-                                    ) : null}
-                                </p>
-                            ) : null}
-                        </div>
-                    )}
-                    {filterHint && (
-                        <div className="rounded-xl border border-violet-100 bg-violet-50/80 px-4 py-3 text-sm text-violet-900 font-bold">
-                            {filterHint}
-                        </div>
+                        <details className="text-xs text-gray-500 border-t border-gray-100 pt-3">
+                            <summary className="cursor-pointer font-bold text-gray-600">מזהי בעל מערכת (קונפיג)</summary>
+                            <div className="mt-2 space-y-1 ltr text-left">
+                                {platformOwner.email_masked ? (
+                                    <p>
+                                        פאנל: <span className="font-mono">{platformOwner.email_masked}</span>
+                                        {!platformOwner.user_resolved && platformOwner.email_configured ? (
+                                            <span className="text-amber-600 mr-1"> (לא נמצא ב־DB)</span>
+                                        ) : null}
+                                    </p>
+                                ) : null}
+                                {platformOwner.customer_phone_masked ? (
+                                    <p>
+                                        B2C: <span className="font-mono">{platformOwner.customer_phone_masked}</span>
+                                        {!platformOwner.customer_resolved && platformOwner.customer_phone_configured ? (
+                                            <span className="text-amber-600 mr-1"> (לא נמצא ב־DB)</span>
+                                        ) : null}
+                                    </p>
+                                ) : null}
+                            </div>
+                        </details>
                     )}
                 </div>
 
-                <div className="flex flex-wrap gap-2">
-                    {[7, 30].map((d) => (
-                        <button
-                            key={d}
-                            type="button"
-                            onClick={() => setDays(d)}
-                            className={`px-4 py-2 rounded-xl text-sm font-black transition-all ${
-                                days === d
-                                    ? 'bg-indigo-600 text-white shadow-md'
-                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                            }`}
-                        >
-                            {d} ימים אחרונים
-                        </button>
-                    ))}
+                <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm space-y-3">
+                    <p className="text-xs font-black text-gray-500 uppercase tracking-wider">התמקדות במשתמשים</p>
+                    <div className="relative">
+                        <FaSearch className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm" />
+                        <input
+                            type="search"
+                            value={entityQuery}
+                            onChange={(e) => setEntityQuery(e.target.value)}
+                            placeholder="חיפוש אימייל, שם או טלפון…"
+                            className="w-full rounded-xl border border-gray-200 py-2.5 pr-10 pl-3 text-sm outline-none focus:ring-2 focus:ring-indigo-200"
+                        />
+                    </div>
+                    {entityLoading ? <p className="text-xs text-gray-400">מחפש…</p> : null}
+                    {(entityResults.users?.length > 0 || entityResults.customers?.length > 0) && entityQuery.trim().length >= 2 ? (
+                        <div className="max-h-48 overflow-y-auto rounded-xl border border-gray-100 divide-y divide-gray-50 text-sm">
+                            {entityResults.users?.map((u) => (
+                                <button
+                                    key={`u-${u.id}`}
+                                    type="button"
+                                    className="w-full text-right px-3 py-2 hover:bg-gray-50 flex flex-col"
+                                    onClick={() => addFocusPick('admin', u.id, u.label)}
+                                >
+                                    <span className="font-bold">{u.label}</span>
+                                    <span className="text-xs text-gray-500 font-mono ltr">{u.sub}</span>
+                                    <span className="text-[10px] text-indigo-600 font-black">מנהל</span>
+                                </button>
+                            ))}
+                            {entityResults.customers?.map((c) => (
+                                <button
+                                    key={`c-${c.id}`}
+                                    type="button"
+                                    className="w-full text-right px-3 py-2 hover:bg-gray-50 flex flex-col"
+                                    onClick={() => addFocusPick('customer', c.id, c.label)}
+                                >
+                                    <span className="font-bold">{c.label}</span>
+                                    <span className="text-xs text-gray-500">{c.sub}</span>
+                                    <span className="text-[10px] text-emerald-700 font-black">לקוח</span>
+                                </button>
+                            ))}
+                        </div>
+                    ) : null}
+                    {focusPicks.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                            {focusPicks.map((p) => (
+                                <span
+                                    key={`${p.type}-${p.id}`}
+                                    className="inline-flex items-center gap-1 rounded-full bg-indigo-50 text-indigo-900 pl-2 pr-1 py-1 text-xs font-bold"
+                                >
+                                    {p.type === 'admin' ? 'מנהל' : 'לקוח'} #{p.id} · {p.label}
+                                    <button
+                                        type="button"
+                                        className="p-1 rounded-full hover:bg-indigo-200"
+                                        onClick={() => removeFocusPick(`${p.type}-${p.id}`)}
+                                        aria-label="הסר"
+                                    >
+                                        <FaTimes size={10} />
+                                    </button>
+                                </span>
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="text-xs text-gray-400">ללא התמקדות — כל המבקרים בטווח.</p>
+                    )}
                 </div>
 
                 {loading ? (
@@ -214,9 +388,19 @@ export default function SuperAdminAnalytics() {
                 ) : (
                     <>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-                            <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+                            <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm min-w-0">
                                 <p className="text-xs font-black text-gray-400 uppercase tracking-wider mb-1">סה״כ צפיות</p>
                                 <p className="text-3xl font-black text-gray-900">{summary?.total_visits ?? 0}</p>
+                                {summary?.compare_yesterday ? (
+                                    <p
+                                        className={`text-xs font-bold mt-1 ${
+                                            (summary.compare_yesterday.delta ?? 0) >= 0 ? 'text-emerald-600' : 'text-rose-600'
+                                        }`}
+                                    >
+                                        מול אתמול (חלון זהה): {summary.compare_yesterday.delta >= 0 ? '+' : ''}
+                                        {summary.compare_yesterday.delta}
+                                    </p>
+                                ) : null}
                             </div>
                             <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
                                 <p className="text-xs font-black text-gray-400 uppercase tracking-wider mb-1 flex items-center gap-1">
@@ -247,24 +431,42 @@ export default function SuperAdminAnalytics() {
                                 <p className="text-3xl font-black text-gray-900">{summary?.unique_admin_user_ids ?? 0}</p>
                             </div>
                         </div>
+                        {hourChartData.length > 0 ? (
+                            <div className="bg-white rounded-2xl border border-gray-100 p-4 sm:p-6 shadow-sm">
+                                <h2 className="text-lg font-black text-gray-900 mb-4">צפיות לפי שעה</h2>
+                                <div className="h-64 w-full min-w-0" dir="ltr">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart data={hourChartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
+                                            <XAxis dataKey="name" tick={{ fontSize: 10 }} interval={2} />
+                                            <YAxis allowDecimals={false} width={36} tick={{ fontSize: 10 }} />
+                                            <Tooltip />
+                                            <Bar dataKey="count" fill="#6366f1" radius={[4, 4, 0, 0]} name="צפיות" />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </div>
+                        ) : null}
+
 
                         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                            <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm overflow-x-auto">
+                            <div className="bg-white rounded-2xl border border-gray-100 p-4 sm:p-6 shadow-sm min-w-0">
                                 <h2 className="text-lg font-black text-gray-900 mb-1 flex items-center gap-2">
                                     <FaUtensils className="text-orange-500" />
                                     תפריט — פילוח לפי מסעדה
                                 </h2>
                                 <p className="text-xs text-gray-500 mb-4">
-                                    כניסות לתפריט לקוח ({pageKeyLabel('menu')} · מפתח טכני: <code className="text-[10px] bg-gray-100 px-1 rounded">menu</code>)
+                                    {pageKeyLabel('menu')} · <code className="text-[10px] bg-gray-100 px-1 rounded">menu</code>
                                 </p>
-                                <table className="min-w-full text-sm">
-                                    <thead>
-                                        <tr className="text-right border-b border-gray-200">
-                                            <th className="py-2 px-2 font-black text-gray-500">מסעדה</th>
-                                            <th className="py-2 px-2 font-black text-gray-500 text-center">כניסות</th>
-                                            <th className="py-2 px-2 font-black text-gray-500 text-center">מבקרים ייחודיים</th>
-                                        </tr>
-                                    </thead>
+                                <div className={tableScrollClass}>
+                                    <table className="min-w-full text-sm">
+                                        <thead>
+                                            <tr className="text-right border-b border-gray-200">
+                                                <th className={thSticky}>מסעדה</th>
+                                                <th className={`${thSticky} text-center`}>כניסות</th>
+                                                <th className={`${thSticky} text-center`}>מבקרים ייחודיים</th>
+                                            </tr>
+                                        </thead>
                                     <tbody>
                                         {(menuInsights?.by_restaurant || []).length === 0 ? (
                                             <tr>
@@ -296,21 +498,23 @@ export default function SuperAdminAnalytics() {
                                             ))
                                         )}
                                     </tbody>
-                                </table>
+                                    </table>
+                                </div>
                             </div>
 
-                            <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm overflow-x-auto">
-                                <h2 className="text-lg font-black text-gray-900 mb-1">תפריט — כניסות אחרונות (מפורט)</h2>
-                                <p className="text-xs text-gray-500 mb-4">לקוח מזוהה: שם + טלפון מוסתר · אורח: שם מהטופס אם הוזן + קצה UUID</p>
-                                <table className="min-w-full text-sm">
-                                    <thead>
-                                        <tr className="text-right border-b border-gray-200">
-                                            <th className="py-2 px-2 font-black text-gray-500">זמן</th>
-                                            <th className="py-2 px-2 font-black text-gray-500">מסעדה</th>
-                                            <th className="py-2 px-2 font-black text-gray-500">מבקר / לקוח</th>
-                                            <th className="py-2 px-2 font-black text-gray-500">דף / יעד</th>
-                                        </tr>
-                                    </thead>
+                            <div className="bg-white rounded-2xl border border-gray-100 p-4 sm:p-6 shadow-sm min-w-0">
+                                <h2 className="text-lg font-black text-gray-900 mb-1">תפריט — כניסות אחרונות</h2>
+                                <p className="text-xs text-gray-500 mb-4">מבקרים מוסתרים חלקית</p>
+                                <div className={tableScrollClass}>
+                                    <table className="min-w-full text-sm">
+                                        <thead>
+                                            <tr className="text-right border-b border-gray-200">
+                                                <th className={thSticky}>זמן</th>
+                                                <th className={thSticky}>מסעדה</th>
+                                                <th className={thSticky}>מבקר / לקוח</th>
+                                                <th className={thSticky}>דף / יעד</th>
+                                            </tr>
+                                        </thead>
                                     <tbody>
                                         {(menuInsights?.recent_menu_views || []).length === 0 ? (
                                             <tr>
@@ -345,7 +549,8 @@ export default function SuperAdminAnalytics() {
                                             ))
                                         )}
                                     </tbody>
-                                </table>
+                                    </table>
+                                </div>
                             </div>
                         </div>
 
@@ -414,16 +619,17 @@ export default function SuperAdminAnalytics() {
                             </div>
                         </div>
 
-                        <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm overflow-x-auto">
+                        <div className="bg-white rounded-2xl border border-gray-100 p-4 sm:p-6 shadow-sm min-w-0">
                             <h2 className="text-lg font-black text-gray-900 mb-4">מובילים לפי פעילות</h2>
-                            <table className="min-w-full text-sm">
-                                <thead>
-                                    <tr className="text-right border-b border-gray-200">
-                                        <th className="py-3 px-2 font-black text-gray-500">תווית</th>
-                                        <th className="py-3 px-2 font-black text-gray-500">סוג</th>
-                                        <th className="py-3 px-2 font-black text-gray-500 text-center">צפיות</th>
-                                    </tr>
-                                </thead>
+                            <div className={tableScrollClass}>
+                                <table className="min-w-full text-sm">
+                                    <thead>
+                                        <tr className="text-right border-b border-gray-200">
+                                            <th className={thSticky}>תווית</th>
+                                            <th className={thSticky}>סוג</th>
+                                            <th className={`${thSticky} text-center`}>צפיות</th>
+                                        </tr>
+                                    </thead>
                                 <tbody>
                                     {topRows.length === 0 ? (
                                         <tr>
@@ -455,7 +661,8 @@ export default function SuperAdminAnalytics() {
                                         ))
                                     )}
                                 </tbody>
-                            </table>
+                                </table>
+                            </div>
                         </div>
                     </>
                 )}

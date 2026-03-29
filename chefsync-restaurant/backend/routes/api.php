@@ -232,6 +232,7 @@ Route::prefix('super-admin')->middleware(['auth:sanctum', 'super_admin'])->group
     Route::get('/analytics/summary', [SuperAdminAnalyticsController::class, 'summary'])->name('super-admin.analytics.summary');
     Route::get('/analytics/top-entities', [SuperAdminAnalyticsController::class, 'topEntities'])->name('super-admin.analytics.top');
     Route::get('/analytics/menu-insights', [SuperAdminAnalyticsController::class, 'menuInsights'])->name('super-admin.analytics.menu-insights');
+    Route::get('/analytics/entity-suggestions', [SuperAdminAnalyticsController::class, 'entitySuggestions'])->name('super-admin.analytics.entity-suggestions');
 });
 
 // ============================================
@@ -402,6 +403,7 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'tenant'])->group(function (
         Route::post('/kiosks/{id}/tables', [KioskController::class, 'saveTables'])->name('admin.kiosks.tables');
 
         // ניהול מדפסות מטבח
+        Route::get('/printers/receipt-example', [PrinterController::class, 'receiptExample'])->name('admin.printers.receipt-example');
         Route::get('/printers', [PrinterController::class, 'index'])->name('admin.printers.index');
         Route::post('/printers', [PrinterController::class, 'store'])->name('admin.printers.store');
         Route::put('/printers/{id}', [PrinterController::class, 'update'])->name('admin.printers.update');
