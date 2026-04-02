@@ -5,6 +5,7 @@ const RestaurantStatusContext = createContext();
 export function RestaurantStatusProvider({ children }) {
     const [restaurantStatus, setRestaurantStatus] = useState({
         is_open: false,
+        is_open_now: false,
         is_override: false,
         is_approved: true,
     });

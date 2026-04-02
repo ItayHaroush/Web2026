@@ -119,7 +119,7 @@ export function CartProvider({ children }) {
         }
     }, [customerInfo]);
 
-    // Heartbeat לתזכורות סל נטוש - debounce 30 שניות
+    // Heartbeat לתזכורות סל נטוש - debounce 5 שניות (תפיסת פעילות מהירה יותר)
     const heartbeatTimerRef = useRef(null);
     useEffect(() => {
         if (cartItems.length === 0) return;
@@ -147,7 +147,7 @@ export function CartProvider({ children }) {
                 total_amount: cartItems.reduce((s, i) => s + (i.totalPrice || 0), 0),
             };
             apiClient.post('/cart/heartbeat', payload).catch(() => {});
-        }, 30_000);
+        }, 5_000);
         return () => {
             if (heartbeatTimerRef.current) clearTimeout(heartbeatTimerRef.current);
         };

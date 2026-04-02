@@ -7,6 +7,7 @@ import LocationPickerModal from '../components/LocationPickerModal';
 import apiClient from '../services/apiClient';
 import logo from '../images/ChefSyncLogoIcon.png';
 import { resolveAssetUrl } from '../utils/assets';
+import announcementService from '../services/announcementService';
 import { PRODUCT_BYLINE_HE, PRODUCT_NAME } from '../constants/brand';
 import {
     FaRocket,
@@ -24,7 +25,8 @@ import {
     FaCalendarAlt,
     FaSearch,
     FaUserPlus,
-    FaBell
+    FaBell,
+    FaTimes
 } from 'react-icons/fa';
 import { HiGlobeAlt, HiLocationMarker } from 'react-icons/hi';
 
@@ -51,6 +53,10 @@ export default function HomePage() {
     const [searchOpen, setSearchOpen] = useState(false);
     const searchRef = useRef(null);
     const debounceRef = useRef(null);
+    const [announcements, setAnnouncements] = useState([]);
+    const [dismissedPopup, setDismissedPopup] = useState(false);
+    const [dismissedHeroOverlay, setDismissedHeroOverlay] = useState(false);
+    const [dismissedBanners, setDismissedBanners] = useState([]);
     const navigate = useNavigate();
 
     // Feature Carousel Logic
@@ -129,8 +135,19 @@ export default function HomePage() {
     useEffect(() => {
         const interval = setInterval(() => {
             setActiveFeature(prev => (prev + 1) % features.length);
-        }, 3000);
+        }, 4000);
         return () => clearInterval(interval);
+    }, []);
+
+    // טען הודעות כלליות
+    useEffect(() => {
+        announcementService.getActiveAnnouncements()
+            .then(res => {
+                if (res.success && Array.isArray(res.data)) {
+                    setAnnouncements(res.data);
+                }
+            })
+            .catch(err => console.warn('Failed to load announcements', err));
     }, []);
 
     // טען מיקום שמור למשלוח
@@ -296,8 +313,36 @@ export default function HomePage() {
         );
     }
 
+    const heroOverlay = !dismissedHeroOverlay ? announcements.find(a => a.position === 'hero_overlay') : null;
+    const bannerAnnouncements = announcements.filter(a => a.position === 'top_banner' || a.position === 'banner');
+    const popupAnnouncement = !dismissedPopup ? announcements.find(a => a.position === 'popup') : null;
+
     return (
         <CustomerLayout>
+            {/* פופאפ הודעה כללית */}
+            {popupAnnouncement && (
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setDismissedPopup(true)}>
+                    <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden relative" onClick={e => e.stopPropagation()}>
+                        <button
+                            onClick={() => setDismissedPopup(true)}
+                            className="absolute top-3 left-3 z-10 w-8 h-8 bg-black/40 hover:bg-black/60 text-white rounded-full flex items-center justify-center transition-colors text-lg leading-none cursor-pointer"
+                        >
+                            ×
+                        </button>
+                        {popupAnnouncement.image_url && (
+                            <div className="bg-gray-100">
+                                <img src={popupAnnouncement.image_url} alt={popupAnnouncement.title} className="w-full h-auto max-h-[60vh] object-contain" />
+                            </div>
+                        )}
+                        <div className="p-6">
+                            <h3 className="font-black text-xl text-gray-900 mb-2">{popupAnnouncement.title}</h3>
+                            {popupAnnouncement.body && <p className="text-gray-500 text-sm leading-relaxed mb-5">{popupAnnouncement.body}</p>}
+                            <button onClick={() => setDismissedPopup(true)} className="w-full bg-brand-primary text-white font-bold py-3 rounded-xl hover:opacity-90 transition-opacity cursor-pointer">הבנתי</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <LocationPickerModal
                 open={showLocationModal}
                 onClose={() => setShowLocationModal(false)}
@@ -307,9 +352,28 @@ export default function HomePage() {
                 }}
             />
 
-            {/* Hero — צמוד לנב (ללא margin עליון); רק full-bleed אופקי */}
-            <div className="relative -mx-4 sm:-mx-6 lg:-mx-8 mt-0 mb-6">
-                <div className="relative min-h-[16rem] h-auto sm:h-[460px] sm:min-h-0 bg-gradient-to-br from-brand-dark via-brand-primary to-brand-secondary overflow-hidden rounded-b-2xl sm:rounded-none">
+            {/* הודעת שכבה עליונה — מעל הכל */}
+            {heroOverlay && (
+                <div className="relative -mx-4 sm:-mx-6 lg:-mx-8 z-40 bg-gradient-to-r from-brand-primary to-brand-secondary text-white px-4 py-3 flex items-center gap-3">
+                    <div className="flex-shrink-0 w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center">
+                        <FaBell className="w-4 h-4 text-white" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <p className="font-bold text-sm truncate">{heroOverlay.title}</p>
+                        {heroOverlay.body && <p className="text-white/90 text-xs leading-snug line-clamp-2 mt-0.5">{heroOverlay.body}</p>}
+                    </div>
+                    {heroOverlay.link_url && (
+                        <a href={heroOverlay.link_url} target="_blank" rel="noopener noreferrer" className="flex-shrink-0 text-white text-xs font-bold hover:underline">פרטים &larr;</a>
+                    )}
+                    <button onClick={() => setDismissedHeroOverlay(true)} className="flex-shrink-0 w-7 h-7 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center transition-colors cursor-pointer" aria-label="סגור">
+                        <FaTimes className="w-3 h-3 text-white" />
+                    </button>
+                </div>
+            )}
+
+            {/* Hero — צמוד לנב; בדסקטופ נמשך מאחורי הנאבבר */}
+            <div className="relative -mx-4 sm:-mx-6 lg:-mx-8 mt-0 sm:-mt-[5.75rem] mb-6">
+                <div className="relative min-h-[16rem] h-auto sm:h-[calc(460px+5.75rem)] sm:min-h-0 bg-gradient-to-br from-brand-dark via-brand-primary to-brand-secondary overflow-hidden rounded-b-2xl sm:rounded-none">
                     {/* אפקט עומק וגרדיאנט מודרני (Mesh Gradient Style) */}
                     <div className="absolute inset-0 opacity-30">
                         <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[80%] bg-white/20 rounded-full blur-[120px] animate-pulse"></div>
@@ -319,7 +383,7 @@ export default function HomePage() {
                     </div>
 
                     {/* שורה עליונה: אדמין (ימין ב-RTL) + מיקום קומפקטי (שמאל ב-RTL) — בלי flex-1 על המיקום */}
-                    <div className="relative z-30 flex w-full flex-nowrap items-center justify-between gap-2 px-4 pb-1 pt-1 sm:absolute sm:inset-x-0 sm:top-0 sm:gap-3 sm:p-6 sm:pb-0 sm:pt-6">
+                    <div className="relative z-30 flex w-full flex-nowrap items-center justify-between gap-2 px-4 pb-1 pt-1 sm:absolute sm:inset-x-0 sm:top-0 sm:gap-3 sm:p-6 sm:pb-0 sm:pt-[calc(5.75rem+1.5rem)]">
                         <button
                             type="button"
                             onClick={handleAdminLogin}
@@ -517,6 +581,25 @@ export default function HomePage() {
                     </div>
                 </div>
             </div>
+
+            {/* באנרים עליונים */}
+            {bannerAnnouncements.filter(a => !dismissedBanners.includes(a.id)).map(ann => (
+                <div key={ann.id} className="relative -mx-6 sm:-mx-6 lg:-mx-8 mb-2 bg-gradient-to-r from-brand-dark to-brand-primary/90 text-white px-4 py-3 flex items-center gap-3">
+                    <div className="flex-shrink-0 w-8 h-8 bg-white/15 rounded-xl flex items-center justify-center">
+                        <FaBell className="w-4 h-4 text-white" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <p className="font-bold text-sm truncate">{ann.title}</p>
+                        {ann.body && <p className="text-white/85 text-xs leading-snug line-clamp-2 mt-0.5">{ann.body}</p>}
+                    </div>
+                    {ann.link_url && (
+                        <a href={ann.link_url} target="_blank" rel="noopener noreferrer" className="flex-shrink-0 text-white text-xs font-bold hover:underline">קרא עוד &larr;</a>
+                    )}
+                    <button onClick={() => setDismissedBanners(prev => [...prev, ann.id])} className="flex-shrink-0 w-7 h-7 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center transition-colors cursor-pointer" aria-label="סגור">
+                        <FaTimes className="w-3 h-3 text-white" />
+                    </button>
+                </div>
+            ))}
 
             <div className="space-y-6 sm:space-y-10">
                 {/* כותרת רשימת מסעדות */}

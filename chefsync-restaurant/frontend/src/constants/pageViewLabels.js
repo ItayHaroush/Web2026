@@ -61,7 +61,7 @@ export const PAGE_VIEW_LABELS = {
     super_admin_database: 'סופר־אדמין — תחזוקת DB',
     super_admin_debug_auth: 'סופר־אדמין — דיבאג אימות',
     super_admin_order_debug: 'סופר־אדמין — לוג הזמנות',
-    super_admin_abandoned_carts: 'סופר־אדמין — סלי נטוש',
+    super_admin_abandoned_carts: 'סופר־אדמין — סל נטוש',
     super_admin_customer_detail: 'סופר־אדמין — פרטי לקוח',
     super_admin_customers: 'סופר־אדמין — לקוחות',
     super_admin_email_management: 'סופר־אדמין — ניהול מיילים',

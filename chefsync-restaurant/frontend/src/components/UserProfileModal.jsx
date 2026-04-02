@@ -11,7 +11,7 @@ import {
     getCustomerFcmTokenIfPermitted,
     clearStoredCustomerFcmToken,
 } from '../services/fcm';
-import { FaTimes, FaSignOutAlt, FaEdit, FaRedo, FaPhone, FaArrowRight, FaClock, FaStore, FaCheck, FaMapMarkerAlt, FaPlus, FaTrash, FaStar, FaEnvelope, FaExclamationTriangle, FaLock, FaBell, FaHome, FaCog, FaShoppingBag, FaLightbulb } from 'react-icons/fa';
+import { FaTimes, FaSignOutAlt, FaEdit, FaRedo, FaPhone, FaArrowRight, FaClock, FaStore, FaCheck, FaMapMarkerAlt, FaPlus, FaTrash, FaStar, FaEnvelope, FaExclamationTriangle, FaLock, FaBell, FaHome, FaCog, FaShoppingBag, FaLightbulb, FaVolumeUp, FaVolumeMute } from 'react-icons/fa';
 import LocationPickerModal from './LocationPickerModal';
 
 /** אם המשתמש מחק כתובת — לא להשאיר את אותה נקודה ב-localStorage (הסל היה טוען אותה מחדש) */
@@ -90,6 +90,22 @@ export default function UserProfileModal({ isOpen, onClose }) {
     const pushSectionRef = useRef(null);
     const passwordSectionRef = useRef(null);
     const addressesSectionRef = useRef(null);
+
+    // צלצול התראות — נשמר ב-localStorage
+    const [customerSoundEnabled, setCustomerSoundEnabled] = useState(() => {
+        try { return localStorage.getItem('customer_sound_enabled') !== 'false'; } catch { return true; }
+    });
+    const handleCustomerSoundToggle = (next) => {
+        setCustomerSoundEnabled(next);
+        try { localStorage.setItem('customer_sound_enabled', next ? 'true' : 'false'); } catch { /* ignore */ }
+        if (next) {
+            try {
+                const a = new Audio('/sounds/Order-up-bell-sound.mp3');
+                a.volume = 0.4;
+                a.play().catch(() => {});
+            } catch { /* ignore */ }
+        }
+    };
 
     /** טאבי פרופיל (רק אחרי התחברות) */
     const [profileTab, setProfileTab] = useState('home');
@@ -1239,6 +1255,27 @@ export default function UserProfileModal({ isOpen, onClose }) {
                                             <p className="text-xs text-amber-700 dark:text-amber-400">
                                                 ההרשאה נחסמה בדפדפן. יש לפתוח את הגדרות האתר ולאפשר התראות, ואז להפעיל את המתג שוב.
                                             </p>
+                                        )}
+
+                                        {/* צלצול התראות */}
+                                        {pushOk && (
+                                            <div className="flex items-center justify-between gap-3 pt-2 mt-1 border-t border-gray-200 dark:border-brand-dark-border">
+                                                <div className="flex items-center gap-2">
+                                                    <div className={`p-1.5 rounded-lg ${customerSoundEnabled ? 'bg-orange-50 text-orange-500' : 'bg-gray-100 dark:bg-gray-700 text-gray-400'}`}>
+                                                        {customerSoundEnabled ? <FaVolumeUp size={14} /> : <FaVolumeMute size={14} />}
+                                                    </div>
+                                                    <span className="text-sm font-bold text-gray-700 dark:text-brand-dark-text">צלצול התראות</span>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    role="switch"
+                                                    aria-checked={customerSoundEnabled}
+                                                    onClick={() => handleCustomerSoundToggle(!customerSoundEnabled)}
+                                                    className={`relative w-14 h-8 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-orange-400 ${customerSoundEnabled ? 'bg-orange-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+                                                >
+                                                    <span className={`absolute top-1 w-6 h-6 rounded-full bg-white shadow-md transition-all ${customerSoundEnabled ? 'left-7' : 'left-1'}`} />
+                                                </button>
+                                            </div>
                                         )}
 
                                         {pushEnabled && pushOk && (

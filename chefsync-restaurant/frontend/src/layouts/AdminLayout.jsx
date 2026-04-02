@@ -9,6 +9,8 @@ import DashboardSidebar from '../components/admin/DashboardSidebar';
 import DashboardHeader from '../components/admin/DashboardHeader';
 import FloatingRestaurantAssistant from '../components/admin/FloatingRestaurantAssistant';
 import ImpersonationBanner from '../components/admin/ImpersonationBanner';
+import HolidayScheduleModal from '../components/admin/HolidayScheduleModal';
+import holidayService from '../services/holidayService';
 import { resolveRestaurantAdminPageKey } from '../utils/pageViewMap';
 import { sendRestaurantAdminPageView } from '../services/analyticsBeacon';
 import {
@@ -31,6 +33,9 @@ export default function AdminLayout({ children }) {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [subscriptionData, setSubscriptionData] = useState(null);
+    const [pendingHolidays, setPendingHolidays] = useState([]);
+    const [showHolidayModal, setShowHolidayModal] = useState(false);
+    const holidayDismissedAt = useRef(0);
     const { user, logout, isOwner, isManager, getAuthHeaders, impersonating } = useAdminAuth();
     const { restaurantStatus, setRestaurantStatus, setSubscriptionInfo } = useRestaurantStatus();
     const location = useLocation();
@@ -52,12 +57,14 @@ export default function AdminLayout({ children }) {
 
             const dataType = payload?.data?.type;
             if (dataType === 'new_order') {
-                try {
-                    const audio = new Audio('/sounds/Order-up-bell-sound.mp3');
-                    audio.volume = 0.6;
-                    audio.play().catch(() => {});
-                } catch (_) {
-                    /* ignore */
+                if (localStorage.getItem('admin_sound_enabled') !== 'false') {
+                    try {
+                        const audio = new Audio('/sounds/Order-up-bell-sound.mp3');
+                        audio.volume = 0.6;
+                        audio.play().catch(() => {});
+                    } catch (_) {
+                        /* ignore */
+                    }
                 }
             }
 
@@ -169,6 +176,28 @@ export default function AdminLayout({ children }) {
         }
     }, [user, getAuthHeaders, setRestaurantStatus]);
 
+    // בדיקת חגים ממתינים — polling כל 60 שניות
+    useEffect(() => {
+        if (!user) return;
+        const checkHolidays = async () => {
+            try {
+                const res = await holidayService.getUpcomingHolidays();
+                const unanswered = (res.data || []).filter(h => !h.response);
+                setPendingHolidays(unanswered);
+                // פתח מודל אוטומטית — רק אם לא נסגר ב-30 דקות האחרונות
+                const thirtyMinutes = 30 * 60 * 1000;
+                if (unanswered.length > 0 && (Date.now() - holidayDismissedAt.current > thirtyMinutes)) {
+                    setShowHolidayModal(prev => prev ? prev : true);
+                }
+            } catch (e) {
+                // silent — לא נכשלים על חגים
+            }
+        };
+        checkHolidays();
+        const interval = setInterval(checkHolidays, 60000);
+        return () => clearInterval(interval);
+    }, [user]);
+
     const handleLogout = async () => {
         await logout();
         navigate('/admin/login');
@@ -227,12 +256,12 @@ export default function AdminLayout({ children }) {
 
     const statusBadge = (
         <div className="flex items-center gap-2">
-            <span className={`px-3 py-1 rounded-full text-xs font-bold transition-all flex items-center gap-1 shadow-sm ${restaurantStatus.is_open
+            <span className={`px-3 py-1 rounded-full text-xs font-bold transition-all flex items-center gap-1 shadow-sm ${restaurantStatus.is_open_now
                 ? 'bg-green-100 text-green-700 border border-green-200'
                 : 'bg-red-100 text-red-700 border border-red-200'
                 }`}>
-                <span className={`w-2 h-2 rounded-full ${restaurantStatus.is_open ? 'bg-green-500' : 'bg-red-500'}`}></span>
-                {restaurantStatus.is_open ? 'פתוח' : 'סגור'}
+                <span className={`w-2 h-2 rounded-full ${restaurantStatus.is_open_now ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                {restaurantStatus.is_open_now ? 'פתוח' : 'סגור'}
             </span>
             {restaurantStatus.is_approved === false && (
                 <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700 border border-amber-200">
@@ -291,6 +320,31 @@ export default function AdminLayout({ children }) {
                         )}
                         {subscriptionData && <TrialBanner {...subscriptionData} navigate={navigate} />}
                         {subscriptionData && <PaymentFailedBanner {...subscriptionData} navigate={navigate} />}
+
+                        {/* באנר חגים ממתינים — מוצג בכל דפי האדמין עד שהמסעדן ענה */}
+                        {pendingHolidays.length > 0 && (
+                            <div
+                                role="button"
+                                tabIndex={0}
+                                onClick={() => setShowHolidayModal(true)}
+                                onKeyDown={e => e.key === 'Enter' && setShowHolidayModal(true)}
+                                className="mb-6 rounded-xl border border-purple-200 bg-purple-50 p-4 shadow-sm cursor-pointer hover:bg-purple-100 transition-colors"
+                            >
+                                <div className="flex items-center gap-3">
+                                    <span className="text-2xl">🕎</span>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="font-bold text-purple-800">
+                                            {pendingHolidays.length === 1
+                                                ? `חג קרוב: ${pendingHolidays[0].name} — נא לעדכן שעות פעילות`
+                                                : `${pendingHolidays.length} חגים קרובים — נא לעדכן שעות פעילות`}
+                                        </p>
+                                        <p className="text-sm text-purple-600">לחצו כאן לעדכון הסטטוס שלכם בחגים</p>
+                                    </div>
+                                    <FaExclamationTriangle className="text-purple-400" />
+                                </div>
+                            </div>
+                        )}
+
                         {children}
                     </main>
                 </div>
@@ -298,6 +352,19 @@ export default function AdminLayout({ children }) {
                 {/* סוכן AI ספציפי למסעדה - עם מכסת קרדיטים */}
                 <FloatingRestaurantAssistant isSidebarOpen={sidebarOpen} />
             </div>
+
+            {/* מודל חגים — גלובלי לכל דפי האדמין */}
+            <HolidayScheduleModal
+                show={showHolidayModal}
+                onClose={() => { holidayDismissedAt.current = Date.now(); setShowHolidayModal(false); }}
+                onResponded={async () => {
+                    try {
+                        const res = await holidayService.getUpcomingHolidays();
+                        const unanswered = (res.data || []).filter(h => !h.response);
+                        setPendingHolidays(unanswered);
+                    } catch (e) {}
+                }}
+            />
         </div>
     );
 }

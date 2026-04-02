@@ -32,8 +32,11 @@ use App\Http\Controllers\SuperAdminController;
 use App\Http\Controllers\SuperAdminCustomerController;
 use App\Http\Controllers\SuperAdminDailyReportsController;
 use App\Http\Controllers\SuperAdminEmailController;
+use App\Http\Controllers\SuperAdminAnnouncementController;
+use App\Http\Controllers\SuperAdminHolidayController;
 use App\Http\Controllers\SuperAdminNotificationController;
 use App\Http\Controllers\SuperAdminSettingsController;
+use App\Http\Controllers\HolidayScheduleController;
 use Illuminate\Support\Facades\Route;
 
 /**
@@ -52,8 +55,8 @@ Route::prefix('auth')->group(function () {
     Route::post('/phone/request', [\App\Http\Controllers\PhoneAuthController::class, 'requestCode']);
     Route::post('/phone/verify', [\App\Http\Controllers\PhoneAuthController::class, 'verifyCode']);
     // Preflight CORS
-    Route::options('/phone/request', fn () => response()->json(['success' => true]));
-    Route::options('/phone/verify', fn () => response()->json(['success' => true]));
+    Route::options('/phone/request', fn() => response()->json(['success' => true]));
+    Route::options('/phone/verify', fn() => response()->json(['success' => true]));
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/logout', [AuthController::class, 'logout'])->name('auth.logout');
@@ -233,6 +236,27 @@ Route::prefix('super-admin')->middleware(['auth:sanctum', 'super_admin'])->group
     Route::get('/analytics/top-entities', [SuperAdminAnalyticsController::class, 'topEntities'])->name('super-admin.analytics.top');
     Route::get('/analytics/menu-insights', [SuperAdminAnalyticsController::class, 'menuInsights'])->name('super-admin.analytics.menu-insights');
     Route::get('/analytics/entity-suggestions', [SuperAdminAnalyticsController::class, 'entitySuggestions'])->name('super-admin.analytics.entity-suggestions');
+
+    // ============================================
+    // הודעות כלליות לפלטפורמה (Platform Announcements)
+    // ============================================
+    Route::get('/announcements', [SuperAdminAnnouncementController::class, 'index'])->name('super-admin.announcements.index');
+    Route::post('/announcements', [SuperAdminAnnouncementController::class, 'store'])->name('super-admin.announcements.store');
+    Route::put('/announcements/{id}', [SuperAdminAnnouncementController::class, 'update'])->name('super-admin.announcements.update');
+    Route::delete('/announcements/{id}', [SuperAdminAnnouncementController::class, 'destroy'])->name('super-admin.announcements.destroy');
+    Route::patch('/announcements/{id}/toggle', [SuperAdminAnnouncementController::class, 'toggle'])->name('super-admin.announcements.toggle');
+
+    // ============================================
+    // חגים ומועדים (Israeli Holidays)
+    // ============================================
+    Route::get('/holidays', [SuperAdminHolidayController::class, 'index'])->name('super-admin.holidays.index');
+    Route::post('/holidays', [SuperAdminHolidayController::class, 'store'])->name('super-admin.holidays.store');
+    Route::get('/holidays/available', [SuperAdminHolidayController::class, 'availableHolidays'])->name('super-admin.holidays.available');
+    Route::post('/holidays/seed', [SuperAdminHolidayController::class, 'seedHolidays'])->name('super-admin.holidays.seed');
+    Route::put('/holidays/{id}', [SuperAdminHolidayController::class, 'update'])->name('super-admin.holidays.update');
+    Route::delete('/holidays/{id}', [SuperAdminHolidayController::class, 'destroy'])->name('super-admin.holidays.destroy');
+    Route::get('/holidays/{id}/responses', [SuperAdminHolidayController::class, 'responses'])->name('super-admin.holidays.responses');
+    Route::post('/holidays/{id}/notify', [SuperAdminHolidayController::class, 'notifyRestaurants'])->name('super-admin.holidays.notify');
 });
 
 // ============================================
@@ -487,6 +511,10 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'tenant'])->group(function (
         Route::delete('/promotions/{id}', [PromotionController::class, 'destroy'])->name('admin.promotions.destroy');
         Route::patch('/promotions/{id}/toggle', [PromotionController::class, 'toggle'])->name('admin.promotions.toggle');
 
+        // חגים — שעות מיוחדות למסעדה
+        Route::get('/holidays/upcoming', [HolidayScheduleController::class, 'upcoming'])->name('admin.holidays.upcoming');
+        Route::post('/holidays/{holidayId}/respond', [HolidayScheduleController::class, 'respond'])->name('admin.holidays.respond');
+
         // דוחות יומיים
         Route::get('/reports', [ReportController::class, 'index'])->name('admin.reports.index');
         Route::get('/reports/csv', [ReportController::class, 'csv'])->name('admin.reports.csv');
@@ -609,6 +637,9 @@ Route::post('/kiosk/{token}/orders/{orderId}/charge-pinpad', [KioskController::c
 // רשימת מסעדות - ללא צורך ב-tenant
 Route::get('/restaurants', [RestaurantController::class, 'index'])->name('restaurants.index');
 
+// הודעות כלליות לפלטפורמה — ציבורי
+Route::get('/platform/announcements/active', [SuperAdminAnnouncementController::class, 'active'])->name('platform.announcements.active');
+
 // חיפוש מנות בתפריטים - ציבורי
 Route::get('/menu-search', [RestaurantController::class, 'searchMenuItems'])->name('menu.search');
 
@@ -661,7 +692,7 @@ if (app()->environment('local') || config('services.zcredit.allow_test_pinpad_ro
 
         $result = app(\App\Services\ZCreditService::class)->chargePinPad(
             (float) $validated['amount'],
-            'local_pinpad_test_'.uniqid('', true)
+            'local_pinpad_test_' . uniqid('', true)
         );
 
         return response()->json($result);

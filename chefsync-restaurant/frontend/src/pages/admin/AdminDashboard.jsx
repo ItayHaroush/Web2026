@@ -23,7 +23,9 @@ import {
     FaTabletAlt,
     FaExclamationTriangle,
     FaLink,
-    FaHandPaper
+    FaHandPaper,
+    FaVolumeUp,
+    FaVolumeMute
 } from 'react-icons/fa';
 import OrderManualPaymentModal from '../../components/admin/OrderManualPaymentModal';
 import FutureOrderDetailModal from '../../components/admin/FutureOrderDetailModal';
@@ -47,6 +49,22 @@ export default function AdminDashboard() {
     // רק בעלים ומנהלים רואים הכנסות
     const canViewRevenue = isOwner() || isManager();
     const canManualPaymentTools = isOwner() || isManager();
+
+    // מצב צלצול הזמנות — נשמר ב-localStorage
+    const [soundEnabled, setSoundEnabled] = useState(() => {
+        try { return localStorage.getItem('admin_sound_enabled') !== 'false'; } catch { return true; }
+    });
+    const handleSoundToggle = (next) => {
+        setSoundEnabled(next);
+        try { localStorage.setItem('admin_sound_enabled', next ? 'true' : 'false'); } catch { /* ignore */ }
+        if (next) {
+            try {
+                const a = new Audio('/sounds/Order-up-bell-sound.mp3');
+                a.volume = 0.4;
+                a.play().catch(() => {});
+            } catch { /* ignore */ }
+        }
+    };
 
     /** כרטיס "טיפול בתשלום" (HYP) מהשרת; אם ריק — נופלים ל-10 האחרונות עם pending/failed */
     const bannerUnpaidOrders = useMemo(() => {
@@ -243,6 +261,27 @@ export default function AdminDashboard() {
                             )}
                         </button>
                     </div>
+                </div>
+                {/* שורת צלצול הזמנות */}
+                <div className="pt-3 mt-1 border-t border-gray-100 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-xl ${soundEnabled ? 'bg-orange-50 text-orange-500' : 'bg-gray-100 text-gray-400'}`}>
+                            {soundEnabled ? <FaVolumeUp size={16} /> : <FaVolumeMute size={16} />}
+                        </div>
+                        <div>
+                            <p className="text-sm font-black text-gray-900 leading-tight">צלצול הזמנות</p>
+                            <p className="text-xs text-gray-500">{soundEnabled ? 'צלצול הזמנות פעיל' : 'כבוי — לחץ להפעלה'}</p>
+                        </div>
+                    </div>
+                    <button
+                        type="button"
+                        role="switch"
+                        aria-checked={soundEnabled}
+                        onClick={() => handleSoundToggle(!soundEnabled)}
+                        className={`relative h-9 w-14 shrink-0 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 ${soundEnabled ? 'bg-orange-400' : 'bg-gray-200'}`}
+                    >
+                        <span className={`absolute top-1 h-7 w-7 rounded-full bg-white shadow-md transition-all duration-200 ${soundEnabled ? 'end-1' : 'start-1'}`} />
+                    </button>
                 </div>
             </div>
 

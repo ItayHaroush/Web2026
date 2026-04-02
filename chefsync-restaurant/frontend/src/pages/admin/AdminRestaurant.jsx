@@ -142,11 +142,12 @@ export default function AdminRestaurant() {
         if (restaurant) {
             setRestaurantStatus({
                 is_open: restaurant.is_open,
+                is_open_now: restaurant.is_open_now ?? restaurant.is_open,
                 is_override: overrideStatus,
                 is_approved: restaurant.is_approved ?? false,
             });
         }
-    }, [restaurant?.is_open, restaurant?.is_approved, overrideStatus, setRestaurantStatus]);
+    }, [restaurant?.is_open, restaurant?.is_open_now, restaurant?.is_approved, overrideStatus, setRestaurantStatus]);
 
     useEffect(() => {
         // רק חשב את הסטטוס המחושב לצורך תצוגה - אל תשנה את restaurant.is_open!
@@ -179,6 +180,7 @@ export default function AdminRestaurant() {
                 setOverrideStatus(normalized.is_override_status || false);
                 setRestaurantStatus({
                     is_open: normalized.is_open,
+                    is_open_now: Boolean(response.data.restaurant.is_open_now ?? normalized.is_open),
                     is_override: normalized.is_override_status || false,
                     is_approved: normalized.is_approved ?? false,
                 });
@@ -764,7 +766,7 @@ export default function AdminRestaurant() {
                             <div className="relative z-10">
                                 <div className="flex items-center justify-between mb-6">
                                     <div className="flex items-center gap-2">
-                                        <div className={`p-2 rounded-xl ${restaurant.is_open ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
+                                        <div className={`p-2 rounded-xl ${restaurant.is_open_now ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
                                             <FaClock />
                                         </div>
                                         <h3 className="font-black text-gray-900">סטטוס פתיחה</h3>
@@ -775,6 +777,42 @@ export default function AdminRestaurant() {
                                     </span>
                                 </div>
 
+                                {/* תגית חג פעיל */}
+                                {restaurant.active_holiday_info && (
+                                    <div className={`mb-4 p-3 rounded-2xl border flex items-center gap-3 ${
+                                        restaurant.active_holiday_info.response_status === 'closed'
+                                            ? 'bg-red-50 border-red-200'
+                                            : restaurant.active_holiday_info.response_status === 'special_hours'
+                                            ? 'bg-blue-50 border-blue-200'
+                                            : restaurant.active_holiday_info.response_status === 'open'
+                                            ? 'bg-green-50 border-green-200'
+                                            : 'bg-purple-50 border-purple-200'
+                                    }`}>
+                                        <span className="text-2xl">🕎</span>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-black text-gray-900">
+                                                {restaurant.active_holiday_info.holiday_name}
+                                            </p>
+                                            <p className="text-[11px] text-gray-500">
+                                                {restaurant.active_holiday_info.hebrew_date_info}
+                                                {' · '}
+                                                <span className={`font-black ${
+                                                    restaurant.active_holiday_info.response_status === 'closed' ? 'text-red-600' :
+                                                    restaurant.active_holiday_info.response_status === 'special_hours' ? 'text-blue-600' :
+                                                    restaurant.active_holiday_info.response_status === 'open' ? 'text-green-600' :
+                                                    'text-purple-600'
+                                                }`}>
+                                                    {restaurant.active_holiday_info.response_label}
+                                                    {restaurant.active_holiday_info.response_status === 'special_hours' &&
+                                                        restaurant.active_holiday_info.open_time && restaurant.active_holiday_info.close_time &&
+                                                        ` (${restaurant.active_holiday_info.open_time?.slice(0,5)}–${restaurant.active_holiday_info.close_time?.slice(0,5)})`
+                                                    }
+                                                </span>
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+
                                 <div className="flex flex-col items-center gap-4 py-2">
                                     <button
                                         type="button"
@@ -784,16 +822,16 @@ export default function AdminRestaurant() {
                                             }
                                         }}
                                         disabled={!overrideStatus || !isApproved}
-                                        className={`w-full py-8 rounded-[2rem] flex flex-col items-center justify-center gap-3 transition-all transform active:scale-95 ${restaurant.is_open
+                                        className={`w-full py-8 rounded-[2rem] flex flex-col items-center justify-center gap-3 transition-all transform active:scale-95 ${restaurant.is_open_now
                                             ? 'bg-green-500 text-white shadow-[0_10px_30px_-10px_rgba(34,197,94,0.5)] border-b-4 border-green-700'
                                             : 'bg-red-500 text-white shadow-[0_10px_30px_-10px_rgba(239,68,68,0.5)] border-b-4 border-red-700'
                                             } ${(!overrideStatus || !isApproved) && 'opacity-80 saturate-50 grayscale-[0.2]'}`}
                                     >
                                         <span className="text-4xl">
-                                            {restaurant.is_open ? <FaCheckCircle /> : <FaTimesCircle />}
+                                            {restaurant.is_open_now ? <FaCheckCircle /> : <FaTimesCircle />}
                                         </span>
                                         <span className="text-2xl font-black">
-                                            {restaurant.is_open ? 'פתוח להזמנות' : 'סגור להזמנות'}
+                                            {restaurant.is_open_now ? 'פתוח להזמנות' : 'סגור להזמנות'}
                                         </span>
                                     </button>
 

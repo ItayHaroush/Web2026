@@ -106,38 +106,38 @@ export default function LegalMarkdownPage({ title, markdownPath, policyType }) {
                             <ReactMarkdown
                                 remarkPlugins={[remarkGfm]}
                                 components={{
-                                    h1: (props) => (
-                                        <h2 className="text-xl sm:text-2xl font-bold text-brand-dark mt-6 mb-3" {...props} />
+                                    h1: ({ node, ...rest }) => (
+                                        <h2 className="text-xl sm:text-2xl font-bold text-brand-dark mt-6 mb-3" {...rest} />
                                     ),
-                                    h2: (props) => (
-                                        <h3 className="text-lg sm:text-xl font-bold text-brand-dark mt-6 mb-2" {...props} />
+                                    h2: ({ node, ...rest }) => (
+                                        <h3 className="text-lg sm:text-xl font-bold text-brand-dark mt-6 mb-2" {...rest} />
                                     ),
-                                    h3: (props) => (
-                                        <h4 className="text-base sm:text-lg font-bold text-brand-dark mt-5 mb-2" {...props} />
+                                    h3: ({ node, ...rest }) => (
+                                        <h4 className="text-base sm:text-lg font-bold text-brand-dark mt-5 mb-2" {...rest} />
                                     ),
-                                    p: (props) => (
-                                        <p className="mb-3" {...props} />
+                                    p: ({ node, ...rest }) => (
+                                        <p className="mb-3" {...rest} />
                                     ),
-                                    ul: (props) => (
-                                        <ul className="list-disc pr-6 mb-3" {...props} />
+                                    ul: ({ node, ...rest }) => (
+                                        <ul className="list-disc pr-6 mb-3" {...rest} />
                                     ),
-                                    ol: (props) => (
-                                        <ol className="list-decimal pr-6 mb-3" {...props} />
+                                    ol: ({ node, ...rest }) => (
+                                        <ol className="list-decimal pr-6 mb-3" {...rest} />
                                     ),
-                                    li: (props) => (
-                                        <li className="mb-1" {...props} />
+                                    li: ({ node, ...rest }) => (
+                                        <li className="mb-1" {...rest} />
                                     ),
                                     hr: () => (
                                         <div className="my-5 border-t border-gray-200" />
                                     ),
-                                    strong: (props) => (
-                                        <strong className="font-bold" {...props} />
+                                    strong: ({ node, ...rest }) => (
+                                        <strong className="font-bold" {...rest} />
                                     ),
-                                    a: (props) => (
-                                        <a className="text-brand-primary hover:underline" target="_blank" rel="noreferrer" {...props} />
+                                    a: ({ node, ...rest }) => (
+                                        <a className="text-brand-primary hover:underline" target="_blank" rel="noreferrer" {...rest} />
                                     ),
-                                    code: (props) => (
-                                        <code className="bg-gray-100 text-gray-800 px-1 py-0.5 rounded" {...props} />
+                                    code: ({ node, ...rest }) => (
+                                        <code className="bg-gray-100 text-gray-800 px-1 py-0.5 rounded" {...rest} />
                                     ),
                                 }}
                             >

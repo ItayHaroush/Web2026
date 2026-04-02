@@ -92,7 +92,7 @@ export default function SuperAdminAbandonedCarts() {
                         <div className="p-2 bg-brand-primary/10 rounded-lg">
                             <FaShoppingCart className="text-brand-primary" size={20} />
                         </div>
-                        סלי נטוש
+                        סל נטוש
                     </h1>
                     <p className="text-sm text-gray-500 mt-1">סלים פתוחים, תזכורות שנשלחו והזמנות שנצלו</p>
                 </div>

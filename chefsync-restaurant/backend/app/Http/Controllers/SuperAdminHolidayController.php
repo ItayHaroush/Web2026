@@ -1,0 +1,238 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\IsraeliHoliday;
+use App\Models\PlatformAnnouncement;
+use App\Models\Restaurant;
+use Illuminate\Http\Request;
+
+/**
+ * ניהול חגים ישראליים — סופר אדמין בלבד
+ */
+class SuperAdminHolidayController extends Controller
+{
+    /**
+     * רשימת כל החגים (ניתן לסנן לפי שנה)
+     */
+    public function index(Request $request)
+    {
+        $query = IsraeliHoliday::query();
+
+        if ($request->has('year')) {
+            $query->where('year', $request->integer('year'));
+        }
+
+        $holidays = $query->orderBy('start_date')->get();
+
+        return response()->json(['success' => true, 'data' => $holidays]);
+    }
+
+    /**
+     * יצירת חג חדש
+     */
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:100',
+            'hebrew_date_info' => 'nullable|string|max:100',
+            'start_date' => 'required|date',
+            'end_date' => 'required|date|after_or_equal:start_date',
+            'year' => 'required|integer|min:2024|max:2040',
+            'type' => 'required|in:full_closure,half_day,eve,info_only',
+            'description' => 'nullable|string|max:500',
+        ]);
+
+        $holiday = IsraeliHoliday::create($validated);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'חג נוסף בהצלחה',
+            'data' => $holiday,
+        ], 201);
+    }
+
+    /**
+     * עדכון חג
+     */
+    public function update(Request $request, int $id)
+    {
+        $holiday = IsraeliHoliday::findOrFail($id);
+
+        $validated = $request->validate([
+            'name' => 'sometimes|string|max:100',
+            'hebrew_date_info' => 'nullable|string|max:100',
+            'start_date' => 'sometimes|date',
+            'end_date' => 'sometimes|date|after_or_equal:start_date',
+            'year' => 'sometimes|integer|min:2024|max:2040',
+            'type' => 'sometimes|in:full_closure,half_day,eve,info_only',
+            'description' => 'nullable|string|max:500',
+        ]);
+
+        $holiday->update($validated);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'חג עודכן בהצלחה',
+            'data' => $holiday,
+        ]);
+    }
+
+    /**
+     * מחיקת חג
+     */
+    public function destroy(int $id)
+    {
+        $holiday = IsraeliHoliday::findOrFail($id);
+        $holiday->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'חג נמחק בהצלחה',
+        ]);
+    }
+
+    /**
+     * סטטוס תגובות מסעדות לחג
+     */
+    public function responses(int $id)
+    {
+        $holiday = IsraeliHoliday::findOrFail($id);
+
+        $responses = $holiday->restaurantHours()
+            ->with('restaurant:id,name,tenant_id,logo_url')
+            ->get();
+
+        $allRestaurants = Restaurant::withoutGlobalScope('tenant')
+            ->where('is_approved', true)
+            ->get(['id', 'name', 'tenant_id', 'logo_url']);
+
+        $respondedIds = $responses->pluck('restaurant_id')->toArray();
+        $notResponded = $allRestaurants->filter(fn($r) => !in_array($r->id, $respondedIds))->values();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'holiday' => $holiday,
+                'responded' => $responses,
+                'not_responded' => $notResponded,
+                'stats' => [
+                    'total' => $allRestaurants->count(),
+                    'responded' => $responses->count(),
+                    'not_responded' => $notResponded->count(),
+                ],
+            ],
+        ]);
+    }
+
+    /**
+     * רשימת חגים זמינים לטעינה מה-Seeder (עם סימון אלו כבר קיימים)
+     */
+    public function availableHolidays()
+    {
+        $seeder = new \Database\Seeders\IsraeliHolidaySeeder();
+        $available = $seeder->getHolidaysList();
+
+        // סמן אלו כבר קיימים
+        $existing = IsraeliHoliday::all()->map(fn($h) => $h->name . '|' . $h->year . '|' . $h->start_date->toDateString())->toArray();
+
+        $result = collect($available)->map(function ($h, $idx) use ($existing) {
+            $key = $h['name'] . '|' . $h['year'] . '|' . $h['start_date'];
+            return array_merge($h, [
+                'index' => $idx,
+                'already_exists' => in_array($key, $existing),
+            ]);
+        })->values();
+
+        return response()->json(['success' => true, 'data' => $result]);
+    }
+
+    /**
+     * טעינת חגים נבחרים מה-Seeder
+     */
+    public function seedHolidays(Request $request)
+    {
+        try {
+            $selectedIndices = $request->input('selected'); // null = all
+
+            $seeder = new \Database\Seeders\IsraeliHolidaySeeder();
+            $allHolidays = $seeder->getHolidaysList();
+
+            if (is_array($selectedIndices) && count($selectedIndices) > 0) {
+                $toSeed = collect($allHolidays)->filter(fn($h, $idx) => in_array($idx, $selectedIndices))->values();
+            } else {
+                $toSeed = collect($allHolidays);
+            }
+
+            $created = 0;
+            foreach ($toSeed as $holiday) {
+                $result = IsraeliHoliday::updateOrCreate(
+                    [
+                        'name' => $holiday['name'],
+                        'year' => $holiday['year'],
+                        'start_date' => $holiday['start_date'],
+                    ],
+                    $holiday
+                );
+                if ($result->wasRecentlyCreated) $created++;
+            }
+
+            $total = IsraeliHoliday::count();
+
+            return response()->json([
+                'success' => true,
+                'message' => "נטענו {$toSeed->count()} חגים ({$created} חדשים) — סה\"כ {$total} במערכת",
+                'data' => ['total' => $total, 'loaded' => $toSeed->count(), 'created' => $created],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'שגיאה בטעינת חגים: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * שליחת התראה לכל המסעדות על חג קרוב
+     */
+    public function notifyRestaurants(int $id)
+    {
+        $holiday = IsraeliHoliday::findOrFail($id);
+
+        $allRestaurants = Restaurant::withoutGlobalScope('tenant')
+            ->where('is_approved', true)
+            ->get(['id', 'name', 'tenant_id']);
+
+        $respondedIds = $holiday->restaurantHours()->pluck('restaurant_id')->toArray();
+        $notRespondedCount = $allRestaurants->filter(fn($r) => !in_array($r->id, $respondedIds))->count();
+
+        // יצירת הודעה בפלטפורמה
+        $startFormatted = $holiday->start_date->format('d/m/Y');
+        $endFormatted = $holiday->end_date->format('d/m/Y');
+        $dateRange = $startFormatted === $endFormatted
+            ? $startFormatted
+            : "{$startFormatted} — {$endFormatted}";
+
+        PlatformAnnouncement::updateOrCreate(
+            ['title' => "🕎 {$holiday->name} — עדכנו שעות פעילות"],
+            [
+                'body' => "החג \"{$holiday->name}\" ({$dateRange}) מתקרב! נא לעדכן את שעות הפעילות של המסעדה שלכם דרך לוח הבקרה.",
+                'start_at' => now(),
+                'end_at' => $holiday->end_date->copy()->addDay(),
+                'is_active' => true,
+                'position' => 'top_banner',
+                'priority' => 90,
+                'created_by' => auth()->id(),
+            ]
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => "התראה נשלחה! {$notRespondedCount} מסעדות טרם הגיבו",
+            'data' => [
+                'total_restaurants' => $allRestaurants->count(),
+                'not_responded' => $notRespondedCount,
+            ],
+        ]);
+    }
+}

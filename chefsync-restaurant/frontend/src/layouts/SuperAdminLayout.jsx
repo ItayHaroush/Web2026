@@ -8,6 +8,8 @@ import FloatingAiAssistant from '../components/admin/FloatingAiAssistant';
 import {
     FaChartPie,
     FaBell,
+    FaBullhorn,
+    FaCalendarAlt,
     FaFileInvoiceDollar,
     FaCogs,
     FaClipboardList,
@@ -78,7 +80,7 @@ export default function SuperAdminLayout({ children }) {
             icon: <FaCoins />,
         },
         {
-            label: 'סלי נטוש',
+            label: 'סל נטוש',
             path: '/super-admin/abandoned-carts',
             icon: <FaShoppingCart />,
         },
@@ -91,6 +93,16 @@ export default function SuperAdminLayout({ children }) {
             label: 'ניהול מיילים',
             path: '/super-admin/email-management',
             icon: <FaEnvelope />,
+        },
+        {
+            label: 'הודעות כלליות',
+            path: '/super-admin/announcements',
+            icon: <FaBullhorn />,
+        },
+        {
+            label: 'חגים ומועדים',
+            path: '/super-admin/holidays',
+            icon: <FaCalendarAlt />,
         },
         {
             label: 'לוגים והזמנות',

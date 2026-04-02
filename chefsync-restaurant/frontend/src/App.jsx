@@ -68,6 +68,8 @@ import SuperAdminCustomers from './pages/super-admin/SuperAdminCustomers';
 import SuperAdminCustomerDetail from './pages/super-admin/SuperAdminCustomerDetail';
 import SuperAdminNotificationCenter from './pages/super-admin/SuperAdminNotificationCenter';
 import SuperAdminEmailManagement from './pages/super-admin/SuperAdminEmailManagement';
+import SuperAdminAnnouncements from './pages/super-admin/SuperAdminAnnouncements';
+import SuperAdminHolidays from './pages/super-admin/SuperAdminHolidays';
 import DebugAPI from './pages/DebugAPI';
 import RegisterRestaurant from './pages/RegisterRestaurant';
 import LandingPage from './pages/LandingPage';
@@ -524,6 +526,22 @@ function AppRoutes() {
         }
       />
       <Route path="/super-admin/emails" element={<Navigate to="/super-admin/email-management" replace />} />
+      <Route
+        path="/super-admin/announcements"
+        element={
+          <SuperAdminRoute>
+            <SuperAdminAnnouncements />
+          </SuperAdminRoute>
+        }
+      />
+      <Route
+        path="/super-admin/holidays"
+        element={
+          <SuperAdminRoute>
+            <SuperAdminHolidays />
+          </SuperAdminRoute>
+        }
+      />
       <Route
         path="/super-admin/profile"
         element={
