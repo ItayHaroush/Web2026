@@ -61,7 +61,7 @@ export default function AdminLayout({ children }) {
                     try {
                         const audio = new Audio('/sounds/Order-up-bell-sound.mp3');
                         audio.volume = 0.6;
-                        audio.play().catch(() => {});
+                        audio.play().catch(() => { });
                     } catch (_) {
                         /* ignore */
                     }
@@ -84,9 +84,9 @@ export default function AdminLayout({ children }) {
                         window.focus();
                         fcmNotifCountRef.current = Math.max(0, fcmNotifCountRef.current - 1);
                         if (fcmNotifCountRef.current > 0) {
-                            if (navigator.setAppBadge) navigator.setAppBadge(fcmNotifCountRef.current).catch(() => {});
+                            if (navigator.setAppBadge) navigator.setAppBadge(fcmNotifCountRef.current).catch(() => { });
                         } else if (navigator.clearAppBadge) {
-                            navigator.clearAppBadge().catch(() => {});
+                            navigator.clearAppBadge().catch(() => { });
                         }
                         const url = payload?.data?.url;
                         if (url && typeof url === 'string' && url.startsWith('/')) {
@@ -96,7 +96,7 @@ export default function AdminLayout({ children }) {
                         }
                     };
                     fcmNotifCountRef.current += 1;
-                    if (navigator.setAppBadge) navigator.setAppBadge(fcmNotifCountRef.current).catch(() => {});
+                    if (navigator.setAppBadge) navigator.setAppBadge(fcmNotifCountRef.current).catch(() => { });
                 } catch (e) {
                     console.warn('[FCM] Notification() failed', e);
                 }
@@ -111,7 +111,7 @@ export default function AdminLayout({ children }) {
         const clearBadge = () => {
             if (document.visibilityState === 'visible') {
                 fcmNotifCountRef.current = 0;
-                if (navigator.clearAppBadge) navigator.clearAppBadge().catch(() => {});
+                if (navigator.clearAppBadge) navigator.clearAppBadge().catch(() => { });
             }
         };
         clearBadge();
@@ -362,7 +362,7 @@ export default function AdminLayout({ children }) {
                         const res = await holidayService.getUpcomingHolidays();
                         const unanswered = (res.data || []).filter(h => !h.response);
                         setPendingHolidays(unanswered);
-                    } catch (e) {}
+                    } catch (e) { }
                 }}
             />
         </div>

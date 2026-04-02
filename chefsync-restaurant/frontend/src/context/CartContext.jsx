@@ -146,7 +146,7 @@ export function CartProvider({ children }) {
                 customer_name: customerInfo?.name || undefined,
                 total_amount: cartItems.reduce((s, i) => s + (i.totalPrice || 0), 0),
             };
-            apiClient.post('/cart/heartbeat', payload).catch(() => {});
+            apiClient.post('/cart/heartbeat', payload).catch(() => { });
         }, 5_000);
         return () => {
             if (heartbeatTimerRef.current) clearTimeout(heartbeatTimerRef.current);

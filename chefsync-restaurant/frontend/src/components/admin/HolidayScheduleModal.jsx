@@ -196,13 +196,12 @@ export default function HolidayScheduleModal({ show, onClose, onResponded }) {
                             {holidays.map((_, idx) => (
                                 <div
                                     key={idx}
-                                    className={`rounded-full transition-all duration-300 ${
-                                        idx === currentIdx
+                                    className={`rounded-full transition-all duration-300 ${idx === currentIdx
                                             ? 'w-6 h-2 bg-white'
                                             : completed.has(idx)
-                                            ? 'w-2 h-2 bg-white/80'
-                                            : 'w-2 h-2 bg-white/30'
-                                    }`}
+                                                ? 'w-2 h-2 bg-white/80'
+                                                : 'w-2 h-2 bg-white/30'
+                                        }`}
                                 />
                             ))}
                         </div>
@@ -243,11 +242,10 @@ export default function HolidayScheduleModal({ show, onClose, onResponded }) {
                                 <button
                                     key={opt.value}
                                     onClick={() => setForm(p => ({ ...p, status: opt.value }))}
-                                    className={`w-full flex items-center gap-3 p-3.5 rounded-2xl border-2 transition-all text-right ${
-                                        isSelected
+                                    className={`w-full flex items-center gap-3 p-3.5 rounded-2xl border-2 transition-all text-right ${isSelected
                                             ? `${c.border} ${c.bg} shadow-sm ring-2 ${c.ring}`
                                             : 'border-gray-200 hover:border-gray-300 bg-white'
-                                    }`}
+                                        }`}
                                 >
                                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isSelected ? c.bg : 'bg-gray-100'}`}>
                                         <span className={isSelected ? c.icon : 'text-gray-400'}>{opt.icon}</span>

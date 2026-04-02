@@ -136,449 +136,449 @@ function AppRoutes() {
   }
   return (
     <>
-    <AnalyticsPublicTracker />
-    <Routes>
-      {/* Debug */}
-      <Route path="/debug-api" element={<DebugAPI />} />
+      <AnalyticsPublicTracker />
+      <Routes>
+        {/* Debug */}
+        <Route path="/debug-api" element={<DebugAPI />} />
 
-      {/* משפטי */}
-      <Route path="/legal/end-user" element={<TermsEndUser />} />
-      <Route path="/legal/restaurant" element={<TermsRestaurant />} />
-      <Route path="/legal/privacy" element={<PrivacyPolicy />} />
+        {/* משפטי */}
+        <Route path="/legal/end-user" element={<TermsEndUser />} />
+        <Route path="/legal/restaurant" element={<TermsRestaurant />} />
+        <Route path="/legal/privacy" element={<PrivacyPolicy />} />
 
-      {/* לקוחות */}
-      <Route path="/" element={<HomePage />} />
-      <Route path="/landing" element={<LandingPage />} />
-      <Route path="/register-restaurant" element={<RegisterRestaurant />} />
-      <Route path="/menu" element={tenantId ? <MenuPage /> : <Navigate to="/" />} />
-      <Route path="/cart" element={tenantId ? <CartPage /> : <Navigate to="/" />} />
-      <Route path="/order-status/:orderId" element={tenantId ? <OrderStatusPage /> : <Navigate to="/" />} />
-      <Route path="/my-orders" element={<CustomerOrderHistory />} />
-      <Route path="/verify-email" element={<VerifyEmailPage />} />
+        {/* לקוחות */}
+        <Route path="/" element={<HomePage />} />
+        <Route path="/landing" element={<LandingPage />} />
+        <Route path="/register-restaurant" element={<RegisterRestaurant />} />
+        <Route path="/menu" element={tenantId ? <MenuPage /> : <Navigate to="/" />} />
+        <Route path="/cart" element={tenantId ? <CartPage /> : <Navigate to="/" />} />
+        <Route path="/order-status/:orderId" element={tenantId ? <OrderStatusPage /> : <Navigate to="/" />} />
+        <Route path="/my-orders" element={<CustomerOrderHistory />} />
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
 
-      {/* callback חזרה מ-HYP אחרי תשלום הזמנה */}
-      <Route path="/payment/success" element={<PaymentCallback />} />
-      <Route path="/payment/error" element={<PaymentCallback />} />
-      <Route path="/payment/failed" element={<PaymentCallback />} />
+        {/* callback חזרה מ-HYP אחרי תשלום הזמנה */}
+        <Route path="/payment/success" element={<PaymentCallback />} />
+        <Route path="/payment/error" element={<PaymentCallback />} />
+        <Route path="/payment/failed" element={<PaymentCallback />} />
 
-      {/* לינק ישיר למסעדה */}
-      <Route path="/:tenantId/menu" element={<MenuPage />} />
-      <Route path="/:tenantId/cart" element={<CartPage />} />
-      <Route path="/:tenantId/order-status/:orderId" element={<OrderStatusPage />} />
+        {/* לינק ישיר למסעדה */}
+        <Route path="/:tenantId/menu" element={<MenuPage />} />
+        <Route path="/:tenantId/cart" element={<CartPage />} />
+        <Route path="/:tenantId/order-status/:orderId" element={<OrderStatusPage />} />
 
-      {/* עמוד שיתוף למסעדה */}
-      <Route path="/r/:slug" element={<RestaurantSharePage />} />
+        {/* עמוד שיתוף למסעדה */}
+        <Route path="/r/:slug" element={<RestaurantSharePage />} />
 
-      {/* מסך תצוגה ציבורי */}
-      <Route path="/screen/:token" element={<ScreenViewer />} />
+        {/* מסך תצוגה ציבורי */}
+        <Route path="/screen/:token" element={<ScreenViewer />} />
 
-      {/* קיוסק ציבורי */}
-      <Route path="/kiosk/:token" element={<KioskViewer />} />
+        {/* קיוסק ציבורי */}
+        <Route path="/kiosk/:token" element={<KioskViewer />} />
 
-      {/* אדמין */}
-      <Route path="/admin/login" element={isAdmin ? <Navigate to="/admin/dashboard" replace /> : <AdminLogin />} />
-      <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
-      <Route
-        path="/admin/dashboard"
-        element={
-          <AdminRoute>
-            <AdminDashboard />
-          </AdminRoute>
-        }
-      />
-      <Route
-        path="/admin/orders"
-        element={
-          <AdminRoute>
-            <AdminOrders />
-          </AdminRoute>
-        }
-      />
-      <Route
-        path="/admin/menu-management"
-        element={
-          <AdminRoute>
-            <AdminMenuManagement />
-          </AdminRoute>
-        }
-      />
-      <Route path="/admin/menu" element={<Navigate to="/admin/menu-management" replace />} />
-      <Route path="/admin/menu/bases" element={<Navigate to="/admin/menu-management" replace />} />
-      <Route path="/admin/menu/salads" element={<Navigate to="/admin/menu-management" replace />} />
-      <Route path="/admin/categories" element={<Navigate to="/admin/menu-management" replace />} />
-      <Route
-        path="/admin/employees"
-        element={
-          <AdminRoute>
-            <AdminEmployees />
-          </AdminRoute>
-        }
-      />
-      <Route
-        path="/admin/restaurant"
-        element={
-          <AdminRoute>
-            <AdminRestaurant />
-          </AdminRoute>
-        }
-      />
-      <Route
-        path="/admin/payment-settings"
-        element={
-          <AdminRoute>
-            <AdminPaymentSettings />
-          </AdminRoute>
-        }
-      />
-      <Route
-        path="/admin/preview-menu"
-        element={
-          <AdminRoute>
-            <AdminMenuPreview />
-          </AdminRoute>
-        }
-      />
-      <Route
-        path="/admin/preview-cart"
-        element={
-          <AdminRoute>
-            <AdminCartPreview />
-          </AdminRoute>
-        }
-      />
-      <Route
-        path="/admin/preview-order-status/:orderId"
-        element={
-          <AdminRoute>
-            <AdminOrderStatusPreview />
-          </AdminRoute>
-        }
-      />
-      <Route
-        path="/admin/delivery-zones"
-        element={
-          <AdminRoute>
-            <AdminDeliveryZones />
-          </AdminRoute>
-        }
-      />
-      <Route
-        path="/admin/paywall"
-        element={
-          <AdminRoute>
-            <AdminPaywall />
-          </AdminRoute>
-        }
-      />
-      <Route
-        path="/admin/payment"
-        element={
-          <AdminRoute>
-            <PaymentDemo />
-          </AdminRoute>
-        }
-      />
-      <Route
-        path="/admin/payment/success"
-        element={
-          <AdminRoute>
-            <PaymentSuccess />
-          </AdminRoute>
-        }
-      />
-      <Route
-        path="/admin/payment/error"
-        element={
-          <AdminRoute>
-            <PaymentError />
-          </AdminRoute>
-        }
-      />
-      <Route path="/admin/billing" element={<Navigate to="/admin/payment-settings" replace />} />
-      <Route
-        path="/admin/terminal"
-        element={
-          <AdminRoute>
-            <AdminTerminal />
-          </AdminRoute>
-        }
-      />
-      <Route
-        path="/admin/coupons"
-        element={
-          <AdminRoute>
-            <AdminCoupons />
-          </AdminRoute>
-        }
-      />
-      <Route
-        path="/admin/devices"
-        element={
-          <AdminRoute>
-            <AdminDevices />
-          </AdminRoute>
-        }
-      />
-      <Route path="/admin/printers" element={<Navigate to="/admin/devices" replace />} />
-      <Route path="/admin/print-devices" element={<Navigate to="/admin/devices" replace />} />
-      <Route
-        path="/admin/simulator"
-        element={
-          <AdminRoute>
-            <AdminSimulator />
-          </AdminRoute>
-        }
-      />
-      <Route
-        path="/admin/qr-code"
-        element={
-          <AdminRoute>
-            <AdminQrCode />
-          </AdminRoute>
-        }
-      />
-      <Route path="/admin/display-screens" element={<Navigate to="/admin/devices" replace />} />
-      <Route path="/admin/kiosks" element={<Navigate to="/admin/devices" replace />} />
-      <Route
-        path="/admin/reports-center"
-        element={
-          <AdminRoute>
-            <AdminReportsCenter />
-          </AdminRoute>
-        }
-      />
-      <Route path="/admin/reports" element={<Navigate to="/admin/reports-center" replace />} />
-      <Route path="/admin/time-reports" element={<Navigate to="/admin/reports-center" replace />} />
-      <Route
-        path="/admin/pos"
-        element={
-          <AdminRoute>
-            <POSLite />
-          </AdminRoute>
-        }
-      />
-      <Route
-        path="/admin/auth-debug"
-        element={
-          <AdminRoute>
-            <AdminAuthDebug />
-          </AdminRoute>
-        }
-      />
-      <Route
-        path="/admin/settings-hub"
-        element={
-          <AdminRoute>
-            <AdminSettingsHub />
-          </AdminRoute>
-        }
-      />
-      <Route
-        path="/admin/settings"
-        element={
-          <AdminRoute>
-            <AdminUserSettings />
-          </AdminRoute>
-        }
-      />
-      <Route
-        path="/admin/abandoned-cart-reminders"
-        element={
-          <AdminRoute>
-            <AdminAbandonedCartReminders />
-          </AdminRoute>
-        }
-      />
+        {/* אדמין */}
+        <Route path="/admin/login" element={isAdmin ? <Navigate to="/admin/dashboard" replace /> : <AdminLogin />} />
+        <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
+        <Route
+          path="/admin/dashboard"
+          element={
+            <AdminRoute>
+              <AdminDashboard />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/orders"
+          element={
+            <AdminRoute>
+              <AdminOrders />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/menu-management"
+          element={
+            <AdminRoute>
+              <AdminMenuManagement />
+            </AdminRoute>
+          }
+        />
+        <Route path="/admin/menu" element={<Navigate to="/admin/menu-management" replace />} />
+        <Route path="/admin/menu/bases" element={<Navigate to="/admin/menu-management" replace />} />
+        <Route path="/admin/menu/salads" element={<Navigate to="/admin/menu-management" replace />} />
+        <Route path="/admin/categories" element={<Navigate to="/admin/menu-management" replace />} />
+        <Route
+          path="/admin/employees"
+          element={
+            <AdminRoute>
+              <AdminEmployees />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/restaurant"
+          element={
+            <AdminRoute>
+              <AdminRestaurant />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/payment-settings"
+          element={
+            <AdminRoute>
+              <AdminPaymentSettings />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/preview-menu"
+          element={
+            <AdminRoute>
+              <AdminMenuPreview />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/preview-cart"
+          element={
+            <AdminRoute>
+              <AdminCartPreview />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/preview-order-status/:orderId"
+          element={
+            <AdminRoute>
+              <AdminOrderStatusPreview />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/delivery-zones"
+          element={
+            <AdminRoute>
+              <AdminDeliveryZones />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/paywall"
+          element={
+            <AdminRoute>
+              <AdminPaywall />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/payment"
+          element={
+            <AdminRoute>
+              <PaymentDemo />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/payment/success"
+          element={
+            <AdminRoute>
+              <PaymentSuccess />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/payment/error"
+          element={
+            <AdminRoute>
+              <PaymentError />
+            </AdminRoute>
+          }
+        />
+        <Route path="/admin/billing" element={<Navigate to="/admin/payment-settings" replace />} />
+        <Route
+          path="/admin/terminal"
+          element={
+            <AdminRoute>
+              <AdminTerminal />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/coupons"
+          element={
+            <AdminRoute>
+              <AdminCoupons />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/devices"
+          element={
+            <AdminRoute>
+              <AdminDevices />
+            </AdminRoute>
+          }
+        />
+        <Route path="/admin/printers" element={<Navigate to="/admin/devices" replace />} />
+        <Route path="/admin/print-devices" element={<Navigate to="/admin/devices" replace />} />
+        <Route
+          path="/admin/simulator"
+          element={
+            <AdminRoute>
+              <AdminSimulator />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/qr-code"
+          element={
+            <AdminRoute>
+              <AdminQrCode />
+            </AdminRoute>
+          }
+        />
+        <Route path="/admin/display-screens" element={<Navigate to="/admin/devices" replace />} />
+        <Route path="/admin/kiosks" element={<Navigate to="/admin/devices" replace />} />
+        <Route
+          path="/admin/reports-center"
+          element={
+            <AdminRoute>
+              <AdminReportsCenter />
+            </AdminRoute>
+          }
+        />
+        <Route path="/admin/reports" element={<Navigate to="/admin/reports-center" replace />} />
+        <Route path="/admin/time-reports" element={<Navigate to="/admin/reports-center" replace />} />
+        <Route
+          path="/admin/pos"
+          element={
+            <AdminRoute>
+              <POSLite />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/auth-debug"
+          element={
+            <AdminRoute>
+              <AdminAuthDebug />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/settings-hub"
+          element={
+            <AdminRoute>
+              <AdminSettingsHub />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/settings"
+          element={
+            <AdminRoute>
+              <AdminUserSettings />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/abandoned-cart-reminders"
+          element={
+            <AdminRoute>
+              <AdminAbandonedCartReminders />
+            </AdminRoute>
+          }
+        />
 
-      {/* Super Admin */}
-      <Route path="/super-admin/login" element={<Navigate to="/admin/login" replace />} />
-      <Route path="/super-admin" element={<Navigate to="/super-admin/dashboard" replace />} />
-      <Route
-        path="/super-admin/dashboard"
-        element={
-          <SuperAdminRoute>
-            <SuperAdminDashboard />
-          </SuperAdminRoute>
-        }
-      />
-      <Route
-        path="/super-admin/analytics"
-        element={
-          <SuperAdminRoute>
-            <SuperAdminAnalytics />
-          </SuperAdminRoute>
-        }
-      />
-      <Route
-        path="/super-admin/notification-center"
-        element={
-          <SuperAdminRoute>
-            <SuperAdminNotificationCenter />
-          </SuperAdminRoute>
-        }
-      />
-      <Route path="/super-admin/notifications" element={<Navigate to="/super-admin/notification-center" replace />} />
-      <Route path="/super-admin/notification-log" element={<Navigate to="/super-admin/notification-center" replace />} />
-      <Route path="/super-admin/sms-debug" element={<Navigate to="/super-admin/notification-center" replace />} />
-      <Route
-        path="/super-admin/reports"
-        element={
-          <SuperAdminRoute>
-            <SuperAdminReports />
-          </SuperAdminRoute>
-        }
-      />
-      <Route
-        path="/super-admin/invoices"
-        element={
-          <SuperAdminRoute>
-            <SuperAdminInvoices />
-          </SuperAdminRoute>
-        }
-      />
-      <Route
-        path="/super-admin/billing-manual"
-        element={
-          <SuperAdminRoute>
-            <SuperAdminManualBilling />
-          </SuperAdminRoute>
-        }
-      />
-      <Route
-        path="/super-admin/settings"
-        element={
-          <SuperAdminRoute>
-            <SuperAdminSettings />
-          </SuperAdminRoute>
-        }
-      />
-      <Route
-        path="/super-admin/settings/regional"
-        element={
-          <SuperAdminRoute>
-            <RegionalSettings />
-          </SuperAdminRoute>
-        }
-      />
-      <Route
-        path="/super-admin/settings/billing"
-        element={
-          <SuperAdminRoute>
-            <BillingSettings />
-          </SuperAdminRoute>
-        }
-      />
-      <Route
-        path="/super-admin/settings/security"
-        element={
-          <SuperAdminRoute>
-            <SecuritySettings />
-          </SuperAdminRoute>
-        }
-      />
-      <Route
-        path="/super-admin/settings/notifications"
-        element={
-          <SuperAdminRoute>
-            <NotificationSettings />
-          </SuperAdminRoute>
-        }
-      />
-      <Route
-        path="/super-admin/settings/policies"
-        element={
-          <SuperAdminRoute>
-            <PolicySettings />
-          </SuperAdminRoute>
-        }
-      />
-      <Route
-        path="/super-admin/settings/database"
-        element={
-          <SuperAdminRoute>
-            <DatabaseMaintenance />
-          </SuperAdminRoute>
-        }
-      />
-      <Route
-        path="/super-admin/order-debug"
-        element={
-          <SuperAdminRoute>
-            <SuperAdminOrderDebug />
-          </SuperAdminRoute>
-        }
-      />
-      <Route
-        path="/super-admin/settings/auth-debug"
-        element={
-          <SuperAdminRoute>
-            <DebugAuth />
-          </SuperAdminRoute>
-        }
-      />
-      <Route path="/super-admin/debug" element={<Navigate to="/super-admin/settings/auth-debug" replace />} />
-      <Route
-        path="/super-admin/email-management"
-        element={
-          <SuperAdminRoute>
-            <SuperAdminEmailManagement />
-          </SuperAdminRoute>
-        }
-      />
-      <Route path="/super-admin/emails" element={<Navigate to="/super-admin/email-management" replace />} />
-      <Route
-        path="/super-admin/announcements"
-        element={
-          <SuperAdminRoute>
-            <SuperAdminAnnouncements />
-          </SuperAdminRoute>
-        }
-      />
-      <Route
-        path="/super-admin/holidays"
-        element={
-          <SuperAdminRoute>
-            <SuperAdminHolidays />
-          </SuperAdminRoute>
-        }
-      />
-      <Route
-        path="/super-admin/profile"
-        element={
-          <SuperAdminRoute>
-            <SuperAdminProfile />
-          </SuperAdminRoute>
-        }
-      />
-      <Route
-        path="/super-admin/abandoned-carts"
-        element={
-          <SuperAdminRoute>
-            <SuperAdminAbandonedCarts />
-          </SuperAdminRoute>
-        }
-      />
-      <Route
-        path="/super-admin/customers"
-        element={
-          <SuperAdminRoute>
-            <SuperAdminCustomers />
-          </SuperAdminRoute>
-        }
-      />
-      <Route
-        path="/super-admin/customers/:id"
-        element={
-          <SuperAdminRoute>
-            <SuperAdminCustomerDetail />
-          </SuperAdminRoute>
-        }
-      />
-      <Route path="/super-admin/email-log" element={<Navigate to="/super-admin/email-management" replace />} />
+        {/* Super Admin */}
+        <Route path="/super-admin/login" element={<Navigate to="/admin/login" replace />} />
+        <Route path="/super-admin" element={<Navigate to="/super-admin/dashboard" replace />} />
+        <Route
+          path="/super-admin/dashboard"
+          element={
+            <SuperAdminRoute>
+              <SuperAdminDashboard />
+            </SuperAdminRoute>
+          }
+        />
+        <Route
+          path="/super-admin/analytics"
+          element={
+            <SuperAdminRoute>
+              <SuperAdminAnalytics />
+            </SuperAdminRoute>
+          }
+        />
+        <Route
+          path="/super-admin/notification-center"
+          element={
+            <SuperAdminRoute>
+              <SuperAdminNotificationCenter />
+            </SuperAdminRoute>
+          }
+        />
+        <Route path="/super-admin/notifications" element={<Navigate to="/super-admin/notification-center" replace />} />
+        <Route path="/super-admin/notification-log" element={<Navigate to="/super-admin/notification-center" replace />} />
+        <Route path="/super-admin/sms-debug" element={<Navigate to="/super-admin/notification-center" replace />} />
+        <Route
+          path="/super-admin/reports"
+          element={
+            <SuperAdminRoute>
+              <SuperAdminReports />
+            </SuperAdminRoute>
+          }
+        />
+        <Route
+          path="/super-admin/invoices"
+          element={
+            <SuperAdminRoute>
+              <SuperAdminInvoices />
+            </SuperAdminRoute>
+          }
+        />
+        <Route
+          path="/super-admin/billing-manual"
+          element={
+            <SuperAdminRoute>
+              <SuperAdminManualBilling />
+            </SuperAdminRoute>
+          }
+        />
+        <Route
+          path="/super-admin/settings"
+          element={
+            <SuperAdminRoute>
+              <SuperAdminSettings />
+            </SuperAdminRoute>
+          }
+        />
+        <Route
+          path="/super-admin/settings/regional"
+          element={
+            <SuperAdminRoute>
+              <RegionalSettings />
+            </SuperAdminRoute>
+          }
+        />
+        <Route
+          path="/super-admin/settings/billing"
+          element={
+            <SuperAdminRoute>
+              <BillingSettings />
+            </SuperAdminRoute>
+          }
+        />
+        <Route
+          path="/super-admin/settings/security"
+          element={
+            <SuperAdminRoute>
+              <SecuritySettings />
+            </SuperAdminRoute>
+          }
+        />
+        <Route
+          path="/super-admin/settings/notifications"
+          element={
+            <SuperAdminRoute>
+              <NotificationSettings />
+            </SuperAdminRoute>
+          }
+        />
+        <Route
+          path="/super-admin/settings/policies"
+          element={
+            <SuperAdminRoute>
+              <PolicySettings />
+            </SuperAdminRoute>
+          }
+        />
+        <Route
+          path="/super-admin/settings/database"
+          element={
+            <SuperAdminRoute>
+              <DatabaseMaintenance />
+            </SuperAdminRoute>
+          }
+        />
+        <Route
+          path="/super-admin/order-debug"
+          element={
+            <SuperAdminRoute>
+              <SuperAdminOrderDebug />
+            </SuperAdminRoute>
+          }
+        />
+        <Route
+          path="/super-admin/settings/auth-debug"
+          element={
+            <SuperAdminRoute>
+              <DebugAuth />
+            </SuperAdminRoute>
+          }
+        />
+        <Route path="/super-admin/debug" element={<Navigate to="/super-admin/settings/auth-debug" replace />} />
+        <Route
+          path="/super-admin/email-management"
+          element={
+            <SuperAdminRoute>
+              <SuperAdminEmailManagement />
+            </SuperAdminRoute>
+          }
+        />
+        <Route path="/super-admin/emails" element={<Navigate to="/super-admin/email-management" replace />} />
+        <Route
+          path="/super-admin/announcements"
+          element={
+            <SuperAdminRoute>
+              <SuperAdminAnnouncements />
+            </SuperAdminRoute>
+          }
+        />
+        <Route
+          path="/super-admin/holidays"
+          element={
+            <SuperAdminRoute>
+              <SuperAdminHolidays />
+            </SuperAdminRoute>
+          }
+        />
+        <Route
+          path="/super-admin/profile"
+          element={
+            <SuperAdminRoute>
+              <SuperAdminProfile />
+            </SuperAdminRoute>
+          }
+        />
+        <Route
+          path="/super-admin/abandoned-carts"
+          element={
+            <SuperAdminRoute>
+              <SuperAdminAbandonedCarts />
+            </SuperAdminRoute>
+          }
+        />
+        <Route
+          path="/super-admin/customers"
+          element={
+            <SuperAdminRoute>
+              <SuperAdminCustomers />
+            </SuperAdminRoute>
+          }
+        />
+        <Route
+          path="/super-admin/customers/:id"
+          element={
+            <SuperAdminRoute>
+              <SuperAdminCustomerDetail />
+            </SuperAdminRoute>
+          }
+        />
+        <Route path="/super-admin/email-log" element={<Navigate to="/super-admin/email-management" replace />} />
 
-      <Route path="*" element={<NotFoundPage />} />
-    </Routes>
-    <PwaCustomerEngagement />
+        <Route path="*" element={<NotFoundPage />} />
+      </Routes>
+      <PwaCustomerEngagement />
     </>
   );
 }

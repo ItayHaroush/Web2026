@@ -38,7 +38,7 @@ export default function SuperAdminAbandonedCarts() {
         try {
             const res = await api.get('/super-admin/cart-sessions/restaurants', { headers: getAuthHeaders() });
             if (res.data?.success) setRestaurants(res.data.restaurants || []);
-        } catch {}
+        } catch { }
     }, [getAuthHeaders]);
 
     const fetchSessions = useCallback(async () => {
@@ -106,11 +106,10 @@ export default function SuperAdminAbandonedCarts() {
                                 setActiveTab(t.key);
                                 setPage(1);
                             }}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-colors ${
-                                activeTab === t.key
+                            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-colors ${activeTab === t.key
                                     ? 'bg-brand-primary text-white shadow-md'
                                     : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
-                            }`}
+                                }`}
                         >
                             <t.icon size={14} />
                             {t.label}

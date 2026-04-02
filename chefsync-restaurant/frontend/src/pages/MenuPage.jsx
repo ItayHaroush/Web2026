@@ -91,7 +91,7 @@ export default function MenuPage({ isPreviewMode = false }) {
                 if (names.length > 0) {
                     addToast(`פריטים לא זמינים: ${names.join(', ')}`, 'warning');
                 }
-            } catch {}
+            } catch { }
             localStorage.removeItem('reorder_unavailable');
         }
 
@@ -107,7 +107,7 @@ export default function MenuPage({ isPreviewMode = false }) {
             if (Array.isArray(items) && items.length > 0) {
                 setPendingReorderItems(items);
             }
-        } catch {}
+        } catch { }
         localStorage.removeItem('reorder_items');
         localStorage.removeItem('reorder_tenant');
     }, []);

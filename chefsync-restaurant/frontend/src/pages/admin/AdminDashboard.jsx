@@ -61,7 +61,7 @@ export default function AdminDashboard() {
             try {
                 const a = new Audio('/sounds/Order-up-bell-sound.mp3');
                 a.volume = 0.4;
-                a.play().catch(() => {});
+                a.play().catch(() => { });
             } catch { /* ignore */ }
         }
     };

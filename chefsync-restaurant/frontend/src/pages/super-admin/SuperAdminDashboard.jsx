@@ -78,7 +78,7 @@ export default function SuperAdminDashboard() {
             try {
                 const a = new Audio('/sounds/Order-up-bell-sound.mp3');
                 a.volume = 0.4;
-                a.play().catch(() => {});
+                a.play().catch(() => { });
             } catch { /* ignore */ }
         }
     };
@@ -105,7 +105,7 @@ export default function SuperAdminDashboard() {
                 try {
                     const audio = new Audio('/sounds/Order-up-bell-sound.mp3');
                     audio.volume = 0.6;
-                    audio.play().catch(() => {});
+                    audio.play().catch(() => { });
                 } catch (_) { /* ignore */ }
             }
 

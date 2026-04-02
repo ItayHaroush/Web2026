@@ -434,8 +434,8 @@ export default function SuperAdminHolidays() {
                                                     <div key={r.id} className="flex items-center gap-3 bg-green-50 rounded-xl p-3">
                                                         <span className="font-bold text-sm">{r.restaurant?.name}</span>
                                                         <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${r.status === 'closed' ? 'bg-red-100 text-red-600' :
-                                                                r.status === 'open' ? 'bg-green-100 text-green-600' :
-                                                                    'bg-blue-100 text-blue-600'
+                                                            r.status === 'open' ? 'bg-green-100 text-green-600' :
+                                                                'bg-blue-100 text-blue-600'
                                                             }`}>
                                                             {r.status === 'closed' ? 'סגור' : r.status === 'open' ? 'פתוח רגיל' : `${r.open_time?.slice(0, 5)}–${r.close_time?.slice(0, 5)}`}
                                                         </span>
@@ -517,13 +517,12 @@ export default function SuperAdminHolidays() {
                                             return (
                                                 <label
                                                     key={h.index}
-                                                    className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${
-                                                        h.already_exists
+                                                    className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${h.already_exists
                                                             ? 'border-gray-100 bg-gray-50 opacity-60 cursor-not-allowed'
                                                             : checked
-                                                            ? 'border-green-400 bg-green-50'
-                                                            : 'border-gray-200 hover:border-gray-300'
-                                                    }`}
+                                                                ? 'border-green-400 bg-green-50'
+                                                                : 'border-gray-200 hover:border-gray-300'
+                                                        }`}
                                                 >
                                                     <input
                                                         type="checkbox"

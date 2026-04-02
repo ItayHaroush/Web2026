@@ -102,7 +102,7 @@ export default function UserProfileModal({ isOpen, onClose }) {
             try {
                 const a = new Audio('/sounds/Order-up-bell-sound.mp3');
                 a.volume = 0.4;
-                a.play().catch(() => {});
+                a.play().catch(() => { });
             } catch { /* ignore */ }
         }
     };
@@ -1055,399 +1055,399 @@ export default function UserProfileModal({ isOpen, onClose }) {
 
                             {profileTab === 'settings' && (
                                 <>
-                            {/* סיסמה לכניסה */}
-                            {!editMode && (
-                                <div
-                                    ref={passwordSectionRef}
-                                    id="customer-password-settings"
-                                    className="rounded-xl border-2 border-gray-200 dark:border-brand-dark-border bg-gray-50/80 dark:bg-brand-dark-bg p-4 space-y-3"
-                                >
-                                    <div className="flex items-center gap-2">
-                                        <FaLock className="text-brand-primary shrink-0" size={16} />
-                                        <h3 className="font-bold text-gray-900 dark:text-brand-dark-text text-sm">סיסמה לכניסה מהירה</h3>
-                                    </div>
-                                    {!customer.has_pin ? (
-                                        <>
-                                            <p className="text-xs text-gray-600 dark:text-brand-dark-muted">
-                                                עדיין לא הוגדרה סיסמה. אפשר להיכנס רק עם קוד SMS. הגדרת סיסמה מאפשרת <strong>התחברות עם טלפון + סיסמה</strong> בלי לחכות לקוד.
-                                            </p>
-                                            <div className="space-y-2">
-                                                <input
-                                                    type="password"
-                                                    value={passwordOffer}
-                                                    onChange={(e) => { setPasswordOffer(e.target.value); setError(''); }}
-                                                    placeholder="סיסמה חדשה (לפחות 6 תווים)"
-                                                    className="w-full border-2 border-gray-200 dark:border-brand-dark-border rounded-lg px-3 py-2.5 focus:border-brand-primary outline-none dark:bg-brand-dark-surface dark:text-brand-dark-text text-sm"
-                                                    dir="ltr"
-                                                />
-                                                <input
-                                                    type="password"
-                                                    value={passwordOfferConfirm}
-                                                    onChange={(e) => { setPasswordOfferConfirm(e.target.value); setError(''); }}
-                                                    placeholder="אימות סיסמה"
-                                                    className="w-full border-2 border-gray-200 dark:border-brand-dark-border rounded-lg px-3 py-2.5 focus:border-brand-primary outline-none dark:bg-brand-dark-surface dark:text-brand-dark-text text-sm"
-                                                    dir="ltr"
-                                                />
-                                            </div>
-                                            <button
-                                                type="button"
-                                                onClick={handleSetPasswordFromOffer}
-                                                disabled={loading || passwordOffer.length < 6 || passwordOffer !== passwordOfferConfirm}
-                                                className="w-full bg-brand-primary text-white rounded-xl px-4 py-2.5 text-sm font-bold hover:bg-brand-secondary transition disabled:opacity-50"
-                                            >
-                                                {loading ? 'שומר...' : 'שמור סיסמה'}
-                                            </button>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <p className="text-xs text-gray-600 dark:text-brand-dark-muted">
-                                                כבר קיימת סיסמה — ניתן להתחבר מהמסך הראשי ב־״התחבר עם סיסמה (ללא SMS)״.
-                                            </p>
-                                            {!showChangePasswordForm ? (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => { setShowChangePasswordForm(true); setError(''); }}
-                                                    className="w-full py-2.5 rounded-xl border-2 border-brand-primary/40 text-brand-primary font-bold text-sm hover:bg-orange-50 dark:hover:bg-orange-900/15 transition"
-                                                >
-                                                    שנה סיסמה
-                                                </button>
-                                            ) : (
-                                                <div className="space-y-2 pt-1">
-                                                    <input
-                                                        type="password"
-                                                        value={changeCurrentPassword}
-                                                        onChange={(e) => { setChangeCurrentPassword(e.target.value); setError(''); }}
-                                                        placeholder="סיסמה נוכחית"
-                                                        className="w-full border-2 border-gray-200 dark:border-brand-dark-border rounded-lg px-3 py-2.5 focus:border-brand-primary outline-none dark:bg-brand-dark-surface dark:text-brand-dark-text text-sm"
-                                                        dir="ltr"
-                                                        autoComplete="current-password"
-                                                    />
-                                                    <input
-                                                        type="password"
-                                                        value={changeNewPassword}
-                                                        onChange={(e) => { setChangeNewPassword(e.target.value); setError(''); }}
-                                                        placeholder="סיסמה חדשה (לפחות 6 תווים)"
-                                                        className="w-full border-2 border-gray-200 dark:border-brand-dark-border rounded-lg px-3 py-2.5 focus:border-brand-primary outline-none dark:bg-brand-dark-surface dark:text-brand-dark-text text-sm"
-                                                        dir="ltr"
-                                                        autoComplete="new-password"
-                                                    />
-                                                    <input
-                                                        type="password"
-                                                        value={changeNewPasswordConfirm}
-                                                        onChange={(e) => { setChangeNewPasswordConfirm(e.target.value); setError(''); }}
-                                                        placeholder="אימות סיסמה חדשה"
-                                                        className="w-full border-2 border-gray-200 dark:border-brand-dark-border rounded-lg px-3 py-2.5 focus:border-brand-primary outline-none dark:bg-brand-dark-surface dark:text-brand-dark-text text-sm"
-                                                        dir="ltr"
-                                                        autoComplete="new-password"
-                                                    />
-                                                    <div className="flex gap-2">
-                                                        <button
-                                                            type="button"
-                                                            onClick={handleChangeExistingPassword}
-                                                            disabled={
-                                                                loading ||
-                                                                changeNewPassword.length < 6 ||
-                                                                changeNewPassword !== changeNewPasswordConfirm ||
-                                                                !changeCurrentPassword
-                                                            }
-                                                            className="flex-1 bg-brand-primary text-white rounded-xl px-3 py-2.5 text-sm font-bold hover:bg-brand-secondary transition disabled:opacity-50"
-                                                        >
-                                                            {loading ? 'שומר...' : 'עדכן סיסמה'}
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => {
-                                                                setShowChangePasswordForm(false);
-                                                                setChangeCurrentPassword('');
-                                                                setChangeNewPassword('');
-                                                                setChangeNewPasswordConfirm('');
-                                                                setError('');
-                                                            }}
-                                                            className="px-4 py-2.5 rounded-xl border-2 border-gray-300 dark:border-brand-dark-border text-sm font-bold text-gray-700 dark:text-gray-300"
-                                                        >
-                                                            ביטול
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </>
-                                    )}
-                                </div>
-                            )}
-
-                            {/* אימות מייל */}
-                            {customer.email && !customer.email_verified && !editMode && (
-                                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl p-3 space-y-2">
-                                    <div className="flex items-center gap-2">
-                                        <FaExclamationTriangle className="text-amber-500 flex-shrink-0" size={14} />
-                                        <p className="text-sm text-amber-800 dark:text-amber-300 font-medium">
-                                            המייל <span className="font-bold" dir="ltr">{customer.email}</span> טרם אומת
-                                        </p>
-                                    </div>
-                                    <p className="text-xs text-amber-600 dark:text-amber-400">
-                                        אמת את המייל כדי לקבל קבלות הזמנה וסיכומים
-                                    </p>
-                                    {emailVerifySent ? (
-                                        <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
-                                            <FaCheck size={12} />
-                                            <span className="text-xs font-bold">מייל אימות נשלח! בדוק את תיבת הדואר</span>
-                                        </div>
-                                    ) : (
-                                        <button
-                                            onClick={handleResendVerification}
-                                            disabled={emailVerifySending}
-                                            className="w-full flex items-center justify-center gap-2 bg-amber-500 text-white rounded-lg px-3 py-2 text-xs font-bold hover:bg-amber-600 transition disabled:opacity-50"
+                                    {/* סיסמה לכניסה */}
+                                    {!editMode && (
+                                        <div
+                                            ref={passwordSectionRef}
+                                            id="customer-password-settings"
+                                            className="rounded-xl border-2 border-gray-200 dark:border-brand-dark-border bg-gray-50/80 dark:bg-brand-dark-bg p-4 space-y-3"
                                         >
-                                            <FaEnvelope size={12} />
-                                            <span>{emailVerifySending ? 'שולח...' : 'שלח מייל אימות'}</span>
-                                        </button>
-                                    )}
-                                </div>
-                            )}
-
-                            {/* התראות Push — מתג + בחירת מסעדות אחרי הפעלה */}
-                            {(() => {
-                                const ua = typeof navigator !== 'undefined' ? (navigator.userAgent || '') : '';
-                                const inFb = /FBAN|FBAV|Instagram/i.test(ua);
-                                const pushOk = typeof window !== 'undefined' && 'Notification' in window && 'serviceWorker' in navigator && !inFb;
-                                return (
-                                    <div
-                                        ref={pushSectionRef}
-                                        id="customer-push-settings"
-                                        className="rounded-xl border-2 border-gray-100 dark:border-brand-dark-border bg-gray-50/80 dark:bg-brand-dark-bg p-4 space-y-3"
-                                    >
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <FaBell className="text-orange-500" size={16} />
-                                            <h3 className="font-bold text-gray-900 dark:text-brand-dark-text text-sm">התראות דחיפה (Push)</h3>
-                                        </div>
-                                        <p className="text-xs text-gray-500 dark:text-brand-dark-muted">
-                                            {pushEnabled
-                                                ? 'בחרו מאיזו מסעדה מותר לשלוח אליכם עדכונים (לפי היסטוריית הזמנות).'
-                                                : 'אחרי ההפעלה תוכלו לסמן מסעדות ספציפיות. כיבוי מוחק את הרישום מהמערכת.'}
-                                        </p>
-                                        {!pushOk ? (
-                                            <p className="text-xs text-amber-700 dark:text-amber-400">
-                                                התראות אינן זמינות בדפדפן זה. נסו Chrome/Safari או התקנת אפליקציה — לא מתוך פייסבוק/אינסטגרם.
-                                            </p>
-                                        ) : (
-                                            <div className="flex items-center justify-between gap-3 pt-1" dir="ltr">
-                                                <span className="text-sm font-bold text-gray-700 dark:text-brand-dark-text rtl:text-right" dir="rtl">
-                                                    {pushEnabled ? 'מופעל' : 'כבוי'}
-                                                </span>
-                                                <button
-                                                    type="button"
-                                                    role="switch"
-                                                    aria-checked={pushEnabled}
-                                                    disabled={pushToggleLoading}
-                                                    onClick={() => handlePushToggle(!pushEnabled)}
-                                                    className={`relative w-14 h-8 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-orange-400 disabled:opacity-45 ${pushEnabled ? 'bg-orange-500' : 'bg-gray-300 dark:bg-gray-600'}`}
-                                                >
-                                                    <span
-                                                        className={`absolute top-1 w-6 h-6 rounded-full bg-white shadow-md transition-all ${pushEnabled ? 'left-7' : 'left-1'}`}
-                                                    />
-                                                </button>
+                                            <div className="flex items-center gap-2">
+                                                <FaLock className="text-brand-primary shrink-0" size={16} />
+                                                <h3 className="font-bold text-gray-900 dark:text-brand-dark-text text-sm">סיסמה לכניסה מהירה</h3>
                                             </div>
-                                        )}
-                                        {pushMessage && (
-                                            <p className="text-xs text-red-600 dark:text-red-400 font-medium">{pushMessage}</p>
-                                        )}
-                                        {typeof Notification !== 'undefined' && Notification.permission === 'denied' && (
-                                            <p className="text-xs text-amber-700 dark:text-amber-400">
-                                                ההרשאה נחסמה בדפדפן. יש לפתוח את הגדרות האתר ולאפשר התראות, ואז להפעיל את המתג שוב.
-                                            </p>
-                                        )}
-
-                                        {/* צלצול התראות */}
-                                        {pushOk && (
-                                            <div className="flex items-center justify-between gap-3 pt-2 mt-1 border-t border-gray-200 dark:border-brand-dark-border">
-                                                <div className="flex items-center gap-2">
-                                                    <div className={`p-1.5 rounded-lg ${customerSoundEnabled ? 'bg-orange-50 text-orange-500' : 'bg-gray-100 dark:bg-gray-700 text-gray-400'}`}>
-                                                        {customerSoundEnabled ? <FaVolumeUp size={14} /> : <FaVolumeMute size={14} />}
-                                                    </div>
-                                                    <span className="text-sm font-bold text-gray-700 dark:text-brand-dark-text">צלצול התראות</span>
-                                                </div>
-                                                <button
-                                                    type="button"
-                                                    role="switch"
-                                                    aria-checked={customerSoundEnabled}
-                                                    onClick={() => handleCustomerSoundToggle(!customerSoundEnabled)}
-                                                    className={`relative w-14 h-8 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-orange-400 ${customerSoundEnabled ? 'bg-orange-500' : 'bg-gray-300 dark:bg-gray-600'}`}
-                                                >
-                                                    <span className={`absolute top-1 w-6 h-6 rounded-full bg-white shadow-md transition-all ${customerSoundEnabled ? 'left-7' : 'left-1'}`} />
-                                                </button>
-                                            </div>
-                                        )}
-
-                                        {pushEnabled && pushOk && (
-                                            <div className="mt-2 pt-3 border-t border-gray-200 dark:border-brand-dark-border space-y-2">
-                                                <p className="text-xs font-black text-gray-600 dark:text-brand-dark-muted uppercase tracking-wide">מסעדות מורשות לשלוח התראות</p>
-                                                {notifPrefsLoading && (
-                                                    <p className="text-xs text-gray-500">טוען רשימה…</p>
-                                                )}
-                                                {!notifPrefsLoading && notificationRestaurants.length === 0 && (
-                                                    <p className="text-xs text-gray-500 dark:text-brand-dark-muted">
-                                                        אין עדיין מסעדות מהיסטוריה. לאחר הזמנה ראשונה תוכלו לאשר כאן מי רשאי לעדכן אתכם.
+                                            {!customer.has_pin ? (
+                                                <>
+                                                    <p className="text-xs text-gray-600 dark:text-brand-dark-muted">
+                                                        עדיין לא הוגדרה סיסמה. אפשר להיכנס רק עם קוד SMS. הגדרת סיסמה מאפשרת <strong>התחברות עם טלפון + סיסמה</strong> בלי לחכות לקוד.
                                                     </p>
-                                                )}
-                                                {notificationRestaurants.map((r) => (
-                                                    <div
-                                                        key={r.tenant_id}
-                                                        className="flex items-center justify-between gap-2 py-1.5 border-b border-gray-100 dark:border-brand-dark-border last:border-0"
+                                                    <div className="space-y-2">
+                                                        <input
+                                                            type="password"
+                                                            value={passwordOffer}
+                                                            onChange={(e) => { setPasswordOffer(e.target.value); setError(''); }}
+                                                            placeholder="סיסמה חדשה (לפחות 6 תווים)"
+                                                            className="w-full border-2 border-gray-200 dark:border-brand-dark-border rounded-lg px-3 py-2.5 focus:border-brand-primary outline-none dark:bg-brand-dark-surface dark:text-brand-dark-text text-sm"
+                                                            dir="ltr"
+                                                        />
+                                                        <input
+                                                            type="password"
+                                                            value={passwordOfferConfirm}
+                                                            onChange={(e) => { setPasswordOfferConfirm(e.target.value); setError(''); }}
+                                                            placeholder="אימות סיסמה"
+                                                            className="w-full border-2 border-gray-200 dark:border-brand-dark-border rounded-lg px-3 py-2.5 focus:border-brand-primary outline-none dark:bg-brand-dark-surface dark:text-brand-dark-text text-sm"
+                                                            dir="ltr"
+                                                        />
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleSetPasswordFromOffer}
+                                                        disabled={loading || passwordOffer.length < 6 || passwordOffer !== passwordOfferConfirm}
+                                                        className="w-full bg-brand-primary text-white rounded-xl px-4 py-2.5 text-sm font-bold hover:bg-brand-secondary transition disabled:opacity-50"
                                                     >
-                                                        <span className="text-sm font-medium text-gray-800 dark:text-brand-dark-text truncate">{r.name}</span>
+                                                        {loading ? 'שומר...' : 'שמור סיסמה'}
+                                                    </button>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <p className="text-xs text-gray-600 dark:text-brand-dark-muted">
+                                                        כבר קיימת סיסמה — ניתן להתחבר מהמסך הראשי ב־״התחבר עם סיסמה (ללא SMS)״.
+                                                    </p>
+                                                    {!showChangePasswordForm ? (
                                                         <button
                                                             type="button"
-                                                            disabled={notifPrefsSaving}
-                                                            onClick={() => handleRestaurantNotifToggle(r.tenant_id, !r.enabled)}
-                                                            className={`relative w-12 h-7 rounded-full flex-shrink-0 transition-colors disabled:opacity-45 ${r.enabled ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`}
-                                                            dir="ltr"
+                                                            onClick={() => { setShowChangePasswordForm(true); setError(''); }}
+                                                            className="w-full py-2.5 rounded-xl border-2 border-brand-primary/40 text-brand-primary font-bold text-sm hover:bg-orange-50 dark:hover:bg-orange-900/15 transition"
+                                                        >
+                                                            שנה סיסמה
+                                                        </button>
+                                                    ) : (
+                                                        <div className="space-y-2 pt-1">
+                                                            <input
+                                                                type="password"
+                                                                value={changeCurrentPassword}
+                                                                onChange={(e) => { setChangeCurrentPassword(e.target.value); setError(''); }}
+                                                                placeholder="סיסמה נוכחית"
+                                                                className="w-full border-2 border-gray-200 dark:border-brand-dark-border rounded-lg px-3 py-2.5 focus:border-brand-primary outline-none dark:bg-brand-dark-surface dark:text-brand-dark-text text-sm"
+                                                                dir="ltr"
+                                                                autoComplete="current-password"
+                                                            />
+                                                            <input
+                                                                type="password"
+                                                                value={changeNewPassword}
+                                                                onChange={(e) => { setChangeNewPassword(e.target.value); setError(''); }}
+                                                                placeholder="סיסמה חדשה (לפחות 6 תווים)"
+                                                                className="w-full border-2 border-gray-200 dark:border-brand-dark-border rounded-lg px-3 py-2.5 focus:border-brand-primary outline-none dark:bg-brand-dark-surface dark:text-brand-dark-text text-sm"
+                                                                dir="ltr"
+                                                                autoComplete="new-password"
+                                                            />
+                                                            <input
+                                                                type="password"
+                                                                value={changeNewPasswordConfirm}
+                                                                onChange={(e) => { setChangeNewPasswordConfirm(e.target.value); setError(''); }}
+                                                                placeholder="אימות סיסמה חדשה"
+                                                                className="w-full border-2 border-gray-200 dark:border-brand-dark-border rounded-lg px-3 py-2.5 focus:border-brand-primary outline-none dark:bg-brand-dark-surface dark:text-brand-dark-text text-sm"
+                                                                dir="ltr"
+                                                                autoComplete="new-password"
+                                                            />
+                                                            <div className="flex gap-2">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={handleChangeExistingPassword}
+                                                                    disabled={
+                                                                        loading ||
+                                                                        changeNewPassword.length < 6 ||
+                                                                        changeNewPassword !== changeNewPasswordConfirm ||
+                                                                        !changeCurrentPassword
+                                                                    }
+                                                                    className="flex-1 bg-brand-primary text-white rounded-xl px-3 py-2.5 text-sm font-bold hover:bg-brand-secondary transition disabled:opacity-50"
+                                                                >
+                                                                    {loading ? 'שומר...' : 'עדכן סיסמה'}
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        setShowChangePasswordForm(false);
+                                                                        setChangeCurrentPassword('');
+                                                                        setChangeNewPassword('');
+                                                                        setChangeNewPasswordConfirm('');
+                                                                        setError('');
+                                                                    }}
+                                                                    className="px-4 py-2.5 rounded-xl border-2 border-gray-300 dark:border-brand-dark-border text-sm font-bold text-gray-700 dark:text-gray-300"
+                                                                >
+                                                                    ביטול
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* אימות מייל */}
+                                    {customer.email && !customer.email_verified && !editMode && (
+                                        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl p-3 space-y-2">
+                                            <div className="flex items-center gap-2">
+                                                <FaExclamationTriangle className="text-amber-500 flex-shrink-0" size={14} />
+                                                <p className="text-sm text-amber-800 dark:text-amber-300 font-medium">
+                                                    המייל <span className="font-bold" dir="ltr">{customer.email}</span> טרם אומת
+                                                </p>
+                                            </div>
+                                            <p className="text-xs text-amber-600 dark:text-amber-400">
+                                                אמת את המייל כדי לקבל קבלות הזמנה וסיכומים
+                                            </p>
+                                            {emailVerifySent ? (
+                                                <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
+                                                    <FaCheck size={12} />
+                                                    <span className="text-xs font-bold">מייל אימות נשלח! בדוק את תיבת הדואר</span>
+                                                </div>
+                                            ) : (
+                                                <button
+                                                    onClick={handleResendVerification}
+                                                    disabled={emailVerifySending}
+                                                    className="w-full flex items-center justify-center gap-2 bg-amber-500 text-white rounded-lg px-3 py-2 text-xs font-bold hover:bg-amber-600 transition disabled:opacity-50"
+                                                >
+                                                    <FaEnvelope size={12} />
+                                                    <span>{emailVerifySending ? 'שולח...' : 'שלח מייל אימות'}</span>
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* התראות Push — מתג + בחירת מסעדות אחרי הפעלה */}
+                                    {(() => {
+                                        const ua = typeof navigator !== 'undefined' ? (navigator.userAgent || '') : '';
+                                        const inFb = /FBAN|FBAV|Instagram/i.test(ua);
+                                        const pushOk = typeof window !== 'undefined' && 'Notification' in window && 'serviceWorker' in navigator && !inFb;
+                                        return (
+                                            <div
+                                                ref={pushSectionRef}
+                                                id="customer-push-settings"
+                                                className="rounded-xl border-2 border-gray-100 dark:border-brand-dark-border bg-gray-50/80 dark:bg-brand-dark-bg p-4 space-y-3"
+                                            >
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <FaBell className="text-orange-500" size={16} />
+                                                    <h3 className="font-bold text-gray-900 dark:text-brand-dark-text text-sm">התראות דחיפה (Push)</h3>
+                                                </div>
+                                                <p className="text-xs text-gray-500 dark:text-brand-dark-muted">
+                                                    {pushEnabled
+                                                        ? 'בחרו מאיזו מסעדה מותר לשלוח אליכם עדכונים (לפי היסטוריית הזמנות).'
+                                                        : 'אחרי ההפעלה תוכלו לסמן מסעדות ספציפיות. כיבוי מוחק את הרישום מהמערכת.'}
+                                                </p>
+                                                {!pushOk ? (
+                                                    <p className="text-xs text-amber-700 dark:text-amber-400">
+                                                        התראות אינן זמינות בדפדפן זה. נסו Chrome/Safari או התקנת אפליקציה — לא מתוך פייסבוק/אינסטגרם.
+                                                    </p>
+                                                ) : (
+                                                    <div className="flex items-center justify-between gap-3 pt-1" dir="ltr">
+                                                        <span className="text-sm font-bold text-gray-700 dark:text-brand-dark-text rtl:text-right" dir="rtl">
+                                                            {pushEnabled ? 'מופעל' : 'כבוי'}
+                                                        </span>
+                                                        <button
+                                                            type="button"
+                                                            role="switch"
+                                                            aria-checked={pushEnabled}
+                                                            disabled={pushToggleLoading}
+                                                            onClick={() => handlePushToggle(!pushEnabled)}
+                                                            className={`relative w-14 h-8 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-orange-400 disabled:opacity-45 ${pushEnabled ? 'bg-orange-500' : 'bg-gray-300 dark:bg-gray-600'}`}
                                                         >
                                                             <span
-                                                                className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow transition-all ${r.enabled ? 'left-6' : 'left-1'}`}
+                                                                className={`absolute top-1 w-6 h-6 rounded-full bg-white shadow-md transition-all ${pushEnabled ? 'left-7' : 'left-1'}`}
                                                             />
                                                         </button>
+                                                    </div>
+                                                )}
+                                                {pushMessage && (
+                                                    <p className="text-xs text-red-600 dark:text-red-400 font-medium">{pushMessage}</p>
+                                                )}
+                                                {typeof Notification !== 'undefined' && Notification.permission === 'denied' && (
+                                                    <p className="text-xs text-amber-700 dark:text-amber-400">
+                                                        ההרשאה נחסמה בדפדפן. יש לפתוח את הגדרות האתר ולאפשר התראות, ואז להפעיל את המתג שוב.
+                                                    </p>
+                                                )}
+
+                                                {/* צלצול התראות */}
+                                                {pushOk && (
+                                                    <div className="flex items-center justify-between gap-3 pt-2 mt-1 border-t border-gray-200 dark:border-brand-dark-border">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className={`p-1.5 rounded-lg ${customerSoundEnabled ? 'bg-orange-50 text-orange-500' : 'bg-gray-100 dark:bg-gray-700 text-gray-400'}`}>
+                                                                {customerSoundEnabled ? <FaVolumeUp size={14} /> : <FaVolumeMute size={14} />}
+                                                            </div>
+                                                            <span className="text-sm font-bold text-gray-700 dark:text-brand-dark-text">צלצול התראות</span>
+                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            role="switch"
+                                                            aria-checked={customerSoundEnabled}
+                                                            onClick={() => handleCustomerSoundToggle(!customerSoundEnabled)}
+                                                            className={`relative w-14 h-8 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-orange-400 ${customerSoundEnabled ? 'bg-orange-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+                                                        >
+                                                            <span className={`absolute top-1 w-6 h-6 rounded-full bg-white shadow-md transition-all ${customerSoundEnabled ? 'left-7' : 'left-1'}`} />
+                                                        </button>
+                                                    </div>
+                                                )}
+
+                                                {pushEnabled && pushOk && (
+                                                    <div className="mt-2 pt-3 border-t border-gray-200 dark:border-brand-dark-border space-y-2">
+                                                        <p className="text-xs font-black text-gray-600 dark:text-brand-dark-muted uppercase tracking-wide">מסעדות מורשות לשלוח התראות</p>
+                                                        {notifPrefsLoading && (
+                                                            <p className="text-xs text-gray-500">טוען רשימה…</p>
+                                                        )}
+                                                        {!notifPrefsLoading && notificationRestaurants.length === 0 && (
+                                                            <p className="text-xs text-gray-500 dark:text-brand-dark-muted">
+                                                                אין עדיין מסעדות מהיסטוריה. לאחר הזמנה ראשונה תוכלו לאשר כאן מי רשאי לעדכן אתכם.
+                                                            </p>
+                                                        )}
+                                                        {notificationRestaurants.map((r) => (
+                                                            <div
+                                                                key={r.tenant_id}
+                                                                className="flex items-center justify-between gap-2 py-1.5 border-b border-gray-100 dark:border-brand-dark-border last:border-0"
+                                                            >
+                                                                <span className="text-sm font-medium text-gray-800 dark:text-brand-dark-text truncate">{r.name}</span>
+                                                                <button
+                                                                    type="button"
+                                                                    disabled={notifPrefsSaving}
+                                                                    onClick={() => handleRestaurantNotifToggle(r.tenant_id, !r.enabled)}
+                                                                    className={`relative w-12 h-7 rounded-full flex-shrink-0 transition-colors disabled:opacity-45 ${r.enabled ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+                                                                    dir="ltr"
+                                                                >
+                                                                    <span
+                                                                        className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow transition-all ${r.enabled ? 'left-6' : 'left-1'}`}
+                                                                    />
+                                                                </button>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })()}
+
+                                    {/* מיקומים שמורים */}
+                                    <div ref={addressesSectionRef} id="customer-addresses-settings">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <h3 className="font-bold text-gray-900 dark:text-brand-dark-text flex items-center gap-2">
+                                                <FaMapMarkerAlt className="text-brand-primary" size={14} />
+                                                מיקומים שמורים
+                                            </h3>
+                                            {!showAddressForm && (
+                                                <button
+                                                    onClick={() => {
+                                                        setShowAddressForm(true);
+                                                        setEditingAddress(null);
+                                                        setAddressForm(emptyAddressForm());
+                                                        setError('');
+                                                    }}
+                                                    className="text-brand-primary hover:text-brand-secondary transition text-xs font-bold flex items-center gap-1"
+                                                >
+                                                    <FaPlus size={10} />
+                                                    הוסף
+                                                </button>
+                                            )}
+                                        </div>
+
+                                        {/* טופס כתובת */}
+                                        {showAddressForm && (
+                                            <div className="space-y-2 bg-gray-50 dark:bg-brand-dark-bg rounded-xl p-3 mb-3">
+                                                <div className="flex gap-2">
+                                                    {['בית', 'עבודה', 'אחר'].map(lbl => (
+                                                        <button
+                                                            key={lbl}
+                                                            onClick={() => setAddressForm(p => ({ ...p, label: lbl }))}
+                                                            className={`px-3 py-1 rounded-lg text-xs font-bold transition ${addressForm.label === lbl ? 'bg-brand-primary text-white' : 'bg-gray-200 dark:bg-brand-dark-border text-gray-600 dark:text-gray-400'}`}
+                                                        >
+                                                            {lbl}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    <input placeholder="רחוב *" value={addressForm.street} onChange={e => setAddressForm(p => ({ ...p, street: e.target.value }))} className="col-span-2 border border-gray-200 dark:border-brand-dark-border rounded-lg px-3 py-2 text-sm focus:border-brand-primary outline-none dark:bg-brand-dark-surface dark:text-brand-dark-text" />
+                                                    <input placeholder="מספר בית (אופציונלי)" value={addressForm.house_number} onChange={e => setAddressForm(p => ({ ...p, house_number: e.target.value }))} className="border border-gray-200 dark:border-brand-dark-border rounded-lg px-3 py-2 text-sm focus:border-brand-primary outline-none dark:bg-brand-dark-surface dark:text-brand-dark-text" />
+                                                    <input placeholder="עיר *" value={addressForm.city} onChange={e => setAddressForm(p => ({ ...p, city: e.target.value }))} className="border border-gray-200 dark:border-brand-dark-border rounded-lg px-3 py-2 text-sm focus:border-brand-primary outline-none dark:bg-brand-dark-surface dark:text-brand-dark-text" />
+                                                    <input placeholder="דירה" value={addressForm.apartment} onChange={e => setAddressForm(p => ({ ...p, apartment: e.target.value }))} className="border border-gray-200 dark:border-brand-dark-border rounded-lg px-3 py-2 text-sm focus:border-brand-primary outline-none dark:bg-brand-dark-surface dark:text-brand-dark-text" />
+                                                    <input placeholder="קומה" value={addressForm.floor} onChange={e => setAddressForm(p => ({ ...p, floor: e.target.value }))} className="border border-gray-200 dark:border-brand-dark-border rounded-lg px-3 py-2 text-sm focus:border-brand-primary outline-none dark:bg-brand-dark-surface dark:text-brand-dark-text" />
+                                                    <input placeholder="כניסה" value={addressForm.entrance} onChange={e => setAddressForm(p => ({ ...p, entrance: e.target.value }))} className="border border-gray-200 dark:border-brand-dark-border rounded-lg px-3 py-2 text-sm focus:border-brand-primary outline-none dark:bg-brand-dark-surface dark:text-brand-dark-text" />
+                                                    <input placeholder="הערות למשלוח" value={addressForm.notes} onChange={e => setAddressForm(p => ({ ...p, notes: e.target.value }))} className="border border-gray-200 dark:border-brand-dark-border rounded-lg px-3 py-2 text-sm focus:border-brand-primary outline-none dark:bg-brand-dark-surface dark:text-brand-dark-text" />
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setAddressMapOpen(true)}
+                                                    className="w-full flex items-center justify-center gap-2 py-2 rounded-lg border-2 border-brand-primary/40 text-brand-primary text-xs font-black hover:bg-brand-primary/5 transition"
+                                                >
+                                                    <FaMapMarkerAlt />
+                                                    {addressForm.lat != null && addressForm.lng != null ? 'עדכן מיקום במפה' : 'בחר נקודה במפה (חובה)'}
+                                                </button>
+                                                {addressForm.lat != null && addressForm.lng != null && (
+                                                    <p className="text-[10px] text-gray-500 dark:text-brand-dark-muted">מיקום נבחר ✓</p>
+                                                )}
+                                                {error && <p className="text-xs text-red-600 text-center">{error}</p>}
+                                                <div className="flex gap-2">
+                                                    <button onClick={handleSaveAddress} disabled={loading} className="flex-1 bg-brand-primary text-white rounded-lg px-3 py-2 text-xs font-bold hover:bg-brand-secondary transition disabled:opacity-50">
+                                                        {loading ? 'שומר...' : (editingAddress ? 'עדכן' : 'שמור')}
+                                                    </button>
+                                                    <button onClick={() => { setShowAddressForm(false); setError(''); }} className="flex-1 bg-gray-200 dark:bg-brand-dark-border text-gray-600 dark:text-gray-400 rounded-lg px-3 py-2 text-xs font-bold transition">
+                                                        ביטול
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* רשימת כתובות */}
+                                        {addresses.length === 0 && !showAddressForm ? (
+                                            <p className="text-sm text-gray-400 text-center py-3">אין מיקומים שמורים</p>
+                                        ) : (
+                                            <div className="space-y-2">
+                                                {addresses.map(addr => (
+                                                    <div key={addr.id} className="bg-gray-50 dark:bg-brand-dark-bg rounded-xl p-3 flex items-start gap-3">
+                                                        <FaMapMarkerAlt className={`mt-1 flex-shrink-0 ${addr.is_default ? 'text-brand-primary' : 'text-gray-400'}`} size={14} />
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="font-bold text-sm text-gray-900 dark:text-brand-dark-text">{addr.label}</span>
+                                                                {addr.is_default && <FaStar className="text-brand-accent" size={10} />}
+                                                            </div>
+                                                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                                                                {addr.street} {addr.house_number}{addr.apartment ? `, דירה ${addr.apartment}` : ''}, {addr.city}
+                                                            </p>
+                                                            {addr.floor && <span className="text-xs text-gray-400">קומה {addr.floor}</span>}
+                                                        </div>
+                                                        <div className="flex items-center gap-1 flex-shrink-0">
+                                                            {!addr.is_default && (
+                                                                <button onClick={() => handleSetDefaultAddress(addr.id)} className="p-1.5 text-gray-400 hover:text-brand-primary transition" title="הגדר כברירת מחדל">
+                                                                    <FaStar size={12} />
+                                                                </button>
+                                                            )}
+                                                            <button
+                                                                onClick={() => {
+                                                                    setEditingAddress(addr.id);
+                                                                    setAddressForm({
+                                                                        label: addr.label,
+                                                                        street: addr.street,
+                                                                        house_number: addr.house_number || '',
+                                                                        apartment: addr.apartment || '',
+                                                                        floor: addr.floor || '',
+                                                                        entrance: addr.entrance || '',
+                                                                        city: addr.city,
+                                                                        notes: addr.notes || '',
+                                                                        lat: addr.lat != null ? Number(addr.lat) : null,
+                                                                        lng: addr.lng != null ? Number(addr.lng) : null,
+                                                                    });
+                                                                    setShowAddressForm(true);
+                                                                    setError('');
+                                                                }}
+                                                                className="p-1.5 text-gray-400 hover:text-brand-primary transition"
+                                                                title="ערוך"
+                                                            >
+                                                                <FaEdit size={12} />
+                                                            </button>
+                                                            <button onClick={() => handleDeleteAddress(addr)} className="p-1.5 text-gray-400 hover:text-red-500 transition" title="מחק">
+                                                                <FaTrash size={11} />
+                                                            </button>
+                                                        </div>
                                                     </div>
                                                 ))}
                                             </div>
                                         )}
                                     </div>
-                                );
-                            })()}
 
-                            {/* מיקומים שמורים */}
-                            <div ref={addressesSectionRef} id="customer-addresses-settings">
-                                <div className="flex items-center justify-between mb-3">
-                                    <h3 className="font-bold text-gray-900 dark:text-brand-dark-text flex items-center gap-2">
-                                        <FaMapMarkerAlt className="text-brand-primary" size={14} />
-                                        מיקומים שמורים
-                                    </h3>
-                                    {!showAddressForm && (
-                                        <button
-                                            onClick={() => {
-                                                setShowAddressForm(true);
-                                                setEditingAddress(null);
-                                                setAddressForm(emptyAddressForm());
-                                                setError('');
-                                            }}
-                                            className="text-brand-primary hover:text-brand-secondary transition text-xs font-bold flex items-center gap-1"
-                                        >
-                                            <FaPlus size={10} />
-                                            הוסף
-                                        </button>
-                                    )}
-                                </div>
-
-                                {/* טופס כתובת */}
-                                {showAddressForm && (
-                                    <div className="space-y-2 bg-gray-50 dark:bg-brand-dark-bg rounded-xl p-3 mb-3">
-                                        <div className="flex gap-2">
-                                            {['בית', 'עבודה', 'אחר'].map(lbl => (
-                                                <button
-                                                    key={lbl}
-                                                    onClick={() => setAddressForm(p => ({ ...p, label: lbl }))}
-                                                    className={`px-3 py-1 rounded-lg text-xs font-bold transition ${addressForm.label === lbl ? 'bg-brand-primary text-white' : 'bg-gray-200 dark:bg-brand-dark-border text-gray-600 dark:text-gray-400'}`}
-                                                >
-                                                    {lbl}
-                                                </button>
-                                            ))}
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <input placeholder="רחוב *" value={addressForm.street} onChange={e => setAddressForm(p => ({ ...p, street: e.target.value }))} className="col-span-2 border border-gray-200 dark:border-brand-dark-border rounded-lg px-3 py-2 text-sm focus:border-brand-primary outline-none dark:bg-brand-dark-surface dark:text-brand-dark-text" />
-                                            <input placeholder="מספר בית (אופציונלי)" value={addressForm.house_number} onChange={e => setAddressForm(p => ({ ...p, house_number: e.target.value }))} className="border border-gray-200 dark:border-brand-dark-border rounded-lg px-3 py-2 text-sm focus:border-brand-primary outline-none dark:bg-brand-dark-surface dark:text-brand-dark-text" />
-                                            <input placeholder="עיר *" value={addressForm.city} onChange={e => setAddressForm(p => ({ ...p, city: e.target.value }))} className="border border-gray-200 dark:border-brand-dark-border rounded-lg px-3 py-2 text-sm focus:border-brand-primary outline-none dark:bg-brand-dark-surface dark:text-brand-dark-text" />
-                                            <input placeholder="דירה" value={addressForm.apartment} onChange={e => setAddressForm(p => ({ ...p, apartment: e.target.value }))} className="border border-gray-200 dark:border-brand-dark-border rounded-lg px-3 py-2 text-sm focus:border-brand-primary outline-none dark:bg-brand-dark-surface dark:text-brand-dark-text" />
-                                            <input placeholder="קומה" value={addressForm.floor} onChange={e => setAddressForm(p => ({ ...p, floor: e.target.value }))} className="border border-gray-200 dark:border-brand-dark-border rounded-lg px-3 py-2 text-sm focus:border-brand-primary outline-none dark:bg-brand-dark-surface dark:text-brand-dark-text" />
-                                            <input placeholder="כניסה" value={addressForm.entrance} onChange={e => setAddressForm(p => ({ ...p, entrance: e.target.value }))} className="border border-gray-200 dark:border-brand-dark-border rounded-lg px-3 py-2 text-sm focus:border-brand-primary outline-none dark:bg-brand-dark-surface dark:text-brand-dark-text" />
-                                            <input placeholder="הערות למשלוח" value={addressForm.notes} onChange={e => setAddressForm(p => ({ ...p, notes: e.target.value }))} className="border border-gray-200 dark:border-brand-dark-border rounded-lg px-3 py-2 text-sm focus:border-brand-primary outline-none dark:bg-brand-dark-surface dark:text-brand-dark-text" />
-                                        </div>
-                                        <button
-                                            type="button"
-                                            onClick={() => setAddressMapOpen(true)}
-                                            className="w-full flex items-center justify-center gap-2 py-2 rounded-lg border-2 border-brand-primary/40 text-brand-primary text-xs font-black hover:bg-brand-primary/5 transition"
-                                        >
-                                            <FaMapMarkerAlt />
-                                            {addressForm.lat != null && addressForm.lng != null ? 'עדכן מיקום במפה' : 'בחר נקודה במפה (חובה)'}
-                                        </button>
-                                        {addressForm.lat != null && addressForm.lng != null && (
-                                            <p className="text-[10px] text-gray-500 dark:text-brand-dark-muted">מיקום נבחר ✓</p>
-                                        )}
-                                        {error && <p className="text-xs text-red-600 text-center">{error}</p>}
-                                        <div className="flex gap-2">
-                                            <button onClick={handleSaveAddress} disabled={loading} className="flex-1 bg-brand-primary text-white rounded-lg px-3 py-2 text-xs font-bold hover:bg-brand-secondary transition disabled:opacity-50">
-                                                {loading ? 'שומר...' : (editingAddress ? 'עדכן' : 'שמור')}
-                                            </button>
-                                            <button onClick={() => { setShowAddressForm(false); setError(''); }} className="flex-1 bg-gray-200 dark:bg-brand-dark-border text-gray-600 dark:text-gray-400 rounded-lg px-3 py-2 text-xs font-bold transition">
-                                                ביטול
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* רשימת כתובות */}
-                                {addresses.length === 0 && !showAddressForm ? (
-                                    <p className="text-sm text-gray-400 text-center py-3">אין מיקומים שמורים</p>
-                                ) : (
-                                    <div className="space-y-2">
-                                        {addresses.map(addr => (
-                                            <div key={addr.id} className="bg-gray-50 dark:bg-brand-dark-bg rounded-xl p-3 flex items-start gap-3">
-                                                <FaMapMarkerAlt className={`mt-1 flex-shrink-0 ${addr.is_default ? 'text-brand-primary' : 'text-gray-400'}`} size={14} />
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="font-bold text-sm text-gray-900 dark:text-brand-dark-text">{addr.label}</span>
-                                                        {addr.is_default && <FaStar className="text-brand-accent" size={10} />}
-                                                    </div>
-                                                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                                                        {addr.street} {addr.house_number}{addr.apartment ? `, דירה ${addr.apartment}` : ''}, {addr.city}
-                                                    </p>
-                                                    {addr.floor && <span className="text-xs text-gray-400">קומה {addr.floor}</span>}
-                                                </div>
-                                                <div className="flex items-center gap-1 flex-shrink-0">
-                                                    {!addr.is_default && (
-                                                        <button onClick={() => handleSetDefaultAddress(addr.id)} className="p-1.5 text-gray-400 hover:text-brand-primary transition" title="הגדר כברירת מחדל">
-                                                            <FaStar size={12} />
-                                                        </button>
-                                                    )}
-                                                    <button
-                                                        onClick={() => {
-                                                            setEditingAddress(addr.id);
-                                                            setAddressForm({
-                                                                label: addr.label,
-                                                                street: addr.street,
-                                                                house_number: addr.house_number || '',
-                                                                apartment: addr.apartment || '',
-                                                                floor: addr.floor || '',
-                                                                entrance: addr.entrance || '',
-                                                                city: addr.city,
-                                                                notes: addr.notes || '',
-                                                                lat: addr.lat != null ? Number(addr.lat) : null,
-                                                                lng: addr.lng != null ? Number(addr.lng) : null,
-                                                            });
-                                                            setShowAddressForm(true);
-                                                            setError('');
-                                                        }}
-                                                        className="p-1.5 text-gray-400 hover:text-brand-primary transition"
-                                                        title="ערוך"
-                                                    >
-                                                        <FaEdit size={12} />
-                                                    </button>
-                                                    <button onClick={() => handleDeleteAddress(addr)} className="p-1.5 text-gray-400 hover:text-red-500 transition" title="מחק">
-                                                        <FaTrash size={11} />
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* התנתקות */}
-                            <button
-                                onClick={handleLogout}
-                                className="w-full flex items-center justify-center gap-2 text-red-500 hover:text-red-600 transition py-3 font-bold text-sm border-t border-gray-100 dark:border-brand-dark-border mt-2"
-                            >
-                                <FaSignOutAlt size={14} />
-                                <span>התנתקות</span>
-                            </button>
+                                    {/* התנתקות */}
+                                    <button
+                                        onClick={handleLogout}
+                                        className="w-full flex items-center justify-center gap-2 text-red-500 hover:text-red-600 transition py-3 font-bold text-sm border-t border-gray-100 dark:border-brand-dark-border mt-2"
+                                    >
+                                        <FaSignOutAlt size={14} />
+                                        <span>התנתקות</span>
+                                    </button>
                                 </>
                             )}
 

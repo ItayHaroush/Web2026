@@ -153,9 +153,8 @@ export default function SuperAdminAnnouncements() {
                         {announcements.map((a) => (
                             <div
                                 key={a.id}
-                                className={`bg-white rounded-2xl border p-4 flex items-center gap-4 transition-all ${
-                                    isActiveNow(a) ? 'border-green-300 shadow-sm' : 'border-gray-200'
-                                }`}
+                                className={`bg-white rounded-2xl border p-4 flex items-center gap-4 transition-all ${isActiveNow(a) ? 'border-green-300 shadow-sm' : 'border-gray-200'
+                                    }`}
                             >
                                 {a.image_url && (
                                     <img
@@ -167,9 +166,8 @@ export default function SuperAdminAnnouncements() {
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2 mb-1">
                                         <h3 className="font-bold text-gray-900 truncate">{a.title}</h3>
-                                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                                            isActiveNow(a) ? 'bg-green-100 text-green-700' : a.is_active ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-500'
-                                        }`}>
+                                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${isActiveNow(a) ? 'bg-green-100 text-green-700' : a.is_active ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-500'
+                                            }`}>
                                             {isActiveNow(a) ? 'פעיל עכשיו' : a.is_active ? 'ממתין' : 'כבוי'}
                                         </span>
                                         <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 font-bold">

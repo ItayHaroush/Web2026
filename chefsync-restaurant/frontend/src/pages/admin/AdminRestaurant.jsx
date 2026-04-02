@@ -779,15 +779,14 @@ export default function AdminRestaurant() {
 
                                 {/* תגית חג פעיל */}
                                 {restaurant.active_holiday_info && (
-                                    <div className={`mb-4 p-3 rounded-2xl border flex items-center gap-3 ${
-                                        restaurant.active_holiday_info.response_status === 'closed'
+                                    <div className={`mb-4 p-3 rounded-2xl border flex items-center gap-3 ${restaurant.active_holiday_info.response_status === 'closed'
                                             ? 'bg-red-50 border-red-200'
                                             : restaurant.active_holiday_info.response_status === 'special_hours'
-                                            ? 'bg-blue-50 border-blue-200'
-                                            : restaurant.active_holiday_info.response_status === 'open'
-                                            ? 'bg-green-50 border-green-200'
-                                            : 'bg-purple-50 border-purple-200'
-                                    }`}>
+                                                ? 'bg-blue-50 border-blue-200'
+                                                : restaurant.active_holiday_info.response_status === 'open'
+                                                    ? 'bg-green-50 border-green-200'
+                                                    : 'bg-purple-50 border-purple-200'
+                                        }`}>
                                         <span className="text-2xl">🕎</span>
                                         <div className="flex-1 min-w-0">
                                             <p className="text-sm font-black text-gray-900">
@@ -796,16 +795,15 @@ export default function AdminRestaurant() {
                                             <p className="text-[11px] text-gray-500">
                                                 {restaurant.active_holiday_info.hebrew_date_info}
                                                 {' · '}
-                                                <span className={`font-black ${
-                                                    restaurant.active_holiday_info.response_status === 'closed' ? 'text-red-600' :
-                                                    restaurant.active_holiday_info.response_status === 'special_hours' ? 'text-blue-600' :
-                                                    restaurant.active_holiday_info.response_status === 'open' ? 'text-green-600' :
-                                                    'text-purple-600'
-                                                }`}>
+                                                <span className={`font-black ${restaurant.active_holiday_info.response_status === 'closed' ? 'text-red-600' :
+                                                        restaurant.active_holiday_info.response_status === 'special_hours' ? 'text-blue-600' :
+                                                            restaurant.active_holiday_info.response_status === 'open' ? 'text-green-600' :
+                                                                'text-purple-600'
+                                                    }`}>
                                                     {restaurant.active_holiday_info.response_label}
                                                     {restaurant.active_holiday_info.response_status === 'special_hours' &&
                                                         restaurant.active_holiday_info.open_time && restaurant.active_holiday_info.close_time &&
-                                                        ` (${restaurant.active_holiday_info.open_time?.slice(0,5)}–${restaurant.active_holiday_info.close_time?.slice(0,5)})`
+                                                        ` (${restaurant.active_holiday_info.open_time?.slice(0, 5)}–${restaurant.active_holiday_info.close_time?.slice(0, 5)})`
                                                     }
                                                 </span>
                                             </p>
