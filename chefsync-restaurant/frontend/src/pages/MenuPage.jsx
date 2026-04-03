@@ -180,6 +180,7 @@ export default function MenuPage({ isPreviewMode = false }) {
 
     /** מסעדת דמו: פופ־אפ הסבר פעם לסשן (עד אישור) */
     useEffect(() => {
+        if (new URLSearchParams(window.location.search).has('embed')) { setShowDemoDisclaimerModal(false); return; }
         if (!restaurant?.is_demo || !effectiveTenantId) {
             setShowDemoDisclaimerModal(false);
             return;
@@ -333,15 +334,18 @@ export default function MenuPage({ isPreviewMode = false }) {
     };
 
     const loadPromotions = async () => {
+        const isEmbed = new URLSearchParams(window.location.search).has('embed');
         try {
             const result = await promotionService.getActivePromotions();
             const promos = result?.data || [];
             setActivePromotions(promos);
-            const key = `promoPopupShown_${effectiveTenantId}`;
-            const popupEligible = promos.filter((p) => p.show_entry_popup !== false);
-            if (popupEligible.length > 0 && !localStorage.getItem(key)) {
-                localStorage.setItem(key, '1');
-                setShowPromoPopup(true);
+            if (!isEmbed) {
+                const key = `promoPopupShown_${effectiveTenantId}`;
+                const popupEligible = promos.filter((p) => p.show_entry_popup !== false);
+                if (popupEligible.length > 0 && !localStorage.getItem(key)) {
+                    localStorage.setItem(key, '1');
+                    setShowPromoPopup(true);
+                }
             }
         } catch (err) {
             // silently fail — promotions are non-critical

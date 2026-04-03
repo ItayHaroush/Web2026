@@ -27,6 +27,7 @@ export default function RegisterRestaurant() {
     const [cities, setCities] = useState([]);
     const [selectedTier, setSelectedTier] = useState('pro');
     const [pricing, setPricing] = useState(DEFAULT_PRICING);
+    const [pricingLoaded, setPricingLoaded] = useState(false);
     const [form, setForm] = useState({
         name: '',
         tenant_id: '',
@@ -74,6 +75,8 @@ export default function RegisterRestaurant() {
                 }
             } catch (err) {
                 console.error('שגיאה בטעינת מחירים, שימוש ב-defaults', err);
+            } finally {
+                setPricingLoaded(true);
             }
         };
         loadCities();
@@ -274,15 +277,21 @@ export default function RegisterRestaurant() {
                         className={`transition-all duration-300 ease-in-out ${getSlideClasses()}`}
                     >
                         {currentStep === 1 && (
-                            <StepPlan
-                                selectedTier={selectedTier}
-                                setSelectedTier={setSelectedTier}
-                                pricing={pricing}
-                                form={form}
-                                setForm={setForm}
-                                stepErrors={stepErrors}
-                                onNext={goNext}
-                            />
+                            pricingLoaded ? (
+                                <StepPlan
+                                    selectedTier={selectedTier}
+                                    setSelectedTier={setSelectedTier}
+                                    pricing={pricing}
+                                    form={form}
+                                    setForm={setForm}
+                                    stepErrors={stepErrors}
+                                    onNext={goNext}
+                                />
+                            ) : (
+                                <div className="flex justify-center items-center py-20">
+                                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-orange-500"></div>
+                                </div>
+                            )
                         )}
 
                         {currentStep === 2 && (

@@ -596,10 +596,14 @@ export default function App() {
                     <PromotionProvider>
                       <AppRoutes />
                       <Toaster position="bottom-right" />
-                      <FacebookInAppWarning />
-                      <DevModeBanner />
-                      <CookieConsent />
-                      <PWAInstallBanner />
+                      {!new URLSearchParams(window.location.search).has('embed') && (
+                        <>
+                          <FacebookInAppWarning />
+                          <DevModeBanner />
+                          <CookieConsent />
+                          <PWAInstallBanner />
+                        </>
+                      )}
                     </PromotionProvider>
                   </CustomerProvider>
                 </CartProvider>

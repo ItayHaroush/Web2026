@@ -62,6 +62,18 @@
   animation-play-state: paused;
 }
 
+/* Scroll Reveal Animation */
+.scroll-reveal {
+  opacity: 0;
+  transform: translateY(40px);
+  transition: opacity 0.7s ease-out, transform 0.7s ease-out;
+}
+
+.scroll-reveal.revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 /* Cookie Consent Animation */
 @keyframes slide-up {
   from {

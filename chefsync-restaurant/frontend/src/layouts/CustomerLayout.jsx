@@ -102,6 +102,7 @@ export function CustomerLayout({ children }) {
 
     // Smart dismiss logic — הצעת הרשמה אוטומטית
     useEffect(() => {
+        if (new URLSearchParams(window.location.search).has('embed')) return;
         if (isRecognized) return;
         if (sessionStorage.getItem('registration_prompted')) return;
 
