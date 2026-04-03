@@ -6,6 +6,7 @@ use App\Models\IsraeliHoliday;
 use App\Models\PlatformAnnouncement;
 use App\Models\Restaurant;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 /**
  * ניהול חגים ישראליים — סופר אדמין בלבד
@@ -222,7 +223,7 @@ class SuperAdminHolidayController extends Controller
                 'is_active' => true,
                 'position' => 'top_banner',
                 'priority' => 90,
-                'created_by' => auth()->id(),
+                'created_by' => Auth::id(),
             ]
         );
 

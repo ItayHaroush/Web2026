@@ -73,12 +73,14 @@ class PrinterController extends Controller
         // בדיקת מגבלת מדפסות לפי tier
         $tier = $restaurant->tier ?? 'basic';
         $maxPrinters = config("tier_features.tier_limits.{$tier}.max_printers", 0);
-        $currentCount = Printer::where('restaurant_id', $restaurant->id)->count();
-        if ($currentCount >= $maxPrinters) {
-            return response()->json([
-                'success' => false,
-                'message' => "הגעת למגבלת המדפסות בחבילה שלך ($maxPrinters). שדרג לחבילה גבוהה יותר.",
-            ], 403);
+        if ($maxPrinters !== null) {
+            $currentCount = Printer::where('restaurant_id', $restaurant->id)->count();
+            if ($currentCount >= $maxPrinters) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "הגעת למגבלת המדפסות בחבילה שלך ($maxPrinters). שדרג לחבילה גבוהה יותר.",
+                ], 403);
+            }
         }
 
         $printer = Printer::create([

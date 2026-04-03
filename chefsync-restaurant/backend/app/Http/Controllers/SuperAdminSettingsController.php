@@ -105,7 +105,7 @@ class SuperAdminSettingsController extends Controller
             'yearly' => 0,
             'ai_credits' => 1000,
             'trial_ai_credits' => 100,
-            'features' => ['קופה בענן', 'דוחות שעות עובדים', 'קיוסק', 'מסכי תצוגה', 'עובדים ללא הגבלה', 'שליטה מלאה'],
+            'features' => ['קופה בענן', 'דוחות שעות עובדים', 'קיוסק', 'מסכי תצוגה ללא הגבלה', 'עד 5 מדפסות', 'עובדים ללא הגבלה', 'שליטה מלאה'],
             'contactOnly' => true,
         ],
     ];
@@ -804,7 +804,7 @@ class SuperAdminSettingsController extends Controller
                 $connectionNote = 'המיילר הפעיל אינו smtp — בדיקת חיבור לשרת SMTP אינה משקפת את שליחת הדוא״ל בפועל.';
             } elseif ($configured) {
                 try {
-                    $transport = Mail::mailer()->getSymfonyTransport();
+                    $transport = app('mail.manager')->mailer()->getSymfonyTransport();
                     if ($transport instanceof EsmtpTransport) {
                         $transport->start();
                         $transport->stop();

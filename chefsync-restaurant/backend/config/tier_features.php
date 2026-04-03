@@ -104,6 +104,6 @@ return [
     'tier_limits' => [
         'basic'      => ['orders_limit' => 100, 'orders_limit_trial' => 50, 'max_employees' => 0, 'max_kiosks' => 0, 'max_screens' => 0, 'max_printers' => 0],
         'pro'        => ['orders_limit' => null, 'max_employees' => 5, 'max_kiosks' => 1, 'max_screens' => 2, 'max_printers' => 1],
-        'enterprise' => ['orders_limit' => null, 'max_employees' => 10, 'max_kiosks' => 5, 'max_screens' => 10, 'max_printers' => 5],
+        'enterprise' => ['orders_limit' => null, 'max_employees' => null, 'max_kiosks' => 5, 'max_screens' => null, 'max_printers' => 5],
     ],
 ];

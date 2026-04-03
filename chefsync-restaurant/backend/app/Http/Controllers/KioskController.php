@@ -75,12 +75,14 @@ class KioskController extends Controller
         $tier = $restaurant->tier ?? 'basic';
 
         $maxKiosks = config("tier_features.tier_limits.{$tier}.max_kiosks", 0);
-        $currentCount = Kiosk::where('restaurant_id', $user->restaurant_id)->count();
-        if ($currentCount >= $maxKiosks) {
-            return response()->json([
-                'success' => false,
-                'message' => "הגעתם למגבלת הקיוסקים ({$maxKiosks}). שדרגו לתוכנית גבוהה יותר.",
-            ], 403);
+        if ($maxKiosks !== null) {
+            $currentCount = Kiosk::where('restaurant_id', $user->restaurant_id)->count();
+            if ($currentCount >= $maxKiosks) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "הגעתם למגבלת הקיוסקים ({$maxKiosks}). שדרגו לתוכנית גבוהה יותר.",
+                ], 403);
+            }
         }
 
         $designOptions = $request->input('design_options', null);

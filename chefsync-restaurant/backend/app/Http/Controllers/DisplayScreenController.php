@@ -129,12 +129,14 @@ class DisplayScreenController extends Controller
 
         // בדיקת מגבלת מסכים
         $maxScreens = config("tier_features.tier_limits.{$tier}.max_screens", 0);
-        $currentCount = DisplayScreen::where('restaurant_id', $user->restaurant_id)->count();
-        if ($currentCount >= $maxScreens) {
-            return response()->json([
-                'success' => false,
-                'message' => "הגעתם למגבלת המסכים ({$maxScreens}). שדרגו לתוכנית גבוהה יותר.",
-            ], 403);
+        if ($maxScreens !== null) {
+            $currentCount = DisplayScreen::where('restaurant_id', $user->restaurant_id)->count();
+            if ($currentCount >= $maxScreens) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "הגעתם למגבלת המסכים ({$maxScreens}). שדרגו לתוכנית גבוהה יותר.",
+                ], 403);
+            }
         }
 
         // בייסיק: רק סטטי

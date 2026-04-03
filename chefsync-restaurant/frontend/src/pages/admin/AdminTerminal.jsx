@@ -16,7 +16,10 @@ import {
     FaBoxOpen,
     FaRedoAlt,
     FaCreditCard,
-    FaMoneyBillWave
+    FaMoneyBillWave,
+    FaUtensils,
+    FaShoppingBag,
+    FaUser
 } from 'react-icons/fa';
 
 // מסוף סניף לעובדים/שליחים: מציג הזמנות פתוחות ומאפשר עדכון סטטוס מהיר
@@ -105,11 +108,14 @@ export default function AdminTerminal() {
                 const allOrders = response.data.orders.data || response.data.orders;
                 const openOrders = allOrders.filter((order) => {
                     if (order.status === 'delivered' || order.status === 'cancelled') return false;
-                    // הזמנה עתידית — במטבח (received+) או שולמה ועדיין pending (חלון לפני/אחרי cron)
+                    // ממתין לאישור — לא מציגים במסוף עד שהמסעדה מאשרת
+                    if (order.status === 'pending') return false;
+                    // הזמנה עתידית — רק אם כבר במטבח (received+)
+                    // מוכן / במשלוח — מנוהל ע"י מנהל במסך הזמנות
+                    if (order.status === 'ready' || order.status === 'delivering') return false;
                     if (order.is_future_order) {
                         const inKitchen = ['received', 'preparing', 'ready', 'delivering'].includes(order.status);
-                        const paidBeforeReceived = order.status === 'pending' && order.payment_status === 'paid';
-                        if (!inKitchen && !paidBeforeReceived) return false;
+                        if (!inKitchen) return false;
                     }
                     // אשראי — רק אחרי תשלום מלא
                     if (order.payment_method === 'credit_card' && order.payment_status !== 'paid') return false;
@@ -270,7 +276,7 @@ export default function AdminTerminal() {
 
     const nextStatus = (status, deliveryMethod) => {
         const flow = {
-            pending: 'preparing',
+            pending: 'received',
             received: 'preparing',
             preparing: 'ready',
             ready: deliveryMethod === 'delivery' ? 'delivering' : 'delivered',
@@ -366,7 +372,7 @@ export default function AdminTerminal() {
                                         }`}>
                                         <div className="flex justify-between items-start mb-4">
                                             <div>
-                                                <div className="flex items-center gap-2">
+                                                <div className="flex items-center gap-2 flex-wrap">
                                                     <h3 className="text-3xl font-black text-gray-900">#{order.id.toString().slice(-4)}</h3>
                                                     {order.is_test && (
                                                         <span className="px-3 py-1 rounded-full text-xs font-black uppercase bg-purple-100 text-purple-700 border-2 border-purple-300 animate-pulse">
@@ -376,16 +382,6 @@ export default function AdminTerminal() {
                                                     {order.source === 'kiosk' && (
                                                         <span className="px-3 py-1 rounded-full text-xs font-black uppercase bg-amber-100 text-amber-700 border-2 border-amber-300">
                                                             קיוסק
-                                                        </span>
-                                                    )}
-                                                    {order.order_type === 'dine_in' && (
-                                                        <span className="px-3 py-1 rounded-full text-xs font-black uppercase bg-green-100 text-green-700 border-2 border-green-300">
-                                                            לשבת
-                                                        </span>
-                                                    )}
-                                                    {order.order_type === 'takeaway' && (
-                                                        <span className="px-3 py-1 rounded-full text-xs font-black uppercase bg-orange-100 text-orange-700 border-2 border-orange-300">
-                                                            לקחת
                                                         </span>
                                                     )}
                                                     {order.table_number && (
@@ -400,6 +396,19 @@ export default function AdminTerminal() {
                                                     )}
                                                 </div>
                                                 <p className="text-gray-400 font-bold text-xs mt-1 uppercase tracking-widest flex items-center gap-2">
+                                                    {order.order_type === 'dine_in' && (
+                                                        <span className="flex items-center gap-1 text-green-600 font-black normal-case tracking-normal">
+                                                            <FaUtensils size={10} /> לשבת
+                                                        </span>
+                                                    )}
+                                                    {order.order_type === 'takeaway' && (
+                                                        <span className="flex items-center gap-1 text-orange-600 font-black normal-case tracking-normal">
+                                                            <FaShoppingBag size={10} />לקחת
+                                                        </span>
+                                                    )}
+                                                    {(order.order_type === 'dine_in' || order.order_type === 'takeaway') && (
+                                                        <span className="text-gray-300">|</span>
+                                                    )}
                                                     <FaClock size={10} />
                                                     {order.is_future_order && order.scheduled_for
                                                         ? <>מתוזמנת: {new Date(order.scheduled_for).toLocaleString('he-IL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</>
@@ -413,21 +422,11 @@ export default function AdminTerminal() {
                                                 }`}>
                                                 {statusLabel[order.status]}
                                             </div>
-                                            {shouldShowPaymentStatusBadge(order) && (
-                                                <div className={`px-4 py-1.5 rounded-2xl text-[10px] font-black uppercase tracking-wider shadow-sm flex items-center gap-1.5 ${order.payment_status === 'paid' ? 'bg-green-100 text-green-700 border border-green-200' :
-                                                    order.payment_status === 'pending' ? 'bg-orange-100 text-orange-700 border border-orange-200' :
-                                                        order.payment_status === 'failed' ? 'bg-red-100 text-red-700 border border-red-200' :
-                                                            'bg-gray-100 text-gray-600 border border-gray-200'
-                                                    }`}>
-                                                    {getOrderDisplayPaymentMethod(order) === 'credit_card' ? <FaCreditCard size={10} /> : (order.payment_status === 'paid' ? <FaMoneyBillWave size={10} /> : null)}
-                                                    {paymentStatusBadgeLabel(order)}
-                                                </div>
-                                            )}
                                         </div>
 
                                         <div className="flex items-center gap-4">
-                                            <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-xl shadow-sm border border-gray-100">
-                                                👤
+                                            <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-xl shadow-sm border border-gray-100 text-gray-400">
+                                                <FaUser size={20} />
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <p className="text-lg font-black text-gray-900 truncate tracking-tight">{order.customer_name}</p>
@@ -492,6 +491,16 @@ export default function AdminTerminal() {
 
                                     {/* Action Footers */}
                                     <div className="p-8 bg-gray-50/50 border-t border-gray-100 mt-auto">
+                                        {shouldShowPaymentStatusBadge(order) && (
+                                            <div className={`flex items-center justify-center gap-2 mb-3 py-2 rounded-2xl text-xs font-black ${order.payment_status === 'paid' ? 'bg-green-50 text-green-700' :
+                                                order.payment_status === 'pending' ? 'bg-orange-50 text-orange-700' :
+                                                    order.payment_status === 'failed' ? 'bg-red-50 text-red-700' :
+                                                        'bg-gray-50 text-gray-600'
+                                                }`}>
+                                                {getOrderDisplayPaymentMethod(order) === 'credit_card' ? <FaCreditCard size={12} /> : (order.payment_status === 'paid' ? <FaMoneyBillWave size={12} /> : null)}
+                                                {paymentStatusBadgeLabel(order)}
+                                            </div>
+                                        )}
                                         <div className="flex justify-between items-center mb-6 px-2">
                                             <span className="text-sm font-black text-gray-400">סה"כ לתשלום</span>
                                             <span className="text-2xl font-black text-gray-900 tracking-tighter">₪{Number(order.total).toFixed(2)}</span>
@@ -529,20 +538,14 @@ export default function AdminTerminal() {
                                                 );
                                             }
                                             return (
-                                            <div className="text-center py-4 bg-emerald-50 text-emerald-600 rounded-3xl font-black text-sm border border-emerald-100 flex items-center justify-center gap-2">
-                                                <FaCheckCircle /> הושלם
-                                            </div>
+                                                <div className="text-center py-4 bg-emerald-50 text-emerald-600 rounded-3xl font-black text-sm border border-emerald-100 flex items-center justify-center gap-2">
+                                                    <FaCheckCircle /> הושלם
+                                                </div>
                                             );
                                         })()}
 
-                                        <div className={`grid gap-3 mt-4 ${['preparing', 'ready', 'delivering'].includes(order.status) ? 'grid-cols-3' : 'grid-cols-2'}`}>
-                                            <button
-                                                className="py-3 bg-white text-gray-600 rounded-2xl text-xs font-black shadow-sm border border-gray-100 hover:bg-gray-50 transition-all active:scale-95 flex items-center justify-center gap-2"
-                                                onClick={() => printSingleOrder(order)}
-                                            >
-                                                <FaPrint size={12} /> הדפס
-                                            </button>
-                                            {['preparing', 'ready', 'delivering'].includes(order.status) && (
+                                        <div className={`grid gap-3 mt-4 grid-cols-2`}>
+                                            {['received', 'preparing', 'ready', 'delivering'].includes(order.status) && (
                                                 <button
                                                     onClick={() => handleReprint(order.id)}
                                                     disabled={reprintingId === order.id}

@@ -360,7 +360,7 @@ export default function AdminOrders() {
         const getNextStatus = (currentStatus, isDelivery) => {
             const transitions = {
                 awaiting_payment: null,
-                pending: 'preparing',
+                pending: 'received',
                 received: 'preparing',
                 preparing: 'ready',
                 ready: isDelivery ? 'delivering' : 'delivered', // 🔑 ההבדל המרכזי!
@@ -1433,12 +1433,33 @@ export default function AdminOrders() {
                                             );
                                         }
 
+                                        if (selectedOrder.status === 'pending') {
+                                            return (
+                                                <div className="flex flex-col gap-3">
+                                                    <button
+                                                        onClick={() => updateStatus(selectedOrder.id, 'received')}
+                                                        disabled={isLocked}
+                                                        className="w-full bg-gradient-to-r from-brand-primary to-brand-secondary text-white py-5 rounded-[2rem] font-black text-lg shadow-xl hover:shadow-2xl transition-all active:scale-95 flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-wider"
+                                                    >
+                                                        <FaBell /> התקבלה
+                                                    </button>
+                                                    <button
+                                                        onClick={() => updateStatus(selectedOrder.id, 'preparing')}
+                                                        disabled={isLocked}
+                                                        className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white py-4 rounded-[2rem] font-black text-sm shadow-lg hover:shadow-xl transition-all active:scale-95 flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-wider"
+                                                    >
+                                                        <FaCheckCircle /> התחל הכנה
+                                                    </button>
+                                                </div>
+                                            );
+                                        }
+
                                         if (nextStatus) {
                                             const nextBadge = getStatusBadge(nextStatus, selectedOrder.delivery_method);
                                             const isDeliveryOrder = selectedOrder.delivery_method === 'delivery';
                                             const isPickupOrder = selectedOrder.delivery_method === 'pickup';
                                             const buttonConfigs = {
-                                                'preparing': { text: 'אישור והתחלת הכנה', icon: <FaCheckCircle />, color: 'from-brand-primary to-brand-secondary' },
+                                                'preparing': { text: 'התחל הכנה', icon: <FaCheckCircle />, color: 'from-blue-500 to-blue-600' },
                                                 'ready': {
                                                     text: isPickupOrder ? 'סיום הכנה - מוכן לאיסוף! 🎉' : 'סיום הכנה - מוכן!',
                                                     icon: <FaCheckCircle />,

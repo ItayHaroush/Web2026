@@ -266,8 +266,13 @@ export default function AdminPrinters({ embedded = false }) {
         return <AdminLayout>{loader}</AdminLayout>;
     }
 
-    const canCreateMorePrinters = printers.length < (limits.max_printers ?? 1);
+    const isUnlimitedPrinters = limits.max_printers === null || limits.max_printers === undefined;
+    const canCreateMorePrinters = isUnlimitedPrinters || printers.length < (limits.max_printers ?? 1);
+    const isEnterprise = subscriptionInfo?.tier === 'enterprise';
+    const contactForMore = () => window.open('https://wa.me/972547466508?text=שלום, אני בחבילת מסעדה מלאה ומעוניין להוסיף מדפסות נוספות', '_blank');
     const upgradeToEnterprise = () => window.open('https://wa.me/972547466508?text=שלום, אני מעוניין בחבילת מסעדה מלאה – מדפסות נוספות', '_blank');
+    const atLimitAction = isEnterprise ? contactForMore : upgradeToEnterprise;
+    const atLimitLabel = isEnterprise ? 'צור קשר להוספת מדפסות' : 'שדרג למסעדה מלאה';
 
     const content = (
         <div className="max-w-6xl mx-auto space-y-12 pb-32 animate-in fade-in duration-500">
@@ -281,7 +286,9 @@ export default function AdminPrinters({ embedded = false }) {
                             <h1 className="text-4xl font-black text-gray-900 tracking-tight">מדפסות</h1>
                             <p className="text-gray-500 font-medium mt-1">
                                 {activeTab === 'printers'
-                                    ? `${printers.length} / ${limits.max_printers ?? 1} מדפסות מוגדרות`
+                                    ? (isUnlimitedPrinters
+                                        ? `${printers.length} מדפסות מוגדרות (ללא הגבלה)`
+                                        : `${printers.length} / ${limits.max_printers ?? 1} מדפסות מוגדרות`)
                                     : `${devices.length} גשרי הדפסה — הדפסה למדפסות רשת`}
                             </p>
                         </div>
@@ -293,16 +300,16 @@ export default function AdminPrinters({ embedded = false }) {
                             )}
                             <button
                                 onClick={activeTab === 'printers'
-                                    ? (canCreateMorePrinters ? openNew : upgradeToEnterprise)
+                                    ? (canCreateMorePrinters ? openNew : atLimitAction)
                                     : openDeviceNew}
                                 className={`px-10 py-5 rounded-[2rem] font-black transition-all flex items-center justify-center gap-3 shadow-xl active:scale-95 group shrink-0 ${activeTab === 'printers' && !canCreateMorePrinters
-                                        ? 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white shadow-purple-200'
-                                        : 'bg-blue-600 text-white hover:bg-blue-500 shadow-blue-600/20'
+                                    ? 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white shadow-purple-200'
+                                    : 'bg-blue-600 text-white hover:bg-blue-500 shadow-blue-600/20'
                                     }`}
                             >
                                 <FaPlus className="group-hover:rotate-90 transition-transform" />
                                 {activeTab === 'printers'
-                                    ? (canCreateMorePrinters ? 'מדפסת חדשה' : 'שדרג למסעדה מלאה')
+                                    ? (canCreateMorePrinters ? 'מדפסת חדשה' : atLimitLabel)
                                     : 'גשר הדפסה חדש'}
                             </button>
                         </div>
@@ -532,9 +539,9 @@ export default function AdminPrinters({ embedded = false }) {
             )}
             {isManager() && !showModal && !showDeviceModal && (
                 <MobileAddFab
-                    label={activeTab === 'devices' ? 'גשר הדפסה חדש' : (canCreateMorePrinters ? 'מדפסת חדשה' : 'שדרג למסעדה מלאה')}
+                    label={activeTab === 'devices' ? 'גשר הדפסה חדש' : (canCreateMorePrinters ? 'מדפסת חדשה' : atLimitLabel)}
                     icon={activeTab === 'devices' ? FaNetworkWired : FaPrint}
-                    onClick={activeTab === 'devices' ? openDeviceNew : (canCreateMorePrinters ? openNew : upgradeToEnterprise)}
+                    onClick={activeTab === 'devices' ? openDeviceNew : (canCreateMorePrinters ? openNew : atLimitAction)}
                 />
             )}
         </div>

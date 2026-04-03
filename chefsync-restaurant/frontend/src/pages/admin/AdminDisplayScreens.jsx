@@ -218,7 +218,8 @@ export default function AdminDisplayScreens({ embedded = false }) {
         }
     };
 
-    const canCreateMore = screens.length < (limits.max_screens || 1);
+    const isUnlimitedScreens = limits.max_screens === null || limits.max_screens === undefined;
+    const canCreateMore = isUnlimitedScreens || screens.length < (limits.max_screens || 1);
 
     if (loading) {
         const loader = (
@@ -242,7 +243,9 @@ export default function AdminDisplayScreens({ embedded = false }) {
                         <div>
                             <h1 className="text-4xl font-black text-gray-900 tracking-tight">מסכי תצוגה</h1>
                             <p className="text-gray-500 font-medium mt-1">
-                                {screens.length} / {limits.max_screens || 1} מסכים פעילים
+                                {isUnlimitedScreens
+                                    ? `${screens.length} מסכים פעילים (ללא הגבלה)`
+                                    : `${screens.length} / ${limits.max_screens || 1} מסכים פעילים`}
                             </p>
                         </div>
                     </div>
@@ -252,8 +255,8 @@ export default function AdminDisplayScreens({ embedded = false }) {
                             <button
                                 onClick={canCreateMore ? openNew : () => window.open('https://wa.me/972547466508?text=שלום, אני מעוניין בחבילת מסעדה מלאה – מסכי תצוגה נוספים', '_blank')}
                                 className={`px-10 py-5 rounded-[2rem] font-black transition-all flex items-center justify-center gap-3 shadow-xl active:scale-95 group shrink-0 ${canCreateMore
-                                        ? 'bg-brand-primary text-white hover:bg-brand-dark shadow-brand-primary/20'
-                                        : 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white shadow-purple-200'
+                                    ? 'bg-brand-primary text-white hover:bg-brand-dark shadow-brand-primary/20'
+                                    : 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white shadow-purple-200'
                                     }`}
                             >
                                 <FaPlus className="group-hover:rotate-90 transition-transform" />
@@ -271,8 +274,8 @@ export default function AdminDisplayScreens({ embedded = false }) {
                         type="button"
                         onClick={canCreateMore ? openNew : () => window.open('https://wa.me/972547466508?text=שלום, אני מעוניין בחבילת מסעדה מלאה – מסכי תצוגה נוספים', '_blank')}
                         className={`inline-flex items-center gap-2 px-6 py-3 rounded-2xl font-black text-sm shadow-lg shrink-0 ${canCreateMore
-                                ? 'bg-brand-primary text-white hover:bg-brand-dark shadow-brand-primary/20'
-                                : 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white shadow-purple-200'
+                            ? 'bg-brand-primary text-white hover:bg-brand-dark shadow-brand-primary/20'
+                            : 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white shadow-purple-200'
                             }`}
                     >
                         <FaPlus />

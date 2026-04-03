@@ -144,7 +144,13 @@ export default function AdminKiosks({ embedded = false }) {
 
     const closeModal = () => { setShowModal(false); setEditKiosk(null); };
 
-    const canCreateMore = kiosks.length < (limits.max_kiosks || 1);
+    const isUnlimitedKiosks = limits.max_kiosks === null || limits.max_kiosks === undefined;
+    const canCreateMore = isUnlimitedKiosks || kiosks.length < (limits.max_kiosks || 1);
+    const isEnterprise = tier === 'enterprise';
+    const atLimitAction = isEnterprise
+        ? () => window.open('https://wa.me/972547466508?text=שלום, אני בחבילת מסעדה מלאה ומעוניין להוסיף קיוסקים נוספים', '_blank')
+        : () => window.open('https://wa.me/972547466508?text=שלום, אני מעוניין בחבילת מסעדה מלאה – קיוסקים נוספים', '_blank');
+    const atLimitLabel = isEnterprise ? 'צור קשר להוספת קיוסקים' : 'שדרג למסעדה מלאה';
 
     if (loading) {
         const loader = (
@@ -168,7 +174,9 @@ export default function AdminKiosks({ embedded = false }) {
                         <div>
                             <h1 className="text-4xl font-black text-gray-900 tracking-tight">קיוסקים</h1>
                             <p className="text-gray-500 font-medium mt-1">
-                                {kiosks.length} / {limits.max_kiosks || 1} קיוסקים פעילים
+                                {isUnlimitedKiosks
+                                    ? `${kiosks.length} קיוסקים פעילים (ללא הגבלה)`
+                                    : `${kiosks.length} / ${limits.max_kiosks || 1} קיוסקים פעילים`}
                             </p>
                         </div>
                     </div>
@@ -176,14 +184,14 @@ export default function AdminKiosks({ embedded = false }) {
                         <div className="hidden md:flex items-center gap-4">
                             <UpgradeBanner requiredTier="enterprise" context="kiosks" feature="kiosks" variant="inline" />
                             <button
-                                onClick={canCreateMore ? openNew : () => window.open('https://wa.me/972547466508?text=שלום, אני מעוניין בחבילת מסעדה מלאה – קיוסקים נוספים', '_blank')}
+                                onClick={canCreateMore ? openNew : atLimitAction}
                                 className={`px-10 py-5 rounded-[2rem] font-black transition-all flex items-center justify-center gap-3 shadow-xl active:scale-95 group shrink-0 ${canCreateMore
                                     ? 'bg-brand-primary text-white hover:bg-brand-dark shadow-brand-primary/20'
                                     : 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white shadow-purple-200'
                                     }`}
                             >
                                 <FaPlus className="group-hover:rotate-90 transition-transform" />
-                                {canCreateMore ? 'קיוסק חדש' : 'שדרג למסעדה מלאה'}
+                                {canCreateMore ? 'קיוסק חדש' : atLimitLabel}
                             </button>
                         </div>
                     )}
@@ -195,14 +203,14 @@ export default function AdminKiosks({ embedded = false }) {
                     <UpgradeBanner requiredTier="enterprise" context="kiosks" feature="kiosks" variant="inline" />
                     <button
                         type="button"
-                        onClick={canCreateMore ? openNew : () => window.open('https://wa.me/972547466508?text=שלום, אני מעוניין בחבילת מסעדה מלאה – קיוסקים נוספים', '_blank')}
+                        onClick={canCreateMore ? openNew : atLimitAction}
                         className={`inline-flex items-center gap-2 px-6 py-3 rounded-2xl font-black text-sm shadow-lg shrink-0 ${canCreateMore
-                                ? 'bg-brand-primary text-white hover:bg-brand-dark shadow-brand-primary/20'
-                                : 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white shadow-purple-200'
+                            ? 'bg-brand-primary text-white hover:bg-brand-dark shadow-brand-primary/20'
+                            : 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white shadow-purple-200'
                             }`}
                     >
                         <FaPlus />
-                        {canCreateMore ? 'קיוסק חדש' : 'שדרג למסעדה מלאה'}
+                        {canCreateMore ? 'קיוסק חדש' : atLimitLabel}
                     </button>
                 </div>
             )}
@@ -270,8 +278,8 @@ export default function AdminKiosks({ embedded = false }) {
             )}
             {isManager() && !showModal && !qrKiosk && (
                 <MobileAddFab
-                    label={canCreateMore ? 'קיוסק חדש' : 'שדרג למסעדה מלאה'}
-                    onClick={canCreateMore ? openNew : () => window.open('https://wa.me/972547466508?text=שלום, אני מעוניין בחבילת מסעדה מלאה – קיוסקים נוספים', '_blank')}
+                    label={canCreateMore ? 'קיוסק חדש' : atLimitLabel}
+                    onClick={canCreateMore ? openNew : atLimitAction}
                 />
             )}
         </div>

@@ -449,7 +449,8 @@ function StepPlan({ selectedTier, setSelectedTier, pricing, form, setForm, stepE
                         'קופה POS ענן',
                         'דוח נוכחות ושכר',
                         'קיוסקים לשירות עצמי',
-                        'מסכי תצוגה דיגיטליים',
+                        'מסכי תצוגה ללא הגבלה',
+                        'עד 5 מדפסות',
                         'עובדים ללא הגבלה'
                     ]}
                     selected={selectedTier === 'enterprise'}
