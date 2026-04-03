@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('restaurants', function (Blueprint $table) {
-            $table->unsignedSmallInteger('max_employees')->nullable()->after('orders_limit');
+            $table->unsignedSmallInteger('max_employees')->nullable();
         });
     }
 

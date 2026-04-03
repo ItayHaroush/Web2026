@@ -27,8 +27,14 @@ class PromotionService {
             if (v === null || v === undefined || v === '') return;
             fd.append(k, typeof v === 'boolean' ? (v ? '1' : '0') : v);
         });
-        if (image instanceof File) fd.append('image', image);
-        if (data.remove_image) fd.append('remove_image', '1');
+        // שלח image רק אם קיים file חדש
+        if (image instanceof File) {
+            fd.append('image', image);
+        }
+        // שלח remove_image כ-'1' אם צריך להסיר
+        if (data.remove_image) {
+            fd.append('remove_image', '1');
+        }
         if (Array.isArray(active_days) && active_days.length > 0) {
             active_days.forEach((d, i) => fd.append(`active_days[${i}]`, Number(d)));
         } else {

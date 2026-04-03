@@ -183,7 +183,7 @@ class PromotionController extends Controller
                 $filename = Str::uuid() . '.' . $file->getClientOriginalExtension();
                 $file->storeAs('public/promotions', $filename);
                 $imageUrl = Storage::url('public/promotions/' . $filename);
-            } elseif ($request->boolean('remove_image')) {
+            } elseif ($this->shouldRemoveImage($request)) {
                 if ($promotion->image_url) {
                     $oldPath = str_replace('/storage/', 'public/', $promotion->image_url);
                     Storage::delete($oldPath);
@@ -434,9 +434,11 @@ class PromotionController extends Controller
             'rewards.*.discount_menu_item_ids' => 'nullable|array',
             'rewards.*.discount_menu_item_ids.*' => ['integer', Rule::exists('menu_items', 'id')->where('tenant_id', $tenantId)],
         ];
+        // תמונה: nullable כדי שעדכون בלא תמונה או עם הסרה לא יגרום לשגיאה
         $rules['image'] = 'nullable|image|max:12288';
         if ($isUpdate) {
-            $rules['remove_image'] = 'nullable|boolean';
+            // remove_image יכול להגיע כ-string ('0', '1', 'true', 'false') מ-FormData או כ-boolean
+            $rules['remove_image'] = 'nullable|in:0,1,true,false';
         }
 
         $validator = Validator::make($request->all(), $rules);
@@ -550,5 +552,18 @@ class PromotionController extends Controller
             'discount_scope' => $discountScope,
             'discount_menu_item_ids' => $discountMenuItemIds,
         ];
+    }
+
+    /**
+     * בדוק אם צריך להסיר תמונה: קבל string '1', '0', 'true', 'false' מ-FormData
+     */
+    private function shouldRemoveImage(Request $request): bool
+    {
+        $removeImage = $request->input('remove_image');
+        if ($removeImage === null || $removeImage === '') {
+            return false;
+        }
+        // FormData ממיר boolean לstring — קבל '1', 'true', true, 1
+        return in_array($removeImage, ['1', 'true', true, 1], true);
     }
 }
