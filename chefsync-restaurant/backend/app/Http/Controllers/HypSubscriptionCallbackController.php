@@ -279,10 +279,13 @@ class HypSubscriptionCallbackController extends Controller
             'next_payment_at'       => $periodEnd,
             'payment_failed_at'     => null,
             'payment_failure_count' => 0,
+            // סנכרן מחירים עם הקטלוג — מחיר מותאם נשמר רק דרך סופר אדמין
+            'monthly_price'         => (float) ($prices[$tier]['monthly'] ?? 0),
+            'yearly_price'          => (float) ($prices[$tier]['yearly'] ?? 0),
         ]);
 
         // AI Credits
-        if ($tier === 'pro' && $prices[$tier]['ai_credits'] > 0) {
+        if (in_array($tier, ['pro', 'enterprise']) && $prices[$tier]['ai_credits'] > 0) {
             \App\Models\AiCredit::updateOrCreate(
                 ['restaurant_id' => $restaurant->id],
                 [

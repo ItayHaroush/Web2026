@@ -40,7 +40,7 @@ class PaymentSuccessMail extends Mailable
         $restaurantName = $this->restaurant->name ?? 'המסעדה';
         $formattedAmount = number_format($this->amount, 2);
         $nextDate = $this->nextChargeAt->format('d/m/Y');
-        $tier = $this->restaurant->tier === 'pro' ? 'Pro' : 'Basic';
+        $tier = ['basic' => 'Basic', 'pro' => 'Pro', 'enterprise' => 'מסעדה מלאה'][$this->restaurant->tier] ?? ucfirst($this->restaurant->tier);
         $plan = $this->restaurant->subscription_plan === 'yearly' ? 'שנתי' : 'חודשי';
         $dashboardUrl = EmailLayoutHelper::siteUrl('/admin/dashboard');
 

@@ -540,9 +540,12 @@ class AdminController extends Controller
             ])->toArray(),
         ]);
 
+        $restaurant = Restaurant::withoutGlobalScopes()->find($restaurantId);
+
         return response()->json([
             'success' => true,
             'items' => $items,
+            'enable_dine_in_pricing' => (bool) ($restaurant->enable_dine_in_pricing ?? false),
         ]);
     }
 
@@ -2412,9 +2415,16 @@ class AdminController extends Controller
                 return $emp;
             });
 
+        $restaurant = \App\Models\Restaurant::find($this->resolveRestaurantId($request));
+        $tier = $restaurant->tier ?? 'basic';
+        $maxEmployees = $restaurant->max_employees
+            ?? config("tier_features.tier_limits.{$tier}.max_employees", 0);
+
         return response()->json([
             'success' => true,
             'employees' => $employees,
+            'tier' => $tier,
+            'max_employees' => $maxEmployees,
         ]);
     }
 
@@ -2758,7 +2768,7 @@ class AdminController extends Controller
 
         $subscription = $restaurant->subscription;
 
-        $tierFeatures = config("tier_features.{$restaurant->tier}", config('tier_features.basic', []));
+        $tierFeatures = $restaurant->getResolvedFeatures();
 
         return response()->json([
             'success' => true,
@@ -2775,6 +2785,17 @@ class AdminController extends Controller
                 'next_charge_at' => $subscription?->next_charge_at,
                 'last_paid_at' => $subscription?->last_paid_at,
                 'features' => $tierFeatures,
+                'feature_required_tier' => config('tier_features.feature_required_tier', []),
+                'feature_overrides' => $restaurant->feature_overrides ?? [],
+                'tier_limits' => config("tier_features.tier_limits.{$restaurant->tier}", []),
+                'orders_limit' => $restaurant->orders_limit ?? (
+                    $restaurant->isOnTrial()
+                        ? config("tier_features.tier_limits.{$restaurant->tier}.orders_limit_trial", config("tier_features.tier_limits.{$restaurant->tier}.orders_limit"))
+                        : config("tier_features.tier_limits.{$restaurant->tier}.orders_limit")
+                ),
+                'orders_this_month' => \App\Models\Order::where('restaurant_id', $restaurant->id)
+                    ->where('created_at', '>=', now()->startOfMonth())->count(),
+                'orders_limit_enabled' => \App\Models\SystemSetting::get('orders_limit_enabled') !== false,
             ],
         ]);
     }
@@ -2933,13 +2954,14 @@ class AdminController extends Controller
 
         $validated = $request->validate([
             'plan_type' => 'required|in:monthly,yearly',
-            'tier' => 'required|in:basic,pro',
+            'tier' => 'required|in:basic,pro,enterprise',
         ]);
 
         $planType = $validated['plan_type'];
         $tier = $validated['tier'];
         $previousTier = $restaurant->tier;
-        $isDowngrade = ($previousTier === 'pro' && $tier === 'basic');
+        $tierHierarchy = ['basic' => 0, 'pro' => 1, 'enterprise' => 2];
+        $isDowngrade = ($tierHierarchy[$previousTier] ?? 0) > ($tierHierarchy[$tier] ?? 0);
 
         $prices = SuperAdminSettingsController::getPricingArray();
         $pricingService = app(SubscriptionPricingService::class);
@@ -2999,10 +3021,13 @@ class AdminController extends Controller
             'next_payment_at' => $periodEnd,
             'payment_failed_at' => null,
             'payment_failure_count' => 0,
+            // סנכרן מחירים עם הקטלוג — מחיר מותאם נשמר רק דרך סופר אדמין
+            'monthly_price' => (float) ($prices[$tier]['monthly'] ?? 0),
+            'yearly_price' => (float) ($prices[$tier]['yearly'] ?? 0),
         ]);
 
         // AI Credits
-        if ($tier === 'pro' && ($prices[$tier]['ai_credits'] ?? 0) > 0) {
+        if (in_array($tier, ['pro', 'enterprise']) && ($prices[$tier]['ai_credits'] ?? 0) > 0) {
             \App\Models\AiCredit::updateOrCreate(
                 ['restaurant_id' => $restaurant->id],
                 [
@@ -3026,9 +3051,10 @@ class AdminController extends Controller
             }
         }
 
+        $tierLabel = ['basic' => 'Basic', 'pro' => 'Pro', 'enterprise' => 'מסעדה מלאה'][$tier] ?? ucfirst($tier);
         return response()->json([
             'success' => true,
-            'message' => $isDowngrade ? 'התוכנית עודכנה ל-Basic' : 'המנוי הופעל בהצלחה',
+            'message' => $isDowngrade ? "התוכנית עודכנה ל-{$tierLabel}" : 'המנוי הופעל בהצלחה',
             'subscription' => $subscription,
             'restaurant' => $restaurant->fresh(),
             'payment' => $payment,
@@ -3045,7 +3071,7 @@ class AdminController extends Controller
     {
         $validated = $request->validate([
             'plan_type' => 'required|in:monthly,yearly',
-            'tier' => 'required|in:basic,pro',
+            'tier' => 'required|in:basic,pro,enterprise',
         ]);
 
         $restaurant = $request->user()->restaurant;
@@ -3256,6 +3282,52 @@ class AdminController extends Controller
 
         // טיפול רגיל
         return $currentTime >= $open && $currentTime <= $close;
+    }
+
+    /**
+     * החלת תמחור ישיבה גורף — אחוז או סכום קבוע, לפי קטגוריה או לכל התפריט
+     */
+    public function bulkDineInAdjust(Request $request)
+    {
+        $request->validate([
+            'mode'        => 'required|in:percent,flat',
+            'value'       => 'required|numeric|min:0',
+            'category_id' => 'nullable|integer|exists:categories,id',
+        ]);
+
+        $restaurantId = $this->resolveRestaurantId($request);
+        $mode  = $request->input('mode');   // 'percent' | 'flat'
+        $value = (float) $request->input('value');
+        $catId = $request->input('category_id'); // null = כל התפריט
+
+        $query = MenuItem::where('restaurant_id', $restaurantId);
+        if ($catId) {
+            $query->where('category_id', $catId);
+        }
+
+        $items = $query->get();
+        $count = 0;
+
+        foreach ($items as $item) {
+            $adjustment = $mode === 'percent'
+                ? round($item->price * $value / 100, 2)
+                : $value;
+
+            $item->update(['dine_in_adjustment' => $adjustment]);
+            $count++;
+        }
+
+        // הפעלת תמחור ישיבה אוטומטית
+        $restaurant = Restaurant::findOrFail($restaurantId);
+        if (! $restaurant->enable_dine_in_pricing) {
+            $restaurant->update(['enable_dine_in_pricing' => true]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => "עודכנו {$count} פריטים בהצלחה",
+            'updated' => $count,
+        ]);
     }
 
     /**

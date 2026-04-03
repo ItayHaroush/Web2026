@@ -1,6 +1,7 @@
 import { DESIGN_PRESETS } from '../shared/presetStyles';
+import { isFeatureUnlocked } from '../../../utils/tierUtils';
 
-export default function ScreenFormPresets({ form, setForm, tier }) {
+export default function ScreenFormPresets({ form, setForm, subscriptionInfo }) {
     return (
         <>
             {/* Design Preset */}
@@ -10,7 +11,7 @@ export default function ScreenFormPresets({ form, setForm, tier }) {
                 </label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                     {DESIGN_PRESETS.map((preset) => {
-                        const disabled = tier === 'basic' && preset.tier === 'pro';
+                        const disabled = !isFeatureUnlocked(subscriptionInfo?.features, 'display_screens') && preset.tier === 'pro';
                         return (
                             <button
                                 key={preset.id}

@@ -3,6 +3,8 @@ import {
     FaTabletAlt, FaEdit, FaTrash, FaCopy, FaSync,
     FaToggleOn, FaToggleOff, FaExternalLinkAlt, FaCheck, FaQrcode, FaCrown
 } from 'react-icons/fa';
+import { isFeatureUnlocked } from '../../../utils/tierUtils';
+import { useRestaurantStatus } from '../../../context/RestaurantStatusContext';
 
 const getKioskViewUrl = (token) => `${window.location.origin}/kiosk/${token}`;
 
@@ -20,7 +22,8 @@ export default function KioskCard({
     onQrCode,
 }) {
     const navigate = useNavigate();
-    const isBasic = tier === 'basic';
+    const { subscriptionInfo } = useRestaurantStatus();
+    const isLocked = !isFeatureUnlocked(subscriptionInfo?.features, 'kiosks');
     const pinpadTerminalName =
         kiosk.payment_terminal_id != null
             ? paymentTerminals.find((t) => Number(t.id) === Number(kiosk.payment_terminal_id))?.name
@@ -130,14 +133,14 @@ export default function KioskCard({
                     >
                         <FaSync size={14} /> חדש קישור
                     </button>
-                    {isBasic ? (
+                    {isLocked ? (
                         <button
-                            onClick={() => navigate('/admin/paywall')}
-                            className="flex items-center gap-2 px-4 py-2.5 bg-gray-100 text-gray-400 rounded-xl hover:bg-amber-50 hover:text-amber-600 transition-all text-sm font-black"
+                            onClick={() => window.open('https://wa.me/972547466508?text=שלום, אני מעוניין בחבילת מסעדה מלאה – QR שולחנות', '_blank')}
+                            className="flex items-center gap-2 px-4 py-2.5 bg-gray-100 text-gray-400 rounded-xl hover:bg-purple-50 hover:text-purple-600 transition-all text-sm font-black"
                         >
                             <FaQrcode size={14} /> QR שולחנות
-                            <span className="text-[9px] font-black bg-gradient-to-r from-amber-400 to-orange-500 text-white px-1.5 py-0.5 rounded-md uppercase leading-none">
-                                Pro
+                            <span className="text-[9px] font-black bg-gradient-to-r from-purple-500 to-indigo-600 text-white px-1.5 py-0.5 rounded-md leading-none">
+                                מסעדה מלאה
                             </span>
                         </button>
                     ) : (

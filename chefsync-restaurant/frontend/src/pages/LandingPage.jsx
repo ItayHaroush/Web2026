@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { CustomerLayout } from '../layouts/CustomerLayout';
+import api from '../services/apiClient';
 import {
     FaCheck,
     FaRocket,
@@ -31,6 +32,13 @@ import { PRODUCT_BYLINE_HE, PRODUCT_NAME } from '../constants/brand';
 
 export default function LandingPage() {
     const [activeDevice, setActiveDevice] = useState('mobile'); // mobile, tablet, desktop
+    const [pricing, setPricing] = useState({ basic: { monthly: 299 }, pro: { monthly: 449 } });
+
+    useEffect(() => {
+        api.get('/pricing').then(({ data }) => {
+            if (data?.success && data?.data) setPricing(data.data);
+        }).catch(() => {});
+    }, []);
 
     const benefits = [
         {
@@ -75,38 +83,55 @@ export default function LandingPage() {
 
     const plans = [
         {
-            name: 'Standard',
-            price: '₪450',
+            name: 'אתר הזמנות',
+            price: `₪${pricing.basic?.monthly || 299}`,
             period: '/ חודש',
-            yearlyPrice: 'פיילוט פתוח • ללא התחייבות',
+            yearlyPrice: '60 יום חינם או 50 הזמנות',
             features: [
-                'מערכת הזמנות מלאה (משלוח ואיסוף)',
                 'דף אישי למסעדה + תפריט דיגיטלי',
-                'שליטה באזורי משלוח והגבלות',
-                'מסוף הזמנות למסעדה (Tablet / PWA)',
-                'ניהול תפריט, תוספות וקטגוריות',
-                'תמיכה בוואטסאפ',
-                'סוכן Ai חכם בסיסי למסעדן'
+                'מערכת הזמנות (איסוף ומשלוח)',
+                'הגדרת אזורי משלוח והגבלות',
+                'לינק + QR להזמנות',
+                'דוח חודשי',
+                'טעימת AI (1 קרדיט)',
+                'עד 50 הזמנות ראשונות'
             ],
             highlight: false,
-            badge: 'המערכת המלאה'
+            badge: 'בייסיק'
         },
         {
-            name: 'Pro',
-            price: '₪600',
+            name: 'ניהול חכם',
+            price: `₪${pricing.pro?.monthly || 449}`,
             period: '/ חודש',
-            yearlyPrice: 'סוכן חכם מתקדם',
+            yearlyPrice: 'הזמנות + ניהול + AI',
             features: [
-                'כל מה שיש ב־Standard',
-                'סוכן Ai חכם לתובנות עסקיות',
-                'שיפור תיאורי מנות אוטומטי',
-                'המלצות תמחור חכמות',
-                'ניתוח ביצועים ומכירות',
-                'הצעות לשיפור תפריט',
-                'תמיכה בעדיפות'
+                'כל מה שיש באתר הזמנות',
+                'הדפסה אוטומטית להזמנות',
+                'דוחות יומיים + סינון',
+                'סוכן AI מלא',
+                'ניהול עובדים (עד 10)',
+                'הזמנות ללא הגבלה'
             ],
             highlight: true,
-            badge: 'סוכן חכם מלא'
+            badge: 'מומלץ'
+        },
+        {
+            name: 'מסעדה מלאה',
+            price: 'צור קשר',
+            period: '',
+            yearlyPrice: 'מותאם אישית לעסק שלך',
+            features: [
+                'כל מה שיש בניהול חכם',
+                'קופה POS ענן מלאה',
+                'דוח נוכחות ושכר',
+                'קיוסקים לשירות עצמי',
+                'מסכי תצוגה דיגיטליים',
+                'עובדים ללא הגבלה',
+                'הכל פתוח'
+            ],
+            highlight: false,
+            badge: 'מסעדה מלאה',
+            contactOnly: true
         }
     ];
 
@@ -596,7 +621,7 @@ export default function LandingPage() {
                 <section id="pricing" className="max-w-5xl mx-auto px-4 sm:px-6">
                     <h2 className="text-4xl font-bold text-center mb-16 text-gray-900 dark:text-brand-dark-text">תכניות ומחירים</h2>
 
-                    <div className="grid md:grid-cols-2 gap-8 items-start">
+                    <div className="grid md:grid-cols-3 gap-8 items-start">
                         {plans.map((plan) => (
                             <div
                                 key={plan.name}
@@ -637,13 +662,14 @@ export default function LandingPage() {
                                 </ul>
 
                                 <Link
-                                    to="/register-restaurant"
+                                    to={plan.contactOnly ? '#' : '/register-restaurant'}
+                                    onClick={plan.contactOnly ? (e) => { e.preventDefault(); window.open('https://wa.me/972547466508?text=שלום, אני מעוניין בחבילת מסעדה מלאה', '_blank'); } : undefined}
                                     className={`block w-full py-4 rounded-xl font-bold text-center transition-all ${plan.highlight
                                         ? 'bg-brand-primary text-white hover:bg-brand-primary/90 shadow-lg hover:shadow-brand-primary/30 hover:-translate-y-0.5'
                                         : 'bg-gray-50 dark:bg-brand-dark-bg border border-gray-200 dark:border-brand-dark-border text-gray-900 dark:text-brand-dark-text hover:bg-gray-100 dark:hover:bg-brand-dark-border hover:border-gray-300'
                                         }`}
                                 >
-                                    בחר {plan.name}
+                                    {plan.contactOnly ? 'צור קשר' : `בחר ${plan.name}`}
                                 </Link>
                             </div>
                         ))}
@@ -754,7 +780,7 @@ export default function LandingPage() {
                                 to="/register-restaurant"
                                 className="inline-flex items-center gap-3 px-12 py-6 bg-white text-brand-dark font-bold rounded-2xl text-xl hover:scale-105 transition-transform shadow-2xl"
                             >
-                                <span>התחל 14 ימי ניסיון חינם</span>
+                                <span>התחל 60 יום ניסיון חינם</span>
                                 <FaArrowLeft className="text-brand-primary" />
                             </Link>
                         </div>

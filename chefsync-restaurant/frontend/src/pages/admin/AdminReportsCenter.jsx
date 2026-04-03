@@ -3,12 +3,13 @@ import AdminLayout from '../../layouts/AdminLayout';
 import AdminReports from './AdminReports';
 import AdminTimeReports from './AdminTimeReports';
 import { useRestaurantStatus } from '../../context/RestaurantStatusContext';
+import { isFeatureUnlocked } from '../../utils/tierUtils';
 import { FaChartBar, FaUserClock, FaStar } from 'react-icons/fa';
 
 export default function AdminReportsCenter() {
     const [activeTab, setActiveTab] = useState('daily');
     const { subscriptionInfo } = useRestaurantStatus();
-    const isBasic = subscriptionInfo?.tier === 'basic';
+    const isTimeReportsLocked = !isFeatureUnlocked(subscriptionInfo?.features, 'time_reports');
 
     const TABS = [
         { id: 'daily', label: 'דוחות יומיים', icon: <FaChartBar size={14} /> },
@@ -42,10 +43,10 @@ export default function AdminReportsCenter() {
                             >
                                 {tab.icon}
                                 {tab.label}
-                                {tab.proOnly && isBasic && (
+                                {tab.proOnly && isTimeReportsLocked && (
                                     <span className="text-[9px] font-black bg-gradient-to-r from-amber-400 to-orange-500 text-white px-1.5 py-0.5 rounded-md uppercase leading-none flex items-center gap-0.5">
                                         <FaStar size={7} />
-                                        Pro
+                                        מסעדה מלאה
                                     </span>
                                 )}
                             </button>

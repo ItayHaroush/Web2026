@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { getBillingInfo, checkPendingPayment } from '../../services/subscriptionService';
+import { TIER_HIERARCHY, TIER_LABELS } from '../../utils/tierUtils';
 import {
     FaLock,
     FaRocket,
@@ -13,14 +14,33 @@ import {
     FaBrain,
     FaExclamationTriangle,
     FaArrowDown,
-    FaShieldAlt
+    FaShieldAlt,
+    FaBuilding
 } from 'react-icons/fa';
 
-const PRO_ONLY_FEATURES = [
-    'קרדיטים AI (תיאורי מנות, תובנות, המלצות מחיר)',
-    'דו"חות בזמן אמת ומתקדמים',
-    'תמיכה עדיפות',
-];
+const TIER_DOWNGRADE_FEATURES = {
+    pro: [
+        'קרדיטים AI (תיאורי מנות, תובנות, המלצות מחיר)',
+        'דו"חות בזמן אמת ומתקדמים',
+        'תמיכה עדיפות',
+    ],
+    enterprise: [
+        'קופה POS',
+        'קיוסקים',
+        'מסכי תצוגה',
+        'ניהול עובדים/נוכחות',
+        'קרדיטים AI (תיאורי מנות, תובנות, המלצות מחיר)',
+        'דו"חות בזמן אמת ומתקדמים',
+        'תמיכה עדיפות',
+    ],
+};
+
+function getDowngradeFeatures(fromTier, toTier) {
+    if (fromTier === 'enterprise' && toTier === 'basic') return TIER_DOWNGRADE_FEATURES.enterprise;
+    if (fromTier === 'enterprise' && toTier === 'pro') return TIER_DOWNGRADE_FEATURES.enterprise.filter(f => !TIER_DOWNGRADE_FEATURES.pro.includes(f));
+    if (fromTier === 'pro' && toTier === 'basic') return TIER_DOWNGRADE_FEATURES.pro;
+    return [];
+}
 
 export default function AdminPaywall() {
     const navigate = useNavigate();
@@ -74,7 +94,7 @@ export default function AdminPaywall() {
                     if (recoveryRes.data?.reason === 'already_active') {
                         const { data: billingData } = await getBillingInfo().catch(() => ({}));
                         const currentTier = billingData?.data?.current_tier;
-                        if (currentTier === 'pro') {
+                        if (currentTier === 'pro' || currentTier === 'enterprise') {
                             navigate('/admin/dashboard');
                             return;
                         }
@@ -105,12 +125,13 @@ export default function AdminPaywall() {
     }, []);
 
     const pricing = billing?.pricing || {
-        basic: { monthly: 450, yearly: 4500, ai_credits: 0, features: ['תפריט דיגיטלי', 'ניהול הזמנות', 'דוחות בסיסיים'] },
-        pro: { monthly: 600, yearly: 5000, ai_credits: 500, features: ['תפריט דיגיטלי', 'ניהול הזמנות', 'דוחות מתקדמים', 'AI מתקדם', 'תמיכה מועדפת'] }
+        basic: { monthly: 299, yearly: 2990, ai_credits: 1, features: ['אתר הזמנות', 'תפריט + מבצעים', 'משלוחים / איסוף', 'לינק + QR', 'דוח חודשי', 'טעימת AI'] },
+        pro: { monthly: 449, yearly: 4490, ai_credits: 500, features: ['הכל מהבסיס', 'הדפסה אוטומטית', 'דוחות יומיים + פילוחים', 'סוכן חכם מלא', 'ניהול עובדים', 'ללא הגבלת הזמנות'] },
+        enterprise: { monthly: 0, yearly: 0, ai_credits: 1000, features: ['קופה בענן', 'דוחות שעות עובדים', 'קיוסק', 'מסכי תצוגה', 'עובדים ללא הגבלה', 'שליטה מלאה'], contactOnly: true }
     };
 
-    const isDowngrade = billing?.current_tier === 'pro' && selectedTier === 'basic';
-    const isUpgrade = billing?.current_tier === 'basic' && selectedTier === 'pro';
+    const isDowngrade = TIER_HIERARCHY[billing?.current_tier] > TIER_HIERARCHY[selectedTier];
+    const isUpgrade = TIER_HIERARCHY[billing?.current_tier] < TIER_HIERARCHY[selectedTier];
     const isTrialActive = billing?.subscription_status === 'trial' && billing?.days_left_in_trial > 0;
     const isActive = billing?.subscription_status === 'active';
 
@@ -135,7 +156,7 @@ export default function AdminPaywall() {
     const totalAmount = planPrice;
 
     const handleTierSelect = (tier) => {
-        if (billing?.current_tier === 'pro' && tier === 'basic') {
+        if (TIER_HIERARCHY[billing?.current_tier] > TIER_HIERARCHY[tier]) {
             setShowDowngradeWarning(true);
         } else {
             setShowDowngradeWarning(false);
@@ -143,7 +164,13 @@ export default function AdminPaywall() {
         setSelectedTier(tier);
     };
 
+    const isContactOnly = selectedTier === 'enterprise' || pricing[selectedTier]?.contactOnly;
+
     const handleActivate = () => {
+        if (isContactOnly) {
+            window.open('https://wa.me/972547466508?text=שלום, אשמח לשמוע על חבילת מסעדה מלאה עבור המסעדה שלי', '_blank');
+            return;
+        }
         navigate('/admin/payment', {
             state: {
                 tier: selectedTier,
@@ -188,7 +215,7 @@ export default function AdminPaywall() {
                             {isTrialActive
                                 ? `נשארו ${billing?.days_left_in_trial} ימים בתקופת הניסיון`
                                 : isActive
-                                    ? `תוכנית נוכחית: ${billing?.current_tier === 'pro' ? 'Pro' : 'Basic'} | ${billing?.current_plan === 'yearly' ? 'שנתי' : 'חודשי'}`
+                                    ? `תוכנית נוכחית: ${TIER_LABELS[billing?.current_tier] || billing?.current_tier} | ${billing?.current_plan === 'yearly' ? 'שנתי' : 'חודשי'}`
                                     : 'שדרג עכשיו וקבל גישה מלאה לכל התכונות'}
                         </p>
                     </div>
@@ -245,12 +272,12 @@ export default function AdminPaywall() {
                         <div className="flex items-start gap-3">
                             <FaExclamationTriangle className="text-amber-500 mt-1 text-xl flex-shrink-0" />
                             <div>
-                                <h3 className="font-black text-amber-800 text-lg mb-2">שדרוג לאחור ל-Basic</h3>
+                                <h3 className="font-black text-amber-800 text-lg mb-2">שדרוג לאחור ל-{TIER_LABELS[selectedTier] || selectedTier}</h3>
                                 <p className="text-amber-700 font-medium mb-3">
-                                    שים לב — במעבר מ-Pro ל-Basic התכונות הבאות <strong>לא יהיו זמינות</strong>:
+                                    שים לב — במעבר מ-{TIER_LABELS[billing?.current_tier] || billing?.current_tier} ל-{TIER_LABELS[selectedTier] || selectedTier} התכונות הבאות <strong>לא יהיו זמינות</strong>:
                                 </p>
                                 <ul className="space-y-2 mb-4">
-                                    {PRO_ONLY_FEATURES.map((feature, i) => (
+                                    {getDowngradeFeatures(billing?.current_tier, selectedTier).map((feature, i) => (
                                         <li key={i} className="flex items-center gap-2 text-amber-800 font-medium text-sm">
                                             <FaArrowDown className="text-red-500 text-xs" />
                                             {feature}
@@ -266,15 +293,15 @@ export default function AdminPaywall() {
                 )}
 
                 {/* Tier Selection */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
                     <TierCard
                         tier="basic"
-                        title="Basic"
-                        subtitle="מערכת בסיסית מלאה"
-                        monthlyPrice={pricing.basic?.monthly || 450}
-                        yearlyPrice={pricing.basic?.yearly || 4500}
-                        aiCredits={pricing.basic?.ai_credits || 0}
-                        features={pricing.basic?.features || ['תפריט דיגיטלי', 'ניהול הזמנות', 'דוחות בסיסיים']}
+                        title="אתר הזמנות"
+                        subtitle="כניסה קלה לעולם ההזמנות"
+                        monthlyPrice={pricing.basic?.monthly || 299}
+                        yearlyPrice={pricing.basic?.yearly || 2990}
+                        aiCredits={pricing.basic?.ai_credits || 1}
+                        features={pricing.basic?.features || ['אתר הזמנות', 'תפריט + מבצעים', 'משלוחים / איסוף', 'לינק + QR', 'דוח חודשי', 'טעימת AI']}
                         selected={selectedTier === 'basic'}
                         onSelect={() => handleTierSelect('basic')}
                         icon={<FaRocket />}
@@ -283,18 +310,34 @@ export default function AdminPaywall() {
                     />
                     <TierCard
                         tier="pro"
-                        title="Pro"
-                        subtitle="מערכת + AI חכמה"
-                        monthlyPrice={pricing.pro?.monthly || 600}
-                        yearlyPrice={pricing.pro?.yearly || 5000}
+                        title="ניהול חכם"
+                        subtitle="כבר עסק שמתחיל לעבוד"
+                        monthlyPrice={pricing.pro?.monthly || 449}
+                        yearlyPrice={pricing.pro?.yearly || 4490}
                         aiCredits={pricing.pro?.ai_credits || 500}
-                        features={pricing.pro?.features || ['תפריט דיגיטלי', 'ניהול הזמנות', 'דוחות מתקדמים', 'AI מתקדם', 'תמיכה מועדפת']}
+                        features={pricing.pro?.features || ['הכל מהבסיס', 'הדפסה אוטומטית', 'דוחות יומיים + פילוחים', 'סוכן חכם מלא', 'ניהול עובדים', 'ללא הגבלת הזמנות']}
                         selected={selectedTier === 'pro'}
                         onSelect={() => handleTierSelect('pro')}
                         icon={<FaBrain />}
                         color="from-amber-500 to-orange-600"
                         badge="מומלץ"
                         isCurrent={billing?.current_tier === 'pro' && isActive}
+                    />
+                    <TierCard
+                        tier="enterprise"
+                        title="מסעדה מלאה"
+                        subtitle="ניהול עסק אמיתי"
+                        monthlyPrice={0}
+                        yearlyPrice={0}
+                        aiCredits={pricing.enterprise?.ai_credits || 1000}
+                        features={pricing.enterprise?.features || ['קופה בענן', 'דוחות שעות עובדים', 'קיוסק', 'מסכי תצוגה', 'עובדים ללא הגבלה', 'שליטה מלאה']}
+                        selected={selectedTier === 'enterprise'}
+                        onSelect={() => handleTierSelect('enterprise')}
+                        icon={<FaBuilding />}
+                        color="from-purple-500 to-indigo-600"
+                        badge="הכל כלול"
+                        isCurrent={billing?.current_tier === 'enterprise' && isActive}
+                        contactOnly={true}
                     />
                 </div>
 
@@ -338,30 +381,39 @@ export default function AdminPaywall() {
                             <p className="text-gray-400 font-bold text-sm uppercase tracking-widest mb-4">סיכום חשבון לתשלום</p>
 
                             {/* Line items */}
-                            <div className="bg-gray-50 rounded-2xl p-5 text-right space-y-3 mb-4">
-                                <div className="flex justify-between items-center">
-                                    <span className="font-bold text-gray-900">
-                                        ₪{planPrice.toLocaleString()}
-                                    </span>
-                                    <span className="text-gray-600 font-medium">
-                                        חבילת {selectedTier === 'pro' ? 'Pro' : 'Basic'} ({billingCycle === 'yearly' ? 'שנתי' : 'חודשי'})
-                                    </span>
+                            {isContactOnly ? (
+                                <div className="bg-purple-50 rounded-2xl p-5 text-center mb-4">
+                                    <p className="text-2xl font-black text-purple-700">מותאם אישית</p>
+                                    <p className="text-purple-500 font-medium text-sm mt-2">חבילת מסעדה מלאה מותאמת לצרכי המסעדה שלך</p>
                                 </div>
+                            ) : (
+                                <div className="bg-gray-50 rounded-2xl p-5 text-right space-y-3 mb-4">
+                                    <div className="flex justify-between items-center">
+                                        <span className="font-bold text-gray-900">
+                                            ₪{planPrice.toLocaleString()}
+                                        </span>
+                                        <span className="text-gray-600 font-medium">
+                                            חבילת {TIER_LABELS[selectedTier] || selectedTier} ({billingCycle === 'yearly' ? 'שנתי' : 'חודשי'})
+                                        </span>
+                                    </div>
 
-                                <div className="border-t border-gray-200 pt-3 flex justify-between items-center">
-                                    <span className="text-2xl font-black text-gray-900">
-                                        ₪{totalAmount.toLocaleString()}
-                                    </span>
-                                    <span className="font-black text-gray-900 text-lg">סה"כ</span>
+                                    <div className="border-t border-gray-200 pt-3 flex justify-between items-center">
+                                        <span className="text-2xl font-black text-gray-900">
+                                            ₪{totalAmount.toLocaleString()}
+                                        </span>
+                                        <span className="font-black text-gray-900 text-lg">סה"כ</span>
+                                    </div>
                                 </div>
-                            </div>
+                            )}
 
-                            <p className="text-gray-500 font-medium text-sm">
-                                {billingCycle === 'yearly'
-                                    ? 'תשלום חד-פעמי לשנה מלאה'
-                                    : 'חיוב חודשי אוטומטי'
-                                }
-                            </p>
+                            {!isContactOnly && (
+                                <p className="text-gray-500 font-medium text-sm">
+                                    {billingCycle === 'yearly'
+                                        ? 'תשלום חד-פעמי לשנה מלאה'
+                                        : 'חיוב חודשי אוטומטי'
+                                    }
+                                </p>
+                            )}
 
                             {selectedTier === 'pro' && (
                                 <p className="text-brand-primary font-bold text-sm mt-2">
@@ -369,7 +421,13 @@ export default function AdminPaywall() {
                                 </p>
                             )}
 
-                            {billingCycle === 'yearly' && (
+                            {selectedTier === 'enterprise' && (
+                                <p className="text-purple-600 font-bold text-sm mt-2">
+                                    כולל {pricing.enterprise?.ai_credits || 1000} קרדיטים AI בחודש
+                                </p>
+                            )}
+
+                            {billingCycle === 'yearly' && !isContactOnly && (
                                 <p className="text-emerald-600 font-bold text-sm mt-2">
                                     חיסכון של {(((pricing[selectedTier]?.monthly || 0) * 12) - (pricing[selectedTier]?.yearly || 0)).toLocaleString()}₪ לשנה
                                 </p>
@@ -378,12 +436,14 @@ export default function AdminPaywall() {
 
                         <button
                             onClick={handleActivate}
-                            className={`w-full px-12 py-6 text-white rounded-2xl font-black text-xl hover:shadow-2xl transition-all active:scale-95 flex items-center justify-center gap-4 ${isDowngrade
-                                ? 'bg-gradient-to-r from-amber-500 to-orange-600'
-                                : 'bg-gradient-to-r from-brand-primary to-brand-secondary'
+                            className={`w-full px-12 py-6 text-white rounded-2xl font-black text-xl hover:shadow-2xl transition-all active:scale-95 flex items-center justify-center gap-4 ${isContactOnly
+                                ? 'bg-gradient-to-r from-purple-500 to-indigo-600'
+                                : isDowngrade
+                                    ? 'bg-gradient-to-r from-amber-500 to-orange-600'
+                                    : 'bg-gradient-to-r from-brand-primary to-brand-secondary'
                                 }`}
                         >
-                            {isDowngrade ? 'המשך לשדרוג לאחור' : isActive ? 'עדכן תוכנית' : 'המשך לתשלום'}
+                            {isContactOnly ? 'צור קשר' : isDowngrade ? 'המשך לשדרוג לאחור' : isActive ? 'עדכן תוכנית' : 'המשך לתשלום'}
                             <FaArrowLeft className="animate-pulse" />
                         </button>
 
@@ -406,7 +466,7 @@ export default function AdminPaywall() {
     );
 }
 
-function TierCard({ tier, title, subtitle, monthlyPrice, yearlyPrice, aiCredits, features, selected, onSelect, icon, color, badge, isCurrent }) {
+function TierCard({ tier, title, subtitle, monthlyPrice, yearlyPrice, aiCredits, features, selected, onSelect, icon, color, badge, isCurrent, contactOnly }) {
     return (
         <button
             onClick={onSelect}
@@ -416,7 +476,7 @@ function TierCard({ tier, title, subtitle, monthlyPrice, yearlyPrice, aiCredits,
                 }`}
         >
             {badge && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-amber-500 to-orange-600 text-white px-4 py-1 rounded-full text-xs font-black uppercase shadow-lg">
+                <div className={`absolute -top-3 left-1/2 -translate-x-1/2 ${contactOnly ? 'bg-gradient-to-r from-purple-500 to-indigo-600' : 'bg-gradient-to-r from-amber-500 to-orange-600'} text-white px-4 py-1 rounded-full text-xs font-black uppercase shadow-lg`}>
                     {badge}
                 </div>
             )}
@@ -435,13 +495,24 @@ function TierCard({ tier, title, subtitle, monthlyPrice, yearlyPrice, aiCredits,
             <p className="text-sm text-gray-500 font-medium text-center mb-4">{subtitle}</p>
 
             <div className="bg-gray-50 rounded-2xl p-4 mb-6">
-                <div className="text-center">
-                    <span className="text-3xl font-black text-gray-900">₪{monthlyPrice}</span>
-                    <span className="text-gray-500 text-sm font-bold">/חודש</span>
-                </div>
-                <div className="text-center mt-1 text-xs text-gray-400 font-medium">
-                    או ₪{yearlyPrice?.toLocaleString()}/שנה
-                </div>
+                {contactOnly ? (
+                    <div className="text-center">
+                        <span className="text-2xl font-black text-purple-600">צור קשר</span>
+                        <div className="text-center mt-1 text-xs text-gray-400 font-medium">
+                            מותאם אישית לעסק שלך
+                        </div>
+                    </div>
+                ) : (
+                    <>
+                        <div className="text-center">
+                            <span className="text-3xl font-black text-gray-900">₪{monthlyPrice}</span>
+                            <span className="text-gray-500 text-sm font-bold">/חודש</span>
+                        </div>
+                        <div className="text-center mt-1 text-xs text-gray-400 font-medium">
+                            או ₪{yearlyPrice?.toLocaleString()}/שנה
+                        </div>
+                    </>
+                )}
             </div>
 
             {aiCredits > 0 ? (

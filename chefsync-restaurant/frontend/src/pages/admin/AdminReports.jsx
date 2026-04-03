@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import AdminLayout from '../../layouts/AdminLayout';
 import UpgradeBanner from '../../components/UpgradeBanner';
+import { useRestaurantStatus } from '../../context/RestaurantStatusContext';
+import { isFeatureUnlocked } from '../../utils/tierUtils';
 import { useToast } from '../../context/ToastContext';
 import reportService from '../../services/reportService';
 import {
@@ -34,6 +36,9 @@ const COLORS = ['#f97316', '#3b82f6', '#8b5cf6', '#22c55e', '#ef4444', '#eab308'
 
 export default function AdminReports({ embedded = false }) {
     const { addToast } = useToast();
+    const { subscriptionInfo } = useRestaurantStatus();
+    const reportsUnlocked = isFeatureUnlocked(subscriptionInfo?.features, 'reports');
+
     const [reports, setReports] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedReport, setSelectedReport] = useState(null);
@@ -206,6 +211,7 @@ export default function AdminReports({ embedded = false }) {
 
     const content = (
             <div className="max-w-7xl mx-auto space-y-6 animate-in fade-in duration-500">
+                <UpgradeBanner variant="card" context="reports" requiredTier="pro" feature="reports" />
                 {!embedded && (
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div>
@@ -278,13 +284,15 @@ export default function AdminReports({ embedded = false }) {
                             onChange={e => setGenerateDate(e.target.value)}
                             max={new Date().toISOString().split('T')[0]}
                             className="border border-gray-200 rounded-xl px-3 py-2 text-sm"
+                            disabled={!reportsUnlocked}
                         />
                         <button
                             onClick={handleGenerate}
-                            disabled={generating}
-                            className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-xl text-sm font-bold hover:bg-black transition-all disabled:opacity-50"
+                            disabled={generating || !reportsUnlocked}
+                            title={!reportsUnlocked ? 'שדרג חבילה לשימוש בדוחות' : undefined}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all disabled:opacity-50 ${!reportsUnlocked ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-gray-900 text-white hover:bg-black'}`}
                         >
-                            {generating ? '...' : 'צור דוח ידני'}
+                            {!reportsUnlocked ? '🔒 צור דוח ידני' : generating ? '...' : 'צור דוח ידני'}
                         </button>
                     </div>
                 </div>
@@ -506,7 +514,7 @@ export default function AdminReports({ embedded = false }) {
                     )}
                 </div>
 
-                <UpgradeBanner variant="inline" context="reports" />
+                <UpgradeBanner variant="inline" context="reports" requiredTier="pro" feature="advanced_reports" />
 
                 {/* Detail Modal */}
                 {modalOpen && selectedReport && (

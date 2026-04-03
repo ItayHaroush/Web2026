@@ -347,6 +347,8 @@ class SuperAdminController extends Controller
             'is_demo' => 'sometimes|boolean',
             /** תאריך תחילת פעילות אמיתית — תצוגת מסעדן מאפס מיום זה (איפוס: null) */
             'owner_activity_started_at' => 'nullable|date',
+            /** מגבלת הזמנות חודשית — override ספציפי למסעדה (null = ברירת מחדל מה-tier) */
+            'orders_limit' => 'nullable|integer|min:0|max:100000',
         ]);
 
         // אם השם משתנה, עדכן את ה-slug
@@ -367,6 +369,7 @@ class SuperAdminController extends Controller
      * מחיקת מסעדה (soft delete או hard delete)
      */
     public function deleteRestaurant($id)
+
     {
         $restaurant = Restaurant::findOrFail($id);
 
@@ -388,6 +391,45 @@ class SuperAdminController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'המסעדה נמחקה בהצלחה!',
+        ]);
+    }
+
+    /**
+     * עדכון feature overrides למסעדה ספציפית (סופר אדמין)
+     */
+    public function updateFeatureOverrides(Request $request, $id)
+    {
+        $restaurant = Restaurant::withoutGlobalScopes()->findOrFail($id);
+
+        $validated = $request->validate([
+            'feature' => 'required|string|max:50',
+            'value' => 'nullable|in:full,demo',
+        ]);
+
+        $overrides = $restaurant->feature_overrides ?? [];
+
+        if ($validated['value'] === null) {
+            unset($overrides[$validated['feature']]);
+        } else {
+            $overrides[$validated['feature']] = $validated['value'];
+        }
+
+        $restaurant->update(['feature_overrides' => $overrides ?: null]);
+
+        Log::info('Feature override updated by super admin', [
+            'user_id' => $request->user()->id,
+            'restaurant_id' => $id,
+            'feature' => $validated['feature'],
+            'value' => $validated['value'],
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'ה-override עודכן בהצלחה',
+            'data' => [
+                'feature_overrides' => $restaurant->feature_overrides,
+                'resolved_features' => $restaurant->getResolvedFeatures(),
+            ],
         ]);
     }
 

@@ -49,9 +49,9 @@ class KioskController extends Controller
                 'kiosks' => $kiosks,
                 'tier' => $tier,
                 'limits' => [
-                    'max_kiosks' => $tier === 'pro' ? 5 : 1,
-                    'max_tables' => $tier === 'pro' ? 10 : 0,
-                    'custom_design_allowed' => $tier === 'pro',
+                    'max_kiosks' => config("tier_features.tier_limits.{$tier}.max_kiosks", 0),
+                    'max_tables' => in_array($tier, ['pro', 'enterprise']) ? ($tier === 'enterprise' ? 999 : 10) : 0,
+                    'custom_design_allowed' => in_array($tier, ['pro', 'enterprise']),
                 ],
             ],
         ]);
@@ -74,12 +74,12 @@ class KioskController extends Controller
         $restaurant = Restaurant::withoutGlobalScopes()->find($user->restaurant_id);
         $tier = $restaurant->tier ?? 'basic';
 
-        $maxKiosks = $tier === 'pro' ? 5 : 1;
+        $maxKiosks = config("tier_features.tier_limits.{$tier}.max_kiosks", 0);
         $currentCount = Kiosk::where('restaurant_id', $user->restaurant_id)->count();
         if ($currentCount >= $maxKiosks) {
             return response()->json([
                 'success' => false,
-                'message' => "הגעתם למגבלת הקיוסקים ({$maxKiosks}). שדרגו לתוכנית Pro לעוד קיוסקים.",
+                'message' => "הגעתם למגבלת הקיוסקים ({$maxKiosks}). שדרגו לתוכנית גבוהה יותר.",
             ], 403);
         }
 
@@ -156,13 +156,13 @@ class KioskController extends Controller
         $restaurant = Restaurant::withoutGlobalScopes()->find($user->restaurant_id);
         $tier = $restaurant->tier ?? 'basic';
 
-        $maxTables = $tier === 'pro' ? 10 : 0;
+        $maxTables = $tier === 'enterprise' ? 999 : ($tier === 'pro' ? 10 : 0);
         $tables = array_unique(array_values($request->tables));
 
         if (count($tables) > $maxTables) {
             return response()->json([
                 'success' => false,
-                'message' => "ניתן להגדיר עד {$maxTables} שולחנות. שדרגו ל-Pro להגדלת המגבלה.",
+                'message' => "ניתן להגדיר עד {$maxTables} שולחנות. שדרגו לתוכנית גבוהה יותר.",
             ], 403);
         }
 

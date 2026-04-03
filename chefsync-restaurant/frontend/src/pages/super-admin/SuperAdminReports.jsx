@@ -34,6 +34,7 @@ import {
     FaFilePdf,
     FaLink
 } from 'react-icons/fa';
+import { TIER_LABELS } from '../../utils/tierUtils';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
@@ -53,7 +54,7 @@ export default function SuperAdminReports() {
     const [addingPackage, setAddingPackage] = useState(false);
     const [resetting, setResetting] = useState(false);
     const [grantingFree, setGrantingFree] = useState(false);
-    const [activateForm, setActivateForm] = useState({ tier: 'basic', plan_type: 'monthly', note: '', record_payment: false, payment_reference: '', trial_days: 14, free_months: 1, free_note: '', custom_price_enabled: false, custom_monthly_price: '', custom_yearly_price: '', abandoned_cart_package_size: '', abandoned_cart_package_amount: '', abandoned_cart_package_custom: false, setup_fee: '' });
+    const [activateForm, setActivateForm] = useState({ tier: 'basic', plan_type: 'monthly', note: '', record_payment: false, payment_reference: '', trial_days: 60, free_months: 1, free_note: '', custom_price_enabled: false, custom_monthly_price: '', custom_yearly_price: '', abandoned_cart_package_size: '', abandoned_cart_package_amount: '', abandoned_cart_package_custom: false, setup_fee: '' });
     const [wizardStep, setWizardStep] = useState(1);
     const [wizardAction, setWizardAction] = useState('activate'); // 'activate' | 'free' | 'trial'
 
@@ -433,6 +434,7 @@ export default function SuperAdminReports() {
                                     <option value="">כל התוכניות</option>
                                     <option value="basic">Basic</option>
                                     <option value="pro">Pro</option>
+                                    <option value="enterprise">מסעדה מלאה</option>
                                 </select>
                             </div>
                             <div className="flex items-center gap-4 text-xs font-bold text-gray-400 bg-gray-50 px-4 py-2.5 rounded-xl border border-gray-100 overflow-x-auto whitespace-nowrap">
@@ -487,9 +489,9 @@ export default function SuperAdminReports() {
                                                     </td>
                                                     <td className="px-4 py-4 text-center">
                                                         <div className="flex flex-col items-center gap-1">
-                                                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black ${r.tier === 'pro' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600'}`}>
+                                                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black ${r.tier === 'enterprise' ? 'bg-purple-100 text-purple-700' : r.tier === 'pro' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600'}`}>
                                                                 <FaCrown size={8} />
-                                                                {r.tier === 'pro' ? 'Pro' : 'Basic'}
+                                                                {TIER_LABELS[r.tier] || r.tier}
                                                             </span>
                                                             <span className="text-[9px] text-gray-400 font-bold">
                                                                 {r.subscription_plan === 'yearly' ? 'שנתי' : 'חודשי'}
@@ -682,8 +684,8 @@ export default function SuperAdminReports() {
                                 <div className="space-y-5">
                                     <div>
                                         <label className="text-xs font-black text-gray-500 mb-2 block">תוכנית</label>
-                                        <div className="grid grid-cols-2 gap-3">
-                                            {[{ value: 'basic', label: 'Basic', desc: 'תכונות בסיסיות' }, { value: 'pro', label: 'Pro', desc: 'כל התכונות' }].map(t => (
+                                        <div className="grid grid-cols-3 gap-3">
+                                            {[{ value: 'basic', label: 'Basic', desc: 'תכונות בסיסיות' }, { value: 'pro', label: 'Pro', desc: 'ניהול חכם' }, { value: 'enterprise', label: 'מסעדה מלאה', desc: 'מסעדה מלאה' }].map(t => (
                                                 <button
                                                     key={t.value}
                                                     onClick={() => setActivateForm(f => ({ ...f, tier: t.value }))}
@@ -787,13 +789,13 @@ export default function SuperAdminReports() {
                                                     type="checkbox"
                                                     checked={activateForm.abandoned_cart_package_custom ?? false}
                                                     onChange={(e) => {
-                                                    const def = { 50: 50, 100: 90, 500: 400 }[parseInt(activateForm.abandoned_cart_package_size)];
-                                                    setActivateForm(f => ({
-                                                        ...f,
-                                                        abandoned_cart_package_custom: e.target.checked,
-                                                        abandoned_cart_package_amount: e.target.checked ? (f.abandoned_cart_package_amount || def) : def
-                                                    }));
-                                                }}
+                                                        const def = { 50: 50, 100: 90, 500: 400 }[parseInt(activateForm.abandoned_cart_package_size)];
+                                                        setActivateForm(f => ({
+                                                            ...f,
+                                                            abandoned_cart_package_custom: e.target.checked,
+                                                            abandoned_cart_package_amount: e.target.checked ? (f.abandoned_cart_package_amount || def) : def
+                                                        }));
+                                                    }}
                                                     className="w-4 h-4 rounded accent-green-600"
                                                 />
                                                 <span className="text-xs font-bold text-green-800">מחיר מותאם (מבצע) — לחשבונית לפי מחיר בפועל</span>
@@ -866,8 +868,8 @@ export default function SuperAdminReports() {
                                 <div className="space-y-5">
                                     <div>
                                         <label className="text-xs font-black text-gray-500 mb-2 block">תוכנית</label>
-                                        <div className="grid grid-cols-2 gap-3">
-                                            {[{ value: 'basic', label: 'Basic' }, { value: 'pro', label: 'Pro' }].map(t => (
+                                        <div className="grid grid-cols-3 gap-3">
+                                            {[{ value: 'basic', label: 'Basic' }, { value: 'pro', label: 'Pro' }, { value: 'enterprise', label: 'מסעדה מלאה' }].map(t => (
                                                 <button
                                                     key={t.value}
                                                     onClick={() => setActivateForm(f => ({ ...f, tier: t.value }))}
@@ -965,7 +967,7 @@ export default function SuperAdminReports() {
                                             <>
                                                 <div className="border-t border-gray-200 pt-2 flex justify-between items-center">
                                                     <span className="text-gray-500 font-bold">תוכנית</span>
-                                                    <span className="font-black text-gray-800">{activateForm.tier === 'pro' ? 'Pro' : 'Basic'} — {activateForm.plan_type === 'yearly' ? 'שנתי' : 'חודשי'}</span>
+                                                    <span className="font-black text-gray-800">{TIER_LABELS[activateForm.tier] || activateForm.tier} — {activateForm.plan_type === 'yearly' ? 'שנתי' : 'חודשי'}</span>
                                                 </div>
                                                 {activateForm.custom_price_enabled && (activateForm.custom_monthly_price || activateForm.custom_yearly_price) && (
                                                     <div className="flex justify-between items-center">
@@ -1021,7 +1023,7 @@ export default function SuperAdminReports() {
                                             <>
                                                 <div className="border-t border-gray-200 pt-2 flex justify-between items-center">
                                                     <span className="text-gray-500 font-bold">תוכנית</span>
-                                                    <span className="font-black text-gray-800">{activateForm.tier === 'pro' ? 'Pro' : 'Basic'}</span>
+                                                    <span className="font-black text-gray-800">{TIER_LABELS[activateForm.tier] || activateForm.tier}</span>
                                                 </div>
                                                 <div className="flex justify-between items-center">
                                                     <span className="text-gray-500 font-bold">ימי ניסיון</span>

@@ -111,7 +111,7 @@ class InvoicePdfService
 
         // Subscription info
         $subscription = RestaurantSubscription::where('restaurant_id', $restaurant->id)->first();
-        $tierLabel = $restaurant->tier === 'pro' ? 'פרו' : 'בסיסי';
+        $tierLabel = ['basic' => 'בסיסי', 'pro' => 'פרו', 'enterprise' => 'מסעדה מלאה'][$restaurant->tier] ?? $restaurant->tier;
 
         // Orders for the month — רק הזמנות שהגיעו בפועל למסעדה
         $orders = Order::where('restaurant_id', $restaurant->id)

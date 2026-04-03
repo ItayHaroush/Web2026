@@ -1,4 +1,5 @@
 import { FaTimes, FaPlus, FaEdit, FaCheckCircle } from 'react-icons/fa';
+import { isFeatureUnlocked } from '../../../utils/tierUtils';
 import ScreenFormBasic from './ScreenFormBasic';
 import ScreenFormPresets from './ScreenFormPresets';
 import ScreenFormFonts from './ScreenFormFonts';
@@ -8,7 +9,7 @@ import ScreenFormWidgets from './ScreenFormWidgets';
 import ScreenFormLayout from './ScreenFormLayout';
 import AspectRatioSelector from './AspectRatioSelector';
 
-export default function ScreenFormModal({ form, setForm, editScreen, tier, onSubmit, onClose }) {
+export default function ScreenFormModal({ form, setForm, editScreen, subscriptionInfo, onSubmit, onClose }) {
     return (
         <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-4 animate-in fade-in duration-300">
             <div className="bg-white rounded-[3.5rem] shadow-2xl max-w-2xl w-full overflow-hidden border border-white/20 animate-in zoom-in-95 duration-300">
@@ -35,8 +36,8 @@ export default function ScreenFormModal({ form, setForm, editScreen, tier, onSub
 
                 {/* Form Body */}
                 <form onSubmit={onSubmit} className="p-10 space-y-10 max-h-[75vh] overflow-y-auto custom-scrollbar">
-                    <ScreenFormBasic form={form} setForm={setForm} tier={tier} />
-                    <ScreenFormPresets form={form} setForm={setForm} tier={tier} />
+                    <ScreenFormBasic form={form} setForm={setForm} subscriptionInfo={subscriptionInfo} />
+                    <ScreenFormPresets form={form} setForm={setForm} subscriptionInfo={subscriptionInfo} />
 
                     {/* Aspect Ratio */}
                     <AspectRatioSelector
@@ -45,7 +46,7 @@ export default function ScreenFormModal({ form, setForm, editScreen, tier, onSub
                     />
 
                     {/* Pro-only sections */}
-                    {tier === 'pro' && (
+                    {isFeatureUnlocked(subscriptionInfo?.features, 'display_screens') && (
                         <>
                             <ScreenFormFonts form={form} setForm={setForm} />
                             <ScreenFormBackground form={form} setForm={setForm} />
@@ -54,12 +55,12 @@ export default function ScreenFormModal({ form, setForm, editScreen, tier, onSub
                     )}
 
                     {/* Logo (available for both tiers, with position limits for basic) */}
-                    {tier === 'pro' && (
-                        <ScreenFormLogo form={form} setForm={setForm} tier={tier} />
+                    {isFeatureUnlocked(subscriptionInfo?.features, 'display_screens') && (
+                        <ScreenFormLogo form={form} setForm={setForm} subscriptionInfo={subscriptionInfo} />
                     )}
 
                     {/* Widgets */}
-                    <ScreenFormWidgets form={form} setForm={setForm} tier={tier} />
+                    <ScreenFormWidgets form={form} setForm={setForm} subscriptionInfo={subscriptionInfo} />
 
                     {/* Submit */}
                     <div className="flex gap-6 pt-10">

@@ -920,7 +920,7 @@ export default function AdminSalads({ embedded = false }) {
 
                 {/* מודל תוספת — וויזארד ביצירה */}
                 {modalOpen && (
-                    <div className="fixed inset-0 bg-gray-900/70 backdrop-blur-md z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-500">
+                    <div className="fixed inset-0 bg-gray-900/70 backdrop-blur-md z-[110] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-500">
                         <div className="bg-white rounded-t-[1.75rem] sm:rounded-[3rem] shadow-2xl max-w-2xl w-full max-h-[min(92dvh,90vh)] flex flex-col min-h-0 border border-white/20 animate-in zoom-in-95 duration-400">
                             <div className="px-4 py-5 sm:px-10 sm:py-8 bg-gray-50/50 border-b border-gray-100 flex items-center justify-between shrink-0">
                                 <div className="flex items-center gap-3 sm:gap-6 min-w-0">
@@ -1133,7 +1133,7 @@ export default function AdminSalads({ embedded = false }) {
 
                 {/* Group Modal */}
                 {groupModalOpen && (
-                    <div className="fixed inset-0 bg-gray-900/70 backdrop-blur-md z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-500">
+                    <div className="fixed inset-0 bg-gray-900/70 backdrop-blur-md z-[110] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-500">
                         <div className="bg-white rounded-t-[1.75rem] sm:rounded-[3rem] shadow-2xl max-w-xl w-full max-h-[min(92dvh,90vh)] flex flex-col min-h-0 border border-white/20 animate-in zoom-in-95 duration-400 my-0 sm:my-4">
                             <div className="px-4 py-5 sm:px-10 sm:py-8 bg-gray-50/50 border-b border-gray-100 flex items-center justify-between shrink-0">
                                 <div className="flex items-center gap-3 sm:gap-6 min-w-0">

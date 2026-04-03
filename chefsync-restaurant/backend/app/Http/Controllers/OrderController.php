@@ -127,6 +127,32 @@ class OrderController extends Controller
                 throw new \Exception('Restaurant not found for tenant');
             }
 
+            // Orders limit enforcement (tier-based, trial vs paid)
+            $ordersLimitEnabled = \App\Models\SystemSetting::get('orders_limit_enabled') !== false;
+            if ($ordersLimitEnabled) {
+                $tierKey = $restaurant->tier ?? 'basic';
+                $defaultLimit = $restaurant->isOnTrial()
+                    ? config("tier_features.tier_limits.{$tierKey}.orders_limit_trial", config("tier_features.tier_limits.{$tierKey}.orders_limit"))
+                    : config("tier_features.tier_limits.{$tierKey}.orders_limit");
+                $limit = $restaurant->orders_limit ?? $defaultLimit;
+                if ($limit !== null) {
+                    $ordersThisMonth = Order::where('restaurant_id', $restaurant->id)
+                        ->where('created_at', '>=', now()->startOfMonth())
+                        ->count();
+                    if ($ordersThisMonth >= $limit) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'הגעת למגבלת ההזמנות החודשית. שדרג חבילה לקבלת הזמנות ללא הגבלה.',
+                            'error' => 'orders_limit_reached',
+                            'data' => [
+                                'limit' => $limit,
+                                'count' => $ordersThisMonth,
+                            ],
+                        ], 429);
+                    }
+                }
+            }
+
             // בדיקת אישור - אבל לא במצב preview
             $isPreviewMode = $request->header('X-Preview-Mode') === 'true';
             $isTestOrder = $validated['is_test'] ?? false;

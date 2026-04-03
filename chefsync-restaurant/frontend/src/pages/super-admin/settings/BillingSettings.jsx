@@ -16,25 +16,35 @@ import {
     FaPlus,
     FaBrain,
     FaStar,
-    FaCheck
+    FaCheck,
+    FaCrown
 } from 'react-icons/fa';
 
 const DEFAULT_TIERS = {
     basic: {
-        label: 'בייסיק',
-        monthly: 450,
-        yearly: 4500,
-        ai_credits: 0,
-        trial_ai_credits: 0,
-        features: ['תפריט דיגיטלי', 'ניהול הזמנות', 'דוחות בסיסיים'],
+        label: 'אתר הזמנות',
+        monthly: 299,
+        yearly: 2990,
+        ai_credits: 1,
+        trial_ai_credits: 1,
+        features: ['דף אישי + תפריט דיגיטלי', 'מערכת הזמנות', 'אזורי משלוח', 'לינק + QR', 'דוח חודשי', 'טעימת AI', 'עד 50 הזמנות ראשונות'],
     },
     pro: {
-        label: 'פרו',
-        monthly: 600,
-        yearly: 5000,
+        label: 'ניהול חכם',
+        monthly: 449,
+        yearly: 4490,
         ai_credits: 500,
         trial_ai_credits: 50,
-        features: ['תפריט דיגיטלי', 'ניהול הזמנות', 'דוחות מתקדמים', 'AI מתקדם', 'תמיכה מועדפת'],
+        features: ['הכל מבייסיק', 'הדפסה אוטומטית', 'דוחות יומיים + סינון', 'סוכן AI מלא', 'ניהול עובדים (עד 10)', 'הזמנות ללא הגבלה'],
+    },
+    enterprise: {
+        label: 'מסעדה מלאה',
+        monthly: 0,
+        yearly: 0,
+        ai_credits: 1000,
+        trial_ai_credits: 100,
+        features: ['הכל מפרו', 'קופה POS', 'קיוסקים', 'מסכי תצוגה', 'דוח נוכחות ושכר', 'עובדים ללא הגבלה'],
+        contactOnly: true,
     },
 };
 
@@ -50,8 +60,9 @@ export default function BillingSettings() {
 
     const [settings, setSettings] = useState({
         recurring_enabled: 'false',
-        trial_duration_days: '14',
-        grace_period_days: '3'
+        trial_duration_days: '60',
+        grace_period_days: '3',
+        orders_limit_enabled: 'true',
     });
 
     useEffect(() => {
@@ -129,6 +140,7 @@ export default function BillingSettings() {
                 ai_credits: Number(editForm.ai_credits),
                 trial_ai_credits: Number(editForm.trial_ai_credits),
                 features: editForm.features || [],
+                ...(editForm.contactOnly ? { contactOnly: true } : {}),
             },
         };
 
@@ -158,6 +170,7 @@ export default function BillingSettings() {
                 recurring_enabled: 'boolean',
                 trial_duration_days: 'integer',
                 grace_period_days: 'integer',
+                orders_limit_enabled: 'boolean',
             };
 
             const payload = Object.entries(settings)
@@ -220,7 +233,7 @@ export default function BillingSettings() {
                 <div className="mb-8">
                     <h2 className="text-lg font-black text-gray-900 mb-4">חבילות מחירים</h2>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         {Object.entries(tiers).map(([key, tier]) => (
                             <TierCard
                                 key={key}
@@ -237,7 +250,7 @@ export default function BillingSettings() {
                                 onRemoveFeature={removeFeature}
                                 onSave={saveTier}
                                 saving={savingTiers}
-                                isPro={key === 'pro'}
+                                tierStyle={key === 'enterprise' ? 'enterprise' : key === 'pro' ? 'pro' : 'basic'}
                             />
                         ))}
                     </div>
@@ -263,6 +276,28 @@ export default function BillingSettings() {
                                 className="transition-colors"
                             >
                                 {settings.recurring_enabled === 'true' ? (
+                                    <FaToggleOn className="text-brand-primary" size={32} />
+                                ) : (
+                                    <FaToggleOff className="text-gray-300" size={32} />
+                                )}
+                            </button>
+                        </div>
+
+                        {/* Orders Limit Toggle */}
+                        <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100">
+                            <div>
+                                <p className="text-sm font-black text-gray-900">הגבלת הזמנות (בייסיק)</p>
+                                <p className="text-xs text-gray-500 mt-0.5">הפעל מגבלת 100 הזמנות/חודש לחבילת בייסיק</p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setSettings(prev => ({
+                                    ...prev,
+                                    orders_limit_enabled: prev.orders_limit_enabled === 'true' ? 'false' : 'true'
+                                }))}
+                                className="transition-colors"
+                            >
+                                {settings.orders_limit_enabled === 'true' ? (
                                     <FaToggleOn className="text-brand-primary" size={32} />
                                 ) : (
                                     <FaToggleOff className="text-gray-300" size={32} />
@@ -343,24 +378,28 @@ function TierCard({
     onRemoveFeature,
     onSave,
     saving,
-    isPro,
+    tierStyle,
 }) {
     const data = isEditing ? editForm : tier;
-    const borderColor = isPro ? 'border-brand-primary' : 'border-gray-200';
-    const headerBg = isPro ? 'bg-brand-primary text-white' : 'bg-gray-100 text-gray-900';
+    const isEnterprise = tierStyle === 'enterprise';
+    const isPro = tierStyle === 'pro';
+    const borderColor = isEnterprise ? 'border-purple-500' : isPro ? 'border-brand-primary' : 'border-gray-200';
+    const headerBg = isEnterprise ? 'bg-purple-600 text-white' : isPro ? 'bg-brand-primary text-white' : 'bg-gray-100 text-gray-900';
+    const headerIcon = isEnterprise ? <FaCrown size={16} /> : isPro ? <FaStar size={16} /> : <FaCreditCard size={16} />;
+    const checkColor = isEnterprise ? 'text-purple-500' : isPro ? 'text-brand-primary' : 'text-green-500';
 
     return (
         <div className={`bg-white rounded-3xl border-2 ${borderColor} shadow-sm overflow-hidden relative`}>
             {/* Header */}
             <div className={`${headerBg} px-6 py-4 flex items-center justify-between`}>
                 <div className="flex items-center gap-2">
-                    {isPro ? <FaStar size={16} /> : <FaCreditCard size={16} />}
+                    {headerIcon}
                     {isEditing ? (
                         <input
                             type="text"
                             value={data.label}
                             onChange={(e) => onEditChange('label', e.target.value)}
-                            className={`bg-transparent border-b ${isPro ? 'border-white/50 text-white placeholder-white/50' : 'border-gray-400 text-gray-900'} outline-none font-black text-lg w-32`}
+                            className={`bg-transparent border-b ${(isPro || isEnterprise) ? 'border-white/50 text-white placeholder-white/50' : 'border-gray-400 text-gray-900'} outline-none font-black text-lg w-32`}
                         />
                     ) : (
                         <span className="font-black text-lg">{data.label}</span>
@@ -369,14 +408,14 @@ function TierCard({
                 {!isEditing ? (
                     <button
                         onClick={onStartEdit}
-                        className={`p-2 rounded-lg transition-colors ${isPro ? 'hover:bg-white/20 text-white' : 'hover:bg-gray-200 text-gray-600'}`}
+                        className={`p-2 rounded-lg transition-colors ${(isPro || isEnterprise) ? 'hover:bg-white/20 text-white' : 'hover:bg-gray-200 text-gray-600'}`}
                     >
                         <FaEdit size={14} />
                     </button>
                 ) : (
                     <button
                         onClick={onCancelEdit}
-                        className={`p-2 rounded-lg transition-colors ${isPro ? 'hover:bg-white/20 text-white' : 'hover:bg-gray-200 text-gray-600'}`}
+                        className={`p-2 rounded-lg transition-colors ${(isPro || isEnterprise) ? 'hover:bg-white/20 text-white' : 'hover:bg-gray-200 text-gray-600'}`}
                     >
                         <FaTimes size={14} />
                     </button>
@@ -462,7 +501,7 @@ function TierCard({
                     <ul className="space-y-1.5">
                         {(data.features || []).map((feature, i) => (
                             <li key={i} className="flex items-center gap-2 text-sm text-gray-700">
-                                <FaCheck size={10} className={isPro ? 'text-brand-primary' : 'text-green-500'} />
+                                <FaCheck size={10} className={checkColor} />
                                 <span className="flex-1">{feature}</span>
                                 {isEditing && (
                                     <button

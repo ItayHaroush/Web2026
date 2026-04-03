@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { FaChartLine, FaStar, FaClock, FaLightbulb, FaExclamationTriangle, FaSync, FaChevronDown, FaChevronUp, FaCheckCircle, FaInfoCircle, FaBolt } from 'react-icons/fa';
 import apiClient from '../services/apiClient';
 import { useRestaurantStatus } from '../context/RestaurantStatusContext';
+import { isFeatureUnlocked } from '../utils/tierUtils';
+import UpgradeBanner from './UpgradeBanner';
 
 const PRIORITY_COLORS = {
     critical: 'border-red-300 bg-red-50',
@@ -21,7 +23,7 @@ const TYPE_ICONS = {
 const AiInsightsPanel = () => {
     const navigate = useNavigate();
     const { subscriptionInfo } = useRestaurantStatus();
-    const isBasic = subscriptionInfo?.tier === 'basic';
+    const isLocked = !isFeatureUnlocked(subscriptionInfo?.features, 'ai_insights');
     const [insights, setInsights] = useState(null);
     const [smartInsights, setSmartInsights] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -291,19 +293,10 @@ const AiInsightsPanel = () => {
                                 </div>
                             )}
 
-                            {/* Upgrade prompt for basic tier */}
-                            {isBasic && (
-                                <div className="mt-6 p-4 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl flex items-center justify-between gap-3">
-                                    <div className="flex items-center gap-3">
-                                        <FaStar className="text-amber-500 shrink-0" size={16} />
-                                        <p className="text-sm font-bold text-gray-700">שדרג ל-Pro וקבל תובנות AI מתקדמות יותר וקרדיטים נוספים</p>
-                                    </div>
-                                    <button
-                                        onClick={() => navigate('/admin/paywall')}
-                                        className="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-xl font-black text-xs transition-all whitespace-nowrap shrink-0"
-                                    >
-                                        שדרג
-                                    </button>
+                            {/* Upgrade prompt */}
+                            {isLocked && (
+                                <div className="mt-6">
+                                    <UpgradeBanner requiredTier="pro" context="ai" feature="ai_insights" />
                                 </div>
                             )}
 

@@ -1,6 +1,7 @@
 import { FaCheckCircle, FaInfoCircle } from 'react-icons/fa';
+import { isFeatureUnlocked } from '../../../utils/tierUtils';
 
-export default function ScreenFormBasic({ form, setForm, tier }) {
+export default function ScreenFormBasic({ form, setForm, subscriptionInfo }) {
     return (
         <>
             {/* Name */}
@@ -26,7 +27,7 @@ export default function ScreenFormBasic({ form, setForm, tier }) {
                 <div className="grid grid-cols-2 gap-5">
                     {[
                         { id: 'static', label: 'סטטי', desc: 'כל הפריטים ברשת', icon: '🖥️', disabled: false },
-                        { id: 'rotating', label: 'קרוסלה', desc: 'שקפים מתחלפים', icon: '🎠', disabled: tier === 'basic' },
+                        { id: 'rotating', label: 'קרוסלה', desc: 'שקפים מתחלפים', icon: '🎠', disabled: !isFeatureUnlocked(subscriptionInfo?.features, 'display_screens') },
                     ].map((type) => (
                         <button
                             key={type.id}

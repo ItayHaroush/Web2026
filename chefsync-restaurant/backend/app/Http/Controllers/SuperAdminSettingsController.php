@@ -84,20 +84,29 @@ class SuperAdminSettingsController extends Controller
      */
     private static array $defaultPricing = [
         'basic' => [
-            'label' => 'בייסיק',
-            'monthly' => 450,
-            'yearly' => 4500,
-            'ai_credits' => 0,
-            'trial_ai_credits' => 0,
-            'features' => ['תפריט דיגיטלי', 'ניהול הזמנות', 'דוחות בסיסיים'],
+            'label' => 'אתר הזמנות',
+            'monthly' => 299,
+            'yearly' => 2990,
+            'ai_credits' => 1,
+            'trial_ai_credits' => 1,
+            'features' => ['אתר הזמנות', 'תפריט + מבצעים', 'משלוחים / איסוף', 'לינק + QR', 'דוח חודשי', 'טעימת AI', 'עד 50 הזמנות ראשונות'],
         ],
         'pro' => [
-            'label' => 'פרו',
-            'monthly' => 600,
-            'yearly' => 5000,
+            'label' => 'ניהול חכם',
+            'monthly' => 449,
+            'yearly' => 4490,
             'ai_credits' => 500,
             'trial_ai_credits' => 50,
-            'features' => ['תפריט דיגיטלי', 'ניהול הזמנות', 'דוחות מתקדמים', 'AI מתקדם', 'תמיכה מועדפת'],
+            'features' => ['הכל מהבסיס', 'הדפסה אוטומטית', 'דוחות יומיים + פילוחים', 'סוכן חכם מלא', 'ניהול עובדים', 'ללא הגבלת הזמנות'],
+        ],
+        'enterprise' => [
+            'label' => 'מסעדה מלאה',
+            'monthly' => 0,
+            'yearly' => 0,
+            'ai_credits' => 1000,
+            'trial_ai_credits' => 100,
+            'features' => ['קופה בענן', 'דוחות שעות עובדים', 'קיוסק', 'מסכי תצוגה', 'עובדים ללא הגבלה', 'שליטה מלאה'],
+            'contactOnly' => true,
         ],
     ];
 
@@ -110,6 +119,9 @@ class SuperAdminSettingsController extends Controller
 
         if (! $tiers || ! is_array($tiers)) {
             $tiers = self::$defaultPricing;
+        } else {
+            // Merge with defaults to ensure all tiers (including enterprise) exist
+            $tiers = array_replace_recursive(self::$defaultPricing, $tiers);
         }
 
         return response()->json([
@@ -141,6 +153,15 @@ class SuperAdminSettingsController extends Controller
             'tiers.pro.trial_ai_credits' => 'required|integer|min:0',
             'tiers.pro.features' => 'required|array',
             'tiers.pro.features.*' => 'string|max:100',
+            'tiers.enterprise' => 'sometimes|array',
+            'tiers.enterprise.label' => 'sometimes|string|max:50',
+            'tiers.enterprise.monthly' => 'sometimes|numeric|min:0',
+            'tiers.enterprise.yearly' => 'sometimes|numeric|min:0',
+            'tiers.enterprise.ai_credits' => 'sometimes|integer|min:0',
+            'tiers.enterprise.trial_ai_credits' => 'sometimes|integer|min:0',
+            'tiers.enterprise.features' => 'sometimes|array',
+            'tiers.enterprise.features.*' => 'string|max:100',
+            'tiers.enterprise.contactOnly' => 'sometimes|boolean',
         ]);
 
         SystemSetting::set(
@@ -148,7 +169,7 @@ class SuperAdminSettingsController extends Controller
             $validated['tiers'],
             'json',
             'billing',
-            'מחירי חבילות (basic/pro)'
+            'מחירי חבילות (basic/pro/enterprise)'
         );
 
         Log::info('Pricing tiers updated by super admin', [
@@ -172,6 +193,8 @@ class SuperAdminSettingsController extends Controller
 
         if (! $tiers || ! is_array($tiers)) {
             $tiers = self::$defaultPricing;
+        } else {
+            $tiers = array_replace_recursive(self::$defaultPricing, $tiers);
         }
 
         return response()->json([
@@ -191,7 +214,8 @@ class SuperAdminSettingsController extends Controller
             return self::$defaultPricing;
         }
 
-        return $tiers;
+        // Merge with defaults to ensure all tiers (including enterprise) exist
+        return array_replace_recursive(self::$defaultPricing, $tiers);
     }
 
     // ==========================================
@@ -376,7 +400,7 @@ class SuperAdminSettingsController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'שגיאה בשליפת סטטוס: '.$e->getMessage(),
+                'message' => 'שגיאה בשליפת סטטוס: ' . $e->getMessage(),
             ], 500);
         }
     }
@@ -435,7 +459,7 @@ class SuperAdminSettingsController extends Controller
 
             $args = [$mysqldump];
             if ($dbSocket !== '') {
-                $args[] = '--socket='.$dbSocket;
+                $args[] = '--socket=' . $dbSocket;
             } else {
                 $args[] = '-h';
                 $args[] = $dbHost;
@@ -443,8 +467,9 @@ class SuperAdminSettingsController extends Controller
                 $args[] = $dbPort;
             }
             $args = array_merge($args, [
-                '-u', $dbUser,
-                '--password='.$dbPass,
+                '-u',
+                $dbUser,
+                '--password=' . $dbPass,
                 '--single-transaction',
                 '--quick',
                 '--skip-lock-tables',
@@ -468,7 +493,7 @@ class SuperAdminSettingsController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => 'גיבוי נכשל (mysqldump)',
-                    'error' => $combined !== '' ? $combined : 'קוד יציאה: '.$process->getExitCode(),
+                    'error' => $combined !== '' ? $combined : 'קוד יציאה: ' . $process->getExitCode(),
                 ], 500);
             }
 
@@ -515,7 +540,7 @@ class SuperAdminSettingsController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'שגיאה בגיבוי: '.$e->getMessage(),
+                'message' => 'שגיאה בגיבוי: ' . $e->getMessage(),
             ], 500);
         }
     }
@@ -604,13 +629,15 @@ class SuperAdminSettingsController extends Controller
             }
         }
 
-        foreach ([
-            '/opt/homebrew/Cellar/mysql-client/*/bin/mysqldump',
-            '/opt/homebrew/Cellar/mysql/*/bin/mysqldump',
-            '/opt/homebrew/Cellar/mariadb/*/bin/mysqldump',
-            '/usr/local/Cellar/mysql-client/*/bin/mysqldump',
-            '/usr/local/Cellar/mysql/*/bin/mysqldump',
-        ] as $pattern) {
+        foreach (
+            [
+                '/opt/homebrew/Cellar/mysql-client/*/bin/mysqldump',
+                '/opt/homebrew/Cellar/mysql/*/bin/mysqldump',
+                '/opt/homebrew/Cellar/mariadb/*/bin/mysqldump',
+                '/usr/local/Cellar/mysql-client/*/bin/mysqldump',
+                '/usr/local/Cellar/mysql/*/bin/mysqldump',
+            ] as $pattern
+        ) {
             foreach (glob($pattern, GLOB_NOSORT) ?: [] as $p) {
                 $candidates[] = $p;
             }
@@ -732,7 +759,7 @@ class SuperAdminSettingsController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'שגיאה באופטימיזציה: '.$e->getMessage(),
+                'message' => 'שגיאה באופטימיזציה: ' . $e->getMessage(),
             ], 500);
         }
     }
@@ -858,14 +885,14 @@ class SuperAdminSettingsController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'אימייל בדיקה נשלח בהצלחה ל-'.$toEmail,
+                'message' => 'אימייל בדיקה נשלח בהצלחה ל-' . $toEmail,
             ]);
         } catch (\Exception $e) {
             Log::error('SMTP test failed', ['error' => $e->getMessage()]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'שליחת בדיקה נכשלה: '.$e->getMessage(),
+                'message' => 'שליחת בדיקה נכשלה: ' . $e->getMessage(),
             ], 500);
         }
     }

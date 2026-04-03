@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { getBillingInfo } from '../../services/subscriptionService';
+import { TIER_LABELS } from '../../utils/tierUtils';
 import {
     FaCreditCard,
     FaReceipt,
@@ -68,9 +69,11 @@ export default function AdminBilling() {
         );
     }
 
-    const tierIcon = billing.current_tier === 'pro'
-        ? <FaBrain className="text-amber-500" />
-        : <FaRocket className="text-blue-500" />;
+    const tierIcon = billing.current_tier === 'enterprise'
+        ? <FaCrown className="text-purple-500" />
+        : billing.current_tier === 'pro'
+            ? <FaBrain className="text-amber-500" />
+            : <FaRocket className="text-blue-500" />;
 
     return (
         <div className="max-w-4xl mx-auto p-6 space-y-6">
@@ -96,7 +99,7 @@ export default function AdminBilling() {
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-5">
-                    <InfoBox label="תוכנית" value={billing.current_tier === 'pro' ? 'Pro' : 'Basic'} />
+                    <InfoBox label="תוכנית" value={TIER_LABELS[billing.current_tier] || billing.current_tier} />
                     <InfoBox label="מחזור" value={billing.current_plan === 'yearly' ? 'שנתי' : 'חודשי'} />
                     <InfoBox
                         label="חיוב הבא"
@@ -188,7 +191,7 @@ export default function AdminBilling() {
                         </p>
                         <p className="text-blue-600 text-xs font-medium">
                             ייגבו בתשלום הראשון באשראי.
-                            {billing.current_tier === 'pro' ? ' (₪100 לחבילת Pro)' : ' (₪200 לחבילת Basic)'}
+                            {billing.current_tier === 'pro' ? ' (₪100 לחבילת Pro)' : billing.current_tier === 'enterprise' ? ' (₪0 לחבילת מסעדה מלאה)' : ' (₪200 לחבילת Basic)'}
                         </p>
                     </div>
                 )}

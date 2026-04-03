@@ -2060,7 +2060,7 @@ PROMPT;
         // מידע על המסעדה
         $systemPrompt .= "=== מידע על המסעדה ===\n";
         $systemPrompt .= "שם: {$restaurant['name']}\n";
-        $systemPrompt .= "מנוי: " . ($restaurant['subscription_tier'] === 'pro' ? 'Pro 🌟' : 'Free') . "\n";
+        $systemPrompt .= "מנוי: " . (['basic' => 'Basic', 'pro' => 'Pro 🌟', 'enterprise' => 'מסעדה מלאה 👑'][$restaurant['tier'] ?? $restaurant['subscription_tier'] ?? 'basic'] ?? 'Basic') . "\n";
         $systemPrompt .= "סטטוס: " . ($restaurant['is_approved'] ? 'מאושרת ✅' : 'ממתינה לאישור ⏳') . "\n";
         $systemPrompt .= "פריטי תפריט: {$restaurant['total_menu_items']}\n\n";
 

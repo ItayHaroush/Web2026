@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { useRestaurantStatus } from '../../context/RestaurantStatusContext';
 import AdminLayout from '../../layouts/AdminLayout';
-import ProFeatureGate from '../../components/ProFeatureGate';
+import FeatureGate from '../../components/FeatureGate';
 import posApi from '../../features/pos/api/posApi';
 import {
     FaClock,
@@ -47,7 +47,7 @@ export default function AdminTimeReports({ embedded = false }) {
     const [expandedUser, setExpandedUser] = useState(null);
     const [todayLogs, setTodayLogs] = useState([]);
 
-    const isBasicTier = subscriptionInfo?.tier === 'basic';
+    const isLocked = subscriptionInfo?.features?.time_reports !== 'full';
 
     const fetchToday = async () => {
         try {
@@ -76,16 +76,16 @@ export default function AdminTimeReports({ embedded = false }) {
     };
 
     useEffect(() => {
-        if (!isBasicTier) fetchData();
-    }, [tab, range, isBasicTier]);
+        if (!isLocked) fetchData();
+    }, [tab, range, isLocked]);
 
     useEffect(() => {
-        if (!isBasicTier) fetchToday();
-    }, [isBasicTier]);
+        if (!isLocked) fetchToday();
+    }, [isLocked]);
 
-    if (isBasicTier) {
-        if (embedded) return <div className="text-center py-12 text-gray-400 text-sm font-bold">תכונה זו זמינה בתוכנית Pro</div>;
-        return <ProFeatureGate featureName="דוח נוכחות" />;
+    if (isLocked) {
+        if (embedded) return <div className="text-center py-12 text-gray-400 text-sm font-bold">תכונה זו זמינה בחבילת מסעדה מלאה</div>;
+        return <FeatureGate feature="time_reports" requiredTier="enterprise" featureName="דוח נוכחות" />;
     }
 
     const activeClockedIn = todayLogs.filter(l => l.is_active);

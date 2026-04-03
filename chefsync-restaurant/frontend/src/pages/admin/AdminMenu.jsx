@@ -8,7 +8,7 @@ import { resolveAssetUrl } from '../../utils/assets';
 import AiDescriptionGenerator from '../../components/AiDescriptionGenerator';
 import AiPriceRecommender from '../../components/AiPriceRecommender';
 import AiImageEnhancer from '../../components/AiImageEnhancer';
-import AiDineInRecommender from '../../components/AiDineInRecommender';
+import DineInPricerPanel from '../../components/DineInPricerPanel';
 import MobileAddFab from '../../components/admin/MobileAddFab';
 import {
     FaUtensils,
@@ -32,17 +32,18 @@ import {
     FaBreadSlice,
     FaSave,
     FaArchive,
-    FaUndo
+    FaUndo,
 } from 'react-icons/fa';
 
 export default function AdminMenu({ embedded = false }) {
     const { getAuthHeaders, isManager } = useAdminAuth();
     const { restaurantStatus } = useRestaurantStatus();
-    const isLocked = restaurantStatus?.is_approved === false;
+    const isLocked = false; // תפריט פתוח תמיד — מסעדות חדשות צריכות להכין תפריט לפני אישור
     const [items, setItems] = useState([]);
     const [categories, setCategories] = useState([]);
     const [groups, setGroups] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [enableDineInPricing, setEnableDineInPricing] = useState(false);
     const [showModal, setShowModal] = useState(false);
     const [editItem, setEditItem] = useState(null);
     const [filterCategory, setFilterCategory] = useState('');
@@ -56,6 +57,7 @@ export default function AdminMenu({ embedded = false }) {
     const [basePriceAdjustments, setBasePriceAdjustments] = useState({});
     const [loadingBasePrices, setLoadingBasePrices] = useState(false);
     const [savingBasePrices, setSavingBasePrices] = useState(false);
+    const [dineInPanelOpen, setDineInPanelOpen] = useState(false);
 
     const [form, setForm] = useState({
         name: '',
@@ -95,6 +97,9 @@ export default function AdminMenu({ embedded = false }) {
                 itemsData.forEach(item => {
                     console.log(`Item: ${item.name}, Category ID: ${item.category_id}, Category:`, item.category);
                 });
+                if (itemsRes.data.enable_dine_in_pricing !== undefined) {
+                    setEnableDineInPricing(itemsRes.data.enable_dine_in_pricing);
+                }
             }
             if (categoriesRes.data.success) {
                 const catsData = categoriesRes.data.categories || [];
@@ -111,6 +116,19 @@ export default function AdminMenu({ embedded = false }) {
             console.error('Error details:', error.response?.data);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const toggleDineInPricing = async () => {
+        const newVal = !enableDineInPricing;
+        setEnableDineInPricing(newVal);
+        try {
+            const formData = new FormData();
+            formData.append('enable_dine_in_pricing', newVal ? '1' : '0');
+            formData.append('_method', 'PUT');
+            await api.post('/admin/restaurant', formData, { headers: getAuthHeaders() });
+        } catch {
+            setEnableDineInPricing(!newVal);
         }
     };
 
@@ -502,7 +520,16 @@ export default function AdminMenu({ embedded = false }) {
                     </div>
                     {activeTab === 'items' && (
                         <div className="flex items-center gap-3">
-                            <AiDineInRecommender onApplyAdjustments={handleApplyDineInAdjustments} />
+                            <DineInPricerPanel
+                                categories={categories}
+                                enableDineInPricing={enableDineInPricing}
+                                onToggleDineIn={toggleDineInPricing}
+                                onApplyAdjustments={handleApplyDineInAdjustments}
+                                onRefresh={fetchData}
+                                getAuthHeaders={getAuthHeaders}
+                                onOpenChange={setDineInPanelOpen}
+                                hideFab={showModal}
+                            />
                             <button
                                 onClick={() => setShowModal(true)}
                                 disabled={isLocked}
@@ -521,6 +548,16 @@ export default function AdminMenu({ embedded = false }) {
             {embedded && activeTab === 'items' && isManager() && (
                 <>
                     <div className="hidden md:flex flex-wrap justify-end gap-2 mb-4 px-1">
+                        <DineInPricerPanel
+                            categories={categories}
+                            enableDineInPricing={enableDineInPricing}
+                            onToggleDineIn={toggleDineInPricing}
+                            onApplyAdjustments={handleApplyDineInAdjustments}
+                            onRefresh={fetchData}
+                            getAuthHeaders={getAuthHeaders}
+                            onOpenChange={setDineInPanelOpen}
+                            hideFab={showModal}
+                        />
                         <button
                             type="button"
                             onClick={openNewModal}
@@ -531,7 +568,19 @@ export default function AdminMenu({ embedded = false }) {
                             הוסף פריט
                         </button>
                     </div>
-                    {!showModal && (
+                    {/* Mobile FABs — rendered outside the hidden md:flex container */}
+                    <DineInPricerPanel
+                        categories={categories}
+                        enableDineInPricing={enableDineInPricing}
+                        onToggleDineIn={toggleDineInPricing}
+                        onApplyAdjustments={handleApplyDineInAdjustments}
+                        onRefresh={fetchData}
+                        getAuthHeaders={getAuthHeaders}
+                        onOpenChange={setDineInPanelOpen}
+                        hideFab={showModal}
+                        mobileOnly
+                    />
+                    {!showModal && !dineInPanelOpen && (
                     <MobileAddFab label="הוסף פריט" onClick={openNewModal} disabled={isLocked} />
                     )}
                 </>
@@ -829,7 +878,7 @@ export default function AdminMenu({ embedded = false }) {
 
             {/* Modal הוספת/עריכת פריט */}
             {showModal && (
-                <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-300">
+                <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-[110] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-300">
                     <div className="bg-white rounded-t-[2rem] sm:rounded-[2.5rem] max-w-lg w-full max-h-[min(92dvh,90vh)] overflow-hidden shadow-2xl flex flex-col min-h-0">
                         <div className="p-4 sm:p-6 border-b border-gray-100 bg-slate-50/50 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between shrink-0">
                             <div className="flex items-center gap-3 min-w-0">

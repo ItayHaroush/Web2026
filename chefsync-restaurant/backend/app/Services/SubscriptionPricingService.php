@@ -26,10 +26,13 @@ class SubscriptionPricingService
             ? (float) ($restaurant->yearly_price ?? 0)
             : (float) ($restaurant->monthly_price ?? 0);
 
+        // ערכי ברירת מחדל מהמיגרציה (600/5000) — לא מחירים אמיתיים שנקבעו ע"י סופר אדמין
+        $migrationDefaults = [600.00, 5000.00];
+
         $amount = $catalogAmount;
         $hasNegotiated = false;
 
-        if ($matchesDeal && $storedAmount > 0.009) {
+        if ($matchesDeal && $storedAmount > 0.009 && !in_array($storedAmount, $migrationDefaults, true)) {
             if (abs($storedAmount - $catalogAmount) > 0.01) {
                 $hasNegotiated = true;
                 $amount = $storedAmount;
@@ -65,6 +68,11 @@ class SubscriptionPricingService
         $catalogYearly = (float) ($prices[$restaurantTier]['yearly'] ?? 0);
         $yourMonthly = (float) ($restaurant->monthly_price ?? 0);
         $yourYearly = (float) ($restaurant->yearly_price ?? 0);
+
+        // סנן ערכי ברירת מחדל מהמיגרציה — אלו לא מחירים אמיתיים
+        $migrationDefaults = [600.00, 5000.00];
+        if (in_array($yourMonthly, $migrationDefaults, true)) $yourMonthly = 0;
+        if (in_array($yourYearly, $migrationDefaults, true)) $yourYearly = 0;
 
         $resolved = $this->resolve($restaurant, $restaurantTier, $restaurantPlan);
 

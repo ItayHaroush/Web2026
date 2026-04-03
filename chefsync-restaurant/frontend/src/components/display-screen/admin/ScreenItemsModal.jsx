@@ -1,12 +1,13 @@
 import { FaTimes, FaListUl, FaCheckCircle, FaCheck, FaChevronUp, FaChevronDown } from 'react-icons/fa';
 import { BADGE_OPTIONS } from '../shared/presetStyles';
+import { isFeatureUnlocked } from '../../../utils/tierUtils';
 
 export default function ScreenItemsModal({
     show,
     loading,
     allMenuItems,
     selectedItems,
-    tier,
+    subscriptionInfo,
     onToggleItem,
     onToggleBadge,
     onMoveItem,
@@ -129,7 +130,7 @@ export default function ScreenItemsModal({
                                                 </button>
                                             </div>
                                             {/* Badge toggles - Pro Only */}
-                                            {tier === 'pro' && (
+                                            {isFeatureUnlocked(subscriptionInfo?.features, 'display_screens') && (
                                                 <div className="flex gap-1.5 mt-2 mr-10">
                                                     {BADGE_OPTIONS.map(badge => {
                                                         const active = (item.badge || []).includes(badge.id);

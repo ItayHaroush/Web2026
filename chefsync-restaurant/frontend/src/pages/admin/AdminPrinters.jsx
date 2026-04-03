@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAdminAuth } from '../../context/AdminAuthContext';
+import { useRestaurantStatus } from '../../context/RestaurantStatusContext';
 import AdminLayout from '../../layouts/AdminLayout';
+import FeatureGate from '../../components/FeatureGate';
+import UpgradeBanner from '../../components/UpgradeBanner';
 import MobileAddFab from '../../components/admin/MobileAddFab';
 import { FaPrint, FaPlus, FaNetworkWired, FaEdit, FaTrash, FaPowerOff, FaCopy, FaCheck, FaTimes, FaExclamationTriangle } from 'react-icons/fa';
 import api from '../../services/apiClient';
@@ -48,9 +51,18 @@ export default function AdminPrinters({ embedded = false }) {
     const activeTab = searchParams.get('tab') || 'printers';
 
     const { isManager, getAuthHeaders } = useAdminAuth();
+    const { subscriptionInfo } = useRestaurantStatus();
+
+    const isLocked = subscriptionInfo?.features?.printers !== 'full';
+
+    if (isLocked) {
+        if (embedded) return <div className="text-center py-12 text-gray-400 text-sm font-bold">תכונה זו זמינה בתוכנית Pro</div>;
+        return <FeatureGate feature="printers" requiredTier="pro" featureName="מדפסות" />;
+    }
     const [printers, setPrinters] = useState([]);
     const [categories, setCategories] = useState([]);
     const [devices, setDevices] = useState([]);
+    const [limits, setLimits] = useState({});
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [editPrinter, setEditPrinter] = useState(null);
@@ -74,7 +86,10 @@ export default function AdminPrinters({ embedded = false }) {
                 api.get('/admin/categories', { headers: getAuthHeaders() }),
                 getPrintDevices(),
             ]);
-            if (printersRes.success) setPrinters(printersRes.printers || []);
+            if (printersRes.success) {
+                setPrinters(printersRes.printers || []);
+                setLimits(printersRes.limits || {});
+            }
             if (categoriesRes.data?.success) setCategories(categoriesRes.data.categories || []);
             if (devicesRes.success) setDevices(devicesRes.devices || []);
         } catch (error) {
@@ -251,6 +266,9 @@ export default function AdminPrinters({ embedded = false }) {
         return <AdminLayout>{loader}</AdminLayout>;
     }
 
+    const canCreateMorePrinters = printers.length < (limits.max_printers ?? 1);
+    const upgradeToEnterprise = () => window.open('https://wa.me/972547466508?text=שלום, אני מעוניין בחבילת מסעדה מלאה – מדפסות נוספות', '_blank');
+
     const content = (
             <div className="max-w-6xl mx-auto space-y-12 pb-32 animate-in fade-in duration-500">
                 {!embedded && (
@@ -263,19 +281,32 @@ export default function AdminPrinters({ embedded = false }) {
                             <h1 className="text-4xl font-black text-gray-900 tracking-tight">מדפסות</h1>
                             <p className="text-gray-500 font-medium mt-1">
                                 {activeTab === 'printers'
-                                    ? `${printers.length} מדפסות מוגדרות — מטבח וקופה`
+                                    ? `${printers.length} / ${limits.max_printers ?? 1} מדפסות מוגדרות`
                                     : `${devices.length} גשרי הדפסה — הדפסה למדפסות רשת`}
                             </p>
                         </div>
                     </div>
                     {isManager() && (
-                        <button
-                            onClick={activeTab === 'printers' ? openNew : openDeviceNew}
-                            className="hidden md:flex w-full md:w-auto px-10 py-5 rounded-[2rem] font-black transition-all items-center justify-center gap-3 shadow-xl active:scale-95 group bg-blue-600 text-white hover:bg-blue-500 shadow-blue-600/20"
-                        >
-                            <FaPlus className="group-hover:rotate-90 transition-transform" />
-                            {activeTab === 'printers' ? 'מדפסת חדשה' : 'גשר הדפסה חדש'}
-                        </button>
+                        <div className="hidden md:flex items-center gap-4">
+                            {activeTab === 'printers' && !canCreateMorePrinters && (
+                                <UpgradeBanner requiredTier="enterprise" context="printers" feature="printers" variant="inline" />
+                            )}
+                            <button
+                                onClick={activeTab === 'printers'
+                                    ? (canCreateMorePrinters ? openNew : upgradeToEnterprise)
+                                    : openDeviceNew}
+                                className={`px-10 py-5 rounded-[2rem] font-black transition-all flex items-center justify-center gap-3 shadow-xl active:scale-95 group shrink-0 ${
+                                    activeTab === 'printers' && !canCreateMorePrinters
+                                        ? 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white shadow-purple-200'
+                                        : 'bg-blue-600 text-white hover:bg-blue-500 shadow-blue-600/20'
+                                }`}
+                            >
+                                <FaPlus className="group-hover:rotate-90 transition-transform" />
+                                {activeTab === 'printers'
+                                    ? (canCreateMorePrinters ? 'מדפסת חדשה' : 'שדרג למסעדה מלאה')
+                                    : 'גשר הדפסה חדש'}
+                            </button>
+                        </div>
                     )}
                 </div>
                 )}
@@ -502,9 +533,9 @@ export default function AdminPrinters({ embedded = false }) {
                 )}
                 {isManager() && !showModal && !showDeviceModal && (
                     <MobileAddFab
-                        label={activeTab === 'devices' ? 'גשר הדפסה חדש' : 'מדפסת חדשה'}
+                        label={activeTab === 'devices' ? 'גשר הדפסה חדש' : (canCreateMorePrinters ? 'מדפסת חדשה' : 'שדרג למסעדה מלאה')}
                         icon={activeTab === 'devices' ? FaNetworkWired : FaPrint}
-                        onClick={activeTab === 'devices' ? openDeviceNew : openNew}
+                        onClick={activeTab === 'devices' ? openDeviceNew : (canCreateMorePrinters ? openNew : upgradeToEnterprise)}
                     />
                 )}
             </div>

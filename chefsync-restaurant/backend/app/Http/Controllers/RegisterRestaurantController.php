@@ -36,7 +36,7 @@ class RegisterRestaurantController extends Controller
             'owner_phone' => 'required|string|max:20',
             'password' => 'required|string|min:6|confirmed',
             'password_confirmation' => 'required|string|min:6',
-            'tier' => 'required|in:basic,pro',
+            'tier' => 'required|in:basic,pro,enterprise',
             'plan_type' => 'required|in:monthly,yearly,annual',
             'paid_upfront' => 'nullable|boolean',
             'verification_code' => 'required|string',
@@ -97,7 +97,8 @@ class RegisterRestaurantController extends Controller
         $chargeAmount = $isYearly ? $yearlyPrice : $monthlyPrice;
         $monthlyFeeForTracking = $isYearly ? round($yearlyPrice / 12, 2) : $monthlyPrice;
 
-        $trialEndsAt = now()->addDays(14)->endOfDay();
+        $trialDays = (int) (\App\Models\SystemSetting::get('trial_duration_days') ?? 60);
+        $trialEndsAt = now()->addDays($trialDays)->endOfDay();
         $planDurationEnd = $isYearly
             ? $trialEndsAt->copy()->addYear()
             : $trialEndsAt->copy()->addMonth();
@@ -162,6 +163,8 @@ class RegisterRestaurantController extends Controller
                         ? $planDurationEnd->copy()->addYear()
                         : $planDurationEnd->copy()->addMonth())
                     : $trialEndsAt,
+                'monthly_price' => $monthlyPrice,
+                'yearly_price' => $yearlyPrice,
             ]);
 
             $owner = User::create([

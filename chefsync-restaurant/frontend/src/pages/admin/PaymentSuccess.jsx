@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { FaCheckCircle, FaArrowLeft, FaSpinner } from 'react-icons/fa';
 import { getSubscriptionStatus, checkPendingPayment } from '../../services/subscriptionService';
+import { TIER_LABELS } from '../../utils/tierUtils';
 
 const getEnv = (key, fallback) => {
     try { return import.meta?.env?.[key] ?? fallback; } catch { return fallback; }
@@ -85,7 +86,7 @@ export default function PaymentSuccess() {
                             </p>
                             <div className="bg-gray-50 rounded-xl p-4 text-sm space-y-2">
                                 <div className="flex justify-between">
-                                    <span className="font-bold text-gray-900">{subData.tier === 'pro' ? 'Pro' : 'Basic'}</span>
+                                    <span className="font-bold text-gray-900">{TIER_LABELS[subData.tier] || subData.tier}</span>
                                     <span className="text-gray-500">תוכנית</span>
                                 </div>
                                 <div className="flex justify-between">

@@ -221,6 +221,11 @@ export default function AdminDashboard() {
 
     return (
         <AdminLayout>
+            {/* Upgrade Banner */}
+            <div className="mb-4">
+                <UpgradeBanner variant="inline" context="ai" />
+            </div>
+
             {/* באנר התראות מודרני */}
             <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-4 sm:p-5 mb-6">
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
@@ -440,7 +445,7 @@ export default function AdminDashboard() {
                                             <div className="min-w-0">
                                                 <div className="flex flex-wrap items-center gap-1.5 mb-0.5">
                                                     <span className="text-xs font-black text-gray-900">#{o.id}</span>
-                                                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-orange-50 text-orange-800 border border-orange-100">
+                                                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-gray-100/60 text-gray-600 border border-gray-200/60">
                                                         {pay}
                                                     </span>
                                                 </div>
@@ -509,11 +514,6 @@ export default function AdminDashboard() {
                 </div>
             </div>
 
-            {/* Upgrade Banner */}
-            <div className="mb-6">
-                <UpgradeBanner variant="card" context="ai" />
-            </div>
-
             {/* AI Credits Section */}
             <div className="mb-6">
                 <AiCreditsBadge detailed={canViewRevenue} />
@@ -565,11 +565,7 @@ export default function AdminDashboard() {
                                                         {statusBadge.text}
                                                     </span>
                                                     {shouldShowPaymentStatusBadge(order) && (
-                                                        <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase border shrink-0 ${order.payment_status === 'paid' ? 'bg-green-50 text-green-700 border-green-100' :
-                                                            order.payment_status === 'pending' ? 'bg-orange-50 text-orange-700 border-orange-100' :
-                                                                order.payment_status === 'failed' ? 'bg-red-50 text-red-700 border-red-100' :
-                                                                    'bg-gray-50 text-gray-600 border-gray-100'
-                                                            }`}>
+                                                        <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase border shrink-0 bg-gray-100/60 text-gray-600 border-gray-200/60`}>
                                                             {paymentStatusBadgeLabel(order)}
                                                         </span>
                                                     )}

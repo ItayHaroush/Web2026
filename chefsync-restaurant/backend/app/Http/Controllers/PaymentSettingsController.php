@@ -93,7 +93,7 @@ class PaymentSettingsController extends Controller
             }
 
             // חישוב דמי הקמה לפי תוכנית
-            $setupFee = ($restaurant->tier === 'pro') ? 100 : 200;
+            $setupFee = $restaurant->tier === 'enterprise' ? 0 : ($restaurant->tier === 'pro' ? 100 : 200);
 
             // הוסף דמי הקמה ל-outstanding_amount של המנוי
             $subscription = RestaurantSubscription::where('restaurant_id', $restaurant->id)->first();

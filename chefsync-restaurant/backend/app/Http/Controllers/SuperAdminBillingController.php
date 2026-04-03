@@ -184,7 +184,7 @@ class SuperAdminBillingController extends Controller
     public function manualActivateSubscription(Request $request, $id)
     {
         $validated = $request->validate([
-            'tier' => 'required|in:basic,pro',
+            'tier' => 'required|in:basic,pro,enterprise',
             'plan_type' => 'required|in:monthly,yearly',
             'note' => 'nullable|string|max:500',
             'record_payment' => 'nullable|boolean',  // true = תשלום בוצע בפועל — לרישום בדוחות
@@ -340,7 +340,7 @@ class SuperAdminBillingController extends Controller
             $restaurant->update($restaurantUpdate);
 
             // AI Credits
-            if ($tier === 'pro' && ($prices[$tier]['ai_credits'] ?? 0) > 0) {
+            if (in_array($tier, ['pro', 'enterprise']) && ($prices[$tier]['ai_credits'] ?? 0) > 0) {
                 \App\Models\AiCredit::updateOrCreate(
                     ['restaurant_id' => $restaurant->id],
                     [
@@ -358,7 +358,7 @@ class SuperAdminBillingController extends Controller
             DB::commit();
 
             // --- Notifications ---
-            $tierLabel = $tier === 'pro' ? 'Pro' : 'Basic';
+            $tierLabel = ['basic' => 'Basic', 'pro' => 'Pro', 'enterprise' => 'מסעדה מלאה'][$tier] ?? ucfirst($tier);
             $planLabel = $planType === 'yearly' ? 'שנתי' : 'חודשי';
             $breaks = ["₪{$baseCharge} מנוי"];
             if ($setupFee > 0) $breaks[] = "₪{$setupFee} דמי הקמה";
@@ -442,7 +442,7 @@ class SuperAdminBillingController extends Controller
     public function resetToTrial(Request $request, $id)
     {
         $validated = $request->validate([
-            'tier' => 'required|in:basic,pro',
+            'tier' => 'required|in:basic,pro,enterprise',
             'trial_days' => 'nullable|integer|min:1|max:90',
             'note' => 'nullable|string|max:500',
         ]);
@@ -450,18 +450,18 @@ class SuperAdminBillingController extends Controller
         $restaurant = Restaurant::findOrFail($id);
         $prices = SuperAdminSettingsController::getPricingArray();
         $tier = $validated['tier'];
-        $trialDays = (int) ($validated['trial_days'] ?? 14);
+        $trialDays = (int) ($validated['trial_days'] ?? 60);
         $trialEndsAt = now()->addDays($trialDays)->endOfDay();
 
         DB::beginTransaction();
         try {
-            $aiCredits = $tier === 'pro' ? ($prices[$tier]['trial_ai_credits'] ?? 50) : 0;
+            $aiCredits = in_array($tier, ['pro', 'enterprise']) ? ($prices[$tier]['trial_ai_credits'] ?? 50) : 0;
 
             $restaurant->update([
                 'subscription_status'   => 'trial',
                 'subscription_plan'     => null,
                 'tier'                  => $tier,
-                'ai_credits_monthly'    => $tier === 'pro' ? ($prices[$tier]['ai_credits'] ?? 500) : 0,
+                'ai_credits_monthly'    => in_array($tier, ['pro', 'enterprise']) ? ($prices[$tier]['ai_credits'] ?? 500) : 0,
                 'trial_ends_at'         => $trialEndsAt,
                 'subscription_ends_at'  => null,
                 'last_payment_at'       => null,
@@ -493,7 +493,7 @@ class SuperAdminBillingController extends Controller
                 }
             }
 
-            if ($tier === 'pro' && $aiCredits > 0) {
+            if (in_array($tier, ['pro', 'enterprise']) && $aiCredits > 0) {
                 \App\Models\AiCredit::updateOrCreate(
                     ['restaurant_id' => $restaurant->id],
                     [
@@ -516,7 +516,7 @@ class SuperAdminBillingController extends Controller
             DB::commit();
 
             // --- Notifications ---
-            $tierLabel = $tier === 'pro' ? 'Pro' : 'Basic';
+            $tierLabel = ['basic' => 'Basic', 'pro' => 'Pro', 'enterprise' => 'מסעדה מלאה'][$tier] ?? ucfirst($tier);
 
             try {
                 MonitoringAlert::create([

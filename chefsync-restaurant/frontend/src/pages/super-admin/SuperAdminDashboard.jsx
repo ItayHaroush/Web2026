@@ -27,6 +27,7 @@ import {
     FaSearch,
     FaFilter,
     FaEye,
+    FaEyeSlash,
     FaPowerOff,
     FaCog,
     FaUserSecret,
@@ -44,8 +45,13 @@ import {
     FaBell,
     FaBellSlash,
     FaVolumeUp,
-    FaVolumeMute
+    FaVolumeMute,
+    FaToggleOn,
+    FaToggleOff,
+    FaSpinner,
+    FaChevronDown
 } from 'react-icons/fa';
+import { TIER_LABELS } from '../../utils/tierUtils';
 
 export default function SuperAdminDashboard() {
     const { getAuthHeaders, startImpersonation } = useAdminAuth();
@@ -780,6 +786,7 @@ function AddRestaurantModal({ onClose, onSuccess, getAuthHeaders }) {
     const [loading, setLoading] = useState(false);
     const [cities, setCities] = useState([]);
     const [citiesLoading, setCitiesLoading] = useState(true);
+    const [showPassword, setShowPassword] = useState(false);
     const [formData, setFormData] = useState({
         name: '',
         tenant_id: '',
@@ -814,6 +821,33 @@ function AddRestaurantModal({ onClose, onSuccess, getAuthHeaders }) {
         fetchCities();
     }, []);
 
+    // נורמליזציה של tenant_id: רק אותיות קטנות, מספרים ומקפים
+    const normalizeTenantId = (val) =>
+        val.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').replace(/-+/g, '-');
+
+    // תמליל עברית לאנגלית בסיסי
+    const hebrewToLatin = (text) => {
+        const map = {
+            'א':'a','ב':'b','ג':'g','ד':'d','ה':'a','ו':'u','ז':'z','ח':'ch','ט':'t',
+            'י':'i','כ':'k','ך':'k','ל':'l','מ':'m','ם':'m','נ':'n','ן':'n','ס':'s',
+            'ע':'e','פ':'p','ף':'f','צ':'z','ץ':'z','ק':'k','ר':'r','ש':'sh','ת':'t'
+        };
+        return text.split('').map(c => map[c] || c).join('');
+    };
+
+    // יצירת tenant_id אוטומטי משם המסעדה (תמליל לטיני)
+    const generateTenantId = (name) => {
+        const transliterated = hebrewToLatin(name);
+        const slug = transliterated
+            .trim()
+            .toLowerCase()
+            .replace(/\s+/g, '-')
+            .replace(/[^a-z0-9-]/g, '')
+            .replace(/-+/g, '-')
+            .replace(/^-|-$/g, '');
+        return slug || '';
+    };
+
     const handleChange = (e) => {
         const { name, value, files } = e.target;
         if (name === 'logo' && files && files[0]) {
@@ -821,6 +855,25 @@ function AddRestaurantModal({ onClose, onSuccess, getAuthHeaders }) {
                 ...formData,
                 logo: files[0]
             });
+        } else if (name === 'tenant_id') {
+            setFormData({
+                ...formData,
+                tenant_id: normalizeTenantId(value)
+            });
+        } else if (name === 'name') {
+            const newData = { ...formData, name: value };
+            // אם tenant_id ריק או נוצר אוטומטית, עדכן אותו
+            const oldAutoSlug = generateTenantId(formData.name);
+            if (!formData.tenant_id || formData.tenant_id === oldAutoSlug) {
+                newData.tenant_id = generateTenantId(value);
+            }
+            // אם אימייל ריק, צור אוטומטי
+            const autoEmail = oldAutoSlug ? `${oldAutoSlug}@takeeat.co.il` : '';
+            if (!formData.owner_email || formData.owner_email === autoEmail) {
+                const newSlug = generateTenantId(value);
+                newData.owner_email = newSlug ? `${newSlug}@takeeat.co.il` : '';
+            }
+            setFormData(newData);
         } else {
             setFormData({
                 ...formData,
@@ -857,8 +910,14 @@ function AddRestaurantModal({ onClose, onSuccess, getAuthHeaders }) {
             );
 
             if (response.data.success) {
+                const tempPass = response.data.owner.temporary_password;
+                const ownerEmail = response.data.owner.email;
                 toast.success('המסעדה נוצרה בהצלחה!');
-                toast.success(`סיסמת בעלים זמנית: ${response.data.owner.temporary_password}`);
+                toast.success(`פרטי כניסה לבעלים:\nאימייל: ${ownerEmail}\nסיסמה: ${tempPass}`, { duration: 15000 });
+                // העתק סיסמה ללוח
+                navigator.clipboard?.writeText(tempPass).then(() => {
+                    toast.success('הסיסמה הועתקה ללוח!', { duration: 3000 });
+                });
                 onSuccess();
             }
         } catch (error) {
@@ -918,7 +977,7 @@ function AddRestaurantModal({ onClose, onSuccess, getAuthHeaders }) {
                                 />
                             </div>
                             <div className="space-y-1.5">
-                                <label className="text-xs font-bold text-gray-500 mr-1">מזהה (URL)</label>
+                                <label className="text-xs font-bold text-gray-500 mr-1">מזהה (URL) — נוצר אוטומטית משם המסעדה</label>
                                 <input
                                     type="text"
                                     name="tenant_id"
@@ -926,8 +985,14 @@ function AddRestaurantModal({ onClose, onSuccess, getAuthHeaders }) {
                                     value={formData.tenant_id}
                                     onChange={handleChange}
                                     className="w-full px-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none transition-all text-sm font-mono text-gray-600"
+                                    dir="ltr"
                                     required
                                 />
+                                {formData.tenant_id && (
+                                    <p className="text-[11px] text-gray-400 font-bold mt-1" dir="ltr">
+                                        takeeat.co.il/{formData.tenant_id}/menu
+                                    </p>
+                                )}
                             </div>
                             <div className="space-y-1.5">
                                 <label className="text-xs font-bold text-gray-500 mr-1">טלפון ליצירת קשר</label>
@@ -1067,14 +1132,24 @@ function AddRestaurantModal({ onClose, onSuccess, getAuthHeaders }) {
                             </div>
                             <div className="space-y-1.5">
                                 <label className="text-xs font-bold text-gray-500 mr-1">סיסמה זמנית</label>
-                                <input
-                                    type="password"
-                                    name="owner_password"
-                                    placeholder="השאר ריק ליצירה אוטומטית"
-                                    value={formData.owner_password}
-                                    onChange={handleChange}
-                                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none transition-all text-sm font-medium"
-                                />
+                                <div className="relative">
+                                    <input
+                                        type={showPassword ? 'text' : 'password'}
+                                        name="owner_password"
+                                        placeholder="השאר ריק ליצירה אוטומטית"
+                                        value={formData.owner_password}
+                                        onChange={handleChange}
+                                        className="w-full px-4 py-2.5 pl-10 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none transition-all text-sm font-medium font-mono"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                                    >
+                                        {showPassword ? <FaEyeSlash size={14} /> : <FaEye size={14} />}
+                                    </button>
+                                </div>
+                                <p className="text-[10px] text-gray-400 font-bold">הסיסמה תוצג גם לאחר היצירה. אם ריק - תיווצר אוטומטית.</p>
                             </div>
                         </div>
                     </div>
@@ -1122,6 +1197,10 @@ function RestaurantDetailModal({ restaurant: initialRestaurant, onClose, onImper
     const [savingOwnerActivity, setSavingOwnerActivity] = useState(false);
     const [ownerContactPhone, setOwnerContactPhone] = useState('');
     const [savingOwnerPhone, setSavingOwnerPhone] = useState(false);
+    const [ordersLimit, setOrdersLimit] = useState('');
+    const [savingOrdersLimit, setSavingOrdersLimit] = useState(false);
+    const [showPhoneSection, setShowPhoneSection] = useState(false);
+    const [showActivitySection, setShowActivitySection] = useState(false);
 
     useEffect(() => {
         const fetchDetails = async () => {
@@ -1138,6 +1217,7 @@ function RestaurantDetailModal({ restaurant: initialRestaurant, onClose, onImper
                             : ''
                     );
                     setOwnerContactPhone(r.owner_contact_phone ?? '');
+                    setOrdersLimit(r.orders_limit != null ? String(r.orders_limit) : '');
                 }
             } catch (err) {
                 console.error('Failed to fetch restaurant details:', err);
@@ -1191,8 +1271,30 @@ function RestaurantDetailModal({ restaurant: initialRestaurant, onClose, onImper
         }
     };
 
+    const saveOrdersLimit = async (clear) => {
+        setSavingOrdersLimit(true);
+        try {
+            const value = clear ? null : (ordersLimit === '' ? null : parseInt(ordersLimit, 10));
+            const res = await api.put(
+                `/super-admin/restaurants/${restaurant.id}`,
+                { orders_limit: value },
+                { headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' } }
+            );
+            if (res.data.success) {
+                setRestaurant(res.data.restaurant);
+                if (clear) setOrdersLimit('');
+                toast.success(clear ? 'מגבלת הזמנות אופסה לברירת מחדל' : 'מגבלת הזמנות נשמרה');
+            }
+        } catch (err) {
+            console.error(err);
+            toast.error(err.response?.data?.message || 'שגיאה בשמירה');
+        } finally {
+            setSavingOrdersLimit(false);
+        }
+    };
+
     /** נתיב תפריט ציבורי (תואם App.jsx: /:tenantId/menu) */
-    const publicMenuUrl = `/${restaurant.tenant_id}/menu`;
+    const publicMenuUrl = `/${restaurant?.tenant_id || ''}/menu`;
 
     return (
         <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
@@ -1285,28 +1387,39 @@ function RestaurantDetailModal({ restaurant: initialRestaurant, onClose, onImper
                                         <p className="font-bold text-gray-700">{restaurant.address || '—'}</p>
                                     </div>
                                     <div className="col-span-2 rounded-xl border border-emerald-100 bg-emerald-50/60 p-3">
-                                        <span className="text-xs text-emerald-800 font-bold block mb-1">פלאפון בעלים לדוחות/וואטסאפ (מערכת)</span>
-                                        <p className="text-[11px] text-emerald-900/80 mb-2 leading-snug">
-                                            מספר זה משמש לקישורי wa.me ולדוחות — עדיפות על טלפון המסעדה. ניתן לערוך כאן.
-                                        </p>
-                                        <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
-                                            <input
-                                                type="tel"
-                                                dir="ltr"
-                                                value={ownerContactPhone}
-                                                onChange={(e) => setOwnerContactPhone(e.target.value)}
-                                                placeholder="05x-xxxxxxx"
-                                                className="flex-1 min-w-0 px-3 py-2 rounded-xl border border-emerald-200 bg-white text-sm font-bold text-gray-800"
-                                            />
-                                            <button
-                                                type="button"
-                                                disabled={savingOwnerPhone}
-                                                onClick={saveOwnerContactPhone}
-                                                className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 disabled:opacity-50 shrink-0"
-                                            >
-                                                {savingOwnerPhone ? 'שומר…' : 'שמור'}
-                                            </button>
-                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowPhoneSection(!showPhoneSection)}
+                                            className="w-full flex items-center justify-between text-xs text-emerald-800 font-bold"
+                                        >
+                                            <span>פלאפון בעלים לדוחות/וואטסאפ (מערכת)</span>
+                                            <FaChevronDown className={`text-emerald-600 transition-transform ${showPhoneSection ? 'rotate-180' : ''}`} size={10} />
+                                        </button>
+                                        {showPhoneSection && (
+                                            <>
+                                                <p className="text-[11px] text-emerald-900/80 mb-2 mt-2 leading-snug">
+                                                    מספר זה משמש לקישורי wa.me ולדוחות — עדיפות על טלפון המסעדה. ניתן לערוך כאן.
+                                                </p>
+                                                <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
+                                                    <input
+                                                        type="tel"
+                                                        dir="ltr"
+                                                        value={ownerContactPhone}
+                                                        onChange={(e) => setOwnerContactPhone(e.target.value)}
+                                                        placeholder="05x-xxxxxxx"
+                                                        className="flex-1 min-w-0 px-3 py-2 rounded-xl border border-emerald-200 bg-white text-sm font-bold text-gray-800"
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        disabled={savingOwnerPhone}
+                                                        onClick={saveOwnerContactPhone}
+                                                        className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 disabled:opacity-50 shrink-0"
+                                                    >
+                                                        {savingOwnerPhone ? 'שומר…' : 'שמור'}
+                                                    </button>
+                                                </div>
+                                            </>
+                                        )}
                                     </div>
                                     <div>
                                         <span className="text-xs text-gray-400 font-bold">סטטוס</span>
@@ -1347,8 +1460,8 @@ function RestaurantDetailModal({ restaurant: initialRestaurant, onClose, onImper
                                     <div>
                                         <span className="text-xs text-gray-400 font-bold">תוכנית</span>
                                         <p className="font-bold text-gray-700 flex items-center gap-1.5 mt-0.5">
-                                            <FaCrown className={restaurant.tier === 'pro' ? 'text-amber-500' : 'text-gray-400'} size={12} />
-                                            {restaurant.tier === 'pro' ? 'Pro' : 'Basic'} ({restaurant.subscription_plan === 'yearly' ? 'שנתי' : 'חודשי'})
+                                            <FaCrown className={restaurant.tier === 'enterprise' ? 'text-purple-500' : restaurant.tier === 'pro' ? 'text-amber-500' : 'text-gray-400'} size={12} />
+                                            {TIER_LABELS[restaurant.tier] || restaurant.tier} ({restaurant.subscription_plan === 'yearly' ? 'שנתי' : 'חודשי'})
                                         </p>
                                     </div>
                                     {restaurant.monthly_price && (
@@ -1385,6 +1498,48 @@ function RestaurantDetailModal({ restaurant: initialRestaurant, onClose, onImper
                                 </div>
                             </div>
 
+                            {/* מגבלת הזמנות חודשית */}
+                            {restaurant.tier === 'basic' && (
+                            <div className="bg-indigo-50/80 rounded-2xl p-5 border border-indigo-100">
+                                <h3 className="text-sm font-black text-gray-900 mb-2 flex items-center gap-2">
+                                    <FaShoppingBag className="text-indigo-600" size={14} />
+                                    מגבלת הזמנות חודשית
+                                </h3>
+                                <p className="text-xs text-indigo-900/80 font-medium mb-3 leading-relaxed">
+                                    Override למסעדה הזו. ריק = ברירת מחדל לפי tier (ניסיון: 50, Basic ששילם: 100, Pro+: ללא הגבלה).
+                                </p>
+                                <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-end">
+                                    <div className="flex-1 min-w-0">
+                                        <label className="text-xs font-bold text-gray-500 block mb-1">הזמנות לחודש</label>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            value={ordersLimit}
+                                            onChange={(e) => setOrdersLimit(e.target.value)}
+                                            placeholder="ברירת מחדל מה-tier"
+                                            className="w-full px-3 py-2 rounded-xl border border-indigo-200 bg-white text-sm font-bold text-gray-800"
+                                        />
+                                    </div>
+                                    <button
+                                        type="button"
+                                        disabled={savingOrdersLimit}
+                                        onClick={() => saveOrdersLimit(false)}
+                                        className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 disabled:opacity-50"
+                                    >
+                                        {savingOrdersLimit ? 'שומר…' : 'שמור'}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        disabled={savingOrdersLimit || restaurant.orders_limit == null}
+                                        onClick={() => saveOrdersLimit(true)}
+                                        className="px-4 py-2 border border-indigo-300 text-indigo-900 rounded-xl text-sm font-bold hover:bg-indigo-100/80 disabled:opacity-50"
+                                    >
+                                        אפס לברירת מחדל
+                                    </button>
+                                </div>
+                            </div>
+                            )}
+
                             {/* סטטיסטיקות */}
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
                                 <div className="bg-blue-50 rounded-xl p-2.5 sm:p-3 border border-blue-100 text-center min-w-0">
@@ -1407,11 +1562,20 @@ function RestaurantDetailModal({ restaurant: initialRestaurant, onClose, onImper
 
                             {/* תאריך תחילת פעילות — תצוגת מסעדן מאפס */}
                             <div className="bg-amber-50/80 rounded-2xl p-5 border border-amber-100">
-                                <h3 className="text-sm font-black text-gray-900 mb-2 flex items-center gap-2">
-                                    <FaClipboardList className="text-amber-600" size={14} />
-                                    תאריך תחילת פעילות (תצוגת מסעדן)
-                                </h3>
-                                <p className="text-xs text-amber-900/80 font-medium mb-3 leading-relaxed">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowActivitySection(!showActivitySection)}
+                                    className="w-full flex items-center justify-between"
+                                >
+                                    <h3 className="text-sm font-black text-gray-900 flex items-center gap-2">
+                                        <FaClipboardList className="text-amber-600" size={14} />
+                                        תאריך תחילת פעילות (תצוגת מסעדן)
+                                    </h3>
+                                    <FaChevronDown className={`text-amber-600 transition-transform ${showActivitySection ? 'rotate-180' : ''}`} size={12} />
+                                </button>
+                                {showActivitySection && (
+                                <>
+                                <p className="text-xs text-amber-900/80 font-medium mb-3 mt-2 leading-relaxed">
                                     מיום זה ואילך המסעדן רואה סטטיסטיקות, הזמנות ודוחות בלבד. הנתונים במסד לא נמחקים; חיובי פלטפורמה מבוססים על כל ההיסטוריה.
                                 </p>
                                 <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 items-stretch sm:items-end">
@@ -1441,6 +1605,8 @@ function RestaurantDetailModal({ restaurant: initialRestaurant, onClose, onImper
                                         נקה תאריך
                                     </button>
                                 </div>
+                                </>
+                                )}
                             </div>
 
                             {/* פיצ'רים פעילים */}
@@ -1479,6 +1645,14 @@ function RestaurantDetailModal({ restaurant: initialRestaurant, onClose, onImper
                                 </div>
                             </div>
 
+                            {/* Feature Overrides — שליטה בפיצ'רים למסעדה ספציפית */}
+                            {['basic', 'pro'].includes(restaurant.tier) && (
+                                <FeatureOverridesSection
+                                    restaurant={restaurant}
+                                    onUpdate={(updated) => setRestaurant(updated)}
+                                />
+                            )}
+
                             {/* הפניות מהירות */}
                             <div className="flex flex-col sm:flex-row flex-wrap gap-2">
                                 <button
@@ -1501,6 +1675,104 @@ function RestaurantDetailModal({ restaurant: initialRestaurant, onClose, onImper
                         </>
                     )}
                 </div>
+            </div>
+        </div>
+    );
+}
+
+const OVERRIDE_FEATURES = [
+    { key: 'pos', label: 'קופה POS', tier: 'enterprise' },
+    { key: 'kiosks', label: 'קיוסקים', tier: 'enterprise' },
+    { key: 'display_screens', label: 'מסכי תצוגה', tier: 'enterprise' },
+    { key: 'time_reports', label: 'דוח נוכחות', tier: 'enterprise' },
+    { key: 'printers', label: 'הדפסה אוטומטית', tier: 'pro' },
+    { key: 'employees', label: 'ניהול עובדים', tier: 'pro' },
+    { key: 'ai_insights', label: 'AI Insights', tier: 'pro' },
+    { key: 'advanced_reports', label: 'דוחות מתקדמים', tier: 'pro' },
+];
+
+function FeatureOverridesSection({ restaurant, onUpdate }) {
+    const { getAuthHeaders } = useAdminAuth();
+    const [saving, setSaving] = useState(null);
+    const overrides = restaurant.feature_overrides || {};
+
+    const handleToggle = async (featureKey, newValue) => {
+        setSaving(featureKey);
+        try {
+            const res = await api.patch(
+                `/super-admin/restaurants/${restaurant.id}/feature-overrides`,
+                { feature: featureKey, value: newValue },
+                { headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' } }
+            );
+            if (res.data.success) {
+                onUpdate({ ...restaurant, feature_overrides: res.data.data?.feature_overrides ?? {} });
+                toast.success(newValue === null ? 'חזר לברירת מחדל' : `פיצ'ר ${newValue === 'full' ? 'הופעל' : 'ננעל'}`);
+            }
+        } catch (err) {
+            console.error(err);
+            toast.error(err.response?.data?.message || 'שגיאה בשמירה');
+        } finally {
+            setSaving(null);
+        }
+    };
+
+    const getStatus = (featureKey) => {
+        if (overrides[featureKey] === 'full') return 'on';
+        if (overrides[featureKey] === 'demo') return 'off';
+        return 'default';
+    };
+
+    return (
+        <div className="bg-indigo-50/80 rounded-2xl p-5 border border-indigo-100">
+            <h3 className="text-sm font-black text-gray-900 mb-3 flex items-center gap-2">
+                <FaCog className="text-indigo-600" size={14} />
+                Feature Overrides
+            </h3>
+            <p className="text-xs text-indigo-900/70 font-medium mb-4">שליטה ידנית בפיצ'רים — דורס את הגדרות החבילה ({TIER_LABELS[restaurant.tier] || restaurant.tier})</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {OVERRIDE_FEATURES.map(({ key, label, tier }) => {
+                    const status = getStatus(key);
+                    const isSaving = saving === key;
+                    return (
+                        <div key={key} className="flex items-center justify-between bg-white rounded-xl px-3 py-2 border border-indigo-100">
+                            <div className="flex items-center gap-2 min-w-0">
+                                <span className="text-sm font-bold text-gray-700 truncate">{label}</span>
+                                <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${tier === 'enterprise' ? 'bg-purple-100 text-purple-600' : 'bg-amber-100 text-amber-600'}`}>
+                                    {tier === 'enterprise' ? 'ENT' : 'PRO'}
+                                </span>
+                            </div>
+                            <div className="flex items-center gap-1 shrink-0">
+                                {isSaving ? (
+                                    <FaSpinner className="animate-spin text-indigo-400" size={14} />
+                                ) : (
+                                    <>
+                                        <button
+                                            onClick={() => handleToggle(key, null)}
+                                            className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${status === 'default' ? 'bg-gray-200 text-gray-700' : 'bg-gray-50 text-gray-400 hover:bg-gray-100'}`}
+                                            title="ברירת מחדל מהחבילה"
+                                        >
+                                            Auto
+                                        </button>
+                                        <button
+                                            onClick={() => handleToggle(key, 'full')}
+                                            className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${status === 'on' ? 'bg-green-500 text-white' : 'bg-gray-50 text-gray-400 hover:bg-green-50'}`}
+                                            title="פתוח תמיד"
+                                        >
+                                            ON
+                                        </button>
+                                        <button
+                                            onClick={() => handleToggle(key, 'demo')}
+                                            className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${status === 'off' ? 'bg-red-500 text-white' : 'bg-gray-50 text-gray-400 hover:bg-red-50'}`}
+                                            title="נעול תמיד"
+                                        >
+                                            OFF
+                                        </button>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    );
+                })}
             </div>
         </div>
     );

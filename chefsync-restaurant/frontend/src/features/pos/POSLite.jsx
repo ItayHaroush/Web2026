@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { useRestaurantStatus } from '../../context/RestaurantStatusContext';
-import ProFeatureGate from '../../components/ProFeatureGate';
+import FeatureGate from '../../components/FeatureGate';
 import usePosSession from './hooks/usePosSession';
 import POSPinLock from './components/POSPinLock';
 import POSHeader from './components/POSHeader';
@@ -66,7 +66,7 @@ function exitPosFullscreen() {
 
 export default function POSLite() {
     const navigate = useNavigate();
-    const { isManager: isManagerFn, getAuthHeaders } = useAdminAuth();
+    const { isManager: isManagerFn, getAuthHeaders, impersonating } = useAdminAuth();
     const posAnalyticsSentRef = useRef(false);
     const { subscriptionInfo } = useRestaurantStatus();
     const isManager = isManagerFn();
@@ -91,7 +91,7 @@ export default function POSLite() {
 
     useBrowserPrint(headers, posToken, isAuthenticated);
 
-    const isBasicTier = subscriptionInfo?.tier === 'basic';
+    const isPosLocked = !impersonating && subscriptionInfo?.features?.pos !== 'full';
 
     // Fetch current shift on load
     useEffect(() => {
@@ -186,8 +186,8 @@ export default function POSLite() {
         return () => window.removeEventListener('takeeat:pos-session-lost', onSessionLost);
     }, [logout]);
 
-    if (isBasicTier) {
-        return <ProFeatureGate featureName="קופה POS" />;
+    if (isPosLocked) {
+        return <FeatureGate feature="pos" requiredTier="enterprise" featureName="קופה POS" />;
     }
 
     if (!isAuthenticated) {

@@ -520,7 +520,11 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
         } catch (err) {
             console.error('שגיאה בהגשת הזמנה:', err);
             setShowConfirmation(false);
-            setError(err.response?.data?.message || 'שגיאה בהגשת ההזמנה');
+            if (err.response?.status === 429 && err.response?.data?.error === 'orders_limit_reached') {
+                setError('המסעדה הגיעה למגבלת ההזמנות החודשית. אנא נסו שוב מאוחר יותר.');
+            } else {
+                setError(err.response?.data?.message || 'שגיאה בהגשת ההזמנה');
+            }
         } finally {
             setSubmitting(false);
         }

@@ -354,13 +354,13 @@ export default function HomePage() {
 
             {/* הודעת שכבה עליונה — מעל הכל */}
             {heroOverlay && (
-                <div className="relative -mx-4 sm:-mx-6 lg:-mx-8 z-40 bg-gradient-to-r from-brand-primary to-brand-secondary text-white px-4 py-3 flex items-center gap-3">
+                <div className="relative -mx-6 lg:-mx-8 z-40 -mt-[calc(env(safe-area-inset-top,0px)+3.75rem)] sm:-mt-[calc(env(safe-area-inset-top,0px)+5.75rem)] -mb-px bg-gradient-to-r from-brand-primary to-brand-secondary text-white px-4 py-3 pt-[calc(env(safe-area-inset-top,0px)+4rem)] sm:pt-[calc(env(safe-area-inset-top,0px)+6rem)] flex items-center gap-3">
                     <div className="flex-shrink-0 w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center">
                         <FaBell className="w-4 h-4 text-white" />
                     </div>
                     <div className="flex-1 min-w-0">
-                        <p className="font-bold text-sm truncate">{heroOverlay.title}</p>
-                        {heroOverlay.body && <p className="text-white/90 text-xs leading-snug line-clamp-2 mt-0.5">{heroOverlay.body}</p>}
+                        <p className="font-bold text-sm">{heroOverlay.title}</p>
+                        {heroOverlay.body && <p className="text-white/90 text-xs leading-snug mt-0.5">{heroOverlay.body}</p>}
                     </div>
                     {heroOverlay.link_url && (
                         <a href={heroOverlay.link_url} target="_blank" rel="noopener noreferrer" className="flex-shrink-0 text-white text-xs font-bold hover:underline">פרטים &larr;</a>
@@ -589,8 +589,8 @@ export default function HomePage() {
                         <FaBell className="w-4 h-4 text-white" />
                     </div>
                     <div className="flex-1 min-w-0">
-                        <p className="font-bold text-sm truncate">{ann.title}</p>
-                        {ann.body && <p className="text-white/85 text-xs leading-snug line-clamp-2 mt-0.5">{ann.body}</p>}
+                        <p className="font-bold text-sm">{ann.title}</p>
+                        {ann.body && <p className="text-white/85 text-xs leading-snug mt-0.5">{ann.body}</p>}
                     </div>
                     {ann.link_url && (
                         <a href={ann.link_url} target="_blank" rel="noopener noreferrer" className="flex-shrink-0 text-white text-xs font-bold hover:underline">קרא עוד &larr;</a>

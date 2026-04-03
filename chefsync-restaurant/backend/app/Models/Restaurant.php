@@ -60,7 +60,7 @@ class Restaurant extends Model
         'trial_ends_at',
         'subscription_ends_at',
         'subscription_plan',
-        'tier', // basic או pro
+        'tier', // basic, pro, enterprise
         'ai_credits_monthly', // קרדיטי AI חודשיים
         'tranzila_terminal_name',
         'tranzila_token',
@@ -96,6 +96,9 @@ class Restaurant extends Model
         'default_payment_terminal_id',
         /** תאריך תחילת פעילות אמיתית — סופר־אדמין; מסנן תצוגת סטטיסטיקות/הזמנות למסעדן מ־יום זה */
         'owner_activity_started_at',
+        'feature_overrides',
+        'orders_limit',
+        'max_employees',
     ];
 
     protected $hidden = [
@@ -143,6 +146,7 @@ class Restaurant extends Model
         'abandoned_cart_reminders_enabled' => 'boolean',
         'zcredit_terminal_password' => 'encrypted',
         'owner_activity_started_at' => 'date',
+        'feature_overrides' => 'array',
     ];
 
     /**
@@ -329,6 +333,25 @@ class Restaurant extends Model
         }
 
         return $cityMap[$value] ?? $value;
+    }
+
+    /**
+     * Get resolved features — tier defaults merged with per-restaurant overrides
+     */
+    public function getResolvedFeatures(): array
+    {
+        $tier = $this->tier ?? 'basic';
+        $base = config("tier_features.{$tier}", config('tier_features.basic', []));
+        $overrides = $this->feature_overrides ?? [];
+
+        // Apply per-restaurant overrides
+        foreach ($overrides as $feature => $value) {
+            if (in_array($value, ['full', 'demo'])) {
+                $base[$feature] = $value;
+            }
+        }
+
+        return $base;
     }
 
     /**

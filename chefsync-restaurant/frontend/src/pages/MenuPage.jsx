@@ -697,7 +697,7 @@ export default function MenuPage({ isPreviewMode = false }) {
                         <div className="flex w-full max-w-lg flex-col items-center">
                             {restaurant?.logo_url && (
                                 <div className="mb-4 flex justify-center sm:mb-5">
-                                    <div className="rounded-2xl bg-white dark:bg-brand-dark-surface p-2.5 shadow-2xl sm:p-3">
+                                    <div className="rounded-2xl bg-white p-2.5 shadow-2xl sm:p-3">
                                         <img
                                             src={resolveAssetUrl(restaurant.logo_url)}
                                             alt={restaurant?.name}

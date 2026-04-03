@@ -93,6 +93,7 @@ Route::prefix('super-admin')->middleware(['auth:sanctum', 'super_admin'])->group
     Route::patch('/restaurants/{id}/toggle-status', [SuperAdminController::class, 'toggleRestaurantStatus'])->name('super-admin.restaurants.toggle');
     Route::post('/restaurants/{id}/approve', [SuperAdminController::class, 'approveRestaurant'])->name('super-admin.restaurants.approve');
     Route::post('/restaurants/{id}/revoke-approval', [SuperAdminController::class, 'revokeApproval'])->name('super-admin.restaurants.revoke');
+    Route::patch('/restaurants/{id}/feature-overrides', [SuperAdminController::class, 'updateFeatureOverrides'])->name('super-admin.restaurants.feature-overrides');
 
     // סטטיסטיקות מסעדה
     Route::get('/restaurants/{id}/stats', [SuperAdminController::class, 'getRestaurantStats'])->name('super-admin.restaurants.stats');
@@ -334,6 +335,7 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'tenant'])->group(function (
         Route::put('/restaurant', [AdminController::class, 'updateRestaurant'])->name('admin.restaurant.update');
         Route::post('/restaurant/override/clear', [AdminController::class, 'clearRestaurantOverride'])->name('admin.restaurant.override.clear');
         Route::post('/restaurant/reset-dine-in-adjustments', [AdminController::class, 'resetDineInAdjustments'])->name('admin.restaurant.reset-dine-in');
+        Route::post('/restaurant/bulk-dine-in-adjust', [AdminController::class, 'bulkDineInAdjust'])->name('admin.restaurant.bulk-dine-in');
 
         // ניהול קטגוריות
         Route::get('/categories', [AdminController::class, 'getCategories'])->name('admin.categories.index');

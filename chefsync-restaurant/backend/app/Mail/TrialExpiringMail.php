@@ -55,7 +55,7 @@ class TrialExpiringMail extends Mailable
     private function buildHtml(): string
     {
         $restaurantName = e($this->restaurant->name);
-        $tier = $this->restaurant->tier === 'pro' ? 'Pro' : 'Basic';
+        $tier = ['basic' => 'Basic', 'pro' => 'Pro', 'enterprise' => 'מסעדה מלאה'][$this->restaurant->tier] ?? ucfirst($this->restaurant->tier);
         $trialEnds = $this->restaurant->trial_ends_at
             ? $this->restaurant->trial_ends_at->format('d/m/Y')
             : '';

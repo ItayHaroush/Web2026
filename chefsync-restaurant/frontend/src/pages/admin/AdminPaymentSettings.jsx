@@ -6,6 +6,7 @@ import paymentSettingsService from '../../services/paymentSettingsService';
 import ZCreditSettingsPanel from '../../components/admin/ZCreditSettingsPanel';
 import { getBillingInfo } from '../../services/subscriptionService';
 import { FaCreditCard, FaMoneyBillWave, FaCheckCircle, FaExclamationTriangle, FaExternalLinkAlt, FaShieldAlt, FaSpinner, FaInfoCircle, FaWrench, FaCrown } from 'react-icons/fa';
+import { TIER_LABELS } from '../../utils/tierUtils';
 
 const STATUS_LABELS = { trial: 'תקופת ניסיון', active: 'פעיל', suspended: 'מושהה', expired: 'פג תוקף', cancelled: 'מבוטל' };
 const STATUS_COLORS = { trial: 'bg-blue-100 text-blue-700', active: 'bg-emerald-100 text-emerald-700', suspended: 'bg-red-100 text-red-700', expired: 'bg-gray-100 text-gray-600', cancelled: 'bg-gray-100 text-gray-600' };
@@ -163,7 +164,7 @@ export default function AdminPaymentSettings() {
 
     const creditCardEnabled = acceptedMethods.includes('credit_card');
     const canVerify = (isOwner() || isSuperAdmin()) && terminalId && !verified;
-    const setupFee = tier === 'pro' ? 100 : 200;
+    const setupFee = tier === 'enterprise' ? 0 : tier === 'pro' ? 100 : 200;
     const needsFeeAgreement = creditCardEnabled && !setupFeeCharged;
     const saveDisabled = saving || (needsFeeAgreement && !agreedToFee);
 
@@ -196,7 +197,7 @@ export default function AdminPaymentSettings() {
                     <div className="bg-white rounded-[2rem] shadow-sm border border-gray-100 p-8 mx-4 space-y-6">
                         <h2 className="text-xl font-black text-gray-900">חשבון וחיוב</h2>
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                            <InfoBox label="תוכנית" value={billing.current_tier === 'pro' ? 'Pro' : 'Basic'} />
+                            <InfoBox label="תוכנית" value={TIER_LABELS[billing.current_tier] || billing.current_tier} />
                             <InfoBox label="מחזור" value={billing.current_plan === 'yearly' ? 'שנתי' : 'חודשי'} />
                             <InfoBox label="חיוב הבא" value={billing.next_payment_at ? new Date(billing.next_payment_at).toLocaleDateString('he-IL') : '-'} />
                             <InfoBox label="סטטוס" value={STATUS_LABELS[billing.subscription_status] || billing.subscription_status} />
@@ -247,8 +248,8 @@ export default function AdminPaymentSettings() {
                 {/* Message */}
                 {message && (
                     <div className={`mx-4 p-4 rounded-2xl text-sm font-medium ${message.type === 'success' ? 'bg-green-50 text-green-800 border border-green-200' :
-                            message.type === 'warning' ? 'bg-orange-50 text-orange-800 border border-orange-200' :
-                                'bg-red-50 text-red-800 border border-red-200'
+                        message.type === 'warning' ? 'bg-orange-50 text-orange-800 border border-orange-200' :
+                            'bg-red-50 text-red-800 border border-red-200'
                         }`}>
                         {message.text}
                     </div>

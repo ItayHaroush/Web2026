@@ -102,6 +102,7 @@ export default function SuperAdminAiSettings() {
             description_generator: 'יצירת תיאורים',
             price_suggestion: 'הצעת מחירים',
             image_enhancement: 'שיפור תמונות',
+            dine_in_recommendation: 'תמחור ישיבה',
         };
         return names[feature] || feature;
     };

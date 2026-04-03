@@ -1,6 +1,6 @@
 // Force rebuild - pickup fix applied
 import React, { useState, useEffect, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { useRestaurantStatus } from '../../context/RestaurantStatusContext';
 import AdminLayout from '../../layouts/AdminLayout';
@@ -35,7 +35,8 @@ import {
     FaMoneyBillWave,
     FaFileAlt,
     FaCopy,
-    FaWhatsapp
+    FaWhatsapp,
+    FaLock
 } from 'react-icons/fa';
 import { SiWaze, SiGooglemaps } from 'react-icons/si';
 
@@ -50,7 +51,8 @@ function digitsForWhatsApp(phone) {
 
 export default function AdminOrders() {
     const { getAuthHeaders, isOwner, isManager, user } = useAdminAuth();
-    const { restaurantStatus } = useRestaurantStatus();
+    const { restaurantStatus, subscriptionInfo } = useRestaurantStatus();
+    const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
     const [orders, setOrders] = useState([]);
     const [allOrders, setAllOrders] = useState([]); // כל ההזמנות ללא סינון
@@ -486,6 +488,7 @@ export default function AdminOrders() {
                             </p>
                         </div>
                         <div className="border-r border-gray-200 pr-4">
+                            {subscriptionInfo?.features?.reports === 'full' ? (
                             <button
                                 onClick={async () => {
                                     setGeneratingReport(true);
@@ -512,6 +515,15 @@ export default function AdminOrders() {
                                 {generatingReport ? <FaSpinner className="animate-spin" size={14} /> : <FaFileAlt size={14} />}
                                 צור דוח יומי
                             </button>
+                            ) : (
+                            <button
+                                onClick={() => navigate('/admin/paywall')}
+                                className="flex items-center gap-2 px-3 py-2 bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 rounded-xl text-xs font-black transition-all"
+                            >
+                                <FaLock size={12} />
+                                צור דוח יומי
+                            </button>
+                            )}
                         </div>
                     </div>
                 </div>

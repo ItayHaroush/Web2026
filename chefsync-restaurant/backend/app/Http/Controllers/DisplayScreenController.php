@@ -46,17 +46,17 @@ class DisplayScreenController extends Controller
                 'screens' => $screens,
                 'tier' => $tier,
                 'limits' => [
-                    'max_screens' => $tier === 'pro' ? 5 : 1,
-                    'carousel_allowed' => $tier === 'pro',
-                    'branding_required' => $tier !== 'pro',
-                    'allowed_presets' => $tier === 'pro' ? self::ALL_PRESETS : self::BASIC_PRESETS,
-                    'promotions_allowed' => $tier === 'pro',
-                    'badges_allowed' => $tier === 'pro',
-                    'logo_overlay_allowed' => $tier === 'pro',
-                    'fonts_allowed' => $tier === 'pro',
-                    'custom_background_allowed' => $tier === 'pro',
-                    'widgets_allowed' => $tier === 'pro',
-                    'layout_controls_allowed' => $tier === 'pro',
+                    'max_screens' => config("tier_features.tier_limits.{$tier}.max_screens", 0),
+                    'carousel_allowed' => in_array($tier, ['pro', 'enterprise']),
+                    'branding_required' => !in_array($tier, ['pro', 'enterprise']),
+                    'allowed_presets' => in_array($tier, ['pro', 'enterprise']) ? self::ALL_PRESETS : self::BASIC_PRESETS,
+                    'promotions_allowed' => in_array($tier, ['pro', 'enterprise']),
+                    'badges_allowed' => in_array($tier, ['pro', 'enterprise']),
+                    'logo_overlay_allowed' => in_array($tier, ['pro', 'enterprise']),
+                    'fonts_allowed' => in_array($tier, ['pro', 'enterprise']),
+                    'custom_background_allowed' => in_array($tier, ['pro', 'enterprise']),
+                    'widgets_allowed' => in_array($tier, ['pro', 'enterprise']),
+                    'layout_controls_allowed' => in_array($tier, ['pro', 'enterprise']),
                 ],
             ],
         ]);
@@ -128,12 +128,12 @@ class DisplayScreenController extends Controller
         $tier = $restaurant->tier ?? 'basic';
 
         // בדיקת מגבלת מסכים
-        $maxScreens = $tier === 'pro' ? 5 : 1;
+        $maxScreens = config("tier_features.tier_limits.{$tier}.max_screens", 0);
         $currentCount = DisplayScreen::where('restaurant_id', $user->restaurant_id)->count();
         if ($currentCount >= $maxScreens) {
             return response()->json([
                 'success' => false,
-                'message' => "הגעתם למגבלת המסכים ({$maxScreens}). שדרגו לתוכנית Pro לעוד מסכים.",
+                'message' => "הגעתם למגבלת המסכים ({$maxScreens}). שדרגו לתוכנית גבוהה יותר.",
             ], 403);
         }
 
@@ -141,13 +141,13 @@ class DisplayScreenController extends Controller
         if ($tier === 'basic' && $request->display_type === 'rotating') {
             return response()->json([
                 'success' => false,
-                'message' => 'תצוגת קרוסלה זמינה רק בתוכנית Pro.',
+                'message' => 'תצוגת קרוסלה זמינה רק בתוכנית Pro ומעלה.',
             ], 403);
         }
 
         // בדיקת פריסטים לפי tier
         $preset = $request->input('design_preset', 'classic');
-        $allowedPresets = $tier === 'pro' ? self::ALL_PRESETS : self::BASIC_PRESETS;
+        $allowedPresets = in_array($tier, ['pro', 'enterprise']) ? self::ALL_PRESETS : self::BASIC_PRESETS;
         if (!in_array($preset, $allowedPresets)) {
             $preset = 'classic';
         }
@@ -181,7 +181,7 @@ class DisplayScreenController extends Controller
             'content_mode' => $request->input('content_mode', 'auto_available'),
             'refresh_interval' => $request->input('refresh_interval', 30),
             'rotation_speed' => $request->input('rotation_speed', 5),
-            'show_branding' => $tier !== 'pro',
+            'show_branding' => !in_array($tier, ['pro', 'enterprise']),
             'is_active' => true,
         ]);
 
@@ -265,13 +265,13 @@ class DisplayScreenController extends Controller
         if ($tier === 'basic' && $request->input('display_type') === 'rotating') {
             return response()->json([
                 'success' => false,
-                'message' => 'תצוגת קרוסלה זמינה רק בתוכנית Pro.',
+                'message' => 'תצוגת קרוסלה זמינה רק בתוכנית Pro ומעלה.',
             ], 403);
         }
 
         // בייסיק: רק פריסטים בסיסיים
         if ($request->has('design_preset')) {
-            $allowedPresets = $tier === 'pro' ? self::ALL_PRESETS : self::BASIC_PRESETS;
+            $allowedPresets = in_array($tier, ['pro', 'enterprise']) ? self::ALL_PRESETS : self::BASIC_PRESETS;
             if (!in_array($request->design_preset, $allowedPresets)) {
                 $request->merge(['design_preset' => 'classic']);
             }
@@ -308,7 +308,7 @@ class DisplayScreenController extends Controller
         }
 
         // כפה ברנדינג בבייסיק
-        $updateData['show_branding'] = $tier !== 'pro';
+        $updateData['show_branding'] = !in_array($tier, ['pro', 'enterprise']);
 
         $screen->update($updateData);
 

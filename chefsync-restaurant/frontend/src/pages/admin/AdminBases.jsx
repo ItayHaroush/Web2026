@@ -425,7 +425,7 @@ export default function AdminBases({ embedded = false }) {
 
                 {/* Modern Modal */}
                 {modalOpen && (
-                    <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-300">
+                    <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-[110] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-300">
                         <div className="bg-white rounded-t-[2rem] sm:rounded-[3.5rem] shadow-2xl max-w-xl w-full max-h-[min(92dvh,90vh)] overflow-hidden flex flex-col min-h-0 border border-white/20 animate-in zoom-in-95 duration-300">
                             <div className="px-4 sm:px-10 py-5 sm:py-8 bg-gray-50/50 border-b border-gray-100 flex items-center justify-between shrink-0">
                                 <div className="flex items-center gap-5">

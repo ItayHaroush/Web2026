@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaMagic, FaChartLine, FaChevronDown } from 'react-icons/fa';
 import apiClient from '../services/apiClient';
+import { TIER_LABELS, isTierSufficient } from '../utils/tierUtils';
 
 /**
  * AI Credits Badge Component
@@ -58,9 +59,12 @@ const AiCreditsBadge = ({ detailed = false }) => {
     // Tier display names
     const tierNames = {
         free: 'חינם',
-        pro: 'Pro',
-        enterprise: 'Enterprise',
+        basic: 'Basic',
+        pro: TIER_LABELS.pro,
+        enterprise: TIER_LABELS.enterprise,
     };
+
+    const isEnterprise = credits.tier === 'enterprise';
 
     // Color schemes based on usage
     const getThemeColor = () => {
@@ -94,7 +98,11 @@ const AiCreditsBadge = ({ detailed = false }) => {
                     <div>
                         <div className="flex items-center gap-2">
                             <h3 className="font-bold text-gray-800">ניצולת AI</h3>
-                            <span className="text-[10px] font-bold px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full border border-gray-200">
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                                isEnterprise
+                                    ? 'bg-gradient-to-r from-purple-100 to-indigo-100 text-purple-700 border-purple-200'
+                                    : 'bg-gray-100 text-gray-600 border-gray-200'
+                            }`}>
                                 {tierNames[credits.tier]}
                             </span>
                         </div>
@@ -197,7 +205,9 @@ const AiCreditsBadge = ({ detailed = false }) => {
                                                 <span className="text-gray-500">
                                                     {feature === 'description_generator' ? 'תיאורי מנות' :
                                                         feature === 'dashboard_insights' ? 'תובנות עסקיות' :
-                                                            feature === 'price_recommendations' ? 'המלצות מחיר' : feature}
+                                                            feature === 'price_recommendations' ? 'המלצות מחיר' :
+                                                                feature === 'dine_in_recommendation' ? 'תמחור ישיבה' :
+                                                                    feature === 'image_enhancement' ? 'שיפור תמונות' : feature}
                                                 </span>
                                                 <span className="bg-gray-100 px-2 py-0.5 rounded text-gray-700 font-medium">
                                                     {data.count}
@@ -211,15 +221,20 @@ const AiCreditsBadge = ({ detailed = false }) => {
                     )}
 
                     {/* Upgrade Button */}
-                    {(credits.tier === 'free' || credits.tier === 'basic') && (
+                    {!isTierSufficient(credits.tier, 'pro') && (
                         <div className="mt-4">
                             <button
                                 onClick={() => navigate('/admin/paywall')}
                                 className="w-full bg-gradient-to-r from-gray-900 to-gray-800 text-white
                                 py-2.5 rounded-xl text-sm font-semibold hover:shadow-lg transform active:scale-[0.98] transition-all"
                             >
-                                שדרג ל-Pro לקבלת יותר קרדיטים ✨
+                                שדרג ל-Pro לקבלת יותר קרדיטים
                             </button>
+                        </div>
+                    )}
+                    {isEnterprise && (
+                        <div className="mt-4 p-3 bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-xl text-center">
+                            <span className="text-xs font-bold text-purple-700">מסעדה מלאה - קרדיטים ללא הגבלה</span>
                         </div>
                     )}
                 </div>

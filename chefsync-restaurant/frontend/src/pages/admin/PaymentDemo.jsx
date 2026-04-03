@@ -12,6 +12,7 @@ import {
     FaSpinner,
     FaArrowDown
 } from 'react-icons/fa';
+import { TIER_LABELS } from '../../utils/tierUtils';
 
 export default function PaymentDemo() {
     const navigate = useNavigate();
@@ -145,7 +146,7 @@ export default function PaymentDemo() {
                         <div className="flex items-start gap-3">
                             <FaArrowDown className="text-amber-500 mt-1 flex-shrink-0" />
                             <div>
-                                <p className="font-black text-amber-800 mb-1">מעבר מ-{previousTier === 'pro' ? 'Pro' : 'Basic'} ל-{tier === 'pro' ? 'Pro' : 'Basic'}</p>
+                                <p className="font-black text-amber-800 mb-1">מעבר מ-{TIER_LABELS[previousTier] || previousTier} ל-{TIER_LABELS[tier] || tier}</p>
                                 <p className="text-amber-700 text-sm font-medium">
                                     לאחר האישור, תכונות Pro כמו AI, דו"חות מתקדמים ותמיכה עדיפות לא יהיו זמינות.
                                 </p>
@@ -160,7 +161,7 @@ export default function PaymentDemo() {
                     <div className="space-y-4 mb-6 pb-6 border-b">
                         <div className="flex justify-between items-center">
                             <span className="font-bold text-gray-900">
-                                {tier === 'pro' ? 'Pro' : 'Basic'}
+                                {TIER_LABELS[tier] || tier}
                             </span>
                             <span className="text-gray-600 font-medium">תוכנית</span>
                         </div>
@@ -170,9 +171,9 @@ export default function PaymentDemo() {
                             </span>
                             <span className="text-gray-600 font-medium">מחזור חיוב</span>
                         </div>
-                        {tier === 'pro' && (
+                        {(tier === 'pro' || tier === 'enterprise') && (
                             <div className="flex justify-between items-center">
-                                <span className="font-bold text-brand-primary">500/חודש</span>
+                                <span className="font-bold text-brand-primary">{tier === 'enterprise' ? '1000' : '500'}/חודש</span>
                                 <span className="text-gray-600 font-medium">קרדיטי AI</span>
                             </div>
                         )}
@@ -199,7 +200,7 @@ export default function PaymentDemo() {
                                 )}
                             </span>
                             <span className="text-gray-600 font-medium">
-                                חבילת {tier === 'pro' ? 'Pro' : 'Basic'} ({billingCycle === 'yearly' ? 'שנתי' : 'חודשי'})
+                                חבילת {TIER_LABELS[tier] || tier} ({billingCycle === 'yearly' ? 'שנתי' : 'חודשי'})
                             </span>
                         </div>
 

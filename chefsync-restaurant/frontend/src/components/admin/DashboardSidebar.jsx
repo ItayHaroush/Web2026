@@ -1,7 +1,8 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { FaTimes, FaSignOutAlt, FaChevronRight, FaChevronLeft, FaUtensils, FaStar, FaCashRegister, FaHome } from 'react-icons/fa';
+import { FaTimes, FaSignOutAlt, FaChevronRight, FaChevronLeft, FaUtensils, FaStar, FaCashRegister, FaHome, FaLock } from 'react-icons/fa';
 import { useRestaurantStatus } from '../../context/RestaurantStatusContext';
+import { isTierSufficient, isFeatureUnlocked, TIER_LABELS } from '../../utils/tierUtils';
 
 export default function DashboardSidebar({
     isOpen,
@@ -16,7 +17,10 @@ export default function DashboardSidebar({
     const showCollapsed = isCollapsed && !isOpen;
     const navigate = useNavigate();
     const { subscriptionInfo } = useRestaurantStatus();
-    const isBasic = subscriptionInfo?.tier === 'basic';
+    const currentTier = subscriptionInfo?.tier || 'basic';
+
+    // Check if this is a super admin (system owner)
+    const isSuperAdminMode = impersonating;
 
     return (
         <>
@@ -61,7 +65,8 @@ export default function DashboardSidebar({
                 {/* Navigation Items */}
                 <nav className="flex-1 overflow-y-auto overflow-x-visible py-6 px-3 space-y-1.5 custom-scrollbar">
                     {menuItems.map((item, index) => {
-                        const isLocked = isBasic && item.proOnly;
+                        const isLocked = !impersonating && item.requiredTier && !isTierSufficient(currentTier, item.requiredTier);
+                        const tierBadge = item.requiredTier ? (item.requiredTier === 'enterprise' ? 'מסעדה מלאה' : 'Pro') : null;
 
                         if (isLocked) {
                             return (
@@ -81,8 +86,8 @@ export default function DashboardSidebar({
                                     {!showCollapsed && (
                                         <>
                                             <span className="truncate text-sm font-medium">{item.label}</span>
-                                            <span className="mr-auto text-[9px] font-black bg-gradient-to-r from-amber-400 to-orange-500 text-white px-1.5 py-0.5 rounded-md uppercase leading-none">
-                                                Pro
+                                            <span className="mr-auto text-[9px] font-black bg-gradient-to-r from-amber-400 to-orange-500 text-white px-1.5 py-0.5 rounded-md uppercase leading-none flex items-center gap-0.5">
+                                                {tierBadge}
                                             </span>
                                         </>
                                     )}
@@ -90,7 +95,7 @@ export default function DashboardSidebar({
                                     {showCollapsed && (
                                         <div className="absolute left-full ml-2 bg-gray-900 text-white text-xs px-2 py-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none shadow-xl duration-200 flex items-center gap-1.5" style={{ zIndex: 9999 }}>
                                             {item.label}
-                                            <span className="text-[9px] font-black bg-amber-500 px-1 py-0.5 rounded text-white">Pro</span>
+                                            <span className="text-[9px] font-black bg-amber-500 px-1 py-0.5 rounded text-white">{tierBadge}</span>
                                         </div>
                                     )}
                                 </button>
@@ -127,8 +132,8 @@ export default function DashboardSidebar({
                     })}
                 </nav>
 
-                {/* Upgrade CTA for basic tier */}
-                {isBasic && (
+                {/* Upgrade CTA - dynamic per tier - hidden for super admin */}
+                {!impersonating && !isSuperAdminMode && currentTier !== 'enterprise' && (
                     <div className={`px-3 pb-2 shrink-0 ${showCollapsed ? 'flex justify-center' : ''}`}>
                         {showCollapsed ? (
                             <button
@@ -137,7 +142,7 @@ export default function DashboardSidebar({
                             >
                                 <FaStar size={16} />
                                 <div className="absolute left-full ml-2 bg-gray-900 text-white text-xs px-2 py-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none shadow-xl" style={{ zIndex: 9999 }}>
-                                    שדרג ל-Pro
+                                    {currentTier === 'basic' ? 'שדרג ל-Pro' : 'שדרג לחבילת מסעדה מלאה'}
                                 </div>
                             </button>
                         ) : (
@@ -149,7 +154,9 @@ export default function DashboardSidebar({
                                     <FaStar size={12} />
                                 </div>
                                 <div className="text-right">
-                                    <p className="text-xs font-black text-gray-800">שדרג ל-Pro</p>
+                                    <p className="text-xs font-black text-gray-800">
+                                        {currentTier === 'basic' ? 'שדרג ל-Pro' : 'שדרג לחבילת מסעדה מלאה'}
+                                    </p>
                                     <p className="text-[10px] text-gray-500 font-medium">קבל גישה לכל התכונות</p>
                                 </div>
                             </button>
@@ -159,20 +166,37 @@ export default function DashboardSidebar({
 
                 {/* Footer Actions */}
                 <div className="p-4 border-t border-gray-100 bg-gray-50/50 shrink-0 space-y-2">
-                    {!isBasic && (
-                        <button
-                            onClick={() => navigate('/admin/pos')}
-                            className={`w-full flex items-center ${showCollapsed ? 'justify-center' : 'px-3'} py-2.5 text-orange-500 hover:bg-orange-50 hover:text-orange-600 rounded-xl transition-all duration-200 group relative`}
-                        >
-                            <span className={`text-xl ${showCollapsed ? '' : 'ml-3'}`}><FaCashRegister /></span>
-                            {!showCollapsed && <span className="font-bold text-sm">קופה POS</span>}
-                            {showCollapsed && (
-                                <div className="absolute left-full ml-2 bg-gray-900 text-white text-xs px-2 py-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none shadow-xl duration-200" style={{ zIndex: 9999 }}>
-                                    קופה POS
-                                </div>
-                            )}
-                        </button>
-                    )}
+                    {!isSuperAdminMode && (() => {
+                        const posLocked = !impersonating && !isFeatureUnlocked(subscriptionInfo?.features, 'pos');
+                        return (
+                            <button
+                                onClick={() => navigate(posLocked ? '/admin/paywall' : '/admin/pos')}
+                                className={`w-full flex items-center ${showCollapsed ? 'justify-center' : 'px-3'} py-2.5 rounded-xl transition-all duration-200 group relative ${
+                                    posLocked
+                                        ? 'text-gray-400 hover:bg-amber-50 hover:text-amber-600'
+                                        : 'text-orange-500 hover:bg-orange-50 hover:text-orange-600'
+                                }`}
+                            >
+                                <span className={`text-xl ${showCollapsed ? '' : 'ml-3'}`}><FaCashRegister /></span>
+                                {!showCollapsed && (
+                                    <>
+                                        <span className={`font-bold text-sm ${posLocked ? '' : ''}`}>קופה POS</span>
+                                        {posLocked && (
+                                            <span className="mr-auto text-[9px] font-black bg-gradient-to-r from-amber-400 to-orange-500 text-white px-1.5 py-0.5 rounded-md uppercase leading-none flex items-center gap-0.5">
+                                                <FaLock size={7} /> מסעדה מלאה
+                                            </span>
+                                        )}
+                                    </>
+                                )}
+                                {showCollapsed && (
+                                    <div className="absolute left-full ml-2 bg-gray-900 text-white text-xs px-2 py-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none shadow-xl duration-200 flex items-center gap-1.5" style={{ zIndex: 9999 }}>
+                                        קופה POS
+                                        {posLocked && <span className="text-[9px] font-black bg-amber-500 px-1 py-0.5 rounded text-white">מסעדה מלאה</span>}
+                                    </div>
+                                )}
+                            </button>
+                        );
+                    })()}
 
                     <button
                         onClick={toggleCollapse}

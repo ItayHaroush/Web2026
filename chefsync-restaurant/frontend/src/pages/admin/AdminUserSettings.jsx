@@ -4,6 +4,7 @@ import AdminLayout from '../../layouts/AdminLayout';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import api from '../../services/apiClient';
 import { FaUser, FaLock, FaSave, FaCreditCard, FaCrown, FaClock, FaCheckCircle } from 'react-icons/fa';
+import { TIER_LABELS } from '../../utils/tierUtils';
 
 const STATUS_LABELS = { trial: 'תקופת ניסיון', active: 'פעיל', suspended: 'מושהה', expired: 'פג תוקף', cancelled: 'מבוטל' };
 const STATUS_COLORS = { trial: 'bg-blue-100 text-blue-700', active: 'bg-green-100 text-green-700', suspended: 'bg-red-100 text-red-700', expired: 'bg-gray-100 text-gray-600', cancelled: 'bg-gray-100 text-gray-600' };
@@ -325,8 +326,8 @@ export default function AdminUserSettings() {
                                 <div className="bg-gray-50 rounded-xl p-4">
                                     <p className="text-xs font-semibold text-gray-500 mb-1">תוכנית</p>
                                     <div className="flex items-center gap-2">
-                                        <FaCrown className={restaurant.tier === 'pro' ? 'text-amber-500' : 'text-gray-400'} size={14} />
-                                        <span className="text-sm font-bold text-gray-900">{restaurant.tier === 'pro' ? 'Pro' : 'Basic'}</span>
+                                        <FaCrown className={restaurant.tier === 'enterprise' ? 'text-purple-500' : restaurant.tier === 'pro' ? 'text-amber-500' : 'text-gray-400'} size={14} />
+                                        <span className="text-sm font-bold text-gray-900">{TIER_LABELS[restaurant.tier] || restaurant.tier}</span>
                                         {restaurant.subscription_plan && (
                                             <span className="text-xs text-gray-500">({PLAN_LABELS[restaurant.subscription_plan] || restaurant.subscription_plan})</span>
                                         )}

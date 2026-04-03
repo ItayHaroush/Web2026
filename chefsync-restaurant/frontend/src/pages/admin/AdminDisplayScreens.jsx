@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAdminAuth } from '../../context/AdminAuthContext';
+import { useRestaurantStatus } from '../../context/RestaurantStatusContext';
 import AdminLayout from '../../layouts/AdminLayout';
-import { FaTv, FaPlus, FaCrown } from 'react-icons/fa';
+import { FaTv, FaPlus } from 'react-icons/fa';
 import {
     getScreens,
     createScreen,
@@ -17,6 +19,7 @@ import ScreenCard from '../../components/display-screen/admin/ScreenCard';
 import ScreenFormModal from '../../components/display-screen/admin/ScreenFormModal';
 import ScreenItemsModal from '../../components/display-screen/admin/ScreenItemsModal';
 import MobileAddFab from '../../components/admin/MobileAddFab';
+import UpgradeBanner from '../../components/UpgradeBanner';
 
 const DEFAULT_FORM = {
     name: '',
@@ -31,6 +34,8 @@ const DEFAULT_FORM = {
 
 export default function AdminDisplayScreens({ embedded = false }) {
     const { isManager } = useAdminAuth();
+    const { subscriptionInfo } = useRestaurantStatus();
+    const navigate = useNavigate();
     const [screens, setScreens] = useState([]);
     const [limits, setLimits] = useState({});
     const [tier, setTier] = useState('basic');
@@ -242,54 +247,39 @@ export default function AdminDisplayScreens({ embedded = false }) {
                         </div>
                     </div>
                     {isManager() && (
-                        <button
-                            onClick={canCreateMore ? openNew : undefined}
-                            disabled={!canCreateMore}
-                            className={`hidden md:flex w-full md:w-auto px-10 py-5 rounded-[2rem] font-black transition-all items-center justify-center gap-3 shadow-xl active:scale-95 group ${
-                                canCreateMore
-                                    ? 'bg-brand-primary text-white hover:bg-brand-dark shadow-brand-primary/20'
-                                    : 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-none'
-                            }`}
-                        >
-                            <FaPlus className="group-hover:rotate-90 transition-transform" />
-                            {canCreateMore ? 'מסך חדש' : 'הגעתם למגבלה'}
-                        </button>
+                        <div className="hidden md:flex items-center gap-4">
+                            <UpgradeBanner requiredTier="enterprise" context="displays" feature="display_screens" variant="inline" />
+                            <button
+                                onClick={canCreateMore ? openNew : () => window.open('https://wa.me/972547466508?text=שלום, אני מעוניין בחבילת מסעדה מלאה – מסכי תצוגה נוספים', '_blank')}
+                                className={`px-10 py-5 rounded-[2rem] font-black transition-all flex items-center justify-center gap-3 shadow-xl active:scale-95 group shrink-0 ${
+                                    canCreateMore
+                                        ? 'bg-brand-primary text-white hover:bg-brand-dark shadow-brand-primary/20'
+                                        : 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white shadow-purple-200'
+                                }`}
+                            >
+                                <FaPlus className="group-hover:rotate-90 transition-transform" />
+                                {canCreateMore ? 'מסך חדש' : 'שדרג למסעדה מלאה'}
+                            </button>
+                        </div>
                     )}
                 </div>
                 )}
 
                 {embedded && isManager() && (
-                    <div className="hidden md:flex justify-end mb-6 px-4">
+                    <div className="hidden md:flex items-center justify-end gap-4 mb-6 px-4">
+                        <UpgradeBanner requiredTier="enterprise" context="displays" feature="display_screens" variant="inline" />
                         <button
                             type="button"
-                            onClick={canCreateMore ? openNew : undefined}
-                            disabled={!canCreateMore}
-                            className={`inline-flex items-center gap-2 px-6 py-3 rounded-2xl font-black text-sm shadow-lg ${
+                            onClick={canCreateMore ? openNew : () => window.open('https://wa.me/972547466508?text=שלום, אני מעוניין בחבילת מסעדה מלאה – מסכי תצוגה נוספים', '_blank')}
+                            className={`inline-flex items-center gap-2 px-6 py-3 rounded-2xl font-black text-sm shadow-lg shrink-0 ${
                                 canCreateMore
                                     ? 'bg-brand-primary text-white hover:bg-brand-dark shadow-brand-primary/20'
-                                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                    : 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white shadow-purple-200'
                             }`}
                         >
                             <FaPlus />
-                            {canCreateMore ? 'מסך חדש' : 'הגעתם למגבלה'}
+                            {canCreateMore ? 'מסך חדש' : 'שדרג למסעדה מלאה'}
                         </button>
-                    </div>
-                )}
-
-                {/* Tier Upgrade Banner */}
-                {tier === 'basic' && (
-                    <div className="mx-4 bg-gradient-to-r from-indigo-50 to-purple-50 border-2 border-indigo-200 rounded-3xl p-6 shadow-lg">
-                        <div className="flex items-center gap-4 flex-wrap">
-                            <div className="w-14 h-14 bg-indigo-500 rounded-2xl flex items-center justify-center text-white shadow-lg">
-                                <FaCrown size={24} />
-                            </div>
-                            <div className="flex-1">
-                                <h3 className="text-xl font-black text-gray-900">שדרגו ל-Pro</h3>
-                                <p className="text-gray-600 font-medium mt-1">
-                                    עד 5 מסכים, קרוסלה, 7 עיצובים נוספים, לוגו, מבצעים, גופנים, רקעים מותאמים, ווידג׳טים ועוד
-                                </p>
-                            </div>
-                        </div>
                     </div>
                 )}
 
@@ -337,7 +327,7 @@ export default function AdminDisplayScreens({ embedded = false }) {
                         form={form}
                         setForm={setForm}
                         editScreen={editScreen}
-                        tier={tier}
+                        subscriptionInfo={subscriptionInfo}
                         onSubmit={handleSubmit}
                         onClose={closeModal}
                     />
@@ -349,7 +339,7 @@ export default function AdminDisplayScreens({ embedded = false }) {
                     loading={itemsLoading}
                     allMenuItems={allMenuItems}
                     selectedItems={selectedItems}
-                    tier={tier}
+                    subscriptionInfo={subscriptionInfo}
                     onToggleItem={toggleItem}
                     onToggleBadge={toggleBadge}
                     onMoveItem={moveItem}
@@ -358,9 +348,8 @@ export default function AdminDisplayScreens({ embedded = false }) {
                 />
                 {isManager() && !showModal && !showItemsModal && (
                     <MobileAddFab
-                        label={canCreateMore ? 'מסך חדש' : 'הגעתם למגבלה'}
-                        onClick={openNew}
-                        disabled={!canCreateMore}
+                        label={canCreateMore ? 'מסך חדש' : 'שדרג למסעדה מלאה'}
+                        onClick={canCreateMore ? openNew : () => window.open('https://wa.me/972547466508?text=שלום, אני מעוניין בחבילת מסעדה מלאה – מסכי תצוגה נוספים', '_blank')}
                     />
                 )}
             </div>

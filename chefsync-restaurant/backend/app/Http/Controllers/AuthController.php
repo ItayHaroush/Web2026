@@ -126,6 +126,24 @@ class AuthController extends Controller
             ], 403);
         }
 
+        // בדיקת מגבלת עובדים לפי חבילה
+        $restaurant = \App\Models\Restaurant::find($currentUser->restaurant_id);
+        if ($restaurant) {
+            $tier = $restaurant->tier ?? 'basic';
+            $maxEmployees = $restaurant->max_employees
+                ?? config("tier_features.tier_limits.{$tier}.max_employees", 0);
+
+            if ($maxEmployees !== null) {
+                $currentCount = User::where('restaurant_id', $restaurant->id)->count();
+                if ($currentCount >= $maxEmployees) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => "הגעת למגבלת העובדים ({$maxEmployees}) בחבילה שלך. שדרג חבילה כדי להוסיף עוד.",
+                    ], 403);
+                }
+            }
+        }
+
         $user = User::create([
             'restaurant_id' => $currentUser->restaurant_id,
             'name' => $request->name,

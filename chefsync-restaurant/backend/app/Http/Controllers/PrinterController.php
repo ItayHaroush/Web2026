@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Order;
 use App\Models\Printer;
+use App\Models\Restaurant;
 use App\Services\PrintService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -16,14 +17,23 @@ class PrinterController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
+        $restaurant = Restaurant::withoutGlobalScopes()->find($user->restaurant_id);
+        $tier = $restaurant->tier ?? 'basic';
+
         $printers = Printer::where('restaurant_id', $user->restaurant_id)
             ->with('categories:id,name,icon')
             ->orderBy('created_at', 'desc')
             ->get();
 
+        $maxPrinters = config("tier_features.tier_limits.{$tier}.max_printers", 0);
+
         return response()->json([
             'success' => true,
             'printers' => $printers,
+            'tier' => $tier,
+            'limits' => [
+                'max_printers' => $maxPrinters,
+            ],
         ]);
     }
 
@@ -58,6 +68,17 @@ class PrinterController extends Controller
                 'success' => false,
                 'message' => 'לא נמצאה מסעדה למשתמש',
             ], 404);
+        }
+
+        // בדיקת מגבלת מדפסות לפי tier
+        $tier = $restaurant->tier ?? 'basic';
+        $maxPrinters = config("tier_features.tier_limits.{$tier}.max_printers", 0);
+        $currentCount = Printer::where('restaurant_id', $restaurant->id)->count();
+        if ($currentCount >= $maxPrinters) {
+            return response()->json([
+                'success' => false,
+                'message' => "הגעת למגבלת המדפסות בחבילה שלך ($maxPrinters). שדרג לחבילה גבוהה יותר.",
+            ], 403);
         }
 
         $printer = Printer::create([

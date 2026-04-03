@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import AdminLayout from '../../layouts/AdminLayout';
+import UpgradeBanner from '../../components/UpgradeBanner';
 import api from '../../services/apiClient';
 import {
     FaUsers,
@@ -21,8 +23,10 @@ import {
 
 export default function AdminEmployees() {
     const { getAuthHeaders, isManager, user: currentUser } = useAdminAuth();
+    const navigate = useNavigate();
     const [employees, setEmployees] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [maxEmployees, setMaxEmployees] = useState(0);
     const [showModal, setShowModal] = useState(false);
     const [form, setForm] = useState({
         name: '',
@@ -42,7 +46,10 @@ export default function AdminEmployees() {
     const fetchEmployees = async () => {
         try {
             const response = await api.get('/admin/employees', { headers: getAuthHeaders() });
-            if (response.data.success) setEmployees(response.data.employees);
+            if (response.data.success) {
+                setEmployees(response.data.employees);
+                if (response.data.max_employees !== undefined) setMaxEmployees(response.data.max_employees);
+            }
         } catch (error) {
             console.error('Failed to fetch employees:', error);
         } finally {
@@ -133,6 +140,8 @@ export default function AdminEmployees() {
         );
     }
 
+    const canAddMore = maxEmployees === null || employees.length < maxEmployees;
+
     return (
         <AdminLayout>
             <div className="max-w-7xl mx-auto space-y-12 pb-40 animate-in fade-in duration-700">
@@ -147,7 +156,7 @@ export default function AdminEmployees() {
                             <div className="flex items-center gap-4 mt-2">
                                 <span className="flex items-center gap-2 px-4 py-1.5 bg-indigo-100/50 text-indigo-700 rounded-2xl text-[11px] font-black uppercase tracking-widest border border-indigo-200/30">
                                     <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></div>
-                                    {employees.length} חברי צוות
+                                    {employees.length}{maxEmployees !== null ? ` / ${maxEmployees}` : ''} חברי צוות
                                 </span>
                                 <span className="text-gray-300">/</span>
                                 <p className="text-gray-500 font-bold text-sm">ניהול הרשאות, תפקידים וגישה לחנות</p>
@@ -155,15 +164,22 @@ export default function AdminEmployees() {
                         </div>
                     </div>
                     {isManager() && (
-                        <button
-                            onClick={() => setShowModal(true)}
-                            className="w-full md:w-auto bg-brand-primary text-white px-12 py-6 rounded-[2rem] font-black hover:bg-brand-dark transition-all flex items-center justify-center gap-4 shadow-2xl shadow-brand-primary/30 active:scale-95 group hover:-translate-y-1"
-                        >
-                            <div className="bg-white/20 p-2.5 rounded-xl group-hover:rotate-90 transition-transform">
-                                <FaUserPlus size={16} />
-                            </div>
-                            <span className="text-lg">הוספת איש צוות</span>
-                        </button>
+                        <div className="flex items-center gap-4 w-full md:w-auto">
+                            <UpgradeBanner variant="inline" context="employees" requiredTier="pro" feature="employees" />
+                            <button
+                                onClick={canAddMore ? () => setShowModal(true) : () => navigate('/admin/paywall')}
+                                className={`w-full md:w-auto px-12 py-6 rounded-[2rem] font-black transition-all flex items-center justify-center gap-4 shadow-2xl active:scale-95 group hover:-translate-y-1 ${
+                                    canAddMore
+                                        ? 'bg-brand-primary text-white hover:bg-brand-dark shadow-brand-primary/30'
+                                        : 'bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-amber-200'
+                                }`}
+                            >
+                                <div className="bg-white/20 p-2.5 rounded-xl group-hover:rotate-90 transition-transform">
+                                    <FaUserPlus size={16} />
+                                </div>
+                                <span className="text-lg">{canAddMore ? 'הוספת איש צוות' : 'שדרג חבילה'}</span>
+                            </button>
+                        </div>
                     )}
                 </div>
 

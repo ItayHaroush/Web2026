@@ -4,6 +4,7 @@ import posApi from '../api/posApi';
 import CancelOrderModal from '../../../components/CancelOrderModal';
 import { ORDER_STATUS_AWAITING_PAYMENT_HE, getOrderDisplayPaymentMethod, paymentStatusBadgeLabel, shouldShowPaymentStatusBadge } from '../../../utils/orderPaymentLabels';
 import POSManagerAuth from './POSManagerAuth';
+import { useRestaurantStatus } from '../../../context/RestaurantStatusContext';
 
 const SOURCE_LABELS = {
     website: 'אתר',
@@ -96,6 +97,8 @@ function normalizeOrder(raw) {
 }
 
 export default function POSOrderPanel({ headers, posToken, mode = 'active' }) {
+    const { subscriptionInfo } = useRestaurantStatus();
+    const canPrint = subscriptionInfo?.features?.printers === 'full';
     const [printMsg, setPrintMsg] = useState(null);
     const [refunding, setRefunding] = useState(null);
     const [pendingRefundId, setPendingRefundId] = useState(null);
@@ -248,8 +251,8 @@ export default function POSOrderPanel({ headers, posToken, mode = 'active' }) {
                         onUpdateStatus={updateStatus}
                         onCancel={(orderId) => setCancelModal({ isOpen: true, orderId })}
                         showActions={mode === 'active'}
-                        onPrintReceipt={handlePrintReceipt}
-                        onPrintKitchen={handlePrintKitchen}
+                        onPrintReceipt={canPrint ? handlePrintReceipt : null}
+                        onPrintKitchen={canPrint ? handlePrintKitchen : null}
                         onRefund={handleRefund}
                         refunding={refunding}
                     />
@@ -428,18 +431,22 @@ function OrderCard({
                     )}
 
                     <div className="flex gap-2">
+                        {onPrintReceipt && (
                         <button
                             onClick={() => onPrintReceipt?.(order.id)}
                             className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-500/10 text-blue-400 text-xs font-bold transition-all active:scale-95 hover:bg-blue-500/20"
                         >
                             <FaPrint size={11} /> קבלה
                         </button>
+                        )}
+                        {onPrintKitchen && (
                         <button
                             onClick={() => onPrintKitchen?.(order.id)}
                             className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-orange-500/10 text-orange-400 text-xs font-bold transition-all active:scale-95 hover:bg-orange-500/20"
                         >
                             <FaUtensils size={11} /> מטבח
                         </button>
+                        )}
                         {order.payment_status === 'paid'
                             && (order.payment_method === 'credit_card'
                                 || (order.payment_transaction_id

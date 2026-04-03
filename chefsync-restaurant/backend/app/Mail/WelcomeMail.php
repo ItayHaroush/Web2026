@@ -38,7 +38,7 @@ class WelcomeMail extends Mailable
         $name = e($this->ownerName);
         $restaurantName = e($this->restaurant->name);
         $tenantId = e($this->restaurant->tenant_id);
-        $tier = $this->restaurant->tier === 'pro' ? 'Pro' : 'Basic';
+        $tier = ['basic' => 'Basic', 'pro' => 'Pro', 'enterprise' => 'מסעדה מלאה'][$this->restaurant->tier] ?? ucfirst($this->restaurant->tier);
         $trialEnds = $this->restaurant->trial_ends_at
             ? $this->restaurant->trial_ends_at->format('d/m/Y')
             : 'לא הוגדר';

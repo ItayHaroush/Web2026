@@ -14,6 +14,11 @@ export function RestaurantStatusProvider({ children }) {
         subscription_status: null,
         subscription_plan: null,
         trial_ends_at: null,
+        features: {},
+        featureRequiredTier: {},
+        ordersLimit: null,
+        ordersThisMonth: 0,
+        ordersLimitEnabled: false,
     });
 
     return (

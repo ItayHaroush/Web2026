@@ -1,4 +1,5 @@
 import { FaCrown, FaToggleOn, FaToggleOff } from 'react-icons/fa';
+import { isFeatureUnlocked } from '../../../utils/tierUtils';
 
 const POSITIONS = [
     { id: 'top-right', label: 'ימין למעלה' },
@@ -14,7 +15,7 @@ const SIZES = [
     { id: 'lg', label: 'גדול' },
 ];
 
-export default function ScreenFormLogo({ form, setForm, tier }) {
+export default function ScreenFormLogo({ form, setForm, subscriptionInfo }) {
     const overlay = form.design_options?.logo_overlay || {};
 
     const updateOverlay = (updates) => {
@@ -39,7 +40,7 @@ export default function ScreenFormLogo({ form, setForm, tier }) {
         });
     };
 
-    const allowedPositions = tier === 'pro' ? POSITIONS : POSITIONS.filter(p => ['top-right', 'top-left'].includes(p.id));
+    const allowedPositions = isFeatureUnlocked(subscriptionInfo?.features, 'display_screens') ? POSITIONS : POSITIONS.filter(p => ['top-right', 'top-left'].includes(p.id));
 
     return (
         <div className="space-y-4 bg-indigo-50/50 rounded-[2rem] p-6 border border-indigo-100">
@@ -82,7 +83,7 @@ export default function ScreenFormLogo({ form, setForm, tier }) {
                     </div>
 
                     {/* Size (Pro only) */}
-                    {tier === 'pro' && (
+                    {isFeatureUnlocked(subscriptionInfo?.features, 'display_screens') && (
                         <div>
                             <label className="text-xs font-black text-gray-500 mb-2 block">גודל</label>
                             <div className="grid grid-cols-3 gap-2">

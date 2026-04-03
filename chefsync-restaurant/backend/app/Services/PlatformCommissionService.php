@@ -148,7 +148,7 @@ class PlatformCommissionService
                 ->where('setup_fee', '>', 0)
                 ->exists();
             if (! $alreadyInvoiced) {
-                $setupFee = ($restaurant->tier === 'pro') ? 100 : 200;
+                $setupFee = $restaurant->tier === 'enterprise' ? 0 : ($restaurant->tier === 'pro' ? 100 : 200);
             }
         }
 
@@ -266,7 +266,7 @@ class PlatformCommissionService
             return false;
         }
 
-        $expectedSetup = ($restaurant->tier === 'pro') ? 100.0 : 200.0;
+        $expectedSetup = $restaurant->tier === 'enterprise' ? 0.0 : ($restaurant->tier === 'pro' ? 100.0 : 200.0);
         $base = $this->activationSubscriptionBaseAmount($restaurant, $subscription);
         if ($base < 0.01) {
             return false;

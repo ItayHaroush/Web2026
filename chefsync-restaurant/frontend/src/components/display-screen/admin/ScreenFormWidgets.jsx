@@ -1,8 +1,9 @@
 import { FaCrown, FaToggleOn, FaToggleOff } from 'react-icons/fa';
 import { WIDGET_TYPES, createDefaultWidget, ANNOUNCEMENT_ICONS } from '../shared/widgetDefaults';
 import { PROMO_ICONS } from '../shared/presetStyles';
+import { isFeatureUnlocked } from '../../../utils/tierUtils';
 
-export default function ScreenFormWidgets({ form, setForm, tier }) {
+export default function ScreenFormWidgets({ form, setForm, subscriptionInfo }) {
     const widgets = form.design_options?.widgets || [];
 
     const getWidget = (type) => widgets.find(w => w.type === type);
@@ -40,7 +41,7 @@ export default function ScreenFormWidgets({ form, setForm, tier }) {
         }
     };
 
-    const allowedWidgets = WIDGET_TYPES.filter(w => tier === 'pro' || w.tier === 'all');
+    const allowedWidgets = WIDGET_TYPES.filter(w => isFeatureUnlocked(subscriptionInfo?.features, 'display_screens') || w.tier === 'all');
 
     return (
         <div className="space-y-5">

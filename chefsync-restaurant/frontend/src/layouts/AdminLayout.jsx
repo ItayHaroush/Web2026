@@ -8,6 +8,7 @@ import { PRODUCT_NAME } from '../constants/brand';
 import DashboardSidebar from '../components/admin/DashboardSidebar';
 import DashboardHeader from '../components/admin/DashboardHeader';
 import FloatingRestaurantAssistant from '../components/admin/FloatingRestaurantAssistant';
+import FloatingSystemAdminButtons from '../components/admin/FloatingSystemAdminButtons';
 import ImpersonationBanner from '../components/admin/ImpersonationBanner';
 import HolidayScheduleModal from '../components/admin/HolidayScheduleModal';
 import holidayService from '../services/holidayService';
@@ -26,7 +27,9 @@ import {
     FaExclamationTriangle,
     FaCashRegister,
     FaCog,
-    FaServer
+    FaServer,
+    FaBell,
+    FaChevronDown
 } from 'react-icons/fa';
 
 export default function AdminLayout({ children }) {
@@ -35,8 +38,9 @@ export default function AdminLayout({ children }) {
     const [subscriptionData, setSubscriptionData] = useState(null);
     const [pendingHolidays, setPendingHolidays] = useState([]);
     const [showHolidayModal, setShowHolidayModal] = useState(false);
+    const [alertsOpen, setAlertsOpen] = useState(false);
     const holidayDismissedAt = useRef(0);
-    const { user, logout, isOwner, isManager, getAuthHeaders, impersonating } = useAdminAuth();
+    const { user, logout, isOwner, isManager, getAuthHeaders, impersonating, isSuperAdmin } = useAdminAuth();
     const { restaurantStatus, setRestaurantStatus, setSubscriptionInfo } = useRestaurantStatus();
     const location = useLocation();
     const navigate = useNavigate();
@@ -135,14 +139,19 @@ export default function AdminLayout({ children }) {
     useEffect(() => {
         const fetchRestaurantStatus = async () => {
             try {
-                const response = await api.get('/admin/restaurant', { headers: getAuthHeaders() });
+                const headers = getAuthHeaders();
+                const [response, statusResponse] = await Promise.all([
+                    api.get('/admin/restaurant', { headers }),
+                    api.get('/admin/subscription/status', { headers }).catch(() => null),
+                ]);
+                const statusData = statusResponse?.data?.data ?? statusResponse?.data;
                 if (response.data.success) {
                     const restaurant = response.data.restaurant;
                     setRestaurantStatus({
                         is_open: restaurant.is_open_now ?? restaurant.is_open,
                         is_override: restaurant.is_override_status || false,
                         is_approved: restaurant.is_approved ?? false,
-                        active_orders_count: restaurant.active_orders_count || 0, // ✅ הוספת מונה הזמנות
+                        active_orders_count: restaurant.active_orders_count || 0,
                     });
                     // שמור נתוני subscription לתצוגת Trial Banner + Payment Failed Banner
                     setSubscriptionData({
@@ -161,6 +170,11 @@ export default function AdminLayout({ children }) {
                         subscription_status: restaurant.subscription_status,
                         subscription_plan: restaurant.subscription_plan,
                         trial_ends_at: restaurant.trial_ends_at,
+                        features: statusData?.features || {},
+                        featureRequiredTier: statusData?.feature_required_tier || {},
+                        ordersLimit: statusData?.orders_limit ?? null,
+                        ordersThisMonth: statusData?.orders_this_month ?? 0,
+                        ordersLimitEnabled: statusData?.orders_limit_enabled ?? false,
                     });
                 }
             } catch (error) {
@@ -304,53 +318,28 @@ export default function AdminLayout({ children }) {
                     />
 
                     <main className={`flex-1 p-4 lg:p-8 overflow-x-hidden ${impersonating ? 'mt-[7.5rem]' : 'mt-20'}`}>
-                        {restaurantStatus.is_approved === false && (
-                            <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-800 shadow-sm animate-pulse-slow">
-                                <div className="flex items-start gap-3">
-                                    <span className="text-xl">⏳</span>
-                                    <div>
-                                        <p className="font-bold">ממתין לאישור מנהל מערכת</p>
-                                        <p className="text-sm">בינתיים ניתן לעדכן פרטי מסעדה, אבל פעולות פתיחה/סגירה והזמנות מנוטרלות עד לאישור.</p>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                        {subscriptionData?.subscription_paused && !isOwner() && !isManager() && (
-                            <SubscriptionPausedBanner />
-                        )}
-                        {subscriptionData && <TrialBanner {...subscriptionData} navigate={navigate} />}
-                        {subscriptionData && <PaymentFailedBanner {...subscriptionData} navigate={navigate} />}
-
-                        {/* באנר חגים ממתינים — מוצג בכל דפי האדמין עד שהמסעדן ענה */}
-                        {pendingHolidays.length > 0 && (
-                            <div
-                                role="button"
-                                tabIndex={0}
-                                onClick={() => setShowHolidayModal(true)}
-                                onKeyDown={e => e.key === 'Enter' && setShowHolidayModal(true)}
-                                className="mb-6 rounded-xl border border-purple-200 bg-purple-50 p-4 shadow-sm cursor-pointer hover:bg-purple-100 transition-colors"
-                            >
-                                <div className="flex items-center gap-3">
-                                    <span className="text-2xl">🕎</span>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="font-bold text-purple-800">
-                                            {pendingHolidays.length === 1
-                                                ? `חג קרוב: ${pendingHolidays[0].name} — נא לעדכן שעות פעילות`
-                                                : `${pendingHolidays.length} חגים קרובים — נא לעדכן שעות פעילות`}
-                                        </p>
-                                        <p className="text-sm text-purple-600">לחצו כאן לעדכון הסטטוס שלכם בחגים</p>
-                                    </div>
-                                    <FaExclamationTriangle className="text-purple-400" />
-                                </div>
-                            </div>
-                        )}
+                        <AlertsPanel
+                            restaurantStatus={restaurantStatus}
+                            subscriptionData={subscriptionData}
+                            pendingHolidays={pendingHolidays}
+                            isOwner={isOwner}
+                            isManager={isManager}
+                            navigate={navigate}
+                            alertsOpen={alertsOpen}
+                            setAlertsOpen={setAlertsOpen}
+                            onHolidayClick={() => setShowHolidayModal(true)}
+                        />
 
                         {children}
                     </main>
                 </div>
 
                 {/* סוכן AI ספציפי למסעדה - עם מכסת קרדיטים */}
-                <FloatingRestaurantAssistant isSidebarOpen={sidebarOpen} />
+                {isSuperAdmin() && impersonating ? (
+                    <FloatingSystemAdminButtons isSidebarOpen={sidebarOpen} />
+                ) : (
+                    <FloatingRestaurantAssistant isSidebarOpen={sidebarOpen} />
+                )}
             </div>
 
             {/* מודל חגים — גלובלי לכל דפי האדמין */}
@@ -369,33 +358,123 @@ export default function AdminLayout({ children }) {
     );
 }
 
+// פאנל התראות מקובץ — שורה אחת קומפקטית עם פתיחה/סגירה
+function AlertsPanel({ restaurantStatus, subscriptionData, pendingHolidays, isOwner, isManager, navigate, alertsOpen, setAlertsOpen, onHolidayClick }) {
+    const alerts = [];
+
+    if (restaurantStatus.is_approved === false) {
+        alerts.push({ id: 'approval', label: 'ממתין לאישור' });
+    }
+    if (subscriptionData?.subscription_paused && !isOwner() && !isManager()) {
+        alerts.push({ id: 'paused', label: 'מנוי מושהה' });
+    }
+    if (subscriptionData?.subscription_status === 'trial' && subscriptionData?.trial_ends_at) {
+        const daysLeft = Math.ceil((new Date(subscriptionData.trial_ends_at) - new Date()) / (1000 * 60 * 60 * 24));
+        if (daysLeft > 0) {
+            alerts.push({ id: 'trial', label: `ניסיון — ${daysLeft} ימים` });
+        }
+    }
+    if (subscriptionData?.subscription_status === 'active' && subscriptionData?.payment_failed_at && subscriptionData?.is_in_grace_period) {
+        alerts.push({ id: 'payment', label: 'חיוב נכשל' });
+    }
+    if (pendingHolidays.length > 0) {
+        alerts.push({ id: 'holidays', label: `${pendingHolidays.length} חגים` });
+    }
+
+    if (alerts.length === 0) return null;
+
+    return (
+        <div className="mb-4">
+            {/* שורה קומפקטית */}
+            <button
+                onClick={() => setAlertsOpen(!alertsOpen)}
+                className="w-full flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 bg-white shadow-sm hover:bg-gray-50 transition-all"
+            >
+                <div className="relative">
+                    <FaBell className="text-orange-500" size={16} />
+                    <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-gray-800 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                        {alerts.length}
+                    </span>
+                </div>
+                <div className="flex items-center gap-2 flex-1 overflow-x-auto no-scrollbar">
+                    {alerts.map(a => (
+                        <span key={a.id} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold border whitespace-nowrap bg-gray-50 border-gray-200 text-gray-600">
+                            {a.label}
+                        </span>
+                    ))}
+                </div>
+                <FaChevronDown className={`text-gray-400 transition-transform flex-shrink-0 ${alertsOpen ? 'rotate-180' : ''}`} size={12} />
+            </button>
+
+            {/* תוכן מורחב */}
+            {alertsOpen && (
+                <div className="mt-3 space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                    {restaurantStatus.is_approved === false && (
+                        <div className="rounded-xl border border-gray-200 bg-white p-3 text-gray-700">
+                            <div className="flex items-start gap-2">
+                                <FaClock className="text-gray-400 mt-0.5 shrink-0" size={14} />
+                                <div>
+                                    <p className="font-bold text-sm">ממתין לאישור מנהל מערכת</p>
+                                    <p className="text-xs text-gray-500">פעולות פתיחה/סגירה והזמנות מנוטרלות עד לאישור.</p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    {subscriptionData?.subscription_paused && !isOwner() && !isManager() && (
+                        <SubscriptionPausedBanner />
+                    )}
+                    {subscriptionData && <TrialBanner {...subscriptionData} navigate={navigate} />}
+                    {subscriptionData && <PaymentFailedBanner {...subscriptionData} navigate={navigate} />}
+                    {pendingHolidays.length > 0 && (
+                        <div
+                            role="button" tabIndex={0}
+                            onClick={onHolidayClick}
+                            onKeyDown={e => e.key === 'Enter' && onHolidayClick()}
+                            className="rounded-xl border border-gray-200 bg-white p-3 cursor-pointer hover:bg-gray-50 transition-colors"
+                        >
+                            <div className="flex items-center gap-2">
+                                <FaClock className="text-gray-400 shrink-0" size={14} />
+                                <p className="font-bold text-sm text-gray-700 flex-1">
+                                    {pendingHolidays.length === 1
+                                        ? `חג קרוב: ${pendingHolidays[0].name} — נא לעדכן`
+                                        : `${pendingHolidays.length} חגים קרובים — נא לעדכן שעות פעילות`}
+                                </p>
+                                <FaExclamationTriangle className="text-gray-400" size={12} />
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}
+
 // Payment Failed Banner - מוצג כשיש כשלון בחיוב והמסעדה עדיין בתוך תקופת חסד
 function PaymentFailedBanner({ subscription_status, payment_failed_at, payment_failure_grace_days_left, is_in_grace_period, navigate }) {
     if (subscription_status !== 'active' || !payment_failed_at || !is_in_grace_period) return null;
 
     const daysLeft = payment_failure_grace_days_left ?? 0;
-    const isUrgent = daysLeft <= 1;
 
     return (
-        <div className={`mb-6 ${isUrgent ? 'bg-gradient-to-r from-red-50 to-amber-50 border-red-300' : 'bg-gradient-to-r from-amber-50 to-orange-50 border-amber-300'} border-2 rounded-3xl p-6 shadow-lg animate-in fade-in zoom-in-95 duration-500`}>
+        <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
             <div className="flex items-center justify-between gap-4 flex-wrap">
                 <div className="flex items-center gap-4">
-                    <div className={`w-14 h-14 ${isUrgent ? 'bg-red-500' : 'bg-amber-500'} rounded-2xl flex items-center justify-center text-white shadow-lg`}>
+                    <div className="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center text-gray-500">
                         <FaExclamationTriangle size={24} />
                     </div>
                     <div>
                         <h3 className="text-xl font-black text-gray-900">
-                            {isUrgent ? '⚠️ תשלום נכשל – זמן החסד מסתיים!' : '💳 חיוב המנוי לא הצליח'}
+                            חיוב המנוי לא הצליח
                         </h3>
                         <p className="text-gray-600 font-medium mt-1">
-                            נותרו <strong className={isUrgent ? 'text-red-600' : 'text-amber-700'}>{daysLeft} ימים</strong>
+                            נותרו <strong className="text-gray-900">{daysLeft} ימים</strong>
                             {' '}לעדכון אמצעי התשלום לפני השעיית החשבון. אנא עדכן את פרטי התשלום כדי להמשיך.
                         </p>
                     </div>
                 </div>
                 <button
                     onClick={() => navigate('/admin/paywall')}
-                    className={`${isUrgent ? 'bg-gradient-to-r from-red-500 to-amber-600' : 'bg-gradient-to-r from-amber-500 to-orange-600'} text-white px-6 py-3 rounded-2xl font-black hover:shadow-xl transition-all whitespace-nowrap`}
+                    className="bg-gray-900 text-white px-6 py-3 rounded-2xl font-black hover:bg-gray-800 transition-all whitespace-nowrap"
                 >
                     עדכן תשלום
                 </button>
@@ -407,9 +486,9 @@ function PaymentFailedBanner({ subscription_status, payment_failed_at, payment_f
 // Subscription Paused Banner — מוצג לעובדים שאינם בעלים/מנהלים כשהמנוי לא פעיל
 function SubscriptionPausedBanner() {
     return (
-        <div className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-3xl p-6 shadow-lg">
+        <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
             <div className="flex items-center gap-4">
-                <div className="w-14 h-14 bg-blue-500 rounded-2xl flex items-center justify-center text-white shadow-lg">
+                <div className="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center text-gray-500">
                     <FaShieldAlt size={24} />
                 </div>
                 <div>
@@ -433,30 +512,28 @@ function TrialBanner({ subscription_status, trial_ends_at, tier, subscription_pl
 
     if (daysLeft <= 0) return null; // אם פג התוקף, Middleware יפנה ל-paywall
 
-    const isUrgent = daysLeft <= 3;
-
     return (
-        <div className={`mb-6 ${isUrgent ? 'bg-gradient-to-r from-red-50 to-orange-50 border-red-200' : 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200'} border-2 rounded-3xl p-6 shadow-lg animate-in fade-in zoom-in-95 duration-500`}>
+        <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
             <div className="flex items-center justify-between gap-4 flex-wrap">
                 <div className="flex items-center gap-4">
-                    <div className={`w-14 h-14 ${isUrgent ? 'bg-red-500' : 'bg-blue-500'} rounded-2xl flex items-center justify-center text-white shadow-lg`}>
+                    <div className="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center text-gray-500">
                         <FaClock size={24} />
                     </div>
                     <div>
                         <h3 className="text-xl font-black text-gray-900">
-                            {isUrgent ? '⏰ תקופת הניסיון עומדת להסתיים!' : '🎉 תקופת ניסיון פעילה'}
+                            תקופת ניסיון פעילה
                         </h3>
                         <p className="text-gray-600 font-medium mt-1">
-                            נותרו <strong className={isUrgent ? 'text-red-600' : 'text-blue-600'}>{daysLeft} ימים</strong>
+                            נותרו <strong className="text-gray-900">{daysLeft} ימים</strong>
                             {' '}לתקופת הניסיון החינמית • תוכנית: <strong>{tier === 'basic' ? 'Basic' : 'Pro'}</strong>
                         </p>
                     </div>
                 </div>
                 <button
                     onClick={() => navigate('/admin/paywall')}
-                    className={`${isUrgent ? 'bg-gradient-to-r from-red-500 to-orange-600' : 'bg-gradient-to-r from-brand-primary to-blue-600'} text-white px-6 py-3 rounded-2xl font-black hover:shadow-xl transition-all whitespace-nowrap`}
+                    className="bg-gray-900 text-white px-6 py-3 rounded-2xl font-black hover:bg-gray-800 transition-all whitespace-nowrap"
                 >
-                    {isUrgent ? '🚀 שלם עכשיו' : '💳 הפעל מנוי'}
+                    הפעל מנוי
                 </button>
             </div>
         </div>
