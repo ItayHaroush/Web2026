@@ -466,7 +466,7 @@ class PromotionController extends Controller
 
                     continue;
                 }
-                $nonEmpty = array_filter($ids, fn ($v) => $v !== '' && $v !== null);
+                $nonEmpty = array_filter($ids, fn($v) => $v !== '' && $v !== null);
                 if (count($nonEmpty) === 0) {
                     $validator->errors()->add("rewards.{$i}.discount_menu_item_ids", 'נא לבחור לפחות מוצר אחד להנחה על פריטים נבחרים.');
                 }
@@ -533,8 +533,8 @@ class PromotionController extends Controller
             if ($scope === 'selected_items' && is_array($rawIds) && count($rawIds) > 0) {
                 $discountScope = 'selected_items';
                 $discountMenuItemIds = array_values(array_unique(array_map(
-                    static fn ($v) => (int) $v,
-                    array_filter($rawIds, static fn ($v) => $v !== '' && $v !== null)
+                    static fn($v) => (int) $v,
+                    array_filter($rawIds, static fn($v) => $v !== '' && $v !== null)
                 )));
                 if ($discountMenuItemIds === []) {
                     $discountScope = 'whole_cart';
