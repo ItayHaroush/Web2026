@@ -44,8 +44,8 @@ export default function KioskCard({
                         </h3>
                         <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                             <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border ${kiosk.require_name
-                                    ? 'bg-blue-50 text-blue-600 border-blue-100'
-                                    : 'bg-gray-100 text-gray-500 border-gray-100'
+                                ? 'bg-blue-50 text-blue-600 border-blue-100'
+                                : 'bg-gray-100 text-gray-500 border-gray-100'
                                 }`}>
                                 {kiosk.require_name ? 'דורש שם' : 'ללא שם'}
                             </span>
@@ -82,29 +82,29 @@ export default function KioskCard({
             <div>
                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-wide mb-1.5">קישור לפתיחה בטאבלט / דפדפן</p>
                 <div className="flex items-center gap-2 bg-gray-50 rounded-2xl p-3">
-                <input
-                    type="text"
-                    value={getKioskViewUrl(kiosk.token)}
-                    readOnly
-                    className="flex-1 bg-transparent border-none text-sm text-gray-600 font-mono truncate focus:outline-none"
-                    dir="ltr"
-                />
-                <button
-                    onClick={() => onCopyLink(kiosk)}
-                    className="p-2 text-amber-600 hover:bg-amber-100 rounded-xl transition-all"
-                    title="העתק קישור"
-                >
-                    {copiedId === kiosk.id ? <FaCheck size={14} /> : <FaCopy size={14} />}
-                </button>
-                <a
-                    href={getKioskViewUrl(kiosk.token)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-2 text-amber-600 hover:bg-amber-100 rounded-xl transition-all shrink-0"
-                    title="פתח בחלון חדש"
-                >
-                    <FaExternalLinkAlt size={14} />
-                </a>
+                    <input
+                        type="text"
+                        value={getKioskViewUrl(kiosk.token)}
+                        readOnly
+                        className="flex-1 bg-transparent border-none text-sm text-gray-600 font-mono truncate focus:outline-none"
+                        dir="ltr"
+                    />
+                    <button
+                        onClick={() => onCopyLink(kiosk)}
+                        className="p-2 text-amber-600 hover:bg-amber-100 rounded-xl transition-all"
+                        title="העתק קישור"
+                    >
+                        {copiedId === kiosk.id ? <FaCheck size={14} /> : <FaCopy size={14} />}
+                    </button>
+                    <a
+                        href={getKioskViewUrl(kiosk.token)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-2 text-amber-600 hover:bg-amber-100 rounded-xl transition-all shrink-0"
+                        title="פתח בחלון חדש"
+                    >
+                        <FaExternalLinkAlt size={14} />
+                    </a>
                 </div>
             </div>
 

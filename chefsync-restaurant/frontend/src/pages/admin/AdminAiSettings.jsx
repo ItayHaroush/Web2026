@@ -256,8 +256,8 @@ export default function SuperAdminAiSettings() {
                                 <button
                                     onClick={() => toggleFeature(feature.key)}
                                     className={`relative inline-flex h-12 w-24 items-center rounded-full transition-colors ${settings[feature.key]
-                                            ? 'bg-green-500'
-                                            : 'bg-gray-300'
+                                        ? 'bg-green-500'
+                                        : 'bg-gray-300'
                                         }`}
                                 >
                                     <span

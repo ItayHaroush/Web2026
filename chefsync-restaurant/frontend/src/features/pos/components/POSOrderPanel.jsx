@@ -432,33 +432,33 @@ function OrderCard({
 
                     <div className="flex gap-2">
                         {onPrintReceipt && (
-                        <button
-                            onClick={() => onPrintReceipt?.(order.id)}
-                            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-500/10 text-blue-400 text-xs font-bold transition-all active:scale-95 hover:bg-blue-500/20"
-                        >
-                            <FaPrint size={11} /> קבלה
-                        </button>
+                            <button
+                                onClick={() => onPrintReceipt?.(order.id)}
+                                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-500/10 text-blue-400 text-xs font-bold transition-all active:scale-95 hover:bg-blue-500/20"
+                            >
+                                <FaPrint size={11} /> קבלה
+                            </button>
                         )}
                         {onPrintKitchen && (
-                        <button
-                            onClick={() => onPrintKitchen?.(order.id)}
-                            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-orange-500/10 text-orange-400 text-xs font-bold transition-all active:scale-95 hover:bg-orange-500/20"
-                        >
-                            <FaUtensils size={11} /> מטבח
-                        </button>
+                            <button
+                                onClick={() => onPrintKitchen?.(order.id)}
+                                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-orange-500/10 text-orange-400 text-xs font-bold transition-all active:scale-95 hover:bg-orange-500/20"
+                            >
+                                <FaUtensils size={11} /> מטבח
+                            </button>
                         )}
                         {order.payment_status === 'paid'
                             && (order.payment_method === 'credit_card'
                                 || (order.payment_transaction_id
                                     && String(order.payment_transaction_id).startsWith('MOCK_'))) && (
-                            <button
-                                onClick={() => onRefund?.(order.id)}
-                                disabled={refunding === order.id}
-                                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-red-500/10 text-red-400 text-xs font-bold transition-all active:scale-95 hover:bg-red-500/20 disabled:opacity-50"
-                            >
-                                <FaUndo size={11} /> {refunding === order.id ? 'מעבד...' : 'החזר כספי'}
-                            </button>
-                        )}
+                                <button
+                                    onClick={() => onRefund?.(order.id)}
+                                    disabled={refunding === order.id}
+                                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-red-500/10 text-red-400 text-xs font-bold transition-all active:scale-95 hover:bg-red-500/20 disabled:opacity-50"
+                                >
+                                    <FaUndo size={11} /> {refunding === order.id ? 'מעבד...' : 'החזר כספי'}
+                                </button>
+                            )}
                     </div>
                 </div>
             )}

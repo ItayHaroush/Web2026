@@ -473,8 +473,8 @@ export default function AdminSalads({ embedded = false }) {
     }
 
     const content = (
-            <div className="max-w-7xl mx-auto space-y-12 pb-40 animate-in fade-in duration-700">
-                {!embedded && (
+        <div className="max-w-7xl mx-auto space-y-12 pb-40 animate-in fade-in duration-700">
+            {!embedded && (
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 px-4">
                     <div className="flex items-center gap-6">
                         <div className="w-24 h-24 bg-emerald-50 rounded-[2.5rem] flex items-center justify-center text-emerald-600 shadow-sm border border-emerald-100/50">
@@ -515,442 +515,442 @@ export default function AdminSalads({ embedded = false }) {
                         </div>
                     )}
                 </div>
-                )}
+            )}
 
-                {embedded && isManager() && !isCategoryGroup && (
-                    <div className="hidden md:flex flex-col gap-2 items-end px-4 mb-4">
-                        <button
-                            type="button"
-                            onClick={() => openGroupModal()}
-                            className="inline-flex items-center gap-2 bg-slate-800 text-white px-6 py-2.5 rounded-2xl font-black text-sm shadow-md hover:bg-slate-900"
-                        >
-                            <FaLayerGroup size={14} />
-                            הוסף קבוצה
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => openModal()}
-                            className="inline-flex items-center gap-2 bg-brand-primary text-white px-6 py-3 rounded-2xl font-black text-sm shadow-lg shadow-brand-primary/20 hover:opacity-95"
-                        >
-                            <FaPlus size={14} />
-                            הוספת תוספת
-                        </button>
+            {embedded && isManager() && !isCategoryGroup && (
+                <div className="hidden md:flex flex-col gap-2 items-end px-4 mb-4">
+                    <button
+                        type="button"
+                        onClick={() => openGroupModal()}
+                        className="inline-flex items-center gap-2 bg-slate-800 text-white px-6 py-2.5 rounded-2xl font-black text-sm shadow-md hover:bg-slate-900"
+                    >
+                        <FaLayerGroup size={14} />
+                        הוסף קבוצה
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => openModal()}
+                        className="inline-flex items-center gap-2 bg-brand-primary text-white px-6 py-3 rounded-2xl font-black text-sm shadow-lg shadow-brand-primary/20 hover:opacity-95"
+                    >
+                        <FaPlus size={14} />
+                        הוספת תוספת
+                    </button>
+                </div>
+            )}
+
+            {/* Main Configuration Layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 px-4">
+
+                {/* Sidebar: Group Selector (3 Columns) */}
+                <div className="lg:col-span-4 space-y-6">
+                    <div className="flex items-center justify-between px-2">
+                        <div className="flex items-center gap-3">
+                            <FaLayerGroup className="text-brand-primary" />
+                            <h3 className="text-lg font-black text-gray-900 uppercase tracking-wider">קבוצות תוספות</h3>
+                        </div>
+                        {isManager() && (
+                            <button
+                                onClick={() => openGroupModal()}
+                                className="p-2 bg-brand-primary text-white rounded-xl hover:bg-brand-dark transition-all active:scale-95"
+                                title="הוסף קבוצה חדשה"
+                            >
+                                <FaPlus size={14} />
+                            </button>
+                        )}
                     </div>
-                )}
 
-                {/* Main Configuration Layout */}
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 px-4">
-
-                    {/* Sidebar: Group Selector (3 Columns) */}
-                    <div className="lg:col-span-4 space-y-6">
-                        <div className="flex items-center justify-between px-2">
-                            <div className="flex items-center gap-3">
-                                <FaLayerGroup className="text-brand-primary" />
-                                <h3 className="text-lg font-black text-gray-900 uppercase tracking-wider">קבוצות תוספות</h3>
-                            </div>
-                            {isManager() && (
+                    <div className="flex flex-col gap-3">
+                        {groups.map((group) => (
+                            <div key={group.id} className="relative group/item">
                                 <button
-                                    onClick={() => openGroupModal()}
-                                    className="p-2 bg-brand-primary text-white rounded-xl hover:bg-brand-dark transition-all active:scale-95"
-                                    title="הוסף קבוצה חדשה"
+                                    onClick={() => setSelectedGroupId(String(group.id))}
+                                    className={`w-full relative flex items-center justify-between p-6 rounded-[2rem] border-2 transition-all duration-300 text-right ${selectedGroupId === String(group.id) ? 'border-brand-primary bg-brand-primary/[0.04] shadow-xl shadow-brand-primary/5 -translate-x-2' : 'border-gray-50 bg-white hover:border-gray-200 hover:bg-gray-50'}`}
                                 >
-                                    <FaPlus size={14} />
-                                </button>
-                            )}
-                        </div>
-
-                        <div className="flex flex-col gap-3">
-                            {groups.map((group) => (
-                                <div key={group.id} className="relative group/item">
-                                    <button
-                                        onClick={() => setSelectedGroupId(String(group.id))}
-                                        className={`w-full relative flex items-center justify-between p-6 rounded-[2rem] border-2 transition-all duration-300 text-right ${selectedGroupId === String(group.id) ? 'border-brand-primary bg-brand-primary/[0.04] shadow-xl shadow-brand-primary/5 -translate-x-2' : 'border-gray-50 bg-white hover:border-gray-200 hover:bg-gray-50'}`}
-                                    >
-                                        <div className="flex items-center gap-4">
-                                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-lg font-black transition-all ${selectedGroupId === String(group.id) ? 'bg-brand-primary text-white shadow-lg' : 'bg-gray-100 text-gray-400'}`}>
-                                                {group.sort_order}
-                                            </div>
-                                            <div>
-                                                <span className={`block font-black text-lg transition-colors ${selectedGroupId === String(group.id) ? 'text-brand-primary' : 'text-gray-700'}`}>
-                                                    {group.name}
-                                                </span>
-                                                <span className="text-xs font-bold text-gray-400">
-                                                    {group.source_type === 'category'
-                                                        ? <span className="flex items-center gap-1 text-blue-500"><FaLink size={10} /> מקושר לקטגוריה</span>
-                                                        : `${salads.filter(s => String(s.addon_group_id) === String(group.id)).length} פריטים`
-                                                    }
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <div className={`transition-all ${selectedGroupId === String(group.id) ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4'}`}>
-                                            <FaChevronLeft className="text-brand-primary" />
-                                        </div>
-                                    </button>
-                                    {isManager() && (
-                                        <div className="absolute left-2 top-1/2 -translate-y-1/2 opacity-0 group-hover/item:opacity-100 transition-opacity flex gap-1">
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    openGroupModal(group);
-                                                }}
-                                                className="p-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-all active:scale-95 shadow-lg"
-                                                title="ערוך קבוצה"
-                                            >
-                                                <FaEdit size={12} />
-                                            </button>
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    duplicateGroup(group.id);
-                                                }}
-                                                className="p-2 bg-green-500 text-white rounded-xl hover:bg-green-600 transition-all active:scale-95 shadow-lg"
-                                                title="העתק קבוצה"
-                                            >
-                                                <FaCopy size={12} />
-                                            </button>
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    deleteGroup(group.id);
-                                                }}
-                                                className="p-2 bg-rose-500 text-white rounded-xl hover:bg-rose-600 transition-all active:scale-95 shadow-lg"
-                                                title="מחק קבוצה"
-                                            >
-                                                <FaTrash size={12} />
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
-
-                        {/* Group Rules Info */}
-                        <div className="bg-amber-50/50 rounded-[2.5rem] p-8 border border-amber-100/50 space-y-4">
-                            <div className="flex items-center gap-3 text-amber-700">
-                                <FaInfoCircle size={20} />
-                                <h4 className="font-black">טיפ למנהלים</h4>
-                            </div>
-                            <p className="text-sm font-medium text-amber-900/70 leading-relaxed">
-                                הגדר פריטים כ"כלולים" במנה ע"י קביעת מחיר 0. פריטים אלו יופיעו כברירת מחדל או בחירה חופשית ללא תשלום.
-                            </p>
-                        </div>
-                    </div>
-
-                    {/* Content Area: Selected Group Settings & Items (8 Columns) */}
-                    <div className="lg:col-span-8 space-y-10">
-                        {/* Group Settings Card */}
-                        {selectedGroup && (
-                            <div className="bg-white rounded-[3rem] shadow-xl shadow-gray-200/50 border border-gray-100 overflow-hidden animate-in slide-in-from-left duration-500">
-                                <div className="p-8 border-b border-gray-50 bg-gray-50/30 flex justify-between items-center">
                                     <div className="flex items-center gap-4">
-                                        <div className="p-3 bg-brand-primary text-white rounded-2xl shadow-lg">
-                                            <FaCogs size={20} />
+                                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-lg font-black transition-all ${selectedGroupId === String(group.id) ? 'bg-brand-primary text-white shadow-lg' : 'bg-gray-100 text-gray-400'}`}>
+                                            {group.sort_order}
                                         </div>
                                         <div>
-                                            <h2 className="text-2xl font-black text-gray-900">הגדרות וחוקי קבוצה</h2>
-                                            <p className="text-gray-500 font-medium text-xs">שליטה על כמות הבחירות של הלקוח ב{selectedGroup.name}</p>
+                                            <span className={`block font-black text-lg transition-colors ${selectedGroupId === String(group.id) ? 'text-brand-primary' : 'text-gray-700'}`}>
+                                                {group.name}
+                                            </span>
+                                            <span className="text-xs font-bold text-gray-400">
+                                                {group.source_type === 'category'
+                                                    ? <span className="flex items-center gap-1 text-blue-500"><FaLink size={10} /> מקושר לקטגוריה</span>
+                                                    : `${salads.filter(s => String(s.addon_group_id) === String(group.id)).length} פריטים`
+                                                }
+                                            </span>
                                         </div>
                                     </div>
-                                    <button
-                                        onClick={() => updateGroup(selectedGroup.id)}
-                                        disabled={updatingGroup === selectedGroup.id}
-                                        className="flex items-center gap-3 bg-emerald-500 text-white px-8 py-3.5 rounded-2xl font-black hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20 active:scale-95 disabled:opacity-50"
-                                    >
-                                        {updatingGroup === selectedGroup.id ? (
-                                            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                                        ) : (
-                                            <>
-                                                <FaSave size={16} />
-                                                שמור שינויים
-                                            </>
-                                        )}
-                                    </button>
-                                </div>
-
-                                <div className="p-10 space-y-8">
-                                    {/* שם קבוצה */}
-                                    <div className="space-y-3">
-                                        <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest mr-2 flex items-center gap-2">
-                                            <FaLayerGroup className="text-purple-400" /> שם הקבוצה (יוצג ללקוח)
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={groupEdits[selectedGroup.id]?.name ?? ''}
-                                            onChange={(e) => setGroupEdits((prev) => ({
-                                                ...prev,
-                                                [selectedGroup.id]: { ...prev[selectedGroup.id], name: e.target.value },
-                                            }))}
-                                            className="w-full px-6 py-4 bg-gray-50 border-none rounded-[1.5rem] focus:ring-4 focus:ring-brand-primary/10 text-gray-900 font-extrabold text-center text-xl"
-                                            placeholder="למשל: סלטים, ממרחים, תוספות חמות"
-                                        />
-                                        <p className="text-[10px] text-gray-400 text-center font-bold">השם יופיע בתפריט של הלקוח</p>
+                                    <div className={`transition-all ${selectedGroupId === String(group.id) ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4'}`}>
+                                        <FaChevronLeft className="text-brand-primary" />
                                     </div>
-
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                                        <div className="space-y-3">
-                                            <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest mr-2 flex items-center gap-2">
-                                                <FaMagic className="text-blue-400" /> מינימום בחירה
-                                            </label>
-                                            <input
-                                                type="number"
-                                                value={groupEdits[selectedGroup.id]?.min_selections ?? '0'}
-                                                onChange={(e) => setGroupEdits((prev) => ({
-                                                    ...prev,
-                                                    [selectedGroup.id]: { ...prev[selectedGroup.id], min_selections: e.target.value },
-                                                }))}
-                                                className="w-full px-6 py-4 bg-gray-50 border-none rounded-[1.5rem] focus:ring-4 focus:ring-brand-primary/10 text-gray-900 font-extrabold text-center text-xl"
-                                            />
-                                            <p className="text-[10px] text-gray-400 text-center font-bold">למשל: 1 מחייב בחירה אחת</p>
-                                        </div>
-
-                                        <div className="space-y-3">
-                                            <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest mr-2 flex items-center gap-2">
-                                                <FaMagic className="text-blue-400" /> מקסימום בחירה
-                                            </label>
-                                            <input
-                                                type="number"
-                                                value={groupEdits[selectedGroup.id]?.max_selections ?? ''}
-                                                onChange={(e) => setGroupEdits((prev) => ({
-                                                    ...prev,
-                                                    [selectedGroup.id]: { ...prev[selectedGroup.id], max_selections: e.target.value },
-                                                }))}
-                                                className="w-full px-6 py-4 bg-gray-50 border-none rounded-[1.5rem] focus:ring-4 focus:ring-brand-primary/10 text-gray-900 font-extrabold text-center text-xl"
-                                                placeholder="∞"
-                                            />
-                                            <p className="text-[10px] text-gray-400 text-center font-bold">ריק או 0 = ללא הגבלה</p>
-                                        </div>
-
-                                        <div className="space-y-4">
-                                            <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] mr-2 flex items-center gap-2">
-                                                סדר תצוגה בתפריט
-                                            </label>
-                                            <div className="flex items-center gap-3 bg-gray-50 p-2 rounded-[2rem] border border-gray-100 shadow-inner">
-                                                <button
-                                                    onClick={() => {
-                                                        const current = Number(groupEdits[selectedGroup.id]?.sort_order || 0);
-                                                        setGroupEdits(prev => ({ ...prev, [selectedGroup.id]: { ...prev[selectedGroup.id], sort_order: Math.max(0, current - 1) } }));
-                                                    }}
-                                                    className="w-14 h-14 bg-white text-gray-900 rounded-[1.5rem] flex items-center justify-center hover:bg-brand-primary hover:text-white transition-all shadow-sm group/btn active:scale-90"
-                                                >
-                                                    <FaChevronRight size={14} className="group-hover/btn:scale-125 transition-transform" />
-                                                </button>
-
-                                                <div className="flex-1 text-center py-2">
-                                                    <div className="text-[10px] font-black text-brand-primary/50 uppercase tracking-widest mb-0.5">
-                                                        {selectedGroup.name}
-                                                    </div>
-                                                    <div className="flex items-center justify-center gap-2">
-                                                        <span className="text-gray-400 font-bold text-xs italic">מיקום</span>
-                                                        <input
-                                                            type="text"
-                                                            inputMode="numeric"
-                                                            value={groupEdits[selectedGroup.id]?.sort_order ?? '0'}
-                                                            readOnly
-                                                            className="w-12 bg-transparent border-none text-center font-black text-2xl text-gray-900 focus:ring-0 p-0"
-                                                        />
-                                                    </div>
-                                                </div>
-
-                                                <button
-                                                    onClick={() => {
-                                                        const current = Number(groupEdits[selectedGroup.id]?.sort_order || 0);
-                                                        setGroupEdits(prev => ({ ...prev, [selectedGroup.id]: { ...prev[selectedGroup.id], sort_order: current + 1 } }));
-                                                    }}
-                                                    className="w-14 h-14 bg-white text-gray-900 rounded-[1.5rem] flex items-center justify-center hover:bg-brand-primary hover:text-white transition-all shadow-sm group/btn active:scale-90"
-                                                >
-                                                    <FaChevronLeft size={14} className="group-hover/btn:scale-125 transition-transform" />
-                                                </button>
-                                            </div>
-                                            <p className="text-[10px] text-gray-400 text-center font-bold">החצים משנים את סדר הופעת הקבוצה ללקוח</p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="p-8 pt-0 flex justify-center">
-                                    <label className="flex items-center gap-4 px-8 py-4 bg-gray-50 rounded-[2rem] cursor-pointer hover:bg-gray-100 transition-all border border-gray-100">
-                                        <div className={`w-12 h-7 flex items-center rounded-full p-1 transition-colors ${groupEdits[selectedGroup.id]?.is_active ? 'bg-emerald-500' : 'bg-gray-300'}`}>
-                                            <div className={`bg-white w-5 h-5 rounded-full shadow transform transition-transform ${groupEdits[selectedGroup.id]?.is_active ? '-translate-x-5' : 'translate-x-0'}`}></div>
-                                        </div>
-                                        <input
-                                            type="checkbox"
-                                            className="hidden"
-                                            checked={groupEdits[selectedGroup.id]?.is_active ?? true}
-                                            onChange={(e) => {
-                                                const val = e.target.checked;
-                                                setGroupEdits(prev => ({ ...prev, [selectedGroup.id]: { ...prev[selectedGroup.id], is_active: val } }));
+                                </button>
+                                {isManager() && (
+                                    <div className="absolute left-2 top-1/2 -translate-y-1/2 opacity-0 group-hover/item:opacity-100 transition-opacity flex gap-1">
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                openGroupModal(group);
                                             }}
-                                        />
-                                        <span className="text-sm font-black text-gray-700">הצג קבוצה זו ללקוח</span>
-                                    </label>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Items Sub-Grid */}
-                        <div className="space-y-6">
-                            <div className="flex items-center justify-between px-4">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-2 h-8 bg-brand-primary rounded-full"></div>
-                                    <h2 className="text-2xl font-black text-gray-900 italic tracking-tight">
-                                        פריטים ב{selectedGroup?.name || '...'}
-                                    </h2>
-                                </div>
-                            </div>
-
-                            {isCategoryGroup ? (
-                                <div className="col-span-full py-20 text-center bg-blue-50/50 rounded-[4rem] border-2 border-blue-100 flex flex-col items-center justify-center">
-                                    <div className="w-24 h-24 bg-blue-100 rounded-[3rem] flex items-center justify-center mb-8 text-blue-500">
-                                        <FaLink size={36} />
+                                            className="p-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-all active:scale-95 shadow-lg"
+                                            title="ערוך קבוצה"
+                                        >
+                                            <FaEdit size={12} />
+                                        </button>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                duplicateGroup(group.id);
+                                            }}
+                                            className="p-2 bg-green-500 text-white rounded-xl hover:bg-green-600 transition-all active:scale-95 shadow-lg"
+                                            title="העתק קבוצה"
+                                        >
+                                            <FaCopy size={12} />
+                                        </button>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                deleteGroup(group.id);
+                                            }}
+                                            className="p-2 bg-rose-500 text-white rounded-xl hover:bg-rose-600 transition-all active:scale-95 shadow-lg"
+                                            title="מחק קבוצה"
+                                        >
+                                            <FaTrash size={12} />
+                                        </button>
                                     </div>
-                                    <h3 className="text-2xl font-black text-gray-900">קבוצה מקושרת לקטגוריה</h3>
-                                    <p className="text-gray-600 mt-3 font-medium max-w-md">
-                                        הפריטים בקבוצה זו נשלפים אוטומטית מהקטגוריה
-                                        <span className="font-black text-blue-600 mx-1">
-                                            "{categoryNameById[selectedGroup?.source_category_id] || '...'}"
-                                        </span>
-                                    </p>
-                                    <p className="text-gray-400 mt-2 text-sm font-bold">
-                                        שינוי זמינות פריט בתפריט ישפיע אוטומטית על הקבוצה הזו
-                                    </p>
-                                    {(() => {
-                                        const g = selectedGroup;
-                                        const raw = g?.source_addon_fixed_price;
-                                        const hasFixed = raw !== null && raw !== undefined && raw !== '' && Number(raw) >= 0;
-                                        const fixedNum = hasFixed ? Number(raw) : null;
-                                        const badgeClass = hasFixed
-                                            ? 'bg-amber-100 text-amber-900'
-                                            : g?.source_include_prices
-                                                ? 'bg-blue-100 text-blue-700'
-                                                : 'bg-emerald-100 text-emerald-700';
-                                        const badgeText = hasFixed
-                                            ? `+₪${fixedNum.toFixed(2)} קבוע לכל בחירה`
-                                            : g?.source_include_prices
-                                                ? '+₪ מחירי הפריטים מתווספים'
-                                                : '₪0 כלול במנה (ללא תוספת מחיר)';
-                                        return (
-                                            <div className={`mt-4 px-5 py-2 rounded-2xl text-sm font-black inline-block ${badgeClass}`}>
-                                                {badgeText}
-                                            </div>
-                                        );
-                                    })()}
-                                </div>
-                            ) : (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-                                    {visibleSalads.length === 0 ? (
-                                        <div className="col-span-full py-28 text-center bg-white rounded-[4rem] border-2 border-dashed border-gray-100 flex flex-col items-center justify-center animate-pulse">
-                                            <div className="w-24 h-24 bg-gray-50 rounded-[3rem] flex items-center justify-center mb-8 text-gray-200">
-                                                <FaPlus size={36} />
-                                            </div>
-                                            <h3 className="text-2xl font-black text-gray-900">הקבוצה כרגע ריקה</h3>
-                                            <p className="text-gray-500 mt-2 font-medium">זה הזמן להוסיף את התוספת המנצחת שלך!</p>
-                                            <button
-                                                onClick={() => openModal()}
-                                                className="mt-8 px-8 py-3 bg-brand-primary text-white rounded-2xl font-black hover:bg-brand-dark transition-all shadow-lg shadow-brand-primary/20"
-                                            >
-                                                הוספה מהירה
-                                            </button>
-                                        </div>
-                                    ) : (
-                                        visibleSalads.map((salad) => (
-                                            <div
-                                                key={salad.id}
-                                                className={`group bg-white rounded-[3rem] shadow-sm border border-gray-100 p-8 flex flex-col gap-8 hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 relative overflow-hidden ${!salad.is_active && 'opacity-60 grayscale-[0.6]'}`}
-                                            >
-                                                <div className="flex justify-between items-start">
-                                                    <div className={`w-16 h-16 rounded-[1.5rem] flex items-center justify-center text-2xl shadow-inner transition-all group-hover:scale-110 group-hover:rotate-6 ${salad.is_active ? 'bg-brand-primary/10 text-brand-primary' : 'bg-gray-100 text-gray-400'}`}>
-                                                        <FaPlus className="bg-white/50 p-1.5 rounded-lg" size={24} />
-                                                    </div>
-                                                    <div className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${salad.is_active ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-gray-50 text-gray-400 border-gray-200'}`}>
-                                                        {salad.is_active ? '● פעיל' : '○ כבוי'}
-                                                    </div>
-                                                </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
 
-                                                <div>
-                                                    <h3 className="text-2xl font-black text-gray-900 group-hover:text-brand-primary transition-colors leading-tight mb-3 tracking-tight">{salad.name}</h3>
-                                                    <div className="flex flex-wrap gap-2">
-                                                        {Array.isArray(salad.category_ids) && salad.category_ids.length > 0 ? (
-                                                            salad.category_ids.slice(0, 3).map((id) => (
-                                                                <span key={id} className="px-3 py-1 rounded-xl bg-gray-50 text-gray-400 text-[9px] font-black border border-gray-100/50 uppercase tracking-tighter">
-                                                                    {categoryNameById[id] || `#${id}`}
-                                                                </span>
-                                                            ))
-                                                        ) : (
-                                                            <span className="flex items-center gap-1.5 text-[10px] text-brand-primary/60 font-black bg-brand-primary/5 px-2.5 py-1 rounded-lg">
-                                                                <FaRoute size={10} /> מופיע בכל התפריט
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </div>
-
-                                                <div className="pt-6 border-t border-gray-50/50 flex flex-col gap-2">
-                                                    <div className="flex items-center justify-between">
-                                                        <span className="text-xs font-black text-gray-400 uppercase tracking-widest mr-1">עלות בחירה</span>
-                                                        <span className={`text-2xl font-black ${Number(salad.price_delta) > 0 ? 'text-brand-primary' : 'text-emerald-500'}`}>
-                                                            {Number(salad.price_delta || 0) === 0 ? 'חינם' : `₪${Number(salad.price_delta).toFixed(1)}`}
-                                                        </span>
-                                                    </div>
-                                                </div>
-
-                                                {isManager() && (
-                                                    <div className="grid grid-cols-2 gap-3 mt-2 transform translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">
-                                                        <button
-                                                            onClick={() => openModal(salad)}
-                                                            className="flex items-center justify-center gap-2 py-4 bg-gray-900 text-white rounded-[1.5rem] text-xs font-black hover:bg-black transition-all active:scale-95 shadow-lg shadow-gray-200"
-                                                        >
-                                                            <FaEdit size={14} />
-                                                            עריכה
-                                                        </button>
-                                                        <button
-                                                            onClick={() => deleteSalad(salad.id)}
-                                                            className="flex items-center justify-center gap-2 py-4 bg-rose-50 text-rose-600 rounded-[1.5rem] text-xs font-black hover:bg-rose-600 hover:text-white transition-all active:scale-95 border border-rose-100"
-                                                        >
-                                                            <FaTrash size={14} />
-                                                            מחיקה
-                                                        </button>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        ))
-                                    )}
-                                </div>
-                            )}
+                    {/* Group Rules Info */}
+                    <div className="bg-amber-50/50 rounded-[2.5rem] p-8 border border-amber-100/50 space-y-4">
+                        <div className="flex items-center gap-3 text-amber-700">
+                            <FaInfoCircle size={20} />
+                            <h4 className="font-black">טיפ למנהלים</h4>
                         </div>
+                        <p className="text-sm font-medium text-amber-900/70 leading-relaxed">
+                            הגדר פריטים כ"כלולים" במנה ע"י קביעת מחיר 0. פריטים אלו יופיעו כברירת מחדל או בחירה חופשית ללא תשלום.
+                        </p>
                     </div>
                 </div>
 
-                {/* מודל תוספת — וויזארד ביצירה */}
-                {modalOpen && (
-                    <div className="fixed inset-0 bg-gray-900/70 backdrop-blur-md z-[110] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-500">
-                        <div className="bg-white rounded-t-[1.75rem] sm:rounded-[3rem] shadow-2xl max-w-2xl w-full max-h-[min(92dvh,90vh)] flex flex-col min-h-0 border border-white/20 animate-in zoom-in-95 duration-400">
-                            <div className="px-4 py-5 sm:px-10 sm:py-8 bg-gray-50/50 border-b border-gray-100 flex items-center justify-between shrink-0">
-                                <div className="flex items-center gap-3 sm:gap-6 min-w-0">
-                                    <div className="p-3 sm:p-4 bg-brand-primary text-white rounded-2xl sm:rounded-[2rem] shadow-xl shadow-brand-primary/20 shrink-0">
-                                        <FaPlus size={22} />
+                {/* Content Area: Selected Group Settings & Items (8 Columns) */}
+                <div className="lg:col-span-8 space-y-10">
+                    {/* Group Settings Card */}
+                    {selectedGroup && (
+                        <div className="bg-white rounded-[3rem] shadow-xl shadow-gray-200/50 border border-gray-100 overflow-hidden animate-in slide-in-from-left duration-500">
+                            <div className="p-8 border-b border-gray-50 bg-gray-50/30 flex justify-between items-center">
+                                <div className="flex items-center gap-4">
+                                    <div className="p-3 bg-brand-primary text-white rounded-2xl shadow-lg">
+                                        <FaCogs size={20} />
                                     </div>
-                                    <div className="min-w-0">
-                                        <h2 className="text-lg sm:text-2xl font-black text-gray-900 tracking-tight truncate">
-                                            {editSalad ? 'עריכת פריט' : 'הוספת תוספת'}
-                                        </h2>
-                                        <p className="text-gray-500 font-bold text-xs sm:text-sm mt-0.5">ניהול קטלוג התוספות והסלטים</p>
-                                        {!editSalad && (
-                                            <p className="text-[10px] font-black text-gray-400 mt-1">
-                                                שלב {saladWizardStep} מתוך 3 — פרטים · הגדרות · קטגוריות
-                                            </p>
-                                        )}
+                                    <div>
+                                        <h2 className="text-2xl font-black text-gray-900">הגדרות וחוקי קבוצה</h2>
+                                        <p className="text-gray-500 font-medium text-xs">שליטה על כמות הבחירות של הלקוח ב{selectedGroup.name}</p>
                                     </div>
                                 </div>
                                 <button
-                                    type="button"
-                                    onClick={closeModal}
-                                    className="p-3 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-2xl transition-all shrink-0"
+                                    onClick={() => updateGroup(selectedGroup.id)}
+                                    disabled={updatingGroup === selectedGroup.id}
+                                    className="flex items-center gap-3 bg-emerald-500 text-white px-8 py-3.5 rounded-2xl font-black hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20 active:scale-95 disabled:opacity-50"
                                 >
-                                    <FaTimes size={22} />
+                                    {updatingGroup === selectedGroup.id ? (
+                                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                                    ) : (
+                                        <>
+                                            <FaSave size={16} />
+                                            שמור שינויים
+                                        </>
+                                    )}
                                 </button>
                             </div>
 
-                            <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
-                                <div className="overflow-y-auto flex-1 min-h-0 p-4 sm:p-10 space-y-8 sm:space-y-10 custom-scrollbar">
-                                    {(editSalad || saladWizardStep === 1) && (
+                            <div className="p-10 space-y-8">
+                                {/* שם קבוצה */}
+                                <div className="space-y-3">
+                                    <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest mr-2 flex items-center gap-2">
+                                        <FaLayerGroup className="text-purple-400" /> שם הקבוצה (יוצג ללקוח)
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={groupEdits[selectedGroup.id]?.name ?? ''}
+                                        onChange={(e) => setGroupEdits((prev) => ({
+                                            ...prev,
+                                            [selectedGroup.id]: { ...prev[selectedGroup.id], name: e.target.value },
+                                        }))}
+                                        className="w-full px-6 py-4 bg-gray-50 border-none rounded-[1.5rem] focus:ring-4 focus:ring-brand-primary/10 text-gray-900 font-extrabold text-center text-xl"
+                                        placeholder="למשל: סלטים, ממרחים, תוספות חמות"
+                                    />
+                                    <p className="text-[10px] text-gray-400 text-center font-bold">השם יופיע בתפריט של הלקוח</p>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                                    <div className="space-y-3">
+                                        <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest mr-2 flex items-center gap-2">
+                                            <FaMagic className="text-blue-400" /> מינימום בחירה
+                                        </label>
+                                        <input
+                                            type="number"
+                                            value={groupEdits[selectedGroup.id]?.min_selections ?? '0'}
+                                            onChange={(e) => setGroupEdits((prev) => ({
+                                                ...prev,
+                                                [selectedGroup.id]: { ...prev[selectedGroup.id], min_selections: e.target.value },
+                                            }))}
+                                            className="w-full px-6 py-4 bg-gray-50 border-none rounded-[1.5rem] focus:ring-4 focus:ring-brand-primary/10 text-gray-900 font-extrabold text-center text-xl"
+                                        />
+                                        <p className="text-[10px] text-gray-400 text-center font-bold">למשל: 1 מחייב בחירה אחת</p>
+                                    </div>
+
+                                    <div className="space-y-3">
+                                        <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest mr-2 flex items-center gap-2">
+                                            <FaMagic className="text-blue-400" /> מקסימום בחירה
+                                        </label>
+                                        <input
+                                            type="number"
+                                            value={groupEdits[selectedGroup.id]?.max_selections ?? ''}
+                                            onChange={(e) => setGroupEdits((prev) => ({
+                                                ...prev,
+                                                [selectedGroup.id]: { ...prev[selectedGroup.id], max_selections: e.target.value },
+                                            }))}
+                                            className="w-full px-6 py-4 bg-gray-50 border-none rounded-[1.5rem] focus:ring-4 focus:ring-brand-primary/10 text-gray-900 font-extrabold text-center text-xl"
+                                            placeholder="∞"
+                                        />
+                                        <p className="text-[10px] text-gray-400 text-center font-bold">ריק או 0 = ללא הגבלה</p>
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] mr-2 flex items-center gap-2">
+                                            סדר תצוגה בתפריט
+                                        </label>
+                                        <div className="flex items-center gap-3 bg-gray-50 p-2 rounded-[2rem] border border-gray-100 shadow-inner">
+                                            <button
+                                                onClick={() => {
+                                                    const current = Number(groupEdits[selectedGroup.id]?.sort_order || 0);
+                                                    setGroupEdits(prev => ({ ...prev, [selectedGroup.id]: { ...prev[selectedGroup.id], sort_order: Math.max(0, current - 1) } }));
+                                                }}
+                                                className="w-14 h-14 bg-white text-gray-900 rounded-[1.5rem] flex items-center justify-center hover:bg-brand-primary hover:text-white transition-all shadow-sm group/btn active:scale-90"
+                                            >
+                                                <FaChevronRight size={14} className="group-hover/btn:scale-125 transition-transform" />
+                                            </button>
+
+                                            <div className="flex-1 text-center py-2">
+                                                <div className="text-[10px] font-black text-brand-primary/50 uppercase tracking-widest mb-0.5">
+                                                    {selectedGroup.name}
+                                                </div>
+                                                <div className="flex items-center justify-center gap-2">
+                                                    <span className="text-gray-400 font-bold text-xs italic">מיקום</span>
+                                                    <input
+                                                        type="text"
+                                                        inputMode="numeric"
+                                                        value={groupEdits[selectedGroup.id]?.sort_order ?? '0'}
+                                                        readOnly
+                                                        className="w-12 bg-transparent border-none text-center font-black text-2xl text-gray-900 focus:ring-0 p-0"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <button
+                                                onClick={() => {
+                                                    const current = Number(groupEdits[selectedGroup.id]?.sort_order || 0);
+                                                    setGroupEdits(prev => ({ ...prev, [selectedGroup.id]: { ...prev[selectedGroup.id], sort_order: current + 1 } }));
+                                                }}
+                                                className="w-14 h-14 bg-white text-gray-900 rounded-[1.5rem] flex items-center justify-center hover:bg-brand-primary hover:text-white transition-all shadow-sm group/btn active:scale-90"
+                                            >
+                                                <FaChevronLeft size={14} className="group-hover/btn:scale-125 transition-transform" />
+                                            </button>
+                                        </div>
+                                        <p className="text-[10px] text-gray-400 text-center font-bold">החצים משנים את סדר הופעת הקבוצה ללקוח</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="p-8 pt-0 flex justify-center">
+                                <label className="flex items-center gap-4 px-8 py-4 bg-gray-50 rounded-[2rem] cursor-pointer hover:bg-gray-100 transition-all border border-gray-100">
+                                    <div className={`w-12 h-7 flex items-center rounded-full p-1 transition-colors ${groupEdits[selectedGroup.id]?.is_active ? 'bg-emerald-500' : 'bg-gray-300'}`}>
+                                        <div className={`bg-white w-5 h-5 rounded-full shadow transform transition-transform ${groupEdits[selectedGroup.id]?.is_active ? '-translate-x-5' : 'translate-x-0'}`}></div>
+                                    </div>
+                                    <input
+                                        type="checkbox"
+                                        className="hidden"
+                                        checked={groupEdits[selectedGroup.id]?.is_active ?? true}
+                                        onChange={(e) => {
+                                            const val = e.target.checked;
+                                            setGroupEdits(prev => ({ ...prev, [selectedGroup.id]: { ...prev[selectedGroup.id], is_active: val } }));
+                                        }}
+                                    />
+                                    <span className="text-sm font-black text-gray-700">הצג קבוצה זו ללקוח</span>
+                                </label>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Items Sub-Grid */}
+                    <div className="space-y-6">
+                        <div className="flex items-center justify-between px-4">
+                            <div className="flex items-center gap-3">
+                                <div className="w-2 h-8 bg-brand-primary rounded-full"></div>
+                                <h2 className="text-2xl font-black text-gray-900 italic tracking-tight">
+                                    פריטים ב{selectedGroup?.name || '...'}
+                                </h2>
+                            </div>
+                        </div>
+
+                        {isCategoryGroup ? (
+                            <div className="col-span-full py-20 text-center bg-blue-50/50 rounded-[4rem] border-2 border-blue-100 flex flex-col items-center justify-center">
+                                <div className="w-24 h-24 bg-blue-100 rounded-[3rem] flex items-center justify-center mb-8 text-blue-500">
+                                    <FaLink size={36} />
+                                </div>
+                                <h3 className="text-2xl font-black text-gray-900">קבוצה מקושרת לקטגוריה</h3>
+                                <p className="text-gray-600 mt-3 font-medium max-w-md">
+                                    הפריטים בקבוצה זו נשלפים אוטומטית מהקטגוריה
+                                    <span className="font-black text-blue-600 mx-1">
+                                        "{categoryNameById[selectedGroup?.source_category_id] || '...'}"
+                                    </span>
+                                </p>
+                                <p className="text-gray-400 mt-2 text-sm font-bold">
+                                    שינוי זמינות פריט בתפריט ישפיע אוטומטית על הקבוצה הזו
+                                </p>
+                                {(() => {
+                                    const g = selectedGroup;
+                                    const raw = g?.source_addon_fixed_price;
+                                    const hasFixed = raw !== null && raw !== undefined && raw !== '' && Number(raw) >= 0;
+                                    const fixedNum = hasFixed ? Number(raw) : null;
+                                    const badgeClass = hasFixed
+                                        ? 'bg-amber-100 text-amber-900'
+                                        : g?.source_include_prices
+                                            ? 'bg-blue-100 text-blue-700'
+                                            : 'bg-emerald-100 text-emerald-700';
+                                    const badgeText = hasFixed
+                                        ? `+₪${fixedNum.toFixed(2)} קבוע לכל בחירה`
+                                        : g?.source_include_prices
+                                            ? '+₪ מחירי הפריטים מתווספים'
+                                            : '₪0 כלול במנה (ללא תוספת מחיר)';
+                                    return (
+                                        <div className={`mt-4 px-5 py-2 rounded-2xl text-sm font-black inline-block ${badgeClass}`}>
+                                            {badgeText}
+                                        </div>
+                                    );
+                                })()}
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+                                {visibleSalads.length === 0 ? (
+                                    <div className="col-span-full py-28 text-center bg-white rounded-[4rem] border-2 border-dashed border-gray-100 flex flex-col items-center justify-center animate-pulse">
+                                        <div className="w-24 h-24 bg-gray-50 rounded-[3rem] flex items-center justify-center mb-8 text-gray-200">
+                                            <FaPlus size={36} />
+                                        </div>
+                                        <h3 className="text-2xl font-black text-gray-900">הקבוצה כרגע ריקה</h3>
+                                        <p className="text-gray-500 mt-2 font-medium">זה הזמן להוסיף את התוספת המנצחת שלך!</p>
+                                        <button
+                                            onClick={() => openModal()}
+                                            className="mt-8 px-8 py-3 bg-brand-primary text-white rounded-2xl font-black hover:bg-brand-dark transition-all shadow-lg shadow-brand-primary/20"
+                                        >
+                                            הוספה מהירה
+                                        </button>
+                                    </div>
+                                ) : (
+                                    visibleSalads.map((salad) => (
+                                        <div
+                                            key={salad.id}
+                                            className={`group bg-white rounded-[3rem] shadow-sm border border-gray-100 p-8 flex flex-col gap-8 hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 relative overflow-hidden ${!salad.is_active && 'opacity-60 grayscale-[0.6]'}`}
+                                        >
+                                            <div className="flex justify-between items-start">
+                                                <div className={`w-16 h-16 rounded-[1.5rem] flex items-center justify-center text-2xl shadow-inner transition-all group-hover:scale-110 group-hover:rotate-6 ${salad.is_active ? 'bg-brand-primary/10 text-brand-primary' : 'bg-gray-100 text-gray-400'}`}>
+                                                    <FaPlus className="bg-white/50 p-1.5 rounded-lg" size={24} />
+                                                </div>
+                                                <div className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${salad.is_active ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-gray-50 text-gray-400 border-gray-200'}`}>
+                                                    {salad.is_active ? '● פעיל' : '○ כבוי'}
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <h3 className="text-2xl font-black text-gray-900 group-hover:text-brand-primary transition-colors leading-tight mb-3 tracking-tight">{salad.name}</h3>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {Array.isArray(salad.category_ids) && salad.category_ids.length > 0 ? (
+                                                        salad.category_ids.slice(0, 3).map((id) => (
+                                                            <span key={id} className="px-3 py-1 rounded-xl bg-gray-50 text-gray-400 text-[9px] font-black border border-gray-100/50 uppercase tracking-tighter">
+                                                                {categoryNameById[id] || `#${id}`}
+                                                            </span>
+                                                        ))
+                                                    ) : (
+                                                        <span className="flex items-center gap-1.5 text-[10px] text-brand-primary/60 font-black bg-brand-primary/5 px-2.5 py-1 rounded-lg">
+                                                            <FaRoute size={10} /> מופיע בכל התפריט
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            <div className="pt-6 border-t border-gray-50/50 flex flex-col gap-2">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-xs font-black text-gray-400 uppercase tracking-widest mr-1">עלות בחירה</span>
+                                                    <span className={`text-2xl font-black ${Number(salad.price_delta) > 0 ? 'text-brand-primary' : 'text-emerald-500'}`}>
+                                                        {Number(salad.price_delta || 0) === 0 ? 'חינם' : `₪${Number(salad.price_delta).toFixed(1)}`}
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            {isManager() && (
+                                                <div className="grid grid-cols-2 gap-3 mt-2 transform translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">
+                                                    <button
+                                                        onClick={() => openModal(salad)}
+                                                        className="flex items-center justify-center gap-2 py-4 bg-gray-900 text-white rounded-[1.5rem] text-xs font-black hover:bg-black transition-all active:scale-95 shadow-lg shadow-gray-200"
+                                                    >
+                                                        <FaEdit size={14} />
+                                                        עריכה
+                                                    </button>
+                                                    <button
+                                                        onClick={() => deleteSalad(salad.id)}
+                                                        className="flex items-center justify-center gap-2 py-4 bg-rose-50 text-rose-600 rounded-[1.5rem] text-xs font-black hover:bg-rose-600 hover:text-white transition-all active:scale-95 border border-rose-100"
+                                                    >
+                                                        <FaTrash size={14} />
+                                                        מחיקה
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            {/* מודל תוספת — וויזארד ביצירה */}
+            {modalOpen && (
+                <div className="fixed inset-0 bg-gray-900/70 backdrop-blur-md z-[110] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-500">
+                    <div className="bg-white rounded-t-[1.75rem] sm:rounded-[3rem] shadow-2xl max-w-2xl w-full max-h-[min(92dvh,90vh)] flex flex-col min-h-0 border border-white/20 animate-in zoom-in-95 duration-400">
+                        <div className="px-4 py-5 sm:px-10 sm:py-8 bg-gray-50/50 border-b border-gray-100 flex items-center justify-between shrink-0">
+                            <div className="flex items-center gap-3 sm:gap-6 min-w-0">
+                                <div className="p-3 sm:p-4 bg-brand-primary text-white rounded-2xl sm:rounded-[2rem] shadow-xl shadow-brand-primary/20 shrink-0">
+                                    <FaPlus size={22} />
+                                </div>
+                                <div className="min-w-0">
+                                    <h2 className="text-lg sm:text-2xl font-black text-gray-900 tracking-tight truncate">
+                                        {editSalad ? 'עריכת פריט' : 'הוספת תוספת'}
+                                    </h2>
+                                    <p className="text-gray-500 font-bold text-xs sm:text-sm mt-0.5">ניהול קטלוג התוספות והסלטים</p>
+                                    {!editSalad && (
+                                        <p className="text-[10px] font-black text-gray-400 mt-1">
+                                            שלב {saladWizardStep} מתוך 3 — פרטים · הגדרות · קטגוריות
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={closeModal}
+                                className="p-3 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-2xl transition-all shrink-0"
+                            >
+                                <FaTimes size={22} />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+                            <div className="overflow-y-auto flex-1 min-h-0 p-4 sm:p-10 space-y-8 sm:space-y-10 custom-scrollbar">
+                                {(editSalad || saladWizardStep === 1) && (
                                     <div className="space-y-6">
                                         <h3 className="text-sm font-black text-gray-500 uppercase tracking-widest border-b border-gray-100 pb-2">פרטים בסיסיים</h3>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
@@ -995,9 +995,9 @@ export default function AdminSalads({ embedded = false }) {
                                             <p className="text-[10px] text-gray-400 mr-2 font-bold">הזן 0 אם הבחירה כלולה במחיר המנה</p>
                                         </div>
                                     </div>
-                                    )}
+                                )}
 
-                                    {(editSalad || saladWizardStep === 2) && (
+                                {(editSalad || saladWizardStep === 2) && (
                                     <div className="space-y-6">
                                         <h3 className="text-sm font-black text-gray-500 uppercase tracking-widest border-b border-gray-100 pb-2">הגדרות בחירה</h3>
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -1044,9 +1044,9 @@ export default function AdminSalads({ embedded = false }) {
                                             </label>
                                         </div>
                                     </div>
-                                    )}
+                                )}
 
-                                    {(editSalad || saladWizardStep === 3) && (
+                                {(editSalad || saladWizardStep === 3) && (
                                     <div className="space-y-4">
                                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mr-0 sm:mr-2">
                                             <label className="text-xs font-black text-gray-500 uppercase tracking-[0.2em] flex items-center gap-2">
@@ -1081,384 +1081,384 @@ export default function AdminSalads({ embedded = false }) {
                                             ))}
                                         </div>
                                     </div>
-                                    )}
-                                </div>
-
-                                <div className="flex flex-col sm:flex-row flex-wrap gap-2 p-4 sm:p-6 border-t border-gray-100 bg-white shrink-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-                                    {!editSalad && saladWizardStep > 1 && (
-                                        <button
-                                            type="button"
-                                            onClick={goSaladWizardPrev}
-                                            className="order-2 sm:order-1 w-full sm:w-auto px-6 py-3.5 bg-gray-100 text-gray-800 rounded-2xl font-black text-sm"
-                                        >
-                                            הקודם
-                                        </button>
-                                    )}
-                                    <button
-                                        type="button"
-                                        onClick={closeModal}
-                                        className="order-3 sm:order-2 px-6 py-3.5 bg-white border border-gray-200 text-gray-600 rounded-2xl font-black text-sm w-full sm:w-auto"
-                                    >
-                                        ביטול
-                                    </button>
-                                    {!editSalad && saladWizardStep < 3 && (
-                                        <button
-                                            type="submit"
-                                            className="order-1 sm:order-3 flex-1 min-w-[10rem] py-3.5 bg-brand-primary text-white rounded-2xl font-black text-sm shadow-lg"
-                                        >
-                                            הבא
-                                        </button>
-                                    )}
-                                    {(editSalad || saladWizardStep === 3) && (
-                                        <button
-                                            type="submit"
-                                            disabled={saving}
-                                            className="order-1 flex-1 min-w-[10rem] py-3.5 bg-gray-900 text-white rounded-2xl font-black text-base hover:bg-black transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                                        >
-                                            {saving ? (
-                                                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                                            ) : (
-                                                <>
-                                                    <FaSave />
-                                                    {editSalad ? 'שמור שינויים' : 'שמור תוספת'}
-                                                </>
-                                            )}
-                                        </button>
-                                    )}
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                )}
-
-                {/* Group Modal */}
-                {groupModalOpen && (
-                    <div className="fixed inset-0 bg-gray-900/70 backdrop-blur-md z-[110] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-500">
-                        <div className="bg-white rounded-t-[1.75rem] sm:rounded-[3rem] shadow-2xl max-w-xl w-full max-h-[min(92dvh,90vh)] flex flex-col min-h-0 border border-white/20 animate-in zoom-in-95 duration-400 my-0 sm:my-4">
-                            <div className="px-4 py-5 sm:px-10 sm:py-8 bg-gray-50/50 border-b border-gray-100 flex items-center justify-between shrink-0">
-                                <div className="flex items-center gap-3 sm:gap-6 min-w-0">
-                                    <div className="p-3 sm:p-4 bg-brand-primary text-white rounded-2xl sm:rounded-[2rem] shadow-xl shadow-brand-primary/20 bg-gradient-to-br from-brand-primary to-orange-600 shrink-0">
-                                        <FaLayerGroup size={20} className="sm:w-6 sm:h-6" />
-                                    </div>
-                                    <div className="min-w-0">
-                                        <h2 className="text-lg sm:text-2xl font-black text-gray-900 tracking-tight truncate">
-                                            {editingGroup ? 'עריכת קבוצה' : 'הוספת קבוצה'}
-                                        </h2>
-                                        <p className="text-gray-500 font-bold text-xs sm:text-sm mt-0.5">ניהול קבוצת תוספות</p>
-                                        {!editingGroup && (
-                                            <p className="text-[10px] font-black text-gray-400 mt-1">
-                                                שלב {groupWizardStep} מתוך 3 — פרטים · בחירות · הגשה
-                                            </p>
-                                        )}
-                                    </div>
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={closeGroupModal}
-                                    className="p-3 sm:p-4 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-[1.5rem] transition-all shrink-0"
-                                >
-                                    <FaTimes size={20} className="sm:w-6 sm:h-6" />
-                                </button>
+                                )}
                             </div>
 
-                            <form onSubmit={handleGroupSubmit} className="flex flex-col flex-1 min-h-0">
+                            <div className="flex flex-col sm:flex-row flex-wrap gap-2 p-4 sm:p-6 border-t border-gray-100 bg-white shrink-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+                                {!editSalad && saladWizardStep > 1 && (
+                                    <button
+                                        type="button"
+                                        onClick={goSaladWizardPrev}
+                                        className="order-2 sm:order-1 w-full sm:w-auto px-6 py-3.5 bg-gray-100 text-gray-800 rounded-2xl font-black text-sm"
+                                    >
+                                        הקודם
+                                    </button>
+                                )}
+                                <button
+                                    type="button"
+                                    onClick={closeModal}
+                                    className="order-3 sm:order-2 px-6 py-3.5 bg-white border border-gray-200 text-gray-600 rounded-2xl font-black text-sm w-full sm:w-auto"
+                                >
+                                    ביטול
+                                </button>
+                                {!editSalad && saladWizardStep < 3 && (
+                                    <button
+                                        type="submit"
+                                        className="order-1 sm:order-3 flex-1 min-w-[10rem] py-3.5 bg-brand-primary text-white rounded-2xl font-black text-sm shadow-lg"
+                                    >
+                                        הבא
+                                    </button>
+                                )}
+                                {(editSalad || saladWizardStep === 3) && (
+                                    <button
+                                        type="submit"
+                                        disabled={saving}
+                                        className="order-1 flex-1 min-w-[10rem] py-3.5 bg-gray-900 text-white rounded-2xl font-black text-base hover:bg-black transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                                    >
+                                        {saving ? (
+                                            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                                        ) : (
+                                            <>
+                                                <FaSave />
+                                                {editSalad ? 'שמור שינויים' : 'שמור תוספת'}
+                                            </>
+                                        )}
+                                    </button>
+                                )}
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Group Modal */}
+            {groupModalOpen && (
+                <div className="fixed inset-0 bg-gray-900/70 backdrop-blur-md z-[110] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-500">
+                    <div className="bg-white rounded-t-[1.75rem] sm:rounded-[3rem] shadow-2xl max-w-xl w-full max-h-[min(92dvh,90vh)] flex flex-col min-h-0 border border-white/20 animate-in zoom-in-95 duration-400 my-0 sm:my-4">
+                        <div className="px-4 py-5 sm:px-10 sm:py-8 bg-gray-50/50 border-b border-gray-100 flex items-center justify-between shrink-0">
+                            <div className="flex items-center gap-3 sm:gap-6 min-w-0">
+                                <div className="p-3 sm:p-4 bg-brand-primary text-white rounded-2xl sm:rounded-[2rem] shadow-xl shadow-brand-primary/20 bg-gradient-to-br from-brand-primary to-orange-600 shrink-0">
+                                    <FaLayerGroup size={20} className="sm:w-6 sm:h-6" />
+                                </div>
+                                <div className="min-w-0">
+                                    <h2 className="text-lg sm:text-2xl font-black text-gray-900 tracking-tight truncate">
+                                        {editingGroup ? 'עריכת קבוצה' : 'הוספת קבוצה'}
+                                    </h2>
+                                    <p className="text-gray-500 font-bold text-xs sm:text-sm mt-0.5">ניהול קבוצת תוספות</p>
+                                    {!editingGroup && (
+                                        <p className="text-[10px] font-black text-gray-400 mt-1">
+                                            שלב {groupWizardStep} מתוך 3 — פרטים · בחירות · הגשה
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={closeGroupModal}
+                                className="p-3 sm:p-4 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-[1.5rem] transition-all shrink-0"
+                            >
+                                <FaTimes size={20} className="sm:w-6 sm:h-6" />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleGroupSubmit} className="flex flex-col flex-1 min-h-0">
                             <div className="overflow-y-auto flex-1 min-h-0 p-4 sm:p-10 space-y-6 sm:space-y-10 custom-scrollbar">
                                 {(editingGroup || groupWizardStep === 1) && (
-                                <div className="space-y-6 sm:space-y-8">
-                                <div className="space-y-3 sm:space-y-4">
-                                    <label className="text-xs font-black text-gray-500 mr-2 uppercase tracking-[0.2em]">שם הקבוצה</label>
-                                    <input
-                                        type="text"
-                                        value={groupForm.name}
-                                        onChange={(e) => setGroupForm({ ...groupForm, name: e.target.value })}
-                                        required
-                                        className="w-full px-5 py-4 sm:px-8 sm:py-5 bg-gray-50 border-none rounded-2xl sm:rounded-[1.5rem] focus:ring-4 focus:ring-brand-primary/10 text-gray-900 font-black transition-all text-base sm:text-lg shadow-inner"
-                                        placeholder="למשל: סלטים, ממרחים"
-                                    />
-                                </div>
-
-                                {/* Source Type Toggle */}
-                                <div className="space-y-3 sm:space-y-4">
-                                    <label className="text-xs font-black text-gray-500 mr-2 uppercase tracking-[0.2em]">מקור פריטים</label>
-                                    <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                                        <button
-                                            type="button"
-                                            onClick={() => setGroupForm({ ...groupForm, source_type: 'manual', source_category_id: '', source_addon_fixed_price: '' })}
-                                            className={`p-4 sm:p-5 rounded-2xl sm:rounded-[1.5rem] font-black text-sm sm:text-base transition-all flex flex-col items-center gap-2 ${groupForm.source_type === 'manual'
-                                                ? 'bg-brand-primary text-white shadow-lg ring-2 ring-brand-primary ring-offset-2'
-                                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                                }`}
-                                        >
-                                            <FaHandPointer className="text-xl sm:text-2xl" />
-                                            <span>בחירה ידנית</span>
-                                            <span className="text-[10px] opacity-70 font-bold">ברירת מחדל</span>
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setGroupForm({ ...groupForm, source_type: 'category' })}
-                                            className={`p-4 sm:p-5 rounded-2xl sm:rounded-[1.5rem] font-black text-sm sm:text-base transition-all flex flex-col items-center gap-2 ${groupForm.source_type === 'category'
-                                                ? 'bg-blue-600 text-white shadow-lg ring-2 ring-blue-600 ring-offset-2'
-                                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                                }`}
-                                        >
-                                            <FaLink className="text-xl sm:text-2xl" />
-                                            <span>קישור לקטגוריה</span>
-                                            <span className="text-[10px] opacity-70 font-bold">אוטומטי</span>
-                                        </button>
-                                    </div>
-                                </div>
-
-                                {/* Category Dropdown - only shown when source_type is 'category' */}
-                                {groupForm.source_type === 'category' && (
-                                    <div className="space-y-3 sm:space-y-4">
-                                        <label className="text-xs font-black text-gray-500 mr-2 uppercase tracking-[0.2em] flex items-center gap-2">
-                                            <FaLink className="text-blue-500" /> בחר קטגוריה
-                                        </label>
-                                        <select
-                                            value={groupForm.source_category_id}
-                                            onChange={(e) => setGroupForm({ ...groupForm, source_category_id: e.target.value })}
-                                            required
-                                            className="w-full px-5 py-4 sm:px-8 sm:py-5 bg-blue-50 border-2 border-blue-200 rounded-2xl sm:rounded-[1.5rem] focus:ring-4 focus:ring-blue-300/30 text-gray-900 font-black transition-all text-base sm:text-lg appearance-none cursor-pointer"
-                                        >
-                                            <option value="">-- בחר קטגוריה --</option>
-                                            {categories.map((cat) => (
-                                                <option key={cat.id} value={cat.id}>
-                                                    {cat.icon || ''} {cat.name}
-                                                </option>
-                                            ))}
-                                        </select>
-                                        <p className="text-[10px] text-blue-500 mr-2 font-bold">
-                                            פריטים פעילים מהקטגוריה יוצגו אוטומטית כאפשרויות בחירה
-                                        </p>
-
-                                        {/* Price Impact Toggle */}
-                                        <div className="mt-4 pt-4 border-t border-blue-100">
-                                            <label className="text-xs font-black text-gray-500 mr-2 uppercase tracking-[0.2em] mb-3 block">השפעת מחיר</label>
-                                            {(() => {
-                                                const fixedTrim = (groupForm.source_addon_fixed_price || '').trim();
-                                                const isFixed = fixedTrim !== '';
-                                                return (
-                                                    <>
-                                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => setGroupForm({ ...groupForm, source_include_prices: true, source_addon_fixed_price: '' })}
-                                                                className={`p-3 sm:p-4 rounded-2xl font-black text-xs sm:text-sm transition-all flex flex-col items-center gap-1.5 ${!isFixed && groupForm.source_include_prices
-                                                                    ? 'bg-blue-600 text-white shadow-lg ring-2 ring-blue-600 ring-offset-2'
-                                                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                                                    }`}
-                                                            >
-                                                                <span className="text-lg">+₪</span>
-                                                                <span>מחיר מהתפריט</span>
-                                                                <span className="text-[9px] opacity-70 font-bold text-center">לפי מחיר כל פריט</span>
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => setGroupForm({ ...groupForm, source_include_prices: false, source_addon_fixed_price: '' })}
-                                                                className={`p-3 sm:p-4 rounded-2xl font-black text-xs sm:text-sm transition-all flex flex-col items-center gap-1.5 ${!isFixed && !groupForm.source_include_prices
-                                                                    ? 'bg-emerald-600 text-white shadow-lg ring-2 ring-emerald-600 ring-offset-2'
-                                                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                                                    }`}
-                                                            >
-                                                                <span className="text-lg">₪0</span>
-                                                                <span>ללא מחיר</span>
-                                                                <span className="text-[9px] opacity-70 font-bold text-center">כלול במנה</span>
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => setGroupForm({
-                                                                    ...groupForm,
-                                                                    source_include_prices: true,
-                                                                    source_addon_fixed_price: fixedTrim === '' ? '0' : groupForm.source_addon_fixed_price,
-                                                                })}
-                                                                className={`p-3 sm:p-4 rounded-2xl font-black text-xs sm:text-sm transition-all flex flex-col items-center gap-1.5 ${isFixed
-                                                                    ? 'bg-amber-500 text-white shadow-lg ring-2 ring-amber-500 ring-offset-2'
-                                                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                                                    }`}
-                                                            >
-                                                                <span className="text-lg">₪</span>
-                                                                <span>מחיר קבוע</span>
-                                                                <span className="text-[9px] opacity-70 font-bold text-center">אותו תוספת לכל בחירה</span>
-                                                            </button>
-                                                        </div>
-                                                        {isFixed && (
-                                                            <div className="mt-3 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                                                                <label className="text-xs font-black text-amber-800 shrink-0">סכום לכל בחירה (₪)</label>
-                                                                <input
-                                                                    type="number"
-                                                                    min="0"
-                                                                    step="0.01"
-                                                                    value={groupForm.source_addon_fixed_price}
-                                                                    onChange={(e) => setGroupForm({ ...groupForm, source_addon_fixed_price: e.target.value })}
-                                                                    className="w-full sm:max-w-[10rem] px-4 py-3 bg-amber-50 border-2 border-amber-200 rounded-2xl focus:ring-4 focus:ring-amber-300/40 text-gray-900 font-black text-center text-lg"
-                                                                />
-                                                            </div>
-                                                        )}
-                                                    </>
-                                                );
-                                            })()}
+                                    <div className="space-y-6 sm:space-y-8">
+                                        <div className="space-y-3 sm:space-y-4">
+                                            <label className="text-xs font-black text-gray-500 mr-2 uppercase tracking-[0.2em]">שם הקבוצה</label>
+                                            <input
+                                                type="text"
+                                                value={groupForm.name}
+                                                onChange={(e) => setGroupForm({ ...groupForm, name: e.target.value })}
+                                                required
+                                                className="w-full px-5 py-4 sm:px-8 sm:py-5 bg-gray-50 border-none rounded-2xl sm:rounded-[1.5rem] focus:ring-4 focus:ring-brand-primary/10 text-gray-900 font-black transition-all text-base sm:text-lg shadow-inner"
+                                                placeholder="למשל: סלטים, ממרחים"
+                                            />
                                         </div>
 
-                                        {/* משקל בחירה לפריטים מהקטגוריה */}
-                                        <div className="mt-4 pt-4 border-t border-blue-100">
-                                            <label className="text-xs font-black text-gray-500 mr-2 uppercase tracking-[0.2em] mb-3 block">משקל בחירה לפריטים</label>
-                                            <div className="flex items-center gap-3">
-                                                <input
-                                                    type="number"
-                                                    min="1"
-                                                    max="10"
-                                                    step="1"
-                                                    value={groupForm.source_selection_weight || '1'}
-                                                    onChange={(e) => setGroupForm({ ...groupForm, source_selection_weight: e.target.value })}
-                                                    className="w-24 px-4 py-3 bg-blue-50 border-2 border-blue-200 rounded-2xl focus:ring-4 focus:ring-blue-300/30 text-gray-900 font-black text-center text-lg"
-                                                />
-                                                <span className="text-sm font-bold text-blue-700">= כמה בחירות נספרות? (1=בחירה אחת, 2=שתי בחירות וכו׳)</span>
+                                        {/* Source Type Toggle */}
+                                        <div className="space-y-3 sm:space-y-4">
+                                            <label className="text-xs font-black text-gray-500 mr-2 uppercase tracking-[0.2em]">מקור פריטים</label>
+                                            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setGroupForm({ ...groupForm, source_type: 'manual', source_category_id: '', source_addon_fixed_price: '' })}
+                                                    className={`p-4 sm:p-5 rounded-2xl sm:rounded-[1.5rem] font-black text-sm sm:text-base transition-all flex flex-col items-center gap-2 ${groupForm.source_type === 'manual'
+                                                        ? 'bg-brand-primary text-white shadow-lg ring-2 ring-brand-primary ring-offset-2'
+                                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                                        }`}
+                                                >
+                                                    <FaHandPointer className="text-xl sm:text-2xl" />
+                                                    <span>בחירה ידנית</span>
+                                                    <span className="text-[10px] opacity-70 font-bold">ברירת מחדל</span>
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setGroupForm({ ...groupForm, source_type: 'category' })}
+                                                    className={`p-4 sm:p-5 rounded-2xl sm:rounded-[1.5rem] font-black text-sm sm:text-base transition-all flex flex-col items-center gap-2 ${groupForm.source_type === 'category'
+                                                        ? 'bg-blue-600 text-white shadow-lg ring-2 ring-blue-600 ring-offset-2'
+                                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                                        }`}
+                                                >
+                                                    <FaLink className="text-xl sm:text-2xl" />
+                                                    <span>קישור לקטגוריה</span>
+                                                    <span className="text-[10px] opacity-70 font-bold">אוטומטי</span>
+                                                </button>
                                             </div>
-                                            <p className="text-[10px] text-blue-500 mt-2 font-bold">
-                                                ברירת מחדל: 1. משקל 2 = בחירת פריט אחד נספרת כשתי בחירות במקסימום
-                                            </p>
                                         </div>
-                                    </div>
-                                )}
 
-                                </div>
+                                        {/* Category Dropdown - only shown when source_type is 'category' */}
+                                        {groupForm.source_type === 'category' && (
+                                            <div className="space-y-3 sm:space-y-4">
+                                                <label className="text-xs font-black text-gray-500 mr-2 uppercase tracking-[0.2em] flex items-center gap-2">
+                                                    <FaLink className="text-blue-500" /> בחר קטגוריה
+                                                </label>
+                                                <select
+                                                    value={groupForm.source_category_id}
+                                                    onChange={(e) => setGroupForm({ ...groupForm, source_category_id: e.target.value })}
+                                                    required
+                                                    className="w-full px-5 py-4 sm:px-8 sm:py-5 bg-blue-50 border-2 border-blue-200 rounded-2xl sm:rounded-[1.5rem] focus:ring-4 focus:ring-blue-300/30 text-gray-900 font-black transition-all text-base sm:text-lg appearance-none cursor-pointer"
+                                                >
+                                                    <option value="">-- בחר קטגוריה --</option>
+                                                    {categories.map((cat) => (
+                                                        <option key={cat.id} value={cat.id}>
+                                                            {cat.icon || ''} {cat.name}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                                <p className="text-[10px] text-blue-500 mr-2 font-bold">
+                                                    פריטים פעילים מהקטגוריה יוצגו אוטומטית כאפשרויות בחירה
+                                                </p>
+
+                                                {/* Price Impact Toggle */}
+                                                <div className="mt-4 pt-4 border-t border-blue-100">
+                                                    <label className="text-xs font-black text-gray-500 mr-2 uppercase tracking-[0.2em] mb-3 block">השפעת מחיר</label>
+                                                    {(() => {
+                                                        const fixedTrim = (groupForm.source_addon_fixed_price || '').trim();
+                                                        const isFixed = fixedTrim !== '';
+                                                        return (
+                                                            <>
+                                                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => setGroupForm({ ...groupForm, source_include_prices: true, source_addon_fixed_price: '' })}
+                                                                        className={`p-3 sm:p-4 rounded-2xl font-black text-xs sm:text-sm transition-all flex flex-col items-center gap-1.5 ${!isFixed && groupForm.source_include_prices
+                                                                            ? 'bg-blue-600 text-white shadow-lg ring-2 ring-blue-600 ring-offset-2'
+                                                                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                                                            }`}
+                                                                    >
+                                                                        <span className="text-lg">+₪</span>
+                                                                        <span>מחיר מהתפריט</span>
+                                                                        <span className="text-[9px] opacity-70 font-bold text-center">לפי מחיר כל פריט</span>
+                                                                    </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => setGroupForm({ ...groupForm, source_include_prices: false, source_addon_fixed_price: '' })}
+                                                                        className={`p-3 sm:p-4 rounded-2xl font-black text-xs sm:text-sm transition-all flex flex-col items-center gap-1.5 ${!isFixed && !groupForm.source_include_prices
+                                                                            ? 'bg-emerald-600 text-white shadow-lg ring-2 ring-emerald-600 ring-offset-2'
+                                                                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                                                            }`}
+                                                                    >
+                                                                        <span className="text-lg">₪0</span>
+                                                                        <span>ללא מחיר</span>
+                                                                        <span className="text-[9px] opacity-70 font-bold text-center">כלול במנה</span>
+                                                                    </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => setGroupForm({
+                                                                            ...groupForm,
+                                                                            source_include_prices: true,
+                                                                            source_addon_fixed_price: fixedTrim === '' ? '0' : groupForm.source_addon_fixed_price,
+                                                                        })}
+                                                                        className={`p-3 sm:p-4 rounded-2xl font-black text-xs sm:text-sm transition-all flex flex-col items-center gap-1.5 ${isFixed
+                                                                            ? 'bg-amber-500 text-white shadow-lg ring-2 ring-amber-500 ring-offset-2'
+                                                                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                                                            }`}
+                                                                    >
+                                                                        <span className="text-lg">₪</span>
+                                                                        <span>מחיר קבוע</span>
+                                                                        <span className="text-[9px] opacity-70 font-bold text-center">אותו תוספת לכל בחירה</span>
+                                                                    </button>
+                                                                </div>
+                                                                {isFixed && (
+                                                                    <div className="mt-3 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                                                                        <label className="text-xs font-black text-amber-800 shrink-0">סכום לכל בחירה (₪)</label>
+                                                                        <input
+                                                                            type="number"
+                                                                            min="0"
+                                                                            step="0.01"
+                                                                            value={groupForm.source_addon_fixed_price}
+                                                                            onChange={(e) => setGroupForm({ ...groupForm, source_addon_fixed_price: e.target.value })}
+                                                                            className="w-full sm:max-w-[10rem] px-4 py-3 bg-amber-50 border-2 border-amber-200 rounded-2xl focus:ring-4 focus:ring-amber-300/40 text-gray-900 font-black text-center text-lg"
+                                                                        />
+                                                                    </div>
+                                                                )}
+                                                            </>
+                                                        );
+                                                    })()}
+                                                </div>
+
+                                                {/* משקל בחירה לפריטים מהקטגוריה */}
+                                                <div className="mt-4 pt-4 border-t border-blue-100">
+                                                    <label className="text-xs font-black text-gray-500 mr-2 uppercase tracking-[0.2em] mb-3 block">משקל בחירה לפריטים</label>
+                                                    <div className="flex items-center gap-3">
+                                                        <input
+                                                            type="number"
+                                                            min="1"
+                                                            max="10"
+                                                            step="1"
+                                                            value={groupForm.source_selection_weight || '1'}
+                                                            onChange={(e) => setGroupForm({ ...groupForm, source_selection_weight: e.target.value })}
+                                                            className="w-24 px-4 py-3 bg-blue-50 border-2 border-blue-200 rounded-2xl focus:ring-4 focus:ring-blue-300/30 text-gray-900 font-black text-center text-lg"
+                                                        />
+                                                        <span className="text-sm font-bold text-blue-700">= כמה בחירות נספרות? (1=בחירה אחת, 2=שתי בחירות וכו׳)</span>
+                                                    </div>
+                                                    <p className="text-[10px] text-blue-500 mt-2 font-bold">
+                                                        ברירת מחדל: 1. משקל 2 = בחירת פריט אחד נספרת כשתי בחירות במקסימום
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                    </div>
                                 )}
 
                                 {(editingGroup || groupWizardStep === 2) && (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                                    <div className="space-y-3 sm:space-y-4">
-                                        <label className="text-[10px] sm:text-xs font-black text-gray-500 mr-2 uppercase tracking-wide sm:tracking-[0.2em]">מינימום לבחירה</label>
-                                        <input
-                                            type="number"
-                                            min="0"
-                                            value={groupForm.min_selections}
-                                            onChange={(e) => setGroupForm({ ...groupForm, min_selections: e.target.value })}
-                                            className="w-full px-4 py-3 sm:px-6 sm:py-4 bg-gray-50 border-none rounded-2xl sm:rounded-[1.5rem] focus:ring-4 focus:ring-brand-primary/10 text-gray-900 font-extrabold text-center text-lg sm:text-xl shadow-inner"
-                                        />
-                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                                        <div className="space-y-3 sm:space-y-4">
+                                            <label className="text-[10px] sm:text-xs font-black text-gray-500 mr-2 uppercase tracking-wide sm:tracking-[0.2em]">מינימום לבחירה</label>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                value={groupForm.min_selections}
+                                                onChange={(e) => setGroupForm({ ...groupForm, min_selections: e.target.value })}
+                                                className="w-full px-4 py-3 sm:px-6 sm:py-4 bg-gray-50 border-none rounded-2xl sm:rounded-[1.5rem] focus:ring-4 focus:ring-brand-primary/10 text-gray-900 font-extrabold text-center text-lg sm:text-xl shadow-inner"
+                                            />
+                                        </div>
 
-                                    <div className="space-y-3 sm:space-y-4">
-                                        <label className="text-[10px] sm:text-xs font-black text-gray-500 mr-2 uppercase tracking-wide sm:tracking-[0.2em]">מקסימום לבחירה</label>
-                                        <input
-                                            type="number"
-                                            min="0"
-                                            value={groupForm.max_selections}
-                                            onChange={(e) => setGroupForm({ ...groupForm, max_selections: e.target.value })}
-                                            className="w-full px-4 py-3 sm:px-6 sm:py-4 bg-gray-50 border-none rounded-2xl sm:rounded-[1.5rem] focus:ring-4 focus:ring-brand-primary/10 text-gray-900 font-extrabold text-center text-lg sm:text-xl shadow-inner"
-                                            placeholder="∞"
-                                        />
-                                        <p className="text-[10px] text-gray-400 text-center font-bold">ריק = ללא הגבלה</p>
+                                        <div className="space-y-3 sm:space-y-4">
+                                            <label className="text-[10px] sm:text-xs font-black text-gray-500 mr-2 uppercase tracking-wide sm:tracking-[0.2em]">מקסימום לבחירה</label>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                value={groupForm.max_selections}
+                                                onChange={(e) => setGroupForm({ ...groupForm, max_selections: e.target.value })}
+                                                className="w-full px-4 py-3 sm:px-6 sm:py-4 bg-gray-50 border-none rounded-2xl sm:rounded-[1.5rem] focus:ring-4 focus:ring-brand-primary/10 text-gray-900 font-extrabold text-center text-lg sm:text-xl shadow-inner"
+                                                placeholder="∞"
+                                            />
+                                            <p className="text-[10px] text-gray-400 text-center font-bold">ריק = ללא הגבלה</p>
+                                        </div>
                                     </div>
-                                </div>
                                 )}
 
                                 {(editingGroup || groupWizardStep === 3) && (
-                                <div className="space-y-6">
-                                <div className="space-y-3 sm:space-y-4">
-                                    <label className="text-xs font-black text-gray-500 mr-2 uppercase tracking-[0.2em]">סטטוס פעילות</label>
-                                    <label className="flex items-center gap-4 p-4 sm:p-5 bg-emerald-50 rounded-2xl sm:rounded-[1.5rem] cursor-pointer hover:bg-emerald-100 transition-all border border-emerald-100 active:scale-98">
-                                        <div className={`w-12 h-7 flex items-center rounded-full p-1 transition-colors ${groupForm.is_active ? 'bg-emerald-500' : 'bg-gray-300'}`}>
-                                            <div className={`bg-white w-5 h-5 rounded-full shadow transform transition-transform ${groupForm.is_active ? '-translate-x-5' : 'translate-x-0'}`}></div>
+                                    <div className="space-y-6">
+                                        <div className="space-y-3 sm:space-y-4">
+                                            <label className="text-xs font-black text-gray-500 mr-2 uppercase tracking-[0.2em]">סטטוס פעילות</label>
+                                            <label className="flex items-center gap-4 p-4 sm:p-5 bg-emerald-50 rounded-2xl sm:rounded-[1.5rem] cursor-pointer hover:bg-emerald-100 transition-all border border-emerald-100 active:scale-98">
+                                                <div className={`w-12 h-7 flex items-center rounded-full p-1 transition-colors ${groupForm.is_active ? 'bg-emerald-500' : 'bg-gray-300'}`}>
+                                                    <div className={`bg-white w-5 h-5 rounded-full shadow transform transition-transform ${groupForm.is_active ? '-translate-x-5' : 'translate-x-0'}`}></div>
+                                                </div>
+                                                <input
+                                                    type="checkbox"
+                                                    className="hidden"
+                                                    checked={groupForm.is_active}
+                                                    onChange={(e) => setGroupForm({ ...groupForm, is_active: e.target.checked })}
+                                                />
+                                                <span className="text-sm font-black text-emerald-900">קבוצה פעילה</span>
+                                            </label>
                                         </div>
-                                        <input
-                                            type="checkbox"
-                                            className="hidden"
-                                            checked={groupForm.is_active}
-                                            onChange={(e) => setGroupForm({ ...groupForm, is_active: e.target.checked })}
-                                        />
-                                        <span className="text-sm font-black text-emerald-900">קבוצה פעילה</span>
-                                    </label>
-                                </div>
 
-                                <div className="space-y-3 sm:space-y-4">
-                                    <label className="text-xs font-black text-gray-500 mr-2 uppercase tracking-[0.2em]">אפשרויות הגשה</label>
-                                    <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                                        <button
-                                            type="button"
-                                            onClick={() => setGroupForm({ ...groupForm, placement: 'inside' })}
-                                            className={`p-4 sm:p-6 rounded-2xl sm:rounded-[1.5rem] font-black text-base sm:text-lg transition-all flex flex-col items-center gap-2 sm:gap-3 ${groupForm.placement === 'inside'
-                                                ? 'bg-brand-primary text-white shadow-lg ring-2 ring-brand-primary ring-offset-2'
-                                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                                }`}
-                                        >
-                                            <FaUtensils className="text-2xl sm:text-3xl" />
-                                            <span>בתוך המנה</span>
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setGroupForm({ ...groupForm, placement: 'side' })}
-                                            className={`p-4 sm:p-6 rounded-2xl sm:rounded-[1.5rem] font-black text-base sm:text-lg transition-all flex flex-col items-center gap-2 sm:gap-3 ${groupForm.placement === 'side'
-                                                ? 'bg-brand-primary text-white shadow-lg ring-2 ring-brand-primary ring-offset-2'
-                                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                                }`}
-                                        >
-                                            <FaBoxOpen className="text-2xl sm:text-3xl" />
-                                            <span>בצד המנה</span>
-                                        </button>
+                                        <div className="space-y-3 sm:space-y-4">
+                                            <label className="text-xs font-black text-gray-500 mr-2 uppercase tracking-[0.2em]">אפשרויות הגשה</label>
+                                            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setGroupForm({ ...groupForm, placement: 'inside' })}
+                                                    className={`p-4 sm:p-6 rounded-2xl sm:rounded-[1.5rem] font-black text-base sm:text-lg transition-all flex flex-col items-center gap-2 sm:gap-3 ${groupForm.placement === 'inside'
+                                                        ? 'bg-brand-primary text-white shadow-lg ring-2 ring-brand-primary ring-offset-2'
+                                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                                        }`}
+                                                >
+                                                    <FaUtensils className="text-2xl sm:text-3xl" />
+                                                    <span>בתוך המנה</span>
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setGroupForm({ ...groupForm, placement: 'side' })}
+                                                    className={`p-4 sm:p-6 rounded-2xl sm:rounded-[1.5rem] font-black text-base sm:text-lg transition-all flex flex-col items-center gap-2 sm:gap-3 ${groupForm.placement === 'side'
+                                                        ? 'bg-brand-primary text-white shadow-lg ring-2 ring-brand-primary ring-offset-2'
+                                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                                        }`}
+                                                >
+                                                    <FaBoxOpen className="text-2xl sm:text-3xl" />
+                                                    <span>בצד המנה</span>
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
-                                </div>
                                 )}
                             </div>
 
-                                <div className="flex flex-col sm:flex-row flex-wrap gap-2 p-4 sm:p-6 border-t border-gray-100 bg-white shrink-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-                                    {!editingGroup && groupWizardStep > 1 && (
-                                        <button
-                                            type="button"
-                                            onClick={goGroupWizardPrev}
-                                            className="order-2 sm:order-1 w-full sm:w-auto px-6 py-3.5 bg-gray-100 text-gray-800 rounded-2xl font-black text-sm"
-                                        >
-                                            הקודם
-                                        </button>
-                                    )}
+                            <div className="flex flex-col sm:flex-row flex-wrap gap-2 p-4 sm:p-6 border-t border-gray-100 bg-white shrink-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+                                {!editingGroup && groupWizardStep > 1 && (
                                     <button
                                         type="button"
-                                        onClick={closeGroupModal}
-                                        className="order-3 sm:order-2 px-6 py-3.5 bg-white border border-gray-200 text-gray-600 rounded-2xl font-black text-sm w-full sm:w-auto"
+                                        onClick={goGroupWizardPrev}
+                                        className="order-2 sm:order-1 w-full sm:w-auto px-6 py-3.5 bg-gray-100 text-gray-800 rounded-2xl font-black text-sm"
                                     >
-                                        ביטול
+                                        הקודם
                                     </button>
-                                    {!editingGroup && groupWizardStep < 3 && (
-                                        <button
-                                            type="submit"
-                                            className="order-1 sm:order-3 flex-1 min-w-[10rem] py-3.5 bg-brand-primary text-white rounded-2xl font-black text-sm shadow-lg"
-                                        >
-                                            הבא
-                                        </button>
-                                    )}
-                                    {(editingGroup || groupWizardStep === 3) && (
-                                        <button
-                                            type="submit"
-                                            disabled={saving}
-                                            className="order-1 flex-1 min-w-[10rem] py-3.5 bg-gray-900 text-white rounded-2xl font-black text-base hover:bg-black transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                                        >
-                                            {saving ? (
-                                                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                                            ) : (
-                                                <>
-                                                    <FaSave />
-                                                    {editingGroup ? 'שמור שינויים' : 'צור קבוצה'}
-                                                </>
-                                            )}
-                                        </button>
-                                    )}
-                                </div>
-                            </form>
-                        </div>
+                                )}
+                                <button
+                                    type="button"
+                                    onClick={closeGroupModal}
+                                    className="order-3 sm:order-2 px-6 py-3.5 bg-white border border-gray-200 text-gray-600 rounded-2xl font-black text-sm w-full sm:w-auto"
+                                >
+                                    ביטול
+                                </button>
+                                {!editingGroup && groupWizardStep < 3 && (
+                                    <button
+                                        type="submit"
+                                        className="order-1 sm:order-3 flex-1 min-w-[10rem] py-3.5 bg-brand-primary text-white rounded-2xl font-black text-sm shadow-lg"
+                                    >
+                                        הבא
+                                    </button>
+                                )}
+                                {(editingGroup || groupWizardStep === 3) && (
+                                    <button
+                                        type="submit"
+                                        disabled={saving}
+                                        className="order-1 flex-1 min-w-[10rem] py-3.5 bg-gray-900 text-white rounded-2xl font-black text-base hover:bg-black transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                                    >
+                                        {saving ? (
+                                            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                                        ) : (
+                                            <>
+                                                <FaSave />
+                                                {editingGroup ? 'שמור שינויים' : 'צור קבוצה'}
+                                            </>
+                                        )}
+                                    </button>
+                                )}
+                            </div>
+                        </form>
                     </div>
-                )}
-                {isManager() && !isCategoryGroup && !modalOpen && !groupModalOpen && (
-                    <>
-                        <MobileAddFab
-                            label="הוסף קבוצה"
-                            icon={FaLayerGroup}
-                            onClick={() => openGroupModal()}
-                            positionClass="bottom-[6.75rem] right-4"
-                        />
-                        <MobileAddFab label="הוסף תוספת" onClick={() => openModal()} />
-                    </>
-                )}
-            </div>
+                </div>
+            )}
+            {isManager() && !isCategoryGroup && !modalOpen && !groupModalOpen && (
+                <>
+                    <MobileAddFab
+                        label="הוסף קבוצה"
+                        icon={FaLayerGroup}
+                        onClick={() => openGroupModal()}
+                        positionClass="bottom-[6.75rem] right-4"
+                    />
+                    <MobileAddFab label="הוסף תוספת" onClick={() => openModal()} />
+                </>
+            )}
+        </div>
     );
 
     if (embedded) return content;

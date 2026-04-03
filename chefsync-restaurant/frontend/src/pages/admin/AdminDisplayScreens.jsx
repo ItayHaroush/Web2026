@@ -232,8 +232,8 @@ export default function AdminDisplayScreens({ embedded = false }) {
     }
 
     const content = (
-            <div className="max-w-6xl mx-auto space-y-12 pb-32 animate-in fade-in duration-500">
-                {!embedded && (
+        <div className="max-w-6xl mx-auto space-y-12 pb-32 animate-in fade-in duration-500">
+            {!embedded && (
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 px-4">
                     <div className="flex items-center gap-6">
                         <div className="w-20 h-20 bg-indigo-50 rounded-[2.5rem] flex items-center justify-center text-indigo-600 shadow-sm border border-indigo-100/50">
@@ -251,11 +251,10 @@ export default function AdminDisplayScreens({ embedded = false }) {
                             <UpgradeBanner requiredTier="enterprise" context="displays" feature="display_screens" variant="inline" />
                             <button
                                 onClick={canCreateMore ? openNew : () => window.open('https://wa.me/972547466508?text=שלום, אני מעוניין בחבילת מסעדה מלאה – מסכי תצוגה נוספים', '_blank')}
-                                className={`px-10 py-5 rounded-[2rem] font-black transition-all flex items-center justify-center gap-3 shadow-xl active:scale-95 group shrink-0 ${
-                                    canCreateMore
+                                className={`px-10 py-5 rounded-[2rem] font-black transition-all flex items-center justify-center gap-3 shadow-xl active:scale-95 group shrink-0 ${canCreateMore
                                         ? 'bg-brand-primary text-white hover:bg-brand-dark shadow-brand-primary/20'
                                         : 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white shadow-purple-200'
-                                }`}
+                                    }`}
                             >
                                 <FaPlus className="group-hover:rotate-90 transition-transform" />
                                 {canCreateMore ? 'מסך חדש' : 'שדרג למסעדה מלאה'}
@@ -263,96 +262,95 @@ export default function AdminDisplayScreens({ embedded = false }) {
                         </div>
                     )}
                 </div>
-                )}
+            )}
 
-                {embedded && isManager() && (
-                    <div className="hidden md:flex items-center justify-end gap-4 mb-6 px-4">
-                        <UpgradeBanner requiredTier="enterprise" context="displays" feature="display_screens" variant="inline" />
-                        <button
-                            type="button"
-                            onClick={canCreateMore ? openNew : () => window.open('https://wa.me/972547466508?text=שלום, אני מעוניין בחבילת מסעדה מלאה – מסכי תצוגה נוספים', '_blank')}
-                            className={`inline-flex items-center gap-2 px-6 py-3 rounded-2xl font-black text-sm shadow-lg shrink-0 ${
-                                canCreateMore
-                                    ? 'bg-brand-primary text-white hover:bg-brand-dark shadow-brand-primary/20'
-                                    : 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white shadow-purple-200'
-                            }`}
-                        >
-                            <FaPlus />
-                            {canCreateMore ? 'מסך חדש' : 'שדרג למסעדה מלאה'}
-                        </button>
-                    </div>
-                )}
-
-                {/* Screens Grid */}
-                {screens.length === 0 ? (
-                    <div className="bg-white rounded-[4rem] shadow-sm border-2 border-dashed border-gray-100 p-24 text-center flex flex-col items-center col-span-full max-w-xl mx-auto">
-                        <div className="w-28 h-28 bg-gray-50 rounded-[3rem] flex items-center justify-center text-6xl mb-8 grayscale opacity-50">
-                            <FaTv />
-                        </div>
-                        <h3 className="text-3xl font-black text-gray-900 mb-2">אין מסכי תצוגה עדיין</h3>
-                        <p className="text-gray-500 font-medium mb-12 text-lg leading-relaxed">
-                            צרו מסך תצוגה דיגיטלי להצגת התפריט על טאבלט או מסך TV
-                        </p>
-                        {isManager() && (
-                            <button
-                                onClick={openNew}
-                                className="bg-brand-primary text-white px-12 py-5 rounded-[2rem] font-black hover:bg-brand-dark transition-all flex items-center gap-4 shadow-lg shadow-brand-primary/20"
-                            >
-                                <FaPlus /> יצירת מסך ראשון
-                            </button>
-                        )}
-                    </div>
-                ) : (
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 px-4">
-                        {screens.map((screen) => (
-                            <ScreenCard
-                                key={screen.id}
-                                screen={screen}
-                                copiedId={copiedId}
-                                isManager={isManager()}
-                                onEdit={openEdit}
-                                onDelete={handleDelete}
-                                onToggle={handleToggle}
-                                onRegenerate={handleRegenerate}
-                                onCopyLink={copyLink}
-                                onOpenItems={openItemsModal}
-                            />
-                        ))}
-                    </div>
-                )}
-
-                {/* Create/Edit Modal */}
-                {showModal && (
-                    <ScreenFormModal
-                        form={form}
-                        setForm={setForm}
-                        editScreen={editScreen}
-                        subscriptionInfo={subscriptionInfo}
-                        onSubmit={handleSubmit}
-                        onClose={closeModal}
-                    />
-                )}
-
-                {/* Item Selection Modal */}
-                <ScreenItemsModal
-                    show={showItemsModal}
-                    loading={itemsLoading}
-                    allMenuItems={allMenuItems}
-                    selectedItems={selectedItems}
-                    subscriptionInfo={subscriptionInfo}
-                    onToggleItem={toggleItem}
-                    onToggleBadge={toggleBadge}
-                    onMoveItem={moveItem}
-                    onSave={saveItems}
-                    onClose={() => { setShowItemsModal(false); setItemsScreenId(null); }}
-                />
-                {isManager() && !showModal && !showItemsModal && (
-                    <MobileAddFab
-                        label={canCreateMore ? 'מסך חדש' : 'שדרג למסעדה מלאה'}
+            {embedded && isManager() && (
+                <div className="hidden md:flex items-center justify-end gap-4 mb-6 px-4">
+                    <UpgradeBanner requiredTier="enterprise" context="displays" feature="display_screens" variant="inline" />
+                    <button
+                        type="button"
                         onClick={canCreateMore ? openNew : () => window.open('https://wa.me/972547466508?text=שלום, אני מעוניין בחבילת מסעדה מלאה – מסכי תצוגה נוספים', '_blank')}
-                    />
-                )}
-            </div>
+                        className={`inline-flex items-center gap-2 px-6 py-3 rounded-2xl font-black text-sm shadow-lg shrink-0 ${canCreateMore
+                                ? 'bg-brand-primary text-white hover:bg-brand-dark shadow-brand-primary/20'
+                                : 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white shadow-purple-200'
+                            }`}
+                    >
+                        <FaPlus />
+                        {canCreateMore ? 'מסך חדש' : 'שדרג למסעדה מלאה'}
+                    </button>
+                </div>
+            )}
+
+            {/* Screens Grid */}
+            {screens.length === 0 ? (
+                <div className="bg-white rounded-[4rem] shadow-sm border-2 border-dashed border-gray-100 p-24 text-center flex flex-col items-center col-span-full max-w-xl mx-auto">
+                    <div className="w-28 h-28 bg-gray-50 rounded-[3rem] flex items-center justify-center text-6xl mb-8 grayscale opacity-50">
+                        <FaTv />
+                    </div>
+                    <h3 className="text-3xl font-black text-gray-900 mb-2">אין מסכי תצוגה עדיין</h3>
+                    <p className="text-gray-500 font-medium mb-12 text-lg leading-relaxed">
+                        צרו מסך תצוגה דיגיטלי להצגת התפריט על טאבלט או מסך TV
+                    </p>
+                    {isManager() && (
+                        <button
+                            onClick={openNew}
+                            className="bg-brand-primary text-white px-12 py-5 rounded-[2rem] font-black hover:bg-brand-dark transition-all flex items-center gap-4 shadow-lg shadow-brand-primary/20"
+                        >
+                            <FaPlus /> יצירת מסך ראשון
+                        </button>
+                    )}
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 px-4">
+                    {screens.map((screen) => (
+                        <ScreenCard
+                            key={screen.id}
+                            screen={screen}
+                            copiedId={copiedId}
+                            isManager={isManager()}
+                            onEdit={openEdit}
+                            onDelete={handleDelete}
+                            onToggle={handleToggle}
+                            onRegenerate={handleRegenerate}
+                            onCopyLink={copyLink}
+                            onOpenItems={openItemsModal}
+                        />
+                    ))}
+                </div>
+            )}
+
+            {/* Create/Edit Modal */}
+            {showModal && (
+                <ScreenFormModal
+                    form={form}
+                    setForm={setForm}
+                    editScreen={editScreen}
+                    subscriptionInfo={subscriptionInfo}
+                    onSubmit={handleSubmit}
+                    onClose={closeModal}
+                />
+            )}
+
+            {/* Item Selection Modal */}
+            <ScreenItemsModal
+                show={showItemsModal}
+                loading={itemsLoading}
+                allMenuItems={allMenuItems}
+                selectedItems={selectedItems}
+                subscriptionInfo={subscriptionInfo}
+                onToggleItem={toggleItem}
+                onToggleBadge={toggleBadge}
+                onMoveItem={moveItem}
+                onSave={saveItems}
+                onClose={() => { setShowItemsModal(false); setItemsScreenId(null); }}
+            />
+            {isManager() && !showModal && !showItemsModal && (
+                <MobileAddFab
+                    label={canCreateMore ? 'מסך חדש' : 'שדרג למסעדה מלאה'}
+                    onClick={canCreateMore ? openNew : () => window.open('https://wa.me/972547466508?text=שלום, אני מעוניין בחבילת מסעדה מלאה – מסכי תצוגה נוספים', '_blank')}
+                />
+            )}
+        </div>
     );
 
     if (embedded) return content;

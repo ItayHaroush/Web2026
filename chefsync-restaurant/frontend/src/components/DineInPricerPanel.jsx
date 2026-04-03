@@ -75,20 +75,20 @@ export default function DineInPricerPanel({
         <div className={mobileOnly ? '' : 'relative'}>
             {/* Desktop toggle button — hidden on mobile, hidden when mobileOnly */}
             {!mobileOnly && (
-            <button
-                type="button"
-                onClick={() => toggleOpen(!open)}
-                className={`hidden md:flex items-center gap-2 px-4 py-2.5 rounded-2xl font-black text-xs transition-all border ${enableDineInPricing
-                    ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
-                    : 'bg-gray-50 text-gray-400 border-gray-200 hover:bg-gray-100'
-                    }`}
-                title="תמחור ישיבה במקום"
-            >
-                <FaChair size={14} />
-                <span>תמחור ישיבה</span>
-                <span className={`w-2 h-2 rounded-full ${enableDineInPricing ? 'bg-amber-500' : 'bg-gray-300'}`} />
-                {open ? <FaChevronUp size={10} /> : <FaChevronDown size={10} />}
-            </button>
+                <button
+                    type="button"
+                    onClick={() => toggleOpen(!open)}
+                    className={`hidden md:flex items-center gap-2 px-4 py-2.5 rounded-2xl font-black text-xs transition-all border ${enableDineInPricing
+                        ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
+                        : 'bg-gray-50 text-gray-400 border-gray-200 hover:bg-gray-100'
+                        }`}
+                    title="תמחור ישיבה במקום"
+                >
+                    <FaChair size={14} />
+                    <span>תמחור ישיבה</span>
+                    <span className={`w-2 h-2 rounded-full ${enableDineInPricing ? 'bg-amber-500' : 'bg-gray-300'}`} />
+                    {open ? <FaChevronUp size={10} /> : <FaChevronDown size={10} />}
+                </button>
             )}
 
             {/* Mobile FAB — above "הוסף פריט" FAB */}

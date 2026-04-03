@@ -98,11 +98,10 @@ const AiCreditsBadge = ({ detailed = false }) => {
                     <div>
                         <div className="flex items-center gap-2">
                             <h3 className="font-bold text-gray-800">ניצולת AI</h3>
-                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                                isEnterprise
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${isEnterprise
                                     ? 'bg-gradient-to-r from-purple-100 to-indigo-100 text-purple-700 border-purple-200'
                                     : 'bg-gray-100 text-gray-600 border-gray-200'
-                            }`}>
+                                }`}>
                                 {tierNames[credits.tier]}
                             </span>
                         </div>

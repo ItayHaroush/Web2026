@@ -96,8 +96,8 @@ export default function AdminTimeReports({ embedded = false }) {
     };
 
     const content = (
-            <div className="max-w-7xl mx-auto space-y-8 pb-40 animate-in fade-in duration-700">
-                {!embedded && (
+        <div className="max-w-7xl mx-auto space-y-8 pb-40 animate-in fade-in duration-700">
+            {!embedded && (
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 px-4">
                     <div className="flex items-center gap-5">
                         <div className="w-20 h-20 bg-amber-50 rounded-[2rem] flex items-center justify-center text-amber-600 shadow-sm border border-amber-100/50">
@@ -118,101 +118,101 @@ export default function AdminTimeReports({ embedded = false }) {
                         </div>
                     )}
                 </div>
+            )}
+
+            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between px-4">
+                {isManager() && (
+                    <div className="flex bg-gray-100 rounded-2xl p-1.5">
+                        <button
+                            onClick={() => setTab('manager')}
+                            className={`px-6 py-3 rounded-xl text-sm font-black transition-all ${tab === 'manager' ? 'bg-white shadow-md text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+                        >
+                            <FaUsers className="inline ml-2" />
+                            דוח לתשלום
+                        </button>
+                        <button
+                            onClick={() => setTab('employee')}
+                            className={`px-6 py-3 rounded-xl text-sm font-black transition-all ${tab === 'employee' ? 'bg-white shadow-md text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+                        >
+                            <FaClock className="inline ml-2" />
+                            השעות שלי
+                        </button>
+                    </div>
                 )}
 
-                <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between px-4">
-                    {isManager() && (
-                        <div className="flex bg-gray-100 rounded-2xl p-1.5">
-                            <button
-                                onClick={() => setTab('manager')}
-                                className={`px-6 py-3 rounded-xl text-sm font-black transition-all ${tab === 'manager' ? 'bg-white shadow-md text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
-                            >
-                                <FaUsers className="inline ml-2" />
-                                דוח לתשלום
-                            </button>
-                            <button
-                                onClick={() => setTab('employee')}
-                                className={`px-6 py-3 rounded-xl text-sm font-black transition-all ${tab === 'employee' ? 'bg-white shadow-md text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
-                            >
-                                <FaClock className="inline ml-2" />
-                                השעות שלי
-                            </button>
-                        </div>
-                    )}
+                <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-2xl px-4 py-2.5 shadow-sm">
+                        <FaCalendarAlt className="text-gray-400" />
+                        <input
+                            type="date"
+                            value={range.from}
+                            onChange={(e) => setRange(r => ({ ...r, from: e.target.value }))}
+                            className="bg-transparent border-none text-sm font-bold text-gray-700 focus:outline-none"
+                        />
+                        <span className="text-gray-300">—</span>
+                        <input
+                            type="date"
+                            value={range.to}
+                            onChange={(e) => setRange(r => ({ ...r, to: e.target.value }))}
+                            className="bg-transparent border-none text-sm font-bold text-gray-700 focus:outline-none"
+                        />
+                    </div>
+                </div>
+            </div>
 
-                    <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-2xl px-4 py-2.5 shadow-sm">
-                            <FaCalendarAlt className="text-gray-400" />
-                            <input
-                                type="date"
-                                value={range.from}
-                                onChange={(e) => setRange(r => ({ ...r, from: e.target.value }))}
-                                className="bg-transparent border-none text-sm font-bold text-gray-700 focus:outline-none"
-                            />
-                            <span className="text-gray-300">—</span>
-                            <input
-                                type="date"
-                                value={range.to}
-                                onChange={(e) => setRange(r => ({ ...r, to: e.target.value }))}
-                                className="bg-transparent border-none text-sm font-bold text-gray-700 focus:outline-none"
-                            />
+            {loading ? (
+                <div className="flex flex-col items-center justify-center h-64">
+                    <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-amber-500" />
+                    <p className="mt-4 text-gray-500 font-bold animate-pulse">טוען דוח...</p>
+                </div>
+            ) : tab === 'manager' && isManager() ? (
+                <ManagerReport data={managerData} expandedUser={expandedUser} setExpandedUser={setExpandedUser} formatDate={formatDate} />
+            ) : (
+                <EmployeeReport data={myData} formatDate={formatDate} />
+            )}
+
+            {todayLogs.length > 0 && (
+                <div className="px-4">
+                    <div className="bg-white rounded-[2.5rem] shadow-lg border border-gray-100 p-8">
+                        <h3 className="text-xl font-black text-gray-900 mb-6 flex items-center gap-3">
+                            <FaClock className="text-amber-500" />
+                            פעילות היום
+                        </h3>
+                        <div className="space-y-3">
+                            {todayLogs.map((log, i) => (
+                                <div key={i} className="flex items-center justify-between bg-gray-50 rounded-2xl px-6 py-4">
+                                    <div className="flex items-center gap-4">
+                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${log.is_active ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-500'}`}>
+                                            {log.is_active ? <FaSignInAlt /> : <FaSignOutAlt />}
+                                        </div>
+                                        <div>
+                                            <p className="font-black text-gray-900 flex items-center gap-2">
+                                                {log.employee_name}
+                                                {log.role === 'owner' && <FaCrown className="text-amber-400 text-xs" />}
+                                            </p>
+                                            <p className="text-xs text-gray-500 font-semibold">{log.role === 'owner' ? 'בעלים' : log.role === 'manager' ? 'מנהל' : 'עובד'}</p>
+                                        </div>
+                                    </div>
+                                    <div className="text-left">
+                                        <p className="font-bold text-gray-700 text-sm">
+                                            {log.clock_in}{log.clock_out ? ` — ${log.clock_out}` : ''}
+                                        </p>
+                                        {log.is_active ? (
+                                            <span className="text-emerald-600 text-xs font-black flex items-center gap-1">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                                עובד כרגע
+                                            </span>
+                                        ) : (
+                                            <span className="text-gray-500 text-xs font-bold">{formatMinutes(log.raw_minutes)}</span>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     </div>
                 </div>
-
-                {loading ? (
-                    <div className="flex flex-col items-center justify-center h-64">
-                        <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-amber-500" />
-                        <p className="mt-4 text-gray-500 font-bold animate-pulse">טוען דוח...</p>
-                    </div>
-                ) : tab === 'manager' && isManager() ? (
-                    <ManagerReport data={managerData} expandedUser={expandedUser} setExpandedUser={setExpandedUser} formatDate={formatDate} />
-                ) : (
-                    <EmployeeReport data={myData} formatDate={formatDate} />
-                )}
-
-                {todayLogs.length > 0 && (
-                    <div className="px-4">
-                        <div className="bg-white rounded-[2.5rem] shadow-lg border border-gray-100 p-8">
-                            <h3 className="text-xl font-black text-gray-900 mb-6 flex items-center gap-3">
-                                <FaClock className="text-amber-500" />
-                                פעילות היום
-                            </h3>
-                            <div className="space-y-3">
-                                {todayLogs.map((log, i) => (
-                                    <div key={i} className="flex items-center justify-between bg-gray-50 rounded-2xl px-6 py-4">
-                                        <div className="flex items-center gap-4">
-                                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${log.is_active ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-500'}`}>
-                                                {log.is_active ? <FaSignInAlt /> : <FaSignOutAlt />}
-                                            </div>
-                                            <div>
-                                                <p className="font-black text-gray-900 flex items-center gap-2">
-                                                    {log.employee_name}
-                                                    {log.role === 'owner' && <FaCrown className="text-amber-400 text-xs" />}
-                                                </p>
-                                                <p className="text-xs text-gray-500 font-semibold">{log.role === 'owner' ? 'בעלים' : log.role === 'manager' ? 'מנהל' : 'עובד'}</p>
-                                            </div>
-                                        </div>
-                                        <div className="text-left">
-                                            <p className="font-bold text-gray-700 text-sm">
-                                                {log.clock_in}{log.clock_out ? ` — ${log.clock_out}` : ''}
-                                            </p>
-                                            {log.is_active ? (
-                                                <span className="text-emerald-600 text-xs font-black flex items-center gap-1">
-                                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                                    עובד כרגע
-                                                </span>
-                                            ) : (
-                                                <span className="text-gray-500 text-xs font-bold">{formatMinutes(log.raw_minutes)}</span>
-                                            )}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                )}
-            </div>
+            )}
+        </div>
     );
 
     if (embedded) return content;

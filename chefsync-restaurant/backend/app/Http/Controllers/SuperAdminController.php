@@ -261,7 +261,7 @@ class SuperAdminController extends Controller
             if ($request->hasFile('logo') && $request->file('logo')->isValid()) {
                 $logoFile = $request->file('logo');
                 $logoPath = $logoFile->store('logos', 'public');
-                $logoUrl = '/storage/'.$logoPath;
+                $logoUrl = '/storage/' . $logoPath;
             }
 
             Log::info('Creating restaurant', [
@@ -314,14 +314,14 @@ class SuperAdminController extends Controller
             ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Restaurant creation error: '.$e->getMessage(), [
+            Log::error('Restaurant creation error: ' . $e->getMessage(), [
                 'exception' => $e,
                 'validated_data' => $validated,
             ]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'שגיאה ביצירת המסעדה: '.$e->getMessage(),
+                'message' => 'שגיאה ביצירת המסעדה: ' . $e->getMessage(),
                 'error_detail' => env('APP_DEBUG') ? $e->getMessage() : null,
             ], 500);
         }
@@ -336,7 +336,7 @@ class SuperAdminController extends Controller
 
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
-            'tenant_id' => 'sometimes|string|max:255|unique:restaurants,tenant_id,'.$id.'|regex:/^[a-z0-9-]+$/',
+            'tenant_id' => 'sometimes|string|max:255|unique:restaurants,tenant_id,' . $id . '|regex:/^[a-z0-9-]+$/',
             'phone' => 'sometimes|string|max:20',
             /** פלאפון בעלים לדוחות/וואטסאפ — עדיפות על טלפון מסעדה */
             'owner_contact_phone' => 'nullable|string|max:32',
@@ -653,11 +653,11 @@ class SuperAdminController extends Controller
                 ],
             ]);
         } catch (\Throwable $e) {
-            Log::error('Schema status error: '.$e->getMessage(), ['exception' => $e]);
+            Log::error('Schema status error: ' . $e->getMessage(), ['exception' => $e]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'שגיאה בשליפת סטטוס הסכימה: '.$e->getMessage(),
+                'message' => 'שגיאה בשליפת סטטוס הסכימה: ' . $e->getMessage(),
             ], 500);
         }
     }
@@ -819,7 +819,7 @@ class SuperAdminController extends Controller
     {
         $phone = preg_replace('/\s+/', '', $raw);
         if (str_starts_with($phone, '0')) {
-            return '+972'.substr($phone, 1);
+            return '+972' . substr($phone, 1);
         }
 
         return $phone;
@@ -833,17 +833,17 @@ class SuperAdminController extends Controller
         }
         $last4 = substr($digits, -4);
 
-        return '***'.$last4;
+        return '***' . $last4;
     }
 
     private function formatPhoneForDisplay(string $raw): string
     {
         $phone = preg_replace('/\D/', '', $raw);
         if (strlen($phone) === 10 && str_starts_with($phone, '05')) {
-            return substr($phone, 0, 3).'-'.substr($phone, 3);
+            return substr($phone, 0, 3) . '-' . substr($phone, 3);
         }
         if (strlen($phone) === 9 && str_starts_with($phone, '0')) {
-            return substr($phone, 0, 2).'-'.substr($phone, 2);
+            return substr($phone, 0, 2) . '-' . substr($phone, 2);
         }
 
         return $raw;

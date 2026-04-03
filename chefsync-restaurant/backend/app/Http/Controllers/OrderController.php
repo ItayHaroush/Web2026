@@ -61,7 +61,7 @@ class OrderController extends Controller
                 'customer_name' => 'required|string|max:100',
                 'customer_phone' => 'required|string|max:20',
                 'delivery_method' => 'required|in:pickup,delivery',
-                'payment_method' => 'required|in:'.(config('payment.credit_card_enabled') ? 'cash,credit_card' : 'cash'),
+                'payment_method' => 'required|in:' . (config('payment.credit_card_enabled') ? 'cash,credit_card' : 'cash'),
                 'delivery_address' => 'nullable|string|max:255',
                 'delivery_city' => 'nullable|string|max:120',
                 'delivery_street' => 'nullable|string|max:255',
@@ -192,7 +192,7 @@ class OrderController extends Controller
                 if ($scheduledCarbon->lt($minScheduled)) {
                     return response()->json([
                         'success' => false,
-                        'message' => 'ניתן להזמין החל מ-'.$minScheduled->format('H:i').' בתאריך '.$minScheduled->format('d/m/Y'),
+                        'message' => 'ניתן להזמין החל מ-' . $minScheduled->format('H:i') . ' בתאריך ' . $minScheduled->format('d/m/Y'),
                         'data' => [
                             'min_scheduled_at' => $minScheduled->toIso8601String(),
                         ],
@@ -346,7 +346,7 @@ class OrderController extends Controller
                 }
 
                 $addonEntries = collect($itemData['addons'] ?? [])
-                    ->filter(fn ($entry) => is_array($entry) && isset($entry['addon_id']))
+                    ->filter(fn($entry) => is_array($entry) && isset($entry['addon_id']))
                     ->unique('addon_id')
                     ->values();
 
@@ -362,7 +362,7 @@ class OrderController extends Controller
 
                     foreach ($availableAddonGroups as $group) {
                         $groupAddons = $group->addons ?? collect();
-                        $matchedAddon = $groupAddons->first(fn ($a) => (string) $a->id === (string) $addonId);
+                        $matchedAddon = $groupAddons->first(fn($a) => (string) $a->id === (string) $addonId);
                         if ($matchedAddon) {
                             $matchedGroup = $group;
                             break;
@@ -998,7 +998,7 @@ class OrderController extends Controller
     {
         try {
             $validated = $request->validate([
-                'status' => 'required|in:'.implode(',', Order::validStatuses()),
+                'status' => 'required|in:' . implode(',', Order::validStatuses()),
             ]);
 
             $tenantId = app('tenant_id');
@@ -1016,7 +1016,7 @@ class OrderController extends Controller
             if (! $order->canTransitionTo($validated['status'])) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'מעבר סטטוס לא מותר. '.
+                    'message' => 'מעבר סטטוס לא מותר. ' .
                         ($order->delivery_method === 'pickup' && $validated['status'] === 'delivering'
                             ? 'הזמנות איסוף עצמי אינן דורשות סטטוס "במשלוח"'
                             : 'מעבר זה אינו אפשרי במצב הנוכחי'),
@@ -1031,9 +1031,11 @@ class OrderController extends Controller
             if ($validated['status'] === Order::STATUS_CANCELLED) {
                 if (in_array($order->payment_status, [Order::PAYMENT_PENDING, Order::PAYMENT_FAILED], true)) {
                     $updates['payment_status'] = Order::PAYMENT_CANCELLED;
-                } elseif ($order->payment_status === Order::PAYMENT_PAID
+                } elseif (
+                    $order->payment_status === Order::PAYMENT_PAID
                     && ! $order->refund_waived_at
-                    && $order->refund_pending_at === null) {
+                    && $order->refund_pending_at === null
+                ) {
                     $updates['refund_pending_at'] = now();
                 }
             }
@@ -1058,7 +1060,7 @@ class OrderController extends Controller
                 try {
                     app(\App\Services\PrintService::class)->printOrder($order);
                 } catch (\Exception $e) {
-                    Log::error('Print failed: '.$e->getMessage());
+                    Log::error('Print failed: ' . $e->getMessage());
                 }
             }
 
@@ -1118,8 +1120,8 @@ class OrderController extends Controller
         $messageKey = $status;
         if ($status === 'ready' || $status === 'delivered') {
             $messageKey = $order->delivery_method === 'pickup'
-                ? $status.'_pickup'
-                : $status.'_delivery';
+                ? $status . '_pickup'
+                : $status . '_delivery';
         }
 
         // אם יש הודעה ספציפית - השתמש בה, אחרת נסה הודעה כללית
@@ -1173,7 +1175,7 @@ class OrderController extends Controller
             ]);
             SystemErrorReporter::report(
                 'push_failure',
-                'FCM למסעדה: '.$e->getMessage(),
+                'FCM למסעדה: ' . $e->getMessage(),
                 'error',
                 $tenantId,
                 isset($data['orderId']) ? (int) $data['orderId'] : null,
@@ -1465,7 +1467,7 @@ class OrderController extends Controller
                 return 0.0;
             }
 
-            usort($tiers, fn ($a, $b) => ($a['upto_km'] ?? 0) <=> ($b['upto_km'] ?? 0));
+            usort($tiers, fn($a, $b) => ($a['upto_km'] ?? 0) <=> ($b['upto_km'] ?? 0));
             foreach ($tiers as $tier) {
                 $upto = (float) ($tier['upto_km'] ?? 0);
                 $fee = (float) ($tier['fee'] ?? 0);
@@ -1505,7 +1507,7 @@ class OrderController extends Controller
                 $weight = $item->addon_selection_weight !== null ? (int) $item->addon_selection_weight : $groupDefaultWeight;
                 $weight = max(1, min(10, $weight));
                 $addon = new \stdClass;
-                $addon->id = 'cat_item_'.$item->id;
+                $addon->id = 'cat_item_' . $item->id;
                 $addon->name = $item->name;
                 $addon->price_delta = $group->syntheticAddonPriceDelta((float) $item->price);
                 $addon->selection_weight = $weight;
@@ -1544,9 +1546,9 @@ class OrderController extends Controller
             if ($scope === 'both') {
                 $filteredGroups = $groups;
             } elseif ($scope === 'salads') {
-                $filteredGroups = $groups->filter(fn ($g) => $g->name === self::DEFAULT_SALAD_GROUP_NAME)->values();
+                $filteredGroups = $groups->filter(fn($g) => $g->name === self::DEFAULT_SALAD_GROUP_NAME)->values();
             } elseif ($scope === 'hot') {
-                $filteredGroups = $groups->filter(fn ($g) => $g->name === self::DEFAULT_HOT_GROUP_NAME)->values();
+                $filteredGroups = $groups->filter(fn($g) => $g->name === self::DEFAULT_HOT_GROUP_NAME)->values();
             } else {
                 // אם זה לא ערך מוכר, נציג הכל
                 $filteredGroups = $groups;
@@ -1578,7 +1580,7 @@ class OrderController extends Controller
                         }
 
                         $normalized = collect((array) $categoryIds)
-                            ->map(fn ($id) => (int) $id)
+                            ->map(fn($id) => (int) $id)
                             ->all();
 
                         return in_array((int) $categoryId, $normalized, true);
@@ -1589,7 +1591,7 @@ class OrderController extends Controller
 
                 return $group;
             })
-            ->filter(fn ($group) => ($group->addons ?? collect())->isNotEmpty())
+            ->filter(fn($group) => ($group->addons ?? collect())->isNotEmpty())
             ->values();
     }
 

@@ -97,14 +97,14 @@ class AdminController extends Controller
             // כמו דוח יומי + revenue_today: לא סופרים הזמנות מבוטלות
             'orders_today' => Order::where('restaurant_id', $restaurantId)
                 ->visibleToRestaurant()
-                ->when($restaurant, fn ($q) => $q->forOwnerReporting($restaurant))
+                ->when($restaurant, fn($q) => $q->forOwnerReporting($restaurant))
                 ->where('is_test', false)  // ← מתעלם מהזמנות test
                 ->where('status', '!=', Order::STATUS_CANCELLED)
                 ->whereDate('created_at', today())
                 ->count(),
             'orders_pending' => Order::where('restaurant_id', $restaurantId)
                 ->visibleToRestaurant()
-                ->when($restaurant, fn ($q) => $q->forOwnerReporting($restaurant))
+                ->when($restaurant, fn($q) => $q->forOwnerReporting($restaurant))
                 ->where('is_test', false)  // ← מתעלם מהזמנות test
                 ->whereIn('status', ['pending', 'received', 'preparing'])
                 ->count(),
@@ -117,7 +117,7 @@ class AdminController extends Controller
         if ($user->isOwner() || $user->isManager() || $user->is_super_admin) {
             $stats['revenue_today'] = Order::where('restaurant_id', $restaurantId)
                 ->visibleToRestaurant()
-                ->when($restaurant, fn ($q) => $q->forOwnerReporting($restaurant))
+                ->when($restaurant, fn($q) => $q->forOwnerReporting($restaurant))
                 ->where('is_test', false)  // ← מתעלם מהזמנות test
                 ->whereDate('created_at', today())
                 ->where('status', '!=', 'cancelled')
@@ -133,7 +133,7 @@ class AdminController extends Controller
 
             $stats['revenue_week'] = Order::where('restaurant_id', $restaurantId)
                 ->visibleToRestaurant()
-                ->when($restaurant, fn ($q) => $q->forOwnerReporting($restaurant))
+                ->when($restaurant, fn($q) => $q->forOwnerReporting($restaurant))
                 ->where('is_test', false)  // ← מתעלם מהזמנות test
                 ->whereBetween('created_at', [$weekStart, $weekEnd])
                 ->where('status', '!=', 'cancelled')
@@ -143,7 +143,7 @@ class AdminController extends Controller
         // הזמנות אחרונות
         $recentOrders = Order::where('restaurant_id', $restaurantId)
             ->visibleToRestaurant()
-            ->when($restaurant, fn ($q) => $q->forOwnerReporting($restaurant))
+            ->when($restaurant, fn($q) => $q->forOwnerReporting($restaurant))
             ->where('is_test', false)
             ->with('items.menuItem.category')
             ->orderBy('created_at', 'desc')
@@ -154,7 +154,7 @@ class AdminController extends Controller
         // עתידיות לפני כניסה למטבח — מוצגות בדשבורד בלבד (לא ברשימת ההזמנות הראשית)
         $futureOrders = Order::where('restaurant_id', $restaurantId)
             ->visibleToRestaurant()
-            ->when($restaurant, fn ($q) => $q->forOwnerReporting($restaurant))
+            ->when($restaurant, fn($q) => $q->forOwnerReporting($restaurant))
             ->where('is_test', false)
             ->where('is_future_order', true)
             ->whereIn('status', [Order::STATUS_PENDING, Order::STATUS_AWAITING_PAYMENT])
@@ -169,7 +169,7 @@ class AdminController extends Controller
         // הזמנות אתר שדורשות טיפול בתשלום (HYP — ממתין או נכשל)
         // הזמנה עתידית לפני כניסה למטבח — לא מופיעה כאן; תופיע רק אחרי received אם תידרש (בפועל אשראי עתידי שולם לפני ה-cron)
         $manualPaymentOrders = Order::where('restaurant_id', $restaurantId)
-            ->when($restaurant, fn ($q) => $q->forOwnerReporting($restaurant))
+            ->when($restaurant, fn($q) => $q->forOwnerReporting($restaurant))
             ->where('is_test', false)
             ->where('is_future_order', false)
             ->where('status', Order::STATUS_AWAITING_PAYMENT)
@@ -392,7 +392,7 @@ class AdminController extends Controller
         $newCategory = Category::create([
             'restaurant_id' => $restaurant->id,
             'tenant_id' => $restaurant->tenant_id,
-            'name' => $originalCategory->name.' (עותק)',
+            'name' => $originalCategory->name . ' (עותק)',
             'description' => $originalCategory->description,
             'icon' => $originalCategory->icon,
             'sort_order' => $maxSortOrder + 1,
@@ -426,8 +426,8 @@ class AdminController extends Controller
                 $oldPath = str_replace('/storage/', 'public/', $storagePath);
                 if (Storage::exists($oldPath)) {
                     $extension = pathinfo($oldPath, PATHINFO_EXTENSION);
-                    $newFilename = Str::uuid().'.'.$extension;
-                    $newPath = 'public/menu-items/'.$newFilename;
+                    $newFilename = Str::uuid() . '.' . $extension;
+                    $newPath = 'public/menu-items/' . $newFilename;
                     Storage::copy($oldPath, $newPath);
                     $newImageUrl = Storage::url($newPath);
                 } else {
@@ -532,7 +532,7 @@ class AdminController extends Controller
 
         Log::info('Found items', [
             'count' => $items->count(),
-            'items' => $items->map(fn ($item) => [
+            'items' => $items->map(fn($item) => [
                 'id' => $item->id,
                 'name' => $item->name,
                 'category_id' => $item->category_id,
@@ -840,15 +840,15 @@ class AdminController extends Controller
             : RestaurantAddonGroup::where('restaurant_id', $restaurant->id)->orderBy('sort_order')->firstOrFail();
         $maxOrder = RestaurantAddon::where('addon_group_id', $group->id)->max('sort_order') ?? 0;
         $categoryIds = collect($request->input('category_ids', []))
-            ->filter(fn ($id) => is_numeric($id))
-            ->map(fn ($id) => (int) $id)
+            ->filter(fn($id) => is_numeric($id))
+            ->map(fn($id) => (int) $id)
             ->values();
 
         if ($categoryIds->isNotEmpty()) {
             $allowedCategoryIds = Category::where('restaurant_id', $restaurant->id)
                 ->whereIn('id', $categoryIds)
                 ->pluck('id')
-                ->map(fn ($id) => (int) $id)
+                ->map(fn($id) => (int) $id)
                 ->values();
             $categoryIds = $allowedCategoryIds;
         }
@@ -910,15 +910,15 @@ class AdminController extends Controller
         $payload = $request->only(['name', 'price_delta', 'selection_weight', 'max_quantity', 'is_active', 'sort_order']);
         if ($request->has('category_ids')) {
             $categoryIds = collect($request->input('category_ids', []))
-                ->filter(fn ($id) => is_numeric($id))
-                ->map(fn ($id) => (int) $id)
+                ->filter(fn($id) => is_numeric($id))
+                ->map(fn($id) => (int) $id)
                 ->values();
 
             if ($categoryIds->isNotEmpty()) {
                 $categoryIds = Category::where('restaurant_id', $restaurant->id)
                     ->whereIn('id', $categoryIds)
                     ->pluck('id')
-                    ->map(fn ($id) => (int) $id)
+                    ->map(fn($id) => (int) $id)
                     ->values();
             }
 
@@ -1455,8 +1455,8 @@ class AdminController extends Controller
         // וודא שהבסיסים שייכים למסעדה
         $validVariantIds = $variantIds->isNotEmpty()
             ? RestaurantVariant::where('restaurant_id', $restaurant->id)
-                ->whereIn('id', $variantIds)
-                ->pluck('id')
+            ->whereIn('id', $variantIds)
+            ->pluck('id')
             : collect();
 
         // מחק כללי מחיר קיימים ברמת קטגוריה עבור כל הקטגוריות
@@ -1878,7 +1878,7 @@ class AdminController extends Controller
         $newGroup = RestaurantAddonGroup::create([
             'restaurant_id' => $restaurant->id,
             'tenant_id' => $restaurant->tenant_id,
-            'name' => $originalGroup->name.' (עותק)',
+            'name' => $originalGroup->name . ' (עותק)',
             'selection_type' => $originalGroup->selection_type,
             'min_selections' => $originalGroup->min_selections,
             'max_selections' => $originalGroup->max_selections,
@@ -2191,12 +2191,12 @@ class AdminController extends Controller
         if ($hasExplicitIsOpen) {
             $updateData['is_open'] = $isOpen;
             $updateData['is_override_status'] = true;
-            Log::debug('🔒 Override status to: '.($isOpen ? 'true' : 'false'));
+            Log::debug('🔒 Override status to: ' . ($isOpen ? 'true' : 'false'));
         } elseif ($restaurant->is_override_status && ! ($hasExplicitOverrideFlag && $overrideFlag === false)) {
             // שמור כפייה קיימת גם אם לא נשלח is_open בבקשה
             $updateData['is_override_status'] = true;
             $updateData['is_open'] = $restaurant->is_open;
-            Log::debug('🔒 Preserve existing override: '.($restaurant->is_open ? 'true' : 'false'));
+            Log::debug('🔒 Preserve existing override: ' . ($restaurant->is_open ? 'true' : 'false'));
         }
 
         // עבוד עם JSON strings מ-FormData
@@ -2279,7 +2279,7 @@ class AdminController extends Controller
 
             $calculated = $this->isRestaurantOpen($operatingDays, $operatingHours);
             $updateData['is_open'] = $calculated;
-            Log::debug('🔓 Override cleared. Recalculated status: '.($calculated ? 'true' : 'false'));
+            Log::debug('🔓 Override cleared. Recalculated status: ' . ($calculated ? 'true' : 'false'));
         }
 
         // חשב סטטוס פתיחה אוטומטי רק אם אין כפייה ידנית (חדשה או קיימת)
@@ -2290,7 +2290,7 @@ class AdminController extends Controller
 
             $calculated = $this->isRestaurantOpen($operatingDays, $operatingHours);
             $updateData['is_open'] = $calculated;
-            Log::debug('📅 Calculated status: '.($calculated ? 'true' : 'false'));
+            Log::debug('📅 Calculated status: ' . ($calculated ? 'true' : 'false'));
         }
 
         // אין פתיחה/כפייה לפני אישור סופר אדמין
@@ -2521,7 +2521,7 @@ class AdminController extends Controller
         $restaurant = $this->resolveRestaurant($request);
         $query = Order::where('restaurant_id', $this->resolveRestaurantId($request))
             ->visibleToRestaurantOrB2cAwaitingPayment()
-            ->when($restaurant, fn ($q) => $q->forOwnerReporting($restaurant))
+            ->when($restaurant, fn($q) => $q->forOwnerReporting($restaurant))
             ->with('items.menuItem.category');
 
         if ($request->has('status')) {
@@ -2572,7 +2572,7 @@ class AdminController extends Controller
         if (! $order->canTransitionTo($request->status)) {
             return response()->json([
                 'success' => false,
-                'message' => 'מעבר סטטוס לא מותר. '.
+                'message' => 'מעבר סטטוס לא מותר. ' .
                     ($order->delivery_method === 'pickup' && $request->status === 'delivering'
                         ? 'הזמנות איסוף עצמי אינן דורשות סטטוס "במשלוח"'
                         : 'מעבר זה אינו אפשרי במצב הנוכחי'),
@@ -2630,9 +2630,11 @@ class AdminController extends Controller
             if ($request->filled('cancellation_reason')) {
                 $order->cancellation_reason = $request->cancellation_reason;
             }
-            if ($order->payment_status === Order::PAYMENT_PAID
+            if (
+                $order->payment_status === Order::PAYMENT_PAID
                 && ! $order->refund_waived_at
-                && $order->refund_pending_at === null) {
+                && $order->refund_pending_at === null
+            ) {
                 $order->refund_pending_at = now();
             }
         }
@@ -2644,7 +2646,7 @@ class AdminController extends Controller
             try {
                 app(\App\Services\PrintService::class)->printOrder($order);
             } catch (\Exception $e) {
-                Log::error('Print failed: '.$e->getMessage());
+                Log::error('Print failed: ' . $e->getMessage());
             }
         }
 
@@ -2714,8 +2716,8 @@ class AdminController extends Controller
         $order->refund_waived_by_user_id = $user->id;
         $order->refund_pending_at = null;
         if ($request->filled('note')) {
-            $suffix = ' [ויתור החזר: '.$request->input('note').']';
-            $order->cancellation_reason = trim((string) $order->cancellation_reason).$suffix;
+            $suffix = ' [ויתור החזר: ' . $request->input('note') . ']';
+            $order->cancellation_reason = trim((string) $order->cancellation_reason) . $suffix;
         }
         $order->save();
 
@@ -2790,8 +2792,8 @@ class AdminController extends Controller
                 'tier_limits' => config("tier_features.tier_limits.{$restaurant->tier}", []),
                 'orders_limit' => $restaurant->orders_limit ?? (
                     $restaurant->isOnTrial()
-                        ? config("tier_features.tier_limits.{$restaurant->tier}.orders_limit_trial", config("tier_features.tier_limits.{$restaurant->tier}.orders_limit"))
-                        : config("tier_features.tier_limits.{$restaurant->tier}.orders_limit")
+                    ? config("tier_features.tier_limits.{$restaurant->tier}.orders_limit_trial", config("tier_features.tier_limits.{$restaurant->tier}.orders_limit"))
+                    : config("tier_features.tier_limits.{$restaurant->tier}.orders_limit")
                 ),
                 'orders_this_month' => \App\Models\Order::where('restaurant_id', $restaurant->id)
                     ->where('created_at', '>=', now()->startOfMonth())->count(),
@@ -2898,7 +2900,7 @@ class AdminController extends Controller
                 if ($tokenResult['success']) {
                     $restaurant->update([
                         'hyp_card_token' => $tokenResult['token'],
-                        'hyp_card_expiry' => $tokenResult['tmonth'].$tokenResult['tyear'],
+                        'hyp_card_expiry' => $tokenResult['tmonth'] . $tokenResult['tyear'],
                         'hyp_card_last4' => $tokenResult['l4digit'],
                     ]);
                 }
@@ -3205,7 +3207,7 @@ class AdminController extends Controller
 
     private function uploadImage($file, $folder)
     {
-        $filename = Str::uuid().'.'.$file->getClientOriginalExtension();
+        $filename = Str::uuid() . '.' . $file->getClientOriginalExtension();
         $path = $file->storeAs("public/{$folder}", $filename);
 
         return Storage::url($path);

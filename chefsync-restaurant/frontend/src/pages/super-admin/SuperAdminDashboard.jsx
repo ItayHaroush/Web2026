@@ -828,9 +828,9 @@ function AddRestaurantModal({ onClose, onSuccess, getAuthHeaders }) {
     // תמליל עברית לאנגלית בסיסי
     const hebrewToLatin = (text) => {
         const map = {
-            'א':'a','ב':'b','ג':'g','ד':'d','ה':'a','ו':'u','ז':'z','ח':'ch','ט':'t',
-            'י':'i','כ':'k','ך':'k','ל':'l','מ':'m','ם':'m','נ':'n','ן':'n','ס':'s',
-            'ע':'e','פ':'p','ף':'f','צ':'z','ץ':'z','ק':'k','ר':'r','ש':'sh','ת':'t'
+            'א': 'a', 'ב': 'b', 'ג': 'g', 'ד': 'd', 'ה': 'a', 'ו': 'u', 'ז': 'z', 'ח': 'ch', 'ט': 't',
+            'י': 'i', 'כ': 'k', 'ך': 'k', 'ל': 'l', 'מ': 'm', 'ם': 'm', 'נ': 'n', 'ן': 'n', 'ס': 's',
+            'ע': 'e', 'פ': 'p', 'ף': 'f', 'צ': 'z', 'ץ': 'z', 'ק': 'k', 'ר': 'r', 'ש': 'sh', 'ת': 't'
         };
         return text.split('').map(c => map[c] || c).join('');
     };
@@ -1500,44 +1500,44 @@ function RestaurantDetailModal({ restaurant: initialRestaurant, onClose, onImper
 
                             {/* מגבלת הזמנות חודשית */}
                             {restaurant.tier === 'basic' && (
-                            <div className="bg-indigo-50/80 rounded-2xl p-5 border border-indigo-100">
-                                <h3 className="text-sm font-black text-gray-900 mb-2 flex items-center gap-2">
-                                    <FaShoppingBag className="text-indigo-600" size={14} />
-                                    מגבלת הזמנות חודשית
-                                </h3>
-                                <p className="text-xs text-indigo-900/80 font-medium mb-3 leading-relaxed">
-                                    Override למסעדה הזו. ריק = ברירת מחדל לפי tier (ניסיון: 50, Basic ששילם: 100, Pro+: ללא הגבלה).
-                                </p>
-                                <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-end">
-                                    <div className="flex-1 min-w-0">
-                                        <label className="text-xs font-bold text-gray-500 block mb-1">הזמנות לחודש</label>
-                                        <input
-                                            type="number"
-                                            min="0"
-                                            value={ordersLimit}
-                                            onChange={(e) => setOrdersLimit(e.target.value)}
-                                            placeholder="ברירת מחדל מה-tier"
-                                            className="w-full px-3 py-2 rounded-xl border border-indigo-200 bg-white text-sm font-bold text-gray-800"
-                                        />
+                                <div className="bg-indigo-50/80 rounded-2xl p-5 border border-indigo-100">
+                                    <h3 className="text-sm font-black text-gray-900 mb-2 flex items-center gap-2">
+                                        <FaShoppingBag className="text-indigo-600" size={14} />
+                                        מגבלת הזמנות חודשית
+                                    </h3>
+                                    <p className="text-xs text-indigo-900/80 font-medium mb-3 leading-relaxed">
+                                        Override למסעדה הזו. ריק = ברירת מחדל לפי tier (ניסיון: 50, Basic ששילם: 100, Pro+: ללא הגבלה).
+                                    </p>
+                                    <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-end">
+                                        <div className="flex-1 min-w-0">
+                                            <label className="text-xs font-bold text-gray-500 block mb-1">הזמנות לחודש</label>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                value={ordersLimit}
+                                                onChange={(e) => setOrdersLimit(e.target.value)}
+                                                placeholder="ברירת מחדל מה-tier"
+                                                className="w-full px-3 py-2 rounded-xl border border-indigo-200 bg-white text-sm font-bold text-gray-800"
+                                            />
+                                        </div>
+                                        <button
+                                            type="button"
+                                            disabled={savingOrdersLimit}
+                                            onClick={() => saveOrdersLimit(false)}
+                                            className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 disabled:opacity-50"
+                                        >
+                                            {savingOrdersLimit ? 'שומר…' : 'שמור'}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            disabled={savingOrdersLimit || restaurant.orders_limit == null}
+                                            onClick={() => saveOrdersLimit(true)}
+                                            className="px-4 py-2 border border-indigo-300 text-indigo-900 rounded-xl text-sm font-bold hover:bg-indigo-100/80 disabled:opacity-50"
+                                        >
+                                            אפס לברירת מחדל
+                                        </button>
                                     </div>
-                                    <button
-                                        type="button"
-                                        disabled={savingOrdersLimit}
-                                        onClick={() => saveOrdersLimit(false)}
-                                        className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 disabled:opacity-50"
-                                    >
-                                        {savingOrdersLimit ? 'שומר…' : 'שמור'}
-                                    </button>
-                                    <button
-                                        type="button"
-                                        disabled={savingOrdersLimit || restaurant.orders_limit == null}
-                                        onClick={() => saveOrdersLimit(true)}
-                                        className="px-4 py-2 border border-indigo-300 text-indigo-900 rounded-xl text-sm font-bold hover:bg-indigo-100/80 disabled:opacity-50"
-                                    >
-                                        אפס לברירת מחדל
-                                    </button>
                                 </div>
-                            </div>
                             )}
 
                             {/* סטטיסטיקות */}
@@ -1574,38 +1574,38 @@ function RestaurantDetailModal({ restaurant: initialRestaurant, onClose, onImper
                                     <FaChevronDown className={`text-amber-600 transition-transform ${showActivitySection ? 'rotate-180' : ''}`} size={12} />
                                 </button>
                                 {showActivitySection && (
-                                <>
-                                <p className="text-xs text-amber-900/80 font-medium mb-3 mt-2 leading-relaxed">
-                                    מיום זה ואילך המסעדן רואה סטטיסטיקות, הזמנות ודוחות בלבד. הנתונים במסד לא נמחקים; חיובי פלטפורמה מבוססים על כל ההיסטוריה.
-                                </p>
-                                <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 items-stretch sm:items-end">
-                                    <div className="flex-1 min-w-0">
-                                        <label className="text-xs font-bold text-gray-500 block mb-1">מתאריך</label>
-                                        <input
-                                            type="date"
-                                            value={ownerActivityDate}
-                                            onChange={(e) => setOwnerActivityDate(e.target.value)}
-                                            className="w-full px-3 py-2 rounded-xl border border-amber-200 bg-white text-sm font-bold text-gray-800"
-                                        />
-                                    </div>
-                                    <button
-                                        type="button"
-                                        disabled={savingOwnerActivity}
-                                        onClick={() => saveOwnerActivityDate(false)}
-                                        className="px-4 py-2 bg-amber-600 text-white rounded-xl text-sm font-bold hover:bg-amber-700 disabled:opacity-50"
-                                    >
-                                        {savingOwnerActivity ? 'שומר…' : 'שמור'}
-                                    </button>
-                                    <button
-                                        type="button"
-                                        disabled={savingOwnerActivity || !restaurant.owner_activity_started_at}
-                                        onClick={() => saveOwnerActivityDate(true)}
-                                        className="px-4 py-2 border border-amber-300 text-amber-900 rounded-xl text-sm font-bold hover:bg-amber-100/80 disabled:opacity-50"
-                                    >
-                                        נקה תאריך
-                                    </button>
-                                </div>
-                                </>
+                                    <>
+                                        <p className="text-xs text-amber-900/80 font-medium mb-3 mt-2 leading-relaxed">
+                                            מיום זה ואילך המסעדן רואה סטטיסטיקות, הזמנות ודוחות בלבד. הנתונים במסד לא נמחקים; חיובי פלטפורמה מבוססים על כל ההיסטוריה.
+                                        </p>
+                                        <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 items-stretch sm:items-end">
+                                            <div className="flex-1 min-w-0">
+                                                <label className="text-xs font-bold text-gray-500 block mb-1">מתאריך</label>
+                                                <input
+                                                    type="date"
+                                                    value={ownerActivityDate}
+                                                    onChange={(e) => setOwnerActivityDate(e.target.value)}
+                                                    className="w-full px-3 py-2 rounded-xl border border-amber-200 bg-white text-sm font-bold text-gray-800"
+                                                />
+                                            </div>
+                                            <button
+                                                type="button"
+                                                disabled={savingOwnerActivity}
+                                                onClick={() => saveOwnerActivityDate(false)}
+                                                className="px-4 py-2 bg-amber-600 text-white rounded-xl text-sm font-bold hover:bg-amber-700 disabled:opacity-50"
+                                            >
+                                                {savingOwnerActivity ? 'שומר…' : 'שמור'}
+                                            </button>
+                                            <button
+                                                type="button"
+                                                disabled={savingOwnerActivity || !restaurant.owner_activity_started_at}
+                                                onClick={() => saveOwnerActivityDate(true)}
+                                                className="px-4 py-2 border border-amber-300 text-amber-900 rounded-xl text-sm font-bold hover:bg-amber-100/80 disabled:opacity-50"
+                                            >
+                                                נקה תאריך
+                                            </button>
+                                        </div>
+                                    </>
                                 )}
                             </div>
 

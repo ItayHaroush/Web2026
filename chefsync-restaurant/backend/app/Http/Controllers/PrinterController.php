@@ -287,7 +287,7 @@ class PrinterController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'שגיאה בהדפסת ניסיון: '.$e->getMessage(),
+                'message' => 'שגיאה בהדפסת ניסיון: ' . $e->getMessage(),
             ], 500);
         }
     }
@@ -330,7 +330,7 @@ class PrinterController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'שגיאה בהדפסה חוזרת: '.$e->getMessage(),
+                'message' => 'שגיאה בהדפסה חוזרת: ' . $e->getMessage(),
             ], 500);
         }
     }

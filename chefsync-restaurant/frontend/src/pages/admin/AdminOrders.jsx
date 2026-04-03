@@ -489,40 +489,40 @@ export default function AdminOrders() {
                         </div>
                         <div className="border-r border-gray-200 pr-4">
                             {subscriptionInfo?.features?.reports === 'full' ? (
-                            <button
-                                onClick={async () => {
-                                    setGeneratingReport(true);
-                                    try {
-                                        const today = new Date().toLocaleDateString('en-CA');
-                                        const res = await api.post('/admin/reports/generate', { date: today }, { headers: getAuthHeaders() });
-                                        if (res.data?.success) {
-                                            const reportId = res.data?.data?.id;
-                                            if (reportId) {
-                                                await reportService.downloadPdf(reportId);
+                                <button
+                                    onClick={async () => {
+                                        setGeneratingReport(true);
+                                        try {
+                                            const today = new Date().toLocaleDateString('en-CA');
+                                            const res = await api.post('/admin/reports/generate', { date: today }, { headers: getAuthHeaders() });
+                                            if (res.data?.success) {
+                                                const reportId = res.data?.data?.id;
+                                                if (reportId) {
+                                                    await reportService.downloadPdf(reportId);
+                                                }
+                                            } else {
+                                                alert(res.data?.message || 'לא נמצאו הזמנות להיום');
                                             }
-                                        } else {
-                                            alert(res.data?.message || 'לא נמצאו הזמנות להיום');
+                                        } catch (e) {
+                                            alert(e.response?.data?.message || 'שגיאה ביצירת דוח');
+                                        } finally {
+                                            setGeneratingReport(false);
                                         }
-                                    } catch (e) {
-                                        alert(e.response?.data?.message || 'שגיאה ביצירת דוח');
-                                    } finally {
-                                        setGeneratingReport(false);
-                                    }
-                                }}
-                                disabled={generatingReport}
-                                className="flex items-center gap-2 px-3 py-2 bg-brand-primary/10 text-brand-primary hover:bg-brand-primary hover:text-white rounded-xl text-xs font-black transition-all disabled:opacity-50"
-                            >
-                                {generatingReport ? <FaSpinner className="animate-spin" size={14} /> : <FaFileAlt size={14} />}
-                                צור דוח יומי
-                            </button>
+                                    }}
+                                    disabled={generatingReport}
+                                    className="flex items-center gap-2 px-3 py-2 bg-brand-primary/10 text-brand-primary hover:bg-brand-primary hover:text-white rounded-xl text-xs font-black transition-all disabled:opacity-50"
+                                >
+                                    {generatingReport ? <FaSpinner className="animate-spin" size={14} /> : <FaFileAlt size={14} />}
+                                    צור דוח יומי
+                                </button>
                             ) : (
-                            <button
-                                onClick={() => navigate('/admin/paywall')}
-                                className="flex items-center gap-2 px-3 py-2 bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 rounded-xl text-xs font-black transition-all"
-                            >
-                                <FaLock size={12} />
-                                צור דוח יומי
-                            </button>
+                                <button
+                                    onClick={() => navigate('/admin/paywall')}
+                                    className="flex items-center gap-2 px-3 py-2 bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 rounded-xl text-xs font-black transition-all"
+                                >
+                                    <FaLock size={12} />
+                                    צור דוח יומי
+                                </button>
                             )}
                         </div>
                     </div>

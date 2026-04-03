@@ -158,8 +158,8 @@ export default function AdminCategories({ embedded = false }) {
     }
 
     const content = (
-            <div className="max-w-6xl mx-auto space-y-12 pb-32 animate-in fade-in duration-500">
-                {!embedded && (
+        <div className="max-w-6xl mx-auto space-y-12 pb-32 animate-in fade-in duration-500">
+            {!embedded && (
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 px-4">
                     <div className="flex items-center gap-6">
                         <div className="w-20 h-20 bg-emerald-50 rounded-[2.5rem] flex items-center justify-center text-emerald-600 shadow-sm border border-emerald-100/50">
@@ -182,135 +182,135 @@ export default function AdminCategories({ embedded = false }) {
                         </button>
                     )}
                 </div>
-                )}
-                {embedded && isManager() && (
-                    <div className="hidden md:flex justify-end px-4">
+            )}
+            {embedded && isManager() && (
+                <div className="hidden md:flex justify-end px-4">
+                    <button
+                        onClick={openNew}
+                        className="bg-brand-primary text-white px-6 py-3 rounded-2xl font-black text-sm hover:bg-brand-dark transition-all flex items-center gap-2 shadow-lg shadow-brand-primary/20"
+                    >
+                        <FaPlus />
+                        הוספת קטגוריה
+                    </button>
+                </div>
+            )}
+
+            {/* Categories Grid */}
+            {categories.length === 0 ? (
+                <div className="bg-white rounded-[4rem] shadow-sm border-2 border-dashed border-gray-100 p-24 text-center flex flex-col items-center col-span-full max-w-xl mx-auto">
+                    <div className="w-28 h-28 bg-gray-50 rounded-[3rem] flex items-center justify-center text-6xl mb-8 grayscale opacity-50">
+                        <FaFolderOpen />
+                    </div>
+                    <h3 className="text-3xl font-black text-gray-900 mb-2">אין קטגוריות עדיין</h3>
+                    <p className="text-gray-500 font-medium mb-12 text-lg leading-relaxed">הוסף את הקטגוריה הראשונה כדי להתחיל לסדר את התפריט שלך בצורה חכמה</p>
+                    {isManager() && (
                         <button
                             onClick={openNew}
-                            className="bg-brand-primary text-white px-6 py-3 rounded-2xl font-black text-sm hover:bg-brand-dark transition-all flex items-center gap-2 shadow-lg shadow-brand-primary/20"
+                            className="bg-brand-primary text-white px-12 py-5 rounded-[2rem] font-black hover:bg-brand-dark transition-all flex items-center gap-4 shadow-lg shadow-brand-primary/20"
                         >
-                            <FaPlus />
-                            הוספת קטגוריה
+                            <FaPlus /> הוספה עכשיו
                         </button>
-                    </div>
-                )}
-
-                {/* Categories Grid */}
-                {categories.length === 0 ? (
-                    <div className="bg-white rounded-[4rem] shadow-sm border-2 border-dashed border-gray-100 p-24 text-center flex flex-col items-center col-span-full max-w-xl mx-auto">
-                        <div className="w-28 h-28 bg-gray-50 rounded-[3rem] flex items-center justify-center text-6xl mb-8 grayscale opacity-50">
-                            <FaFolderOpen />
-                        </div>
-                        <h3 className="text-3xl font-black text-gray-900 mb-2">אין קטגוריות עדיין</h3>
-                        <p className="text-gray-500 font-medium mb-12 text-lg leading-relaxed">הוסף את הקטגוריה הראשונה כדי להתחיל לסדר את התפריט שלך בצורה חכמה</p>
-                        {isManager() && (
-                            <button
-                                onClick={openNew}
-                                className="bg-brand-primary text-white px-12 py-5 rounded-[2rem] font-black hover:bg-brand-dark transition-all flex items-center gap-4 shadow-lg shadow-brand-primary/20"
-                            >
-                                <FaPlus /> הוספה עכשיו
-                            </button>
-                        )}
-                    </div>
-                ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 px-4">
-                        {categories.map((cat) => (
-                            <div
-                                key={cat.id}
-                                className="group bg-white rounded-[3rem] shadow-sm border border-gray-100 p-10 flex flex-col gap-8 hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 relative overflow-hidden"
-                            >
-                                <div className="flex items-start justify-between">
-                                    <div className="flex items-center gap-6">
-                                        <div className="w-20 h-20 bg-gray-50 rounded-[2rem] flex items-center justify-center text-4xl shadow-inner group-hover:scale-110 transition-transform duration-500">
-                                            {cat.icon || '📁'}
-                                        </div>
-                                        <div>
-                                            <h3 className="font-black text-gray-900 text-2xl leading-tight group-hover:text-brand-primary transition-colors">{cat.name}</h3>
-                                            <div className="flex items-center gap-3 mt-2">
-                                                <span className={`px-3 py-1 bg-gray-100 text-gray-500 rounded-lg text-[10px] font-black uppercase tracking-widest border border-gray-100`}>
-                                                    {cat.dish_type === 'plate' ? '🥗 צלחת' : cat.dish_type === 'sandwich' ? '🌯 כריך' : '🥗🌯 הכל'}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {cat.description && (
-                                    <p className="text-gray-500 font-medium line-clamp-2 leading-relaxed text-sm">
-                                        {cat.description}
-                                    </p>
-                                )}
-
-                                <div className="mt-auto pt-8 border-t border-gray-50 flex items-center justify-between">
-                                    <div className="flex items-center gap-3 text-gray-400">
-                                        <div className="w-8 h-8 bg-gray-50 rounded-lg flex items-center justify-center">
-                                            <FaLayerGroup size={12} className="text-gray-400" />
-                                        </div>
-                                        <span className="text-sm font-black tracking-tight">{cat.items_count || 0} פריטים</span>
-                                    </div>
-
-                                    {isManager() && (
-                                        <div className="flex gap-3 opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0 duration-300">
-                                            <button
-                                                onClick={() => openEdit(cat)}
-                                                className="p-4 bg-blue-50 text-blue-600 rounded-2xl hover:bg-blue-600 hover:text-white transition-all shadow-sm"
-                                                title="עריכה"
-                                            >
-                                                <FaEdit size={18} />
-                                            </button>
-                                            <button
-                                                onClick={() => duplicateCategory(cat)}
-                                                disabled={duplicatingId === cat.id}
-                                                className="p-4 bg-emerald-50 text-emerald-600 rounded-2xl hover:bg-emerald-600 hover:text-white transition-all shadow-sm disabled:opacity-50"
-                                                title="העתק קטגוריה"
-                                            >
-                                                {duplicatingId === cat.id ? (
-                                                    <div className="animate-spin rounded-full h-[18px] w-[18px] border-2 border-emerald-600 border-t-transparent" />
-                                                ) : (
-                                                    <FaCopy size={18} />
-                                                )}
-                                            </button>
-                                            <button
-                                                onClick={() => deleteCategory(cat.id)}
-                                                className="p-4 bg-rose-50 text-rose-600 rounded-2xl hover:bg-rose-600 hover:text-white transition-all shadow-sm"
-                                                title="מחיקה"
-                                            >
-                                                <FaTrash size={18} />
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
-
-                {/* Modern Premium Modal */}
-                {showModal && (
-                    <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-md z-[110] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-300">
-                        <div className="bg-white rounded-t-[2rem] sm:rounded-[3.5rem] shadow-2xl max-w-2xl w-full max-h-[min(92dvh,90vh)] overflow-hidden flex flex-col min-h-0 border border-white/20 animate-in zoom-in-95 duration-300">
-                            <div className="px-4 sm:px-10 py-5 sm:py-8 bg-gray-50/50 border-b border-gray-100 flex items-center justify-between shrink-0">
-                                <div className="flex items-center gap-5">
-                                    <div className="p-4 bg-brand-primary/10 rounded-[1.5rem] text-brand-primary shadow-sm">
-                                        {editCategory ? <FaRegEdit size={24} /> : <FaPlus size={24} />}
+                    )}
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 px-4">
+                    {categories.map((cat) => (
+                        <div
+                            key={cat.id}
+                            className="group bg-white rounded-[3rem] shadow-sm border border-gray-100 p-10 flex flex-col gap-8 hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 relative overflow-hidden"
+                        >
+                            <div className="flex items-start justify-between">
+                                <div className="flex items-center gap-6">
+                                    <div className="w-20 h-20 bg-gray-50 rounded-[2rem] flex items-center justify-center text-4xl shadow-inner group-hover:scale-110 transition-transform duration-500">
+                                        {cat.icon || '📁'}
                                     </div>
                                     <div>
-                                        <h2 className="text-2xl font-black text-gray-900 tracking-tight">
-                                            {editCategory ? 'עריכת קטגוריה' : 'קטגוריה חדשה'}
-                                        </h2>
-                                        <p className="text-gray-500 font-medium text-sm mt-0.5">ניהול קבוצת פריטים בתפריט</p>
+                                        <h3 className="font-black text-gray-900 text-2xl leading-tight group-hover:text-brand-primary transition-colors">{cat.name}</h3>
+                                        <div className="flex items-center gap-3 mt-2">
+                                            <span className={`px-3 py-1 bg-gray-100 text-gray-500 rounded-lg text-[10px] font-black uppercase tracking-widest border border-gray-100`}>
+                                                {cat.dish_type === 'plate' ? '🥗 צלחת' : cat.dish_type === 'sandwich' ? '🌯 כריך' : '🥗🌯 הכל'}
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
-                                <button
-                                    type="button"
-                                    onClick={closeModal}
-                                    className="p-3 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-2xl transition-all shrink-0"
-                                >
-                                    <FaTimes size={24} />
-                                </button>
                             </div>
 
-                            <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+                            {cat.description && (
+                                <p className="text-gray-500 font-medium line-clamp-2 leading-relaxed text-sm">
+                                    {cat.description}
+                                </p>
+                            )}
+
+                            <div className="mt-auto pt-8 border-t border-gray-50 flex items-center justify-between">
+                                <div className="flex items-center gap-3 text-gray-400">
+                                    <div className="w-8 h-8 bg-gray-50 rounded-lg flex items-center justify-center">
+                                        <FaLayerGroup size={12} className="text-gray-400" />
+                                    </div>
+                                    <span className="text-sm font-black tracking-tight">{cat.items_count || 0} פריטים</span>
+                                </div>
+
+                                {isManager() && (
+                                    <div className="flex gap-3 opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0 duration-300">
+                                        <button
+                                            onClick={() => openEdit(cat)}
+                                            className="p-4 bg-blue-50 text-blue-600 rounded-2xl hover:bg-blue-600 hover:text-white transition-all shadow-sm"
+                                            title="עריכה"
+                                        >
+                                            <FaEdit size={18} />
+                                        </button>
+                                        <button
+                                            onClick={() => duplicateCategory(cat)}
+                                            disabled={duplicatingId === cat.id}
+                                            className="p-4 bg-emerald-50 text-emerald-600 rounded-2xl hover:bg-emerald-600 hover:text-white transition-all shadow-sm disabled:opacity-50"
+                                            title="העתק קטגוריה"
+                                        >
+                                            {duplicatingId === cat.id ? (
+                                                <div className="animate-spin rounded-full h-[18px] w-[18px] border-2 border-emerald-600 border-t-transparent" />
+                                            ) : (
+                                                <FaCopy size={18} />
+                                            )}
+                                        </button>
+                                        <button
+                                            onClick={() => deleteCategory(cat.id)}
+                                            className="p-4 bg-rose-50 text-rose-600 rounded-2xl hover:bg-rose-600 hover:text-white transition-all shadow-sm"
+                                            title="מחיקה"
+                                        >
+                                            <FaTrash size={18} />
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {/* Modern Premium Modal */}
+            {showModal && (
+                <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-md z-[110] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-300">
+                    <div className="bg-white rounded-t-[2rem] sm:rounded-[3.5rem] shadow-2xl max-w-2xl w-full max-h-[min(92dvh,90vh)] overflow-hidden flex flex-col min-h-0 border border-white/20 animate-in zoom-in-95 duration-300">
+                        <div className="px-4 sm:px-10 py-5 sm:py-8 bg-gray-50/50 border-b border-gray-100 flex items-center justify-between shrink-0">
+                            <div className="flex items-center gap-5">
+                                <div className="p-4 bg-brand-primary/10 rounded-[1.5rem] text-brand-primary shadow-sm">
+                                    {editCategory ? <FaRegEdit size={24} /> : <FaPlus size={24} />}
+                                </div>
+                                <div>
+                                    <h2 className="text-2xl font-black text-gray-900 tracking-tight">
+                                        {editCategory ? 'עריכת קטגוריה' : 'קטגוריה חדשה'}
+                                    </h2>
+                                    <p className="text-gray-500 font-medium text-sm mt-0.5">ניהול קבוצת פריטים בתפריט</p>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={closeModal}
+                                className="p-3 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-2xl transition-all shrink-0"
+                            >
+                                <FaTimes size={24} />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
                             <div className="p-4 sm:p-10 space-y-8 sm:space-y-10 overflow-y-auto flex-1 min-h-0 custom-scrollbar">
                                 <div className="grid grid-cols-1 gap-10">
                                     <div className="space-y-4">
@@ -458,30 +458,30 @@ export default function AdminCategories({ embedded = false }) {
                                 </div>
                             </div>
 
-                                <div className="flex flex-col-reverse sm:flex-row gap-3 p-4 sm:p-10 pt-4 border-t border-gray-100 bg-white shrink-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-                                    <button
-                                        type="button"
-                                        onClick={closeModal}
-                                        className="w-full sm:w-auto px-8 py-4 sm:py-6 bg-gray-100 text-gray-700 rounded-[2rem] font-black hover:bg-gray-200 transition-all active:scale-95"
-                                    >
-                                        ביטול
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        className="flex-1 bg-brand-primary text-white py-4 sm:py-6 rounded-[2rem] font-black text-lg sm:text-xl hover:bg-brand-dark transition-all shadow-xl shadow-brand-primary/20 active:scale-95 flex items-center justify-center gap-4"
-                                    >
-                                        <FaCheckCircle size={22} />
-                                        {editCategory ? 'עדכן קטגוריה' : 'צור קטגוריה'}
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
+                            <div className="flex flex-col-reverse sm:flex-row gap-3 p-4 sm:p-10 pt-4 border-t border-gray-100 bg-white shrink-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+                                <button
+                                    type="button"
+                                    onClick={closeModal}
+                                    className="w-full sm:w-auto px-8 py-4 sm:py-6 bg-gray-100 text-gray-700 rounded-[2rem] font-black hover:bg-gray-200 transition-all active:scale-95"
+                                >
+                                    ביטול
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="flex-1 bg-brand-primary text-white py-4 sm:py-6 rounded-[2rem] font-black text-lg sm:text-xl hover:bg-brand-dark transition-all shadow-xl shadow-brand-primary/20 active:scale-95 flex items-center justify-center gap-4"
+                                >
+                                    <FaCheckCircle size={22} />
+                                    {editCategory ? 'עדכן קטגוריה' : 'צור קטגוריה'}
+                                </button>
+                            </div>
+                        </form>
                     </div>
-                )}
-                {isManager() && !showModal && (
-                    <MobileAddFab label="הוספת קטגוריה" icon={FaTags} onClick={openNew} />
-                )}
-            </div>
+                </div>
+            )}
+            {isManager() && !showModal && (
+                <MobileAddFab label="הוספת קטגוריה" icon={FaTags} onClick={openNew} />
+            )}
+        </div>
     );
 
     if (embedded) return content;

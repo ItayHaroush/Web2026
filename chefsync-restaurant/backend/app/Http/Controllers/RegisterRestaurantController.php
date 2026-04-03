@@ -107,7 +107,7 @@ class RegisterRestaurantController extends Controller
         $logoUrl = null;
         if ($request->hasFile('logo') && $request->file('logo')->isValid()) {
             $logoPath = $request->file('logo')->store('logos', 'public');
-            $logoUrl = '/storage/'.$logoPath;
+            $logoUrl = '/storage/' . $logoPath;
         } elseif (! empty($request->input('logo_url'))) {
             // שמור תאימות אחורה אם נשלח URL ישיר
             $logoUrl = $request->input('logo_url');
@@ -239,7 +239,7 @@ class RegisterRestaurantController extends Controller
                 ]);
                 SystemErrorReporter::report(
                     'email_failure',
-                    'מייל welcome להרשמת מסעדה נכשל: '.$mailError->getMessage(),
+                    'מייל welcome להרשמת מסעדה נכשל: ' . $mailError->getMessage(),
                     'warning',
                     $restaurant->tenant_id,
                     null,
@@ -265,7 +265,7 @@ class RegisterRestaurantController extends Controller
             DB::rollBack();
             SystemErrorReporter::report(
                 'registration_failed',
-                'הרשמת מסעדה נכשלה: '.$e->getMessage(),
+                'הרשמת מסעדה נכשלה: ' . $e->getMessage(),
                 'error',
                 null,
                 null,
@@ -276,7 +276,7 @@ class RegisterRestaurantController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'שגיאה בהרשמה: '.$e->getMessage(),
+                'message' => 'שגיאה בהרשמה: ' . $e->getMessage(),
             ], 500);
         }
     }
@@ -287,12 +287,12 @@ class RegisterRestaurantController extends Controller
 
         // נייד: 05X-XXXXXXX (10 ספרות)
         if (strlen($phone) === 10 && str_starts_with($phone, '05')) {
-            return substr($phone, 0, 3).'-'.substr($phone, 3);
+            return substr($phone, 0, 3) . '-' . substr($phone, 3);
         }
 
         // נייח: 0X-XXXXXXX (9 ספרות)
         if (strlen($phone) === 9 && str_starts_with($phone, '0')) {
-            return substr($phone, 0, 2).'-'.substr($phone, 2);
+            return substr($phone, 0, 2) . '-' . substr($phone, 2);
         }
 
         return $raw; // החזר מקורי אם לא תואם

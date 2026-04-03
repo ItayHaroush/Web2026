@@ -168,11 +168,10 @@ export default function AdminEmployees() {
                             <UpgradeBanner variant="inline" context="employees" requiredTier="pro" feature="employees" />
                             <button
                                 onClick={canAddMore ? () => setShowModal(true) : () => navigate('/admin/paywall')}
-                                className={`w-full md:w-auto px-12 py-6 rounded-[2rem] font-black transition-all flex items-center justify-center gap-4 shadow-2xl active:scale-95 group hover:-translate-y-1 ${
-                                    canAddMore
+                                className={`w-full md:w-auto px-12 py-6 rounded-[2rem] font-black transition-all flex items-center justify-center gap-4 shadow-2xl active:scale-95 group hover:-translate-y-1 ${canAddMore
                                         ? 'bg-brand-primary text-white hover:bg-brand-dark shadow-brand-primary/30'
                                         : 'bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-amber-200'
-                                }`}
+                                    }`}
                             >
                                 <div className="bg-white/20 p-2.5 rounded-xl group-hover:rotate-90 transition-transform">
                                     <FaUserPlus size={16} />

@@ -210,9 +210,9 @@ export default function AdminReports({ embedded = false }) {
     };
 
     const content = (
-            <div className="max-w-7xl mx-auto space-y-6 animate-in fade-in duration-500">
-                <UpgradeBanner variant="card" context="reports" requiredTier="pro" feature="reports" />
-                {!embedded && (
+        <div className="max-w-7xl mx-auto space-y-6 animate-in fade-in duration-500">
+            <UpgradeBanner variant="card" context="reports" requiredTier="pro" feature="reports" />
+            {!embedded && (
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div>
                         <h1 className="text-3xl font-black text-gray-900 flex items-center gap-3">
@@ -252,307 +252,307 @@ export default function AdminReports({ embedded = false }) {
                         </button>
                     </div>
                 </div>
-                )}
+            )}
 
-                {/* Filters */}
-                <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-wrap items-center gap-4">
-                    <FaCalendarAlt className="text-brand-primary" />
+            {/* Filters */}
+            <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-wrap items-center gap-4">
+                <FaCalendarAlt className="text-brand-primary" />
+                <input
+                    type="date"
+                    value={from}
+                    onChange={e => setFrom(e.target.value)}
+                    className="border border-gray-200 rounded-xl px-3 py-2 text-sm"
+                />
+                <span className="text-gray-400">עד</span>
+                <input
+                    type="date"
+                    value={to}
+                    onChange={e => setTo(e.target.value)}
+                    className="border border-gray-200 rounded-xl px-3 py-2 text-sm"
+                />
+                <button
+                    onClick={() => fetchReports()}
+                    className="flex items-center gap-2 px-4 py-2 bg-brand-primary text-white rounded-xl text-sm font-bold hover:bg-brand-primary/90 transition-all"
+                >
+                    <FaSync size={12} /> סנן
+                </button>
+
+                <div className="mr-auto flex items-center gap-2">
                     <input
                         type="date"
-                        value={from}
-                        onChange={e => setFrom(e.target.value)}
+                        value={generateDate}
+                        onChange={e => setGenerateDate(e.target.value)}
+                        max={new Date().toISOString().split('T')[0]}
                         className="border border-gray-200 rounded-xl px-3 py-2 text-sm"
-                    />
-                    <span className="text-gray-400">עד</span>
-                    <input
-                        type="date"
-                        value={to}
-                        onChange={e => setTo(e.target.value)}
-                        className="border border-gray-200 rounded-xl px-3 py-2 text-sm"
+                        disabled={!reportsUnlocked}
                     />
                     <button
-                        onClick={() => fetchReports()}
-                        className="flex items-center gap-2 px-4 py-2 bg-brand-primary text-white rounded-xl text-sm font-bold hover:bg-brand-primary/90 transition-all"
+                        onClick={handleGenerate}
+                        disabled={generating || !reportsUnlocked}
+                        title={!reportsUnlocked ? 'שדרג חבילה לשימוש בדוחות' : undefined}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all disabled:opacity-50 ${!reportsUnlocked ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-gray-900 text-white hover:bg-black'}`}
                     >
-                        <FaSync size={12} /> סנן
+                        {!reportsUnlocked ? '🔒 צור דוח ידני' : generating ? '...' : 'צור דוח ידני'}
                     </button>
+                </div>
+            </div>
 
-                    <div className="mr-auto flex items-center gap-2">
-                        <input
-                            type="date"
-                            value={generateDate}
-                            onChange={e => setGenerateDate(e.target.value)}
-                            max={new Date().toISOString().split('T')[0]}
-                            className="border border-gray-200 rounded-xl px-3 py-2 text-sm"
-                            disabled={!reportsUnlocked}
-                        />
-                        <button
-                            onClick={handleGenerate}
-                            disabled={generating || !reportsUnlocked}
-                            title={!reportsUnlocked ? 'שדרג חבילה לשימוש בדוחות' : undefined}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all disabled:opacity-50 ${!reportsUnlocked ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-gray-900 text-white hover:bg-black'}`}
-                        >
-                            {!reportsUnlocked ? '🔒 צור דוח ידני' : generating ? '...' : 'צור דוח ידני'}
-                        </button>
+            {/* KPI Cards */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <KpiCard
+                    label="הכנסות"
+                    value={`₪${totalRevenue.toLocaleString('he-IL', { maximumFractionDigits: 0 })}`}
+                    icon={<FaMoneyBillWave />}
+                    color="emerald"
+                />
+                <KpiCard
+                    label="הזמנות"
+                    value={totalOrders.toLocaleString()}
+                    icon={<FaShoppingBag />}
+                    color="blue"
+                />
+                <KpiCard
+                    label="ממוצע להזמנה"
+                    value={`₪${avgOrderValue.toLocaleString('he-IL', { maximumFractionDigits: 0 })}`}
+                    icon={<FaChartLine />}
+                    color="orange"
+                />
+                <KpiCard
+                    label="ביטולים"
+                    value={totalCancelled.toLocaleString()}
+                    icon={<FaTimesCircle />}
+                    color="rose"
+                />
+            </div>
+
+            {/* Charts */}
+            {!loading && reports.length > 0 && (
+                <div className="space-y-6">
+                    {/* Revenue bar chart */}
+                    <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                        <h3 className="text-lg font-black text-gray-900 mb-4 flex items-center gap-2">
+                            <FaChartLine className="text-blue-500" /> הכנסות יומיות
+                        </h3>
+                        <ResponsiveContainer width="100%" height={300}>
+                            <BarChart data={chartData}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                                <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                                <YAxis tick={{ fontSize: 11 }} />
+                                <Tooltip
+                                    formatter={(value, name) => [
+                                        name === 'הכנסות' ? `₪${value.toLocaleString()}` : value,
+                                        name
+                                    ]}
+                                />
+                                <Bar dataKey="הכנסות" fill="#f97316" radius={[4, 4, 0, 0]} />
+                            </BarChart>
+                        </ResponsiveContainer>
                     </div>
-                </div>
 
-                {/* KPI Cards */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    <KpiCard
-                        label="הכנסות"
-                        value={`₪${totalRevenue.toLocaleString('he-IL', { maximumFractionDigits: 0 })}`}
-                        icon={<FaMoneyBillWave />}
-                        color="emerald"
-                    />
-                    <KpiCard
-                        label="הזמנות"
-                        value={totalOrders.toLocaleString()}
-                        icon={<FaShoppingBag />}
-                        color="blue"
-                    />
-                    <KpiCard
-                        label="ממוצע להזמנה"
-                        value={`₪${avgOrderValue.toLocaleString('he-IL', { maximumFractionDigits: 0 })}`}
-                        icon={<FaChartLine />}
-                        color="orange"
-                    />
-                    <KpiCard
-                        label="ביטולים"
-                        value={totalCancelled.toLocaleString()}
-                        icon={<FaTimesCircle />}
-                        color="rose"
-                    />
-                </div>
+                    {/* Pie charts */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <PieSection
+                            title="איסוף / משלוח"
+                            icon={<FaTruck className="text-purple-500" />}
+                            data={pieData}
+                            colors={COLORS.slice(0)}
+                            tooltipFormatter={v => v.toLocaleString()}
+                        />
 
-                {/* Charts */}
-                {!loading && reports.length > 0 && (
-                    <div className="space-y-6">
-                        {/* Revenue bar chart */}
-                        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-                            <h3 className="text-lg font-black text-gray-900 mb-4 flex items-center gap-2">
-                                <FaChartLine className="text-blue-500" /> הכנסות יומיות
-                            </h3>
-                            <ResponsiveContainer width="100%" height={300}>
-                                <BarChart data={chartData}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-                                    <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-                                    <YAxis tick={{ fontSize: 11 }} />
-                                    <Tooltip
-                                        formatter={(value, name) => [
-                                            name === 'הכנסות' ? `₪${value.toLocaleString()}` : value,
-                                            name
-                                        ]}
-                                    />
-                                    <Bar dataKey="הכנסות" fill="#f97316" radius={[4, 4, 0, 0]} />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </div>
+                        <PieSection
+                            title="אמצעי תשלום"
+                            icon={<FaMoneyBillWave className="text-green-500" />}
+                            data={paymentPieData}
+                            colors={COLORS.slice(2)}
+                            tooltipFormatter={v => `₪${v.toLocaleString()}`}
+                        />
 
-                        {/* Pie charts */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {sourcePieData.length > 0 && (
                             <PieSection
-                                title="איסוף / משלוח"
-                                icon={<FaTruck className="text-purple-500" />}
-                                data={pieData}
-                                colors={COLORS.slice(0)}
+                                title="מקור הזמנה"
+                                icon={<FaStore className="text-orange-500" />}
+                                data={sourcePieData}
+                                colors={COLORS.slice(3)}
                                 tooltipFormatter={v => v.toLocaleString()}
                             />
-
-                            <PieSection
-                                title="אמצעי תשלום"
-                                icon={<FaMoneyBillWave className="text-green-500" />}
-                                data={paymentPieData}
-                                colors={COLORS.slice(2)}
-                                tooltipFormatter={v => `₪${v.toLocaleString()}`}
-                            />
-
-                            {sourcePieData.length > 0 && (
-                                <PieSection
-                                    title="מקור הזמנה"
-                                    icon={<FaStore className="text-orange-500" />}
-                                    data={sourcePieData}
-                                    colors={COLORS.slice(3)}
-                                    tooltipFormatter={v => v.toLocaleString()}
-                                />
-                            )}
-                        </div>
-                    </div>
-                )}
-
-                {/* Reports Table */}
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                    <div className="p-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
-                        <h3 className="text-lg font-black text-gray-900">דוחות יומיים</h3>
-                        {selectedIds.size > 0 && (
-                            <div className="flex flex-wrap items-center gap-2">
-                                <span className="text-sm text-gray-500">{selectedIds.size} נבחרו</span>
-                                <button
-                                    type="button"
-                                    disabled={bulkLoading}
-                                    onClick={() => runBulk({ send_email: true })}
-                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
-                                >
-                                    <FaEnvelope size={11} /> מייל
-                                </button>
-                                <button
-                                    type="button"
-                                    disabled={bulkLoading}
-                                    onClick={() => runBulk({ whatsapp: true })}
-                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
-                                >
-                                    <FaWhatsapp size={12} /> וואטסאפ
-                                </button>
-                                <button
-                                    type="button"
-                                    disabled={bulkLoading}
-                                    onClick={() => runBulk({ copy_text: true })}
-                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-gray-800 text-white hover:bg-black disabled:opacity-50"
-                                >
-                                    <FaCopy size={11} /> העתקה
-                                </button>
-                            </div>
                         )}
                     </div>
+                </div>
+            )}
 
-                    {loading ? (
-                        <div className="p-16 text-center text-gray-400">טוען דוחות...</div>
-                    ) : reports.length === 0 ? (
-                        <div className="p-16 text-center text-gray-400">אין דוחות בטווח התאריכים שנבחר</div>
-                    ) : (
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-sm">
-                                <thead className="bg-gray-50">
-                                    <tr>
-                                        <th className="text-right p-3 font-bold text-gray-500 w-10">
-                                            <input
-                                                type="checkbox"
-                                                checked={reports.length > 0 && reports.every((r) => selectedIds.has(r.id))}
-                                                onChange={toggleSelectAllPage}
-                                                title="בחר הכל בעמוד"
-                                                className="rounded border-gray-300"
-                                            />
-                                        </th>
-                                        <th className="text-right p-3 font-bold text-gray-500">תאריך</th>
-                                        <th className="text-right p-3 font-bold text-gray-500">הזמנות</th>
-                                        <th className="text-right p-3 font-bold text-gray-500">הכנסות</th>
-                                        <th className="text-right p-3 font-bold text-gray-500">איסוף</th>
-                                        <th className="text-right p-3 font-bold text-gray-500">משלוח</th>
-                                        <th className="text-right p-3 font-bold text-gray-500">אונליין</th>
-                                        <th className="text-right p-3 font-bold text-gray-500">קיוסק</th>
-                                        <th className="text-right p-3 font-bold text-gray-500">קופה</th>
-                                        <th className="text-right p-3 font-bold text-gray-500">ממוצע</th>
-                                        <th className="text-right p-3 font-bold text-gray-500">ביטולים</th>
-                                        <th className="text-right p-3 font-bold text-gray-500">פעולות</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-50">
-                                    {reports.map(r => (
-                                        <tr key={r.id} className="hover:bg-gray-50 transition-colors">
-                                            <td className="p-3">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={selectedIds.has(r.id)}
-                                                    onChange={() => toggleSelect(r.id)}
-                                                    className="rounded border-gray-300"
-                                                />
-                                            </td>
-                                            <td className="p-3 font-bold">{formatDailyReportCalendarDate(r.date)}</td>
-                                            <td className="p-3">{r.total_orders}</td>
-                                            <td className="p-3 font-bold text-emerald-600">₪{parseFloat(r.total_revenue || 0).toLocaleString()}</td>
-                                            <td className="p-3">{r.pickup_orders}</td>
-                                            <td className="p-3">{r.delivery_orders}</td>
-                                            <td className="p-3">{r.web_orders || 0}</td>
-                                            <td className="p-3">{r.kiosk_orders || 0}</td>
-                                            <td className="p-3">{r.pos_orders || 0}</td>
-                                            <td className="p-3">₪{parseFloat(r.avg_order_value || 0).toFixed(0)}</td>
-                                            <td className="p-3">
-                                                {r.cancelled_orders > 0 && (
-                                                    <span className="text-rose-600 font-bold">{r.cancelled_orders}</span>
-                                                )}
-                                                {!r.cancelled_orders && <span className="text-gray-300">0</span>}
-                                            </td>
-                                            <td className="p-3 flex gap-2">
-                                                <button
-                                                    onClick={() => openReport(r)}
-                                                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                                    title="צפייה"
-                                                >
-                                                    <FaEye size={14} />
-                                                </button>
-                                                <button
-                                                    onClick={() => reportService.downloadPdf(r.id)}
-                                                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                                    title="PDF"
-                                                >
-                                                    <FaFilePdf size={14} />
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
-
-                    {/* Pagination */}
-                    {pagination.last_page > 1 && (
-                        <div className="p-4 border-t border-gray-100 flex justify-center gap-2">
-                            {Array.from({ length: pagination.last_page }, (_, i) => i + 1).map(page => (
-                                <button
-                                    key={page}
-                                    onClick={() => fetchReports(page)}
-                                    className={`w-9 h-9 rounded-lg text-sm font-bold transition-all ${page === pagination.current_page
-                                        ? 'bg-brand-primary text-white'
-                                        : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
-                                        }`}
-                                >
-                                    {page}
-                                </button>
-                            ))}
+            {/* Reports Table */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="p-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
+                    <h3 className="text-lg font-black text-gray-900">דוחות יומיים</h3>
+                    {selectedIds.size > 0 && (
+                        <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-sm text-gray-500">{selectedIds.size} נבחרו</span>
+                            <button
+                                type="button"
+                                disabled={bulkLoading}
+                                onClick={() => runBulk({ send_email: true })}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+                            >
+                                <FaEnvelope size={11} /> מייל
+                            </button>
+                            <button
+                                type="button"
+                                disabled={bulkLoading}
+                                onClick={() => runBulk({ whatsapp: true })}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
+                            >
+                                <FaWhatsapp size={12} /> וואטסאפ
+                            </button>
+                            <button
+                                type="button"
+                                disabled={bulkLoading}
+                                onClick={() => runBulk({ copy_text: true })}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-gray-800 text-white hover:bg-black disabled:opacity-50"
+                            >
+                                <FaCopy size={11} /> העתקה
+                            </button>
                         </div>
                     )}
                 </div>
 
-                <UpgradeBanner variant="inline" context="reports" requiredTier="pro" feature="advanced_reports" />
-
-                {/* Detail Modal */}
-                {modalOpen && selectedReport && (
-                    <ReportDetailModal
-                        report={selectedReport}
-                        onClose={() => { setModalOpen(false); setSelectedReport(null); }}
-                        onDownloadPdf={() => reportService.downloadPdf(selectedReport.id)}
-                    />
+                {loading ? (
+                    <div className="p-16 text-center text-gray-400">טוען דוחות...</div>
+                ) : reports.length === 0 ? (
+                    <div className="p-16 text-center text-gray-400">אין דוחות בטווח התאריכים שנבחר</div>
+                ) : (
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                            <thead className="bg-gray-50">
+                                <tr>
+                                    <th className="text-right p-3 font-bold text-gray-500 w-10">
+                                        <input
+                                            type="checkbox"
+                                            checked={reports.length > 0 && reports.every((r) => selectedIds.has(r.id))}
+                                            onChange={toggleSelectAllPage}
+                                            title="בחר הכל בעמוד"
+                                            className="rounded border-gray-300"
+                                        />
+                                    </th>
+                                    <th className="text-right p-3 font-bold text-gray-500">תאריך</th>
+                                    <th className="text-right p-3 font-bold text-gray-500">הזמנות</th>
+                                    <th className="text-right p-3 font-bold text-gray-500">הכנסות</th>
+                                    <th className="text-right p-3 font-bold text-gray-500">איסוף</th>
+                                    <th className="text-right p-3 font-bold text-gray-500">משלוח</th>
+                                    <th className="text-right p-3 font-bold text-gray-500">אונליין</th>
+                                    <th className="text-right p-3 font-bold text-gray-500">קיוסק</th>
+                                    <th className="text-right p-3 font-bold text-gray-500">קופה</th>
+                                    <th className="text-right p-3 font-bold text-gray-500">ממוצע</th>
+                                    <th className="text-right p-3 font-bold text-gray-500">ביטולים</th>
+                                    <th className="text-right p-3 font-bold text-gray-500">פעולות</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-50">
+                                {reports.map(r => (
+                                    <tr key={r.id} className="hover:bg-gray-50 transition-colors">
+                                        <td className="p-3">
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedIds.has(r.id)}
+                                                onChange={() => toggleSelect(r.id)}
+                                                className="rounded border-gray-300"
+                                            />
+                                        </td>
+                                        <td className="p-3 font-bold">{formatDailyReportCalendarDate(r.date)}</td>
+                                        <td className="p-3">{r.total_orders}</td>
+                                        <td className="p-3 font-bold text-emerald-600">₪{parseFloat(r.total_revenue || 0).toLocaleString()}</td>
+                                        <td className="p-3">{r.pickup_orders}</td>
+                                        <td className="p-3">{r.delivery_orders}</td>
+                                        <td className="p-3">{r.web_orders || 0}</td>
+                                        <td className="p-3">{r.kiosk_orders || 0}</td>
+                                        <td className="p-3">{r.pos_orders || 0}</td>
+                                        <td className="p-3">₪{parseFloat(r.avg_order_value || 0).toFixed(0)}</td>
+                                        <td className="p-3">
+                                            {r.cancelled_orders > 0 && (
+                                                <span className="text-rose-600 font-bold">{r.cancelled_orders}</span>
+                                            )}
+                                            {!r.cancelled_orders && <span className="text-gray-300">0</span>}
+                                        </td>
+                                        <td className="p-3 flex gap-2">
+                                            <button
+                                                onClick={() => openReport(r)}
+                                                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                title="צפייה"
+                                            >
+                                                <FaEye size={14} />
+                                            </button>
+                                            <button
+                                                onClick={() => reportService.downloadPdf(r.id)}
+                                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                title="PDF"
+                                            >
+                                                <FaFilePdf size={14} />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 )}
 
-                {waLinksModal && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50" onClick={() => setWaLinksModal(null)}>
-                        <div className="bg-white rounded-2xl max-w-lg w-full max-h-[80vh] overflow-hidden shadow-2xl" onClick={(e) => e.stopPropagation()}>
-                            <div className="p-4 border-b border-gray-100 flex justify-between items-center">
-                                <h3 className="font-black text-gray-900">קישורי וואטסאפ</h3>
-                                <button type="button" className="p-2 hover:bg-gray-100 rounded-lg" onClick={() => setWaLinksModal(null)}>
-                                    <FaTimes />
-                                </button>
-                            </div>
-                            <ul className="p-4 overflow-y-auto max-h-[60vh] space-y-2 text-sm">
-                                {waLinksModal.map((row) => (
-                                    <li key={row.report_id} className="flex flex-wrap items-center gap-2 justify-between border border-gray-100 rounded-xl p-2">
-                                        <span className="text-gray-600">{formatDailyReportCalendarDate(row.date)}</span>
-                                        <a
-                                            href={row.url}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="font-bold text-green-600 hover:underline"
-                                        >
-                                            פתח
-                                        </a>
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
+                {/* Pagination */}
+                {pagination.last_page > 1 && (
+                    <div className="p-4 border-t border-gray-100 flex justify-center gap-2">
+                        {Array.from({ length: pagination.last_page }, (_, i) => i + 1).map(page => (
+                            <button
+                                key={page}
+                                onClick={() => fetchReports(page)}
+                                className={`w-9 h-9 rounded-lg text-sm font-bold transition-all ${page === pagination.current_page
+                                    ? 'bg-brand-primary text-white'
+                                    : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                                    }`}
+                            >
+                                {page}
+                            </button>
+                        ))}
                     </div>
                 )}
             </div>
+
+            <UpgradeBanner variant="inline" context="reports" requiredTier="pro" feature="advanced_reports" />
+
+            {/* Detail Modal */}
+            {modalOpen && selectedReport && (
+                <ReportDetailModal
+                    report={selectedReport}
+                    onClose={() => { setModalOpen(false); setSelectedReport(null); }}
+                    onDownloadPdf={() => reportService.downloadPdf(selectedReport.id)}
+                />
+            )}
+
+            {waLinksModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50" onClick={() => setWaLinksModal(null)}>
+                    <div className="bg-white rounded-2xl max-w-lg w-full max-h-[80vh] overflow-hidden shadow-2xl" onClick={(e) => e.stopPropagation()}>
+                        <div className="p-4 border-b border-gray-100 flex justify-between items-center">
+                            <h3 className="font-black text-gray-900">קישורי וואטסאפ</h3>
+                            <button type="button" className="p-2 hover:bg-gray-100 rounded-lg" onClick={() => setWaLinksModal(null)}>
+                                <FaTimes />
+                            </button>
+                        </div>
+                        <ul className="p-4 overflow-y-auto max-h-[60vh] space-y-2 text-sm">
+                            {waLinksModal.map((row) => (
+                                <li key={row.report_id} className="flex flex-wrap items-center gap-2 justify-between border border-gray-100 rounded-xl p-2">
+                                    <span className="text-gray-600">{formatDailyReportCalendarDate(row.date)}</span>
+                                    <a
+                                        href={row.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="font-bold text-green-600 hover:underline"
+                                    >
+                                        פתח
+                                    </a>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                </div>
+            )}
+        </div>
     );
 
     if (embedded) return content;

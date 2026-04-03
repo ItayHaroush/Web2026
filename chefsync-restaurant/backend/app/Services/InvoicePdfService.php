@@ -85,7 +85,7 @@ class InvoicePdfService
         $logoFilePath = null;
         if (! empty($restaurant->logo_url) && str_starts_with($restaurant->logo_url, '/storage/')) {
             $relativePath = str_replace('/storage/', '', $restaurant->logo_url);
-            $candidate = storage_path('app/public/'.$relativePath);
+            $candidate = storage_path('app/public/' . $relativePath);
             if (file_exists($candidate)) {
                 $logoFilePath = $candidate;
             }
@@ -103,10 +103,10 @@ class InvoicePdfService
         $monthParts = explode('-', $invoice->month);
         $year = $monthParts[0] ?? '';
         $monthNum = $monthParts[1] ?? '';
-        $monthHebrew = (self::HEBREW_MONTHS[$monthNum] ?? $monthNum).' '.$year;
+        $monthHebrew = (self::HEBREW_MONTHS[$monthNum] ?? $monthNum) . ' ' . $year;
 
         // Period dates for queries
-        $periodStart = Carbon::parse($invoice->month.'-01')->startOfMonth();
+        $periodStart = Carbon::parse($invoice->month . '-01')->startOfMonth();
         $periodEnd = (clone $periodStart)->endOfMonth();
 
         // Subscription info
@@ -125,9 +125,9 @@ class InvoicePdfService
 
         $activeOrders = $orders->where('status', '!=', 'cancelled');
         $cancelledOrders = $orders->where('status', 'cancelled');
-        $waivedCancelled = $cancelledOrders->filter(fn ($o) => $o->refund_waived_at !== null
+        $waivedCancelled = $cancelledOrders->filter(fn($o) => $o->refund_waived_at !== null
             && $o->payment_status === Order::PAYMENT_PAID);
-        $revenueForWaived = static fn ($o) => (float) ($o->payment_amount ?? $o->total_amount);
+        $revenueForWaived = static fn($o) => (float) ($o->payment_amount ?? $o->total_amount);
         $totalOrdersAll = $orders->count();
         $totalOrders = $activeOrders->count();
         $cancelledCount = $cancelledOrders->count();
@@ -140,25 +140,25 @@ class InvoicePdfService
 
         // Orders by status
         $ordersByStatus = $orders->groupBy('status')
-            ->map(fn ($g) => ['count' => $g->count(), 'revenue' => $g->sum('total_amount')])
+            ->map(fn($g) => ['count' => $g->count(), 'revenue' => $g->sum('total_amount')])
             ->toArray();
 
         // Orders by payment method (כולל בוטל עם ויתור החזר — סכום לפי חיוב בפועל)
         $ordersForPaymentBreakdown = $activeOrders->concat($waivedCancelled);
         $ordersByPayment = $ordersForPaymentBreakdown->groupBy('payment_method')
-            ->map(fn ($g) => [
+            ->map(fn($g) => [
                 'count' => $g->count(),
-                'total' => $g->sum(fn ($o) => ($o->status === 'cancelled' && $o->refund_waived_at)
+                'total' => $g->sum(fn($o) => ($o->status === 'cancelled' && $o->refund_waived_at)
                     ? $revenueForWaived($o)
                     : (float) $o->total_amount),
             ])
             ->toArray();
 
         // Orders by source (web / kiosk)
-        $ordersBySource = $ordersForPaymentBreakdown->groupBy(fn ($o) => $o->source ?? 'web')
-            ->map(fn ($g) => [
+        $ordersBySource = $ordersForPaymentBreakdown->groupBy(fn($o) => $o->source ?? 'web')
+            ->map(fn($g) => [
                 'count' => $g->count(),
-                'total' => $g->sum(fn ($o) => ($o->status === 'cancelled' && $o->refund_waived_at)
+                'total' => $g->sum(fn($o) => ($o->status === 'cancelled' && $o->refund_waived_at)
                     ? $revenueForWaived($o)
                     : (float) $o->total_amount),
             ])
@@ -261,7 +261,7 @@ class InvoicePdfService
 
         return response($mpdf->Output($filename, \Mpdf\Output\Destination::STRING_RETURN), 200, [
             'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="'.$filename.'"',
+            'Content-Disposition' => 'inline; filename="' . $filename . '"',
         ]);
     }
 
@@ -273,7 +273,7 @@ class InvoicePdfService
 
         return response($mpdf->Output($filename, \Mpdf\Output\Destination::STRING_RETURN), 200, [
             'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
         ]);
     }
 
@@ -299,7 +299,7 @@ class InvoicePdfService
             return ['', $html];
         }
         $css = substr($html, $contentStart, $styleEnd - $contentStart);
-        $body = substr($html, 0, $styleStart).substr($html, $styleEnd + 8);
+        $body = substr($html, 0, $styleStart) . substr($html, $styleEnd + 8);
 
         return [$css, $body];
     }

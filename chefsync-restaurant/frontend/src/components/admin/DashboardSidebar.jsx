@@ -171,11 +171,10 @@ export default function DashboardSidebar({
                         return (
                             <button
                                 onClick={() => navigate(posLocked ? '/admin/paywall' : '/admin/pos')}
-                                className={`w-full flex items-center ${showCollapsed ? 'justify-center' : 'px-3'} py-2.5 rounded-xl transition-all duration-200 group relative ${
-                                    posLocked
+                                className={`w-full flex items-center ${showCollapsed ? 'justify-center' : 'px-3'} py-2.5 rounded-xl transition-all duration-200 group relative ${posLocked
                                         ? 'text-gray-400 hover:bg-amber-50 hover:text-amber-600'
                                         : 'text-orange-500 hover:bg-orange-50 hover:text-orange-600'
-                                }`}
+                                    }`}
                             >
                                 <span className={`text-xl ${showCollapsed ? '' : 'ml-3'}`}><FaCashRegister /></span>
                                 {!showCollapsed && (

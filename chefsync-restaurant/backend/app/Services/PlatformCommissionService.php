@@ -243,7 +243,8 @@ class PlatformCommissionService
         if (RestaurantPayment::where('restaurant_id', $restaurantId)
             ->where('status', 'paid')
             ->where('type', 'terminal_setup')
-            ->exists()) {
+            ->exists()
+        ) {
             return true;
         }
 
@@ -252,7 +253,7 @@ class PlatformCommissionService
             ->whereNotNull('reference')
             ->pluck('reference');
 
-        if ($references->contains(fn ($ref) => str_ends_with((string) $ref, '_setup'))) {
+        if ($references->contains(fn($ref) => str_ends_with((string) $ref, '_setup'))) {
             return true;
         }
 

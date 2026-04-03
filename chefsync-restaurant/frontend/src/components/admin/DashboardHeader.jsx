@@ -52,14 +52,14 @@ const DashboardHeader = ({
 
                     {/* כפתור תצוגה כלקוח - Preview Mode */}
                     {!impersonating && (
-                    <button
-                        onClick={() => navigate('/admin/preview-menu')}
-                        className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-purple-600 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors border border-purple-200"
-                        title="הצג את התפריט כפי שהלקוחות רואים אותו"
-                    >
-                        <FaEye />
-                        <span className="hidden md:inline">תצוגה כלקוח</span>
-                    </button>
+                        <button
+                            onClick={() => navigate('/admin/preview-menu')}
+                            className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-purple-600 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors border border-purple-200"
+                            title="הצג את התפריט כפי שהלקוחות רואים אותו"
+                        >
+                            <FaEye />
+                            <span className="hidden md:inline">תצוגה כלקוח</span>
+                        </button>
                     )}
 
                     {/* Notifications */}
