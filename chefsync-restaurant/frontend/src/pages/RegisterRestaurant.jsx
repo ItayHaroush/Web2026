@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../services/apiClient';
 import { requestPhoneCode } from '../services/phoneAuthService';
@@ -7,6 +7,7 @@ import { isValidIsraeliMobile } from '../utils/phone';
 import { FaCheckCircle, FaCheck, FaArrowLeft, FaArrowRight, FaGlobe, FaInfoCircle, FaPen } from 'react-icons/fa';
 import { FaStore, FaBrain, FaPizzaSlice, FaHamburger, FaUtensils, FaConciergeBell } from 'react-icons/fa';
 import { GiKebabSpit, GiChefToque } from 'react-icons/gi';
+import TakeEatIcon from '../images/TakeEatIcon.jpeg';
 
 const DEFAULT_PRICING = {
     basic: { monthly: 299, yearly: 2990, ai_credits: 1, trial_ai_credits: 1 },
@@ -20,6 +21,15 @@ const STEPS = [
     { number: 3, label: 'בעלים' },
     { number: 4, label: 'סיכום' },
 ];
+
+const TRANSITION_MESSAGES = {
+    '1→2': { text: 'מכינים את המסעדה שלכם...', sub: 'בואו נבנה משהו מדהים' },
+    '2→3': { text: 'המסעדה מקבלת צורה!', sub: 'עוד קצת פרטים ומתחילים' },
+    '3→4': { text: 'כמעט שם!', sub: 'בדקו שהכל מושלם' },
+    '2→1': { text: 'חוזרים לבחירת תכנית', sub: '' },
+    '3→2': { text: 'חוזרים לפרטי המסעדה', sub: '' },
+    '4→3': { text: 'חוזרים לפרטי בעלים', sub: '' },
+};
 
 export default function RegisterRestaurant() {
     const navigate = useNavigate();
@@ -56,6 +66,11 @@ export default function RegisterRestaurant() {
     const [isAnimating, setIsAnimating] = useState(false);
     const [stepErrors, setStepErrors] = useState({});
     const contentRef = useRef(null);
+
+    // Transition overlay state
+    const [showTransition, setShowTransition] = useState(false);
+    const [transitionClosing, setTransitionClosing] = useState(false);
+    const [transitionMsg, setTransitionMsg] = useState({ text: '', sub: '' });
 
     useEffect(() => {
         const loadCities = async () => {
@@ -146,6 +161,31 @@ export default function RegisterRestaurant() {
         return Object.keys(errors).length === 0;
     };
 
+    // --- Transition helper ---
+    const animateTransition = useCallback((from, to, dir) => {
+        const key = `${from}→${to}`;
+        const msg = TRANSITION_MESSAGES[key] || { text: 'רגע...', sub: '' };
+        setTransitionMsg(msg);
+        setDirection(dir);
+        setIsAnimating(true);
+        setShowTransition(true);
+        setTransitionClosing(false);
+
+        // Hold overlay for longer on forward (building animation), shorter on back
+        const holdTime = dir === 'forward' ? 1400 : 900;
+
+        setTimeout(() => {
+            setCurrentStep(to);
+            setTransitionClosing(true);
+            setTimeout(() => {
+                setShowTransition(false);
+                setTransitionClosing(false);
+                setIsAnimating(false);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }, 300);
+        }, holdTime);
+    }, []);
+
     // --- Navigation ---
     const goNext = () => {
         if (isAnimating) return;
@@ -155,37 +195,19 @@ export default function RegisterRestaurant() {
         else if (currentStep === 3) valid = validateStep3();
         if (!valid) return;
 
-        setDirection('forward');
-        setIsAnimating(true);
-        setTimeout(() => {
-            setCurrentStep((s) => Math.min(s + 1, 4));
-            setIsAnimating(false);
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }, 300);
+        animateTransition(currentStep, Math.min(currentStep + 1, 4), 'forward');
     };
 
     const goBack = () => {
         if (isAnimating || currentStep === 1) return;
-        setDirection('backward');
         setStepErrors({});
-        setIsAnimating(true);
-        setTimeout(() => {
-            setCurrentStep((s) => Math.max(s - 1, 1));
-            setIsAnimating(false);
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }, 300);
+        animateTransition(currentStep, Math.max(currentStep - 1, 1), 'backward');
     };
 
     const goToStep = (step) => {
         if (isAnimating || step >= currentStep) return;
-        setDirection('backward');
         setStepErrors({});
-        setIsAnimating(true);
-        setTimeout(() => {
-            setCurrentStep(step);
-            setIsAnimating(false);
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }, 300);
+        animateTransition(currentStep, step, 'backward');
     };
 
     // --- Submit ---
@@ -260,6 +282,15 @@ export default function RegisterRestaurant() {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-brand-primary/10 to-white py-8 px-4">
+            {/* Transition Overlay */}
+            {showTransition && (
+                <StepTransitionOverlay
+                    message={transitionMsg}
+                    direction={direction}
+                    closing={transitionClosing}
+                />
+            )}
+
             <div className="max-w-4xl mx-auto">
                 {/* Header */}
                 <div className="text-center mb-8">
@@ -337,6 +368,112 @@ export default function RegisterRestaurant() {
                         )}
                     </div>
                 </div>
+            </div>
+        </div>
+    );
+}
+
+/* ========================================
+   Step Transition Overlay — Restaurant Building Animation
+======================================== */
+function StepTransitionOverlay({ message, direction, closing }) {
+    const isForward = direction === 'forward';
+
+    // Building block colors from brand palette
+    const blockColors = [
+        'from-brand-primary to-brand-secondary',
+        'from-amber-400 to-orange-500',
+        'from-orange-400 to-red-400',
+        'from-yellow-400 to-amber-500',
+        'from-brand-secondary to-brand-primary',
+    ];
+
+    // Sparkle positions for forward animation
+    const sparkles = [
+        { top: '20%', left: '15%', delay: '0.3s', size: 'w-3 h-3' },
+        { top: '25%', right: '20%', delay: '0.5s', size: 'w-2 h-2' },
+        { top: '60%', left: '10%', delay: '0.7s', size: 'w-2 h-2' },
+        { top: '55%', right: '15%', delay: '0.4s', size: 'w-3 h-3' },
+        { top: '40%', left: '25%', delay: '0.6s', size: 'w-2 h-2' },
+        { top: '35%', right: '30%', delay: '0.8s', size: 'w-2 h-2' },
+    ];
+
+    return (
+        <div
+            className={`fixed inset-0 z-50 flex items-center justify-center
+                bg-gradient-to-br from-white via-orange-50 to-amber-50
+                ${closing ? 'animate-wizard-overlay-out' : 'animate-wizard-overlay-in'}`}
+        >
+            {/* Expanding rings behind logo */}
+            {isForward && (
+                <>
+                    <div className="absolute w-32 h-32 rounded-full border-2 border-brand-primary/20 animate-wizard-ring" />
+                    <div className="absolute w-32 h-32 rounded-full border-2 border-brand-secondary/15 animate-wizard-ring" style={{ animationDelay: '0.3s' }} />
+                    <div className="absolute w-32 h-32 rounded-full border-2 border-amber-400/10 animate-wizard-ring" style={{ animationDelay: '0.6s' }} />
+                </>
+            )}
+
+            <div className="flex flex-col items-center gap-6">
+                {/* Logo */}
+                <div className={`relative ${isForward ? 'animate-wizard-logo' : 'animate-wizard-float'}`}>
+                    <div className="w-24 h-24 rounded-2xl overflow-hidden shadow-2xl shadow-brand-primary/30 border-2 border-white">
+                        <img src={TakeEatIcon} alt="TakeEat" className="w-full h-full object-cover" />
+                    </div>
+                </div>
+
+                {/* Building blocks animation (forward only) */}
+                {isForward && (
+                    <div className="flex items-end gap-1.5 h-16">
+                        {blockColors.map((color, i) => (
+                            <div
+                                key={i}
+                                className={`animate-wizard-block rounded-md bg-gradient-to-t ${color}`}
+                                style={{
+                                    width: '12px',
+                                    height: `${20 + i * 8}px`,
+                                    animationDelay: `${0.15 + i * 0.1}s`,
+                                }}
+                            />
+                        ))}
+                    </div>
+                )}
+
+                {/* Text message */}
+                <div className="text-center animate-wizard-text">
+                    <p className="text-xl font-bold text-gray-900">{message.text}</p>
+                    {message.sub && (
+                        <p className="text-sm text-gray-500 mt-1">{message.sub}</p>
+                    )}
+                </div>
+
+                {/* Progress bar (forward only) */}
+                {isForward && (
+                    <div className="w-48 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                        <div className="h-full bg-gradient-to-r from-brand-primary to-brand-secondary rounded-full animate-wizard-progress" />
+                    </div>
+                )}
+
+                {/* Sparkle particles (forward only) */}
+                {isForward && sparkles.map((s, i) => (
+                    <div
+                        key={i}
+                        className={`absolute ${s.size} animate-wizard-sparkle`}
+                        style={{
+                            top: s.top,
+                            left: s.left,
+                            right: s.right,
+                            animationDelay: s.delay,
+                        }}
+                    >
+                        <svg viewBox="0 0 24 24" fill="none" className="w-full h-full">
+                            <path
+                                d="M12 2L13.5 9.5L21 12L13.5 14.5L12 22L10.5 14.5L3 12L10.5 9.5L12 2Z"
+                                fill="#F97316"
+                                opacity="0.6"
+                            />
+                        </svg>
+                    </div>
+                ))}
             </div>
         </div>
     );
