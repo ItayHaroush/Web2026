@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Restaurant;
 use App\Models\City;
 use App\Models\MenuItem;
+use App\Models\IsraeliHoliday;
+use App\Models\RestaurantHolidayHour;
 use Illuminate\Http\Request;
 
 /**
@@ -75,7 +77,47 @@ class RestaurantController extends Controller
             'accepts_credit_card' => $restaurant->acceptsCreditCard(),
             'delivery_minimum' => $restaurant->delivery_minimum ?? 0,
             'allow_future_orders' => (bool) ($restaurant->allow_future_orders ?? false),
+            'holiday_closures' => $this->getHolidayClosures($restaurant),
         ];
+    }
+
+    /**
+     * חגים שהמסעדה סגורה בהם (או שעות מיוחדות) — ל-30 יום הקרובים
+     */
+    private function getHolidayClosures(Restaurant $restaurant): array
+    {
+        $today = now('Asia/Jerusalem')->toDateString();
+        $endDate = now('Asia/Jerusalem')->addDays(30)->toDateString();
+
+        $holidays = IsraeliHoliday::where('end_date', '>=', $today)
+            ->where('start_date', '<=', $endDate)
+            ->get();
+
+        if ($holidays->isEmpty()) {
+            return [];
+        }
+
+        $responses = RestaurantHolidayHour::where('restaurant_id', $restaurant->id)
+            ->whereIn('holiday_id', $holidays->pluck('id'))
+            ->get()
+            ->keyBy('holiday_id');
+
+        $closures = [];
+        foreach ($holidays as $holiday) {
+            $response = $responses->get($holiday->id);
+            if (!$response) continue; // אין תגובה — שעות רגילות
+
+            $closures[] = [
+                'name' => $holiday->name,
+                'start_date' => \Carbon\Carbon::parse($holiday->start_date)->format('Y-m-d'),
+                'end_date' => \Carbon\Carbon::parse($holiday->end_date)->format('Y-m-d'),
+                'status' => $response->status,
+                'open_time' => $response->status === 'special_hours' ? $response->open_time : null,
+                'close_time' => $response->status === 'special_hours' ? $response->close_time : null,
+            ];
+        }
+
+        return $closures;
     }
 
     /**

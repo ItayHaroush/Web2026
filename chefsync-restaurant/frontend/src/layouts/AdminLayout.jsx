@@ -38,8 +38,10 @@ export default function AdminLayout({ children }) {
     const [subscriptionData, setSubscriptionData] = useState(null);
     const [pendingHolidays, setPendingHolidays] = useState([]);
     const [showHolidayModal, setShowHolidayModal] = useState(false);
+    const [holidayMinimized, setHolidayMinimized] = useState(
+        () => sessionStorage.getItem('holidayDismissedSession') === '1'
+    );
     const [alertsOpen, setAlertsOpen] = useState(false);
-    const holidayDismissedAt = useRef(0);
     const { user, logout, isOwner, isManager, getAuthHeaders, impersonating, isSuperAdmin } = useAdminAuth();
     const { restaurantStatus, setRestaurantStatus, setSubscriptionInfo } = useRestaurantStatus();
     const location = useLocation();
@@ -198,10 +200,10 @@ export default function AdminLayout({ children }) {
                 const res = await holidayService.getUpcomingHolidays();
                 const unanswered = (res.data || []).filter(h => !h.response);
                 setPendingHolidays(unanswered);
-                // פתח מודל אוטומטית — רק אם לא נסגר ב-30 דקות האחרונות
-                const thirtyMinutes = 30 * 60 * 1000;
-                if (unanswered.length > 0 && (Date.now() - holidayDismissedAt.current > thirtyMinutes)) {
-                    setShowHolidayModal(prev => prev ? prev : true);
+                // פתח מלא רק אם לא דחה בסשן הנוכחי
+                if (unanswered.length > 0 && sessionStorage.getItem('holidayDismissedSession') !== '1') {
+                    setShowHolidayModal(true);
+                    setHolidayMinimized(false);
                 }
             } catch (e) {
                 // silent — לא נכשלים על חגים
@@ -327,7 +329,7 @@ export default function AdminLayout({ children }) {
                             navigate={navigate}
                             alertsOpen={alertsOpen}
                             setAlertsOpen={setAlertsOpen}
-                            onHolidayClick={() => setShowHolidayModal(true)}
+                            onHolidayClick={() => { setShowHolidayModal(true); setHolidayMinimized(false); }}
                         />
 
                         {children}
@@ -345,15 +347,50 @@ export default function AdminLayout({ children }) {
             {/* מודל חגים — גלובלי לכל דפי האדמין */}
             <HolidayScheduleModal
                 show={showHolidayModal}
-                onClose={() => { holidayDismissedAt.current = Date.now(); setShowHolidayModal(false); }}
+                onClose={() => {
+                    setShowHolidayModal(false);
+                    // אחרי דלג — ממזער לכפתור צף + שומר בסשן שלא יקפוץ שוב
+                    if (pendingHolidays.length > 0) {
+                        setHolidayMinimized(true);
+                        sessionStorage.setItem('holidayDismissedSession', '1');
+                    }
+                }}
                 onResponded={async () => {
                     try {
                         const res = await holidayService.getUpcomingHolidays();
                         const unanswered = (res.data || []).filter(h => !h.response);
                         setPendingHolidays(unanswered);
+                        // אם אין עוד חגים ממתינים — נקה הכל
+                        if (unanswered.length === 0) {
+                            setHolidayMinimized(false);
+                            sessionStorage.removeItem('holidayDismissedSession');
+                        }
                     } catch (e) { }
                 }}
             />
+
+            {/* כפתור צף ממוזער — חגים ממתינים */}
+            {holidayMinimized && !showHolidayModal && pendingHolidays.length > 0 && (
+                <button
+                    onClick={() => {
+                        setShowHolidayModal(true);
+                        setHolidayMinimized(false);
+                    }}
+                    className="fixed bottom-6 right-6 z-[900] flex items-center gap-2 bg-white border border-amber-300 shadow-lg shadow-amber-100 rounded-2xl px-4 py-3 hover:shadow-xl hover:border-amber-400 transition-all group animate-[fadeIn_0.3s_ease-out]"
+                    dir="rtl"
+                >
+                    <span className="text-xl">🕎</span>
+                    <div className="text-right">
+                        <p className="text-sm font-black text-gray-800">
+                            {pendingHolidays.length === 1 ? pendingHolidays[0].name : `${pendingHolidays.length} חגים`}
+                        </p>
+                        <p className="text-[10px] text-amber-600 font-bold">לחץ לעדכון שעות</p>
+                    </div>
+                    <span className="w-5 h-5 bg-amber-500 text-white text-[10px] font-black rounded-full flex items-center justify-center">
+                        {pendingHolidays.length}
+                    </span>
+                </button>
+            )}
         </div>
     );
 }

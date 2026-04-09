@@ -380,7 +380,17 @@ export default function MenuPage({ isPreviewMode = false }) {
     const deliveryMinAmount = restaurant ? (parseFloat(restaurant.delivery_minimum) || 0) : 0;
     const canOrder = isPreviewMode ? true : (isOpenNow !== false);
     const isRegisteredCustomer = isRecognized && !!customer?.id;
-    const allowsFutureOrders = restaurant?.allow_future_orders && (restaurant?.accepts_credit_card || isRegisteredCustomer);
+
+    // בדיקה: האם המסעדה סגורה היום בגלל חג — חסימת הזמנה עתידית
+    const activeHolidayClosure = useMemo(() => {
+        const closures = restaurant?.holiday_closures || [];
+        if (closures.length === 0) return null;
+        const today = new Date();
+        const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+        return closures.find(h => h.status === 'closed' && h.start_date <= todayStr && h.end_date >= todayStr) || null;
+    }, [restaurant?.holiday_closures]);
+
+    const allowsFutureOrders = restaurant?.allow_future_orders && (restaurant?.accepts_credit_card || isRegisteredCustomer) && !activeHolidayClosure;
     // כשהמסעדה סגורה — הזמנה עתידית היא הדרך היחידה
     const canPreOrder = !canOrder && allowsFutureOrders;
     // כשהמסעדה פתוחה — אפשר לתזמן הזמנה עתידית (אופציונלי)
@@ -630,9 +640,16 @@ export default function MenuPage({ isPreviewMode = false }) {
                     <div className="px-4 py-3 flex items-center gap-3">
                         <span className="w-3 h-3 bg-red-500 rounded-full animate-pulse shrink-0" />
                         <p className="text-red-800 dark:text-red-400 font-bold flex-1">
-                            המסעדה סגורה כרגע
+                            {activeHolidayClosure ? `המסעדה סגורה — ${activeHolidayClosure.name}` : 'המסעדה סגורה כרגע'}
                         </p>
                     </div>
+                    {activeHolidayClosure && !canPreOrder && (
+                        <div className="px-4 py-2.5 bg-amber-50/80 dark:bg-amber-900/15 border-t border-amber-200/80 dark:border-amber-500/25">
+                            <p className="text-amber-900 dark:text-amber-200/95 text-xs sm:text-sm font-medium leading-snug">
+                                המסעדה סגורה לרגל {activeHolidayClosure.name}. לא ניתן לבצע הזמנות עתידיות ליום זה. מוזמנים לחזור לאחר החג!
+                            </p>
+                        </div>
+                    )}
                     {canPreOrder && !futureOrderApproved && (
                         <div className="px-4 py-2.5 bg-amber-50/80 dark:bg-amber-900/15 border-t border-amber-200/80 dark:border-amber-500/25">
                             <p className="text-amber-900 dark:text-amber-200/95 text-xs sm:text-sm font-medium leading-snug">

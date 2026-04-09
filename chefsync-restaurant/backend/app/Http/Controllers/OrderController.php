@@ -185,7 +185,7 @@ class OrderController extends Controller
                 }
             }
 
-            // ולידציה: הזמנה עתידית — מינימום זמן (max(שעה, הכנה+30 דק')) + שעות פעילות
+            // ולידציה: הזמנה עתידית — מינימום זמן (max(שעה, הכנה+30 דק')) + שעות פעילות + חגים
             if (! empty($validated['scheduled_for'])) {
                 $scheduledCarbon = \Carbon\Carbon::parse($validated['scheduled_for'])->timezone('Asia/Jerusalem');
                 $minScheduled = $this->minimumScheduledAt($restaurant, $validated['delivery_method']);
@@ -198,17 +198,31 @@ class OrderController extends Controller
                         ],
                     ], 422);
                 }
-                $isOpenAtScheduled = Restaurant::calculateIsOpen(
-                    $restaurant->operating_days ?? [],
-                    $restaurant->operating_hours ?? [],
-                    $scheduledCarbon
-                );
-                if (! $isOpenAtScheduled) {
+
+                // בדיקת חג — האם המסעדה סגורה בגלל חג בתאריך המתוכנן
+                $holidayCheck = $restaurant->checkHolidayHoursForDateTime($scheduledCarbon);
+                if ($holidayCheck === false) {
                     return response()->json([
                         'success' => false,
-                        'message' => 'השעה שנבחרה אינה בשעות הפעילות של המסעדה',
+                        'message' => 'המסעדה סגורה בתאריך זה בגלל חג. נא לבחור תאריך אחר.',
                     ], 422);
                 }
+
+                // אם אין חג או חג עם שעות מיוחדות/פתוח רגיל — בדוק שעות פעילות
+                if ($holidayCheck === null) {
+                    $isOpenAtScheduled = Restaurant::calculateIsOpen(
+                        $restaurant->operating_days ?? [],
+                        $restaurant->operating_hours ?? [],
+                        $scheduledCarbon
+                    );
+                    if (! $isOpenAtScheduled) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'השעה שנבחרה אינה בשעות הפעילות של המסעדה',
+                        ], 422);
+                    }
+                }
+                // holidayCheck === true — חג עם שעות מיוחדות, השעה תקינה
             }
 
             // ולידציה: מינימום הזמנה למשלוח — מתבצע אחרי חישוב סכום שורות מלא (כמו בסל הלקוח), ראו מתחת ללולאת הפריטים

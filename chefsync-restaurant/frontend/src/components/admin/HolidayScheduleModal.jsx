@@ -271,6 +271,7 @@ export default function HolidayScheduleModal({ show, onClose, onResponded }) {
                                 <label className="block text-xs font-black text-blue-800 mb-1.5">שעת פתיחה</label>
                                 <input
                                     type="time"
+                                    dir="ltr"
                                     value={form.open_time}
                                     onChange={e => setForm(p => ({ ...p, open_time: e.target.value }))}
                                     required
@@ -281,6 +282,7 @@ export default function HolidayScheduleModal({ show, onClose, onResponded }) {
                                 <label className="block text-xs font-black text-blue-800 mb-1.5">שעת סגירה</label>
                                 <input
                                     type="time"
+                                    dir="ltr"
                                     value={form.close_time}
                                     onChange={e => setForm(p => ({ ...p, close_time: e.target.value }))}
                                     required

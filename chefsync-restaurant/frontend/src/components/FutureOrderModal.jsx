@@ -11,13 +11,41 @@ function localYmd(d) {
     return `${y}-${m}-${day}`;
 }
 
-/** מועד מוקדם ביותר: max(שעה, זמן_הכנה + 30 דקות) לפי משלוח/איסוף */
+/** מועד מוקדם ביותר: max(שעה, זמן_הכנה + 30 דקות) לפי משלוח/איסוף.
+ *  מדלג על ימים סגורים בגלל חג או כפייה ידנית. */
 export function getMinimumScheduledDate(restaurant, deliveryMethod = 'delivery') {
     const prep = deliveryMethod === 'delivery'
         ? Number(restaurant?.delivery_time_minutes) || 0
         : Number(restaurant?.pickup_time_minutes) || 0;
     const minutes = Math.max(60, prep + 30);
-    return new Date(Date.now() + minutes * 60 * 1000);
+    let minDate = new Date(Date.now() + minutes * 60 * 1000);
+
+    // אם המסעדה סגורה ידנית (כפייה) או בגלל חג — דלג ליום הבא הפתוח
+    const closures = restaurant?.holiday_closures || [];
+    const isManualClosed = restaurant?.is_override_status && !restaurant?.is_open;
+
+    for (let attempt = 0; attempt < 31; attempt++) {
+        const dateStr = localYmd(minDate);
+
+        // בדוק חג סגור
+        const holidayClosed = closures.find(h =>
+            h.status === 'closed' && h.start_date <= dateStr && h.end_date >= dateStr
+        );
+
+        // ביום הראשון — בדוק גם כפייה ידנית
+        const manualClosedToday = attempt === 0 && isManualClosed;
+
+        if (!holidayClosed && !manualClosedToday) {
+            break; // יום פתוח — זהו המועד המוקדם
+        }
+
+        // דלג ליום הבא ב-00:00
+        minDate = new Date(minDate);
+        minDate.setDate(minDate.getDate() + 1);
+        minDate.setHours(0, 0, 0, 0);
+    }
+
+    return minDate;
 }
 
 /**
@@ -32,6 +60,7 @@ export default function FutureOrderModal({ isOpen, onClose, onConfirm, restauran
 
     const operatingHours = restaurant?.operating_hours || {};
     const operatingDays = restaurant?.operating_days || {};
+    const holidayClosures = restaurant?.holiday_closures || [];
 
     const minScheduled = useMemo(
         () => getMinimumScheduledDate(restaurant, deliveryMethod),
@@ -67,6 +96,24 @@ export default function FutureOrderModal({ isOpen, onClose, onConfirm, restauran
         const englishDay = ENGLISH_DAYS[dayOfWeek];
         const hebrewDay = HEBREW_DAYS[dayOfWeek];
         const dateStr = selectedDate; // YYYY-MM-DD
+
+        // 0) בדיקת חג — האם יש חג שסוגר את היום הזה
+        const holidayClosure = holidayClosures.find(h =>
+            h.start_date <= dateStr && h.end_date >= dateStr
+        );
+        if (holidayClosure) {
+            if (holidayClosure.status === 'closed') {
+                return { closed: true, holidayName: holidayClosure.name };
+            }
+            if (holidayClosure.status === 'special_hours' && holidayClosure.open_time && holidayClosure.close_time) {
+                return {
+                    open: holidayClosure.open_time.substring(0, 5),
+                    close: holidayClosure.close_time.substring(0, 5),
+                    holidayName: holidayClosure.name,
+                };
+            }
+            // status === 'open' — שעות רגילות, ממשיכים לבדיקה הרגילה
+        }
 
         const defaultHours = operatingHours.default || operatingHours;
         const specialDays = operatingHours.special_days || {};
@@ -107,7 +154,7 @@ export default function FutureOrderModal({ isOpen, onClose, onConfirm, restauran
             open: defaultHours.open || '00:00',
             close: defaultHours.close || '23:59',
         };
-    }, [selectedDate, operatingHours, operatingDays]);
+    }, [selectedDate, operatingHours, operatingDays, holidayClosures]);
 
     const isTimeValid = useMemo(() => {
         if (!selectedTime || !hoursForSelectedDay || hoursForSelectedDay.closed) return false;
@@ -145,7 +192,9 @@ export default function FutureOrderModal({ isOpen, onClose, onConfirm, restauran
         }
 
         if (hoursForSelectedDay?.closed) {
-            setError('המסעדה סגורה ביום שנבחר. נא לבחור יום אחר.');
+            setError(hoursForSelectedDay.holidayName
+                ? `המסעדה סגורה ביום זה בגלל ${hoursForSelectedDay.holidayName}. נא לבחור יום אחר.`
+                : 'המסעדה סגורה ביום שנבחר. נא לבחור יום אחר.');
             return;
         }
 
@@ -250,8 +299,8 @@ export default function FutureOrderModal({ isOpen, onClose, onConfirm, restauran
                             : 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-700'
                             }`}>
                             {hoursForSelectedDay.closed
-                                ? <><FaTimes className="inline text-red-500 ml-1" size={12} /> המסעדה סגורה ביום זה</>
-                                : <><FaCheckCircle className="inline text-green-500 ml-1" size={12} /> שעות פעילות: {hoursForSelectedDay.open} — {hoursForSelectedDay.close}</>
+                                ? <><FaTimes className="inline text-red-500 ml-1" size={12} /> המסעדה סגורה ביום זה{hoursForSelectedDay.holidayName ? ` (${hoursForSelectedDay.holidayName})` : ''}</>
+                                : <><FaCheckCircle className="inline text-green-500 ml-1" size={12} /> שעות פעילות: <span dir="ltr" className="inline-block">{hoursForSelectedDay.open} — {hoursForSelectedDay.close}</span>{hoursForSelectedDay.holidayName ? ` (${hoursForSelectedDay.holidayName})` : ''}</>
                             }
                         </div>
                     )}

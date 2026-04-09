@@ -59,8 +59,18 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
     const [savedAddresses, setSavedAddresses] = useState([]);
 
     const isRegisteredCustomer = isRecognized && !!customer?.id;
-    // הזמנה עתידית — זמינה גם כשהמסעדה פתוחה, כל עוד allow_future_orders פעיל
-    const canFutureOrder = restaurant?.allow_future_orders && (restaurant?.accepts_credit_card || isRegisteredCustomer);
+
+    // בדיקה: חג סגור היום — חסימת הזמנה עתידית
+    const activeHolidayClosure = useMemo(() => {
+        const closures = restaurant?.holiday_closures || [];
+        if (closures.length === 0) return null;
+        const today = new Date();
+        const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+        return closures.find(h => h.status === 'closed' && h.start_date <= todayStr && h.end_date >= todayStr) || null;
+    }, [restaurant?.holiday_closures]);
+
+    // הזמנה עתידית — זמינה גם כשהמסעדה פתוחה, כל עוד allow_future_orders פעיל ואין חג סגור
+    const canFutureOrder = restaurant?.allow_future_orders && (restaurant?.accepts_credit_card || isRegisteredCustomer) && !activeHolidayClosure;
 
     const paymentMethodsPublic = restaurant?.available_payment_methods || ['cash'];
     const creditAvailableForCheckout = paymentMethodsPublic.includes('credit_card');

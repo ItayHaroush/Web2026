@@ -439,14 +439,16 @@ class Restaurant extends Model
             return false;
         }
 
-        // בדיקת חג — גוברת על הכל (כולל override)
+        // כפיית סטטוס ידנית — גוברת על הכל (כולל חגים)
+        // המסעדן כפה סטטוס ידנית, זה עדיפות עליונה
+        if ($this->is_override_status) {
+            return (bool) $this->is_open;
+        }
+
+        // בדיקת חג — גוברת על שעות רגילות (אבל לא על כפייה ידנית)
         $holidayResult = $this->checkHolidayHours();
         if ($holidayResult !== null) {
             return $holidayResult;
-        }
-
-        if ($this->is_override_status) {
-            return (bool) $this->is_open;
         }
 
         return self::calculateIsOpen(
@@ -509,8 +511,54 @@ class Restaurant extends Model
     }
 
     /**
-     * מידע על חג פעיל + תגובת המסעדה (אם קיימת)
+     * בדיקת חג לתאריך/שעה נתונים — לשימוש בהזמנות עתידיות
+     * @return bool|null — null אם אין חג או אין תגובה, false אם סגור, true אם בשעות מיוחדות
      */
+    public function checkHolidayHoursForDateTime(Carbon $dateTime): ?bool
+    {
+        $dateStr = $dateTime->toDateString();
+
+        $activeHoliday = IsraeliHoliday::where('start_date', '<=', $dateStr)
+            ->where('end_date', '>=', $dateStr)
+            ->first();
+
+        if (!$activeHoliday) {
+            return null;
+        }
+
+        $response = RestaurantHolidayHour::where('restaurant_id', $this->id)
+            ->where('holiday_id', $activeHoliday->id)
+            ->first();
+
+        if (!$response) {
+            return null;
+        }
+
+        if ($response->status === 'closed') {
+            return false;
+        }
+
+        if ($response->status === 'open') {
+            return null; // פתוח רגיל — שעות רגילות
+        }
+
+        // special_hours — בדיקת שעות מיוחדות
+        if ($response->status === 'special_hours' && $response->open_time && $response->close_time) {
+            $currentTime = $dateTime->format('H:i');
+            $open = $response->open_time;
+            $close = $response->close_time;
+
+            if (is_string($open)) $open = substr($open, 0, 5);
+            if (is_string($close)) $close = substr($close, 0, 5);
+
+            if ($close < $open) {
+                return $currentTime >= $open || $currentTime <= $close;
+            }
+            return $currentTime >= $open && $currentTime <= $close;
+        }
+
+        return null;
+    }
     public function getActiveHolidayInfoAttribute(): ?array
     {
         $today = Carbon::now('Asia/Jerusalem')->toDateString();
