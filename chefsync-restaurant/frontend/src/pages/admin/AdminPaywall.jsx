@@ -91,14 +91,7 @@ export default function AdminPaywall() {
                         navigate('/admin/dashboard');
                         return;
                     }
-                    if (recoveryRes.data?.reason === 'already_active') {
-                        const { data: billingData } = await getBillingInfo().catch(() => ({}));
-                        const currentTier = billingData?.data?.current_tier;
-                        if (currentTier === 'pro' || currentTier === 'enterprise') {
-                            navigate('/admin/dashboard');
-                            return;
-                        }
-                    }
+                    // already_active — המשתמש הגיע בכוונה לשנות תוכנית, לא חוסמים
                 } catch { }
 
                 const { data } = await getBillingInfo();
