@@ -40,7 +40,8 @@ class BurgerCentralAddonSeeder extends Seeder
         // ==============================================================
         $pattyGroup = $this->group($r, [
             'name' => 'גודל קציצה',
-            'min' => 1, 'max' => 1,
+            'min' => 1,
+            'max' => 1,
             'sort' => 1,
         ]);
         $this->addons($pattyGroup, $r, [
@@ -54,7 +55,8 @@ class BurgerCentralAddonSeeder extends Seeder
         // ==============================================================
         $bunGroup = $this->group($r, [
             'name' => 'סוג לחמניה',
-            'min' => 1, 'max' => 1,
+            'min' => 1,
+            'max' => 1,
             'sort' => 2,
         ]);
         $this->addons($bunGroup, $r, [
@@ -69,7 +71,8 @@ class BurgerCentralAddonSeeder extends Seeder
         // ==============================================================
         $donenessGroup = $this->group($r, [
             'name' => 'רמת עשייה',
-            'min' => 0, 'max' => 1,
+            'min' => 0,
+            'max' => 1,
             'sort' => 3,
         ]);
         $this->addons($donenessGroup, $r, [
@@ -84,7 +87,8 @@ class BurgerCentralAddonSeeder extends Seeder
         // ==============================================================
         $extrasGroup = $this->group($r, [
             'name' => 'תוספות להמבורגר',
-            'min' => 0, 'max' => 5,
+            'min' => 0,
+            'max' => 5,
             'sort' => 4,
         ]);
         $this->addons($extrasGroup, $r, [
@@ -105,7 +109,8 @@ class BurgerCentralAddonSeeder extends Seeder
         // ==============================================================
         $sauceGroup = $this->group($r, [
             'name' => 'רטבים',
-            'min' => 0, 'max' => 2,
+            'min' => 0,
+            'max' => 2,
             'sort' => 5,
         ]);
         $this->addons($sauceGroup, $r, [
@@ -124,7 +129,8 @@ class BurgerCentralAddonSeeder extends Seeder
         // ==============================================================
         $sideGroup = $this->group($r, [
             'name' => 'תוספת צד',
-            'min' => 0, 'max' => 2,
+            'min' => 0,
+            'max' => 2,
             'sort' => 6,
             'placement' => 'side',
         ]);
@@ -142,7 +148,8 @@ class BurgerCentralAddonSeeder extends Seeder
         // ==============================================================
         $spiceGroup = $this->group($r, [
             'name' => 'רמת חריפות',
-            'min' => 0, 'max' => 1,
+            'min' => 0,
+            'max' => 1,
             'sort' => 7,
         ]);
         $this->addons($spiceGroup, $r, [
@@ -157,7 +164,8 @@ class BurgerCentralAddonSeeder extends Seeder
         // ==============================================================
         $chipsSizeGroup = $this->group($r, [
             'name' => 'גודל צ\'יפס',
-            'min' => 0, 'max' => 1,
+            'min' => 0,
+            'max' => 1,
             'sort' => 8,
         ]);
         $this->addons($chipsSizeGroup, $r, [
@@ -171,7 +179,8 @@ class BurgerCentralAddonSeeder extends Seeder
         // ==============================================================
         $drinkGroup = $this->group($r, [
             'name' => 'הוסף משקה',
-            'min' => 0, 'max' => 1,
+            'min' => 0,
+            'max' => 1,
             'sort' => 9,
             'placement' => 'side',
         ]);

@@ -119,7 +119,7 @@ class HypOrderCallbackController extends Controller
             if ($order) {
                 $this->markOrderCreditPaymentFailed(
                     $order,
-                    trim(($params['errMsg'] ?: '').' CCode='.$ccode) ?: 'התשלום לא אושר'
+                    trim(($params['errMsg'] ?: '') . ' CCode=' . $ccode) ?: 'התשלום לא אושר'
                 );
             }
 
@@ -325,7 +325,7 @@ class HypOrderCallbackController extends Controller
 
             SystemErrorReporter::report(
                 'payment_failure',
-                'תשלום אשראי (HYP) נכשל: '.($params['errMsg'] ?: 'לא צוינה סיבה'),
+                'תשלום אשראי (HYP) נכשל: ' . ($params['errMsg'] ?: 'לא צוינה סיבה'),
                 'warning',
                 $order->tenant_id,
                 $order->id,
@@ -357,7 +357,7 @@ class HypOrderCallbackController extends Controller
                         'restaurant_id' => $order->restaurant_id,
                         'alert_type' => 'payment_failed',
                         'title' => "תשלום נכשל — הזמנה #{$order->id}",
-                        'body' => "תשלום באשראי נכשל עבור הזמנה #{$order->id} ({$order->customer_name}, ₪{$order->total_amount}). ".($params['errMsg'] ?: 'סיבה לא ידועה'),
+                        'body' => "תשלום באשראי נכשל עבור הזמנה #{$order->id} ({$order->customer_name}, ₪{$order->total_amount}). " . ($params['errMsg'] ?: 'סיבה לא ידועה'),
                         'severity' => 'critical',
                         'metadata' => ['order_id' => $order->id, 'error' => $params['errMsg']],
                         'is_read' => false,
@@ -369,8 +369,8 @@ class HypOrderCallbackController extends Controller
                     NotificationLog::create([
                         'channel' => 'system',
                         'type' => 'order_alert',
-                        'title' => 'תשלום נכשל: '.($restaurant->name ?? $tenantId)." — #{$order->id}",
-                        'body' => "תשלום באשראי נכשל עבור הזמנה #{$order->id} (₪{$order->total_amount}). ".($params['errMsg'] ?: ''),
+                        'title' => 'תשלום נכשל: ' . ($restaurant->name ?? $tenantId) . " — #{$order->id}",
+                        'body' => "תשלום באשראי נכשל עבור הזמנה #{$order->id} (₪{$order->total_amount}). " . ($params['errMsg'] ?: ''),
                         'sender_id' => null,
                         'target_restaurant_ids' => [$order->restaurant_id],
                         'tokens_targeted' => 0,
