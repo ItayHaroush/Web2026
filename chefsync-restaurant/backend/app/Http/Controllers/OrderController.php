@@ -742,29 +742,33 @@ class OrderController extends Controller
                 }
             }
 
-            // B2C: אם תשלום באשראי, צור payment session + payment URL
+            // B2C: צור payment session + payment URL (אשראי + מזומן — QR לתשלום על הקבלה)
             $paymentUrl = null;
             $sessionToken = null;
 
-            if ($paymentMethod === 'credit_card') {
-                $restaurant = Restaurant::withoutGlobalScope('tenant')->find($restaurantId);
-                $restaurantPaymentService = app(RestaurantPaymentService::class);
+            $restaurant = Restaurant::withoutGlobalScope('tenant')->find($restaurantId);
+            $restaurantPaymentService = app(RestaurantPaymentService::class);
 
-                if ($restaurant && $restaurantPaymentService->isRestaurantReady($restaurant)) {
-                    $session = PaymentSession::create([
-                        'tenant_id' => $tenantId,
-                        'restaurant_id' => $restaurantId,
-                        'order_id' => $order->id,
-                        'session_token' => \Illuminate\Support\Str::uuid()->toString(),
-                        'amount' => $order->total_amount,
-                        'status' => 'pending',
-                        'expires_at' => now()->addMinutes(config('payment.order_payment.session_timeout_minutes', 15)),
-                    ]);
+            if ($restaurant && $restaurantPaymentService->isRestaurantReady($restaurant)) {
+                $session = PaymentSession::create([
+                    'tenant_id' => $tenantId,
+                    'restaurant_id' => $restaurantId,
+                    'order_id' => $order->id,
+                    'session_token' => \Illuminate\Support\Str::uuid()->toString(),
+                    'amount' => $order->total_amount,
+                    'status' => 'pending',
+                    'expires_at' => now()->addMinutes(config('payment.order_payment.session_timeout_minutes', 15)),
+                ]);
 
-                    $paymentUrl = $restaurantPaymentService->generateOrderPaymentUrl($restaurant, $order, $session);
+                $paymentUrl = $restaurantPaymentService->generateOrderPaymentUrl($restaurant, $order, $session);
 
-                    $session->update(['payment_url' => $paymentUrl]);
-                    $sessionToken = $session->session_token;
+                $session->update(['payment_url' => $paymentUrl]);
+                $sessionToken = $session->session_token;
+
+                // מזומן: לא מחזירים payment_url לפרונט (הלקוח לא מופנה ל-HYP, QR רק על הקבלה)
+                if ($paymentMethod !== 'credit_card') {
+                    $paymentUrl = null;
+                    $sessionToken = null;
                 }
             }
 

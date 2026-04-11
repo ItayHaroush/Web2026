@@ -174,40 +174,58 @@ class HypOrderCallbackController extends Controller
                 return ['restaurant_id' => $restaurant->id, 'order_id' => $order->id, 'status' => 'failed', 'message' => 'פג תוקף התשלום'];
             }
 
-            // בדיקת סכום
+            // בדיקת סכום — תשלום חלקי נשאר pending, תשלום מלא = paid
             $responseAmount = (float) $amount;
             $expectedAmount = (float) $session->amount;
-            if ($responseAmount > 0 && abs($responseAmount - $expectedAmount) > 0.01) {
-                Log::error('HYP order callback: amount mismatch', [
+            $isPartialPayment = $responseAmount > 0 && ($responseAmount < $expectedAmount - 0.01);
+
+            if ($isPartialPayment) {
+                Log::info('HYP order callback: partial payment received', [
                     'response' => $responseAmount,
                     'expected' => $expectedAmount,
+                    'order_id' => $order->id,
                 ]);
-                $session->update(['status' => 'failed', 'error_message' => 'Amount mismatch']);
-                $this->markOrderCreditPaymentFailed($order, 'חוסר התאמה בסכום');
-
-                return ['restaurant_id' => $restaurant->id, 'order_id' => $order->id, 'status' => 'failed', 'message' => 'חוסר התאמה בסכום'];
             }
 
             $session->update([
-                'status' => 'completed',
+                'status' => $isPartialPayment ? 'partial' : 'completed',
                 'hyp_transaction_id' => $transactionId,
                 'completed_at' => now(),
             ]);
 
-            $expectedAmount = $session->amount;
+            $paidAmount = $responseAmount > 0 ? $responseAmount : $session->amount;
         } else {
-            $expectedAmount = (float) $amount;
+            $paidAmount = (float) $amount;
+            $expectedAmount = (float) $order->total_amount;
+            $isPartialPayment = $paidAmount > 0 && ($paidAmount < $expectedAmount - 0.01);
         }
 
-        // עדכון הזמנה — מעבר מ-awaiting_payment ל-pending (תור מטבח) אחרי תשלום מאושר
+        // עדכון הזמנה — תשלום מלא = paid, חלקי = נשאר pending
         $orderUpdates = [
-            'payment_status' => Order::PAYMENT_PAID,
             'payment_transaction_id' => $transactionId,
-            'payment_amount' => $expectedAmount,
+            'payment_amount' => ($order->payment_amount ?? 0) + $paidAmount,
             'paid_at' => now(),
         ];
-        if ($order->status === Order::STATUS_AWAITING_PAYMENT) {
-            $orderUpdates['status'] = Order::STATUS_PENDING;
+
+        if ($isPartialPayment) {
+            // תשלום חלקי — נשאר pending, לא מעדכנים סטטוס
+            $orderUpdates['payment_status'] = Order::PAYMENT_PENDING;
+            Log::info('HYP order partial payment kept pending', [
+                'order_id' => $order->id,
+                'paid' => $paidAmount,
+                'total' => $expectedAmount,
+                'remaining' => $expectedAmount - $paidAmount,
+            ]);
+        } else {
+            // תשלום מלא — סימון כשולם
+            $orderUpdates['payment_status'] = Order::PAYMENT_PAID;
+            if ($order->status === Order::STATUS_AWAITING_PAYMENT) {
+                $orderUpdates['status'] = Order::STATUS_PENDING;
+            }
+            // הזמנת מזומן ששולמה באשראי דרך QR — עדכון אמצעי תשלום בפועל
+            if ($order->payment_method === 'cash') {
+                $orderUpdates['actual_payment_method'] = 'credit_card';
+            }
         }
         $order->update($orderUpdates);
 
@@ -217,16 +235,19 @@ class HypOrderCallbackController extends Controller
             Log::warning('CartSession markCompleted after HYP payment', ['order_id' => $order->id, 'error' => $e->getMessage()]);
         }
 
-        Log::info('HYP order payment completed', [
+        $statusResult = $isPartialPayment ? 'partial' : 'success';
+
+        Log::info('HYP order payment processed', [
             'order_id' => $order->id,
             'transaction_id' => $transactionId,
-            'amount' => $expectedAmount,
+            'amount' => $paidAmount,
+            'partial' => $isPartialPayment,
         ]);
 
         // FCM — רגילה: new_order למטבח; עתידית: future_order_created בלבד (new_order יישלח ב-ProcessFutureOrders)
         try {
             $isFutureOrder = (bool) $order->is_future_order;
-            $baseBody = "{$order->customer_name} - ₪{$expectedAmount}";
+            $baseBody = "{$order->customer_name} - ₪{$paidAmount}";
 
             if ($isFutureOrder) {
                 $scheduledTime = $order->scheduled_for
@@ -277,7 +298,11 @@ class HypOrderCallbackController extends Controller
             ]);
         }
 
-        return ['restaurant_id' => $restaurant->id, 'order_id' => $order->id, 'status' => 'success', 'message' => 'התשלום בוצע בהצלחה'];
+        $message = $isPartialPayment
+            ? 'תשלום חלקי התקבל — ממתין להשלמת הסכום'
+            : 'התשלום בוצע בהצלחה';
+
+        return ['restaurant_id' => $restaurant->id, 'order_id' => $order->id, 'status' => $statusResult, 'message' => $message];
     }
 
     /**

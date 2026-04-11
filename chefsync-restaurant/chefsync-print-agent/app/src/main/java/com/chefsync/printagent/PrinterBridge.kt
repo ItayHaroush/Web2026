@@ -26,6 +26,9 @@ object PrinterBridge {
 
     private val hebrewInWord = Regex("[\\u0590-\\u05FF]")
 
+    private const val MARKER_BIG   = "{{BIG}}"
+    private const val MARKER_NOBIG = "{{/BIG}}"
+
     data class PrintResult(
         val success: Boolean,
         val errorMessage: String? = null,
@@ -38,16 +41,24 @@ object PrinterBridge {
             socket.soTimeout = timeoutMs
 
             val out: OutputStream = socket.getOutputStream()
+            val hasMarkers = payload.contains(MARKER_BIG)
             val prepared = prepareThermalRtlPayload(payload, lineWidth)
 
             out.write(ESC_INIT)
             out.write(ESC_HEBREW_TABLE)
             out.write(ESC_CHAR_SPACING_0)
-            if (doubleHeight) {
-                out.write(ESC_DOUBLE_HEIGHT)
+
+            if (hasMarkers) {
+                // Selective mode: process inline markers per line
+                writeWithInlineMarkers(out, prepared)
+            } else {
+                // Legacy mode: global double-height flag
+                if (doubleHeight) {
+                    out.write(ESC_DOUBLE_HEIGHT)
+                }
+                out.write(prepared.toByteArray(cp862))
+                out.write(ESC_FONT_NORMAL)
             }
-            out.write(prepared.toByteArray(cp862))
-            out.write(ESC_FONT_NORMAL)
             if (binarySuffix != null && binarySuffix.isNotEmpty()) {
                 out.write(binarySuffix)
             }
@@ -71,6 +82,29 @@ object PrinterBridge {
             .replace("\r", "\n")
             .lines()
             .joinToString("\n") { centerIfNeeded(smartReverseHebrewLine(it), lineWidth) }
+
+    /**
+     * Process {{BIG}} / {{/BIG}} markers per line.
+     * Marker lines are consumed — they switch the ESC mode for subsequent lines.
+     */
+    private fun writeWithInlineMarkers(out: OutputStream, text: String) {
+        var isBig = false
+        for (line in text.split("\n")) {
+            val trimmed = line.trim()
+            if (trimmed == MARKER_BIG) {
+                isBig = true
+                continue
+            }
+            if (trimmed == MARKER_NOBIG) {
+                isBig = false
+                out.write(ESC_FONT_NORMAL)
+                continue
+            }
+            out.write(if (isBig) ESC_DOUBLE_HEIGHT else ESC_FONT_NORMAL)
+            out.write((line + "\n").toByteArray(cp862))
+        }
+        out.write(ESC_FONT_NORMAL)
+    }
 
     /**
      * Center lines that have no leading spaces but contain Hebrew.

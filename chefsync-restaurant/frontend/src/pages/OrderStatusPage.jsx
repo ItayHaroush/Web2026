@@ -672,7 +672,7 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
                                         : order.payment_status === 'pending'
                                             ? (order.payment_method === 'credit_card'
                                                 ? (isFutureOrder ? 'ממתין לתשלום — ההזמנה תטופל לאחר התשלום' : 'ממתין לתשלום באשראי')
-                                                : 'תשלום במזומן בעת קבלה')
+                                                : 'ממתין לתשלום')
                                             : order.payment_status === 'failed' ? 'תשלום נכשל' : ''}
                                 </p>
                             </div>

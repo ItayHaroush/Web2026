@@ -472,7 +472,9 @@ class PrintService
         $lines = [];
 
         $lines[] = $separator;
+        $lines[] = '{{BIG}}';
         $lines[] = $this->centerText("הזמנה #{$order->id}", $printer);
+        $lines[] = '{{/BIG}}';
         $lines[] = $separator;
 
         $lines[] = $this->centerText(
@@ -494,7 +496,9 @@ class PrintService
         } else {
             $orderInfo[] = 'איסוף עצמי';
         }
+        $lines[] = '{{BIG}}';
         $lines[] = implode(' | ', $orderInfo);
+        $lines[] = '{{/BIG}}';
 
         $packaging = $this->formatOrderPackagingLabel($order);
         if ($packaging !== '') {
@@ -520,12 +524,16 @@ class PrintService
         $kitchenItemDone = 0;
 
         foreach ($kitchenGroups as $categoryLabel => $bucket) {
+            $lines[] = '{{BIG}}';
             $lines[] = $this->centerText("— {$categoryLabel} —", $printer);
+            $lines[] = '{{/BIG}}';
 
             foreach ($bucket as $item) {
                 $name = $item->menuItem?->name ?? $item->name ?? 'פריט';
                 $qty = $item->quantity ?? 1;
+                $lines[] = '{{BIG}}';
                 $lines[] = "{$qty}x {$name}";
+                $lines[] = '{{/BIG}}';
 
                 if (! empty($item->variant_name)) {
                     $lines[] = "  סוג: {$item->variant_name}";
@@ -586,11 +594,15 @@ class PrintService
 
         $restaurantName = $order->restaurant?->name ?? '';
         if ($restaurantName) {
+            $lines[] = '{{BIG}}';
             $lines[] = $this->centerText($restaurantName, $printer);
+            $lines[] = '{{/BIG}}';
         }
 
         $lines[] = $separator;
+        $lines[] = '{{BIG}}';
         $lines[] = $this->centerText("קבלה — הזמנה #{$order->id}", $printer);
+        $lines[] = '{{/BIG}}';
         $lines[] = $separator;
         $lines[] = $this->centerText($order->created_at->format('d.m.Y H:i'), $printer);
 
@@ -624,7 +636,9 @@ class PrintService
         $receiptItemDone = 0;
 
         foreach ($receiptGroups as $categoryLabel => $bucket) {
+            $lines[] = '{{BIG}}';
             $lines[] = $this->centerText("— {$categoryLabel} —", $printer);
+            $lines[] = '{{/BIG}}';
 
             foreach ($bucket as $item) {
                 $name = $item->menuItem?->name ?? $item->name ?? 'פריט';
@@ -664,12 +678,14 @@ class PrintService
         }
 
         $totalAmount = $order->total_amount ?? 0;
+        $lines[] = '{{BIG}}';
         $lines[] = $this->receiptLineLabelAndAmount(
             'סה"כ:',
             $this->formatShekelAmount((float) $totalAmount),
             $width,
             12
         );
+        $lines[] = '{{/BIG}}';
 
         $paymentLabel = match ($order->payment_method) {
             'cash' => 'מזומן',
