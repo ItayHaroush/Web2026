@@ -123,7 +123,7 @@ export default function POSCreditPaymentModal({ cart, total, headers, posToken, 
                         </button>
                     </div>
 
-                /* Error / Declined */
+                    /* Error / Declined */
                 ) : result?.type === 'error' ? (
                     <div className="p-10 text-center space-y-6 animate-in fade-in zoom-in-95 duration-500">
                         <div className="w-24 h-24 mx-auto rounded-full bg-red-500/20 flex items-center justify-center">
@@ -149,7 +149,7 @@ export default function POSCreditPaymentModal({ cart, total, headers, posToken, 
                         </div>
                     </div>
 
-                /* Initial / Loading state */
+                    /* Initial / Loading state */
                 ) : (
                     <div className="p-8 space-y-6">
                         {/* Header */}
