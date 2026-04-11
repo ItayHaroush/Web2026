@@ -31,19 +31,21 @@ object PrinterBridge {
         val errorMessage: String? = null,
     )
 
-    fun print(ip: String, port: Int, payload: String, binarySuffix: ByteArray? = null, timeoutMs: Int = 5000): PrintResult {
+    fun print(ip: String, port: Int, payload: String, binarySuffix: ByteArray? = null, doubleHeight: Boolean = true, lineWidth: Int = 42, timeoutMs: Int = 5000): PrintResult {
         return try {
             val socket = Socket()
             socket.connect(java.net.InetSocketAddress(ip, port), timeoutMs)
             socket.soTimeout = timeoutMs
 
             val out: OutputStream = socket.getOutputStream()
-            val prepared = prepareThermalRtlPayload(payload)
+            val prepared = prepareThermalRtlPayload(payload, lineWidth)
 
             out.write(ESC_INIT)
             out.write(ESC_HEBREW_TABLE)
             out.write(ESC_CHAR_SPACING_0)
-            out.write(ESC_DOUBLE_HEIGHT)
+            if (doubleHeight) {
+                out.write(ESC_DOUBLE_HEIGHT)
+            }
             out.write(prepared.toByteArray(cp862))
             out.write(ESC_FONT_NORMAL)
             if (binarySuffix != null && binarySuffix.isNotEmpty()) {
@@ -63,12 +65,28 @@ object PrinterBridge {
         }
     }
 
-    private fun prepareThermalRtlPayload(text: String): String =
+    private fun prepareThermalRtlPayload(text: String, lineWidth: Int): String =
         text
             .replace("\r\n", "\n")
             .replace("\r", "\n")
             .lines()
-            .joinToString("\n") { smartReverseHebrewLine(it) }
+            .joinToString("\n") { centerIfNeeded(smartReverseHebrewLine(it), lineWidth) }
+
+    /**
+     * Center lines that have no leading spaces but contain Hebrew.
+     * Lines already pre-centered (starting with spaces via centerText) are preserved.
+     */
+    private fun centerIfNeeded(line: String, lineWidth: Int): String {
+        if (line.isEmpty() || lineWidth <= 0) return line
+        // Already has leading spaces (pre-centered) — preserve
+        if (line.startsWith(" ")) return line
+        // Full-width or wider — no centering needed
+        if (line.length >= lineWidth) return line
+        // Only center lines containing Hebrew
+        if (!line.contains(hebrewInWord)) return line
+        val pad = (lineWidth - line.length) / 2
+        return " ".repeat(pad) + line
+    }
 
     private fun smartReverseHebrewLine(line: String): String {
         if (line.isEmpty()) {

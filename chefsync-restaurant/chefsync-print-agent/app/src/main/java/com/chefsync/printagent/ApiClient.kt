@@ -23,6 +23,7 @@ data class PrintJobData(
     val target_port: Int?,
     val created_at: String?,
     val escpos_binary_suffix: String? = null,
+    val double_height: Boolean? = null,
 )
 
 data class AckRequest(

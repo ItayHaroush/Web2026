@@ -31,6 +31,8 @@ const TRANSITION_MESSAGES = {
     '4→3': { text: 'חוזרים לפרטי בעלים', sub: '' },
 };
 
+const STORAGE_KEY = 'chefsync_registration_draft';
+
 export default function RegisterRestaurant() {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
@@ -71,6 +73,38 @@ export default function RegisterRestaurant() {
     const [showTransition, setShowTransition] = useState(false);
     const [transitionClosing, setTransitionClosing] = useState(false);
     const [transitionMsg, setTransitionMsg] = useState({ text: '', sub: '' });
+
+    // Load saved draft on mount
+    useEffect(() => {
+        const savedDraft = localStorage.getItem(STORAGE_KEY);
+        if (savedDraft) {
+            try {
+                const draft = JSON.parse(savedDraft);
+                setForm(draft.form || form);
+                setSelectedTier(draft.selectedTier || 'pro');
+                setCurrentStep(draft.currentStep || 1);
+                setAgreedTerms(draft.agreedTerms || false);
+                if (draft.logoPreview) {
+                    setLogoPreview(draft.logoPreview);
+                }
+            } catch (err) {
+                console.error('שגיאה בטעינת הטיוטה השמורה', err);
+            }
+        }
+    }, []);
+
+    // Auto-save draft whenever form data changes (silent)
+    useEffect(() => {
+        const draft = {
+            form,
+            selectedTier,
+            currentStep,
+            agreedTerms,
+            logoPreview,
+            timestamp: Date.now(),
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(draft));
+    }, [form, selectedTier, currentStep, agreedTerms, logoPreview]);
 
     useEffect(() => {
         const loadCities = async () => {
@@ -230,6 +264,8 @@ export default function RegisterRestaurant() {
                 headers: { 'Content-Type': 'multipart/form-data' },
             });
             toast.success('ההרשמה בוצעה בהצלחה!');
+            // Clear the saved draft after successful registration
+            localStorage.removeItem(STORAGE_KEY);
             navigate('/admin/login');
         } catch (error) {
             const message = error.response?.data?.message || 'שגיאה בהרשמה';

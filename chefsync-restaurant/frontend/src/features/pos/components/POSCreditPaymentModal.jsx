@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { FaCreditCard, FaCheckCircle, FaTimes, FaExclamationTriangle, FaRedo } from 'react-icons/fa';
 import posApi from '../api/posApi';
 
-export default function POSCreditPaymentModal({ cart, total, headers, posToken, orderType = 'takeaway', onClose, onSuccess }) {
+export default function POSCreditPaymentModal({ cart, total, headers, posToken, orderType = 'takeaway', customerName = '', onClose, onSuccess }) {
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState(null); // { type: 'success' | 'error', data }
     const [retrying, setRetrying] = useState(false);
@@ -14,6 +14,7 @@ export default function POSCreditPaymentModal({ cart, total, headers, posToken, 
             const res = await posApi.createOrderCredit({
                 items: cart,
                 order_type: orderType,
+                ...(customerName.trim() && { customer_name: customerName.trim() }),
             }, headers, posToken);
 
             if (res.data.success) {

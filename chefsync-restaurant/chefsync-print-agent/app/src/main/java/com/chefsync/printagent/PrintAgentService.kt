@@ -112,7 +112,7 @@ class PrintAgentService : Service() {
                         null
                     }
                 }
-                PrinterBridge.print(ip, port, job.text, suffix)
+                PrinterBridge.print(ip, port, job.text, suffix, job.double_height ?: true)
             }
 
             ackJob(

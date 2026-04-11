@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\DailyReport;
 use App\Models\Order;
+use App\Models\PaymentSession;
 use App\Models\PrintDevice;
 use App\Models\Printer;
 use App\Models\PrintJob;
@@ -112,10 +113,34 @@ class PrintService
             return 0;
         }
 
+        // QR code for unpaid orders — link to payment page
+        $qrBinary = '';
+        $qrUrl = null;
+        if ($order->payment_status === Order::PAYMENT_PENDING) {
+            $session = PaymentSession::where('order_id', $order->id)
+                ->where('status', 'pending')
+                ->latest()
+                ->first();
+            if ($session && $session->payment_url) {
+                $qrUrl = $session->payment_url;
+                $qrBinary = base64_encode(EscPosQrHelper::centeredQrCode($qrUrl));
+            }
+        }
+
+        $hasPaymentQr = $qrUrl !== null;
         $jobCount = 0;
 
         foreach ($printers as $printer) {
-            $payload = $this->buildReceiptPayload($order, $printer, $extraData);
+            $payload = $this->buildReceiptPayload($order, $printer, array_merge($extraData, ['has_payment_qr' => $hasPaymentQr]));
+
+            $jobPayload = [
+                'text' => $payload,
+                'type' => 'receipt',
+            ];
+            if ($qrBinary !== '') {
+                $jobPayload['escpos_binary_suffix'] = $qrBinary;
+                $jobPayload['qr_url'] = $qrUrl;
+            }
 
             $job = PrintJob::create([
                 'tenant_id' => $order->tenant_id,
@@ -124,10 +149,7 @@ class PrintService
                 'order_id' => $order->id,
                 'role' => 'receipt',
                 'status' => 'pending',
-                'payload' => [
-                    'text' => $payload,
-                    'type' => 'receipt',
-                ],
+                'payload' => $jobPayload,
             ]);
 
             $this->executeJob($job, $printer, $payload);
@@ -234,7 +256,7 @@ class PrintService
             return 0;
         }
 
-        $shareUrl = $base.'/r/'.rawurlencode((string) $slugPart);
+        $shareUrl = $base . '/r/' . rawurlencode((string) $slugPart);
         $qrBinary = EscPosQrHelper::centeredQrCode($shareUrl);
         $qrB64 = base64_encode($qrBinary);
 
@@ -288,7 +310,10 @@ class PrintService
         return $jobCount;
     }
 
-    public function testPrint(Printer $printer): bool
+    /**
+     * @return bool|array  bool for TCP/bridge, array with 'browser_print' => true + 'text' for browser printers
+     */
+    public function testPrint(Printer $printer): bool|array
     {
         $separator = str_repeat('=', $this->getLineWidth($printer));
         $dash = str_repeat('-', $this->getLineWidth($printer));
@@ -311,7 +336,7 @@ class PrintService
             "IP: {$printer->ip_address}:{$printer->port}",
             "רוחב נייר: {$printer->paper_width}",
             "תפקיד: {$roleLabel}",
-            'קטגוריות: '.($printer->categories->pluck('name')->join(', ') ?: 'הכל'),
+            'קטגוריות: ' . ($printer->categories->pluck('name')->join(', ') ?: 'הכל'),
             $dash,
             '',
             $this->centerText('המדפסת פועלת תקין!', $printer),
@@ -322,6 +347,38 @@ class PrintService
         ];
 
         $payload = implode("\n", $lines);
+
+        // Browser printer — return text directly so the frontend can print immediately
+        if ($printer->type === 'browser') {
+            return [
+                'browser_print' => true,
+                'text' => $payload,
+                'type' => 'test_print',
+                'role' => $printer->role,
+            ];
+        }
+
+        // Bridge printer — route through executeJob so the agent picks it up
+        if ($this->hasBridgeDevicesForPrinter($printer)) {
+            $job = PrintJob::create([
+                'tenant_id' => $printer->tenant_id,
+                'restaurant_id' => $printer->restaurant_id,
+                'printer_id' => $printer->id,
+                'order_id' => null,
+                'role' => $printer->role,
+                'status' => 'pending',
+                'payload' => [
+                    'text' => $payload,
+                    'type' => 'test_print',
+                ],
+            ]);
+
+            $this->executeJob($job, $printer, $payload, true);
+
+            return in_array($job->fresh()->status, ['pending_bridge', 'done']);
+        }
+
+        // Direct TCP — send directly to the printer
         $adapter = $this->getAdapter($printer);
 
         return $adapter->print($payload, [
@@ -337,16 +394,16 @@ class PrintService
     private function formatOrderServiceModeLabel(Order $order): string
     {
         if ($order->delivery_method === 'delivery') {
-            return '🚗 שירות: משלוח';
+            return 'שירות: משלוח';
         }
         if ($order->order_type === 'takeaway') {
-            return '🥡 שירות: טייקאווי';
+            return 'שירות: טייקאווי';
         }
         if ($order->order_type === 'dine_in') {
-            return '🪑 שירות: ישיבה במקום';
+            return 'שירות: ישיבה במקום';
         }
         if (($order->delivery_method ?? '') === 'pickup') {
-            return '📦 שירות: איסוף עצמי';
+            return 'שירות: איסוף עצמי';
         }
 
         return '';
@@ -358,10 +415,10 @@ class PrintService
     private function formatOrderPackagingLabel(Order $order): string
     {
         if ($order->delivery_method === 'delivery') {
-            return '🍱 אריזה: חמגשית (משלוח)';
+            return 'אריזה: חמגשית TA';
         }
         if ($order->order_type === 'takeaway') {
-            return '🍱 אריזה: חמגשית';
+            return 'אריזה: חמגשית';
         }
 
         return '';
@@ -419,7 +476,7 @@ class PrintService
         $lines[] = $separator;
 
         $lines[] = $this->centerText(
-            $order->created_at->format('d.m.Y').' | '.$order->created_at->format('H:i'),
+            $order->created_at->format('d.m.Y') . ' | ' . $order->created_at->format('H:i'),
             $printer
         );
 
@@ -443,11 +500,6 @@ class PrintService
         if ($packaging !== '') {
             $lines[] = $this->centerText($packaging, $printer);
         }
-        $dishSummary = $this->inferDishPresentationSummaryLine($items);
-        if ($dishSummary !== null) {
-            $lines[] = $this->centerText($dishSummary, $printer);
-        }
-
         if ($order->customer_name) {
             $lines[] = $order->customer_name;
         }
@@ -484,8 +536,8 @@ class PrintService
                     $addonName = is_string($addon) ? $addon : ($addon['name'] ?? $addon['addon_name'] ?? '');
                     $onSide = is_array($addon) && ! empty($addon['on_side']);
                     if ($addonName) {
-                        $prefix = $onSide ? '  בצד:' : '  +';
-                        $lines[] = "{$prefix} {$addonName}";
+                        $prefix = $onSide ? '  בצד:' : '  ';
+                        $lines[] = "{$prefix}{$addonName}";
                     }
                 }
 
@@ -550,17 +602,12 @@ class PrintService
         if ($packagingLabel !== '') {
             $lines[] = $this->centerText($packagingLabel, $printer);
         }
-        $dishSummary = $this->inferDishPresentationSummaryLine($order->items);
-        if ($dishSummary !== null) {
-            $lines[] = $this->centerText($dishSummary, $printer);
-        }
-
         if ($order->customer_name && $order->customer_name !== 'POS') {
             $lines[] = $this->centerText("לקוח: {$order->customer_name}", $printer);
         }
         if ($order->customer_phone && $order->customer_phone !== '0000000000') {
             $lines[] = $this->centerText(
-                'טלפון: '.PhoneValidationService::formatIsraeliForDisplay($order->customer_phone),
+                'טלפון: ' . PhoneValidationService::formatIsraeliForDisplay($order->customer_phone),
                 $printer
             );
         }
@@ -569,35 +616,49 @@ class PrintService
         }
         $lines[] = $dash;
 
-        foreach ($order->items as $item) {
-            $name = $item->menuItem?->name ?? $item->name ?? 'פריט';
-            $qty = $item->quantity ?? 1;
+        $receiptGroups = $this->groupOrderItemsByCategory($order->items);
+        $receiptItemTotal = 0;
+        foreach ($receiptGroups as $b) {
+            $receiptItemTotal += count($b);
+        }
+        $receiptItemDone = 0;
 
-            if (! empty($item->variant_name)) {
-                $name .= " ({$item->variant_name})";
-            }
+        foreach ($receiptGroups as $categoryLabel => $bucket) {
+            $lines[] = $this->centerText("— {$categoryLabel} —", $printer);
 
-            $lines[] = "{$qty}x {$name}";
+            foreach ($bucket as $item) {
+                $name = $item->menuItem?->name ?? $item->name ?? 'פריט';
+                $qty = $item->quantity ?? 1;
 
-            $addons = is_array($item->addons) ? $item->addons : [];
-            foreach ($addons as $addon) {
-                $addonName = is_string($addon) ? $addon : ($addon['name'] ?? '');
-                $addonPrice = is_array($addon) ? (float) ($addon['price'] ?? 0) : 0.0;
+                if (! empty($item->variant_name)) {
+                    $name .= " ({$item->variant_name})";
+                }
 
-                if ($addonName) {
-                    $price = $addonPrice > 0 ? ' '.$this->formatShekelAmount($addonPrice) : '';
-                    $lines[] = "  + {$addonName}{$price}";
+                $lines[] = "{$qty}x {$name}";
+
+                $addons = is_array($item->addons) ? $item->addons : [];
+                foreach ($addons as $addon) {
+                    $addonName = is_string($addon) ? $addon : ($addon['name'] ?? '');
+                    $addonPrice = is_array($addon) ? (float) ($addon['price'] ?? 0) : 0.0;
+
+                    if ($addonName) {
+                        $price = $addonPrice > 0 ? ' ' . $this->formatShekelAmount($addonPrice) : '';
+                        $lines[] = "  + {$addonName}{$price}";
+                    }
+                }
+
+                $receiptItemDone++;
+                if ($receiptItemDone < $receiptItemTotal) {
+                    $lines[] = '';
                 }
             }
-
-            $lines[] = '';
         }
 
         $lines[] = $separator;
 
         if ($order->delivery_fee > 0) {
             $lines[] = $this->centerText(
-                'דמי משלוח: '.$this->formatShekelAmount((float) $order->delivery_fee),
+                'דמי משלוח: ' . $this->formatShekelAmount((float) $order->delivery_fee),
                 $printer
             );
         }
@@ -619,7 +680,7 @@ class PrintService
 
         if (! empty($extraData['change']) && $extraData['change'] > 0) {
             $lines[] = $this->centerText(
-                'עודף: '.$this->formatShekelAmount((float) $extraData['change']),
+                'עודף: ' . $this->formatShekelAmount((float) $extraData['change']),
                 $printer
             );
         }
@@ -627,6 +688,12 @@ class PrintService
         if (! empty($extraData['receipt_number'])) {
             $lines[] = $dash;
             $lines[] = "מס׳ קבלה: {$extraData['receipt_number']}";
+        }
+
+        if (! empty($extraData['has_payment_qr'])) {
+            $lines[] = $separator;
+            $lines[] = $this->centerText('לתשלום סרקו את הברקוד', $printer);
+            $lines[] = $separator;
         }
 
         $lines[] = $separator;
@@ -702,9 +769,36 @@ class PrintService
 
     // ─── Infrastructure ───
 
-    private function executeJob(PrintJob $job, Printer $printer, string $payload): void
+    private function executeJob(PrintJob $job, Printer $printer, string $payload, bool $bypassHoursCheck = false): void
     {
+        // Block prints outside operating hours (prevents phantom prints from network scanners/cameras)
+        if (! $bypassHoursCheck) {
+            $restaurant = Restaurant::withoutGlobalScopes()->find($job->restaurant_id);
+            if ($restaurant && ! $this->isWithinPrintableHours($restaurant)) {
+                $job->update([
+                    'status' => 'failed',
+                    'error_message' => 'Rejected: outside operating hours',
+                ]);
+                Log::info('PrintService: Job rejected — outside operating hours', [
+                    'job_id' => $job->id,
+                    'restaurant_id' => $job->restaurant_id,
+                ]);
+
+                return;
+            }
+        }
+
         $role = $job->role ?? $printer->role ?? 'kitchen';
+
+        // Browser printer — always route to pending_browser (before bridge check)
+        if ($printer->type === 'browser') {
+            $job->update([
+                'status' => 'pending_browser',
+                'attempts' => $job->attempts + 1,
+            ]);
+
+            return;
+        }
 
         $hasBridgeDevices = PrintDevice::withoutGlobalScopes()
             ->where('restaurant_id', $job->restaurant_id)
@@ -723,15 +817,6 @@ class PrintService
             return;
         }
 
-        if ($printer->type === 'browser') {
-            $job->update([
-                'status' => 'pending_browser',
-                'attempts' => $job->attempts + 1,
-            ]);
-
-            return;
-        }
-
         try {
             $adapter = $this->getAdapter($printer);
             $job->update(['status' => 'printing', 'attempts' => $job->attempts + 1]);
@@ -744,11 +829,14 @@ class PrintService
                 }
             }
 
+            $isKitchenTicket = ($job->payload['type'] ?? '') === 'kitchen_ticket';
+
             $success = $adapter->print($payload, [
                 'ip_address' => $printer->ip_address,
                 'port' => $printer->port,
                 'line_width' => $this->getLineWidth($printer),
                 'escpos_binary_suffix' => $suffixRaw ?? '',
+                'double_height' => $isKitchenTicket,
             ]);
 
             $job->update([
@@ -826,6 +914,59 @@ class PrintService
         };
     }
 
+    private function hasBridgeDevicesForPrinter(Printer $printer): bool
+    {
+        $role = $printer->role ?? 'kitchen';
+
+        return PrintDevice::withoutGlobalScopes()
+            ->where('restaurant_id', $printer->restaurant_id)
+            ->where('is_active', true)
+            ->where(function ($q) use ($role) {
+                $q->where('role', $role)->orWhere('role', 'general');
+            })
+            ->exists();
+    }
+
+    /**
+     * Check if the current time is within the restaurant's printable hours.
+     * Uses a 30-minute buffer before opening and 60-minute buffer after closing
+     * to allow pre-opening prep and post-closing cleanup prints.
+     */
+    private function isWithinPrintableHours(Restaurant $restaurant): bool
+    {
+        // Manual override: if restaurant manually set to open, allow printing
+        if ($restaurant->is_override_status && $restaurant->is_open) {
+            return true;
+        }
+
+        $operatingDays = $restaurant->operating_days ?? [];
+        $operatingHours = $restaurant->operating_hours ?? [];
+
+        // No hours configured — fail-open, allow prints
+        if (empty($operatingDays) && empty($operatingHours)) {
+            return true;
+        }
+
+        $now = \Carbon\Carbon::now('Asia/Jerusalem');
+
+        // Open right now
+        if (Restaurant::calculateIsOpen($operatingDays, $operatingHours, $now)) {
+            return true;
+        }
+
+        // Opening within 30 minutes (prep time)
+        if (Restaurant::calculateIsOpen($operatingDays, $operatingHours, $now->copy()->addMinutes(30))) {
+            return true;
+        }
+
+        // Was open within last 60 minutes (cleanup time)
+        if (Restaurant::calculateIsOpen($operatingDays, $operatingHours, $now->copy()->subMinutes(60))) {
+            return true;
+        }
+
+        return false;
+    }
+
     private function getLineWidth(Printer $printer): int
     {
         return $printer->paper_width === '58mm' ? 32 : 42;
@@ -840,7 +981,7 @@ class PrintService
         }
         $padding = (int) (($width - $textLen) / 2);
 
-        return str_repeat(' ', $padding).$text;
+        return str_repeat(' ', $padding) . $text;
     }
 
     /**
@@ -852,7 +993,7 @@ class PrintService
         $amountColumns = max(1, $amountColumns);
         $labelWidth = max(0, $width - $amountColumns);
 
-        return $this->mbStrPadRight($label, $labelWidth).$this->mbStrPadLeft($amount, $amountColumns);
+        return $this->mbStrPadRight($label, $labelWidth) . $this->mbStrPadLeft($amount, $amountColumns);
     }
 
     private function mbStrPadLeft(string $string, int $length): string
@@ -862,7 +1003,7 @@ class PrintService
             return $string;
         }
 
-        return str_repeat(' ', $length - $len).$string;
+        return str_repeat(' ', $length - $len) . $string;
     }
 
     private function mbStrPadRight(string $string, int $length): string
@@ -872,7 +1013,7 @@ class PrintService
             return $string;
         }
 
-        return $string.str_repeat(' ', $length - $len);
+        return $string . str_repeat(' ', $length - $len);
     }
 
     /**
@@ -890,20 +1031,21 @@ class PrintService
             $this->centerText('קבלה — הזמנה #248', $printer),
             $separator,
             $this->centerText('29.03.2026 15:30', $printer),
-            $this->centerText('🚗 שירות: משלוח', $printer),
-            $this->centerText('🍱 אריזה: חמגשית (משלוח)', $printer),
-            $this->centerText('🍽🌯 סוג מנה (קטגוריות): מעורב', $printer),
+            $this->centerText('שירות: משלוח', $printer),
+            $this->centerText('אריזה: חמגשית TA', $printer),
             $this->centerText('לקוח: איתי חרוש', $printer),
-            $this->centerText('טלפון: '.PhoneValidationService::formatIsraeliForDisplay('0547466508'), $printer),
+            $this->centerText('טלפון: ' . PhoneValidationService::formatIsraeliForDisplay('0547466508'), $printer),
             $this->centerText('כתובת: רחוב הדוגמה 12, תל אביב', $printer),
             $dash,
+            $this->centerText('— מנות עיקריות —', $printer),
             '1x חזה עוף (גריל)',
-            '  + חומוס '.$this->formatShekelAmount(5.00),
+            '  + חומוס ' . $this->formatShekelAmount(5.00),
             '',
+            $this->centerText('— תוספות —', $printer),
             '2x צ׳יפס',
             '',
             $separator,
-            $this->centerText('דמי משלוח: '.$this->formatShekelAmount(25.00), $printer),
+            $this->centerText('דמי משלוח: ' . $this->formatShekelAmount(25.00), $printer),
             $this->receiptLineLabelAndAmount('סה"כ:', $this->formatShekelAmount(105.00), $width, 12),
             $this->centerText('תשלום: מזומן', $printer),
             $separator,
@@ -920,7 +1062,7 @@ class PrintService
      */
     private function formatShekelAmount(float $amount): string
     {
-        return number_format($amount, 2, '.', '').' ש"ח';
+        return number_format($amount, 2, '.', '') . ' ש"ח';
     }
 
     /**

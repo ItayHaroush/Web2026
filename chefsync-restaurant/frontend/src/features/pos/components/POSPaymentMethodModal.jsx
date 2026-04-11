@@ -1,6 +1,7 @@
-import { FaMoneyBillWave, FaCreditCard, FaTimes, FaPause, FaRandom, FaShoppingBag, FaChair } from 'react-icons/fa';
+import { useState } from 'react';
+import { FaMoneyBillWave, FaCreditCard, FaTimes, FaPause, FaRandom, FaShoppingBag, FaChair, FaUser } from 'react-icons/fa';
 
-export default function POSPaymentMethodModal({ total, orderType = 'takeaway', onOrderTypeChange, onSelect, onClose }) {
+export default function POSPaymentMethodModal({ total, orderType = 'takeaway', onOrderTypeChange, customerName = '', onCustomerNameChange, onSelect, onClose }) {
     return (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[300] flex items-center justify-center p-4" onClick={onClose}>
             <div className="bg-slate-800 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-700 animate-in zoom-in-95 duration-300" onClick={e => e.stopPropagation()}>
@@ -17,6 +18,20 @@ export default function POSPaymentMethodModal({ total, orderType = 'takeaway', o
                 </div>
 
                 <div className="px-8 pb-2">
+                    <div className="mb-3">
+                        <p className="text-slate-500 text-xs font-bold mb-2">שם לקוח</p>
+                        <div className="relative">
+                            <FaUser className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm" />
+                            <input
+                                type="text"
+                                value={customerName}
+                                onChange={e => onCustomerNameChange?.(e.target.value)}
+                                className="w-full pr-9 pl-4 py-3 bg-slate-700/50 text-white rounded-xl border border-slate-600/50 focus:border-orange-500 focus:outline-none text-sm font-bold placeholder:text-slate-600"
+                                placeholder="הזן שם (אופציונלי)"
+                                autoComplete="off"
+                            />
+                        </div>
+                    </div>
                     <p className="text-slate-500 text-xs font-bold mb-2">סוג שירות</p>
                     <div className="flex gap-2">
                         <button

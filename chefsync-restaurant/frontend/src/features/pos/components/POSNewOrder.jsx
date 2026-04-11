@@ -42,6 +42,7 @@ function POSNewOrderInner({ headers, posToken, onOrderCreated }) {
     const [holdLoading, setHoldLoading] = useState(false);
     const [holdOrderId, setHoldOrderId] = useState(null);
     const [configureItem, setConfigureItem] = useState(null);
+    const [customerName, setCustomerName] = useState('');
 
     // Discount state
     const [showDiscount, setShowDiscount] = useState(false);
@@ -157,6 +158,7 @@ function POSNewOrderInner({ headers, posToken, onOrderCreated }) {
         setPaymentMethod(null);
         clearDiscount();
         setHoldOrderId(null);
+        setCustomerName('');
         onOrderCreated?.();
     };
 
@@ -170,6 +172,7 @@ function POSNewOrderInner({ headers, posToken, onOrderCreated }) {
                     items: cart,
                     payment_method: 'hold',
                     order_type: posOrderType,
+                    ...(customerName.trim() && { customer_name: customerName.trim() }),
                     ...(discountAmount > 0 && {
                         discount_type: discountType,
                         discount_value: discVal,
@@ -401,6 +404,8 @@ function POSNewOrderInner({ headers, posToken, onOrderCreated }) {
                     total={cartTotal}
                     orderType={posOrderType}
                     onOrderTypeChange={setPosOrderType}
+                    customerName={customerName}
+                    onCustomerNameChange={setCustomerName}
                     onSelect={handlePaymentMethodSelect}
                     onClose={() => setShowPayment(false)}
                 />
@@ -413,6 +418,7 @@ function POSNewOrderInner({ headers, posToken, onOrderCreated }) {
                     headers={headers}
                     posToken={posToken}
                     orderType={posOrderType}
+                    customerName={customerName}
                     onClose={handlePaymentClose}
                     onSuccess={handleOrderSuccess}
                     discountData={discountAmount > 0 ? { discount_type: discountType, discount_value: discVal, discount_reason: discountReason } : null}
@@ -426,6 +432,7 @@ function POSNewOrderInner({ headers, posToken, onOrderCreated }) {
                     headers={headers}
                     posToken={posToken}
                     orderType={posOrderType}
+                    customerName={customerName}
                     onClose={handlePaymentClose}
                     onSuccess={handleOrderSuccess}
                 />
@@ -438,6 +445,7 @@ function POSNewOrderInner({ headers, posToken, onOrderCreated }) {
                     headers={headers}
                     posToken={posToken}
                     orderType={posOrderType}
+                    customerName={customerName}
                     discountData={discountAmount > 0 ? { discount_type: discountType, discount_value: discVal, discount_reason: discountReason } : null}
                     onClose={() => { setPaymentMethod(null); }}
                     onSuccess={handleOrderSuccess}

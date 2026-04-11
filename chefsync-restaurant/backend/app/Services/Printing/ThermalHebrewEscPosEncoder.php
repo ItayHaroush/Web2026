@@ -45,25 +45,30 @@ final class ThermalHebrewEscPosEncoder
     }
 
     /**
-     * מרכוז אחרי RTL לשורות עבריות קצרות בלבד (לא מפרידים, לא שורות מלאות, לא תוספות, לא IP/תאריך).
+     * מרכוז אחרי RTL לשורות עבריות שלא מרוכזות מראש.
+     * שורות שכבר מתחילות ברווחים (מרוכזות ע"י centerText) — נשמרות כמו שהן.
      */
     private function applySelectiveCentering(string $text, int $width): string
     {
         $lines = explode("\n", $text);
 
         return implode("\n", array_map(function (string $line) use ($width) {
+            // Line already has leading spaces (pre-centered by centerText) — preserve it
+            if ($line !== '' && $line[0] === ' ') {
+                return $line;
+            }
+
             if (! $this->shouldCenterLineAfterRtl($line, $width)) {
                 return $line;
             }
 
-            $trimmed = ltrim($line, ' ');
-            $len = mb_strlen($trimmed, 'UTF-8');
+            $len = mb_strlen($line, 'UTF-8');
             if ($len >= $width) {
-                return $trimmed;
+                return $line;
             }
             $pad = (int) (($width - $len) / 2);
 
-            return str_repeat(' ', $pad).$trimmed;
+            return str_repeat(' ', $pad) . $line;
         }, $lines));
     }
 
@@ -108,7 +113,7 @@ final class ThermalHebrewEscPosEncoder
 
         $lines = explode("\n", $utf8);
 
-        return implode("\n", array_map(fn (string $line) => $this->smartReverseHebrewLine($line), $lines));
+        return implode("\n", array_map(fn(string $line) => $this->smartReverseHebrewLine($line), $lines));
     }
 
     private function smartReverseHebrewLine(string $line): string
@@ -145,7 +150,7 @@ final class ThermalHebrewEscPosEncoder
                 : $word;
         }, $words);
 
-        return $leading.implode(' ', array_reverse($mapped));
+        return $leading . implode(' ', array_reverse($mapped));
     }
 
     /**
@@ -154,19 +159,19 @@ final class ThermalHebrewEscPosEncoder
     private function transformPriceShekelToken(string $word): string
     {
         if (preg_match('/^([\d.,]+)\s*ש"ח$/u', $word, $m)) {
-            return $m[1].' '.$this->reverseUtf8String('ש"ח');
+            return $m[1] . ' ' . $this->reverseUtf8String('ש"ח');
         }
 
         if (preg_match('/^([\d.,]+)ש"ח$/u', $word, $m)) {
-            return $m[1].' '.$this->reverseUtf8String('ש"ח');
+            return $m[1] . ' ' . $this->reverseUtf8String('ש"ח');
         }
 
         if (preg_match('/^ש"ח\s*([\d.,]+)$/u', $word, $m)) {
-            return $m[1].' '.$this->reverseUtf8String('ש"ח');
+            return $m[1] . ' ' . $this->reverseUtf8String('ש"ח');
         }
 
         if (preg_match('/^ש"ח([\d.,]+)$/u', $word, $m)) {
-            return $m[1].' '.$this->reverseUtf8String('ש"ח');
+            return $m[1] . ' ' . $this->reverseUtf8String('ש"ח');
         }
 
         return $word;

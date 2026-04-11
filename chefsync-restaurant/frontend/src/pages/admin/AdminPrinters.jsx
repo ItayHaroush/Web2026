@@ -26,6 +26,34 @@ import {
 import PrinterCard from '../../components/printer/admin/PrinterCard';
 import PrinterFormModal from '../../components/printer/admin/PrinterFormModal';
 
+function printTextInBrowser(text, role) {
+    const title = 'הדפסת ניסיון';
+    const escaped = text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    const html = `<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head><meta charset="utf-8"><title>${title}</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:#fff;color:#111}
+body{font-family:'Courier New',monospace;max-width:${role === 'receipt' ? '300px' : '400px'};margin:0 auto;padding:15px;font-size:12px;white-space:pre-wrap;line-height:1.4}
+@media print{body{padding:0;margin:0}@page{margin:5mm;size:80mm auto}}
+</style></head><body>${escaped}</body></html>`;
+
+    const iframe = document.createElement('iframe');
+    iframe.setAttribute('aria-hidden', 'true');
+    Object.assign(iframe.style, { position: 'fixed', right: '0', bottom: '0', width: '0', height: '0', border: '0', opacity: '0', pointerEvents: 'none' });
+    document.body.appendChild(iframe);
+    const doc = iframe.contentDocument;
+    const win = iframe.contentWindow;
+    if (!doc || !win) { iframe.remove(); return; }
+    doc.open(); doc.write(html); doc.close();
+    const doPrint = () => { try { win.focus(); win.print(); } catch { /* */ } setTimeout(() => iframe.remove(), 3000); };
+    if (doc.readyState === 'complete') { requestAnimationFrame(doPrint); } else { win.addEventListener('load', doPrint, { once: true }); }
+}
+
 const ROLE_LABELS = { kitchen: 'מטבח', receipt: 'קופה / קבלה', bar: 'בר', general: 'כללי' };
 const ROLE_COLORS = {
     kitchen: 'bg-orange-100 text-orange-700 border-orange-200',
@@ -53,12 +81,6 @@ export default function AdminPrinters({ embedded = false }) {
     const { isManager, getAuthHeaders } = useAdminAuth();
     const { subscriptionInfo } = useRestaurantStatus();
 
-    const isLocked = subscriptionInfo?.features?.printers !== 'full';
-
-    if (isLocked) {
-        if (embedded) return <div className="text-center py-12 text-gray-400 text-sm font-bold">תכונה זו זמינה בתוכנית Pro</div>;
-        return <FeatureGate feature="printers" requiredTier="pro" featureName="מדפסות" />;
-    }
     const [printers, setPrinters] = useState([]);
     const [categories, setCategories] = useState([]);
     const [devices, setDevices] = useState([]);
@@ -74,10 +96,6 @@ export default function AdminPrinters({ embedded = false }) {
     const [deviceForm, setDeviceForm] = useState({ ...DEVICE_FORM });
     const [newToken, setNewToken] = useState(null);
     const [copiedToken, setCopiedToken] = useState(false);
-
-    useEffect(() => {
-        fetchData();
-    }, []);
 
     const fetchData = async () => {
         try {
@@ -98,6 +116,17 @@ export default function AdminPrinters({ embedded = false }) {
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+        fetchData();
+    }, []);
+
+    const isLocked = subscriptionInfo?.features?.printers !== 'full';
+
+    if (isLocked) {
+        if (embedded) return <div className="text-center py-12 text-gray-400 text-sm font-bold">תכונה זו זמינה בתוכנית Pro</div>;
+        return <FeatureGate feature="printers" requiredTier="pro" featureName="מדפסות" />;
+    }
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -139,7 +168,11 @@ export default function AdminPrinters({ embedded = false }) {
         setTestingId(id);
         try {
             const res = await testPrint(id);
-            alert(res.message || 'הדפסת ניסיון נשלחה');
+            if (res.browser_print && res.text) {
+                printTextInBrowser(res.text, res.role || 'kitchen');
+            } else {
+                alert(res.message || 'הדפסת ניסיון נשלחה');
+            }
         } catch (error) {
             console.error('Failed to test print:', error);
             alert(error.response?.data?.message || 'שגיאה בהדפסת ניסיון');

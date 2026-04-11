@@ -60,6 +60,7 @@ class PrintAgentController extends Controller
                     'target_ip' => $job->target_ip,
                     'target_port' => $job->target_port,
                     'created_at' => $job->created_at?->toIso8601String(),
+                    'double_height' => ($job->payload['type'] ?? '') === 'kitchen_ticket',
                 ];
                 if (! empty($job->payload['escpos_binary_suffix']) && is_string($job->payload['escpos_binary_suffix'])) {
                     $row['escpos_binary_suffix'] = $job->payload['escpos_binary_suffix'];

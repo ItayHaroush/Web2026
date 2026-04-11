@@ -275,7 +275,21 @@ class PrinterController extends Controller
 
         try {
             $printService = app(PrintService::class);
-            $success = $printService->testPrint($printer);
+            $result = $printService->testPrint($printer);
+
+            // Browser printer — return text for immediate client-side printing
+            if (is_array($result) && ! empty($result['browser_print'])) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'הדפסת ניסיון — מדפסת דפדפן',
+                    'browser_print' => true,
+                    'text' => $result['text'],
+                    'type' => $result['type'] ?? 'test_print',
+                    'role' => $result['role'] ?? $printer->role,
+                ]);
+            }
+
+            $success = (bool) $result;
 
             return response()->json([
                 'success' => $success,

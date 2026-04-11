@@ -3,7 +3,7 @@ import { FaShekelSign, FaCheckCircle, FaTimes, FaMoneyBillWave } from 'react-ico
 import posApi from '../api/posApi';
 import POSAmountKeypad from './POSAmountKeypad';
 
-export default function POSPaymentModal({ cart, total, headers, posToken, orderType = 'takeaway', onClose, onSuccess, discountData }) {
+export default function POSPaymentModal({ cart, total, headers, posToken, orderType = 'takeaway', customerName = '', onClose, onSuccess, discountData }) {
     const [amountTendered, setAmountTendered] = useState('');
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState(null);
@@ -27,6 +27,7 @@ export default function POSPaymentModal({ cart, total, headers, posToken, orderT
                 payment_method: 'cash',
                 amount_tendered: parseFloat(amountTendered),
                 order_type: orderType,
+                ...(customerName.trim() && { customer_name: customerName.trim() }),
                 ...(discountData || {}),
             }, headers, posToken);
 

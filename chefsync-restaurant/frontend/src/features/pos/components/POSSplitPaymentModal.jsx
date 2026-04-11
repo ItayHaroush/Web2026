@@ -3,7 +3,7 @@ import { FaShekelSign, FaCreditCard, FaMoneyBillWave, FaTimes, FaCheckCircle, Fa
 import posApi from '../api/posApi';
 import POSAmountKeypad from './POSAmountKeypad';
 
-export default function POSSplitPaymentModal({ cart, total, headers, posToken, orderType = 'takeaway', discountData, onClose, onSuccess }) {
+export default function POSSplitPaymentModal({ cart, total, headers, posToken, orderType = 'takeaway', customerName = '', discountData, onClose, onSuccess }) {
     const [cashAmount, setCashAmount] = useState('');
     const [creditAmount, setCreditAmount] = useState('');
     const [amountFocus, setAmountFocus] = useState('cash'); // 'cash' | 'credit'
@@ -61,6 +61,7 @@ export default function POSSplitPaymentModal({ cart, total, headers, posToken, o
                     items: cart,
                     payment_method: 'hold',
                     order_type: orderType,
+                    ...(customerName.trim() && { customer_name: customerName.trim() }),
                     ...(discountData && {
                         discount_type: discountData.discount_type,
                         discount_value: discountData.discount_value,
