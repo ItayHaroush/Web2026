@@ -709,6 +709,7 @@ class PrintService
         if (! empty($extraData['has_payment_qr'])) {
             $lines[] = $separator;
             $lines[] = $this->centerText('לתשלום סרקו את הברקוד', $printer);
+            $lines[] = '{{QR}}';
             $lines[] = $separator;
         }
 

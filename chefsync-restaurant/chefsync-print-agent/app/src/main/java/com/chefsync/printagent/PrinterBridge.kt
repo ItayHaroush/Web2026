@@ -32,8 +32,9 @@ object PrinterBridge {
     private const val MARKER_NOCENTER = "{{/CENTER}}"
     private const val MARKER_BOLD   = "{{BOLD}}"
     private const val MARKER_NOBOLD = "{{/BOLD}}"
+    private const val MARKER_QR     = "{{QR}}"
 
-    private val ALL_MARKERS = setOf(MARKER_BIG, MARKER_NOBIG, MARKER_CENTER, MARKER_NOCENTER, MARKER_BOLD, MARKER_NOBOLD)
+    private val ALL_MARKERS = setOf(MARKER_BIG, MARKER_NOBIG, MARKER_CENTER, MARKER_NOCENTER, MARKER_BOLD, MARKER_NOBOLD, MARKER_QR)
 
     data class PrintResult(
         val success: Boolean,
@@ -56,7 +57,11 @@ object PrinterBridge {
 
             if (hasMarkers) {
                 // Selective mode: process inline markers per line
-                writeWithInlineMarkers(out, prepared)
+                val qrInserted = writeWithInlineMarkers(out, prepared, binarySuffix)
+                // Only append suffix at end if {{QR}} was not found
+                if (!qrInserted && binarySuffix != null && binarySuffix.isNotEmpty()) {
+                    out.write(binarySuffix)
+                }
             } else {
                 // Legacy mode: global double-height flag
                 if (doubleHeight) {
@@ -64,9 +69,9 @@ object PrinterBridge {
                 }
                 out.write(prepared.toByteArray(cp862))
                 out.write(ESC_FONT_NORMAL)
-            }
-            if (binarySuffix != null && binarySuffix.isNotEmpty()) {
-                out.write(binarySuffix)
+                if (binarySuffix != null && binarySuffix.isNotEmpty()) {
+                    out.write(binarySuffix)
+                }
             }
             out.write(FEED)
             out.write(ESC_CUT)
@@ -102,11 +107,15 @@ object PrinterBridge {
     private val ESC_BOLD_OFF = byteArrayOf(0x1B, 0x45, 0x00)
 
     /**
-     * Process {{BIG}}, {{/BIG}}, {{CENTER}}, {{/CENTER}}, {{BOLD}}, {{/BOLD}} markers per line.
+     * Process {{BIG}}, {{/BIG}}, {{CENTER}}, {{/CENTER}}, {{BOLD}}, {{/BOLD}}, {{QR}} markers per line.
      * Marker lines are consumed — they switch the ESC mode for subsequent lines.
+     * {{QR}} inserts the QR binary at that position.
+     *
+     * @return true if {{QR}} was found and binary was inserted
      */
-    private fun writeWithInlineMarkers(out: OutputStream, text: String) {
+    private fun writeWithInlineMarkers(out: OutputStream, text: String, qrBinary: ByteArray? = null): Boolean {
         var isBig = false
+        var qrInserted = false
         for (line in text.split("\n")) {
             val trimmed = line.trim()
             when (trimmed) {
@@ -135,6 +144,13 @@ object PrinterBridge {
                     out.write(ESC_BOLD_OFF)
                     continue
                 }
+                MARKER_QR -> {
+                    if (qrBinary != null && qrBinary.isNotEmpty()) {
+                        out.write(qrBinary)
+                        qrInserted = true
+                    }
+                    continue
+                }
             }
             out.write(if (isBig) ESC_DOUBLE_HEIGHT else ESC_FONT_NORMAL)
             out.write((line + "\n").toByteArray(cp862))
@@ -142,6 +158,7 @@ object PrinterBridge {
         out.write(ESC_FONT_NORMAL)
         out.write(ESC_ALIGN_LEFT)
         out.write(ESC_BOLD_OFF)
+        return qrInserted
     }
 
     /**

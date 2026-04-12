@@ -15,17 +15,24 @@ function textToHtml(text, type, role, qrDataUrl) {
         .replace(/>/g, '&gt;');
 
     // Convert formatting markers (they use {{ }} so they survived HTML escaping)
+    // {{QR}} is replaced with the QR image inline (positioned where the marker is)
+    const qrBlock = qrDataUrl
+        ? `<div style="text-align:center;margin:12px 0;"><img src="${qrDataUrl.replace(/"/g, '&quot;')}" alt="QR" width="200" height="200" style="image-rendering:pixelated;" /></div>`
+        : '';
+
+    const hasQrMarker = escaped.includes('{{QR}}');
+
     const formatted = escaped
         .replace(/\{\{BIG\}\}\n?/g, '<span class="big">')
         .replace(/\{\{\/BIG\}\}\n?/g, '</span>')
         .replace(/\{\{CENTER\}\}\n?/g, '<div class="center">')
         .replace(/\{\{\/CENTER\}\}\n?/g, '</div>')
         .replace(/\{\{BOLD\}\}\n?/g, '<span class="bold">')
-        .replace(/\{\{\/BOLD\}\}\n?/g, '</span>');
+        .replace(/\{\{\/BOLD\}\}\n?/g, '</span>')
+        .replace(/\{\{QR\}\}\n?/g, qrBlock);
 
-    const qrBlock = qrDataUrl
-        ? `<div style="text-align:center;margin:12px 0;"><img src="${qrDataUrl.replace(/"/g, '&quot;')}" alt="QR" width="200" height="200" style="image-rendering:pixelated;" /></div>`
-        : '';
+    // If no {{QR}} marker, append QR at the end (legacy behavior)
+    const trailingQr = (!hasQrMarker && qrBlock) ? qrBlock : '';
 
     return `<!DOCTYPE html>
 <html dir="rtl" lang="he">
@@ -53,7 +60,7 @@ function textToHtml(text, type, role, qrDataUrl) {
   }
 </style>
 </head>
-<body>${formatted}${qrBlock}
+<body>${formatted}${trailingQr}
 </body>
 </html>`;
 }

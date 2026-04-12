@@ -18,6 +18,7 @@ final class ThermalHebrewEscPosEncoder
         '{{/CENTER}}',
         '{{BOLD}}',
         '{{/BOLD}}',
+        '{{QR}}',
     ];
     /**
      * @param  bool  $applyRtl  כבה לבדיקות
