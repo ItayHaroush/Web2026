@@ -70,7 +70,8 @@ class NetworkPrinterAdapter implements PrinterAdapter
 
             // Strip markers before CP862 encoding (encoder doesn't know about them)
             $textForEncoding = $this->stripMarkers($payload);
-            $binary = $this->hebrewEncoder->encodeUtf8ToCp862($textForEncoding, true, $lineWidth);
+            // Keep centering decisions in PrintService to avoid double-centering drift.
+            $binary = $this->hebrewEncoder->encodeUtf8ToCp862($textForEncoding, true, null);
 
             $escposSuffix = $config['escpos_binary_suffix'] ?? '';
             if (! is_string($escposSuffix)) {
@@ -84,7 +85,7 @@ class NetworkPrinterAdapter implements PrinterAdapter
             if ($hasMarkers) {
                 // Inline marker mode: encode the raw payload with markers,
                 // then process line-by-line with ESC/POS commands
-                $encodedWithMarkers = $this->hebrewEncoder->encodeUtf8ToCp862($payload, true, $lineWidth);
+                $encodedWithMarkers = $this->hebrewEncoder->encodeUtf8ToCp862($payload, true, null);
                 $qrInserted = $this->writeWithInlineMarkers($socket, $encodedWithMarkers, $doubleHeight, $escposSuffix);
 
                 // Only append suffix at end if {{QR}} was not found (suffix already inserted at QR position)

@@ -508,7 +508,7 @@ class PrintService
             $lines[] = $order->customer_name;
         }
         if ($order->customer_phone && $order->customer_phone !== '0000000000') {
-            $lines[] = PhoneValidationService::formatIsraeliForDisplay($order->customer_phone);
+            $lines[] = 'טלפון: ' . PhoneValidationService::formatIsraeliForDisplay($order->customer_phone);
         }
         if ($order->delivery_address) {
             $lines[] = "כתובת: {$order->delivery_address}";
@@ -544,7 +544,7 @@ class PrintService
                     $addonName = is_string($addon) ? $addon : ($addon['name'] ?? $addon['addon_name'] ?? '');
                     $onSide = is_array($addon) && ! empty($addon['on_side']);
                     if ($addonName) {
-                        $prefix = $onSide ? '  בצד:' : '  ';
+                        $prefix = $onSide ? '  בצד: ' : '  תוספת: ';
                         $lines[] = "{$prefix}{$addonName}";
                     }
                 }
@@ -657,7 +657,7 @@ class PrintService
 
                     if ($addonName) {
                         $price = $addonPrice > 0 ? ' ' . $this->formatShekelAmount($addonPrice) : '';
-                        $lines[] = "  + {$addonName}{$price}";
+                        $lines[] = "  תוספת: {$addonName}{$price}";
                     }
                 }
 
@@ -996,9 +996,10 @@ class PrintService
         if ($textLen >= $width) {
             return $text;
         }
-        $padding = (int) (($width - $textLen) / 2);
+        $leftPadding = (int) floor(($width - $textLen) / 2);
+        $rightPadding = $width - $textLen - $leftPadding;
 
-        return str_repeat(' ', $padding) . $text;
+        return str_repeat(' ', $leftPadding) . $text . str_repeat(' ', $rightPadding);
     }
 
     /**
@@ -1056,7 +1057,7 @@ class PrintService
             $dash,
             $this->centerText('— מנות עיקריות —', $printer),
             '1x חזה עוף (גריל)',
-            '  + חומוס ' . $this->formatShekelAmount(5.00),
+            '  תוספת: חומוס ' . $this->formatShekelAmount(5.00),
             '',
             $this->centerText('— תוספות —', $printer),
             '2x צ׳יפס',
