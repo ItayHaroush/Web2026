@@ -269,10 +269,10 @@ class PrintService
         }
 
         $shareUrl = $base . '/r/' . rawurlencode((string) $slugPart);
-        
+
         try {
             $qrRaw = EscPosQrHelper::centeredQrCode($shareUrl);
-            
+
             // PROTECTION: Limit QR binary size
             if (strlen($qrRaw) > 10000) {
                 Log::error('PrintService: Share QR code too large', [
@@ -281,7 +281,7 @@ class PrintService
                 ]);
                 return 0;
             }
-            
+
             $qrB64 = base64_encode($qrRaw);
         } catch (\Exception $e) {
             Log::error('PrintService: Share QR generation failed', [
