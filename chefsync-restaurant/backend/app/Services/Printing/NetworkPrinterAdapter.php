@@ -84,12 +84,12 @@ class NetworkPrinterAdapter implements PrinterAdapter
                 || str_contains($payload, self::MARKER_BOLD)
                 || str_contains($payload, self::MARKER_QR);
 
-            // OPTIMIZATION: Encode once; reuse for both marker and non-marker modes
+            // RTL: disabled manual reversal — let CP862 codepage handle RTL natively
             if ($hasMarkers) {
-                $encoded = $this->hebrewEncoder->encodeUtf8ToCp862($payload, true, null);
+                $encoded = $this->hebrewEncoder->encodeUtf8ToCp862($payload, false, null);
             } else {
                 $textForEncoding = $this->stripMarkers($payload);
-                $encoded = $this->hebrewEncoder->encodeUtf8ToCp862($textForEncoding, true, null);
+                $encoded = $this->hebrewEncoder->encodeUtf8ToCp862($textForEncoding, false, null);
             }
 
             // CRITICAL FIX: Decode QR binary from base64 before sending (raw binary, not text)

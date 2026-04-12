@@ -563,11 +563,11 @@ class PrintService
                 $name = $item->menuItem?->name ?? $item->name ?? 'פריט';
                 $qty = $item->quantity ?? 1;
                 $lines[] = '{{BIG}}';
-                $lines[] = "{$qty}x {$name}";
+                $lines[] = $this->centerText("{$qty}x {$name}", $printer);
                 $lines[] = '{{/BIG}}';
 
                 if (! empty($item->variant_name)) {
-                    $lines[] = "  סוג: {$item->variant_name}";
+                    $lines[] = $this->centerText("סוג: {$item->variant_name}", $printer);
                 }
 
                 $addons = is_array($item->addons) ? $item->addons : [];
@@ -575,13 +575,13 @@ class PrintService
                     $addonName = is_string($addon) ? $addon : ($addon['name'] ?? $addon['addon_name'] ?? '');
                     $onSide = is_array($addon) && ! empty($addon['on_side']);
                     if ($addonName) {
-                        $prefix = $onSide ? '  בצד: ' : '  תוספת: ';
-                        $lines[] = "{$prefix}{$addonName}";
+                        $label = $onSide ? "בצד: {$addonName}" : $addonName;
+                        $lines[] = $this->centerText($label, $printer);
                     }
                 }
 
                 if (! empty($item->notes)) {
-                    $lines[] = "  הערה: {$item->notes}";
+                    $lines[] = $this->centerText("הערה: {$item->notes}", $printer);
                 }
 
                 $kitchenItemDone++;
@@ -679,7 +679,7 @@ class PrintService
                     $name .= " ({$item->variant_name})";
                 }
 
-                $lines[] = "{$qty}x {$name}";
+                $lines[] = $this->centerText("{$qty}x {$name}", $printer);
 
                 $addons = is_array($item->addons) ? $item->addons : [];
                 foreach ($addons as $addon) {
@@ -688,7 +688,7 @@ class PrintService
 
                     if ($addonName) {
                         $price = $addonPrice > 0 ? ' ' . $this->formatShekelAmount($addonPrice) : '';
-                        $lines[] = "  תוספת: {$addonName}{$price}";
+                        $lines[] = $this->centerText("{$addonName}{$price}", $printer);
                     }
                 }
 
@@ -710,11 +710,9 @@ class PrintService
 
         $totalAmount = $order->total_amount ?? 0;
         $lines[] = '{{BIG}}';
-        $lines[] = $this->receiptLineLabelAndAmount(
-            'סה"כ:',
-            $this->formatShekelAmount((float) $totalAmount),
-            $width,
-            12
+        $lines[] = $this->centerText(
+            'סה"כ: ' . $this->formatShekelAmount((float) $totalAmount),
+            $printer
         );
         $lines[] = '{{/BIG}}';
 
