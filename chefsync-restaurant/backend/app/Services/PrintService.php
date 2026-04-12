@@ -479,15 +479,15 @@ class PrintService
         }
 
         if ($missing || count($known) > 1) {
-            return '🍽🌯 סוג מנה (קטגוריות): מעורב';
+            return 'סוג מנה (קטגוריות): מעורב';
         }
 
         $only = array_key_first($known);
 
         return match ($only) {
-            'plate' => '🍽 סוג מנה (קטגוריות): צלחת',
-            'sandwich' => '🌯 סוג מנה (קטגוריות): כריך',
-            'both' => '🍽🌯 סוג מנה (קטגוריות): צלחת/כריך',
+            'plate' => 'סוג מנה (קטגוריות): צלחת',
+            'sandwich' =>  'סוג מנה (קטגוריות): כריך',
+            'both' =>  'סוג מנה (קטגוריות): צלחת/כריך',
             default => null,
         };
     }
@@ -676,7 +676,7 @@ class PrintService
                 $qty = $item->quantity ?? 1;
 
                 if (! empty($item->variant_name)) {
-                    $name .= " ({$item->variant_name})";
+                    $name .= " ){$item->variant_name}(";
                 }
 
                 $lines[] = $this->centerText("{$qty}x {$name}", $printer);
