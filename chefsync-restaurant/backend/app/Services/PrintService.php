@@ -114,6 +114,7 @@ class PrintService
         }
 
         // QR code for unpaid orders — link to payment page
+        // CRITICAL FIX: Sanitize and size-check QR binary to prevent memory exhaustion
         $qrBinary = '';
         $qrUrl = null;
         if ($order->payment_status === Order::PAYMENT_PENDING) {
@@ -123,11 +124,21 @@ class PrintService
                 ->first();
             if ($session && $session->payment_url) {
                 $qrUrl = $session->payment_url;
-                $qrBinary = base64_encode(EscPosQrHelper::centeredQrCode($qrUrl));
+                try {
+                    $qrRaw = EscPosQrHelper::centeredQrCode($qrUrl);
+                    // PROTECTION: Limit QR binary size (prevent memory bomb)
+                    if (strlen($qrRaw) <= 10000) { // ~10KB max for QR
+                        $qrBinary = base64_encode($qrRaw);
+                    } else {
+                        Log::warning('PrintService: QR code too large', ['size' => strlen($qrRaw)]);
+                    }
+                } catch (\Exception $e) {
+                    Log::error('PrintService: QR generation failed', ['error' => $e->getMessage()]);
+                }
             }
         }
 
-        $hasPaymentQr = $qrUrl !== null;
+        $hasPaymentQr = $qrUrl !== null && $qrBinary !== '';
         $jobCount = 0;
 
         foreach ($printers as $printer) {
@@ -243,6 +254,7 @@ class PrintService
 
     /**
      * בון QR לעמוד שיתוף המסעדה (הזמנה מהירה) — מדפסות receipt/general בלבד.
+     * CRITICAL FIX: Validate QR size to prevent memory explosion
      */
     public function printRestaurantShareQrSlip(Restaurant $restaurant): int
     {
@@ -257,8 +269,27 @@ class PrintService
         }
 
         $shareUrl = $base . '/r/' . rawurlencode((string) $slugPart);
-        $qrBinary = EscPosQrHelper::centeredQrCode($shareUrl);
-        $qrB64 = base64_encode($qrBinary);
+        
+        try {
+            $qrRaw = EscPosQrHelper::centeredQrCode($shareUrl);
+            
+            // PROTECTION: Limit QR binary size
+            if (strlen($qrRaw) > 10000) {
+                Log::error('PrintService: Share QR code too large', [
+                    'restaurant_id' => $restaurant->id,
+                    'size' => strlen($qrRaw),
+                ]);
+                return 0;
+            }
+            
+            $qrB64 = base64_encode($qrRaw);
+        } catch (\Exception $e) {
+            Log::error('PrintService: Share QR generation failed', [
+                'restaurant_id' => $restaurant->id,
+                'error' => $e->getMessage(),
+            ]);
+            return 0;
+        }
 
         $printers = Printer::where('restaurant_id', $restaurant->id)
             ->where('is_active', true)
@@ -786,8 +817,39 @@ class PrintService
 
     // ─── Infrastructure ───
 
+    /**
+     * بناء وتنفيذ طلب الطباعة بشكل آمن مع التحقق من الحدود
+     */
     private function executeJob(PrintJob $job, Printer $printer, string $payload, bool $bypassHoursCheck = false): void
     {
+        // PROTECTION: Prevent infinite retry loops (max 5 attempts per job)
+        if ($job->attempts >= 5) {
+            Log::error('PrintService: Job exceeded max attempts', [
+                'job_id' => $job->id,
+                'attempts' => $job->attempts,
+            ]);
+            $job->update([
+                'status' => 'failed',
+                'error_message' => 'Exceeded maximum retry attempts',
+            ]);
+
+            return;
+        }
+
+        // PROTECTION: Validate payload size early to prevent encoding explosions
+        if (strlen($payload) > 100000) { // ~100KB limit
+            Log::error('PrintService: Payload exceeds maximum size', [
+                'job_id' => $job->id,
+                'size' => strlen($payload),
+            ]);
+            $job->update([
+                'status' => 'failed',
+                'error_message' => 'Payload size exceeds limit',
+            ]);
+
+            return;
+        }
+
         // Block prints outside operating hours (prevents phantom prints from network scanners/cameras)
         if (! $bypassHoursCheck) {
             $restaurant = Restaurant::withoutGlobalScopes()->find($job->restaurant_id);
@@ -838,11 +900,17 @@ class PrintService
             $adapter = $this->getAdapter($printer);
             $job->update(['status' => 'printing', 'attempts' => $job->attempts + 1]);
 
-            $suffixRaw = null;
+            // CRITICAL FIX: Safely decode QR binary from base64 with size validation
+            $suffixRaw = '';
             if (! empty($job->payload['escpos_binary_suffix']) && is_string($job->payload['escpos_binary_suffix'])) {
-                $suffixRaw = base64_decode($job->payload['escpos_binary_suffix'], true);
-                if ($suffixRaw === false) {
-                    $suffixRaw = '';
+                $decoded = base64_decode($job->payload['escpos_binary_suffix'], true);
+                if ($decoded !== false && strlen($decoded) <= 10000) { // ~10KB max
+                    $suffixRaw = $decoded;
+                } else {
+                    Log::warning('PrintService: Invalid or oversized base64 QR suffix', [
+                        'job_id' => $job->id,
+                        'size' => is_string($decoded) ? strlen($decoded) : 'invalid',
+                    ]);
                 }
             }
 
@@ -852,7 +920,7 @@ class PrintService
                 'ip_address' => $printer->ip_address,
                 'port' => $printer->port,
                 'line_width' => $this->getLineWidth($printer),
-                'escpos_binary_suffix' => $suffixRaw ?? '',
+                'escpos_binary_suffix' => $suffixRaw, // Pass decoded binary, not base64
                 'double_height' => $isKitchenTicket,
             ]);
 
@@ -910,11 +978,13 @@ class PrintService
     /**
      * Reset stale "printing" bridge jobs back to pending_bridge (timeout fallback).
      * Should be called from a scheduled command every minute.
+     * PROTECTION: Only retry jobs that haven't exceeded max attempts.
      */
     public function retryStaleJobs(int $timeoutMinutes = 2): int
     {
         return PrintJob::where('status', 'printing')
             ->whereNotNull('device_id')
+            ->where('attempts', '<', 5)
             ->where('updated_at', '<', now()->subMinutes($timeoutMinutes))
             ->update([
                 'status' => 'pending_bridge',

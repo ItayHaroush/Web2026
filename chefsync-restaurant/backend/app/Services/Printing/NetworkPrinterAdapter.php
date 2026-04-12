@@ -51,6 +51,17 @@ class NetworkPrinterAdapter implements PrinterAdapter
             return false;
         }
 
+        // PROTECTION: Limit payload size to prevent memory exhaustion (RTL Hebrew encoding amplification)
+        $maxPayloadSize = 50000; // ~50KB limit
+        if (strlen($payload) > $maxPayloadSize) {
+            Log::error('NetworkPrinterAdapter: Payload exceeds size limit', [
+                'size' => strlen($payload),
+                'limit' => $maxPayloadSize,
+            ]);
+
+            return false;
+        }
+
         $socket = @fsockopen($ip, $port, $errno, $errstr, $timeout);
 
         if (! $socket) {
@@ -62,20 +73,33 @@ class NetworkPrinterAdapter implements PrinterAdapter
             return false;
         }
 
+        // PROTECTION: Set stream timeout to prevent fwrite blocking indefinitely
+        stream_set_timeout($socket, $timeout);
+        stream_set_blocking($socket, false);
+
+        // CRITICAL FIX: Ensure socket is always closed (prevent resource leak)
         try {
             $hasMarkers = str_contains($payload, self::MARKER_BIG)
                 || str_contains($payload, self::MARKER_CENTER)
                 || str_contains($payload, self::MARKER_BOLD)
                 || str_contains($payload, self::MARKER_QR);
 
-            // Strip markers before CP862 encoding (encoder doesn't know about them)
-            $textForEncoding = $this->stripMarkers($payload);
-            // Keep centering decisions in PrintService to avoid double-centering drift.
-            $binary = $this->hebrewEncoder->encodeUtf8ToCp862($textForEncoding, true, null);
+            // OPTIMIZATION: Encode once; reuse for both marker and non-marker modes
+            if ($hasMarkers) {
+                $encoded = $this->hebrewEncoder->encodeUtf8ToCp862($payload, true, null);
+            } else {
+                $textForEncoding = $this->stripMarkers($payload);
+                $encoded = $this->hebrewEncoder->encodeUtf8ToCp862($textForEncoding, true, null);
+            }
 
-            $escposSuffix = $config['escpos_binary_suffix'] ?? '';
-            if (! is_string($escposSuffix)) {
-                $escposSuffix = '';
+            // CRITICAL FIX: Decode QR binary from base64 before sending (raw binary, not text)
+            $qrBinary = '';
+            $escposRawBinary = $config['escpos_binary_suffix'] ?? '';
+            if (is_string($escposRawBinary) && $escposRawBinary !== '') {
+                $decoded = base64_decode($escposRawBinary, true);
+                if ($decoded !== false) {
+                    $qrBinary = $decoded;
+                }
             }
 
             fwrite($socket, "\x1B\x40");
@@ -83,25 +107,23 @@ class NetworkPrinterAdapter implements PrinterAdapter
             fwrite($socket, "\x1B\x20\x00");
 
             if ($hasMarkers) {
-                // Inline marker mode: encode the raw payload with markers,
-                // then process line-by-line with ESC/POS commands
-                $encodedWithMarkers = $this->hebrewEncoder->encodeUtf8ToCp862($payload, true, null);
-                $qrInserted = $this->writeWithInlineMarkers($socket, $encodedWithMarkers, $doubleHeight, $escposSuffix);
+                // Inline marker mode: process line-by-line with ESC/POS commands
+                $qrInserted = $this->writeWithInlineMarkers($socket, $encoded, $doubleHeight, $qrBinary);
 
                 // Only append suffix at end if {{QR}} was not found (suffix already inserted at QR position)
-                if (! $qrInserted && $escposSuffix !== '') {
-                    fwrite($socket, $escposSuffix);
+                if (! $qrInserted && $qrBinary !== '') {
+                    fwrite($socket, $qrBinary);
                 }
             } else {
                 // Legacy mode: global double-height flag
                 if ($doubleHeight) {
                     fwrite($socket, "\x1B\x21" . chr(self::MODE_DOUBLE_HEIGHT));
                 }
-                fwrite($socket, $binary);
+                fwrite($socket, $encoded);
                 fwrite($socket, "\x1B\x21" . chr(self::MODE_NORMAL));
 
-                if ($escposSuffix !== '') {
-                    fwrite($socket, $escposSuffix);
+                if ($qrBinary !== '') {
+                    fwrite($socket, $qrBinary);
                 }
             }
 
@@ -109,25 +131,25 @@ class NetworkPrinterAdapter implements PrinterAdapter
             // GS V 1 — חיתוך חלקי (חצי); 0 = מלא
             fwrite($socket, "\x1D\x56\x01");
 
-            fclose($socket);
-
             return true;
         } catch (\Exception $e) {
             Log::error("NetworkPrinterAdapter: Print failed to {$ip}:{$port}", [
                 'error' => $e->getMessage(),
             ]);
 
-            if (is_resource($socket)) {
-                fclose($socket);
-            }
-
             return false;
+        } finally {
+            // CRITICAL: Always close socket, even on exception (prevent resource leak)
+            if (is_resource($socket)) {
+                @fclose($socket);
+            }
         }
     }
 
     /**
      * Process {{BIG}}, {{CENTER}}, {{BOLD}}, {{QR}} markers per line — switch ESC/POS modes accordingly.
      * Marker lines are consumed (not printed). {{QR}} inserts QR binary at that position.
+     * CRITICAL FIX: Exact marker matching (no trim) to prevent RTL/Hebrew corruption and phantom loops
      *
      * @param  resource  $socket
      * @return bool  Whether {{QR}} was found and QR binary was inserted
@@ -140,43 +162,44 @@ class NetworkPrinterAdapter implements PrinterAdapter
         $qrInserted = false;
 
         foreach (explode("\n", $encoded) as $line) {
-            $trimmed = trim($line);
+            // CRITICAL: No trim() — exact match only to prevent RTL marker corruption
+            // Hebrew markers must match exactly; trim could break RTL detection
+            $isMarkerLine = false;
 
             // Check for marker lines (consume them, don't print)
-            if ($trimmed === self::MARKER_BIG) {
+            if ($line === self::MARKER_BIG) {
                 $isBig = true;
-                continue;
-            }
-            if ($trimmed === self::MARKER_NOBIG) {
+                $isMarkerLine = true;
+            } elseif ($line === self::MARKER_NOBIG) {
                 $isBig = false;
                 fwrite($socket, "\x1B\x21" . chr(self::MODE_NORMAL));
-                continue;
-            }
-            if ($trimmed === self::MARKER_CENTER) {
+                $isMarkerLine = true;
+            } elseif ($line === self::MARKER_CENTER) {
                 $isCenter = true;
                 fwrite($socket, "\x1B\x61\x01"); // ESC a 1 — center alignment
-                continue;
-            }
-            if ($trimmed === self::MARKER_NOCENTER) {
+                $isMarkerLine = true;
+            } elseif ($line === self::MARKER_NOCENTER) {
                 $isCenter = false;
                 fwrite($socket, "\x1B\x61\x00"); // ESC a 0 — left alignment
-                continue;
-            }
-            if ($trimmed === self::MARKER_BOLD) {
+                $isMarkerLine = true;
+            } elseif ($line === self::MARKER_BOLD) {
                 $isBold = true;
                 fwrite($socket, "\x1B\x45\x01"); // ESC E 1 — bold on
-                continue;
-            }
-            if ($trimmed === self::MARKER_NOBOLD) {
+                $isMarkerLine = true;
+            } elseif ($line === self::MARKER_NOBOLD) {
                 $isBold = false;
                 fwrite($socket, "\x1B\x45\x00"); // ESC E 0 — bold off
-                continue;
-            }
-            if ($trimmed === self::MARKER_QR) {
+                $isMarkerLine = true;
+            } elseif ($line === self::MARKER_QR) {
                 if ($qrBinary !== '') {
                     fwrite($socket, $qrBinary);
                     $qrInserted = true;
                 }
+                $isMarkerLine = true;
+            }
+
+            // Skip marker lines entirely (don't send to printer)
+            if ($isMarkerLine) {
                 continue;
             }
 
