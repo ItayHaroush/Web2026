@@ -8,10 +8,20 @@ import posApi from '../api/posApi';
 function textToHtml(text, type, role, qrDataUrl) {
     const title = type === 'receipt' ? 'קבלה' : type === 'kitchen_ticket' ? 'הזמנה למטבח' : type === 'share_qr_slip' ? 'QR שיתוף' : 'הדפסה';
 
+    // Escape HTML first
     const escaped = text
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;');
+
+    // Convert formatting markers (they use {{ }} so they survived HTML escaping)
+    const formatted = escaped
+        .replace(/\{\{BIG\}\}\n?/g, '<span class="big">')
+        .replace(/\{\{\/BIG\}\}\n?/g, '</span>')
+        .replace(/\{\{CENTER\}\}\n?/g, '<div class="center">')
+        .replace(/\{\{\/CENTER\}\}\n?/g, '</div>')
+        .replace(/\{\{BOLD\}\}\n?/g, '<span class="bold">')
+        .replace(/\{\{\/BOLD\}\}\n?/g, '</span>');
 
     const qrBlock = qrDataUrl
         ? `<div style="text-align:center;margin:12px 0;"><img src="${qrDataUrl.replace(/"/g, '&quot;')}" alt="QR" width="200" height="200" style="image-rendering:pixelated;" /></div>`
@@ -34,13 +44,16 @@ function textToHtml(text, type, role, qrDataUrl) {
     white-space: pre-wrap;
     line-height: 1.4;
   }
+  .big { font-size: 1.6em; font-weight: bold; }
+  .center { text-align: center; }
+  .bold { font-weight: bold; }
   @media print {
     body { padding: 0; margin: 0; background: #fff; }
     @page { margin: 5mm; size: 80mm auto; }
   }
 </style>
 </head>
-<body>${escaped}${qrBlock}
+<body>${formatted}${qrBlock}
 </body>
 </html>`;
 }

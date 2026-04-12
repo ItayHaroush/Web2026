@@ -28,6 +28,12 @@ object PrinterBridge {
 
     private const val MARKER_BIG   = "{{BIG}}"
     private const val MARKER_NOBIG = "{{/BIG}}"
+    private const val MARKER_CENTER   = "{{CENTER}}"
+    private const val MARKER_NOCENTER = "{{/CENTER}}"
+    private const val MARKER_BOLD   = "{{BOLD}}"
+    private const val MARKER_NOBOLD = "{{/BOLD}}"
+
+    private val ALL_MARKERS = setOf(MARKER_BIG, MARKER_NOBIG, MARKER_CENTER, MARKER_NOCENTER, MARKER_BOLD, MARKER_NOBOLD)
 
     data class PrintResult(
         val success: Boolean,
@@ -41,7 +47,7 @@ object PrinterBridge {
             socket.soTimeout = timeoutMs
 
             val out: OutputStream = socket.getOutputStream()
-            val hasMarkers = payload.contains(MARKER_BIG)
+            val hasMarkers = ALL_MARKERS.any { payload.contains(it) }
             val prepared = prepareThermalRtlPayload(payload, lineWidth)
 
             out.write(ESC_INIT)
@@ -81,29 +87,61 @@ object PrinterBridge {
             .replace("\r\n", "\n")
             .replace("\r", "\n")
             .lines()
-            .joinToString("\n") { centerIfNeeded(smartReverseHebrewLine(it), lineWidth) }
+            .joinToString("\n") {
+                if (it.trim() in ALL_MARKERS) it
+                else centerIfNeeded(smartReverseHebrewLine(it), lineWidth)
+            }
+
+    /** ESC a 1 — center alignment */
+    private val ESC_ALIGN_CENTER = byteArrayOf(0x1B, 0x61, 0x01)
+    /** ESC a 0 — left alignment */
+    private val ESC_ALIGN_LEFT = byteArrayOf(0x1B, 0x61, 0x00)
+    /** ESC E 1 — bold on */
+    private val ESC_BOLD_ON = byteArrayOf(0x1B, 0x45, 0x01)
+    /** ESC E 0 — bold off */
+    private val ESC_BOLD_OFF = byteArrayOf(0x1B, 0x45, 0x00)
 
     /**
-     * Process {{BIG}} / {{/BIG}} markers per line.
+     * Process {{BIG}}, {{/BIG}}, {{CENTER}}, {{/CENTER}}, {{BOLD}}, {{/BOLD}} markers per line.
      * Marker lines are consumed — they switch the ESC mode for subsequent lines.
      */
     private fun writeWithInlineMarkers(out: OutputStream, text: String) {
         var isBig = false
         for (line in text.split("\n")) {
             val trimmed = line.trim()
-            if (trimmed == MARKER_BIG) {
-                isBig = true
-                continue
-            }
-            if (trimmed == MARKER_NOBIG) {
-                isBig = false
-                out.write(ESC_FONT_NORMAL)
-                continue
+            when (trimmed) {
+                MARKER_BIG -> {
+                    isBig = true
+                    continue
+                }
+                MARKER_NOBIG -> {
+                    isBig = false
+                    out.write(ESC_FONT_NORMAL)
+                    continue
+                }
+                MARKER_CENTER -> {
+                    out.write(ESC_ALIGN_CENTER)
+                    continue
+                }
+                MARKER_NOCENTER -> {
+                    out.write(ESC_ALIGN_LEFT)
+                    continue
+                }
+                MARKER_BOLD -> {
+                    out.write(ESC_BOLD_ON)
+                    continue
+                }
+                MARKER_NOBOLD -> {
+                    out.write(ESC_BOLD_OFF)
+                    continue
+                }
             }
             out.write(if (isBig) ESC_DOUBLE_HEIGHT else ESC_FONT_NORMAL)
             out.write((line + "\n").toByteArray(cp862))
         }
         out.write(ESC_FONT_NORMAL)
+        out.write(ESC_ALIGN_LEFT)
+        out.write(ESC_BOLD_OFF)
     }
 
     /**

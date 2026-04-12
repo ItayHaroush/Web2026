@@ -10,6 +10,12 @@ use Illuminate\Support\Facades\Log;
  */
 final class ThermalHebrewEscPosEncoder
 {
+    /** Formatting markers — these survive CP862 encoding (pure ASCII) and are processed by the printer adapter. */
+    private const MARKERS = [
+        '{{BIG}}', '{{/BIG}}',
+        '{{CENTER}}', '{{/CENTER}}',
+        '{{BOLD}}', '{{/BOLD}}',
+    ];
     /**
      * @param  bool  $applyRtl  כבה לבדיקות
      * @param  int|null  $lineWidth  רוחב שורה (תווים) למרכוז שורות עבריות קצרות; null = בלי מרכוז נוסף
@@ -77,6 +83,9 @@ final class ThermalHebrewEscPosEncoder
         if ($line === '') {
             return false;
         }
+        if ($this->isMarkerLine($line)) {
+            return false;
+        }
         if (mb_strlen($line, 'UTF-8') >= $width) {
             return false;
         }
@@ -119,6 +128,11 @@ final class ThermalHebrewEscPosEncoder
     private function smartReverseHebrewLine(string $line): string
     {
         if ($line === '') {
+            return $line;
+        }
+
+        // Skip marker lines — they're formatting instructions, not printable text
+        if ($this->isMarkerLine($line)) {
             return $line;
         }
 
@@ -242,5 +256,15 @@ final class ThermalHebrewEscPosEncoder
     private function normalizeNewlinesForPrinter(string $s): string
     {
         return str_replace(["\r\n", "\r"], "\n", $s);
+    }
+
+    /**
+     * Check if a line is a formatting marker (should not be RTL-reversed or centered).
+     */
+    private function isMarkerLine(string $line): bool
+    {
+        $trimmed = trim($line);
+
+        return in_array($trimmed, self::MARKERS, true);
     }
 }
