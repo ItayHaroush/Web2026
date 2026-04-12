@@ -225,7 +225,7 @@ class POSController extends Controller
             ->whereNull('clock_out')
             ->with('user:id,name,role')
             ->get()
-            ->map(fn ($log) => [
+            ->map(fn($log) => [
                 'name' => $log->user->name ?? '—',
                 'clock_in' => $log->clock_in->format('H:i'),
             ]);
@@ -251,7 +251,7 @@ class POSController extends Controller
             ->orderBy('closed_at', 'desc')
             ->limit(60)
             ->get()
-            ->map(fn ($s) => [
+            ->map(fn($s) => [
                 'id' => $s->id,
                 'cashier' => $s->user->name ?? '—',
                 'opened_at' => $s->opened_at->format('d/m/Y H:i'),
@@ -356,7 +356,7 @@ class POSController extends Controller
 
         $zcredit = $zCreditResolver->forRestaurantContext($restaurant, $request->pos_session);
         $amount = round((float) $request->amount, 2);
-        $uniqueId = 'shift_credit_'.$shift->id.'_'.uniqid('', true);
+        $uniqueId = 'shift_credit_' . $shift->id . '_' . uniqid('', true);
         $result = $zcredit->chargePinPad($amount, $uniqueId);
 
         if (! $result['success']) {
@@ -412,7 +412,7 @@ class POSController extends Controller
                 'expected_in_register' => $totals->expectedRegisterBalance((float) $shift->opening_balance),
                 'total_sales' => $totals->totalSales(),
                 'order_count' => $totals->paymentsWithOrderIdCount,
-                'movements' => $movements->map(fn ($m) => [
+                'movements' => $movements->map(fn($m) => [
                     'id' => $m->id,
                     'type' => $m->type,
                     'payment_method' => $m->payment_method,
@@ -434,7 +434,7 @@ class POSController extends Controller
             ->with('user:id,name,role')
             ->orderBy('clock_in', 'desc')
             ->get()
-            ->map(fn ($log) => [
+            ->map(fn($log) => [
                 'id' => $log->id,
                 'user_id' => $log->user_id,
                 'employee_name' => $log->user->name ?? '—',
@@ -460,7 +460,7 @@ class POSController extends Controller
             ->with('items.menuItem')
             ->limit(100)
             ->get()
-            ->map(fn ($o) => $this->formatOrder($o));
+            ->map(fn($o) => $this->formatOrder($o));
 
         return response()->json(['success' => true, 'orders' => $orders]);
     }
@@ -593,7 +593,7 @@ class POSController extends Controller
                     'change' => $change,
                 ]);
             } catch (\Exception $e) {
-                Log::error('POS print failed: '.$e->getMessage());
+                Log::error('POS print failed: ' . $e->getMessage());
             }
         } elseif ($isHold) {
             // השהיה / שלב יצירה לתשלום מפוצל — בון למטבח מיד; אישור רק אחרי סגירת תשלום
@@ -602,7 +602,7 @@ class POSController extends Controller
                 $freshOrder = $order->fresh()->load('items.menuItem.category', 'restaurant');
                 $printResults['kitchen'] = $printService->printOrder($freshOrder);
             } catch (\Exception $e) {
-                Log::error('POS hold kitchen print failed: '.$e->getMessage());
+                Log::error('POS hold kitchen print failed: ' . $e->getMessage());
             }
         }
 
@@ -673,11 +673,11 @@ class POSController extends Controller
                 'message' => 'ההזמנה לא נמצאה',
             ], 404);
         } catch (\Exception $e) {
-            Log::error('Receipt print failed: '.$e->getMessage());
+            Log::error('Receipt print failed: ' . $e->getMessage());
 
             return response()->json([
                 'success' => false,
-                'message' => 'שגיאה בהדפסת אישור: '.$e->getMessage(),
+                'message' => 'שגיאה בהדפסת אישור: ' . $e->getMessage(),
             ], 500);
         }
     }
@@ -726,11 +726,11 @@ class POSController extends Controller
                 'message' => 'ההזמנה לא נמצאה',
             ], 404);
         } catch (\Exception $e) {
-            Log::error('Kitchen print failed: '.$e->getMessage());
+            Log::error('Kitchen print failed: ' . $e->getMessage());
 
             return response()->json([
                 'success' => false,
-                'message' => 'שגיאה בהדפסה למטבח: '.$e->getMessage(),
+                'message' => 'שגיאה בהדפסה למטבח: ' . $e->getMessage(),
             ], 500);
         }
     }
@@ -779,13 +779,13 @@ class POSController extends Controller
                 'jobs' => $jobs,
             ]);
         } catch (\Throwable $e) {
-            Log::error('Share QR slip print failed: '.$e->getMessage(), [
+            Log::error('Share QR slip print failed: ' . $e->getMessage(), [
                 'trace' => $e->getTraceAsString(),
             ]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'שגיאה בהדפסת QR שיתוף: '.$e->getMessage(),
+                'message' => 'שגיאה בהדפסת QR שיתוף: ' . $e->getMessage(),
             ], 500);
         }
     }
@@ -842,7 +842,7 @@ class POSController extends Controller
                     $printResults['receipt'] = $printService->printReceipt($order);
                 }
             } catch (\Exception $e) {
-                Log::error('POS credit print failed: '.$e->getMessage());
+                Log::error('POS credit print failed: ' . $e->getMessage());
             }
 
             $order = Order::withoutGlobalScopes()
@@ -911,7 +911,7 @@ class POSController extends Controller
                         $printService->printReceipt($fresh);
                     }
                 } catch (\Exception $e) {
-                    Log::error('POS chargeOrderCredit print failed: '.$e->getMessage());
+                    Log::error('POS chargeOrderCredit print failed: ' . $e->getMessage());
                 }
             }
         }
@@ -937,7 +937,7 @@ class POSController extends Controller
             ->with('items.menuItem')
             ->limit(50)
             ->get()
-            ->map(fn ($o) => array_merge($this->formatOrder($o), [
+            ->map(fn($o) => array_merge($this->formatOrder($o), [
                 'table_number' => $o->table_number,
                 'order_type' => $o->order_type,
                 'delivery_method' => $o->delivery_method,
@@ -955,7 +955,7 @@ class POSController extends Controller
             ->with('items.menuItem')
             ->limit(30)
             ->get()
-            ->map(fn ($o) => array_merge($this->formatOrder($o), [
+            ->map(fn($o) => array_merge($this->formatOrder($o), [
                 'table_number' => $o->table_number,
                 'order_type' => $o->order_type,
                 'delivery_method' => $o->delivery_method,
@@ -1036,7 +1036,7 @@ class POSController extends Controller
             $freshOrder = $order->fresh()->load('items.menuItem.category', 'restaurant');
             $printResult = $printService->printReceipt($freshOrder, ['change' => $change]);
         } catch (\Exception $e) {
-            Log::error('Print receipt failed for pending order cash payment: '.$e->getMessage());
+            Log::error('Print receipt failed for pending order cash payment: ' . $e->getMessage());
         }
 
         // בדוק אם יש שולחן פתוח מחובר להזמנה וסגור אותו
@@ -1105,7 +1105,7 @@ class POSController extends Controller
             $zcredit = $restaurant
                 ? app(ZCreditResolver::class)->forOrder($order, $request->pos_session)
                 : new ZCreditService(null, null, null, false);
-            $result = $zcredit->chargePinPad($creditAmount, 'split_'.$order->id);
+            $result = $zcredit->chargePinPad($creditAmount, 'split_' . $order->id);
 
             if (! $result['success']) {
                 return response()->json([
@@ -1185,7 +1185,7 @@ class POSController extends Controller
                 $freshOrder = $order->fresh()->load('items.menuItem.category', 'restaurant');
                 $printResults['receipt'] = $printService->printReceipt($freshOrder);
             } catch (\Exception $e) {
-                Log::error('POS split payment print failed: '.$e->getMessage());
+                Log::error('POS split payment print failed: ' . $e->getMessage());
             }
         }
 
@@ -1328,7 +1328,7 @@ class POSController extends Controller
             $newLineItems->load('menuItem.category');
             $printService->printKitchenTicketForItems($order->fresh()->load('restaurant'), $newLineItems);
         } catch (\Exception $e) {
-            Log::error('Tab kitchen print failed: '.$e->getMessage());
+            Log::error('Tab kitchen print failed: ' . $e->getMessage());
         }
 
         return response()->json([
@@ -1347,7 +1347,7 @@ class POSController extends Controller
             ->with(['order.items.menuItem', 'openedBy:id,name'])
             ->orderBy('opened_at', 'desc')
             ->get()
-            ->map(fn ($tab) => $this->formatTab($tab));
+            ->map(fn($tab) => $this->formatTab($tab));
 
         return response()->json(['success' => true, 'tabs' => $tabs]);
     }
@@ -1428,7 +1428,7 @@ class POSController extends Controller
             $newLineItems->load('menuItem.category');
             $printService->printKitchenTicketForItems($order->fresh()->load('restaurant'), $newLineItems);
         } catch (\Exception $e) {
-            Log::error('Tab add items kitchen print failed: '.$e->getMessage());
+            Log::error('Tab add items kitchen print failed: ' . $e->getMessage());
         }
 
         return response()->json([
@@ -1603,8 +1603,10 @@ class POSController extends Controller
         $tz = 'Asia/Jerusalem';
         $dateStr = $closedAt->copy()->timezone($tz)->toDateString();
 
-        if ($restaurant->owner_activity_started_at
-            && $dateStr < $restaurant->owner_activity_started_at->toDateString()) {
+        if (
+            $restaurant->owner_activity_started_at
+            && $dateStr < $restaurant->owner_activity_started_at->toDateString()
+        ) {
             $result['message'] = 'לפני תאריך תחילת הפעילות — דוח יומי מערכתי לא נוצר';
 
             return $result;
@@ -1639,7 +1641,7 @@ class POSController extends Controller
                 'restaurant_id' => $restaurantId,
                 'error' => $e->getMessage(),
             ]);
-            $result['message'] = 'דוח יומי מערכתי: '.$e->getMessage();
+            $result['message'] = 'דוח יומי מערכתי: ' . $e->getMessage();
         }
 
         return $result;
@@ -1686,7 +1688,7 @@ class POSController extends Controller
         })->toArray();
 
         $untrackedCash = collect($ordersForReport)
-            ->filter(fn ($o) => ! $o['tracked'] && $o['payment_method'] === 'מזומן' && $o['payment_status'] === 'שולם' && $o['status'] !== 'cancelled')
+            ->filter(fn($o) => ! $o['tracked'] && $o['payment_method'] === 'מזומן' && $o['payment_status'] === 'שולם' && $o['status'] !== 'cancelled')
             ->values();
 
         return [
@@ -1716,7 +1718,7 @@ class POSController extends Controller
             'refunds' => round($totals->refundsTotal, 2),
             'refund_count' => $totals->refundCount,
 
-            'movements' => $movements->map(fn ($m) => [
+            'movements' => $movements->map(fn($m) => [
                 'id' => $m->id,
                 'type' => $m->type,
                 'payment_method' => $m->payment_method,
@@ -1783,7 +1785,7 @@ class POSController extends Controller
             'discount_value' => $order->discount_value ? (float) $order->discount_value : null,
             'discount_reason' => $order->discount_reason,
             'promotion_discount' => (float) ($order->promotion_discount ?? 0),
-            'items' => $order->items->map(fn ($i) => [
+            'items' => $order->items->map(fn($i) => [
                 'id' => $i->id,
                 'name' => $i->name,
                 'quantity' => (int) $i->quantity,
@@ -1817,14 +1819,14 @@ class POSController extends Controller
             'total' => $order ? (float) $order->total_amount : 0,
             'item_count' => $order ? $order->items->sum('quantity') : 0,
             'payment_status' => $order?->payment_status ?? 'pending',
-            'items' => $order ? $order->items->map(fn ($i) => [
+            'items' => $order ? $order->items->map(fn($i) => [
                 'id' => $i->id,
                 'name' => $i->menuItem?->name ?? $i->name ?? 'פריט',
                 'quantity' => (int) $i->quantity,
                 'unit_price' => (float) $i->price_at_order,
                 'variant_name' => $i->variant_name,
                 'addons_text' => $i->addons
-                    ? collect($i->addons)->map(fn ($a) => $a['name'] ?? '')->filter()->join(', ')
+                    ? collect($i->addons)->map(fn($a) => $a['name'] ?? '')->filter()->join(', ')
                     : null,
             ])->toArray() : [],
         ];
@@ -1857,7 +1859,7 @@ class POSController extends Controller
             NotificationLog::create([
                 'channel' => 'system',
                 'type' => 'order_alert',
-                'title' => 'הזמנת POS: '.($restaurant->name ?? '')." — #{$order->id}",
+                'title' => 'הזמנת POS: ' . ($restaurant->name ?? '') . " — #{$order->id}",
                 'body' => "{$order->customer_name} — ₪{$order->total_amount} ({$methodLabel})",
                 'sender_id' => null,
                 'target_restaurant_ids' => [$restaurantId],
@@ -1877,7 +1879,7 @@ class POSController extends Controller
                 if ($tokens->isNotEmpty()) {
                     $fcm = app(FcmService::class);
                     foreach ($tokens as $token) {
-                        $fcm->sendToToken($token, 'הזמנת POS — '.($restaurant->name ?? ''), "{$order->customer_name} — ₪{$order->total_amount}", [
+                        $fcm->sendToToken($token, 'הזמנת POS — ' . ($restaurant->name ?? ''), "{$order->customer_name} — ₪{$order->total_amount}", [
                             'type' => 'super_admin_order_alert',
                             'orderId' => (string) $order->id,
                             'tenantId' => $tenantId,

@@ -117,12 +117,12 @@ export default function POSPendingPaymentModal({ headers, posToken, onClose, onP
                             await posApi.closeTab(tab.id, headers, posToken);
                             closedTab = { id: tab.id, table_number: tab.table_number };
                         }
-                    } catch {}
+                    } catch { }
                 }
                 // אישור (ובון) נשלחים מהשרת עבור קופה ללא שולחן; שולחן — רק אישור מהלקוח
                 const skipClientReceipt = order.source === 'pos' && !order.table_number;
                 if (!skipClientReceipt) {
-                    try { await posApi.printReceipt(order.id, headers, posToken); } catch {}
+                    try { await posApi.printReceipt(order.id, headers, posToken); } catch { }
                 }
 
                 setResult({
@@ -361,9 +361,8 @@ export default function POSPendingPaymentModal({ headers, posToken, onClose, onP
                             return (
                                 <div
                                     key={order.id}
-                                    className={`bg-slate-900/50 rounded-2xl border overflow-hidden ${
-                                        isFailed ? 'border-red-500/40 ring-1 ring-red-500/20' : 'border-slate-700/50'
-                                    }`}
+                                    className={`bg-slate-900/50 rounded-2xl border overflow-hidden ${isFailed ? 'border-red-500/40 ring-1 ring-red-500/20' : 'border-slate-700/50'
+                                        }`}
                                 >
                                     <div className="p-4">
                                         <div className="flex items-center justify-between mb-3">

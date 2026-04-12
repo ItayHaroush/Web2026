@@ -576,7 +576,7 @@ class TestPrintBridge extends Command
             ->where('status', 'pending_bridge')
             ->where(function ($q) use ($other) {
                 $q->whereNull('device_id')
-                  ->orWhere('device_id', $other->id);
+                    ->orWhere('device_id', $other->id);
             })
             ->exists();
 
@@ -586,7 +586,7 @@ class TestPrintBridge extends Command
             ->where('status', 'pending_bridge')
             ->where(function ($q) use ($target) {
                 $q->whereNull('device_id')
-                  ->orWhere('device_id', $target->id);
+                    ->orWhere('device_id', $target->id);
             })
             ->exists();
 

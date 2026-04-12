@@ -68,7 +68,7 @@ class CustomerOrderMailService
 
             SystemErrorReporter::report(
                 'email_failure',
-                'מייל סטטוס הזמנה ללקוח נכשל: '.$e->getMessage(),
+                'מייל סטטוס הזמנה ללקוח נכשל: ' . $e->getMessage(),
                 'warning',
                 $order->tenant_id,
                 $order->id,
@@ -80,7 +80,7 @@ class CustomerOrderMailService
             try {
                 $customerId = isset($customer) ? $customer->id : null;
                 $email = isset($customer) ? $customer->email : 'unknown';
-                EmailLogService::log($email, 'order_'.$newStatus, "Failed: order #{$order->id}", $customerId, 'failed', $e->getMessage());
+                EmailLogService::log($email, 'order_' . $newStatus, "Failed: order #{$order->id}", $customerId, 'failed', $e->getMessage());
             } catch (\Throwable $logErr) {
                 // Silently ignore logging failures
             }
