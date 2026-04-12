@@ -43,7 +43,7 @@ class CustomerOrderMailService
 
             if ($newStatus === 'delivered') {
                 $mailable = new CustomerOrderReceiptMail($order, $customer, $restaurant);
-                $subject = "קבלה - הזמנה #{$order->id}";
+                $subject = "אישור - הזמנה #{$order->id}";
                 $type = 'order_receipt';
                 Mail::to($customer->email)->send($mailable);
             } elseif ($newStatus === 'cancelled') {

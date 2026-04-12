@@ -227,6 +227,12 @@ class HypOrderCallbackController extends Controller
                 $orderUpdates['actual_payment_method'] = 'credit_card';
             }
         }
+
+        // --- שמירת מספר חשבונית EZcount (אם HYP הפיק) ---
+        if (!empty($params['hesh_asm'])) {
+            $orderUpdates['invoice_number'] = $params['hesh_asm'];
+            $orderUpdates['invoice_generated_at'] = now();
+        }
         $order->update($orderUpdates);
 
         try {
@@ -436,6 +442,7 @@ class HypOrderCallbackController extends Controller
             'fild3' => $input['Fild3'] ?? '',
             'errMsg' => $input['errMsg'] ?? $input['ErrMsg'] ?? '',
             'sign' => $input['Sign'] ?? '',
+            'hesh_asm' => $input['HeshASM'] ?? '',
         ];
     }
 

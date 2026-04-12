@@ -12,7 +12,7 @@ import {
 
 const ROLE_LABELS = {
     kitchen: 'מטבח',
-    receipt: 'קופה / קבלה',
+    receipt: 'קופה / אישור',
     bar: 'בר',
     general: 'כללי',
 };
@@ -347,7 +347,7 @@ export default function AdminPrintDevices() {
                                             className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
                                         >
                                             <option value="kitchen">מטבח</option>
-                                            <option value="receipt">קופה / קבלה</option>
+                                            <option value="receipt">קופה / אישור</option>
                                             <option value="bar">בר</option>
                                             <option value="general">כללי</option>
                                         </select>

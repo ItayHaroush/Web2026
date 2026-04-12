@@ -40,6 +40,7 @@ class PaymentSettingsController extends Controller
                 'available_payment_methods' => $restaurant->getPublicPaymentMethods(),
                 'tier' => $restaurant->tier ?? 'basic',
                 'hyp_setup_fee_charged' => (bool) $restaurant->hyp_setup_fee_charged,
+                'ezcount_invoices_enabled' => (bool) $restaurant->ezcount_invoices_enabled,
             ],
         ]);
     }
@@ -57,6 +58,7 @@ class PaymentSettingsController extends Controller
             'accepted_payment_methods' => 'required|array|min:1',
             'accepted_payment_methods.*' => 'in:cash,credit_card',
             'agree_setup_fee' => 'nullable|boolean',
+            'ezcount_invoices_enabled' => 'nullable|boolean',
         ]);
 
         $restaurant = Restaurant::withoutGlobalScope('tenant')
@@ -118,6 +120,11 @@ class PaymentSettingsController extends Controller
             'hyp_setup_fee_charged' => $restaurant->hyp_setup_fee_charged,
         ];
 
+        // עדכון טוגל חשבוניות EZcount
+        if (array_key_exists('ezcount_invoices_enabled', $validated)) {
+            $updateData['ezcount_invoices_enabled'] = (bool) $validated['ezcount_invoices_enabled'];
+        }
+
         // עדכון terminal ID אם סופק
         if (array_key_exists('hyp_terminal_id', $validated)) {
             $updateData['hyp_terminal_id'] = $validated['hyp_terminal_id'];
@@ -163,6 +170,7 @@ class PaymentSettingsController extends Controller
                 'available_payment_methods' => $restaurant->getPublicPaymentMethods(),
                 'tier' => $restaurant->tier ?? 'basic',
                 'hyp_setup_fee_charged' => (bool) $restaurant->hyp_setup_fee_charged,
+                'ezcount_invoices_enabled' => (bool) $restaurant->ezcount_invoices_enabled,
             ],
         ]);
     }

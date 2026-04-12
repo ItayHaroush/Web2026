@@ -13,6 +13,7 @@ use App\Http\Controllers\DisplayScreenController;
 use App\Http\Controllers\FcmTokenController;
 use App\Http\Controllers\HypOrderCallbackController;
 use App\Http\Controllers\HypSubscriptionCallbackController;
+use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\KioskController;
 use App\Http\Controllers\MenuController;
 use App\Http\Controllers\OrderController;
@@ -673,6 +674,11 @@ Route::prefix('payments/hyp')->group(function () {
     Route::post('/order/success-json', [HypOrderCallbackController::class, 'handleSuccessJson'])->name('payments.hyp.order.success-json');
     Route::post('/order/error-json', [HypOrderCallbackController::class, 'handleErrorJson'])->name('payments.hyp.order.error-json');
 });
+
+// ============================================
+// חשבוניות EZcount — צפייה/הורדת PDF (ציבורי)
+// ============================================
+Route::get('/orders/{id}/invoice', [InvoiceController::class, 'show'])->name('orders.invoice');
 
 // ============================================
 // Print Agent API (device-token auth)

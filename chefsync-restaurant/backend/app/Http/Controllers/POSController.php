@@ -596,7 +596,7 @@ class POSController extends Controller
                 Log::error('POS print failed: '.$e->getMessage());
             }
         } elseif ($isHold) {
-            // השהיה / שלב יצירה לתשלום מפוצל — בון למטבח מיד; קבלה רק אחרי סגירת תשלום
+            // השהיה / שלב יצירה לתשלום מפוצל — בון למטבח מיד; אישור רק אחרי סגירת תשלום
             try {
                 $printService = app(PrintService::class);
                 $freshOrder = $order->fresh()->load('items.menuItem.category', 'restaurant');
@@ -677,7 +677,7 @@ class POSController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'שגיאה בהדפסת קבלה: '.$e->getMessage(),
+                'message' => 'שגיאה בהדפסת אישור: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -897,7 +897,7 @@ class POSController extends Controller
                 ->where('restaurant_id', $restaurantId)
                 ->with('items.menuItem.category', 'restaurant')
                 ->find($orderId);
-            // קופה ללא שולחן: אחרי השהיה הבון כבר יצא; אחרי יצירת אשראי שנכשלה — בון + קבלה
+            // קופה ללא שולחן: אחרי השהיה הבון כבר יצא; אחרי יצירת אשראי שנכשלה — בון + אישור
             if ($fresh && $fresh->source === 'pos' && empty($fresh->table_number)) {
                 try {
                     $printService = app(PrintService::class);
@@ -1029,7 +1029,7 @@ class POSController extends Controller
             ]);
         }
 
-        // קבלה בלבד — בון למטבח כבר יצא ביצירת השהיה / פיצול
+        // אישור בלבד — בון למטבח כבר יצא ביצירת השהיה / פיצול
         $printResult = 0;
         try {
             $printService = app(PrintService::class);
@@ -1177,7 +1177,7 @@ class POSController extends Controller
             }
         });
 
-        // בון כבר הודפס ביצירת ההזמנה (hold); כאן רק קבלה
+        // בון כבר הודפס ביצירת ההזמנה (hold); כאן רק אישור
         $printResults = ['kitchen' => 0, 'receipt' => 0];
         if ($order->source === 'pos') {
             try {

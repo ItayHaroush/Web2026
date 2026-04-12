@@ -119,7 +119,7 @@ export default function POSPendingPaymentModal({ headers, posToken, onClose, onP
                         }
                     } catch {}
                 }
-                // קבלה (ובון) נשלחים מהשרת עבור קופה ללא שולחן; שולחן — רק קבלה מהלקוח
+                // אישור (ובון) נשלחים מהשרת עבור קופה ללא שולחן; שולחן — רק אישור מהלקוח
                 const skipClientReceipt = order.source === 'pos' && !order.table_number;
                 if (!skipClientReceipt) {
                     try { await posApi.printReceipt(order.id, headers, posToken); } catch {}

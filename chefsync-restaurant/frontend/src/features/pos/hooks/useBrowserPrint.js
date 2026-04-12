@@ -6,7 +6,7 @@ import posApi from '../api/posApi';
  * @param {string | null | undefined} qrDataUrl data:image/png;base64,... (מקומי — בלי רשת)
  */
 function textToHtml(text, type, role, qrDataUrl) {
-    const title = type === 'receipt' ? 'קבלה' : type === 'kitchen_ticket' ? 'הזמנה למטבח' : type === 'share_qr_slip' ? 'QR שיתוף' : 'הדפסה';
+    const title = type === 'receipt' ? 'אישור' : type === 'kitchen_ticket' ? 'הזמנה למטבח' : type === 'share_qr_slip' ? 'QR שיתוף' : 'הדפסה';
 
     // Escape HTML first
     const escaped = text

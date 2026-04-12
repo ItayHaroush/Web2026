@@ -304,6 +304,61 @@ class RestaurantPaymentService
     }
 
     /**
+     * יצירת URL חתום לצפייה/הורדת חשבונית EZcount דרך HYP PrintHesh
+     * שלב 1: APISign לקבלת חתימה
+     * שלב 2: בניית URL חתום ל-PrintHesh
+     */
+    public function getInvoiceUrl(Restaurant $restaurant, string $transactionId): array
+    {
+        $masof  = $restaurant->hyp_terminal_id;
+        $passp  = $restaurant->hyp_terminal_password;
+        $apiKey = $restaurant->hyp_api_key;
+
+        if (empty($masof) || empty($passp) || empty($apiKey)) {
+            return ['success' => false, 'url' => null, 'error' => 'חסרים פרטי מסוף HYP'];
+        }
+
+        $signParams = [
+            'action'  => 'APISign',
+            'What'    => 'SIGN',
+            'KEY'     => $apiKey,
+            'PassP'   => $passp,
+            'Masof'   => $masof,
+            'TransId' => $transactionId,
+            'type'    => 'EZCOUNT',
+            'ACTION'  => 'PrintHesh',
+        ];
+
+        $referer = config('payment.hyp.referer_url', 'https://api.chefsync.co.il');
+
+        try {
+            $response = Http::timeout(15)
+                ->withHeaders(['Referer' => $referer])
+                ->get($this->baseUrl, $signParams);
+
+            $body = $response->body();
+            $result = $this->parseResponse($body);
+
+            if (!empty($result['signature'])) {
+                $printUrl = $this->baseUrl . '?' . $body;
+                return ['success' => true, 'url' => $printUrl, 'error' => null];
+            }
+
+            return [
+                'success' => false,
+                'url'     => null,
+                'error'   => $result['ErrMsg'] ?? 'Failed to get invoice signature',
+            ];
+        } catch (\Exception $e) {
+            Log::error('RestaurantPaymentService getInvoiceUrl failed', [
+                'restaurant_id' => $restaurant->id,
+                'error' => $e->getMessage(),
+            ]);
+            return ['success' => false, 'url' => null, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
      * מנתח תגובת HYP (query string format)
      */
     private function parseResponse(string $body): array

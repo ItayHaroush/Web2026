@@ -5,7 +5,7 @@ import { useAdminAuth } from '../../context/AdminAuthContext';
 import paymentSettingsService from '../../services/paymentSettingsService';
 import ZCreditSettingsPanel from '../../components/admin/ZCreditSettingsPanel';
 import { getBillingInfo } from '../../services/subscriptionService';
-import { FaCreditCard, FaMoneyBillWave, FaCheckCircle, FaExclamationTriangle, FaExternalLinkAlt, FaShieldAlt, FaSpinner, FaInfoCircle, FaWrench, FaCrown } from 'react-icons/fa';
+import { FaCreditCard, FaMoneyBillWave, FaCheckCircle, FaExclamationTriangle, FaExternalLinkAlt, FaShieldAlt, FaSpinner, FaInfoCircle, FaWrench, FaCrown, FaFileInvoiceDollar } from 'react-icons/fa';
 import { TIER_LABELS } from '../../utils/tierUtils';
 
 const STATUS_LABELS = { trial: 'תקופת ניסיון', active: 'פעיל', suspended: 'מושהה', expired: 'פג תוקף', cancelled: 'מבוטל' };
@@ -34,6 +34,7 @@ export default function AdminPaymentSettings() {
     const [setupFeeCharged, setSetupFeeCharged] = useState(false);
     const [agreedToFee, setAgreedToFee] = useState(false);
     const [billing, setBilling] = useState(null);
+    const [ezcountEnabled, setEzcountEnabled] = useState(false);
 
     useEffect(() => {
         fetchSettings();
@@ -63,6 +64,7 @@ export default function AdminPaymentSettings() {
                 setVerifiedAt(data.hyp_terminal_verified_at || null);
                 setTier(data.tier || 'basic');
                 setSetupFeeCharged(data.hyp_setup_fee_charged || false);
+                setEzcountEnabled(data.ezcount_invoices_enabled || false);
             }
         } catch (error) {
             console.error('Failed to load payment settings:', error);
@@ -104,6 +106,8 @@ export default function AdminPaymentSettings() {
             if (creditCardEnabled && !setupFeeCharged && agreedToFee) {
                 payload.agree_setup_fee = true;
             }
+            // EZcount invoice toggle
+            payload.ezcount_invoices_enabled = ezcountEnabled;
 
             const result = await paymentSettingsService.saveSettings(payload, getAuthHeaders());
             if (result.success) {
@@ -118,6 +122,7 @@ export default function AdminPaymentSettings() {
                     setAvailableMethods(result.data.available_payment_methods || ['cash']);
                     setTier(result.data.tier || 'basic');
                     setSetupFeeCharged(result.data.hyp_setup_fee_charged || false);
+                    setEzcountEnabled(result.data.ezcount_invoices_enabled || false);
                 }
                 if (result.warnings && result.warnings.length > 0) {
                     setMessage({ type: 'warning', text: result.warnings.join(', ') });
@@ -475,6 +480,39 @@ export default function AdminPaymentSettings() {
 
                 {/* Z-Credit — POS / PinPad / קיוסק (נפרד מ-HYP) */}
                 <ZCreditSettingsPanel getAuthHeaders={getAuthHeaders} isOwner={isOwner} />
+
+                {/* חשבוניות EZcount */}
+                {creditCardEnabled && verified && (
+                    <div className="bg-white rounded-[2rem] shadow-sm border border-gray-100 p-8 mx-4 space-y-4">
+                        <div className="flex items-center gap-3">
+                            <FaFileInvoiceDollar className="text-emerald-600" size={22} />
+                            <h2 className="text-xl font-black text-gray-900">חשבוניות מס (EZcount)</h2>
+                        </div>
+                        <p className="text-sm text-gray-500">
+                            הפקת חשבונית מס אוטומטית עבור כל תשלום באשראי. החשבונית מופקת דרך EZcount המובנה במסוף HYP ונשלחת ללקוח במייל.
+                        </p>
+                        <label className="flex items-center gap-4 p-4 rounded-xl bg-gray-50 border border-gray-200 hover:border-emerald-300 transition-colors cursor-pointer">
+                            <input
+                                type="checkbox"
+                                checked={ezcountEnabled}
+                                onChange={(e) => setEzcountEnabled(e.target.checked)}
+                                className="w-5 h-5 rounded accent-emerald-600"
+                            />
+                            <div className="flex-1">
+                                <span className="font-bold text-gray-900">הפעל הפקת חשבוניות אוטומטית</span>
+                                <p className="text-xs text-gray-500 mt-0.5">חשבונית תופק אוטומטית בכל תשלום מוצלח באשראי ותוצג ללקוח בדף סטטוס ההזמנה</p>
+                            </div>
+                            {ezcountEnabled && (
+                                <span className="text-xs bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full font-bold">פעיל</span>
+                            )}
+                        </label>
+                        {ezcountEnabled && (
+                            <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-100 text-sm text-emerald-700">
+                                <strong>שימו לב:</strong> ודאו שחשבון ה-EZcount מחובר למסוף HYP שלכם. ניתן לבדוק זאת בממשק הניהול של HYP.
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 {/* Save button when credit card NOT enabled (just save payment methods) */}
                 {!creditCardEnabled && (

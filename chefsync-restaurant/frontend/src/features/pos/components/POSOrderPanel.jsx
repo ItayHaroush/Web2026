@@ -436,7 +436,7 @@ function OrderCard({
                                 onClick={() => onPrintReceipt?.(order.id)}
                                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-500/10 text-blue-400 text-xs font-bold transition-all active:scale-95 hover:bg-blue-500/20"
                             >
-                                <FaPrint size={11} /> קבלה
+                                <FaPrint size={11} /> אישור
                             </button>
                         )}
                         {onPrintKitchen && (

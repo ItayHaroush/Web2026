@@ -157,6 +157,11 @@ class ReconcilePayments extends Command
                     if ($order->status === Order::STATUS_AWAITING_PAYMENT) {
                         $updates['status'] = Order::STATUS_PENDING;
                     }
+                    // שמירת חשבונית EZcount אם חזרה מ-HYP
+                    if (!empty($match['HeshASM']) && empty($order->invoice_number)) {
+                        $updates['invoice_number'] = $match['HeshASM'];
+                        $updates['invoice_generated_at'] = now();
+                    }
                     $order->update($updates);
                     try {
                         CartSession::markCompletedForB2COrder($order->fresh());

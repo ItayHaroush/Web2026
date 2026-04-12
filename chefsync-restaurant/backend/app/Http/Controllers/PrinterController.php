@@ -221,7 +221,7 @@ class PrinterController extends Controller
     }
 
     /**
-     * דוגמת קבלה (טקסט) לתצוגת ווב / בדיקת פורמט — לפי רוחב נייר.
+     * דוגמת אישור (טקסט) לתצוגת ווב / בדיקת פורמט — לפי רוחב נייר.
      */
     public function receiptExample(Request $request)
     {

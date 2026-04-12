@@ -1214,6 +1214,20 @@ export default function AdminOrders() {
                                                     שולם בתאריך: {new Date(selectedOrder.paid_at).toLocaleString('he-IL')}
                                                 </div>
                                             )}
+                                            {selectedOrder.invoice_number && (
+                                                <div className="flex items-center gap-2 text-xs bg-emerald-50 text-emerald-700 rounded-lg p-2 border border-emerald-200">
+                                                    <FaFileAlt className="text-emerald-600 flex-shrink-0" />
+                                                    <span className="font-bold">חשבונית: {selectedOrder.invoice_number}</span>
+                                                    <a
+                                                        href={`${api.defaults.baseURL}/orders/${selectedOrder.id}/invoice`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="mr-auto text-emerald-600 hover:text-emerald-800 font-bold underline"
+                                                    >
+                                                        PDF
+                                                    </a>
+                                                </div>
+                                            )}
                                             {selectedOrder.marked_paid_by && (
                                                 <div className="text-xs text-gray-400 bg-gray-50 rounded-lg p-2">
                                                     סומן כשולם ע"י: <strong>{selectedOrder.marked_paid_by}</strong>

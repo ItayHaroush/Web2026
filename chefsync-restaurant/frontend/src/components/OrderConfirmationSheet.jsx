@@ -214,7 +214,7 @@ export default function OrderConfirmationSheet({
                                 ? <FaTruck className="text-brand-primary shrink-0" size={14} />
                                 : <FaStore className="text-brand-primary shrink-0" size={14} />
                             }
-                            <span className="text-gray-600 dark:text-gray-400 w-16 shrink-0">קבלה</span>
+                            <span className="text-gray-600 dark:text-gray-400 w-16 shrink-0">אישור</span>
                             <span className="font-bold text-gray-900 dark:text-brand-dark-text">
                                 {isDelivery ? 'משלוח' : 'איסוף עצמי'}
                             </span>

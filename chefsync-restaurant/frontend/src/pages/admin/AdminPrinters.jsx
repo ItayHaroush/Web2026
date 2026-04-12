@@ -54,7 +54,7 @@ body{font-family:'Courier New',monospace;max-width:${role === 'receipt' ? '300px
     if (doc.readyState === 'complete') { requestAnimationFrame(doPrint); } else { win.addEventListener('load', doPrint, { once: true }); }
 }
 
-const ROLE_LABELS = { kitchen: 'מטבח', receipt: 'קופה / קבלה', bar: 'בר', general: 'כללי' };
+const ROLE_LABELS = { kitchen: 'מטבח', receipt: 'קופה / אישור', bar: 'בר', general: 'כללי' };
 const ROLE_COLORS = {
     kitchen: 'bg-orange-100 text-orange-700 border-orange-200',
     receipt: 'bg-blue-100 text-blue-700 border-blue-200',
@@ -549,7 +549,7 @@ export default function AdminPrinters({ embedded = false }) {
                                     <label className="block text-sm font-bold text-gray-700 mb-2">תפקיד</label>
                                     <select value={deviceForm.role} onChange={e => setDeviceForm({ ...deviceForm, role: e.target.value })} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none">
                                         <option value="kitchen">מטבח</option>
-                                        <option value="receipt">קופה / קבלה</option>
+                                        <option value="receipt">קופה / אישור</option>
                                         <option value="bar">בר</option>
                                         <option value="general">כללי</option>
                                     </select>

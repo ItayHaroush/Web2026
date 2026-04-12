@@ -29,7 +29,7 @@ class PrintService
     }
 
     /**
-     * בון מטבח בלבד (ללא קבלה) עבור קבוצת שורות — למשל פריטים שנוספו עכשיו לטאב שולחן.
+     * בון מטבח בלבד (ללא אישור) עבור קבוצת שורות — למשל פריטים שנוספו עכשיו לטאב שולחן.
      *
      * @param  iterable<int, \App\Models\OrderItem>|\Illuminate\Support\Collection<int, \App\Models\OrderItem>  $items
      */
@@ -632,7 +632,7 @@ class PrintService
 
         $lines[] = $separator;
         $lines[] = '{{BIG}}';
-        $lines[] = $this->centerText("קבלה — הזמנה #{$order->id}", $printer);
+        $lines[] = $this->centerText("אישור — הזמנה #{$order->id}", $printer);
         $lines[] = '{{/BIG}}';
         $lines[] = $separator;
         $lines[] = $this->centerText($order->created_at->format('d.m.Y H:i'), $printer);
@@ -732,7 +732,7 @@ class PrintService
 
         if (! empty($extraData['receipt_number'])) {
             $lines[] = $dash;
-            $lines[] = "מס׳ קבלה: {$extraData['receipt_number']}";
+            $lines[] = "מס׳ אישור: {$extraData['receipt_number']}";
         }
 
         if (! empty($extraData['has_payment_qr'])) {
@@ -1071,7 +1071,7 @@ class PrintService
     }
 
     /**
-     * שורת קבלה בסגנון קופה: תווית משמאל (מילוי עד width−amountCols) + עמודת סכום מיושרת לשמאל (מילוי עד amountCols).
+     * שורת אישור בסגנון קופה: תווית משמאל (מילוי עד width−amountCols) + עמודת סכום מיושרת לשמאל (מילוי עד amountCols).
      * מבוסס על mb — עברית וש"ח נספרים נכון.
      */
     private function receiptLineLabelAndAmount(string $label, string $amount, int $width, int $amountColumns = 12): string
@@ -1103,7 +1103,7 @@ class PrintService
     }
 
     /**
-     * טקסט קבלה לדוגמה (תצוגת ווב / בדיקה) — אותו מבנה כמו buildReceiptPayload, בלי הזמנה אמיתית.
+     * טקסט אישור לדוגמה (תצוגת ווב / בדיקה) — אותו מבנה כמו buildReceiptPayload, בלי הזמנה אמיתית.
      */
     public function sampleReceiptForWebPreview(Printer $printer): string
     {
@@ -1114,7 +1114,7 @@ class PrintService
         $lines = [
             $this->centerText("צ'יפס-טעים בכל ביס (דוגמה)", $printer),
             $separator,
-            $this->centerText('קבלה — הזמנה #248', $printer),
+            $this->centerText('אישור — הזמנה #248', $printer),
             $separator,
             $this->centerText('29.03.2026 15:30', $printer),
             $this->centerText('שירות: משלוח', $printer),

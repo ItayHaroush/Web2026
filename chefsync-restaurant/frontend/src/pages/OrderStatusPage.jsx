@@ -3,7 +3,7 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCustomer } from '../context/CustomerContext';
 import { CustomerLayout } from '../layouts/CustomerLayout';
-import { FaBoxOpen, FaUser, FaPhone, FaClock, FaInfoCircle, FaUtensils, FaShoppingBag, FaCheckCircle, FaExclamationTriangle, FaMapMarkerAlt, FaCreditCard, FaMoneyBillWave, FaGift, FaHeart, FaRedo } from 'react-icons/fa';
+import { FaBoxOpen, FaUser, FaPhone, FaClock, FaInfoCircle, FaUtensils, FaShoppingBag, FaCheckCircle, FaExclamationTriangle, FaMapMarkerAlt, FaCreditCard, FaMoneyBillWave, FaGift, FaHeart, FaRedo, FaFileInvoiceDollar, FaDownload } from 'react-icons/fa';
 import orderService from '../services/orderService';
 import { ORDER_STATUS, ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from '../constants/api';
 import RatingWidget from '../components/RatingWidget';
@@ -676,6 +676,27 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
                                             : order.payment_status === 'failed' ? 'תשלום נכשל' : ''}
                                 </p>
                             </div>
+                        </div>
+                    )}
+
+                    {/* חשבונית מס EZcount */}
+                    {order.invoice_number && (
+                        <div className="flex items-center gap-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-4 border border-emerald-200 dark:border-emerald-800">
+                            <FaFileInvoiceDollar className="text-emerald-600 dark:text-emerald-400 text-lg flex-shrink-0" />
+                            <div className="flex-1">
+                                <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide mb-0.5">חשבונית מס</p>
+                                <p className="font-bold text-emerald-800 dark:text-emerald-300">חשבונית הופקה</p>
+                                <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-0.5">מספר: {order.invoice_number}</p>
+                            </div>
+                            <a
+                                href={`${api.defaults.baseURL}/orders/${order.id}/invoice`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="bg-emerald-600 text-white px-3 py-2 rounded-lg text-xs font-bold hover:bg-emerald-700 transition flex items-center gap-1.5 flex-shrink-0"
+                            >
+                                <FaDownload size={10} />
+                                הורד PDF
+                            </a>
                         </div>
                     )}
 

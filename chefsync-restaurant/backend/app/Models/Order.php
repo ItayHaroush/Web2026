@@ -62,6 +62,8 @@ class Order extends Model
         'review_text',
         'reviewed_at',
         'pending_customer_reminder_sent_at',
+        'invoice_number',
+        'invoice_generated_at',
     ];
 
     protected $appends = ['total', 'display_payment_method'];
@@ -86,7 +88,16 @@ class Order extends Model
         'refund_pending_at' => 'datetime',
         'refund_waived_at' => 'datetime',
         'pending_customer_reminder_sent_at' => 'datetime',
+        'invoice_generated_at' => 'datetime',
     ];
+
+    /**
+     * האם הופקה חשבונית EZcount להזמנה
+     */
+    public function hasInvoice(): bool
+    {
+        return !empty($this->invoice_number);
+    }
 
     /**
      * Accessor לשדה total (עבור תאימות עם Frontend)

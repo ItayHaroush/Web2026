@@ -99,6 +99,7 @@ class Restaurant extends Model
         'feature_overrides',
         'orders_limit',
         'max_employees',
+        'ezcount_invoices_enabled',
     ];
 
     protected $hidden = [
@@ -147,6 +148,7 @@ class Restaurant extends Model
         'zcredit_terminal_password' => 'encrypted',
         'owner_activity_started_at' => 'date',
         'feature_overrides' => 'array',
+        'ezcount_invoices_enabled' => 'boolean',
     ];
 
     /**

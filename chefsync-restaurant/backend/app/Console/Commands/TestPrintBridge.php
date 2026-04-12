@@ -73,7 +73,7 @@ class TestPrintBridge extends Command
         $this->section('3. Job Creation & Role Routing');
 
         $kitchenJob = $this->createTestJob($restaurant, 'kitchen', 'kitchen_ticket', 'הזמנה #999 — שניצל x2, סלט x1');
-        $receiptJob = $this->createTestJob($restaurant, 'receipt', 'receipt', 'קבלה — הזמנה #999 — סה"כ ₪89.00');
+        $receiptJob = $this->createTestJob($restaurant, 'receipt', 'receipt', 'אישור — הזמנה #999 — סה"כ ₪89.00');
         $barJob = $this->createTestJob($restaurant, 'bar', 'kitchen_ticket', 'הזמנה #999 — מוחיטו x3');
         $generalJob = $this->createTestJob($restaurant, 'general', 'custom', 'הודעה כללית — בדיקת מערכת');
 

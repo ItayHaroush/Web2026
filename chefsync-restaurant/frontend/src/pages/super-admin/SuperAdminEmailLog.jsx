@@ -9,7 +9,7 @@ import {
 
 const TYPE_LABELS = {
     email_verification: { text: 'אימות מייל לקוח', color: 'bg-blue-50 text-blue-700' },
-    order_receipt: { text: 'קבלה', color: 'bg-green-50 text-green-700' },
+    order_receipt: { text: 'אישור', color: 'bg-green-50 text-green-700' },
     order_cancelled: { text: 'ביטול הזמנה', color: 'bg-red-50 text-red-700' },
     welcome: { text: 'ברוכים הבאים (לקוח)', color: 'bg-purple-50 text-purple-700' },
     share: { text: 'שיתוף', color: 'bg-orange-50 text-orange-700' },

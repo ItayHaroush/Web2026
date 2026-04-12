@@ -27,7 +27,7 @@ class CustomerOrderReceiptMail extends Mailable
         $orderId = $this->order->id;
 
         return new Envelope(
-            subject: "ההזמנה נמסרה! קבלה #{$orderId} מ{$restaurantName}",
+            subject: "ההזמנה נמסרה! אישור #{$orderId} מ{$restaurantName}",
         );
     }
 
@@ -105,7 +105,7 @@ class CustomerOrderReceiptMail extends Mailable
         $body .= '<a href="' . $whatsappUrl . '" style="color: #25D366; font-size: 14px; text-decoration: none; font-weight: bold;">📱 שתף עם חברים בוואטסאפ</a>';
         $body .= '</p>';
 
-        return EmailLayoutHelper::wrap($body, "קבלה להזמנה #{$orderId} מ{$restaurantName}");
+        return EmailLayoutHelper::wrap($body, "אישור להזמנה #{$orderId} מ{$restaurantName}");
     }
 
     private function buildItemsTable(): string
