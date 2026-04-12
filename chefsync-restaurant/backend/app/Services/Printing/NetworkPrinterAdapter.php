@@ -76,7 +76,7 @@ class NetworkPrinterAdapter implements PrinterAdapter
             }
 
             fwrite($socket, "\x1B\x40");
-            fwrite($socket, "\x1B\x74".chr(self::ESC_POS_CODE_PAGE_HEBREW));
+            fwrite($socket, "\x1B\x74" . chr(self::ESC_POS_CODE_PAGE_HEBREW));
             fwrite($socket, "\x1B\x20\x00");
 
             if ($hasMarkers) {
@@ -87,10 +87,10 @@ class NetworkPrinterAdapter implements PrinterAdapter
             } else {
                 // Legacy mode: global double-height flag
                 if ($doubleHeight) {
-                    fwrite($socket, "\x1B\x21".chr(self::MODE_DOUBLE_HEIGHT));
+                    fwrite($socket, "\x1B\x21" . chr(self::MODE_DOUBLE_HEIGHT));
                 }
                 fwrite($socket, $binary);
-                fwrite($socket, "\x1B\x21".chr(self::MODE_NORMAL));
+                fwrite($socket, "\x1B\x21" . chr(self::MODE_NORMAL));
             }
 
             if ($escposSuffix !== '') {

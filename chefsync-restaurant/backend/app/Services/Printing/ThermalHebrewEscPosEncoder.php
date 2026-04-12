@@ -12,9 +12,12 @@ final class ThermalHebrewEscPosEncoder
 {
     /** Formatting markers — these survive CP862 encoding (pure ASCII) and are processed by the printer adapter. */
     private const MARKERS = [
-        '{{BIG}}', '{{/BIG}}',
-        '{{CENTER}}', '{{/CENTER}}',
-        '{{BOLD}}', '{{/BOLD}}',
+        '{{BIG}}',
+        '{{/BIG}}',
+        '{{CENTER}}',
+        '{{/CENTER}}',
+        '{{BOLD}}',
+        '{{/BOLD}}',
     ];
     /**
      * @param  bool  $applyRtl  כבה לבדיקות
