@@ -64,6 +64,7 @@ class Order extends Model
         'pending_customer_reminder_sent_at',
         'invoice_number',
         'invoice_generated_at',
+        'invoice_pdf_url',
     ];
 
     protected $appends = ['total', 'display_payment_method'];

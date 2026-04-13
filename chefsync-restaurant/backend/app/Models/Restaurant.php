@@ -100,6 +100,7 @@ class Restaurant extends Model
         'orders_limit',
         'max_employees',
         'ezcount_invoices_enabled',
+        'ezcount_api_key',
     ];
 
     protected $hidden = [
@@ -107,6 +108,7 @@ class Restaurant extends Model
         'hyp_api_key',
         'hyp_card_token',
         'zcredit_terminal_password',
+        'ezcount_api_key',
     ];
 
     protected $attributes = [
@@ -149,6 +151,7 @@ class Restaurant extends Model
         'owner_activity_started_at' => 'date',
         'feature_overrides' => 'array',
         'ezcount_invoices_enabled' => 'boolean',
+        'ezcount_api_key' => 'encrypted',
     ];
 
     /**

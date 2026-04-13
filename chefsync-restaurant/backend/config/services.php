@@ -8,6 +8,11 @@ return [
         'from' => env('TWILIO_FROM'),
     ],
 
+    'ezcount' => [
+        'url' => env('EZCOUNT_API_URL', 'https://api.ezcount.co.il'),
+        'developer_email' => env('EZCOUNT_DEVELOPER_EMAIL', 'dev@chefsync.co.il'),
+    ],
+
     'zcredit' => [
         /**
          * מסופון אמיתי מוגדר ב-DB (מסעדה / payment_terminals). משתנים אלה — אופציונליים לפיתוח/כלים.

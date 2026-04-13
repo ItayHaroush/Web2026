@@ -11,6 +11,7 @@ use App\Models\PaymentSession;
 use App\Models\Restaurant;
 use App\Models\User;
 use App\Services\FcmService;
+use App\Services\EZcountService;
 use App\Services\RestaurantPaymentService;
 use App\Services\SystemErrorReporter;
 use Illuminate\Http\Request;
@@ -31,6 +32,7 @@ class HypOrderCallbackController extends Controller
 {
     public function __construct(
         private RestaurantPaymentService $paymentService,
+        private EZcountService $ezcountService,
     ) {}
 
     /**
@@ -109,6 +111,8 @@ class HypOrderCallbackController extends Controller
             'fild1' => $params['fild1'],
             'fild2' => $params['fild2'],
             'fild3' => $params['fild3'],
+            'hesh_asm' => $params['hesh_asm'],
+            'raw_params' => array_filter($inputParams, fn($k) => stripos($k, 'hesh') !== false || stripos($k, 'invoice') !== false || stripos($k, 'ez') !== false, ARRAY_FILTER_USE_KEY),
         ]);
 
         // מציאת הזמנה לפני בדיקת CCode — כדי לעדכן payment_status=failed בדשבורד/קופה
@@ -228,12 +232,44 @@ class HypOrderCallbackController extends Controller
             }
         }
 
-        // --- שמירת מספר חשבונית EZcount (אם HYP הפיק) ---
-        if (!empty($params['hesh_asm'])) {
-            $orderUpdates['invoice_number'] = $params['hesh_asm'];
-            $orderUpdates['invoice_generated_at'] = now();
-        }
         $order->update($orderUpdates);
+
+        // --- יצירת חשבונית EZcount ישירות דרך API (רק בתשלום מלא) ---
+        if (!$isPartialPayment && $restaurant->ezcount_invoices_enabled && !empty($restaurant->ezcount_api_key) && $transactionId) {
+            try {
+                $ccInfo = [
+                    'last4' => $inputParams['L4digit'] ?? '',
+                    'brand' => $inputParams['Brand'] ?? '',
+                ];
+                $invoiceResult = $this->ezcountService->createInvoice($restaurant, $order->fresh(), $transactionId, $ccInfo);
+                if ($invoiceResult['success']) {
+                    $order->update([
+                        'invoice_number' => $invoiceResult['doc_number'],
+                        'invoice_pdf_url' => $invoiceResult['pdf_link'],
+                        'invoice_generated_at' => now(),
+                    ]);
+                    Log::info('EZcount: invoice created directly via API', [
+                        'order_id' => $order->id,
+                        'doc_number' => $invoiceResult['doc_number'],
+                    ]);
+
+                    // שליחת חשבונית בוואטסאפ ללקוח
+                    if ($order->customer_phone && $invoiceResult['pdf_link']) {
+                        $this->sendInvoiceWhatsApp($order, $restaurant, $invoiceResult['pdf_link']);
+                    }
+                } else {
+                    Log::warning('EZcount: failed to create invoice', [
+                        'order_id' => $order->id,
+                        'error' => $invoiceResult['error'],
+                    ]);
+                }
+            } catch (\Throwable $e) {
+                Log::warning('EZcount: exception creating invoice', [
+                    'order_id' => $order->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
 
         try {
             CartSession::markCompletedForB2COrder($order->fresh());
@@ -517,6 +553,41 @@ class HypOrderCallbackController extends Controller
             ]);
         } catch (\Throwable $e) {
             Log::warning('Failed to send super admin order alert (HYP)', ['error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * שליחת לינק חשבונית בוואטסאפ ללקוח
+     */
+    private function sendInvoiceWhatsApp(Order $order, Restaurant $restaurant, string $pdfLink): void
+    {
+        try {
+            $phone = preg_replace('/\D/', '', $order->customer_phone);
+            // המרה למספר ישראלי בינלאומי
+            if (str_starts_with($phone, '0')) {
+                $phone = '972' . substr($phone, 1);
+            }
+            if (!str_starts_with($phone, '972')) {
+                $phone = '972' . $phone;
+            }
+
+            $message = "שלום {$order->customer_name},\n"
+                . "תודה על ההזמנה מ-{$restaurant->name}! 🍽️\n"
+                . "חשבונית מס מספר {$order->invoice_number} מוכנה עבורך:\n"
+                . "{$pdfLink}";
+
+            // שליחה דרך Green API / Twilio WhatsApp — כרגע לוג בלבד, ישולב בהמשך
+            Log::info('WhatsApp invoice message ready', [
+                'order_id' => $order->id,
+                'phone' => $phone,
+                'message' => $message,
+                'pdf_link' => $pdfLink,
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('Failed to prepare WhatsApp invoice message', [
+                'order_id' => $order->id,
+                'error' => $e->getMessage(),
+            ]);
         }
     }
 

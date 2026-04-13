@@ -41,6 +41,7 @@ class PaymentSettingsController extends Controller
                 'tier' => $restaurant->tier ?? 'basic',
                 'hyp_setup_fee_charged' => (bool) $restaurant->hyp_setup_fee_charged,
                 'ezcount_invoices_enabled' => (bool) $restaurant->ezcount_invoices_enabled,
+                'has_ezcount_api_key' => !empty($restaurant->ezcount_api_key),
             ],
         ]);
     }
@@ -59,6 +60,7 @@ class PaymentSettingsController extends Controller
             'accepted_payment_methods.*' => 'in:cash,credit_card',
             'agree_setup_fee' => 'nullable|boolean',
             'ezcount_invoices_enabled' => 'nullable|boolean',
+            'ezcount_api_key' => 'nullable|string|max:255',
         ]);
 
         $restaurant = Restaurant::withoutGlobalScope('tenant')
@@ -125,6 +127,11 @@ class PaymentSettingsController extends Controller
             $updateData['ezcount_invoices_enabled'] = (bool) $validated['ezcount_invoices_enabled'];
         }
 
+        // עדכון מפתח API של EZcount (יוצפן אוטומטית)
+        if (!empty($validated['ezcount_api_key'])) {
+            $updateData['ezcount_api_key'] = $validated['ezcount_api_key'];
+        }
+
         // עדכון terminal ID אם סופק
         if (array_key_exists('hyp_terminal_id', $validated)) {
             $updateData['hyp_terminal_id'] = $validated['hyp_terminal_id'];
@@ -171,11 +178,10 @@ class PaymentSettingsController extends Controller
                 'tier' => $restaurant->tier ?? 'basic',
                 'hyp_setup_fee_charged' => (bool) $restaurant->hyp_setup_fee_charged,
                 'ezcount_invoices_enabled' => (bool) $restaurant->ezcount_invoices_enabled,
+                'has_ezcount_api_key' => !empty($restaurant->ezcount_api_key),
             ],
         ]);
-    }
-
-    /**
+    }    /**
      * אימות מסוף תשלום - בדיקת Masof + PassP מול HYP ללא חיוב
      * שולח soft request עם dummy token — CCode 901-903 = credentials שגויים
      * משתמש ב-Masof של המסעדה (B2C)

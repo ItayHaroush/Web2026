@@ -35,6 +35,8 @@ export default function AdminPaymentSettings() {
     const [agreedToFee, setAgreedToFee] = useState(false);
     const [billing, setBilling] = useState(null);
     const [ezcountEnabled, setEzcountEnabled] = useState(false);
+    const [ezcountApiKey, setEzcountApiKey] = useState('');
+    const [hasEzcountApiKey, setHasEzcountApiKey] = useState(false);
 
     useEffect(() => {
         fetchSettings();
@@ -65,6 +67,7 @@ export default function AdminPaymentSettings() {
                 setTier(data.tier || 'basic');
                 setSetupFeeCharged(data.hyp_setup_fee_charged || false);
                 setEzcountEnabled(data.ezcount_invoices_enabled || false);
+                setHasEzcountApiKey(data.has_ezcount_api_key || false);
             }
         } catch (error) {
             console.error('Failed to load payment settings:', error);
@@ -106,8 +109,11 @@ export default function AdminPaymentSettings() {
             if (creditCardEnabled && !setupFeeCharged && agreedToFee) {
                 payload.agree_setup_fee = true;
             }
-            // EZcount invoice toggle
+            // EZcount invoice toggle + API key
             payload.ezcount_invoices_enabled = ezcountEnabled;
+            if (ezcountApiKey) {
+                payload.ezcount_api_key = ezcountApiKey;
+            }
 
             const result = await paymentSettingsService.saveSettings(payload, getAuthHeaders());
             if (result.success) {
@@ -123,6 +129,8 @@ export default function AdminPaymentSettings() {
                     setTier(result.data.tier || 'basic');
                     setSetupFeeCharged(result.data.hyp_setup_fee_charged || false);
                     setEzcountEnabled(result.data.ezcount_invoices_enabled || false);
+                    setHasEzcountApiKey(result.data.has_ezcount_api_key || false);
+                    setEzcountApiKey(''); // clear after save
                 }
                 if (result.warnings && result.warnings.length > 0) {
                     setMessage({ type: 'warning', text: result.warnings.join(', ') });
@@ -489,7 +497,7 @@ export default function AdminPaymentSettings() {
                             <h2 className="text-xl font-black text-gray-900">חשבוניות מס (EZcount)</h2>
                         </div>
                         <p className="text-sm text-gray-500">
-                            הפקת חשבונית מס אוטומטית עבור כל תשלום באשראי. החשבונית מופקת דרך EZcount המובנה במסוף HYP ונשלחת ללקוח במייל.
+                            הפקת חשבונית מס קבלה אוטומטית עבור כל תשלום באשראי. החשבונית מופקת ישירות דרך EZcount ונשלחת ללקוח בוואטסאפ.
                         </p>
                         <label className="flex items-center gap-4 p-4 rounded-xl bg-gray-50 border border-gray-200 hover:border-emerald-300 transition-colors cursor-pointer">
                             <input
@@ -507,8 +515,24 @@ export default function AdminPaymentSettings() {
                             )}
                         </label>
                         {ezcountEnabled && (
-                            <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-100 text-sm text-emerald-700">
-                                <strong>שימו לב:</strong> ודאו שחשבון ה-EZcount מחובר למסוף HYP שלכם. ניתן לבדוק זאת בממשק הניהול של HYP.
+                            <div className="space-y-3">
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-1">מפתח API של EZcount</label>
+                                    <input
+                                        type="password"
+                                        value={ezcountApiKey}
+                                        onChange={(e) => setEzcountApiKey(e.target.value)}
+                                        placeholder={hasEzcountApiKey ? '••••••••••••••••' : 'הזן מפתח API'}
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-300 focus:border-emerald-500 outline-none text-sm"
+                                        dir="ltr"
+                                    />
+                                    {hasEzcountApiKey && !ezcountApiKey && (
+                                        <p className="text-xs text-emerald-600 mt-1">מפתח API שמור. הזן ערך חדש רק אם ברצונך לעדכן.</p>
+                                    )}
+                                </div>
+                                <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-100 text-sm text-emerald-700">
+                                    <strong>איך מוצאים את מפתח ה-API?</strong> היכנסו לחשבון EZcount → הגדרות → מפתחות API → העתיקו את המפתח.
+                                </div>
                             </div>
                         )}
                     </div>
