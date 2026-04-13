@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import AdminLayout from '../../layouts/AdminLayout';
 import api from '../../services/apiClient';
+import SoundManager from '../../services/SoundManager';
 import { clearStoredFcmToken, disableFcm, getStoredFcmToken, requestFcmToken } from '../../services/fcm';
 import AiCreditsBadge from '../../components/AiCreditsBadge';
 import AiInsightsPanel from '../../components/AiInsightsPanel';
@@ -51,18 +52,12 @@ export default function AdminDashboard() {
     const canManualPaymentTools = isOwner() || isManager();
 
     // מצב צלצול הזמנות — נשמר ב-localStorage
-    const [soundEnabled, setSoundEnabled] = useState(() => {
-        try { return localStorage.getItem('admin_sound_enabled') !== 'false'; } catch { return true; }
-    });
+    const [soundEnabled, setSoundEnabled] = useState(() => SoundManager.isEnabled());
     const handleSoundToggle = (next) => {
         setSoundEnabled(next);
-        try { localStorage.setItem('admin_sound_enabled', next ? 'true' : 'false'); } catch { /* ignore */ }
+        SoundManager.setEnabled(next);
         if (next) {
-            try {
-                const a = new Audio('/sounds/Order-up-bell-sound.mp3');
-                a.volume = 0.4;
-                a.play().catch(() => { });
-            } catch { /* ignore */ }
+            SoundManager.playTest();
         }
     };
 

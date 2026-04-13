@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import SuperAdminLayout from '../../layouts/SuperAdminLayout';
 import api from '../../services/apiClient';
+import SoundManager from '../../services/SoundManager';
 import { resolveAssetUrl } from '../../utils/assets';
 import { toast } from 'react-hot-toast';
 import { clearStoredFcmToken, disableFcm, getStoredFcmToken, listenForegroundMessages, requestFcmToken } from '../../services/fcm';
@@ -74,18 +75,12 @@ export default function SuperAdminDashboard() {
     const notifCountRef = useRef(0);
 
     // מצב צלצול הזמנות — נשמר ב-localStorage
-    const [soundEnabled, setSoundEnabled] = useState(() => {
-        try { return localStorage.getItem('admin_sound_enabled') !== 'false'; } catch { return true; }
-    });
+    const [soundEnabled, setSoundEnabled] = useState(() => SoundManager.isEnabled());
     const handleSoundToggle = (next) => {
         setSoundEnabled(next);
-        try { localStorage.setItem('admin_sound_enabled', next ? 'true' : 'false'); } catch { /* ignore */ }
+        SoundManager.setEnabled(next);
         if (next) {
-            try {
-                const a = new Audio('/sounds/Order-up-bell-sound.mp3');
-                a.volume = 0.4;
-                a.play().catch(() => { });
-            } catch { /* ignore */ }
+            SoundManager.playTest();
         }
     };
 
@@ -107,13 +102,7 @@ export default function SuperAdminDashboard() {
             const title = payload?.notification?.title || payload?.data?.title || 'TakeEat';
             const body = payload?.notification?.body || payload?.data?.body || 'התראה חדשה';
 
-            if (localStorage.getItem('admin_sound_enabled') !== 'false') {
-                try {
-                    const audio = new Audio('/sounds/Order-up-bell-sound.mp3');
-                    audio.volume = 0.6;
-                    audio.play().catch(() => { });
-                } catch (_) { /* ignore */ }
-            }
+            SoundManager.play();
 
             if (Notification?.permission === 'granted') {
                 try {

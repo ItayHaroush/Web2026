@@ -4,6 +4,7 @@ import { useAdminAuth } from '../context/AdminAuthContext';
 import { useRestaurantStatus } from '../context/RestaurantStatusContext';
 import api from '../services/apiClient';
 import { listenForegroundMessages } from '../services/fcm';
+import SoundManager from '../services/SoundManager';
 import { PRODUCT_NAME } from '../constants/brand';
 import DashboardSidebar from '../components/admin/DashboardSidebar';
 import DashboardHeader from '../components/admin/DashboardHeader';
@@ -50,9 +51,24 @@ export default function AdminLayout({ children }) {
     const fcmNotifCountRef = useRef(0);
     const lastAnalyticsSigRef = useRef('');
 
+    // פתיחת נעילת אודיו בלחיצה ראשונה (חובה ב-PWA)
+    useEffect(() => {
+        SoundManager.setupAutoUnlock();
+    }, []);
+
     // FCM בכל דפי האדמין — צלצול רק ל-new_order (מטבח)
     useEffect(() => {
         if (!user) return undefined;
+
+        // האזנה ל-postMessage מ-Service Worker (כשהאפליקציה פתוחה)
+        const unsubSw = SoundManager.listenServiceWorkerMessages((payload) => {
+            const title = payload?.notification?.title || payload?.data?.title || PRODUCT_NAME;
+            const body = payload?.notification?.body || payload?.data?.body || 'הזמנה חדשה';
+            if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+                try { new Notification(title, { body, icon: '/icon-192.png' }); } catch (_) { }
+            }
+        });
+
         const unsubscribe = listenForegroundMessages((payload) => {
             const msgId = payload?.messageId || payload?.data?.messageId || payload?.data?.google?.message_id;
             if (msgId) {
@@ -63,15 +79,7 @@ export default function AdminLayout({ children }) {
 
             const dataType = payload?.data?.type;
             if (dataType === 'new_order') {
-                if (localStorage.getItem('admin_sound_enabled') !== 'false') {
-                    try {
-                        const audio = new Audio('/sounds/Order-up-bell-sound.mp3');
-                        audio.volume = 0.6;
-                        audio.play().catch(() => { });
-                    } catch (_) {
-                        /* ignore */
-                    }
-                }
+                SoundManager.play();
             }
 
             const title = payload?.notification?.title || payload?.data?.title || PRODUCT_NAME;
@@ -110,6 +118,7 @@ export default function AdminLayout({ children }) {
         });
         return () => {
             if (typeof unsubscribe === 'function') unsubscribe();
+            unsubSw();
         };
     }, [user, navigate]);
 
