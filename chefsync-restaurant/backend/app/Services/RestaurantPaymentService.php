@@ -340,7 +340,15 @@ class RestaurantPaymentService
             $result = $this->parseResponse($body);
 
             if (!empty($result['signature'])) {
-                $printUrl = $this->baseUrl . '?' . $body;
+                $printParams = [
+                    'action'    => 'PrintHesh',
+                    'Masof'     => $masof,
+                    'PassP'     => $passp,
+                    'TransId'   => $transactionId,
+                    'type'      => 'EZCOUNT',
+                    'signature' => $result['signature'],
+                ];
+                $printUrl = $this->baseUrl . '?' . http_build_query($printParams);
                 return ['success' => true, 'url' => $printUrl, 'error' => null];
             }
 
