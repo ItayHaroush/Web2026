@@ -64,11 +64,34 @@ class DailyReportMail extends Mailable
 
         // החזרים
         if (($r->refund_count ?? 0) > 0) {
+            $json = $r->report_json ?? [];
+            $cashRefund = (float) ($json['cash_refund_total'] ?? 0);
+            $creditRefund = (float) ($json['credit_refund_total'] ?? 0);
+
             $body .= EmailLayoutHelper::sectionTitle('החזרים');
             $body .= EmailLayoutHelper::infoBox(
                 EmailLayoutHelper::infoRow('מספר החזרים', (string) $r->refund_count)
                     . EmailLayoutHelper::infoRow('סכום החזרים', '-' . number_format($r->refund_total, 0) . ' &#8362;')
             );
+
+            // סיכום בפועל לאחר החזרים
+            if ($cashRefund > 0 || $creditRefund > 0) {
+                $body .= EmailLayoutHelper::sectionTitle('סיכום בפועל (לאחר החזרים)');
+                $rows = '';
+                if ($cashRefund > 0) {
+                    $grossCash = (float) $r->cash_total + $cashRefund;
+                    $rows .= EmailLayoutHelper::infoRow('מזומן שנגבה', number_format($grossCash, 0) . ' &#8362;');
+                    $rows .= EmailLayoutHelper::infoRow('החזרי מזומן', '-' . number_format($cashRefund, 0) . ' &#8362;');
+                    $rows .= EmailLayoutHelper::infoRow('מזומן בפועל', number_format($r->cash_total, 0) . ' &#8362;');
+                }
+                if ($creditRefund > 0) {
+                    $grossCredit = (float) $r->credit_total + $creditRefund;
+                    $rows .= EmailLayoutHelper::infoRow('אשראי שנגבה', number_format($grossCredit, 0) . ' &#8362;');
+                    $rows .= EmailLayoutHelper::infoRow('החזרי אשראי', '-' . number_format($creditRefund, 0) . ' &#8362;');
+                    $rows .= EmailLayoutHelper::infoRow('אשראי בפועל', number_format($r->credit_total, 0) . ' &#8362;');
+                }
+                $body .= EmailLayoutHelper::infoBox($rows);
+            }
         }
 
         // אמצעי תשלום

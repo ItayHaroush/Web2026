@@ -50,7 +50,9 @@ export default function AdminLayout({ children }) {
     const lastFcmMessageIdsRef = useRef(new Set());
     const fcmNotifCountRef = useRef(0);
     const lastAnalyticsSigRef = useRef('');
-    const lastKnownOrderCountRef = useRef(null);
+    const lastKnownOrderCountRef = useRef(
+        (() => { const s = sessionStorage.getItem('lastKnownOrderId'); return s ? Number(s) : null; })()
+    );
 
     // פתיחת נעילת אודיו בלחיצה ראשונה (חובה ב-PWA)
     useEffect(() => {
@@ -72,7 +74,10 @@ export default function AdminLayout({ children }) {
                         try { new Notification('הזמנה חדשה', { body: `הזמנה #${latestId}`, icon: '/icon-192.png' }); } catch (_) { }
                     }
                 }
-                if (latestId) lastKnownOrderCountRef.current = latestId;
+                if (latestId) {
+                    lastKnownOrderCountRef.current = latestId;
+                    try { sessionStorage.setItem('lastKnownOrderId', String(latestId)); } catch (_) { }
+                }
             } catch (_) { /* silent */ }
         };
         poll();

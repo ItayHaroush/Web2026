@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import api from '../services/apiClient';
 import { getAdminFcmTokenIfPermitted } from '../services/fcm';
 
@@ -164,10 +164,10 @@ export function AdminAuthProvider({ children }) {
     const isDelivery = () => user?.role === 'delivery';
     const isSuperAdmin = () => user?.is_super_admin === true;
 
-    const getAuthHeaders = () => {
+    const getAuthHeaders = useCallback(() => {
         if (!token) return {};
         return { Authorization: `Bearer ${token}` };
-    };
+    }, [token]);
 
     const refreshUser = async () => {
         if (token) await checkAuth();

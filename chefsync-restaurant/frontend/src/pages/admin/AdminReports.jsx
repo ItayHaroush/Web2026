@@ -611,6 +611,8 @@ function ReportDetailModal({ report, onClose, onDownloadPdf }) {
     const json = report.report_json || {};
     const topItems = json.top_items || [];
     const hourly = json.hourly_breakdown || {};
+    const cashRefund = parseFloat(json.cash_refund_total || 0);
+    const creditRefund = parseFloat(json.credit_refund_total || 0);
     const [showHourly, setShowHourly] = useState(false);
 
     const hourlyData = Object.entries(hourly)
@@ -670,6 +672,47 @@ function ReportDetailModal({ report, onClose, onDownloadPdf }) {
                             <div className="bg-red-50 rounded-xl p-4 text-center">
                                 <p className="text-xs text-red-600 font-bold mb-1">סכום החזרים</p>
                                 <p className="text-xl font-black text-red-600">-₪{parseFloat(report.refund_total || 0).toLocaleString()}</p>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* סיכום בפועל לאחר החזרים */}
+                    {(cashRefund > 0 || creditRefund > 0) && (
+                        <div>
+                            <h3 className="text-sm font-black text-gray-900 mb-3">סיכום בפועל (לאחר החזרים)</h3>
+                            <div className="grid grid-cols-3 gap-3 text-sm">
+                                {cashRefund > 0 && (
+                                    <>
+                                        <div className="bg-gray-50 rounded-xl p-3 text-center">
+                                            <p className="text-[10px] text-gray-500 font-bold mb-1">מזומן שנגבה</p>
+                                            <p className="text-base font-black text-gray-600">₪{(parseFloat(report.cash_total || 0) + cashRefund).toLocaleString()}</p>
+                                        </div>
+                                        <div className="bg-red-50 rounded-xl p-3 text-center">
+                                            <p className="text-[10px] text-red-600 font-bold mb-1">החזרי מזומן</p>
+                                            <p className="text-base font-black text-red-600">-₪{cashRefund.toLocaleString()}</p>
+                                        </div>
+                                        <div className="bg-emerald-50 rounded-xl p-3 text-center border-2 border-emerald-200">
+                                            <p className="text-[10px] text-emerald-700 font-bold mb-1">מזומן בפועל</p>
+                                            <p className="text-base font-black text-emerald-800">₪{parseFloat(report.cash_total || 0).toLocaleString()}</p>
+                                        </div>
+                                    </>
+                                )}
+                                {creditRefund > 0 && (
+                                    <>
+                                        <div className="bg-gray-50 rounded-xl p-3 text-center">
+                                            <p className="text-[10px] text-gray-500 font-bold mb-1">אשראי שנגבה</p>
+                                            <p className="text-base font-black text-gray-600">₪{(parseFloat(report.credit_total || 0) + creditRefund).toLocaleString()}</p>
+                                        </div>
+                                        <div className="bg-red-50 rounded-xl p-3 text-center">
+                                            <p className="text-[10px] text-red-600 font-bold mb-1">החזרי אשראי</p>
+                                            <p className="text-base font-black text-red-600">-₪{creditRefund.toLocaleString()}</p>
+                                        </div>
+                                        <div className="bg-emerald-50 rounded-xl p-3 text-center border-2 border-emerald-200">
+                                            <p className="text-[10px] text-emerald-700 font-bold mb-1">אשראי בפועל</p>
+                                            <p className="text-base font-black text-emerald-800">₪{parseFloat(report.credit_total || 0).toLocaleString()}</p>
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         </div>
                     )}

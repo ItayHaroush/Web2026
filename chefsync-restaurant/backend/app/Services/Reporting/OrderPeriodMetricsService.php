@@ -40,6 +40,12 @@ final class OrderPeriodMetricsService
         $refundCount = $refundedOrders->count();
         $refundTotal = (float) $refundedOrders->sum($revenueForRefunded);
 
+        // פירוט החזרים לפי אמצעי תשלום
+        $cashRefundTotal = (float) $refundedOrders
+            ->filter(fn(Order $o) => $o->effectiveCollectedPaymentMethod() === 'cash')
+            ->sum($revenueForRefunded);
+        $creditRefundTotal = $refundTotal - $cashRefundTotal;
+
         $waivedCount = $waivedCancelled->count();
         $waivedTotal = (float) $waivedCancelled->sum($revenueForWaived);
 
@@ -146,6 +152,8 @@ final class OrderPeriodMetricsService
             'transactions' => $transactions,
             'hourly_breakdown' => $hourlyBreakdown,
             'top_items' => $topItems,
+            'cash_refund_total' => $cashRefundTotal,
+            'credit_refund_total' => $creditRefundTotal,
         ];
 
         return [

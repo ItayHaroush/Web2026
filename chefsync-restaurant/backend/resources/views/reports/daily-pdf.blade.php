@@ -184,6 +184,12 @@
 
     {{-- החזרים --}}
     @if(($report->refund_count ?? 0) > 0)
+    @php
+        $cashRefund = (float) ($json['cash_refund_total'] ?? 0);
+        $creditRefund = (float) ($json['credit_refund_total'] ?? 0);
+        $grossCash = $report->cash_total + $cashRefund;
+        $grossCredit = $report->credit_total + $creditRefund;
+    @endphp
     <table width="100%" cellspacing="0" cellpadding="0" style="margin-bottom: 16px;">
         <tr>
             <td width="50%" style="padding: 0 4px;">
@@ -200,6 +206,59 @@
             </td>
         </tr>
     </table>
+
+    {{-- מזומן בפועל לאחר החזרים --}}
+    @if($cashRefund > 0 || $creditRefund > 0)
+    <div class="section-title">סיכום בפועל (לאחר החזרים)</div>
+    <table width="100%" cellspacing="0" cellpadding="0" style="margin-bottom: 16px;">
+        <tr>
+            @if($cashRefund > 0)
+            <td width="33%" style="padding: 0 4px;">
+                <div class="kpi-card">
+                    <div class="value" style="color: #6b7280;">₪{{ number_format($grossCash, 0) }}</div>
+                    <div class="label">מזומן שנגבה</div>
+                </div>
+            </td>
+            <td width="33%" style="padding: 0 4px;">
+                <div class="kpi-card">
+                    <div class="value" style="color: #ef4444;">-₪{{ number_format($cashRefund, 0) }}</div>
+                    <div class="label">החזרי מזומן</div>
+                </div>
+            </td>
+            <td width="33%" style="padding: 0 4px;">
+                <div class="kpi-card" style="border: 2px solid #22c55e;">
+                    <div class="value" style="color: #22c55e;">₪{{ number_format($report->cash_total, 0) }}</div>
+                    <div class="label">מזומן בפועל</div>
+                </div>
+            </td>
+            @endif
+        </tr>
+    </table>
+    @if($creditRefund > 0)
+    <table width="100%" cellspacing="0" cellpadding="0" style="margin-bottom: 16px;">
+        <tr>
+            <td width="33%" style="padding: 0 4px;">
+                <div class="kpi-card">
+                    <div class="value" style="color: #6b7280;">₪{{ number_format($grossCredit, 0) }}</div>
+                    <div class="label">אשראי שנגבה</div>
+                </div>
+            </td>
+            <td width="33%" style="padding: 0 4px;">
+                <div class="kpi-card">
+                    <div class="value" style="color: #ef4444;">-₪{{ number_format($creditRefund, 0) }}</div>
+                    <div class="label">החזרי אשראי</div>
+                </div>
+            </td>
+            <td width="33%" style="padding: 0 4px;">
+                <div class="kpi-card" style="border: 2px solid #22c55e;">
+                    <div class="value" style="color: #22c55e;">₪{{ number_format($report->credit_total, 0) }}</div>
+                    <div class="label">אשראי בפועל</div>
+                </div>
+            </td>
+        </tr>
+    </table>
+    @endif
+    @endif
     @endif
 
     {{-- אמצעי תשלום --}}
