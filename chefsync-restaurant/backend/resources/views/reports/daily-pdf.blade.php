@@ -143,6 +143,7 @@
     $topItems = $json['top_items'] ?? [];
     $hourlyBreakdown = $json['hourly_breakdown'] ?? [];
     $transactions = $json['transactions'] ?? [];
+    $netRevenue = (float) ($report->net_revenue ?: $report->total_revenue);
     @endphp
 
     <div class="header">
@@ -151,27 +152,99 @@
         <div class="date">{{ $date }}</div>
     </div>
 
-    {{-- KPIs --}}
-    <table width="100%" cellspacing="0" cellpadding="0" style="margin-bottom: 18px;">
+    {{-- KPIs ראשיים --}}
+    <table width="100%" cellspacing="0" cellpadding="0" style="margin-bottom: 12px;">
         <tr>
-            <td width="33%" style="padding: 0 4px;">
+            <td width="25%" style="padding: 0 4px;">
                 <div class="kpi-card">
-                    <div class="value" style="color: #22c55e;">₪{{ number_format($report->total_revenue, 0) }}</div>
-                    <div class="label">הכנסות</div>
+                    <div class="value" style="color: #6b7280;">₪{{ number_format($report->total_revenue, 0) }}</div>
+                    <div class="label">ברוטו</div>
                 </div>
             </td>
-            <td width="33%" style="padding: 0 4px;">
+            <td width="25%" style="padding: 0 4px;">
+                <div class="kpi-card" style="border: 2px solid #22c55e;">
+                    <div class="value" style="color: #22c55e;">₪{{ number_format($netRevenue, 0) }}</div>
+                    <div class="label">נטו אמיתי</div>
+                </div>
+            </td>
+            <td width="25%" style="padding: 0 4px;">
                 <div class="kpi-card">
                     <div class="value" style="color: #3b82f6;">{{ $report->total_orders }}</div>
                     <div class="label">הזמנות</div>
                 </div>
             </td>
-            <td width="33%" style="padding: 0 4px;">
+            <td width="25%" style="padding: 0 4px;">
                 <div class="kpi-card">
                     <div class="value" style="color: #f97316;">₪{{ number_format($report->avg_order_value, 0) }}</div>
-                    <div class="label">ממוצע להזמנה</div>
+                    <div class="label">ממוצע</div>
                 </div>
             </td>
+        </tr>
+    </table>
+
+    {{-- החזרים --}}
+    @if(($report->refund_count ?? 0) > 0)
+    <table width="100%" cellspacing="0" cellpadding="0" style="margin-bottom: 16px;">
+        <tr>
+            <td width="50%" style="padding: 0 4px;">
+                <div class="kpi-card">
+                    <div class="value" style="color: #ef4444;">{{ $report->refund_count }}</div>
+                    <div class="label">החזרים</div>
+                </div>
+            </td>
+            <td width="50%" style="padding: 0 4px;">
+                <div class="kpi-card">
+                    <div class="value" style="color: #ef4444;">-₪{{ number_format($report->refund_total, 0) }}</div>
+                    <div class="label">סכום החזרים</div>
+                </div>
+            </td>
+        </tr>
+    </table>
+    @endif
+
+    {{-- אמצעי תשלום --}}
+    <div class="section-title">אמצעי תשלום</div>
+    <table width="100%" cellspacing="0" cellpadding="0" style="margin-bottom: 16px;">
+        <tr>
+            <td width="25%" style="padding: 0 4px;">
+                <div class="kpi-card">
+                    <div class="value">₪{{ number_format($report->cash_total, 0) }}</div>
+                    <div class="label">מזומן</div>
+                </div>
+            </td>
+            @if(($report->online_credit_total ?? 0) > 0 || ($report->pos_credit_total ?? 0) > 0 || ($report->kiosk_credit_total ?? 0) > 0)
+            @if(($report->online_credit_total ?? 0) > 0)
+            <td width="25%" style="padding: 0 4px;">
+                <div class="kpi-card">
+                    <div class="value">₪{{ number_format($report->online_credit_total, 0) }}</div>
+                    <div class="label">אשראי אתר (HYP)</div>
+                </div>
+            </td>
+            @endif
+            @if(($report->pos_credit_total ?? 0) > 0)
+            <td width="25%" style="padding: 0 4px;">
+                <div class="kpi-card">
+                    <div class="value">₪{{ number_format($report->pos_credit_total, 0) }}</div>
+                    <div class="label">אשראי קופה (POS)</div>
+                </div>
+            </td>
+            @endif
+            @if(($report->kiosk_credit_total ?? 0) > 0)
+            <td width="25%" style="padding: 0 4px;">
+                <div class="kpi-card">
+                    <div class="value">₪{{ number_format($report->kiosk_credit_total, 0) }}</div>
+                    <div class="label">אשראי קיוסק</div>
+                </div>
+            </td>
+            @endif
+            @else
+            <td width="25%" style="padding: 0 4px;">
+                <div class="kpi-card">
+                    <div class="value">₪{{ number_format($report->credit_total, 0) }}</div>
+                    <div class="label">אשראי</div>
+                </div>
+            </td>
+            @endif
         </tr>
     </table>
 
@@ -179,28 +252,16 @@
     <div class="section-title">פילוח הזמנות</div>
     <table width="100%" cellspacing="0" cellpadding="0" style="margin-bottom: 16px;">
         <tr>
-            <td width="25%" style="padding: 0 4px;">
+            <td width="50%" style="padding: 0 4px;">
                 <div class="kpi-card">
                     <div class="value">{{ $report->pickup_orders }}</div>
                     <div class="label">איסוף</div>
                 </div>
             </td>
-            <td width="25%" style="padding: 0 4px;">
+            <td width="50%" style="padding: 0 4px;">
                 <div class="kpi-card">
                     <div class="value">{{ $report->delivery_orders }}</div>
                     <div class="label">משלוח</div>
-                </div>
-            </td>
-            <td width="25%" style="padding: 0 4px;">
-                <div class="kpi-card">
-                    <div class="value">₪{{ number_format($report->cash_total, 0) }}</div>
-                    <div class="label">מזומן</div>
-                </div>
-            </td>
-            <td width="25%" style="padding: 0 4px;">
-                <div class="kpi-card">
-                    <div class="value">₪{{ number_format($report->credit_total, 0) }}</div>
-                    <div class="label">אשראי</div>
                 </div>
             </td>
         </tr>

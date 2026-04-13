@@ -761,9 +761,11 @@ class PrintService
             ? $report->date->format('d/m/Y')
             : (string) $report->date;
 
+        $netRevenue = (float) ($report->net_revenue ?: $report->total_revenue);
+
         $lines = [
             $separator,
-            $this->centerText('דוח יומי — קופה', $printer),
+            $this->centerText('דוח יומי מפורט', $printer),
             $separator,
         ];
 
@@ -772,20 +774,94 @@ class PrintService
         }
         $lines[] = $this->centerText($dateLabel, $printer);
         $lines[] = '';
-        $lines[] = $dash;
-        $lines[] = $this->receiptLineLabelAndAmount('הזמנות (פעילות):', (string) $report->total_orders, $width);
-        $lines[] = $this->receiptLineLabelAndAmount('הכנסות:', $this->formatShekelAmount((float) $report->total_revenue), $width);
-        $lines[] = $this->receiptLineLabelAndAmount('איסוף:', (string) $report->pickup_orders, $width);
-        $lines[] = $this->receiptLineLabelAndAmount('משלוח:', (string) $report->delivery_orders, $width);
-        $lines[] = $this->receiptLineLabelAndAmount('מזומן:', $this->formatShekelAmount((float) $report->cash_total), $width);
-        $lines[] = $this->receiptLineLabelAndAmount('אשראי:', $this->formatShekelAmount((float) $report->credit_total), $width);
-        $lines[] = $this->receiptLineLabelAndAmount('ביטולים:', (string) $report->cancelled_orders, $width);
-        if ((float) $report->cancelled_total > 0) {
-            $lines[] = $this->receiptLineLabelAndAmount('סה"כ ביטולים:', $this->formatShekelAmount((float) $report->cancelled_total), $width);
+
+        // --- סיכום הכנסות ---
+        $lines[] = $this->centerText('--- סיכום הכנסות ---', $printer);
+        $lines[] = $this->receiptLineLabelAndAmount('ברוטו:', $this->formatShekelAmount((float) $report->total_revenue), $width);
+        if ((int) ($report->refund_count ?? 0) > 0) {
+            $lines[] = $this->receiptLineLabelAndAmount(
+                'החזרים (' . $report->refund_count . '):',
+                '-' . $this->formatShekelAmount((float) $report->refund_total),
+                $width
+            );
         }
         $lines[] = $dash;
-        $lines[] = $this->centerText('דוח PDF מלא: ניהול > דוחות', $printer);
+        $lines[] = $this->receiptLineLabelAndAmount('נטו אמיתי:', $this->formatShekelAmount($netRevenue), $width);
+        $lines[] = '';
+
+        // --- אמצעי תשלום ---
+        $lines[] = $this->centerText('--- אמצעי תשלום ---', $printer);
+        $lines[] = $this->receiptLineLabelAndAmount('מזומן:', $this->formatShekelAmount((float) $report->cash_total), $width);
+        if ((float) ($report->online_credit_total ?? 0) > 0) {
+            $lines[] = $this->receiptLineLabelAndAmount('אשראי אתר (HYP):', $this->formatShekelAmount((float) $report->online_credit_total), $width);
+        }
+        if ((float) ($report->pos_credit_total ?? 0) > 0) {
+            $lines[] = $this->receiptLineLabelAndAmount('אשראי קופה (POS):', $this->formatShekelAmount((float) $report->pos_credit_total), $width);
+        }
+        if ((float) ($report->kiosk_credit_total ?? 0) > 0) {
+            $lines[] = $this->receiptLineLabelAndAmount('אשראי קיוסק:', $this->formatShekelAmount((float) $report->kiosk_credit_total), $width);
+        }
+        if ((float) ($report->pos_credit_total ?? 0) == 0 && (float) ($report->online_credit_total ?? 0) == 0 && (float) $report->credit_total > 0) {
+            $lines[] = $this->receiptLineLabelAndAmount('אשראי:', $this->formatShekelAmount((float) $report->credit_total), $width);
+        }
+        $lines[] = '';
+
+        // --- מקור הזמנות ---
+        $lines[] = $this->centerText('--- מקור הזמנות ---', $printer);
+        if ((int) ($report->pos_orders ?? 0) > 0) {
+            $lines[] = $this->receiptLineLabelAndAmount('קופה (' . $report->pos_orders . ' הזמ\'):', $this->formatShekelAmount((float) ($report->pos_revenue ?? 0)), $width);
+        }
+        if ((int) ($report->web_orders ?? 0) > 0) {
+            $lines[] = $this->receiptLineLabelAndAmount('אונליין (' . $report->web_orders . ' הזמ\'):', $this->formatShekelAmount((float) ($report->web_revenue ?? 0)), $width);
+        }
+        if ((int) ($report->kiosk_orders ?? 0) > 0) {
+            $lines[] = $this->receiptLineLabelAndAmount('קיוסק (' . $report->kiosk_orders . ' הזמ\'):', $this->formatShekelAmount((float) ($report->kiosk_revenue ?? 0)), $width);
+        }
+        $lines[] = '';
+
+        // --- סוג ---
+        $lines[] = $this->centerText('--- סוג ---', $printer);
+        $lines[] = $this->receiptLineLabelAndAmount('איסוף:', (string) $report->pickup_orders, $width);
+        $lines[] = $this->receiptLineLabelAndAmount('משלוח:', (string) $report->delivery_orders, $width);
+        if ((int) ($report->dine_in_orders ?? 0) > 0 || (int) ($report->takeaway_orders ?? 0) > 0) {
+            $lines[] = $this->receiptLineLabelAndAmount('לשבת:', (string) ($report->dine_in_orders ?? 0), $width);
+            $lines[] = $this->receiptLineLabelAndAmount('לקחת:', (string) ($report->takeaway_orders ?? 0), $width);
+        }
+        $lines[] = '';
+
+        // --- ביטולים ---
+        if ((int) $report->cancelled_orders > 0) {
+            $lines[] = $this->centerText('--- ביטולים ---', $printer);
+            $lines[] = $this->receiptLineLabelAndAmount('בוטלו (' . $report->cancelled_orders . '):', $this->formatShekelAmount((float) $report->cancelled_total), $width);
+            if ((int) ($report->waived_count ?? 0) > 0) {
+                $lines[] = $this->receiptLineLabelAndAmount('שמורים (' . $report->waived_count . '):', $this->formatShekelAmount((float) $report->waived_total), $width);
+            }
+            $lines[] = '';
+        }
+
+        // --- סגירת יום ---
+        $lines[] = $this->centerText('--- סגירת יום ---', $printer);
+        $lines[] = $this->receiptLineLabelAndAmount('מזומן לספירה:', $this->formatShekelAmount((float) $report->cash_total), $width);
+        $lines[] = '';
+        $lines[] = 'אשראי לבדיקה:';
+        if ((float) ($report->pos_credit_total ?? 0) > 0) {
+            $lines[] = $this->receiptLineLabelAndAmount('  קופה (POS):', $this->formatShekelAmount((float) $report->pos_credit_total), $width);
+        }
+        if ((float) ($report->online_credit_total ?? 0) > 0) {
+            $lines[] = $this->receiptLineLabelAndAmount('  אתר (HYP):', $this->formatShekelAmount((float) $report->online_credit_total), $width);
+        }
+        if ((float) ($report->kiosk_credit_total ?? 0) > 0) {
+            $lines[] = $this->receiptLineLabelAndAmount('  קיוסק:', $this->formatShekelAmount((float) $report->kiosk_credit_total), $width);
+        }
+        if ((float) ($report->pos_credit_total ?? 0) == 0 && (float) ($report->online_credit_total ?? 0) == 0 && (float) $report->credit_total > 0) {
+            $lines[] = $this->receiptLineLabelAndAmount('  אשראי:', $this->formatShekelAmount((float) $report->credit_total), $width);
+        }
+        $lines[] = '';
+        $lines[] = $this->receiptLineLabelAndAmount('סה"כ נטו:', $this->formatShekelAmount($netRevenue), $width);
         $lines[] = $separator;
+        $lines[] = $this->receiptLineLabelAndAmount('הזמנות:', (string) $report->total_orders, $width);
+        $lines[] = $this->receiptLineLabelAndAmount('ממוצע:', $this->formatShekelAmount((float) $report->avg_order_value), $width);
+        $lines[] = $dash;
         $lines[] = $this->centerText('Powered by TakeEat', $printer);
         $lines[] = '';
 

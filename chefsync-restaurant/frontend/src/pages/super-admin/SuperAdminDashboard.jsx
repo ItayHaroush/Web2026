@@ -13,6 +13,7 @@ import {
     FaCheckCircle,
     FaShoppingBag,
     FaCoins,
+    FaWallet,
     FaBuilding,
     FaTimesCircle,
     FaUtensils,
@@ -457,7 +458,7 @@ export default function SuperAdminDashboard() {
                     </div>
                 </div>
                 {stats && (
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
+                    <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 mb-8">
                         <StatCard
                             label="סך הכל מסעדות"
                             value={stats.stats.total_restaurants}
@@ -480,11 +481,18 @@ export default function SuperAdminDashboard() {
                             color="purple"
                         />
                         <StatCard
-                            label="הכנסה כוללת"
-                            value={`₪${Number(stats.stats.total_revenue || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
-                            subtext="מחזור עסקאות"
+                            label="הכנסה - מסעדות דמו"
+                            value={`₪${Number(stats.stats.revenue_demo || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
+                            subtext="כסף מדומה"
                             icon={<FaCoins size={18} />}
                             color="orange"
+                        />
+                        <StatCard
+                            label="הכנסה - מסעדות פעילות"
+                            value={`₪${Number(stats.stats.revenue_real || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
+                            subtext="כסף אמיתי"
+                            icon={<FaWallet size={18} />}
+                            color="green"
                         />
                     </div>
                 )}

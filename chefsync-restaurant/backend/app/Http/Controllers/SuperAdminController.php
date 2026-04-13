@@ -69,6 +69,28 @@ class SuperAdminController extends Controller
             'revenue_today' => (clone $this->orderQuerySuperAdminPlatform())->whereDate('created_at', today())->sum('total_amount'),
         ];
 
+        // הכנסות לפי סוג מסעדה - demo (כסף מדומה) vs real (כסף אמיתי)
+        $demoRestaurantIds = Restaurant::where('is_demo', true)->pluck('id');
+        $realRestaurantIds = Restaurant::where('is_demo', false)->pluck('id');
+
+        $stats['revenue_demo'] = (clone $this->orderQuerySuperAdminPlatform())
+            ->whereIn('restaurant_id', $demoRestaurantIds)
+            ->sum('total_amount');
+
+        $stats['revenue_real'] = (clone $this->orderQuerySuperAdminPlatform())
+            ->whereIn('restaurant_id', $realRestaurantIds)
+            ->sum('total_amount');
+
+        $stats['revenue_today_demo'] = (clone $this->orderQuerySuperAdminPlatform())
+            ->whereDate('created_at', today())
+            ->whereIn('restaurant_id', $demoRestaurantIds)
+            ->sum('total_amount');
+
+        $stats['revenue_today_real'] = (clone $this->orderQuerySuperAdminPlatform())
+            ->whereDate('created_at', today())
+            ->whereIn('restaurant_id', $realRestaurantIds)
+            ->sum('total_amount');
+
         // SaaS KPIs
         $mrr = 0;
         $trialRestaurants = 0;

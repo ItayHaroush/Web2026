@@ -143,13 +143,16 @@ export default function AdminReports({ embedded = false }) {
     // KPIs מחושבים
     const totalOrders = reports.reduce((s, r) => s + (r.total_orders || 0), 0);
     const totalRevenue = reports.reduce((s, r) => s + parseFloat(r.total_revenue || 0), 0);
+    const totalNetRevenue = reports.reduce((s, r) => s + parseFloat(r.net_revenue || r.total_revenue || 0), 0);
+    const totalRefunds = reports.reduce((s, r) => s + parseFloat(r.refund_total || 0), 0);
     const totalCancelled = reports.reduce((s, r) => s + (r.cancelled_orders || 0), 0);
-    const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+    const avgOrderValue = totalOrders > 0 ? totalNetRevenue / totalOrders : 0;
 
     // Chart data
     const chartData = [...reports].reverse().map(r => ({
         date: formatDailyReportCalendarDate(r.date)?.substring(5) || '',
-        הכנסות: parseFloat(r.total_revenue || 0),
+        ברוטו: parseFloat(r.total_revenue || 0),
+        נטו: parseFloat(r.net_revenue || r.total_revenue || 0),
         הזמנות: r.total_orders || 0,
     }));
 
@@ -158,7 +161,14 @@ export default function AdminReports({ embedded = false }) {
         { name: 'משלוח', value: reports.reduce((s, r) => s + (r.delivery_orders || 0), 0) },
     ].filter(d => d.value > 0);
 
-    const paymentPieData = [
+    // פירוט אשראי: אם יש פירוט (דוחות חדשים) — מציג 3 סוגים, אחרת fallback לאשראי אחד
+    const hasDetailedCredit = reports.some(r => parseFloat(r.online_credit_total || 0) > 0 || parseFloat(r.pos_credit_total || 0) > 0 || parseFloat(r.kiosk_credit_total || 0) > 0);
+    const paymentPieData = hasDetailedCredit ? [
+        { name: 'מזומן', value: reports.reduce((s, r) => s + parseFloat(r.cash_total || 0), 0) },
+        { name: 'אשראי אתר (HYP)', value: reports.reduce((s, r) => s + parseFloat(r.online_credit_total || 0), 0) },
+        { name: 'אשראי קופה (POS)', value: reports.reduce((s, r) => s + parseFloat(r.pos_credit_total || 0), 0) },
+        { name: 'אשראי קיוסק', value: reports.reduce((s, r) => s + parseFloat(r.kiosk_credit_total || 0), 0) },
+    ].filter(d => d.value > 0) : [
         { name: 'מזומן', value: reports.reduce((s, r) => s + parseFloat(r.cash_total || 0), 0) },
         { name: 'אשראי', value: reports.reduce((s, r) => s + parseFloat(r.credit_total || 0), 0) },
     ].filter(d => d.value > 0);
@@ -300,8 +310,14 @@ export default function AdminReports({ embedded = false }) {
             {/* KPI Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <KpiCard
-                    label="הכנסות"
+                    label="ברוטו"
                     value={`₪${totalRevenue.toLocaleString('he-IL', { maximumFractionDigits: 0 })}`}
+                    icon={<FaMoneyBillWave />}
+                    color="blue"
+                />
+                <KpiCard
+                    label="נטו אמיתי"
+                    value={`₪${totalNetRevenue.toLocaleString('he-IL', { maximumFractionDigits: 0 })}`}
                     icon={<FaMoneyBillWave />}
                     color="emerald"
                 />
@@ -309,7 +325,7 @@ export default function AdminReports({ embedded = false }) {
                     label="הזמנות"
                     value={totalOrders.toLocaleString()}
                     icon={<FaShoppingBag />}
-                    color="blue"
+                    color="orange"
                 />
                 <KpiCard
                     label="ממוצע להזמנה"
@@ -317,13 +333,27 @@ export default function AdminReports({ embedded = false }) {
                     icon={<FaChartLine />}
                     color="orange"
                 />
-                <KpiCard
-                    label="ביטולים"
-                    value={totalCancelled.toLocaleString()}
-                    icon={<FaTimesCircle />}
-                    color="rose"
-                />
             </div>
+            {(totalRefunds > 0 || totalCancelled > 0) && (
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                    {totalRefunds > 0 && (
+                        <KpiCard
+                            label="החזרים"
+                            value={`-₪${totalRefunds.toLocaleString('he-IL', { maximumFractionDigits: 0 })}`}
+                            icon={<FaTimesCircle />}
+                            color="rose"
+                        />
+                    )}
+                    {totalCancelled > 0 && (
+                        <KpiCard
+                            label="ביטולים"
+                            value={totalCancelled.toLocaleString()}
+                            icon={<FaTimesCircle />}
+                            color="rose"
+                        />
+                    )}
+                </div>
+            )}
 
             {/* Charts */}
             {!loading && reports.length > 0 && (
@@ -339,12 +369,10 @@ export default function AdminReports({ embedded = false }) {
                                 <XAxis dataKey="date" tick={{ fontSize: 11 }} />
                                 <YAxis tick={{ fontSize: 11 }} />
                                 <Tooltip
-                                    formatter={(value, name) => [
-                                        name === 'הכנסות' ? `₪${value.toLocaleString()}` : value,
-                                        name
-                                    ]}
+                                    formatter={(value, name) => [`₪${value.toLocaleString()}`, name]}
                                 />
-                                <Bar dataKey="הכנסות" fill="#f97316" radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="ברוטו" fill="#94a3b8" radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="נטו" fill="#22c55e" radius={[4, 4, 0, 0]} />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
@@ -435,7 +463,8 @@ export default function AdminReports({ embedded = false }) {
                                     </th>
                                     <th className="text-right p-3 font-bold text-gray-500">תאריך</th>
                                     <th className="text-right p-3 font-bold text-gray-500">הזמנות</th>
-                                    <th className="text-right p-3 font-bold text-gray-500">הכנסות</th>
+                                    <th className="text-right p-3 font-bold text-gray-500">ברוטו</th>
+                                    <th className="text-right p-3 font-bold text-gray-500 text-emerald-600">נטו</th>
                                     <th className="text-right p-3 font-bold text-gray-500">איסוף</th>
                                     <th className="text-right p-3 font-bold text-gray-500">משלוח</th>
                                     <th className="text-right p-3 font-bold text-gray-500">אונליין</th>
@@ -459,7 +488,8 @@ export default function AdminReports({ embedded = false }) {
                                         </td>
                                         <td className="p-3 font-bold">{formatDailyReportCalendarDate(r.date)}</td>
                                         <td className="p-3">{r.total_orders}</td>
-                                        <td className="p-3 font-bold text-emerald-600">₪{parseFloat(r.total_revenue || 0).toLocaleString()}</td>
+                                        <td className="p-3 text-gray-500">₪{parseFloat(r.total_revenue || 0).toLocaleString()}</td>
+                                        <td className="p-3 font-bold text-emerald-600">₪{parseFloat(r.net_revenue || r.total_revenue || 0).toLocaleString()}</td>
                                         <td className="p-3">{r.pickup_orders}</td>
                                         <td className="p-3">{r.delivery_orders}</td>
                                         <td className="p-3">{r.web_orders || 0}</td>
@@ -611,10 +641,14 @@ function ReportDetailModal({ report, onClose, onDownloadPdf }) {
 
                 <div className="p-6 space-y-6">
                     {/* KPIs */}
-                    <div className="grid grid-cols-3 gap-3">
-                        <div className="bg-emerald-50 rounded-xl p-4 text-center">
-                            <p className="text-xs text-emerald-700 font-bold mb-1">הכנסות</p>
-                            <p className="text-xl font-black text-emerald-800">₪{parseFloat(report.total_revenue || 0).toLocaleString()}</p>
+                    <div className="grid grid-cols-2 gap-3">
+                        <div className="bg-gray-50 rounded-xl p-4 text-center">
+                            <p className="text-xs text-gray-500 font-bold mb-1">ברוטו</p>
+                            <p className="text-xl font-black text-gray-700">₪{parseFloat(report.total_revenue || 0).toLocaleString()}</p>
+                        </div>
+                        <div className="bg-emerald-50 rounded-xl p-4 text-center border-2 border-emerald-200">
+                            <p className="text-xs text-emerald-700 font-bold mb-1">נטו אמיתי</p>
+                            <p className="text-xl font-black text-emerald-800">₪{parseFloat(report.net_revenue || report.total_revenue || 0).toLocaleString()}</p>
                         </div>
                         <div className="bg-blue-50 rounded-xl p-4 text-center">
                             <p className="text-xs text-blue-700 font-bold mb-1">הזמנות</p>
@@ -626,12 +660,47 @@ function ReportDetailModal({ report, onClose, onDownloadPdf }) {
                         </div>
                     </div>
 
+                    {/* החזרים */}
+                    {(report.refund_count > 0) && (
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="bg-red-50 rounded-xl p-4 text-center">
+                                <p className="text-xs text-red-600 font-bold mb-1">החזרים</p>
+                                <p className="text-xl font-black text-red-600">{report.refund_count}</p>
+                            </div>
+                            <div className="bg-red-50 rounded-xl p-4 text-center">
+                                <p className="text-xs text-red-600 font-bold mb-1">סכום החזרים</p>
+                                <p className="text-xl font-black text-red-600">-₪{parseFloat(report.refund_total || 0).toLocaleString()}</p>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* אמצעי תשלום */}
+                    <div>
+                        <h3 className="text-sm font-black text-gray-900 mb-3">אמצעי תשלום</h3>
+                        <div className="grid grid-cols-2 gap-3 text-sm">
+                            <InfoRow label="מזומן" value={`₪${parseFloat(report.cash_total || 0).toLocaleString()}`} icon={<FaMoneyBillWave className="text-green-500" />} />
+                            {(parseFloat(report.online_credit_total || 0) > 0 || parseFloat(report.pos_credit_total || 0) > 0 || parseFloat(report.kiosk_credit_total || 0) > 0) ? (
+                                <>
+                                    {parseFloat(report.online_credit_total || 0) > 0 && (
+                                        <InfoRow label="אשראי אתר (HYP)" value={`₪${parseFloat(report.online_credit_total).toLocaleString()}`} icon={<FaMoneyBillWave className="text-blue-500" />} />
+                                    )}
+                                    {parseFloat(report.pos_credit_total || 0) > 0 && (
+                                        <InfoRow label="אשראי קופה (POS)" value={`₪${parseFloat(report.pos_credit_total).toLocaleString()}`} icon={<FaMoneyBillWave className="text-indigo-500" />} />
+                                    )}
+                                    {parseFloat(report.kiosk_credit_total || 0) > 0 && (
+                                        <InfoRow label="אשראי קיוסק" value={`₪${parseFloat(report.kiosk_credit_total).toLocaleString()}`} icon={<FaMoneyBillWave className="text-purple-500" />} />
+                                    )}
+                                </>
+                            ) : (
+                                <InfoRow label="אשראי" value={`₪${parseFloat(report.credit_total || 0).toLocaleString()}`} icon={<FaMoneyBillWave className="text-blue-500" />} />
+                            )}
+                        </div>
+                    </div>
+
                     {/* Details */}
                     <div className="grid grid-cols-2 gap-3 text-sm">
                         <InfoRow label="איסוף" value={report.pickup_orders} icon={<FaStore className="text-blue-500" />} />
                         <InfoRow label="משלוח" value={report.delivery_orders} icon={<FaTruck className="text-purple-500" />} />
-                        <InfoRow label="מזומן" value={`₪${parseFloat(report.cash_total || 0).toLocaleString()}`} icon={<FaMoneyBillWave className="text-green-500" />} />
-                        <InfoRow label="אשראי" value={`₪${parseFloat(report.credit_total || 0).toLocaleString()}`} icon={<FaMoneyBillWave className="text-blue-500" />} />
                         {(report.web_orders > 0 || report.kiosk_orders > 0 || report.pos_orders > 0) && (
                             <>
                                 <InfoRow label="אונליין" value={`${report.web_orders || 0} (₪${parseFloat(report.web_revenue || 0).toLocaleString()})`} icon={<FaStore className="text-blue-500" />} />

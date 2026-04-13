@@ -32,13 +32,30 @@ final class OrderPeriodMetricsService
         $waivedCancelled = $cancelledOrders->filter(fn (Order $o) => $o->refund_waived_at !== null
             && $o->payment_status === Order::PAYMENT_PAID);
 
+        $refundedOrders = $cancelledOrders->filter(fn (Order $o) => $o->payment_status === Order::PAYMENT_REFUNDED);
+
         $revenueForWaived = static fn (Order $o): float => (float) ($o->payment_amount ?? $o->total_amount);
+        $revenueForRefunded = static fn (Order $o): float => (float) $o->effectiveChargedAmount();
+
+        $refundCount = $refundedOrders->count();
+        $refundTotal = (float) $refundedOrders->sum($revenueForRefunded);
+
+        $waivedCount = $waivedCancelled->count();
+        $waivedTotal = (float) $waivedCancelled->sum($revenueForWaived);
 
         $totalOrders = $activeOrders->count();
+
+        // total_revenue = ברוטו (כולל סכומים שהוחזרו כדי שנראה את התמונה המלאה)
         $totalRevenue = (float) $activeOrders->sum('total_amount')
-            + (float) $waivedCancelled->sum($revenueForWaived);
+            + $waivedTotal
+            + $refundTotal;
+
+        $netRevenue = $totalRevenue - $refundTotal;
+
         $pickupOrders = $activeOrders->where('delivery_method', 'pickup')->count();
         $deliveryOrders = $activeOrders->where('delivery_method', 'delivery')->count();
+
+        // --- אמצעי תשלום: מזומן / אשראי כולל ---
         $cashTotal = (float) $activeOrders
             ->filter(fn (Order $o) => $o->effectiveCollectedPaymentMethod() === 'cash')
             ->sum('total_amount')
@@ -52,6 +69,18 @@ final class OrderPeriodMetricsService
                 ->filter(fn (Order $o) => $o->effectiveCollectedPaymentMethod() === 'credit_card')
                 ->sum($revenueForWaived);
 
+        // --- פירוט אשראי לפי מקור ---
+        $creditActiveOrders = $activeOrders->filter(fn (Order $o) => $o->effectiveCollectedPaymentMethod() === 'credit_card');
+        $creditWaivedOrders = $waivedCancelled->filter(fn (Order $o) => $o->effectiveCollectedPaymentMethod() === 'credit_card');
+
+        $posCreditTotal = (float) $creditActiveOrders->where('source', 'pos')->sum('total_amount')
+            + (float) $creditWaivedOrders->where('source', 'pos')->sum($revenueForWaived);
+        $onlineCreditTotal = (float) $creditActiveOrders->filter(fn ($o) => in_array($o->source, ['web', null, '']))->sum('total_amount')
+            + (float) $creditWaivedOrders->filter(fn ($o) => in_array($o->source, ['web', null, '']))->sum($revenueForWaived);
+        $kioskCreditTotal = (float) $creditActiveOrders->where('source', 'kiosk')->sum('total_amount')
+            + (float) $creditWaivedOrders->where('source', 'kiosk')->sum($revenueForWaived);
+
+        // --- מקור הזמנות ---
         $webOrders = $activeOrders->filter(fn ($o) => in_array($o->source, ['web', null, '']))->count();
         $webRevenue = (float) $activeOrders->filter(fn ($o) => in_array($o->source, ['web', null, '']))->sum('total_amount')
             + (float) $waivedCancelled->filter(fn ($o) => in_array($o->source, ['web', null, '']))->sum($revenueForWaived);
@@ -67,9 +96,12 @@ final class OrderPeriodMetricsService
 
         $cancelledCount = $cancelledOrders->count();
         $cancelledTotal = (float) $cancelledOrders->sum('total_amount');
-        $avgOrderValue = $totalOrders > 0 ? round($totalRevenue / $totalOrders, 2) : 0;
+        $avgOrderValue = $totalOrders > 0 ? round($netRevenue / $totalOrders, 2) : 0;
 
-        $transactions = $activeOrders->map(function (Order $order) {
+        // --- transactions for report_json ---
+        $allReportOrders = $activeOrders->merge($refundedOrders);
+
+        $transactions = $allReportOrders->map(function (Order $order) {
             return [
                 'order_id' => $order->id,
                 'time' => Carbon::parse($order->created_at)->setTimezone('Asia/Jerusalem')->format('H:i'),
@@ -79,7 +111,7 @@ final class OrderPeriodMetricsService
                 'payment_method' => $order->effectiveCollectedPaymentMethod(),
                 'payment_method_ordered' => $order->payment_method ?? 'cash',
                 'amount' => (float) $order->total_amount,
-                'status' => $order->status,
+                'status' => $order->payment_status === Order::PAYMENT_REFUNDED ? 'refunded' : $order->status,
                 'items_count' => $order->items()->count(),
             ];
         })->values()->toArray();
@@ -132,6 +164,14 @@ final class OrderPeriodMetricsService
             'takeaway_orders' => $takeawayOrders,
             'cash_total' => $cashTotal,
             'credit_total' => $creditTotal,
+            'refund_count' => $refundCount,
+            'refund_total' => $refundTotal,
+            'net_revenue' => $netRevenue,
+            'pos_credit_total' => $posCreditTotal,
+            'online_credit_total' => $onlineCreditTotal,
+            'kiosk_credit_total' => $kioskCreditTotal,
+            'waived_count' => $waivedCount,
+            'waived_total' => $waivedTotal,
             'cancelled_orders' => $cancelledCount,
             'cancelled_total' => $cancelledTotal,
             'avg_order_value' => $avgOrderValue,

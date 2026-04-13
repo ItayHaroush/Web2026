@@ -182,7 +182,10 @@ class ReportController extends Controller
             fputcsv($file, [
                 'תאריך',
                 'הזמנות',
-                'הכנסות',
+                'ברוטו',
+                'החזרים',
+                'סכום החזרים',
+                'נטו',
                 'איסוף',
                 'משלוח',
                 'אונליין',
@@ -194,7 +197,10 @@ class ReportController extends Controller
                 'לשבת',
                 'לקחת',
                 'מזומן',
-                'אשראי',
+                'אשראי כולל',
+                'אשראי קופה',
+                'אשראי אונליין',
+                'אשראי קיוסק',
                 'ביטולים',
                 'סכום ביטולים',
                 'ממוצע להזמנה',
@@ -205,6 +211,9 @@ class ReportController extends Controller
                     $r->date->format('Y-m-d'),
                     $r->total_orders,
                     $r->total_revenue,
+                    $r->refund_count,
+                    $r->refund_total,
+                    $r->net_revenue ?: $r->total_revenue,
                     $r->pickup_orders,
                     $r->delivery_orders,
                     $r->web_orders,
@@ -217,6 +226,9 @@ class ReportController extends Controller
                     $r->takeaway_orders,
                     $r->cash_total,
                     $r->credit_total,
+                    $r->pos_credit_total,
+                    $r->online_credit_total,
+                    $r->kiosk_credit_total,
                     $r->cancelled_orders,
                     $r->cancelled_total,
                     $r->avg_order_value,
@@ -572,9 +584,19 @@ class ReportController extends Controller
     {
         $name = $report->restaurant?->name ?? '';
         $d = $report->date->format('d/m/Y');
+        $netRevenue = (float) ($report->net_revenue ?: $report->total_revenue);
 
-        return "דוח יומי TakeEat — {$name} — {$d}\n"
-            . "הזמנות: {$report->total_orders} | הכנסות: ₪" . number_format((float) $report->total_revenue, 0)
-            . "\nאיסוף: {$report->pickup_orders} | משלוח: {$report->delivery_orders}";
+        $text = "דוח יומי TakeEat — {$name} — {$d}\n"
+            . "ברוטו: ₪" . number_format((float) $report->total_revenue, 0)
+            . " | נטו: ₪" . number_format($netRevenue, 0)
+            . "\nהזמנות: {$report->total_orders} | ממוצע: ₪" . number_format((float) $report->avg_order_value, 0);
+
+        if ($report->refund_count > 0) {
+            $text .= "\nהחזרים: {$report->refund_count} (-₪" . number_format((float) $report->refund_total, 0) . ")";
+        }
+
+        $text .= "\nאיסוף: {$report->pickup_orders} | משלוח: {$report->delivery_orders}";
+
+        return $text;
     }
 }
