@@ -185,10 +185,10 @@
     {{-- החזרים --}}
     @if(($report->refund_count ?? 0) > 0)
     @php
-        $cashRefund = (float) ($json['cash_refund_total'] ?? 0);
-        $creditRefund = (float) ($json['credit_refund_total'] ?? 0);
-        $grossCash = $report->cash_total + $cashRefund;
-        $grossCredit = $report->credit_total + $creditRefund;
+    $cashRefund = (float) ($json['cash_refund_total'] ?? 0);
+    $creditRefund = (float) ($json['credit_refund_total'] ?? 0);
+    $grossCash = $report->cash_total + $cashRefund;
+    $grossCredit = $report->credit_total + $creditRefund;
     @endphp
     <table width="100%" cellspacing="0" cellpadding="0" style="margin-bottom: 16px;">
         <tr>
