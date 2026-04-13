@@ -118,7 +118,7 @@ function setupAutoUnlock() {
  * פותר את הבאג שה-SW שולח הודעה אבל אף אחד לא מקשיב
  */
 function listenServiceWorkerMessages(onNewOrder) {
-    if (!navigator.serviceWorker) return () => {};
+    if (!navigator.serviceWorker) return () => { };
 
     const handler = (event) => {
         if (event.data?.type === 'fcm_message') {
