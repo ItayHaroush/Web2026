@@ -73,7 +73,7 @@ class BackfillEzcountInvoicesCommand extends Command
                 // לא קופה / kiosk — אשראי מדומה
                 ->where(function ($q) {
                     $q->whereNull('source')
-                      ->orWhereNotIn('source', ['pos', 'kiosk']);
+                        ->orWhereNotIn('source', ['pos', 'kiosk']);
                 })
                 // לא סומן ידנית כשולם ע"י עובד קופה
                 ->whereNull('marked_paid_by')
