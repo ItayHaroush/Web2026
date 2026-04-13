@@ -50,11 +50,35 @@ export default function AdminLayout({ children }) {
     const lastFcmMessageIdsRef = useRef(new Set());
     const fcmNotifCountRef = useRef(0);
     const lastAnalyticsSigRef = useRef('');
+    const lastKnownOrderCountRef = useRef(null);
 
     // פתיחת נעילת אודיו בלחיצה ראשונה (חובה ב-PWA)
     useEffect(() => {
         SoundManager.setupAutoUnlock();
     }, []);
+
+    // ===== גיבוי: פולינג כל 15 שניות לזיהוי הזמנות חדשות =====
+    // עובד גם כש-FCM/SW לא מעבירים הודעות (PWA standalone)
+    useEffect(() => {
+        if (!user) return;
+        const poll = async () => {
+            try {
+                const res = await api.get('/admin/orders?per_page=1', { headers: getAuthHeaders() });
+                const orders = res.data?.orders?.data || res.data?.orders || [];
+                const latestId = orders[0]?.id ?? null;
+                if (latestId && lastKnownOrderCountRef.current !== null && latestId > lastKnownOrderCountRef.current) {
+                    SoundManager.play();
+                    if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+                        try { new Notification('הזמנה חדשה', { body: `הזמנה #${latestId}`, icon: '/icon-192.png' }); } catch (_) { }
+                    }
+                }
+                if (latestId) lastKnownOrderCountRef.current = latestId;
+            } catch (_) { /* silent */ }
+        };
+        poll();
+        const interval = setInterval(poll, 15_000);
+        return () => clearInterval(interval);
+    }, [user, getAuthHeaders]);
 
     // FCM בכל דפי האדמין — צלצול רק ל-new_order (מטבח)
     useEffect(() => {
@@ -159,7 +183,8 @@ export default function AdminLayout({ children }) {
                 if (response.data.success) {
                     const restaurant = response.data.restaurant;
                     setRestaurantStatus({
-                        is_open: restaurant.is_open_now ?? restaurant.is_open,
+                        is_open: restaurant.is_open ?? false,
+                        is_open_now: restaurant.is_open_now ?? restaurant.is_open,
                         is_override: restaurant.is_override_status || false,
                         is_approved: restaurant.is_approved ?? false,
                         active_orders_count: restaurant.active_orders_count || 0,

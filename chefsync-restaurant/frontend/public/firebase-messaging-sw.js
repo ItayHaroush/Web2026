@@ -2,10 +2,31 @@
 // Basic lifecycle logs to verify the SW is installed on the frontend domain
 self.addEventListener('install', () => {
     console.log('🔥 FCM Service Worker installed');
+    self.skipWaiting();
 });
 
-self.addEventListener('activate', () => {
+self.addEventListener('activate', (event) => {
     console.log('✅ FCM Service Worker activated');
+    event.waitUntil(self.clients.claim());
+});
+
+// ===== שכבה ראשונה: push ישיר — הכי אמין, עובד לפני Firebase =====
+// נורה תמיד כש-push מגיע, גם ב-PWA standalone.
+// שולח postMessage לכל החלונות הפתוחים כדי שהדף ישמיע צלצול.
+self.addEventListener('push', (event) => {
+    let data = null;
+    try { data = event.data?.json?.(); } catch (_) { /* ignore */ }
+    if (!data) return;
+
+    event.waitUntil(
+        clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+            for (const c of windowClients) {
+                try {
+                    c.postMessage({ type: 'fcm_push', data: data.data || data });
+                } catch (_) { /* ignore */ }
+            }
+        })
+    );
 });
 
 importScripts('https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js');
@@ -23,35 +44,35 @@ firebase.initializeApp({
 const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage(async (payload) => {
-    // Avoid duplicates: if there's an active/focused client, let the page handle it.
     const windowClients = await clients.matchAll({ type: 'window', includeUncontrolled: true });
     const hasFocusedClient = windowClients.some((c) => c.focused || c.visibilityState === 'visible');
 
-    if (hasFocusedClient) {
-        for (const c of windowClients) {
-            try {
-                c.postMessage({ type: 'fcm_message', payload });
-            } catch (_) {
-                // ignore
-            }
+    // תמיד שלח postMessage לכל הלקוחות — גם כשהם "ברקע" ב-PWA
+    // (במצב standalone הדפדפן לפעמים לא מזהה את הלקוח כ-focused)
+    for (const c of windowClients) {
+        try {
+            c.postMessage({ type: 'fcm_message', payload });
+        } catch (_) {
+            // ignore
         }
-        return;
     }
 
-    const title = payload.notification?.title || payload.data?.title || 'TakeEat';
-    const body = payload.notification?.body || payload.data?.body || 'התראה חדשה';
+    // הצג system notification רק אם אין לקוח פעיל (באמת ברקע)
+    if (!hasFocusedClient) {
+        const title = payload.notification?.title || payload.data?.title || 'TakeEat';
+        const body = payload.notification?.body || payload.data?.body || 'התראה חדשה';
 
-    await self.registration.showNotification(title, {
-        body,
-        icon: '/icon-192.png',
-        badge: '/badge-72x72.png',
-        data: payload.data || {},
-    });
+        await self.registration.showNotification(title, {
+            body,
+            icon: '/icon-192.png',
+            badge: '/badge-72x72.png',
+            data: payload.data || {},
+        });
 
-    // PWA App Badge – show the actual count of active notifications
-    if (self.navigator?.setAppBadge) {
-        const all = await self.registration.getNotifications();
-        self.navigator.setAppBadge(all.length).catch(() => { });
+        if (self.navigator?.setAppBadge) {
+            const all = await self.registration.getNotifications();
+            self.navigator.setAppBadge(all.length).catch(() => { });
+        }
     }
 });
 

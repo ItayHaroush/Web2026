@@ -13,6 +13,7 @@ const STORAGE_KEY = 'admin_sound_enabled';
 
 let audioElement = null;
 let unlocked = false;
+let lastPlayTime = 0; // dedup: prevent double-play from onMessage + SW postMessage
 
 /**
  * טען/אתחל את ה-Audio element (פעם אחת)
@@ -34,8 +35,8 @@ function unlock() {
     if (unlocked) return;
     try {
         const audio = getAudio();
-        // play+pause מיידי — פותח את הנעילה של הדפדפן
         audio.volume = 0;
+        audio.currentTime = 0;
         const p = audio.play();
         if (p && p.then) {
             p.then(() => {
@@ -43,6 +44,7 @@ function unlock() {
                 audio.currentTime = 0;
                 audio.volume = 0.8;
                 unlocked = true;
+                console.log('[SoundManager] audio unlocked');
             }).catch(() => { });
         }
     } catch (_) { /* ignore */ }
@@ -53,6 +55,10 @@ function unlock() {
  */
 function play() {
     if (!isEnabled()) return;
+    // dedup: אם צלצול כבר הושמע ב-2 שניות האחרונות, דלג (onMessage + SW postMessage)
+    const now = Date.now();
+    if (now - lastPlayTime < 2000) return;
+    lastPlayTime = now;
     try {
         const audio = getAudio();
         audio.volume = 0.8;
@@ -101,32 +107,62 @@ function setEnabled(value) {
 
 /**
  * הרשם לפתיחת נעילה אוטומטית על לחיצה ראשונה
- * קורא פעם אחת ב-mount של האפליקציה
+ * ממשיך לנסות בכל לחיצה עד שהנעילה מצליחה
  */
 function setupAutoUnlock() {
-    const handler = () => {
-        unlock();
+    const remove = () => {
         document.removeEventListener('click', handler, true);
         document.removeEventListener('touchstart', handler, true);
+    };
+    const handler = () => {
+        if (unlocked) { remove(); return; }
+        try {
+            const audio = getAudio();
+            audio.volume = 0;
+            audio.currentTime = 0;
+            const p = audio.play();
+            if (p && p.then) {
+                p.then(() => {
+                    audio.pause();
+                    audio.currentTime = 0;
+                    audio.volume = 0.8;
+                    unlocked = true;
+                    console.log('[SoundManager] audio unlocked');
+                    remove();
+                }).catch(() => { });
+            }
+        } catch (_) { /* ignore */ }
     };
     document.addEventListener('click', handler, true);
     document.addEventListener('touchstart', handler, true);
 }
 
 /**
- * הרשם ל-postMessage מ-Service Worker (fcm_message)
- * פותר את הבאג שה-SW שולח הודעה אבל אף אחד לא מקשיב
+ * הרשם ל-postMessage מ-Service Worker
+ * מטפל בשני סוגי הודעות:
+ * - fcm_push: מ-push event ישיר (הכי אמין, גם ב-PWA)
+ * - fcm_message: מ-onBackgroundMessage של Firebase (fallback)
  */
 function listenServiceWorkerMessages(onNewOrder) {
     if (!navigator.serviceWorker) return () => { };
 
     const handler = (event) => {
-        if (event.data?.type === 'fcm_message') {
-            const dataType = event.data?.payload?.data?.type;
-            if (dataType === 'new_order') {
-                play();
-                if (onNewOrder) onNewOrder(event.data.payload);
-            }
+        let dataType = null;
+        let payload = null;
+
+        if (event.data?.type === 'fcm_push') {
+            // push ישיר — data מגיע ישירות
+            dataType = event.data?.data?.type;
+            payload = { data: event.data.data };
+        } else if (event.data?.type === 'fcm_message') {
+            // onBackgroundMessage של Firebase
+            dataType = event.data?.payload?.data?.type;
+            payload = event.data.payload;
+        }
+
+        if (dataType === 'new_order') {
+            play();
+            if (onNewOrder) onNewOrder(payload);
         }
     };
 
