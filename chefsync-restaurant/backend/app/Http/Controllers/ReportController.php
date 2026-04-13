@@ -28,9 +28,11 @@ class ReportController extends Controller
 
     private function assertDailyReportVisibleToOwner(DailyReport $report, Restaurant $restaurant): void
     {
-        if ($restaurant->owner_activity_started_at
+        if (
+            $restaurant->owner_activity_started_at
             && $report->date
-            && $report->date->toDateString() < $restaurant->owner_activity_started_at->toDateString()) {
+            && $report->date->toDateString() < $restaurant->owner_activity_started_at->toDateString()
+        ) {
             abort(404, 'הדוח לא זמין');
         }
     }
@@ -390,8 +392,10 @@ class ReportController extends Controller
         $restaurant = Restaurant::where('tenant_id', app('tenant_id'))->firstOrFail();
 
         $dateStr = Carbon::parse($request->input('date'))->toDateString();
-        if ($restaurant->owner_activity_started_at
-            && $dateStr < $restaurant->owner_activity_started_at->toDateString()) {
+        if (
+            $restaurant->owner_activity_started_at
+            && $dateStr < $restaurant->owner_activity_started_at->toDateString()
+        ) {
             return response()->json([
                 'success' => false,
                 'message' => 'אין דוח לתקופה זו (לפני תאריך תחילת הפעילות)',
