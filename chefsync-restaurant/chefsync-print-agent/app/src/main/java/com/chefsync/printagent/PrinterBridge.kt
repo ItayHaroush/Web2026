@@ -33,8 +33,13 @@ object PrinterBridge {
     private const val MARKER_BOLD   = "{{BOLD}}"
     private const val MARKER_NOBOLD = "{{/BOLD}}"
     private const val MARKER_QR     = "{{QR}}"
+    // Enhanced template markers
+    private const val MARKER_HEADING    = "{{HEADING}}"
+    private const val MARKER_NOHEADING  = "{{/HEADING}}"
+    private const val MARKER_CENTER_HW  = "{{CENTER_HW}}"
+    private const val MARKER_NOCENTER_HW = "{{/CENTER_HW}}"
 
-    private val ALL_MARKERS = setOf(MARKER_BIG, MARKER_NOBIG, MARKER_CENTER, MARKER_NOCENTER, MARKER_BOLD, MARKER_NOBOLD, MARKER_QR)
+    private val ALL_MARKERS = setOf(MARKER_BIG, MARKER_NOBIG, MARKER_CENTER, MARKER_NOCENTER, MARKER_BOLD, MARKER_NOBOLD, MARKER_QR, MARKER_HEADING, MARKER_NOHEADING, MARKER_CENTER_HW, MARKER_NOCENTER_HW)
 
     data class PrintResult(
         val success: Boolean,
@@ -105,6 +110,8 @@ object PrinterBridge {
     private val ESC_BOLD_ON = byteArrayOf(0x1B, 0x45, 0x01)
     /** ESC E 0 — bold off */
     private val ESC_BOLD_OFF = byteArrayOf(0x1B, 0x45, 0x00)
+    /** ESC ! 0x38 — double-height + double-width + bold (enhanced headings) */
+    private val ESC_HEADING = byteArrayOf(0x1B, 0x21, 0x38)
 
     /**
      * Process {{BIG}}, {{/BIG}}, {{CENTER}}, {{/CENTER}}, {{BOLD}}, {{/BOLD}}, {{QR}} markers per line.
@@ -115,6 +122,7 @@ object PrinterBridge {
      */
     private fun writeWithInlineMarkers(out: OutputStream, text: String, qrBinary: ByteArray? = null): Boolean {
         var isBig = false
+        var isHeading = false
         var qrInserted = false
         for (line in text.split("\n")) {
             val trimmed = line.trim()
@@ -144,6 +152,23 @@ object PrinterBridge {
                     out.write(ESC_BOLD_OFF)
                     continue
                 }
+                MARKER_HEADING -> {
+                    isHeading = true
+                    continue
+                }
+                MARKER_NOHEADING -> {
+                    isHeading = false
+                    out.write(ESC_FONT_NORMAL)
+                    continue
+                }
+                MARKER_CENTER_HW -> {
+                    out.write(ESC_ALIGN_CENTER)
+                    continue
+                }
+                MARKER_NOCENTER_HW -> {
+                    out.write(ESC_ALIGN_LEFT)
+                    continue
+                }
                 MARKER_QR -> {
                     if (qrBinary != null && qrBinary.isNotEmpty()) {
                         out.write(qrBinary)
@@ -152,7 +177,7 @@ object PrinterBridge {
                     continue
                 }
             }
-            out.write(if (isBig) ESC_DOUBLE_HEIGHT else ESC_FONT_NORMAL)
+            out.write(if (isHeading) ESC_HEADING else if (isBig) ESC_DOUBLE_HEIGHT else ESC_FONT_NORMAL)
             out.write((line + "\n").toByteArray(cp862))
         }
         out.write(ESC_FONT_NORMAL)

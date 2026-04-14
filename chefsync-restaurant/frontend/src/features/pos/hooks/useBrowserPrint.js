@@ -29,6 +29,10 @@ function textToHtml(text, type, role, qrDataUrl) {
         .replace(/\{\{\/CENTER\}\}\n?/g, '</div>')
         .replace(/\{\{BOLD\}\}\n?/g, '<span class="bold">')
         .replace(/\{\{\/BOLD\}\}\n?/g, '</span>')
+        .replace(/\{\{HEADING\}\}\n?/g, '<span class="heading">')
+        .replace(/\{\{\/HEADING\}\}\n?/g, '</span>')
+        .replace(/\{\{CENTER_HW\}\}\n?/g, '<div class="center-hw">')
+        .replace(/\{\{\/CENTER_HW\}\}\n?/g, '</div>')
         .replace(/\{\{QR\}\}\n?/g, qrBlock);
 
     // If no {{QR}} marker, append QR at the end (legacy behavior)
@@ -54,6 +58,8 @@ function textToHtml(text, type, role, qrDataUrl) {
   .big { font-size: 1.6em; font-weight: bold; }
   .center { text-align: center; }
   .bold { font-weight: bold; }
+  .heading { font-size: 2em; font-weight: bold; }
+  .center-hw { text-align: center; }
   @media print {
     body { padding: 0; margin: 0; background: #fff; }
     @page { margin: 5mm; size: 80mm auto; }

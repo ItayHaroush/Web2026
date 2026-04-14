@@ -1,15 +1,20 @@
 import { useState } from 'react';
+import { Navigate } from 'react-router-dom';
 import AdminLayout from '../../layouts/AdminLayout';
 import AdminReports from './AdminReports';
 import AdminTimeReports from './AdminTimeReports';
 import { useRestaurantStatus } from '../../context/RestaurantStatusContext';
+import { useAdminAuth } from '../../context/AdminAuthContext';
 import { isFeatureUnlocked } from '../../utils/tierUtils';
 import { FaChartBar, FaUserClock, FaStar } from 'react-icons/fa';
 
 export default function AdminReportsCenter() {
     const [activeTab, setActiveTab] = useState('daily');
     const { subscriptionInfo } = useRestaurantStatus();
+    const { isManager } = useAdminAuth();
     const isTimeReportsLocked = !isFeatureUnlocked(subscriptionInfo?.features, 'time_reports');
+
+    if (!isManager()) return <Navigate to="/admin/dashboard" replace />;
 
     const TABS = [
         { id: 'daily', label: 'דוחות יומיים', icon: <FaChartBar size={14} /> },

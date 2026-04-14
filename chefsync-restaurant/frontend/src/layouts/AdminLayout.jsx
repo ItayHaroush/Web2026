@@ -3,9 +3,6 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import { useRestaurantStatus } from '../context/RestaurantStatusContext';
 import api from '../services/apiClient';
-import { listenForegroundMessages } from '../services/fcm';
-import SoundManager from '../services/SoundManager';
-import { PRODUCT_NAME } from '../constants/brand';
 import DashboardSidebar from '../components/admin/DashboardSidebar';
 import DashboardHeader from '../components/admin/DashboardHeader';
 import FloatingRestaurantAssistant from '../components/admin/FloatingRestaurantAssistant';
@@ -13,6 +10,7 @@ import FloatingSystemAdminButtons from '../components/admin/FloatingSystemAdminB
 import ImpersonationBanner from '../components/admin/ImpersonationBanner';
 import HolidayScheduleModal from '../components/admin/HolidayScheduleModal';
 import holidayService from '../services/holidayService';
+import { PRODUCT_NAME } from '../constants/brand';
 import { resolveRestaurantAdminPageKey } from '../utils/pageViewMap';
 import { sendRestaurantAdminPageView } from '../services/analyticsBeacon';
 import {
@@ -43,125 +41,11 @@ export default function AdminLayout({ children }) {
         () => sessionStorage.getItem('holidayDismissedSession') === '1'
     );
     const [alertsOpen, setAlertsOpen] = useState(false);
-    const { user, logout, isOwner, isManager, getAuthHeaders, impersonating, isSuperAdmin } = useAdminAuth();
+    const { user, logout, isOwner, isManager, getAuthHeaders, impersonating, isSuperAdmin, hasPosAccess } = useAdminAuth();
     const { restaurantStatus, setRestaurantStatus, setSubscriptionInfo } = useRestaurantStatus();
     const location = useLocation();
     const navigate = useNavigate();
-    const lastFcmMessageIdsRef = useRef(new Set());
-    const fcmNotifCountRef = useRef(0);
     const lastAnalyticsSigRef = useRef('');
-    const lastKnownOrderCountRef = useRef(
-        (() => { const s = sessionStorage.getItem('lastKnownOrderId'); return s ? Number(s) : null; })()
-    );
-
-    // פתיחת נעילת אודיו בלחיצה ראשונה (חובה ב-PWA)
-    useEffect(() => {
-        SoundManager.setupAutoUnlock();
-    }, []);
-
-    // ===== גיבוי: פולינג כל 15 שניות לזיהוי הזמנות חדשות =====
-    // עובד גם כש-FCM/SW לא מעבירים הודעות (PWA standalone)
-    useEffect(() => {
-        if (!user) return;
-        const poll = async () => {
-            try {
-                const res = await api.get('/admin/orders?per_page=1', { headers: getAuthHeaders() });
-                const orders = res.data?.orders?.data || res.data?.orders || [];
-                const latestId = orders[0]?.id ?? null;
-                if (latestId && lastKnownOrderCountRef.current !== null && latestId > lastKnownOrderCountRef.current) {
-                    SoundManager.play();
-                    if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-                        try { new Notification('הזמנה חדשה', { body: `הזמנה #${latestId}`, icon: '/icon-192.png' }); } catch (_) { }
-                    }
-                }
-                if (latestId) {
-                    lastKnownOrderCountRef.current = latestId;
-                    try { sessionStorage.setItem('lastKnownOrderId', String(latestId)); } catch (_) { }
-                }
-            } catch (_) { /* silent */ }
-        };
-        poll();
-        const interval = setInterval(poll, 15_000);
-        return () => clearInterval(interval);
-    }, [user, getAuthHeaders]);
-
-    // FCM בכל דפי האדמין — צלצול רק ל-new_order (מטבח)
-    useEffect(() => {
-        if (!user) return undefined;
-
-        // האזנה ל-postMessage מ-Service Worker (כשהאפליקציה פתוחה)
-        const unsubSw = SoundManager.listenServiceWorkerMessages((payload) => {
-            const title = payload?.notification?.title || payload?.data?.title || PRODUCT_NAME;
-            const body = payload?.notification?.body || payload?.data?.body || 'הזמנה חדשה';
-            if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-                try { new Notification(title, { body, icon: '/icon-192.png' }); } catch (_) { }
-            }
-        });
-
-        const unsubscribe = listenForegroundMessages((payload) => {
-            const msgId = payload?.messageId || payload?.data?.messageId || payload?.data?.google?.message_id;
-            if (msgId) {
-                if (lastFcmMessageIdsRef.current.has(msgId)) return;
-                lastFcmMessageIdsRef.current.add(msgId);
-                setTimeout(() => lastFcmMessageIdsRef.current.delete(msgId), 30_000);
-            }
-
-            const dataType = payload?.data?.type;
-            if (dataType === 'new_order') {
-                SoundManager.play();
-            }
-
-            const title = payload?.notification?.title || payload?.data?.title || PRODUCT_NAME;
-            const body = payload?.notification?.body || payload?.data?.body || 'התראה חדשה';
-
-            // future_order_created — בלי חלון מערכת (רק לוגיקת אחרות אם תתווסף); צלצול כבר מדולג
-            if (dataType === 'future_order_created') {
-                return;
-            }
-
-            if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-                try {
-                    const n = new Notification(title, { body, icon: '/icon-192.png' });
-                    n.onclick = () => {
-                        n.close();
-                        window.focus();
-                        fcmNotifCountRef.current = Math.max(0, fcmNotifCountRef.current - 1);
-                        if (fcmNotifCountRef.current > 0) {
-                            if (navigator.setAppBadge) navigator.setAppBadge(fcmNotifCountRef.current).catch(() => { });
-                        } else if (navigator.clearAppBadge) {
-                            navigator.clearAppBadge().catch(() => { });
-                        }
-                        const url = payload?.data?.url;
-                        if (url && typeof url === 'string' && url.startsWith('/')) {
-                            navigate(url);
-                        } else if (payload?.data?.orderId) {
-                            navigate('/admin/orders');
-                        }
-                    };
-                    fcmNotifCountRef.current += 1;
-                    if (navigator.setAppBadge) navigator.setAppBadge(fcmNotifCountRef.current).catch(() => { });
-                } catch (e) {
-                    console.warn('[FCM] Notification() failed', e);
-                }
-            }
-        });
-        return () => {
-            if (typeof unsubscribe === 'function') unsubscribe();
-            unsubSw();
-        };
-    }, [user, navigate]);
-
-    useEffect(() => {
-        const clearBadge = () => {
-            if (document.visibilityState === 'visible') {
-                fcmNotifCountRef.current = 0;
-                if (navigator.clearAppBadge) navigator.clearAppBadge().catch(() => { });
-            }
-        };
-        clearBadge();
-        document.addEventListener('visibilitychange', clearBadge);
-        return () => document.removeEventListener('visibilitychange', clearBadge);
-    }, []);
 
     useEffect(() => {
         if (!user) return;
@@ -275,7 +159,7 @@ export default function AdminLayout({ children }) {
             path: '/admin/terminal',
             icon: <FaDesktop />,
             label: 'מסוף סניף',
-            show: true
+            show: hasPosAccess()
         },
         {
             path: '/admin/menu-management',
@@ -287,7 +171,13 @@ export default function AdminLayout({ children }) {
             path: '/admin/reports-center',
             icon: <FaChartBar />,
             label: 'דוחות',
-            show: true
+            show: isManager()
+        },
+        {
+            path: '/admin/my-hours',
+            icon: <FaClock />,
+            label: 'השעות שלי',
+            show: !isManager()
         },
         {
             path: '/admin/coupons',

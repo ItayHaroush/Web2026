@@ -121,10 +121,11 @@ apiClient.interceptors.response.use(
         if (error.response?.status === 401) {
             const requestUrl = error.config?.url || '';
             const isPosRoute = requestUrl.includes('/pos/');
+            const isTimeClockRoute = requestUrl.includes('/time/clock');
             const isCustomerRoute = requestUrl.startsWith('/customer/') || requestUrl.startsWith('/customer');
 
-            // Customer and POS routes handle their own 401 logic
-            if (isPosRoute || isCustomerRoute) {
+            // Customer, POS and time-clock routes handle their own 401 logic
+            if (isPosRoute || isCustomerRoute || isTimeClockRoute) {
                 if (isPosRoute) {
                     const posNoSessionPath = [
                         '/pos/verify-pin',

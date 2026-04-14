@@ -3,9 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\EmployeeTimeLog;
+use App\Models\Restaurant;
 use App\Models\User;
+use App\Services\PrintService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
 class TimeClockController extends Controller
@@ -20,14 +23,65 @@ class TimeClockController extends Controller
     }
 
     /**
+     * חישוב מרחק בין שתי נקודות גאוגרפיות (Haversine) — תוצאה במטרים
+     */
+    private function haversineDistance(float $lat1, float $lon1, float $lat2, float $lon2): float
+    {
+        $earthRadius = 6371000; // מטרים
+
+        $dLat = deg2rad($lat2 - $lat1);
+        $dLon = deg2rad($lon2 - $lon1);
+
+        $a = sin($dLat / 2) * sin($dLat / 2)
+            + cos(deg2rad($lat1)) * cos(deg2rad($lat2))
+            * sin($dLon / 2) * sin($dLon / 2);
+
+        $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
+
+        return $earthRadius * $c;
+    }
+
+    /**
      * POST /api/admin/time/clock
      */
     public function clock(Request $request)
     {
-        $request->validate(['pin' => 'required|string|size:4']);
+        $request->validate([
+            'pin' => 'required|string|size:4',
+            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
+        ]);
 
         $currentUser = $request->user();
         $restaurantId = $currentUser->restaurant_id;
+
+        // אימות מיקום אם נדרש ע"י הגדרות המסעדה
+        $restaurant = Restaurant::withoutGlobalScopes()->find($restaurantId);
+        if ($restaurant && $restaurant->require_clock_location) {
+            if (! $request->filled('latitude') || ! $request->filled('longitude')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'נדרש אימות מיקום להחתמת נוכחות',
+                ], 422);
+            }
+
+            if ($restaurant->latitude && $restaurant->longitude) {
+                $distance = $this->haversineDistance(
+                    (float) $restaurant->latitude,
+                    (float) $restaurant->longitude,
+                    (float) $request->latitude,
+                    (float) $request->longitude
+                );
+                $maxRadius = $restaurant->clock_radius_meters ?? 200;
+
+                if ($distance > $maxRadius) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'אתה מחוץ לטווח המסעדה (' . round($distance) . ' מטר). רדיוס מותר: ' . $maxRadius . ' מטר',
+                    ], 403);
+                }
+            }
+        }
 
         $employees = User::where('restaurant_id', $restaurantId)
             ->whereNotNull('pos_pin_hash')
@@ -67,7 +121,7 @@ class TimeClockController extends Controller
             $hourlyRate = $matched->hourly_rate ? (float) $matched->hourly_rate : null;
             $roundedHours = round($roundedMinutes / 60, 2);
 
-            return response()->json([
+            $responseData = [
                 'success' => true,
                 'action' => 'clock_out',
                 'employee' => $matched->name,
@@ -83,21 +137,51 @@ class TimeClockController extends Controller
                 'total_pay' => ($hourlyRate && $matched->role !== 'owner')
                     ? round($roundedHours * $hourlyRate, 2)
                     : null,
-            ]);
+            ];
+
+            $responseData['print_jobs'] = $this->printTimeClockSlip($restaurantId, $responseData);
+
+            return response()->json($responseData);
         }
+
+        $clockInTime = Carbon::now();
 
         EmployeeTimeLog::create([
             'user_id' => $matched->id,
             'restaurant_id' => $restaurantId,
-            'clock_in' => Carbon::now(),
+            'clock_in' => $clockInTime,
         ]);
 
-        return response()->json([
+        $responseData = [
             'success' => true,
             'action' => 'clock_in',
             'employee' => $matched->name,
-            'time' => Carbon::now()->format('H:i'),
-        ]);
+            'time' => $clockInTime->format('H:i'),
+        ];
+
+        $responseData['print_jobs'] = $this->printTimeClockSlip($restaurantId, $responseData);
+
+        return response()->json($responseData);
+    }
+
+    /**
+     * הדפסת בון שעון נוכחות דרך ESC/POS.
+     */
+    private function printTimeClockSlip(int $restaurantId, array $data): int
+    {
+        try {
+            $restaurant = Restaurant::withoutGlobalScopes()->find($restaurantId);
+            $tenantId = $restaurant?->tenant_id;
+
+            return app(PrintService::class)->printTimeClockSlip($restaurantId, $tenantId, $data);
+        } catch (\Throwable $e) {
+            Log::warning('TimeClockController: print slip failed', [
+                'restaurant_id' => $restaurantId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return 0;
+        }
     }
 
     /**
@@ -136,9 +220,15 @@ class TimeClockController extends Controller
         $restaurantId = $currentUser->restaurant_id;
         $today = Carbon::today();
 
-        $logs = EmployeeTimeLog::where('restaurant_id', $restaurantId)
-            ->where('clock_in', '>=', $today)
-            ->with('user:id,name,role')
+        $query = EmployeeTimeLog::where('restaurant_id', $restaurantId)
+            ->where('clock_in', '>=', $today);
+
+        // עובד רגיל רואה רק את הפעילות שלו
+        if (!$currentUser->isManager()) {
+            $query->where('user_id', $currentUser->id);
+        }
+
+        $logs = $query->with('user:id,name,role')
             ->orderBy('clock_in', 'desc')
             ->get()
             ->map(function ($log) {

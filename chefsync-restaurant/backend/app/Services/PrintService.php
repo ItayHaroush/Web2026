@@ -245,7 +245,49 @@ class PrintService
                 ],
             ]);
 
-            $this->executeJob($job, $printer, $payload);
+            $this->executeJob($job, $printer, $payload, bypassHoursCheck: true);
+            $jobCount++;
+        }
+
+        return $jobCount;
+    }
+
+    /**
+     * בון שעון נוכחות — הדפסה דרך ESC/POS (מדפסות receipt/general).
+     * $data = מערך נתוני clock_in / clock_out מ-TimeClockController.
+     */
+    public function printTimeClockSlip(int $restaurantId, ?string $tenantId, array $data): int
+    {
+        $printers = Printer::where('restaurant_id', $restaurantId)
+            ->where('is_active', true)
+            ->whereIn('role', ['receipt', 'general'])
+            ->get();
+
+        if ($printers->isEmpty()) {
+            Log::info("PrintService: No receipt printers for time-clock slip, restaurant {$restaurantId}");
+
+            return 0;
+        }
+
+        $jobCount = 0;
+
+        foreach ($printers as $printer) {
+            $payload = $this->buildTimeClockSlipPayload($data, $printer);
+
+            $job = PrintJob::create([
+                'tenant_id' => $tenantId,
+                'restaurant_id' => $restaurantId,
+                'printer_id' => $printer->id,
+                'order_id' => null,
+                'role' => 'receipt',
+                'status' => 'pending',
+                'payload' => [
+                    'text' => $payload,
+                    'type' => 'time_clock_slip',
+                ],
+            ]);
+
+            $this->executeJob($job, $printer, $payload, bypassHoursCheck: true);
             $jobCount++;
         }
 
@@ -496,6 +538,10 @@ class PrintService
 
     private function buildKitchenTicket(Order $order, $items, Printer $printer): string
     {
+        if ($this->getTemplate($order) === 'enhanced') {
+            return $this->buildEnhancedKitchenTicket($order, $items, $printer);
+        }
+
         $width = $this->getLineWidth($printer);
         $separator = str_repeat('=', $width);
         $dash = str_repeat('-', $width);
@@ -613,10 +659,277 @@ class PrintService
         return implode("\n", $lines);
     }
 
+    // ─── Enhanced Kitchen Ticket ───
+
+    private function getTemplate(Order $order): string
+    {
+        return $order->restaurant?->print_template ?? 'classic';
+    }
+
+    /**
+     * בון מטבח משופר — מרכוז חומרתי, היררכיה חזותית (HEADING גדול, BOLD לפריטים, רגיל לתוספות).
+     */
+    private function buildEnhancedKitchenTicket(Order $order, $items, Printer $printer): string
+    {
+        $width = $this->getLineWidth($printer);
+        $separator = str_repeat('=', $width);
+        $dash = str_repeat('-', $width);
+
+        $lines = [];
+
+        // Hardware centering for the whole ticket
+        $lines[] = '{{CENTER_HW}}';
+
+        $lines[] = $separator;
+        $lines[] = '{{HEADING}}';
+        $lines[] = "הזמנה #{$order->id}";
+        $lines[] = '{{/HEADING}}';
+        $lines[] = $separator;
+
+        $lines[] = $order->created_at->format('d.m.Y') . ' | ' . $order->created_at->format('H:i');
+
+        $orderInfo = [];
+        if ($order->source === 'kiosk') {
+            $typeLabel = $order->order_type === 'dine_in' ? 'לשבת' : 'לקחת';
+            $orderInfo[] = $typeLabel;
+            if ($order->table_number) {
+                $orderInfo[] = "שולחן {$order->table_number}";
+            }
+        } elseif ($order->source === 'pos') {
+            $orderInfo[] = 'קופה';
+        } elseif ($order->delivery_method === 'delivery') {
+            $orderInfo[] = 'משלוח';
+        } else {
+            $orderInfo[] = 'איסוף עצמי';
+        }
+        $lines[] = '{{HEADING}}';
+        $lines[] = implode(' | ', $orderInfo);
+        $lines[] = '{{/HEADING}}';
+
+        $packaging = $this->formatOrderPackagingLabel($order);
+        if ($packaging !== '') {
+            $lines[] = $packaging;
+        }
+        if ($order->customer_name) {
+            $lines[] = '{{BOLD}}';
+            $lines[] = $order->customer_name;
+            $lines[] = '{{/BOLD}}';
+        }
+        if ($order->customer_phone && $order->customer_phone !== '0000000000') {
+            $lines[] = 'טלפון: ' . PhoneValidationService::formatIsraeliForDisplay($order->customer_phone);
+        }
+        if ($order->delivery_address) {
+            $lines[] = "כתובת: {$order->delivery_address}";
+        }
+
+        $lines[] = $dash;
+
+        $kitchenGroups = $this->groupOrderItemsByCategory($items);
+        $kitchenItemTotal = 0;
+        foreach ($kitchenGroups as $b) {
+            $kitchenItemTotal += count($b);
+        }
+        $kitchenItemDone = 0;
+
+        foreach ($kitchenGroups as $categoryLabel => $bucket) {
+            $lines[] = '{{BOLD}}';
+            $lines[] = "— {$categoryLabel} —";
+            $lines[] = '{{/BOLD}}';
+
+            foreach ($bucket as $item) {
+                $name = $item->menuItem?->name ?? $item->name ?? 'פריט';
+                $qty = $item->quantity ?? 1;
+                $lines[] = '{{BOLD}}';
+                $lines[] = "{$qty}x {$name}";
+                $lines[] = '{{/BOLD}}';
+
+                if (! empty($item->variant_name)) {
+                    $lines[] = "סוג: {$item->variant_name}";
+                }
+
+                $addons = is_array($item->addons) ? $item->addons : [];
+                foreach ($addons as $addon) {
+                    $addonName = is_string($addon) ? $addon : ($addon['name'] ?? $addon['addon_name'] ?? '');
+                    $onSide = is_array($addon) && ! empty($addon['on_side']);
+                    if ($addonName) {
+                        $label = $onSide ? "בצד: {$addonName}" : "תוספת: {$addonName}";
+                        $lines[] = $label;
+                    }
+                }
+
+                if (! empty($item->notes)) {
+                    $lines[] = "הערה: {$item->notes}";
+                }
+
+                $kitchenItemDone++;
+                if ($kitchenItemDone < $kitchenItemTotal) {
+                    $lines[] = '';
+                }
+            }
+        }
+
+        $lines[] = $dash;
+
+        if ($order->delivery_notes) {
+            $lines[] = "הערות: {$order->delivery_notes}";
+            $lines[] = $dash;
+        }
+        if ($order->notes) {
+            $lines[] = "הערות: {$order->notes}";
+            $lines[] = $dash;
+        }
+
+        $lines[] = $separator;
+        $restaurantName = $order->restaurant?->name ?? '';
+        if ($restaurantName) {
+            $lines[] = $restaurantName;
+        }
+        $lines[] = 'Powered by TakeEat';
+        $lines[] = '{{/CENTER_HW}}';
+        $lines[] = '';
+
+        return implode("\n", $lines);
+    }
+
+    /**
+     * אישור/קבלה משופרת — מרכוז חומרתי, HEADING לכותרות, BOLD לפריטים, רגיל לתוספות.
+     */
+    private function buildEnhancedReceiptPayload(Order $order, Printer $printer, array $extraData = []): string
+    {
+        $width = $this->getLineWidth($printer);
+        $separator = str_repeat('█', $width);
+        $dash = str_repeat('-', $width);
+
+        $lines = [];
+
+        $lines[] = '{{CENTER_HW}}';
+
+        $restaurantName = $order->restaurant?->name ?? '';
+        if ($restaurantName) {
+            $lines[] = '{{HEADING}}';
+            $lines[] = $restaurantName;
+            $lines[] = '{{/HEADING}}';
+        }
+
+        $lines[] = $separator;
+        $lines[] = '{{BOLD}}';
+        $lines[] = "אישור — הזמנה #{$order->id}";
+        $lines[] = '{{/BOLD}}';
+        $lines[] = $separator;
+        $lines[] = $order->created_at->format('d.m.Y H:i');
+
+        $serviceLabel = $this->formatOrderServiceModeLabel($order);
+        if ($serviceLabel !== '') {
+            $lines[] = $serviceLabel;
+        }
+        $packagingLabel = $this->formatOrderPackagingLabel($order);
+        if ($packagingLabel !== '') {
+            $lines[] = $packagingLabel;
+        }
+        if ($order->customer_name && $order->customer_name !== 'POS') {
+            $lines[] = "לקוח: {$order->customer_name}";
+        }
+        if ($order->customer_phone && $order->customer_phone !== '0000000000') {
+            $lines[] = 'טלפון: ' . PhoneValidationService::formatIsraeliForDisplay($order->customer_phone);
+        }
+        if ($order->delivery_address) {
+            $lines[] = "כתובת: {$order->delivery_address}";
+        }
+        $lines[] = $dash;
+
+        $receiptGroups = $this->groupOrderItemsByCategory($order->items);
+        $receiptItemTotal = 0;
+        foreach ($receiptGroups as $b) {
+            $receiptItemTotal += count($b);
+        }
+        $receiptItemDone = 0;
+
+        foreach ($receiptGroups as $categoryLabel => $bucket) {
+            $lines[] = '{{BOLD}}';
+            $lines[] = "— {$categoryLabel} —";
+            $lines[] = '{{/BOLD}}';
+
+            foreach ($bucket as $item) {
+                $name = $item->menuItem?->name ?? $item->name ?? 'פריט';
+                $qty = $item->quantity ?? 1;
+
+                if (! empty($item->variant_name)) {
+                    $name .= " ({$item->variant_name})";
+                }
+
+                $lines[] = '{{BOLD}}';
+                $lines[] = "{$qty}x {$name}";
+                $lines[] = '{{/BOLD}}';
+
+                $addons = is_array($item->addons) ? $item->addons : [];
+                foreach ($addons as $addon) {
+                    $addonName = is_string($addon) ? $addon : ($addon['name'] ?? '');
+                    $addonPrice = is_array($addon) ? (float) ($addon['price'] ?? 0) : 0.0;
+
+                    if ($addonName) {
+                        $price = $addonPrice > 0 ? ' ' . $this->formatShekelAmount($addonPrice) : '';
+                        $lines[] = "תוספת: {$addonName}{$price}";
+                    }
+                }
+
+                $receiptItemDone++;
+                if ($receiptItemDone < $receiptItemTotal) {
+                    $lines[] = '';
+                }
+            }
+        }
+
+        $lines[] = $separator;
+
+        if ($order->delivery_fee > 0) {
+            $lines[] = 'דמי משלוח: ' . $this->formatShekelAmount((float) $order->delivery_fee);
+        }
+
+        $totalAmount = $order->total_amount ?? 0;
+        $lines[] = '{{HEADING}}';
+        $lines[] = 'סה"כ: ' . $this->formatShekelAmount((float) $totalAmount);
+        $lines[] = '{{/HEADING}}';
+
+        $paymentLabel = match ($order->payment_method) {
+            'cash' => 'מזומן',
+            'credit_card' => 'אשראי',
+            default => $order->payment_method ?? '—',
+        };
+        $lines[] = "תשלום: {$paymentLabel}";
+
+        if (! empty($extraData['change']) && $extraData['change'] > 0) {
+            $lines[] = 'עודף: ' . $this->formatShekelAmount((float) $extraData['change']);
+        }
+
+        if (! empty($extraData['receipt_number'])) {
+            $lines[] = $dash;
+            $lines[] = "מס׳ אישור: {$extraData['receipt_number']}";
+        }
+
+        if (! empty($extraData['has_payment_qr'])) {
+            $lines[] = $separator;
+            $lines[] = 'לתשלום סרקו את הברקוד';
+            $lines[] = '{{QR}}';
+            $lines[] = $separator;
+        }
+
+        $lines[] = $separator;
+        $lines[] = 'תודה שבחרתם בנו!';
+        $lines[] = 'Powered by TakeEat';
+        $lines[] = '{{/CENTER_HW}}';
+        $lines[] = '';
+
+        return implode("\n", $lines);
+    }
+
     // ─── Receipt ───
 
     private function buildReceiptPayload(Order $order, Printer $printer, array $extraData = []): string
     {
+        if ($this->getTemplate($order) === 'enhanced') {
+            return $this->buildEnhancedReceiptPayload($order, $printer, $extraData);
+        }
+
         $width = $this->getLineWidth($printer);
         $separator = str_repeat('=', $width);
         $dash = str_repeat('-', $width);
@@ -868,6 +1181,71 @@ class PrintService
         return implode("\n", $lines);
     }
 
+    private function buildTimeClockSlipPayload(array $data, Printer $printer): string
+    {
+        $width = $this->getLineWidth($printer);
+        $separator = str_repeat('=', $width);
+        $dash = str_repeat('-', $width);
+
+        $isClockIn = ($data['action'] ?? '') === 'clock_in';
+        $employee = $data['employee'] ?? '—';
+
+        $lines = [
+            $separator,
+            $this->centerText($isClockIn ? 'כניסה — שעון נוכחות' : 'יציאה — שעון נוכחות', $printer),
+            $separator,
+        ];
+
+        $lines[] = $this->receiptLineLabelAndAmount('עובד:', $employee, $width);
+        $lines[] = $this->receiptLineLabelAndAmount('שעה:', $data['time'] ?? '—', $width);
+
+        if ($isClockIn) {
+            $lines[] = '';
+            $lines[] = $this->centerText('כניסה נרשמה בהצלחה', $printer);
+        } else {
+            $lines[] = $this->receiptLineLabelAndAmount('תאריך:', $data['date'] ?? '—', $width);
+            $lines[] = $dash;
+            $lines[] = $this->receiptLineLabelAndAmount('כניסה:', $data['clock_in_time'] ?? '—', $width);
+            $lines[] = $this->receiptLineLabelAndAmount('יציאה:', $data['clock_out_time'] ?? '—', $width);
+            $lines[] = $dash;
+
+            $rawMinutes = $data['raw_minutes'] ?? 0;
+            $roundedMinutes = $data['rounded_minutes'] ?? 0;
+            $totalHours = $data['total_hours'] ?? 0;
+
+            $lines[] = $this->receiptLineLabelAndAmount('זמן עבודה:', $this->formatMinutesHebrew($rawMinutes), $width);
+            $lines[] = $this->receiptLineLabelAndAmount('מעוגל (15 דק\'):', $this->formatMinutesHebrew($roundedMinutes), $width);
+            $lines[] = $this->receiptLineLabelAndAmount('שעות:', (string) $totalHours, $width);
+
+            if (isset($data['hourly_rate']) && $data['hourly_rate']) {
+                $lines[] = $this->receiptLineLabelAndAmount('שכר שעתי:', $this->formatShekelAmount((float) $data['hourly_rate']), $width);
+            }
+
+            if (isset($data['total_pay']) && $data['total_pay'] !== null) {
+                $lines[] = $dash;
+                $lines[] = $this->receiptLineLabelAndAmount('לתשלום:', $this->formatShekelAmount((float) $data['total_pay']), $width);
+            }
+        }
+
+        $lines[] = '';
+        $lines[] = $separator;
+        $lines[] = $this->centerText('Powered by TakeEat', $printer);
+        $lines[] = '';
+
+        return implode("\n", $lines);
+    }
+
+    private function formatMinutesHebrew(int $minutes): string
+    {
+        if ($minutes < 60) {
+            return $minutes . ' דק\'';
+        }
+        $h = intdiv($minutes, 60);
+        $m = $minutes % 60;
+
+        return $m === 0 ? "{$h} שעות" : "{$h} שע' {$m} דק'";
+    }
+
     private function buildShareQrSlipTextPayload(Restaurant $restaurant, Printer $printer): string
     {
         $width = $this->getLineWidth($printer);
@@ -1095,37 +1473,7 @@ class PrintService
      */
     private function isWithinPrintableHours(Restaurant $restaurant): bool
     {
-        // Manual override: if restaurant manually set to open, allow printing
-        if ($restaurant->is_override_status && $restaurant->is_open) {
-            return true;
-        }
-
-        $operatingDays = $restaurant->operating_days ?? [];
-        $operatingHours = $restaurant->operating_hours ?? [];
-
-        // No hours configured — fail-open, allow prints
-        if (empty($operatingDays) && empty($operatingHours)) {
-            return true;
-        }
-
-        $now = \Carbon\Carbon::now('Asia/Jerusalem');
-
-        // Open right now
-        if (Restaurant::calculateIsOpen($operatingDays, $operatingHours, $now)) {
-            return true;
-        }
-
-        // Opening within 30 minutes (prep time)
-        if (Restaurant::calculateIsOpen($operatingDays, $operatingHours, $now->copy()->addMinutes(30))) {
-            return true;
-        }
-
-        // Was open within last 60 minutes (cleanup time)
-        if (Restaurant::calculateIsOpen($operatingDays, $operatingHours, $now->copy()->subMinutes(60))) {
-            return true;
-        }
-
-        return false;
+        return true;
     }
 
     private function getLineWidth(Printer $printer): int

@@ -53,8 +53,12 @@ class OrderRefundService
 
         $referenceNumber = $payment?->transaction_id ?? $order->payment_transaction_id;
 
+        $isMockReference = $referenceNumber
+            && (str_starts_with((string) $referenceNumber, 'MOCK_')
+                || str_starts_with((string) $referenceNumber, 'LOCAL-DEMO-'));
+
         $useZCredit = ($payment && $payment->provider === 'zcredit')
-            || ($referenceNumber && str_starts_with((string) $referenceNumber, 'MOCK_'))
+            || $isMockReference
             || ($order->source === 'pos' && $referenceNumber);
 
         $useHyp = ! $useZCredit
@@ -100,6 +104,7 @@ class OrderRefundService
 
         DB::transaction(function () use ($order, $restaurantId, $user, $isCreditRefund, $amount) {
             $order->update([
+                'status' => Order::STATUS_CANCELLED,
                 'payment_status' => Order::PAYMENT_REFUNDED,
                 'refund_pending_at' => null,
             ]);

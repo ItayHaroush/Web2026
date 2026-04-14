@@ -31,6 +31,7 @@ class PrinterController extends Controller
             'success' => true,
             'printers' => $printers,
             'tier' => $tier,
+            'print_template' => $restaurant->print_template ?? 'classic',
             'limits' => [
                 'max_printers' => $maxPrinters,
             ],
@@ -349,5 +350,40 @@ class PrinterController extends Controller
                 'message' => 'שגיאה בהדפסה חוזרת: ' . $e->getMessage(),
             ], 500);
         }
+    }
+
+    /**
+     * עדכון תצורת הדפסה למסעדה
+     */
+    public function updateTemplate(Request $request)
+    {
+        $user = $request->user();
+
+        if (! $user->isManager()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'אין לך הרשאה לשנות תצורת הדפסה',
+            ], 403);
+        }
+
+        $request->validate([
+            'print_template' => 'required|string|in:classic,enhanced',
+        ]);
+
+        $restaurant = Restaurant::withoutGlobalScopes()->find($user->restaurant_id);
+        if (! $restaurant) {
+            return response()->json([
+                'success' => false,
+                'message' => 'לא נמצאה מסעדה למשתמש',
+            ], 404);
+        }
+
+        $restaurant->update(['print_template' => $request->input('print_template')]);
+
+        return response()->json([
+            'success' => true,
+            'print_template' => $restaurant->print_template,
+            'message' => 'תצורת הדפסה עודכנה בהצלחה!',
+        ]);
     }
 }

@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AdminAuthProvider, useAdminAuth } from './context/AdminAuthContext';
+import AdminNotificationProvider from './context/AdminNotificationProvider';
 import { RestaurantStatusProvider } from './context/RestaurantStatusContext';
 import { CartProvider } from './context/CartContext';
 import { PromotionProvider } from './context/PromotionContext';
@@ -45,6 +46,7 @@ import PaymentCallback from './pages/PaymentCallback';
 import AdminAuthDebug from './pages/admin/AdminAuthDebug';
 import AdminMenuManagement from './pages/admin/AdminMenuManagement';
 import AdminReportsCenter from './pages/admin/AdminReportsCenter';
+import AdminMyHours from './pages/admin/AdminMyHours';
 import AdminDevices from './pages/admin/AdminDevices';
 import AdminSettingsHub from './pages/admin/AdminSettingsHub';
 import AdminAbandonedCartReminders from './pages/admin/AdminAbandonedCartReminders';
@@ -350,6 +352,14 @@ function AppRoutes() {
         <Route path="/admin/reports" element={<Navigate to="/admin/reports-center" replace />} />
         <Route path="/admin/time-reports" element={<Navigate to="/admin/reports-center" replace />} />
         <Route
+          path="/admin/my-hours"
+          element={
+            <AdminRoute>
+              <AdminMyHours />
+            </AdminRoute>
+          }
+        />
+        <Route
           path="/admin/pos"
           element={
             <AdminRoute>
@@ -588,6 +598,7 @@ export default function App() {
     <Router>
       <ThemeProvider>
         <AdminAuthProvider>
+          <AdminNotificationProvider>
           <RestaurantStatusProvider>
             <AuthProvider>
               <ToastProvider>
@@ -610,6 +621,7 @@ export default function App() {
               </ToastProvider>
             </AuthProvider>
           </RestaurantStatusProvider>
+          </AdminNotificationProvider>
         </AdminAuthProvider>
       </ThemeProvider>
     </Router>

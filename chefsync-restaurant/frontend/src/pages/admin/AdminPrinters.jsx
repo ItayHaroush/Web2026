@@ -15,6 +15,7 @@ import {
     deletePrinter,
     togglePrinter,
     testPrint,
+    updatePrintTemplate,
 } from '../../services/printerService';
 import {
     getPrintDevices,
@@ -96,6 +97,8 @@ export default function AdminPrinters({ embedded = false }) {
     const [deviceForm, setDeviceForm] = useState({ ...DEVICE_FORM });
     const [newToken, setNewToken] = useState(null);
     const [copiedToken, setCopiedToken] = useState(false);
+    const [printTemplate, setPrintTemplate] = useState('classic');
+    const [savingTemplate, setSavingTemplate] = useState(false);
 
     const fetchData = async () => {
         try {
@@ -107,6 +110,7 @@ export default function AdminPrinters({ embedded = false }) {
             if (printersRes.success) {
                 setPrinters(printersRes.printers || []);
                 setLimits(printersRes.limits || {});
+                setPrintTemplate(printersRes.print_template || 'classic');
             }
             if (categoriesRes.data?.success) setCategories(categoriesRes.data.categories || []);
             if (devicesRes.success) setDevices(devicesRes.devices || []);
@@ -279,6 +283,21 @@ export default function AdminPrinters({ embedded = false }) {
         }
     };
 
+    const handleTemplateChange = async (template) => {
+        setSavingTemplate(true);
+        try {
+            const res = await updatePrintTemplate(template);
+            if (res.success) {
+                setPrintTemplate(res.print_template);
+            }
+        } catch (error) {
+            console.error('Failed to update print template:', error);
+            alert(error.response?.data?.message || 'שגיאה בעדכון תצורת הדפסה');
+        } finally {
+            setSavingTemplate(false);
+        }
+    };
+
     const timeAgo = (dateStr) => {
         if (!dateStr) return null;
         const diff = (Date.now() - new Date(dateStr).getTime()) / 1000;
@@ -369,6 +388,47 @@ export default function AdminPrinters({ embedded = false }) {
                     <FaNetworkWired size={16} /> גשרי הדפסה
                 </button>
             </div>
+
+            {/* Print Template Selector */}
+            {isManager() && (activeTab === 'printers' || !searchParams.get('tab')) && (
+                <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 mx-4">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        <div>
+                            <h3 className="text-lg font-black text-gray-900">תצורת הדפסה</h3>
+                            <p className="text-sm text-gray-500 mt-1">בחר את סגנון ההדפסה לכל המדפסות במסעדה</p>
+                        </div>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => handleTemplateChange('classic')}
+                                disabled={savingTemplate}
+                                className={`px-6 py-3 rounded-2xl font-bold transition-all text-sm ${
+                                    printTemplate === 'classic'
+                                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-200'
+                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                }`}
+                            >
+                                קלאסי
+                            </button>
+                            <button
+                                onClick={() => handleTemplateChange('enhanced')}
+                                disabled={savingTemplate}
+                                className={`px-6 py-3 rounded-2xl font-bold transition-all text-sm ${
+                                    printTemplate === 'enhanced'
+                                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-200'
+                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                }`}
+                            >
+                                משופר ✨
+                            </button>
+                        </div>
+                    </div>
+                    <div className="mt-3 text-xs text-gray-400">
+                        {printTemplate === 'classic'
+                            ? 'תבנית קלאסית — כל הפריטים בגודל גדול, ריווח ידני'
+                            : 'תבנית משופרת — מרכוז חומרתי, כותרות גדולות, פריטים Bold, תוספות בגודל רגיל'}
+                    </div>
+                </div>
+            )}
 
             {/* Content: Printers */}
             {(activeTab === 'printers' || !searchParams.get('tab')) && (

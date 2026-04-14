@@ -101,6 +101,9 @@ class Restaurant extends Model
         'max_employees',
         'ezcount_invoices_enabled',
         'ezcount_api_key',
+        'require_clock_location',
+        'clock_radius_meters',
+        'print_template',
     ];
 
     protected $hidden = [
@@ -152,6 +155,8 @@ class Restaurant extends Model
         'feature_overrides' => 'array',
         'ezcount_invoices_enabled' => 'boolean',
         'ezcount_api_key' => 'encrypted',
+        'require_clock_location' => 'boolean',
+        'clock_radius_meters' => 'integer',
     ];
 
     /**

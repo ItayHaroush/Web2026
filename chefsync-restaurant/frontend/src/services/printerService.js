@@ -45,3 +45,9 @@ export const reprintOrder = async (orderId) => {
     const response = await apiClient.post(`/admin/orders/${orderId}/reprint`);
     return response.data;
 };
+
+// עדכון תצורת הדפסה (classic / enhanced)
+export const updatePrintTemplate = async (template) => {
+    const response = await apiClient.patch('/admin/printers/template', { print_template: template });
+    return response.data;
+};

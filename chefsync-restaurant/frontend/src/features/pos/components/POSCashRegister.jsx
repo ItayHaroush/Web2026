@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { FaCashRegister, FaPlus, FaMinus, FaLock, FaShekelSign, FaArrowDown, FaArrowUp, FaReceipt, FaHistory, FaTimesCircle, FaPrint, FaCheckCircle, FaExclamationTriangle, FaUsers, FaCreditCard, FaQrcode } from 'react-icons/fa';
+import { FaCashRegister, FaPlus, FaMinus, FaLock, FaShekelSign, FaArrowDown, FaArrowUp, FaReceipt, FaHistory, FaTimesCircle, FaPrint, FaCheckCircle, FaExclamationTriangle, FaUsers, FaCreditCard, FaQrcode, FaExchangeAlt } from 'react-icons/fa';
 import posApi from '../api/posApi';
 import POSManagerAuth from './POSManagerAuth';
 import POSAmountKeypad from './POSAmountKeypad';
@@ -147,6 +147,10 @@ export default function POSCashRegister({ headers, posToken, isManager, onShiftC
     const [managerAuthAction, setManagerAuthAction] = useState(null); // 'history' | null
     const [shareQrLoading, setShareQrLoading] = useState(false);
     const [printMsg, setPrintMsg] = useState(null);
+    const [showSwitchToCredit, setShowSwitchToCredit] = useState(false);
+    const [cashPaidOrders, setCashPaidOrders] = useState([]);
+    const [cashPaidLoading, setCashPaidLoading] = useState(false);
+    const [switchingOrderId, setSwitchingOrderId] = useState(null);
 
     const showPrintMsg = (text, isError = false) => {
         setPrintMsg({ text, isError });
@@ -317,6 +321,37 @@ export default function POSCashRegister({ headers, posToken, isManager, onShiftC
         }
     };
 
+    const openSwitchToCredit = async () => {
+        setShowSwitchToCredit(true);
+        setCashPaidLoading(true);
+        try {
+            const res = await posApi.getCashPaidOrders(headers, posToken);
+            setCashPaidOrders(res.data.orders || []);
+        } catch (e) {
+            console.error('Failed to load cash paid orders:', e);
+            setCashPaidOrders([]);
+        } finally {
+            setCashPaidLoading(false);
+        }
+    };
+
+    const handleSwitchToCredit = async (orderId) => {
+        if (switchingOrderId) return;
+        setSwitchingOrderId(orderId);
+        try {
+            const res = await posApi.switchOrderToCredit(orderId, headers, posToken);
+            if (res.data.success) {
+                setCashPaidOrders(prev => prev.filter(o => o.id !== orderId));
+                showPrintMsg('אמצעי התשלום עודכן לאשראי');
+                fetchData();
+            }
+        } catch (e) {
+            showPrintMsg(e.response?.data?.message || 'שגיאה בעדכון אמצעי תשלום', true);
+        } finally {
+            setSwitchingOrderId(null);
+        }
+    };
+
     if (loading) {
         return (
             <div className="flex items-center justify-center h-full">
@@ -458,7 +493,14 @@ export default function POSCashRegister({ headers, posToken, isManager, onShiftC
                             הוצאת מזומן
                         </button>
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-3 gap-3">
+                        <button
+                            onClick={openSwitchToCredit}
+                            className="flex flex-col items-center gap-2 py-4 bg-cyan-500/10 border border-cyan-500/30 rounded-2xl text-cyan-400 font-black text-sm transition-all active:scale-95 hover:bg-cyan-500/20"
+                        >
+                            <FaExchangeAlt size={20} />
+                            מזומן → אשראי
+                        </button>
                         <button
                             onClick={requestHistory}
                             className="flex flex-col items-center gap-2 py-4 bg-blue-500/10 border border-blue-500/30 rounded-2xl text-blue-400 font-black text-sm transition-all active:scale-95 hover:bg-blue-500/20"
@@ -698,6 +740,57 @@ export default function POSCashRegister({ headers, posToken, isManager, onShiftC
                     onVerified={handleManagerAuthVerified}
                     onClose={() => setManagerAuthAction(null)}
                 />
+            )}
+
+            {showSwitchToCredit && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[300] flex items-center justify-center p-4" onClick={() => setShowSwitchToCredit(false)}>
+                    <div className="bg-slate-800 rounded-3xl max-w-lg w-full border border-slate-700 animate-in zoom-in-95 duration-200 max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+                        <div className="px-6 py-4 border-b border-slate-700 flex items-center justify-between shrink-0">
+                            <h3 className="text-lg font-black text-white flex items-center gap-2">
+                                <FaExchangeAlt className="text-cyan-400" /> החלפה לאשראי
+                            </h3>
+                            <button onClick={() => setShowSwitchToCredit(false)} className="text-slate-500 hover:text-white transition-colors">
+                                <FaTimesCircle size={20} />
+                            </button>
+                        </div>
+                        <div className="p-4 overflow-y-auto flex-1">
+                            {cashPaidLoading ? (
+                                <div className="flex items-center justify-center py-12">
+                                    <div className="animate-spin rounded-full h-10 w-10 border-t-4 border-b-4 border-cyan-500" />
+                                </div>
+                            ) : cashPaidOrders.length === 0 ? (
+                                <p className="text-slate-400 text-center py-12">אין הזמנות מזומן להחלפה</p>
+                            ) : (
+                                <div className="space-y-2">
+                                    {cashPaidOrders.map(order => (
+                                        <div key={order.id} className="flex items-center justify-between bg-slate-900/50 rounded-2xl px-4 py-3 border border-slate-700">
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-white font-black text-sm">#{order.id}</span>
+                                                    <span className="text-slate-300 text-sm truncate">{order.customer_name}</span>
+                                                </div>
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    <span className="text-slate-500 text-xs">{order.time}</span>
+                                                    <span className="text-slate-500 text-xs">•</span>
+                                                    <span className="text-emerald-400 text-xs font-bold">₪{order.total.toFixed(2)}</span>
+                                                    <span className="text-slate-500 text-xs">•</span>
+                                                    <span className="text-slate-500 text-xs">{order.source}</span>
+                                                </div>
+                                            </div>
+                                            <button
+                                                onClick={() => handleSwitchToCredit(order.id)}
+                                                disabled={switchingOrderId === order.id}
+                                                className="shrink-0 mr-3 px-4 py-2 bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 font-black text-xs rounded-xl hover:bg-cyan-500/30 active:scale-95 transition-all disabled:opacity-50"
+                                            >
+                                                {switchingOrderId === order.id ? '...' : 'העבר לאשראי'}
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );

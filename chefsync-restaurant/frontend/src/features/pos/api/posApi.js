@@ -103,6 +103,12 @@ export const posApi = {
     refundOrder: (orderId, headers, token) =>
         api.post(`/admin/pos/orders/${orderId}/refund`, {}, { headers: posHeaders(headers, token), timeout: 30000 }),
 
+    // החלפת אמצעי תשלום מזומן → אשראי
+    getCashPaidOrders: (headers, token) =>
+        api.get('/admin/pos/orders/cash-paid', { headers: posHeaders(headers, token) }),
+    switchOrderToCredit: (orderId, headers, token) =>
+        api.post(`/admin/pos/orders/${orderId}/switch-to-credit`, {}, { headers: posHeaders(headers, token) }),
+
     // ניהול שולחנות / טאבים
     openTab: (tableNumber, items, headers, token) =>
         api.post(

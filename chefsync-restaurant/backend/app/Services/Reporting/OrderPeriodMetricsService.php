@@ -26,13 +26,15 @@ final class OrderPeriodMetricsService
             return null;
         }
 
-        $activeOrders = $orders->where('status', '!=', 'cancelled');
+        $activeOrders = $orders->where('status', '!=', 'cancelled')
+            ->filter(fn(Order $o) => $o->payment_status !== Order::PAYMENT_REFUNDED);
         $cancelledOrders = $orders->where('status', 'cancelled');
 
         $waivedCancelled = $cancelledOrders->filter(fn(Order $o) => $o->refund_waived_at !== null
             && $o->payment_status === Order::PAYMENT_PAID);
 
-        $refundedOrders = $cancelledOrders->filter(fn(Order $o) => $o->payment_status === Order::PAYMENT_REFUNDED);
+        // הזמנות שהוחזרו — גם מבוטלות וגם כאלו שהוחזרו בלי ביטול (POS refund ישן)
+        $refundedOrders = $orders->filter(fn(Order $o) => $o->payment_status === Order::PAYMENT_REFUNDED);
 
         $revenueForWaived = static fn(Order $o): float => (float) ($o->payment_amount ?? $o->total_amount);
         $revenueForRefunded = static fn(Order $o): float => (float) $o->effectiveChargedAmount();

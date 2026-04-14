@@ -99,6 +99,7 @@ class AuthController extends Controller
                 'tenant_id' => $restaurant?->tenant_id,
                 'hourly_rate' => $user->hourly_rate,
                 'has_pin' => !is_null($user->pos_pin_hash),
+                'pos_access' => $user->hasPosAccess(),
             ],
         ]);
     }
@@ -152,6 +153,7 @@ class AuthController extends Controller
             'phone' => $request->phone,
             'role' => $request->role,
             'is_active' => true,
+            'pos_access' => $request->boolean('pos_access'),
         ]);
 
         return response()->json([
@@ -206,6 +208,12 @@ class AuthController extends Controller
         }
 
         if ($request->has('hourly_rate')) {
+            if (!$user->isManager()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'אין לך הרשאה לעדכן שכר שעתי',
+                ], 403);
+            }
             $user->hourly_rate = $request->hourly_rate;
         }
 

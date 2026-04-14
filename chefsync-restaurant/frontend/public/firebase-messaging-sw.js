@@ -66,6 +66,7 @@ messaging.onBackgroundMessage(async (payload) => {
             body,
             icon: '/icon-192.png',
             badge: '/badge-72x72.png',
+            silent: true,
             data: payload.data || {},
         });
 

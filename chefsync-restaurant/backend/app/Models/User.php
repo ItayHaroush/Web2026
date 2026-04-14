@@ -31,6 +31,7 @@ class User extends Authenticatable
         'is_super_admin',
         'pos_pin_hash',
         'hourly_rate',
+        'pos_access',
     ];
 
     protected $hidden = [
@@ -45,6 +46,7 @@ class User extends Authenticatable
         'is_active' => 'boolean',
         'is_super_admin' => 'boolean',
         'hourly_rate' => 'decimal:2',
+        'pos_access' => 'boolean',
     ];
 
     /**
@@ -81,6 +83,15 @@ class User extends Authenticatable
     public function isDelivery(): bool
     {
         return $this->role === 'delivery';
+    }
+
+    /**
+     * בדיקה אם למשתמש יש גישה לקופה
+     * בעלים תמיד מורשים; שאר המשתמשים צריכים pos_access=true
+     */
+    public function hasPosAccess(): bool
+    {
+        return $this->role === 'owner' || (bool) $this->pos_access;
     }
 
     public function timeLogs()

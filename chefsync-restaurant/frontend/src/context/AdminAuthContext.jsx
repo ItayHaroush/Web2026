@@ -163,6 +163,7 @@ export function AdminAuthProvider({ children }) {
     const isEmployee = () => ['owner', 'manager', 'employee'].includes(user?.role) || (user?.is_super_admin && !!impersonating);
     const isDelivery = () => user?.role === 'delivery';
     const isSuperAdmin = () => user?.is_super_admin === true;
+    const hasPosAccess = () => user?.pos_access === true || user?.role === 'owner' || (user?.is_super_admin && !!impersonating);
 
     const getAuthHeaders = useCallback(() => {
         if (!token) return {};
@@ -210,6 +211,7 @@ export function AdminAuthProvider({ children }) {
         isEmployee,
         isDelivery,
         isSuperAdmin,
+        hasPosAccess,
         getAuthHeaders,
         refreshUser,
         isAuthenticated: !!user,

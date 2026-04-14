@@ -22,7 +22,7 @@ import {
 } from 'react-icons/fa';
 
 export default function AdminEmployees() {
-    const { getAuthHeaders, isManager, user: currentUser } = useAdminAuth();
+    const { getAuthHeaders, isManager, isOwner, user: currentUser } = useAdminAuth();
     const navigate = useNavigate();
     const [employees, setEmployees] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -37,6 +37,7 @@ export default function AdminEmployees() {
         password_confirmation: '',
         hourly_rate: '',
         pos_pin: '',
+        pos_access: false,
     });
 
     useEffect(() => {
@@ -95,6 +96,7 @@ export default function AdminEmployees() {
                     phone: form.phone,
                     role: form.role,
                     hourly_rate: form.hourly_rate || null,
+                    pos_access: form.pos_access,
                 };
                 if (form.password) {
                     updateData.password = form.password;
@@ -109,7 +111,7 @@ export default function AdminEmployees() {
                 await api.post('/auth/register', form, { headers: getAuthHeaders() });
             }
             setShowModal(false);
-            setForm({ name: '', email: '', phone: '', role: 'employee', password: '', password_confirmation: '', hourly_rate: '', pos_pin: '' });
+            setForm({ name: '', email: '', phone: '', role: 'employee', password: '', password_confirmation: '', hourly_rate: '', pos_pin: '', pos_access: false });
             fetchEmployees();
         } catch (error) {
             alert(error.response?.data?.message || 'שגיאה בשמירת פרטי עובד');
@@ -234,6 +236,11 @@ export default function AdminEmployees() {
                                     <span className={`px-3 py-1.5 rounded-xl text-[10px] font-black border ${emp.has_pin ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-gray-50 text-gray-400 border-gray-100'}`}>
                                         {emp.has_pin ? 'PIN מוגדר' : 'ללא PIN'}
                                     </span>
+                                    {emp.pos_access && (
+                                        <span className="px-3 py-1.5 bg-orange-50 text-orange-700 rounded-xl text-[10px] font-black border border-orange-100">
+                                            גישה לקופה
+                                        </span>
+                                    )}
                                 </div>
 
                                 {/* Contact Details */}
@@ -351,7 +358,7 @@ export default function AdminEmployees() {
                                 <button
                                     onClick={() => {
                                         setShowModal(false);
-                                        setForm({ name: '', email: '', phone: '', role: 'employee', password: '', password_confirmation: '', hourly_rate: '', pos_pin: '' });
+                                        setForm({ name: '', email: '', phone: '', role: 'employee', password: '', password_confirmation: '', hourly_rate: '', pos_pin: '', pos_access: false });
                                     }}
                                     className="p-4 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-[1.5rem] transition-all"
                                 >

@@ -107,7 +107,7 @@ export default function SuperAdminDashboard() {
 
             if (Notification?.permission === 'granted') {
                 try {
-                    const n = new Notification(title, { body, icon: '/icon-192.png' });
+                    const n = new Notification(title, { body, icon: '/icon-192.png', silent: true });
                     n.onclick = () => {
                         n.close();
                         window.focus();

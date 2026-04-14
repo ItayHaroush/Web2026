@@ -12,6 +12,7 @@ import CountdownTimer from '../components/CountdownTimer';
 import TopDismissibleBanner from '../components/TopDismissibleBanner';
 import { getOrderDisplayPaymentMethod } from '../utils/orderPaymentLabels';
 import { notifyActiveOrdersStorageChanged } from '../utils/activeOrdersStorage';
+import SoundManager from '../services/SoundManager';
 
 /**
  * פורמט מספר טלפון ישראלי
@@ -285,16 +286,13 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
         }
     }, [orderId, effectiveTenantId, shouldPoll, precheckPassed]);
 
+    // פתיחת נעילת אודיו בלחיצה ראשונה (חובה בדפדפנים מודרניים)
+    useEffect(() => {
+        SoundManager.setupAutoUnlock();
+    }, []);
+
     const playNotificationSound = () => {
-        try {
-            const audio = new Audio('/sounds/Order-up-bell-sound.mp3');
-            audio.volume = 0.5;
-            audio.play().catch(err => {
-                console.log('לא ניתן להשמיע התראה:', err);
-            });
-        } catch (e) {
-            // ignore audio errors
-        }
+        SoundManager.play();
     };
 
     useEffect(() => {

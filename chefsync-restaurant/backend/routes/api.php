@@ -433,6 +433,7 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'tenant'])->group(function (
 
         // ניהול מדפסות מטבח
         Route::get('/printers/receipt-example', [PrinterController::class, 'receiptExample'])->name('admin.printers.receipt-example');
+        Route::patch('/printers/template', [PrinterController::class, 'updateTemplate'])->name('admin.printers.template');
         Route::get('/printers', [PrinterController::class, 'index'])->name('admin.printers.index');
         Route::post('/printers', [PrinterController::class, 'store'])->name('admin.printers.store');
         Route::put('/printers/{id}', [PrinterController::class, 'update'])->name('admin.printers.update');
@@ -481,6 +482,10 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'tenant'])->group(function (
                 // החזר כספי
                 Route::post('/orders/{id}/refund', [\App\Http\Controllers\POSController::class, 'refundOrder'])->name('admin.pos.orders.refund');
 
+                // החלפת אמצעי תשלום מזומן → אשראי
+                Route::get('/orders/cash-paid', [\App\Http\Controllers\POSController::class, 'getCashPaidOrders'])->name('admin.pos.orders.cash-paid');
+                Route::post('/orders/{id}/switch-to-credit', [\App\Http\Controllers\POSController::class, 'switchOrderToCredit'])->name('admin.pos.orders.switch-to-credit');
+
                 // ניהול שולחנות / טאבים
                 Route::post('/tabs/open', [\App\Http\Controllers\POSController::class, 'openTab'])->name('admin.pos.tabs.open');
                 Route::get('/tabs', [\App\Http\Controllers\POSController::class, 'getOpenTabs'])->name('admin.pos.tabs.index');
@@ -518,15 +523,17 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'tenant'])->group(function (
         Route::get('/holidays/upcoming', [HolidayScheduleController::class, 'upcoming'])->name('admin.holidays.upcoming');
         Route::post('/holidays/{holidayId}/respond', [HolidayScheduleController::class, 'respond'])->name('admin.holidays.respond');
 
-        // דוחות יומיים
-        Route::get('/reports', [ReportController::class, 'index'])->name('admin.reports.index');
-        Route::get('/reports/csv', [ReportController::class, 'csv'])->name('admin.reports.csv');
-        Route::get('/reports/tax-csv', [ReportController::class, 'taxCsv'])->name('admin.reports.tax-csv');
-        Route::get('/reports/zip', [ReportController::class, 'zip'])->name('admin.reports.zip');
-        Route::post('/reports/bulk-dispatch', [ReportController::class, 'bulkDispatch'])->name('admin.reports.bulk-dispatch');
-        Route::post('/reports/generate', [ReportController::class, 'generate'])->name('admin.reports.generate');
-        Route::get('/reports/{id}', [ReportController::class, 'show'])->name('admin.reports.show');
-        Route::get('/reports/{id}/pdf', [ReportController::class, 'pdf'])->name('admin.reports.pdf');
+        // דוחות יומיים — רק owner/manager
+        Route::middleware(\App\Http\Middleware\EnsureManager::class)->group(function () {
+            Route::get('/reports', [ReportController::class, 'index'])->name('admin.reports.index');
+            Route::get('/reports/csv', [ReportController::class, 'csv'])->name('admin.reports.csv');
+            Route::get('/reports/tax-csv', [ReportController::class, 'taxCsv'])->name('admin.reports.tax-csv');
+            Route::get('/reports/zip', [ReportController::class, 'zip'])->name('admin.reports.zip');
+            Route::post('/reports/bulk-dispatch', [ReportController::class, 'bulkDispatch'])->name('admin.reports.bulk-dispatch');
+            Route::post('/reports/generate', [ReportController::class, 'generate'])->name('admin.reports.generate');
+            Route::get('/reports/{id}', [ReportController::class, 'show'])->name('admin.reports.show');
+            Route::get('/reports/{id}/pdf', [ReportController::class, 'pdf'])->name('admin.reports.pdf');
+        });
     });
 });
 

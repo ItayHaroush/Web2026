@@ -12,7 +12,7 @@ const PLAN_LABELS = { monthly: 'חודשי', yearly: 'שנתי' };
 
 export default function AdminUserSettings() {
     const navigate = useNavigate();
-    const { user, getAuthHeaders, refreshUser, isOwner } = useAdminAuth();
+    const { user, getAuthHeaders, refreshUser, isOwner, isManager } = useAdminAuth();
     const [restaurant, setRestaurant] = useState(null);
     const [profile, setProfile] = useState({
         name: user?.name ?? '',
@@ -265,6 +265,7 @@ export default function AdminUserSettings() {
                         }}
                         className="space-y-4"
                     >
+                        {isManager() && (
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-1">שכר שעתי (₪)</label>
                             <input
@@ -277,6 +278,7 @@ export default function AdminUserSettings() {
                                 placeholder="0.00"
                             />
                         </div>
+                        )}
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-1">
                                 קוד PIN (4 ספרות) — לשעון נוכחות וכניסה לקופה

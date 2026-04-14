@@ -12,55 +12,6 @@ function formatMinutes(minutes) {
     return `${h} שעות ${m} דק׳`;
 }
 
-function printEmployeeSlip(data) {
-    const html = `<!DOCTYPE html>
-<html dir="rtl" lang="he">
-<head>
-<meta charset="utf-8">
-<title>דוח יציאה — ${data.employee}</title>
-<style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: Arial, Helvetica, sans-serif; max-width: 300px; margin: 0 auto; padding: 20px; font-size: 13px; color: #111; }
-  h1 { text-align: center; font-size: 16px; margin-bottom: 4px; }
-  .sub { text-align: center; color: #666; font-size: 11px; margin-bottom: 14px; }
-  .divider { border-top: 1px dashed #999; margin: 10px 0; }
-  .row { display: flex; justify-content: space-between; padding: 3px 0; font-size: 13px; }
-  .row .label { color: #555; }
-  .row .value { font-weight: bold; }
-  .big { font-size: 18px; text-align: center; margin: 12px 0; font-weight: bold; }
-  .footer { text-align: center; color: #999; font-size: 10px; margin-top: 16px; }
-  @media print { body { padding: 0; } }
-</style>
-</head>
-<body>
-<h1>סיכום יום עבודה</h1>
-<p class="sub">${data.date}</p>
-<div class="divider"></div>
-<div class="row"><span class="label">עובד</span><span class="value">${data.employee}</span></div>
-<div class="row"><span class="label">כניסה</span><span class="value">${data.clock_in_time}</span></div>
-<div class="row"><span class="label">יציאה</span><span class="value">${data.clock_out_time}</span></div>
-<div class="divider"></div>
-<div class="row"><span class="label">זמן עבודה</span><span class="value">${formatMinutes(data.raw_minutes)}</span></div>
-<div class="row"><span class="label">עיגול (15 דק׳)</span><span class="value">${formatMinutes(data.rounded_minutes)}</span></div>
-<div class="row"><span class="label">שעות</span><span class="value">${data.total_hours}</span></div>
-${data.hourly_rate ? `<div class="row"><span class="label">שכר שעתי</span><span class="value">₪${data.hourly_rate}</span></div>` : ''}
-${data.total_pay != null ? `
-<div class="divider"></div>
-<div class="big">לתשלום: ₪${data.total_pay}</div>
-` : ''}
-<div class="divider"></div>
-<p class="footer">Powered by TakeEat</p>
-<script>window.onload = function() { window.print(); }</script>
-</body>
-</html>`;
-
-    const win = window.open('', '_blank', 'width=350,height=500');
-    if (win) {
-        win.document.write(html);
-        win.document.close();
-    }
-}
-
 export default function POSTimeClock({ headers, posToken }) {
     const { getAuthHeaders } = useAdminAuth();
     const [isOpen, setIsOpen] = useState(false);
@@ -210,14 +161,6 @@ export default function POSTimeClock({ headers, posToken }) {
                                     )}
 
                                     <div className="flex gap-3">
-                                        {result.action === 'clock_out' && (
-                                            <button
-                                                onClick={() => printEmployeeSlip(result)}
-                                                className="flex-1 py-3 bg-blue-500/20 text-blue-400 font-black rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all hover:bg-blue-500/30 text-sm"
-                                            >
-                                                <FaPrint /> הדפסת סיכום
-                                            </button>
-                                        )}
                                         <button
                                             onClick={handleClose}
                                             className="flex-1 py-3 bg-slate-700 text-white font-black rounded-2xl active:scale-95 transition-all hover:bg-slate-600 text-sm"
@@ -225,6 +168,18 @@ export default function POSTimeClock({ headers, posToken }) {
                                             סגור
                                         </button>
                                     </div>
+
+                                    {result.print_jobs > 0 && (
+                                        <p className="text-emerald-400 text-xs text-center font-bold mt-2">
+                                            <FaPrint className="inline ml-1" />
+                                            נשלח למדפסת ({result.print_jobs} {result.print_jobs === 1 ? 'הדפסה' : 'הדפסות'})
+                                        </p>
+                                    )}
+                                    {result.print_jobs === 0 && (
+                                        <p className="text-amber-400/70 text-xs text-center mt-2">
+                                            לא נמצאה מדפסת קופה פעילה
+                                        </p>
+                                    )}
                                 </div>
                             ) : (
                                 <div className="px-8 pb-6 pt-2">

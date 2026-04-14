@@ -14,6 +14,7 @@ const STORAGE_KEY = 'admin_sound_enabled';
 let audioElement = null;
 let unlocked = false;
 let lastPlayTime = 0; // dedup: prevent double-play from onMessage + SW postMessage
+let globalMuteUntil = 0; // timestamp — block ALL play() until this time passes
 
 /**
  * טען/אתחל את ה-Audio element (פעם אחת)
@@ -34,18 +35,20 @@ function getAudio() {
 function unlock() {
     if (unlocked) return;
     try {
-        const audio = getAudio();
-        audio.volume = 0;
-        audio.currentTime = 0;
-        const p = audio.play();
-        if (p && p.then) {
-            p.then(() => {
-                audio.pause();
-                audio.currentTime = 0;
-                audio.volume = 0.8;
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (AudioCtx) {
+            const ctx = new AudioCtx();
+            const buf = ctx.createBuffer(1, 1, 22050);
+            const src = ctx.createBufferSource();
+            src.buffer = buf;
+            src.connect(ctx.destination);
+            src.start(0);
+            if (ctx.state === 'suspended') {
+                ctx.resume().then(() => { unlocked = true; ctx.close().catch(() => {}); }).catch(() => {});
+            } else {
                 unlocked = true;
-                console.log('[SoundManager] audio unlocked');
-            }).catch(() => { });
+                ctx.close().catch(() => {});
+            }
         }
     } catch (_) { /* ignore */ }
 }
@@ -55,6 +58,8 @@ function unlock() {
  */
 function play() {
     if (!isEnabled()) return;
+    // global mute: חוסם כל צלצול בזמן אתחול (מניעת false-positive אחרי ריענון)
+    if (Date.now() < globalMuteUntil) return;
     // dedup: אם צלצול כבר הושמע ב-2 שניות האחרונות, דלג (onMessage + SW postMessage)
     const now = Date.now();
     if (now - lastPlayTime < 2000) return;
@@ -109,7 +114,15 @@ function setEnabled(value) {
  * הרשם לפתיחת נעילה אוטומטית על לחיצה ראשונה
  * ממשיך לנסות בכל לחיצה עד שהנעילה מצליחה
  */
+/**
+ * חסום כל צלצולים עד timestamp מסוים (למניעת צלצולי שווא בזמן אתחול)
+ */
+function setMuteUntil(ts) {
+    globalMuteUntil = ts;
+}
+
 function setupAutoUnlock() {
+    if (unlocked) return;
     const remove = () => {
         document.removeEventListener('click', handler, true);
         document.removeEventListener('touchstart', handler, true);
@@ -117,19 +130,21 @@ function setupAutoUnlock() {
     const handler = () => {
         if (unlocked) { remove(); return; }
         try {
-            const audio = getAudio();
-            audio.volume = 0;
-            audio.currentTime = 0;
-            const p = audio.play();
-            if (p && p.then) {
-                p.then(() => {
-                    audio.pause();
-                    audio.currentTime = 0;
-                    audio.volume = 0.8;
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (AudioCtx) {
+                const ctx = new AudioCtx();
+                const buf = ctx.createBuffer(1, 1, 22050);
+                const src = ctx.createBufferSource();
+                src.buffer = buf;
+                src.connect(ctx.destination);
+                src.start(0);
+                if (ctx.state === 'suspended') {
+                    ctx.resume().then(() => { unlocked = true; ctx.close().catch(() => {}); remove(); }).catch(() => {});
+                } else {
                     unlocked = true;
-                    console.log('[SoundManager] audio unlocked');
+                    ctx.close().catch(() => {});
                     remove();
-                }).catch(() => { });
+                }
             }
         } catch (_) { /* ignore */ }
     };
@@ -176,6 +191,7 @@ const SoundManager = {
     unlock,
     isEnabled,
     setEnabled,
+    setMuteUntil,
     setupAutoUnlock,
     listenServiceWorkerMessages,
 };

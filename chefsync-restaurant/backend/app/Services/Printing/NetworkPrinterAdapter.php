@@ -28,6 +28,15 @@ class NetworkPrinterAdapter implements PrinterAdapter
     private const MARKER_NOBOLD  = '{{/BOLD}}';
     private const MARKER_QR      = '{{QR}}';
 
+    // Enhanced template markers
+    private const MARKER_HEADING    = '{{HEADING}}';
+    private const MARKER_NOHEADING  = '{{/HEADING}}';
+    private const MARKER_CENTER_HW  = '{{CENTER_HW}}';
+    private const MARKER_NOCENTER_HW = '{{/CENTER_HW}}';
+
+    /** ESC ! 0x38 = double-height + double-width + bold */
+    private const MODE_HEADING = 0x38;
+
     public function __construct(
         private ?ThermalHebrewEscPosEncoder $hebrewEncoder = null,
     ) {
@@ -82,7 +91,9 @@ class NetworkPrinterAdapter implements PrinterAdapter
             $hasMarkers = str_contains($payload, self::MARKER_BIG)
                 || str_contains($payload, self::MARKER_CENTER)
                 || str_contains($payload, self::MARKER_BOLD)
-                || str_contains($payload, self::MARKER_QR);
+                || str_contains($payload, self::MARKER_QR)
+                || str_contains($payload, self::MARKER_HEADING)
+                || str_contains($payload, self::MARKER_CENTER_HW);
 
             // OPTIMIZATION: Encode once; reuse for both marker and non-marker modes
             if ($hasMarkers) {
@@ -159,6 +170,7 @@ class NetworkPrinterAdapter implements PrinterAdapter
         $isBig = false;
         $isBold = false;
         $isCenter = false;
+        $isHeading = false;
         $qrInserted = false;
 
         foreach (explode("\n", $encoded) as $line) {
@@ -190,6 +202,19 @@ class NetworkPrinterAdapter implements PrinterAdapter
                 $isBold = false;
                 fwrite($socket, "\x1B\x45\x00"); // ESC E 0 — bold off
                 $isMarkerLine = true;
+            } elseif ($line === self::MARKER_HEADING) {
+                $isHeading = true;
+                $isMarkerLine = true;
+            } elseif ($line === self::MARKER_NOHEADING) {
+                $isHeading = false;
+                fwrite($socket, "\x1B\x21" . chr(self::MODE_NORMAL));
+                $isMarkerLine = true;
+            } elseif ($line === self::MARKER_CENTER_HW) {
+                fwrite($socket, "\x1B\x61\x01"); // ESC a 1 — hardware center
+                $isMarkerLine = true;
+            } elseif ($line === self::MARKER_NOCENTER_HW) {
+                fwrite($socket, "\x1B\x61\x00"); // ESC a 0 — left
+                $isMarkerLine = true;
             } elseif ($line === self::MARKER_QR) {
                 if ($qrBinary !== '') {
                     fwrite($socket, $qrBinary);
@@ -203,8 +228,12 @@ class NetworkPrinterAdapter implements PrinterAdapter
                 continue;
             }
 
-            // Set font mode for this line
-            fwrite($socket, "\x1B\x21" . chr($isBig ? self::MODE_DOUBLE_HEIGHT : self::MODE_NORMAL));
+            // Set font mode for this line — heading takes priority over big
+            if ($isHeading) {
+                fwrite($socket, "\x1B\x21" . chr(self::MODE_HEADING));
+            } else {
+                fwrite($socket, "\x1B\x21" . chr($isBig ? self::MODE_DOUBLE_HEIGHT : self::MODE_NORMAL));
+            }
 
             fwrite($socket, $line . "\n");
         }
@@ -223,7 +252,7 @@ class NetworkPrinterAdapter implements PrinterAdapter
     private function stripMarkers(string $text): string
     {
         return str_replace(
-            [self::MARKER_BIG, self::MARKER_NOBIG, self::MARKER_CENTER, self::MARKER_NOCENTER, self::MARKER_BOLD, self::MARKER_NOBOLD, self::MARKER_QR],
+            [self::MARKER_BIG, self::MARKER_NOBIG, self::MARKER_CENTER, self::MARKER_NOCENTER, self::MARKER_BOLD, self::MARKER_NOBOLD, self::MARKER_QR, self::MARKER_HEADING, self::MARKER_NOHEADING, self::MARKER_CENTER_HW, self::MARKER_NOCENTER_HW],
             '',
             $text
         );

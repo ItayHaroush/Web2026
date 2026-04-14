@@ -227,7 +227,7 @@ class ZCreditService
      */
     public function refundTransaction(string $referenceNumber, ?float $amount = null): array
     {
-        if ($this->isMockMode() || str_starts_with($referenceNumber, 'MOCK_')) {
+        if ($this->isMockMode() || str_starts_with($referenceNumber, 'MOCK_') || str_starts_with($referenceNumber, 'LOCAL-DEMO-')) {
             Log::info('[ZCredit] Mock refund', ['reference' => $referenceNumber, 'amount' => $amount]);
 
             return [

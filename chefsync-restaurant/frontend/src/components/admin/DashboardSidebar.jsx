@@ -2,6 +2,7 @@ import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { FaTimes, FaSignOutAlt, FaChevronRight, FaChevronLeft, FaUtensils, FaStar, FaCashRegister, FaHome, FaLock } from 'react-icons/fa';
 import { useRestaurantStatus } from '../../context/RestaurantStatusContext';
+import { useAdminAuth } from '../../context/AdminAuthContext';
 import { isTierSufficient, isFeatureUnlocked, TIER_LABELS } from '../../utils/tierUtils';
 
 export default function DashboardSidebar({
@@ -17,6 +18,7 @@ export default function DashboardSidebar({
     const showCollapsed = isCollapsed && !isOpen;
     const navigate = useNavigate();
     const { subscriptionInfo } = useRestaurantStatus();
+    const { hasPosAccess } = useAdminAuth();
     const currentTier = subscriptionInfo?.tier || 'basic';
 
     // Check if this is a super admin (system owner)
@@ -166,7 +168,7 @@ export default function DashboardSidebar({
 
                 {/* Footer Actions */}
                 <div className="p-4 border-t border-gray-100 bg-gray-50/50 shrink-0 space-y-2">
-                    {!isSuperAdminMode && (() => {
+                    {!isSuperAdminMode && hasPosAccess() && (() => {
                         const posLocked = !impersonating && !isFeatureUnlocked(subscriptionInfo?.features, 'pos');
                         return (
                             <button

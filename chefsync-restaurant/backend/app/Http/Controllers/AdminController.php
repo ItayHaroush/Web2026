@@ -2407,7 +2407,7 @@ class AdminController extends Controller
         $employees = User::where('restaurant_id', $this->resolveRestaurantId($request))
             ->orderBy('role')
             ->orderBy('name')
-            ->get(['id', 'name', 'email', 'phone', 'role', 'is_active', 'created_at', 'hourly_rate', 'pos_pin_hash'])
+            ->get(['id', 'name', 'email', 'phone', 'role', 'is_active', 'created_at', 'hourly_rate', 'pos_pin_hash', 'pos_access'])
             ->map(function ($emp) {
                 $emp->has_pin = ! is_null($emp->pos_pin_hash);
                 unset($emp->pos_pin_hash);
@@ -2465,9 +2465,21 @@ class AdminController extends Controller
             'is_active' => 'sometimes|boolean',
             'password' => 'nullable|string|min:6|confirmed',
             'hourly_rate' => 'nullable|numeric|min:0|max:9999',
+            'pos_access' => 'sometimes|boolean',
         ]);
 
         $updateData = $request->only(['name', 'phone', 'role', 'is_active', 'hourly_rate']);
+
+        // רק בעלים יכול להעניק גישה לקופה
+        if ($request->has('pos_access')) {
+            if (! $currentUser->isOwner()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'רק בעל המסעדה יכול להעניק גישה לקופה',
+                ], 403);
+            }
+            $updateData['pos_access'] = $request->boolean('pos_access');
+        }
 
         // עדכון סיסמה רק אם סופק שדה password
         if ($request->filled('password')) {

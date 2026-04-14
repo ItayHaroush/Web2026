@@ -109,7 +109,7 @@ export default function AdminTimeReports({ embedded = false }) {
                         </div>
                     </div>
 
-                    {activeClockedIn.length > 0 && (
+                    {activeClockedIn.length > 0 && isManager() && (
                         <div className="flex items-center gap-2 px-5 py-3 bg-emerald-50 border border-emerald-200 rounded-2xl">
                             <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
                             <span className="text-emerald-700 font-black text-sm">
@@ -176,7 +176,7 @@ export default function AdminTimeReports({ embedded = false }) {
                     <div className="bg-white rounded-[2.5rem] shadow-lg border border-gray-100 p-8">
                         <h3 className="text-xl font-black text-gray-900 mb-6 flex items-center gap-3">
                             <FaClock className="text-amber-500" />
-                            פעילות היום
+                            {isManager() ? 'פעילות היום' : 'הפעילות שלי היום'}
                         </h3>
                         <div className="space-y-3">
                             {todayLogs.map((log, i) => (

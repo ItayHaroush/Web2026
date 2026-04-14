@@ -63,6 +63,10 @@ class POSController extends Controller
             return response()->json(['success' => false, 'message' => 'קוד PIN שגוי'], 422);
         }
 
+        if (! $user->hasPosAccess()) {
+            return response()->json(['success' => false, 'message' => 'אין לך הרשאה לגשת לקופה'], 403);
+        }
+
         PosSession::where('user_id', $user->id)->delete();
 
         $token = Str::random(64);
@@ -114,6 +118,10 @@ class POSController extends Controller
 
         if (! Hash::check($request->pin, $user->pos_pin_hash)) {
             return response()->json(['success' => false, 'message' => 'קוד PIN שגוי'], 422);
+        }
+
+        if (! $user->hasPosAccess()) {
+            return response()->json(['success' => false, 'message' => 'אין לך הרשאה לגשת לקופה'], 403);
         }
 
         $session = PosSession::where('user_id', $user->id)
@@ -393,7 +401,7 @@ class POSController extends Controller
             return response()->json(['success' => true, 'summary' => null]);
         }
 
-        $movements = $shift->movements()->get();
+        $movements = $shift->movements()->orderBy('created_at')->get();
         $totals = ShiftMovementTotals::fromMovements($movements);
 
         return response()->json([
@@ -1228,6 +1236,111 @@ class POSController extends Controller
         ]);
     }
 
+    // ─── Switch payment method (cash → credit) ───
+
+    public function switchOrderToCredit(Request $request, $orderId)
+    {
+        $user = $request->user();
+        $restaurantId = $user->restaurant_id;
+
+        if (! $user->isManager()) {
+            return response()->json(['success' => false, 'message' => 'רק מנהל יכול לשנות אמצעי תשלום'], 403);
+        }
+
+        $order = Order::withoutGlobalScopes()
+            ->where('restaurant_id', $restaurantId)
+            ->findOrFail($orderId);
+
+        if ($order->status === Order::STATUS_CANCELLED) {
+            return response()->json(['success' => false, 'message' => 'לא ניתן לעדכן הזמנה שבוטלה'], 422);
+        }
+
+        if ($order->effectiveCollectedPaymentMethod() !== 'cash') {
+            return response()->json(['success' => false, 'message' => 'ההזמנה כבר משויכת לאשראי'], 422);
+        }
+
+        $amount = (float) $order->total_amount;
+
+        $shift = CashRegisterShift::where('restaurant_id', $restaurantId)
+            ->whereNull('closed_at')
+            ->first();
+
+        DB::beginTransaction();
+        try {
+            $order->update([
+                'actual_payment_method' => 'credit_card',
+            ]);
+
+            if ($shift) {
+                // הוצאת מזומן — כי ההזמנה כבר נרשמה כמזומן
+                CashMovement::create([
+                    'shift_id' => $shift->id,
+                    'order_id' => $order->id,
+                    'user_id' => $user->id,
+                    'type' => 'cash_out',
+                    'payment_method' => 'cash',
+                    'amount' => $amount,
+                    'description' => "החלפה לאשראי — הזמנה #{$order->id}",
+                ]);
+
+                // כניסת אשראי
+                CashMovement::create([
+                    'shift_id' => $shift->id,
+                    'order_id' => $order->id,
+                    'user_id' => $user->id,
+                    'type' => 'cash_in',
+                    'payment_method' => 'credit',
+                    'amount' => $amount,
+                    'description' => "החלפה לאשראי — הזמנה #{$order->id}",
+                ]);
+            }
+
+            DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return response()->json(['success' => false, 'message' => 'שגיאה בעדכון אמצעי תשלום'], 500);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'אמצעי התשלום עודכן לאשראי',
+            'order' => $order->fresh(),
+        ]);
+    }
+
+    // ─── Cash paid orders (for payment method switch) ───
+
+    public function getCashPaidOrders(Request $request)
+    {
+        $user = $request->user();
+        $restaurantId = $user->restaurant_id;
+
+        $orders = Order::withoutGlobalScopes()
+            ->where('restaurant_id', $restaurantId)
+            ->where('payment_status', Order::PAYMENT_PAID)
+            ->where('status', '!=', Order::STATUS_CANCELLED)
+            ->where(function ($q) {
+                $q->where('payment_method', 'cash')
+                    ->whereNull('actual_payment_method');
+                $q->orWhere('actual_payment_method', 'cash');
+            })
+            ->whereDate('created_at', '>=', now()->subDay())
+            ->orderByDesc('created_at')
+            ->limit(50)
+            ->get(['id', 'customer_name', 'total_amount', 'payment_method', 'actual_payment_method', 'created_at', 'source']);
+
+        return response()->json([
+            'success' => true,
+            'orders' => $orders->map(fn($o) => [
+                'id' => $o->id,
+                'customer_name' => $o->customer_name,
+                'total' => (float) $o->total_amount,
+                'source' => $o->source ?? 'web',
+                'time' => $o->created_at->format('H:i'),
+            ]),
+        ]);
+    }
+
     // ─── Table Tabs ───
 
     public function openTab(Request $request)
@@ -1649,7 +1762,7 @@ class POSController extends Controller
 
     private function buildZReport(CashRegisterShift $shift): array
     {
-        $movements = $shift->movements()->get();
+        $movements = $shift->movements()->orderBy('created_at')->get();
         $totals = ShiftMovementTotals::fromMovements($movements);
 
         $expectedBalance = $totals->expectedRegisterBalance((float) $shift->opening_balance);
