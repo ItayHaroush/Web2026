@@ -187,11 +187,10 @@ export default function POSTimeClock({ headers, posToken }) {
                                         {[0, 1, 2, 3].map((i) => (
                                             <div
                                                 key={i}
-                                                className={`w-5 h-5 rounded-full transition-all duration-200 ${
-                                                    i < pin.length
+                                                className={`w-5 h-5 rounded-full transition-all duration-200 ${i < pin.length
                                                         ? 'bg-amber-400 scale-110 shadow-lg shadow-amber-400/30'
                                                         : 'bg-slate-600 border-2 border-slate-500'
-                                                }`}
+                                                    }`}
                                             />
                                         ))}
                                     </div>

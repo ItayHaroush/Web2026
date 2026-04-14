@@ -151,7 +151,7 @@ class OrderRefundService
                 NotificationLog::create([
                     'channel' => 'system',
                     'type' => 'order_alert',
-                    'title' => 'החזר: '.($restaurant->name ?? '')." — #{$order->id}",
+                    'title' => 'החזר: ' . ($restaurant->name ?? '') . " — #{$order->id}",
                     'body' => "החזר ₪{$amount} בוצע להזמנה #{$order->id} ({$order->customer_name}) על ידי {$user->name}.",
                     'sender_id' => null,
                     'target_restaurant_ids' => [$restaurantId],

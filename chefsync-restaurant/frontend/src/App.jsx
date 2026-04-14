@@ -599,28 +599,28 @@ export default function App() {
       <ThemeProvider>
         <AdminAuthProvider>
           <AdminNotificationProvider>
-          <RestaurantStatusProvider>
-            <AuthProvider>
-              <ToastProvider>
-                <CartProvider>
-                  <CustomerProvider>
-                    <PromotionProvider>
-                      <AppRoutes />
-                      <Toaster position="bottom-right" />
-                      {!new URLSearchParams(window.location.search).has('embed') && (
-                        <>
-                          <FacebookInAppWarning />
-                          <DevModeBanner />
-                          <CookieConsent />
-                          <PWAInstallBanner />
-                        </>
-                      )}
-                    </PromotionProvider>
-                  </CustomerProvider>
-                </CartProvider>
-              </ToastProvider>
-            </AuthProvider>
-          </RestaurantStatusProvider>
+            <RestaurantStatusProvider>
+              <AuthProvider>
+                <ToastProvider>
+                  <CartProvider>
+                    <CustomerProvider>
+                      <PromotionProvider>
+                        <AppRoutes />
+                        <Toaster position="bottom-right" />
+                        {!new URLSearchParams(window.location.search).has('embed') && (
+                          <>
+                            <FacebookInAppWarning />
+                            <DevModeBanner />
+                            <CookieConsent />
+                            <PWAInstallBanner />
+                          </>
+                        )}
+                      </PromotionProvider>
+                    </CustomerProvider>
+                  </CartProvider>
+                </ToastProvider>
+              </AuthProvider>
+            </RestaurantStatusProvider>
           </AdminNotificationProvider>
         </AdminAuthProvider>
       </ThemeProvider>

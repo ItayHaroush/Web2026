@@ -531,11 +531,11 @@ export default function POSCashRegister({ headers, posToken, isManager, onShiftC
                             <div key={m.id} className="flex items-center justify-between px-5 py-3">
                                 <div className="flex items-center gap-3">
                                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm ${m.type === 'payment' && m.payment_method === 'credit' ? 'bg-violet-500/20 text-violet-400' :
-                                            m.type === 'payment' ? 'bg-emerald-500/20 text-emerald-400' :
+                                        m.type === 'payment' ? 'bg-emerald-500/20 text-emerald-400' :
                                             m.type === 'cash_in' && m.payment_method === 'credit' ? 'bg-violet-500/20 text-violet-400' :
-                                            m.type === 'cash_in' ? 'bg-blue-500/20 text-blue-400' :
-                                                m.type === 'cash_out' ? 'bg-red-500/20 text-red-400' :
-                                                    'bg-amber-500/20 text-amber-400'
+                                                m.type === 'cash_in' ? 'bg-blue-500/20 text-blue-400' :
+                                                    m.type === 'cash_out' ? 'bg-red-500/20 text-red-400' :
+                                                        'bg-amber-500/20 text-amber-400'
                                         }`}>
                                         {m.type === 'payment' && m.payment_method === 'credit' ? <FaCreditCard size={14} /> : m.type === 'payment' ? <FaPlus /> : m.type === 'cash_in' ? <FaArrowDown /> : m.type === 'cash_out' ? <FaArrowUp /> : <FaMinus />}
                                     </div>
@@ -546,12 +546,11 @@ export default function POSCashRegister({ headers, posToken, isManager, onShiftC
                                         <p className="text-slate-600 text-xs">{m.time}</p>
                                     </div>
                                 </div>
-                                <span className={`font-black text-sm ${
-                                    m.type === 'cash_out' || m.type === 'refund' ? 'text-red-400'
+                                <span className={`font-black text-sm ${m.type === 'cash_out' || m.type === 'refund' ? 'text-red-400'
                                         : m.type === 'payment' && m.payment_method === 'credit' ? 'text-violet-400'
-                                        : m.type === 'cash_in' && m.payment_method === 'credit' ? 'text-violet-400'
-                                        : 'text-emerald-400'
-                                }`}>
+                                            : m.type === 'cash_in' && m.payment_method === 'credit' ? 'text-violet-400'
+                                                : 'text-emerald-400'
+                                    }`}>
                                     {['payment', 'cash_in'].includes(m.type) ? '+' : '-'}₪{m.amount}
                                 </span>
                             </div>
@@ -862,10 +861,10 @@ function ZReportModal({ report, onClose }) {
                     </div>
 
                     <div className={`rounded-2xl p-5 text-center space-y-2 ${r.variance === 0
-                            ? 'bg-emerald-500/10 border border-emerald-500/30'
-                            : r.variance > 0
-                                ? 'bg-blue-500/10 border border-blue-500/30'
-                                : 'bg-red-500/10 border border-red-500/30'
+                        ? 'bg-emerald-500/10 border border-emerald-500/30'
+                        : r.variance > 0
+                            ? 'bg-blue-500/10 border border-blue-500/30'
+                            : 'bg-red-500/10 border border-red-500/30'
                         }`}>
                         <div className="flex items-center justify-center gap-2 text-lg">
                             {varianceIcon}
@@ -989,12 +988,11 @@ function ZReportModal({ report, onClose }) {
                                             </span>
                                             {m.order_id && <span className="text-slate-600 text-xs mr-1">(#{m.order_id})</span>}
                                         </div>
-                                        <span className={`font-bold ${
-                                            m.type === 'cash_out' || m.type === 'refund' ? 'text-red-400'
+                                        <span className={`font-bold ${m.type === 'cash_out' || m.type === 'refund' ? 'text-red-400'
                                                 : m.type === 'payment' && m.payment_method === 'credit' ? 'text-violet-400'
-                                                : m.type === 'cash_in' && m.payment_method === 'credit' ? 'text-violet-400'
-                                                : 'text-emerald-400'
-                                        }`}>
+                                                    : m.type === 'cash_in' && m.payment_method === 'credit' ? 'text-violet-400'
+                                                        : 'text-emerald-400'
+                                            }`}>
                                             {['payment', 'cash_in'].includes(m.type) ? '+' : '-'}₪{m.amount.toFixed(2)}
                                         </span>
                                     </div>

@@ -157,7 +157,7 @@ apiClient.interceptors.response.use(
             } else {
                 window.location.href = '/';
             }
-            return new Promise(() => {});
+            return new Promise(() => { });
         }
 
         if (error.response?.status === 402) {

@@ -855,15 +855,15 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
                         <div
                             id="order-continue-section"
                             className={`mt-6 p-6 rounded-xl text-center border-2 ${order.payment_status === 'failed'
-                                    ? 'bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700'
-                                    : 'bg-teal-50 dark:bg-teal-900/20 border-teal-300 dark:border-teal-700'
+                                ? 'bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700'
+                                : 'bg-teal-50 dark:bg-teal-900/20 border-teal-300 dark:border-teal-700'
                                 }`}
                         >
                             <div className="flex flex-col items-center gap-4">
                                 <div
                                     className={`w-16 h-16 rounded-full flex items-center justify-center ${order.payment_status === 'failed'
-                                            ? 'bg-red-100 dark:bg-red-900/40'
-                                            : 'bg-teal-100 dark:bg-teal-800'
+                                        ? 'bg-red-100 dark:bg-red-900/40'
+                                        : 'bg-teal-100 dark:bg-teal-800'
                                         }`}
                                 >
                                     {order.payment_status === 'failed' ? (
@@ -875,16 +875,16 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
                                 <div>
                                     <p
                                         className={`text-2xl font-black ${order.payment_status === 'failed'
-                                                ? 'text-red-900 dark:text-red-200'
-                                                : 'text-teal-900 dark:text-teal-200'
+                                            ? 'text-red-900 dark:text-red-200'
+                                            : 'text-teal-900 dark:text-teal-200'
                                             }`}
                                     >
                                         הזמנה עתידית
                                     </p>
                                     <p
                                         className={`text-lg font-bold mt-1 ${order.payment_status === 'failed'
-                                                ? 'text-red-800 dark:text-red-300'
-                                                : 'text-teal-700 dark:text-teal-300'
+                                            ? 'text-red-800 dark:text-red-300'
+                                            : 'text-teal-700 dark:text-teal-300'
                                             }`}
                                     >
                                         {new Date(order.scheduled_for).toLocaleDateString('he-IL', { weekday: 'long', day: 'numeric', month: 'long' })}
@@ -893,8 +893,8 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
                                     </p>
                                     <p
                                         className={`text-sm mt-3 ${order.payment_status === 'failed'
-                                                ? 'text-red-700 dark:text-red-400'
-                                                : 'text-teal-600 dark:text-teal-400'
+                                            ? 'text-red-700 dark:text-red-400'
+                                            : 'text-teal-600 dark:text-teal-400'
                                             }`}
                                     >
                                         {order.payment_status === 'failed'
@@ -906,8 +906,8 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
                                     onClick={handleRetryPayment}
                                     disabled={retryingPayment}
                                     className={`w-full max-w-xs flex items-center justify-center gap-2 py-3.5 px-6 text-white font-black text-lg rounded-xl shadow-lg transition disabled:opacity-50 ${order.payment_status === 'failed'
-                                            ? 'bg-red-600 hover:bg-red-700'
-                                            : 'bg-teal-600 hover:bg-teal-700'
+                                        ? 'bg-red-600 hover:bg-red-700'
+                                        : 'bg-teal-600 hover:bg-teal-700'
                                         }`}
                                 >
                                     {order.payment_status === 'failed' ? (

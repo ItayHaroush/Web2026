@@ -44,10 +44,10 @@ function unlock() {
             src.connect(ctx.destination);
             src.start(0);
             if (ctx.state === 'suspended') {
-                ctx.resume().then(() => { unlocked = true; ctx.close().catch(() => {}); }).catch(() => {});
+                ctx.resume().then(() => { unlocked = true; ctx.close().catch(() => { }); }).catch(() => { });
             } else {
                 unlocked = true;
-                ctx.close().catch(() => {});
+                ctx.close().catch(() => { });
             }
         }
     } catch (_) { /* ignore */ }
@@ -139,10 +139,10 @@ function setupAutoUnlock() {
                 src.connect(ctx.destination);
                 src.start(0);
                 if (ctx.state === 'suspended') {
-                    ctx.resume().then(() => { unlocked = true; ctx.close().catch(() => {}); remove(); }).catch(() => {});
+                    ctx.resume().then(() => { unlocked = true; ctx.close().catch(() => { }); remove(); }).catch(() => { });
                 } else {
                     unlocked = true;
-                    ctx.close().catch(() => {});
+                    ctx.close().catch(() => { });
                     remove();
                 }
             }
