@@ -167,11 +167,10 @@ class AdminController extends Controller
         $stats['future_orders_count'] = $futureOrders->count();
 
         // הזמנות אתר שדורשות טיפול בתשלום (HYP — ממתין או נכשל)
-        // הזמנה עתידית לפני כניסה למטבח — לא מופיעה כאן; תופיע רק אחרי received אם תידרש (בפועל אשראי עתידי שולם לפני ה-cron)
+        // כולל הזמנות עתידיות אשראי שממתינות לאישור תשלום
         $manualPaymentOrders = Order::where('restaurant_id', $restaurantId)
             ->when($restaurant, fn($q) => $q->forOwnerReporting($restaurant))
             ->where('is_test', false)
-            ->where('is_future_order', false)
             ->where('status', Order::STATUS_AWAITING_PAYMENT)
             ->where('payment_method', 'credit_card')
             ->whereIn('payment_status', [Order::PAYMENT_PENDING, Order::PAYMENT_FAILED])

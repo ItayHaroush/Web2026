@@ -49,6 +49,8 @@ class Order extends Model
         'eta_updated_at',
         'scheduled_for',
         'is_future_order',
+        'activated_at',
+        'print_failed_at',
         'status',
         'cancellation_reason',
         'is_test',              // הזמנת בדיקה
@@ -89,6 +91,8 @@ class Order extends Model
         'refund_pending_at' => 'datetime',
         'refund_waived_at' => 'datetime',
         'pending_customer_reminder_sent_at' => 'datetime',
+        'activated_at' => 'datetime',
+        'print_failed_at' => 'datetime',
         'invoice_generated_at' => 'datetime',
     ];
 

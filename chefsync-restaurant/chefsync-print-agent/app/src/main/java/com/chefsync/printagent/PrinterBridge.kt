@@ -124,59 +124,85 @@ object PrinterBridge {
         var isBig = false
         var isHeading = false
         var qrInserted = false
-        for (line in text.split("\n")) {
-            val trimmed = line.trim()
-            when (trimmed) {
-                MARKER_BIG -> {
-                    isBig = true
-                    continue
-                }
-                MARKER_NOBIG -> {
-                    isBig = false
-                    out.write(ESC_FONT_NORMAL)
-                    continue
-                }
-                MARKER_CENTER -> {
-                    out.write(ESC_ALIGN_CENTER)
-                    continue
-                }
-                MARKER_NOCENTER -> {
-                    out.write(ESC_ALIGN_LEFT)
-                    continue
-                }
-                MARKER_BOLD -> {
-                    out.write(ESC_BOLD_ON)
-                    continue
-                }
-                MARKER_NOBOLD -> {
-                    out.write(ESC_BOLD_OFF)
-                    continue
-                }
-                MARKER_HEADING -> {
-                    isHeading = true
-                    continue
-                }
-                MARKER_NOHEADING -> {
-                    isHeading = false
-                    out.write(ESC_FONT_NORMAL)
-                    continue
-                }
-                MARKER_CENTER_HW -> {
-                    out.write(ESC_ALIGN_CENTER)
-                    continue
-                }
-                MARKER_NOCENTER_HW -> {
-                    out.write(ESC_ALIGN_LEFT)
-                    continue
-                }
-                MARKER_QR -> {
-                    if (qrBinary != null && qrBinary.isNotEmpty()) {
-                        out.write(qrBinary)
-                        qrInserted = true
+
+        fun markerTokens(): List<String> = listOf(
+            MARKER_NOCENTER_HW,
+            MARKER_CENTER_HW,
+            MARKER_NOHEADING,
+            MARKER_HEADING,
+            MARKER_NOCENTER,
+            MARKER_CENTER,
+            MARKER_NOBOLD,
+            MARKER_BOLD,
+            MARKER_NOBIG,
+            MARKER_BIG,
+            MARKER_QR,
+        )
+
+        fun consumeMarkerLine(rawLine: String): Boolean {
+            var remaining = rawLine.trim()
+            if (remaining.isEmpty()) return false
+
+            while (remaining.isNotEmpty()) {
+                var matched = false
+
+                for (token in markerTokens()) {
+                    if (!remaining.startsWith(token)) continue
+
+                    when (token) {
+                        MARKER_BIG -> {
+                            isBig = true
+                        }
+                        MARKER_NOBIG -> {
+                            isBig = false
+                            out.write(ESC_FONT_NORMAL)
+                        }
+                        MARKER_CENTER -> {
+                            out.write(ESC_ALIGN_CENTER)
+                        }
+                        MARKER_NOCENTER -> {
+                            out.write(ESC_ALIGN_LEFT)
+                        }
+                        MARKER_BOLD -> {
+                            out.write(ESC_BOLD_ON)
+                        }
+                        MARKER_NOBOLD -> {
+                            out.write(ESC_BOLD_OFF)
+                        }
+                        MARKER_HEADING -> {
+                            isHeading = true
+                        }
+                        MARKER_NOHEADING -> {
+                            isHeading = false
+                            out.write(ESC_FONT_NORMAL)
+                        }
+                        MARKER_CENTER_HW -> {
+                            out.write(ESC_ALIGN_CENTER)
+                        }
+                        MARKER_NOCENTER_HW -> {
+                            out.write(ESC_ALIGN_LEFT)
+                        }
+                        MARKER_QR -> {
+                            if (qrBinary != null && qrBinary.isNotEmpty()) {
+                                out.write(qrBinary)
+                                qrInserted = true
+                            }
+                        }
                     }
-                    continue
+
+                    remaining = remaining.removePrefix(token).trimStart()
+                    matched = true
+                    break
                 }
+
+                if (!matched) return false
             }
+
+            return true
+        }
+
+        for (line in text.split("\n")) {
+            if (consumeMarkerLine(line)) continue
             out.write(if (isHeading) ESC_HEADING else if (isBig) ESC_DOUBLE_HEIGHT else ESC_FONT_NORMAL)
             out.write((line + "\n").toByteArray(cp862))
         }

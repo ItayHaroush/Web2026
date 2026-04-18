@@ -253,6 +253,47 @@ class PrintService
     }
 
     /**
+     * בון פתיחת קופה — מדפסות receipt/general בלבד.
+     */
+    public function printShiftOpenSlip(int $restaurantId, ?string $tenantId, array $data): int
+    {
+        $printers = Printer::where('restaurant_id', $restaurantId)
+            ->where('is_active', true)
+            ->whereIn('role', ['receipt', 'general'])
+            ->get();
+
+        if ($printers->isEmpty()) {
+            Log::info("PrintService: No receipt printers for shift open slip, restaurant {$restaurantId}");
+
+            return 0;
+        }
+
+        $jobCount = 0;
+
+        foreach ($printers as $printer) {
+            $payload = $this->buildShiftOpenSlipPayload($data, $printer);
+
+            $job = PrintJob::create([
+                'tenant_id' => $tenantId,
+                'restaurant_id' => $restaurantId,
+                'printer_id' => $printer->id,
+                'order_id' => null,
+                'role' => 'receipt',
+                'status' => 'pending',
+                'payload' => [
+                    'text' => $payload,
+                    'type' => 'shift_open_slip',
+                ],
+            ]);
+
+            $this->executeJob($job, $printer, $payload, bypassHoursCheck: true);
+            $jobCount++;
+        }
+
+        return $jobCount;
+    }
+
+    /**
      * בון שעון נוכחות — הדפסה דרך ESC/POS (מדפסות receipt/general).
      * $data = מערך נתוני clock_in / clock_out מ-TimeClockController.
      */
@@ -491,10 +532,55 @@ class PrintService
             return 'אריזה: חמגשית TA';
         }
         if ($order->order_type === 'takeaway') {
-            return 'אריזה: חמגשית';
+            return 'חמגשית TA';
+        }
+        if ($order->order_type === 'dine_in') {
+            return 'אריזה: צלחת';
+        }
+        if (($order->delivery_method ?? '') === 'pickup') {
+            return 'אריזה: חמגשית TA';
+        }
+        return '';
+    }
+
+    /**
+     * מסנן שמות placeholder כמו POS, וגם מונע כפילות מול labels שכבר הודפסו בבון.
+     *
+     * @param  array<int, string>  $existingLabels
+     */
+    private function resolvePrintableCustomerName(Order $order, array $existingLabels = []): ?string
+    {
+        $name = trim((string) ($order->customer_name ?? ''));
+        if ($name === '') {
+            return null;
         }
 
-        return '';
+        $normalizedName = $this->normalizeTicketCompareValue($name);
+        $sourcePlaceholders = [
+            'pos' => ['pos', 'קופה'],
+            'kiosk' => ['kiosk', 'קיוסק'],
+        ];
+
+        foreach ($sourcePlaceholders[$order->source ?? ''] ?? [] as $placeholder) {
+            if ($normalizedName === $this->normalizeTicketCompareValue($placeholder)) {
+                return null;
+            }
+        }
+
+        foreach ($existingLabels as $label) {
+            if ($normalizedName === $this->normalizeTicketCompareValue((string) $label)) {
+                return null;
+            }
+        }
+
+        return $name;
+    }
+
+    private function normalizeTicketCompareValue(string $value): string
+    {
+        $value = preg_replace('/\s+/u', ' ', trim($value)) ?? '';
+
+        return mb_strtolower($value, 'UTF-8');
     }
 
     /**
@@ -549,10 +635,24 @@ class PrintService
         $lines = [];
 
         $lines[] = $separator;
-        $lines[] = '{{BIG}}';
+        $lines[] = '{{BOLD}}{{BIG}}';
         $lines[] = $this->centerText("הזמנה #{$order->id}", $printer);
-        $lines[] = '{{/BIG}}';
+        $lines[] = '{{/BIG}}{{/BOLD}}';
         $lines[] = $separator;
+
+        if ($order->is_future_order) {
+            $lines[] = '{{BOLD}}{{BIG}}';
+            $lines[] = $this->centerText('הזמנה עתידית', $printer);
+            $lines[] = '{{/BIG}}{{/BOLD}}';
+            if ($order->scheduled_for) {
+                $isToday = $order->scheduled_for->isSameDay(now());
+                $scheduledLabel = $isToday
+                    ? 'בשעה ' . $order->scheduled_for->format('H:i')
+                    : 'לתאריך: ' . $order->scheduled_for->format('d.m.Y') . ' בשעה ' . $order->scheduled_for->format('H:i');
+                $lines[] = $this->centerText($scheduledLabel, $printer);
+            }
+            $lines[] = $separator;
+        }
 
         $lines[] = $this->centerText(
             $order->created_at->format('d.m.Y') . ' | ' . $order->created_at->format('H:i'),
@@ -581,8 +681,9 @@ class PrintService
         if ($packaging !== '') {
             $lines[] = $this->centerText($packaging, $printer);
         }
-        if ($order->customer_name) {
-            $lines[] = $order->customer_name;
+        $displayCustomerName = $this->resolvePrintableCustomerName($order, $orderInfo);
+        if ($displayCustomerName !== null) {
+            $lines[] = $displayCustomerName;
         }
         if ($order->customer_phone && $order->customer_phone !== '0000000000') {
             $lines[] = 'טלפון: ' . PhoneValidationService::formatIsraeliForDisplay($order->customer_phone);
@@ -672,7 +773,7 @@ class PrintService
     private function buildEnhancedKitchenTicket(Order $order, $items, Printer $printer): string
     {
         $width = $this->getLineWidth($printer);
-        $separator = str_repeat('=', $width);
+        $separator = str_repeat('█', $width);
         $dash = str_repeat('-', $width);
 
         $lines = [];
@@ -681,10 +782,23 @@ class PrintService
         $lines[] = '{{CENTER_HW}}';
 
         $lines[] = $separator;
-        $lines[] = '{{HEADING}}';
+        $lines[] = '{{HEADING}}{{BOLD}}';
         $lines[] = "הזמנה #{$order->id}";
-        $lines[] = '{{/HEADING}}';
+        $lines[] = '{{/HEADING}}{{/BOLD}}';
         $lines[] = $separator;
+
+        if ($order->is_future_order) {
+            $lines[] = '{{HEADING}}{{BOLD}}';
+            $lines[] = 'הזמנה עתידית';
+            $lines[] = '{{/HEADING}}{{/BOLD}}';
+            if ($order->scheduled_for) {
+                $isToday = $order->scheduled_for->isSameDay(now());
+                $lines[] = $isToday
+                    ? 'בשעה ' . $order->scheduled_for->format('H:i')
+                    : 'לתאריך: ' . $order->scheduled_for->format('d.m.Y') . ' בשעה ' . $order->scheduled_for->format('H:i');
+            }
+            $lines[] = $separator;
+        }
 
         $lines[] = $order->created_at->format('d.m.Y') . ' | ' . $order->created_at->format('H:i');
 
@@ -710,9 +824,10 @@ class PrintService
         if ($packaging !== '') {
             $lines[] = $packaging;
         }
-        if ($order->customer_name) {
+        $displayCustomerName = $this->resolvePrintableCustomerName($order, $orderInfo);
+        if ($displayCustomerName !== null) {
             $lines[] = '{{BOLD}}';
-            $lines[] = $order->customer_name;
+            $lines[] = $displayCustomerName;
             $lines[] = '{{/BOLD}}';
         }
         if ($order->customer_phone && $order->customer_phone !== '0000000000') {
@@ -739,9 +854,9 @@ class PrintService
             foreach ($bucket as $item) {
                 $name = $item->menuItem?->name ?? $item->name ?? 'פריט';
                 $qty = $item->quantity ?? 1;
-                $lines[] = '{{BOLD}}';
+                $lines[] = '{{HEADING}}';
                 $lines[] = "{$qty}x {$name}";
-                $lines[] = '{{/BOLD}}';
+                $lines[] = '{{/HEADING}}';
 
                 if (! empty($item->variant_name)) {
                     $lines[] = "סוג: {$item->variant_name}";
@@ -797,7 +912,7 @@ class PrintService
     private function buildEnhancedReceiptPayload(Order $order, Printer $printer, array $extraData = []): string
     {
         $width = $this->getLineWidth($printer);
-        $separator = str_repeat('█', $width);
+        $separator = str_repeat('=', $width);
         $dash = str_repeat('-', $width);
 
         $lines = [];
@@ -812,10 +927,24 @@ class PrintService
         }
 
         $lines[] = $separator;
-        $lines[] = '{{BOLD}}';
+        $lines[] = '{{BOLD}}{{BIG}}';
         $lines[] = "אישור — הזמנה #{$order->id}";
-        $lines[] = '{{/BOLD}}';
+        $lines[] = '{{/BIG}}{{/BOLD}}';
         $lines[] = $separator;
+
+        if ($order->is_future_order) {
+            $lines[] = '{{HEADING}}{{BOLD}}';
+            $lines[] = 'הזמנה עתידית';
+            $lines[] = '{{/HEADING}}{{/BOLD}}';
+            if ($order->scheduled_for) {
+                $isToday = $order->scheduled_for->isSameDay(now());
+                $lines[] = $isToday
+                    ? 'בשעה ' . $order->scheduled_for->format('H:i')
+                    : 'לתאריך: ' . $order->scheduled_for->format('d.m.Y') . ' בשעה ' . $order->scheduled_for->format('H:i');
+            }
+            $lines[] = $separator;
+        }
+
         $lines[] = $order->created_at->format('d.m.Y H:i');
 
         $serviceLabel = $this->formatOrderServiceModeLabel($order);
@@ -826,8 +955,9 @@ class PrintService
         if ($packagingLabel !== '') {
             $lines[] = $packagingLabel;
         }
-        if ($order->customer_name && $order->customer_name !== 'POS') {
-            $lines[] = "לקוח: {$order->customer_name}";
+        $displayCustomerName = $this->resolvePrintableCustomerName($order);
+        if ($displayCustomerName !== null) {
+            $lines[] = "לקוח: {$displayCustomerName}";
         }
         if ($order->customer_phone && $order->customer_phone !== '0000000000') {
             $lines[] = 'טלפון: ' . PhoneValidationService::formatIsraeliForDisplay($order->customer_phone);
@@ -948,6 +1078,21 @@ class PrintService
         $lines[] = $this->centerText("אישור — הזמנה #{$order->id}", $printer);
         $lines[] = '{{/BIG}}';
         $lines[] = $separator;
+
+        if ($order->is_future_order) {
+            $lines[] = '{{BOLD}}{{BIG}}';
+            $lines[] = $this->centerText('הזמנה עתידית', $printer);
+            $lines[] = '{{/BIG}}{{/BOLD}}';
+            if ($order->scheduled_for) {
+                $isToday = $order->scheduled_for->isSameDay(now());
+                $scheduledLabel = $isToday
+                    ? 'בשעה ' . $order->scheduled_for->format('H:i')
+                    : 'לתאריך: ' . $order->scheduled_for->format('d.m.Y') . ' בשעה ' . $order->scheduled_for->format('H:i');
+                $lines[] = $this->centerText($scheduledLabel, $printer);
+            }
+            $lines[] = $separator;
+        }
+
         $lines[] = $this->centerText($order->created_at->format('d.m.Y H:i'), $printer);
 
         $serviceLabel = $this->formatOrderServiceModeLabel($order);
@@ -958,8 +1103,9 @@ class PrintService
         if ($packagingLabel !== '') {
             $lines[] = $this->centerText($packagingLabel, $printer);
         }
-        if ($order->customer_name && $order->customer_name !== 'POS') {
-            $lines[] = $this->centerText("לקוח: {$order->customer_name}", $printer);
+        $displayCustomerName = $this->resolvePrintableCustomerName($order);
+        if ($displayCustomerName !== null) {
+            $lines[] = $this->centerText("לקוח: {$displayCustomerName}", $printer);
         }
         if ($order->customer_phone && $order->customer_phone !== '0000000000') {
             $lines[] = $this->centerText(
@@ -1181,6 +1327,35 @@ class PrintService
         return implode("\n", $lines);
     }
 
+    private function buildShiftOpenSlipPayload(array $data, Printer $printer): string
+    {
+        $width = $this->getLineWidth($printer);
+        $separator = str_repeat('=', $width);
+        $dash = str_repeat('-', $width);
+        $cashier = $data['cashier'] ?? '—';
+        $openingBalance = $this->formatShekelAmount((float) ($data['opening_balance'] ?? 0));
+
+        $lines = [
+            $separator,
+            $this->centerText('פתיחת קופה', $printer),
+            $separator,
+            $this->receiptLineLabelAndAmount('יתרת פתיחה:', $openingBalance, $width),
+            $this->receiptLineLabelAndAmount('תאריך:', $data['date'] ?? '—', $width),
+            $this->receiptLineLabelAndAmount('יום:', $data['day'] ?? '—', $width),
+            $this->receiptLineLabelAndAmount('שעה:', $data['time'] ?? '—', $width),
+            $dash,
+            $this->receiptLineLabelAndAmount('קופאי:', $cashier, $width),
+            '',
+            $this->centerText('פתיחה נרשמה בהצלחה', $printer),
+            '',
+            $separator,
+            $this->centerText('Powered by TakeEat', $printer),
+            '',
+        ];
+
+        return implode("\n", $lines);
+    }
+
     private function buildTimeClockSlipPayload(array $data, Printer $printer): string
     {
         $width = $this->getLineWidth($printer);
@@ -1252,9 +1427,8 @@ class PrintService
         $separator = str_repeat('=', $width);
         $name = $restaurant->name ?? 'המסעדה';
 
-        $lines[] = '{{CENTER_HW}}';
-
         $lines = [
+            '{{CENTER_HW}}',
             $separator,
             $this->centerText('הזמנה מהירה מהנייד', $printer),
             $this->centerText('סרקו לעמוד המסעדה', $printer),

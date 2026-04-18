@@ -9,25 +9,30 @@ use App\Services\CustomerOrderPushService;
 use App\Services\FcmService;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 /**
- * מעבד הזמנות עתידיות — מעביר אותן לסטטוס "received" כ-60 דקות לפני scheduled_for
+ * מעבד הזמנות עתידיות — מפעיל אותן לפי זמן הכנה דינמי של המסעדה.
+ * כולל: הדפסה למטבח, נעילת DB למניעת כפילויות, וטיפול בכשל הדפסה.
  */
 class ProcessFutureOrders extends Command
 {
     protected $signature = 'orders:process-future';
-    protected $description = 'Process future orders — move to received status 60 minutes before scheduled_for';
+    protected $description = 'Activate future orders based on restaurant prep time before scheduled_for';
 
     public function handle(): int
     {
-        $threshold = Carbon::now('Asia/Jerusalem')->addMinutes(60);
+        $now = Carbon::now('Asia/Jerusalem');
 
         $orders = Order::withoutGlobalScopes()
             ->where('is_future_order', true)
             ->where('status', Order::STATUS_PENDING)
-            ->where('payment_status', Order::PAYMENT_PAID)
-            ->where('scheduled_for', '<=', $threshold)
+            ->where(function ($q) {
+                $q->where('payment_status', Order::PAYMENT_PAID)
+                  ->orWhere('payment_method', 'cash');
+            })
+            ->with('restaurant')
             ->get();
 
         if ($orders->isEmpty()) {
@@ -35,51 +40,94 @@ class ProcessFutureOrders extends Command
             return self::SUCCESS;
         }
 
-        $this->info("Processing {$orders->count()} future order(s)...");
+        $this->info("Checking {$orders->count()} future order(s)...");
 
         foreach ($orders as $order) {
+            $restaurant = $order->restaurant;
+            if (!$restaurant) {
+                $this->warn("  Order #{$order->id}: no restaurant, skipping.");
+                continue;
+            }
+
+            $prep = $order->delivery_method === 'delivery'
+                ? (int) ($restaurant->delivery_time_minutes ?? 30)
+                : (int) ($restaurant->pickup_time_minutes ?? 20);
+
+            $activationTime = Carbon::parse($order->scheduled_for)
+                ->timezone('Asia/Jerusalem')
+                ->subMinutes($prep);
+
+            if (!$now->gte($activationTime)) {
+                continue;
+            }
+
             try {
-                $order->update(['status' => Order::STATUS_RECEIVED]);
+                DB::transaction(function () use ($order, $now) {
+                    $fresh = Order::lockForUpdate()->find($order->id);
 
-                $scheduledTime = Carbon::parse($order->scheduled_for)->timezone('Asia/Jerusalem')->format('H:i');
+                    if (!$fresh || $fresh->status !== Order::STATUS_PENDING) {
+                        return;
+                    }
 
-                // Push notification — כניסה למטבח כרגיל
-                $this->sendOrderNotification(
-                    tenantId: $order->tenant_id,
-                    title: "הזמנה חדשה #{$order->id}",
-                    body: "{$order->customer_name} - ₪{$order->total_amount} (עתידית ל-{$scheduledTime})",
-                    data: [
-                        'orderId' => (string) $order->id,
-                        'type' => 'new_order',
-                        'url' => '/admin/orders',
-                    ]
-                );
-
-                $order->refresh();
-                try {
-                    app(CustomerOrderPushService::class)->sendOrderStatusPush($order, Order::STATUS_RECEIVED);
-                } catch (\Throwable $e) {
-                    Log::warning('Customer order push failed (future order)', [
-                        'error' => $e->getMessage(),
-                        'order_id' => $order->id,
+                    $fresh->update([
+                        'status' => Order::STATUS_RECEIVED,
+                        'activated_at' => $now,
                     ]);
-                }
 
-                MonitoringAlert::create([
-                    'tenant_id' => $order->tenant_id,
-                    'restaurant_id' => $order->restaurant_id,
-                    'alert_type' => 'new_order',
-                    'title' => "הזמנה חדשה #{$order->id}",
-                    'body' => "{$order->customer_name} - ₪{$order->total_amount} (עתידית ל-{$scheduledTime})",
-                    'severity' => 'info',
-                    'metadata' => ['order_id' => $order->id, 'scheduled_for' => $order->scheduled_for],
-                    'is_read' => false,
-                ]);
+                    try {
+                        app(\App\Services\PrintService::class)->printOrder($fresh);
+                    } catch (\Throwable $e) {
+                        $fresh->update(['print_failed_at' => $now]);
+                        Log::warning("Print failed for future order #{$fresh->id}", [
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
 
-                $this->line("  ✅ Order #{$order->id} → received (scheduled for {$scheduledTime})");
+                    $scheduledTime = Carbon::parse($fresh->scheduled_for)
+                        ->timezone('Asia/Jerusalem')->format('H:i');
+
+                    $this->sendOrderNotification(
+                        tenantId: $fresh->tenant_id,
+                        title: "הזמנה חדשה #{$fresh->id}",
+                        body: "{$fresh->customer_name} - ₪{$fresh->total_amount} (עתידית ל-{$scheduledTime})",
+                        data: [
+                            'orderId' => (string) $fresh->id,
+                            'type' => 'new_order',
+                            'url' => '/admin/orders',
+                        ]
+                    );
+
+                    try {
+                        app(CustomerOrderPushService::class)
+                            ->sendOrderStatusPush($fresh, Order::STATUS_RECEIVED);
+                    } catch (\Throwable $e) {
+                        Log::warning('Customer push failed (future order)', [
+                            'error' => $e->getMessage(),
+                            'order_id' => $fresh->id,
+                        ]);
+                    }
+
+                    MonitoringAlert::create([
+                        'tenant_id' => $fresh->tenant_id,
+                        'restaurant_id' => $fresh->restaurant_id,
+                        'alert_type' => 'new_order',
+                        'title' => "הזמנה חדשה #{$fresh->id}",
+                        'body' => "{$fresh->customer_name} - ₪{$fresh->total_amount} (עתידית ל-{$scheduledTime})",
+                        'severity' => 'info',
+                        'metadata' => [
+                            'order_id' => $fresh->id,
+                            'scheduled_for' => $fresh->scheduled_for,
+                        ],
+                        'is_read' => false,
+                    ]);
+                });
+
+                $this->line("  Order #{$order->id} -> received");
             } catch (\Throwable $e) {
-                Log::error("Failed to process future order #{$order->id}", ['error' => $e->getMessage()]);
-                $this->error("  ❌ Order #{$order->id}: {$e->getMessage()}");
+                Log::error("Failed to process future order #{$order->id}", [
+                    'error' => $e->getMessage(),
+                ]);
+                $this->error("  Order #{$order->id}: {$e->getMessage()}");
             }
         }
 

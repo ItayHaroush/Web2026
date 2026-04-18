@@ -411,7 +411,13 @@ export default function AdminTerminal() {
                                                     )}
                                                     <FaClock size={10} />
                                                     {order.is_future_order && order.scheduled_for
-                                                        ? <>מתוזמנת: {new Date(order.scheduled_for).toLocaleString('he-IL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</>
+                                                        ? <>מתוזמנת: {(() => {
+                                                            const s = new Date(order.scheduled_for);
+                                                            const isToday = s.toDateString() === new Date().toDateString();
+                                                            return isToday
+                                                                ? s.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
+                                                                : s.toLocaleString('he-IL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+                                                        })()}</>
                                                         : new Date(order.created_at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
                                                     }
                                                 </p>

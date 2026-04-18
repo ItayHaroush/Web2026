@@ -52,9 +52,12 @@ export default function AdminNotificationProvider({ children }) {
                 const res = await api.get('/admin/orders?per_page=1', { headers: getAuthHeaders() });
                 if (cancelled) return;
                 const orders = res.data?.orders?.data || res.data?.orders || [];
-                const latestId = orders[0]?.id ?? null;
+                const latestOrder = orders[0];
+                const latestId = latestOrder?.id ?? null;
                 if (latestId && lastKnownOrderCountRef.current !== null && latestId > lastKnownOrderCountRef.current) {
-                    if (!isFirstPoll) {
+                    const isFuturePending = latestOrder?.is_future_order &&
+                        (latestOrder?.status === 'pending' || latestOrder?.status === 'awaiting_payment');
+                    if (!isFirstPoll && !isFuturePending) {
                         SoundManager.play();
                         if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
                             try { new Notification('הזמנה חדשה', { body: `הזמנה #${latestId}`, icon: '/icon-192.png', silent: true }); } catch (_) { }
@@ -105,8 +108,13 @@ export default function AdminNotificationProvider({ children }) {
             const title = payload?.notification?.title || payload?.data?.title || PRODUCT_NAME;
             const body = payload?.notification?.body || payload?.data?.body || 'התראה חדשה';
 
-            // future_order_created — בלי חלון מערכת; צלצול כבר מדולג
+            // future_order_created — בלי צלצול; רענן דשבורד בלבד
             if (dataType === 'future_order_created') {
+                try {
+                    window.dispatchEvent(new CustomEvent('takeeat:future-order-created', {
+                        detail: { orderId: payload?.data?.orderId },
+                    }));
+                } catch { /* ignore */ }
                 return;
             }
 

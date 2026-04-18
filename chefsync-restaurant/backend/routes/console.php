@@ -3,7 +3,8 @@
 use Illuminate\Support\Facades\Schedule;
 
 Schedule::command('monitor:stale-orders')->everyFiveMinutes();
-Schedule::command('orders:process-future')->everyFiveMinutes();
+Schedule::command('orders:process-future')->everyMinute();
+Schedule::command('orders:retry-failed-prints')->everyTwoMinutes();
 Schedule::command('orders:notify-pending-customer')->everyFiveMinutes();
 Schedule::command('orders:expire-awaiting-payment')->everyTenMinutes();
 Schedule::command('monitor:daily-summary')->dailyAt('22:00');

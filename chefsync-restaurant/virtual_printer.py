@@ -18,6 +18,19 @@ ANSI_ULINE  = '\033[4m'
 HEBREW_RE   = re.compile(r'[\u0590-\u05FF]')
 MARKER_BIG  = '{{BIG}}'
 MARKER_NOBIG = '{{/BIG}}'
+MARKERS = (
+    '{{BIG}}',
+    '{{/BIG}}',
+    '{{CENTER}}',
+    '{{/CENTER}}',
+    '{{BOLD}}',
+    '{{/BOLD}}',
+    '{{QR}}',
+    '{{HEADING}}',
+    '{{/HEADING}}',
+    '{{CENTER_HW}}',
+    '{{/CENTER_HW}}',
+)
 
 
 def parse_escpos(data: bytes):
@@ -73,11 +86,17 @@ def parse_escpos(data: bytes):
                     pL, pH = data[i + 3], data[i + 4]
                     param_len = pL + (pH << 8)
                     total = 5 + param_len
-                    # Function 80 — Store QR data (31 50 30 <data>)
-                    if param_len >= 4 and i + 7 < len(data):
-                        if data[i + 5:i + 8] == b'\x31\x50\x30':
+                    if param_len >= 3 and i + 7 < len(data):
+                        # Function 80 — Store QR data (31 50 30 <data>)
+                        if data[i + 5:i + 8] == b'\x31\x50\x30' and param_len >= 4:
                             qr_bytes = data[i + 8: i + 8 + param_len - 3]
                             qr_data = qr_bytes.decode('ascii', errors='replace')
+                        # Function 81 — Print stored QR data (31 51 30)
+                        elif data[i + 5:i + 8] == b'\x31\x51\x30':
+                            if cur:
+                                flush()
+                            if qr_data:
+                                items.append(('qr', qr_data))
                     i += total; continue
                 i += 3; continue
 
@@ -97,7 +116,7 @@ def parse_escpos(data: bytes):
         i += 1
 
     if cur: flush()
-    if qr_data:
+    if qr_data and not any(item[0] == 'qr' and item[1] == qr_data for item in items):
         items.append(('qr', qr_data))
     return items
 
@@ -125,6 +144,22 @@ def ansi_wrap(style, text, width=42):
     if style.get('uline'):
         pre += ANSI_ULINE
     return f"{pre}{vis}{ANSI_RESET}" if pre else vis
+
+
+def is_marker_only_line(line: str) -> bool:
+    remaining = line.strip()
+    if not remaining:
+        return False
+
+    while remaining:
+        for marker in MARKERS:
+            if remaining.startswith(marker):
+                remaining = remaining[len(marker):].lstrip()
+                break
+        else:
+            return False
+
+    return True
 
 
 def main():
@@ -157,11 +192,10 @@ def main():
             for item in items:
                 if item[0] == 'line':
                     _, style, text = item
-                    stripped = text.strip()
                     # Skip marker-only lines (text fallback)
-                    if stripped in (MARKER_BIG, MARKER_NOBIG):
+                    if is_marker_only_line(text):
                         continue
-                    rendered = ansi_wrap(style, text)
+                    rendered = ansi_wrap(style, re_reverse(text))
                     print(f"\u2502 {rendered} \u2502")
 
                 elif item[0] == 'qr':

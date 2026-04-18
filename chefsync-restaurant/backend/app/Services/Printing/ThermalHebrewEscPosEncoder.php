@@ -271,8 +271,29 @@ final class ThermalHebrewEscPosEncoder
      */
     private function isMarkerLine(string $line): bool
     {
-        $trimmed = trim($line);
+        $remaining = trim($line);
+        if ($remaining === '') {
+            return false;
+        }
 
-        return in_array($trimmed, self::MARKERS, true);
+        while ($remaining !== '') {
+            $matched = false;
+
+            foreach (self::MARKERS as $marker) {
+                if (! str_starts_with($remaining, $marker)) {
+                    continue;
+                }
+
+                $remaining = ltrim(substr($remaining, strlen($marker)));
+                $matched = true;
+                break;
+            }
+
+            if (! $matched) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

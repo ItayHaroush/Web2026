@@ -61,10 +61,13 @@ export default function AdminDashboard() {
         }
     };
 
-    /** כרטיס "טיפול בתשלום" (HYP) מהשרת; אם ריק — נופלים ל-10 האחרונות עם pending/failed */
+    /**
+     * בנר כתום — רק כשאין manualPaymentOrders מהשרת (fallback מ-10 האחרונות).
+     * כשיש manualPaymentOrders — הסקשן הציאן מציג אותם ואין צורך בבנר כפול.
+     */
     const bannerUnpaidOrders = useMemo(() => {
         if (manualPaymentOrders.length > 0) {
-            return manualPaymentOrders;
+            return [];
         }
         return recentOrders.filter(
             (o) =>
@@ -75,6 +78,13 @@ export default function AdminDashboard() {
 
     useEffect(() => {
         fetchDashboard();
+    }, []);
+
+    // רענון מיידי כשמגיעה הזמנה עתידית חדשה (FCM → AdminNotificationProvider)
+    useEffect(() => {
+        const handler = () => fetchDashboard();
+        window.addEventListener('takeeat:future-order-created', handler);
+        return () => window.removeEventListener('takeeat:future-order-created', handler);
     }, []);
 
     const fetchDashboard = async () => {
@@ -336,32 +346,10 @@ export default function AdminDashboard() {
                 </div>
             )}
 
-            {/* כרטיסי סטטיסטיקה מצומצמים */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                {statCards.map((card) => (
-                    <div key={card.key} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 group hover:border-brand-primary/30 transition-all">
-                        <div className="flex items-center justify-between mb-2">
-                            <div className={`p-2 rounded-lg ${card.bg} ${card.color}`}>
-                                {card.icon}
-                            </div>
-                            <div className="h-1 w-8 bg-gray-50 rounded-full overflow-hidden">
-                                <div className={`h-full ${card.color.replace('text-', 'bg-')} opacity-20 w-1/2`} />
-                            </div>
-                        </div>
-                        <p className="text-xl font-black text-gray-900 leading-none">
-                            {card.format
-                                ? card.format(stats?.[card.key])
-                                : stats?.[card.key] || 0}
-                        </p>
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mt-1.5">{card.label}</p>
-                    </div>
-                ))}
-            </div>
-
             {(futureOrders.length > 0 || (canManualPaymentTools && manualPaymentOrders.length > 0)) && (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6 items-stretch">
+                <div style={{ display: 'grid', gridTemplateColumns: futureOrders.length > 0 && canManualPaymentTools && manualPaymentOrders.length > 0 ? '1fr 1fr' : '1fr', gap: '1rem', marginBottom: '1.5rem' }}>
                     {futureOrders.length > 0 && (
-                        <div className="bg-white rounded-2xl border border-indigo-100 shadow-sm p-4 flex flex-col min-h-0">
+                        <div className="bg-white rounded-2xl border border-indigo-100 shadow-sm p-4" style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
                             <div className="flex items-center justify-between gap-2 mb-3 shrink-0">
                                 <h3 className="text-sm font-black text-gray-900 flex items-center gap-2 min-w-0">
                                     <span className="p-2 rounded-lg bg-indigo-50 text-indigo-600 shrink-0">
@@ -377,7 +365,7 @@ export default function AdminDashboard() {
                                     מסך הזמנות
                                 </button>
                             </div>
-                            <div className="space-y-2 max-h-52 overflow-y-auto flex-1 min-h-0">
+                            <div className="space-y-2 max-h-52 overflow-y-auto" style={{ flex: 1, minHeight: 0 }}>
                                 {futureOrders.map(order => (
                                     <div
                                         key={order.id}
@@ -399,7 +387,16 @@ export default function AdminDashboard() {
                                             <div className="min-w-0">
                                                 <p className="font-bold text-gray-900 truncate">{order.customer_name}</p>
                                                 <p className="text-[10px] text-indigo-600 font-bold">
-                                                    {new Date(order.scheduled_for).toLocaleString('he-IL', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                                                    {(() => {
+                                                        const s = new Date(order.scheduled_for);
+                                                        const now = new Date();
+                                                        const isToday = s.toDateString() === now.toDateString();
+                                                        const diffMin = Math.round((s - now) / 60000);
+                                                        if (diffMin > 0 && diffMin <= 10) return `עוד ${diffMin} דקות`;
+                                                        return isToday
+                                                            ? s.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
+                                                            : s.toLocaleString('he-IL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+                                                    })()}
                                                 </p>
                                             </div>
                                         </div>
@@ -412,7 +409,7 @@ export default function AdminDashboard() {
                         </div>
                     )}
                     {canManualPaymentTools && manualPaymentOrders.length > 0 && (
-                        <div className="bg-white rounded-2xl border border-cyan-100 shadow-sm p-4 flex flex-col min-h-0">
+                        <div className="bg-white rounded-2xl border border-cyan-100 shadow-sm p-4" style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
                             <div className="flex items-center justify-between gap-2 mb-3 shrink-0">
                                 <h3 className="text-sm font-black text-gray-900 flex items-center gap-2 min-w-0">
                                     <span className="p-2 rounded-lg bg-cyan-50 text-cyan-700 shrink-0">
@@ -443,9 +440,20 @@ export default function AdminDashboard() {
                                                     <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-gray-100/60 text-gray-600 border border-gray-200/60">
                                                         {pay}
                                                     </span>
+                                                    {o.is_future_order && (
+                                                        <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-indigo-50 text-indigo-600 border border-indigo-100">
+                                                            עתידית
+                                                        </span>
+                                                    )}
                                                 </div>
                                                 <p className="text-xs font-bold text-gray-800 truncate">{o.customer_name || '—'}</p>
-                                                <p className="text-[10px] text-gray-400 font-bold">₪{total.toFixed(2)}</p>
+                                                {o.is_future_order && o.scheduled_for ? (
+                                                    <p className="text-[10px] text-indigo-500 font-bold">
+                                                        {new Date(o.scheduled_for).toLocaleString('he-IL', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                                                    </p>
+                                                ) : (
+                                                    <p className="text-[10px] text-gray-400 font-bold">₪{total.toFixed(2)}</p>
+                                                )}
                                             </div>
                                             <div className="flex flex-wrap gap-1.5 shrink-0">
                                                 <button
@@ -472,6 +480,28 @@ export default function AdminDashboard() {
                     )}
                 </div>
             )}
+
+            {/* כרטיסי סטטיסטיקה מצומצמים */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                {statCards.map((card) => (
+                    <div key={card.key} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 group hover:border-brand-primary/30 transition-all">
+                        <div className="flex items-center justify-between mb-2">
+                            <div className={`p-2 rounded-lg ${card.bg} ${card.color}`}>
+                                {card.icon}
+                            </div>
+                            <div className="h-1 w-8 bg-gray-50 rounded-full overflow-hidden">
+                                <div className={`h-full ${card.color.replace('text-', 'bg-')} opacity-20 w-1/2`} />
+                            </div>
+                        </div>
+                        <p className="text-xl font-black text-gray-900 leading-none">
+                            {card.format
+                                ? card.format(stats?.[card.key])
+                                : stats?.[card.key] || 0}
+                        </p>
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mt-1.5">{card.label}</p>
+                    </div>
+                ))}
+            </div>
 
             {/* סיכום נוסף - גריד צבעוני מצומצם */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">

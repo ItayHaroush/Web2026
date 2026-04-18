@@ -179,9 +179,12 @@ class POSController extends Controller
             'opening_balance' => $request->opening_balance,
         ]);
 
+        $printJobs = $this->printShiftOpenSlip($shift, $user);
+
         return response()->json([
             'success' => true,
             'shift' => $this->formatShift($shift),
+            'print_jobs' => $printJobs,
         ]);
     }
 
@@ -1691,6 +1694,41 @@ class POSController extends Controller
     }
 
     // ─── Helpers ───
+
+    private function printShiftOpenSlip(CashRegisterShift $shift, User $user): int
+    {
+        try {
+            $restaurant = Restaurant::withoutGlobalScopes()->find($shift->restaurant_id);
+            $tenantId = $restaurant?->tenant_id;
+
+            if (($tenantId === null || $tenantId === '') && app()->has('tenant_id')) {
+                $tenantId = app('tenant_id');
+            }
+
+            return app(PrintService::class)->printShiftOpenSlip($shift->restaurant_id, $tenantId, [
+                'cashier' => $user->name ?? '—',
+                'opening_balance' => (float) $shift->opening_balance,
+                'date' => $shift->opened_at?->format('d/m/Y') ?? Carbon::now()->format('d/m/Y'),
+                'day' => $this->hebrewDayName($shift->opened_at ?? Carbon::now()),
+                'time' => $shift->opened_at?->format('H:i') ?? Carbon::now()->format('H:i'),
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('POS: open shift slip print failed', [
+                'restaurant_id' => $shift->restaurant_id,
+                'shift_id' => $shift->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return 0;
+        }
+    }
+
+    private function hebrewDayName(Carbon $date): string
+    {
+        $days = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+
+        return $days[$date->dayOfWeek] ?? '—';
+    }
 
     /**
      * לאחר סגירת משמרת: יוצר/מעדכן את אותו DailyReport כמו בעמוד הזמנות ליום סגירה (Asia/Jerusalem) ומדפיס בון קופה.

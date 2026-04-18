@@ -103,13 +103,15 @@ class NetworkPrinterAdapter implements PrinterAdapter
                 $encoded = $this->hebrewEncoder->encodeUtf8ToCp862($textForEncoding, true, null);
             }
 
-            // CRITICAL FIX: Decode QR binary from base64 before sending (raw binary, not text)
+            // Accept either base64 or already-decoded ESC/POS binary.
             $qrBinary = '';
             $escposRawBinary = $config['escpos_binary_suffix'] ?? '';
             if (is_string($escposRawBinary) && $escposRawBinary !== '') {
                 $decoded = base64_decode($escposRawBinary, true);
                 if ($decoded !== false) {
                     $qrBinary = $decoded;
+                } else {
+                    $qrBinary = $escposRawBinary;
                 }
             }
 
@@ -174,57 +176,7 @@ class NetworkPrinterAdapter implements PrinterAdapter
         $qrInserted = false;
 
         foreach (explode("\n", $encoded) as $line) {
-            // CRITICAL: No trim() — exact match only to prevent RTL marker corruption
-            // Hebrew markers must match exactly; trim could break RTL detection
-            $isMarkerLine = false;
-
-            // Check for marker lines (consume them, don't print)
-            if ($line === self::MARKER_BIG) {
-                $isBig = true;
-                $isMarkerLine = true;
-            } elseif ($line === self::MARKER_NOBIG) {
-                $isBig = false;
-                fwrite($socket, "\x1B\x21" . chr(self::MODE_NORMAL));
-                $isMarkerLine = true;
-            } elseif ($line === self::MARKER_CENTER) {
-                $isCenter = true;
-                fwrite($socket, "\x1B\x61\x01"); // ESC a 1 — center alignment
-                $isMarkerLine = true;
-            } elseif ($line === self::MARKER_NOCENTER) {
-                $isCenter = false;
-                fwrite($socket, "\x1B\x61\x00"); // ESC a 0 — left alignment
-                $isMarkerLine = true;
-            } elseif ($line === self::MARKER_BOLD) {
-                $isBold = true;
-                fwrite($socket, "\x1B\x45\x01"); // ESC E 1 — bold on
-                $isMarkerLine = true;
-            } elseif ($line === self::MARKER_NOBOLD) {
-                $isBold = false;
-                fwrite($socket, "\x1B\x45\x00"); // ESC E 0 — bold off
-                $isMarkerLine = true;
-            } elseif ($line === self::MARKER_HEADING) {
-                $isHeading = true;
-                $isMarkerLine = true;
-            } elseif ($line === self::MARKER_NOHEADING) {
-                $isHeading = false;
-                fwrite($socket, "\x1B\x21" . chr(self::MODE_NORMAL));
-                $isMarkerLine = true;
-            } elseif ($line === self::MARKER_CENTER_HW) {
-                fwrite($socket, "\x1B\x61\x01"); // ESC a 1 — hardware center
-                $isMarkerLine = true;
-            } elseif ($line === self::MARKER_NOCENTER_HW) {
-                fwrite($socket, "\x1B\x61\x00"); // ESC a 0 — left
-                $isMarkerLine = true;
-            } elseif ($line === self::MARKER_QR) {
-                if ($qrBinary !== '') {
-                    fwrite($socket, $qrBinary);
-                    $qrInserted = true;
-                }
-                $isMarkerLine = true;
-            }
-
-            // Skip marker lines entirely (don't send to printer)
-            if ($isMarkerLine) {
+            if ($this->consumeMarkerLine($socket, $line, $qrBinary, $isBig, $isBold, $isCenter, $isHeading, $qrInserted)) {
                 continue;
             }
 
@@ -244,6 +196,121 @@ class NetworkPrinterAdapter implements PrinterAdapter
         fwrite($socket, "\x1B\x45\x00");
 
         return $qrInserted;
+    }
+
+    /**
+     * Consume one or more concatenated marker tokens on the same line.
+     *
+     * @param  resource  $socket
+     */
+    private function consumeMarkerLine($socket, string $line, string $qrBinary, bool &$isBig, bool &$isBold, bool &$isCenter, bool &$isHeading, bool &$qrInserted): bool
+    {
+        $remaining = trim($line);
+        if ($remaining === '') {
+            return false;
+        }
+
+        while ($remaining !== '') {
+            $matched = false;
+
+            foreach ($this->markerTokens() as $token) {
+                if (! str_starts_with($remaining, $token)) {
+                    continue;
+                }
+
+                $this->applyMarkerToken($socket, $token, $qrBinary, $isBig, $isBold, $isCenter, $isHeading, $qrInserted);
+                $remaining = ltrim(substr($remaining, strlen($token)));
+                $matched = true;
+                break;
+            }
+
+            if (! $matched) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function markerTokens(): array
+    {
+        return [
+            self::MARKER_NOCENTER_HW,
+            self::MARKER_CENTER_HW,
+            self::MARKER_NOHEADING,
+            self::MARKER_HEADING,
+            self::MARKER_NOCENTER,
+            self::MARKER_CENTER,
+            self::MARKER_NOBOLD,
+            self::MARKER_BOLD,
+            self::MARKER_NOBIG,
+            self::MARKER_BIG,
+            self::MARKER_QR,
+        ];
+    }
+
+    /**
+     * @param  resource  $socket
+     */
+    private function applyMarkerToken($socket, string $token, string $qrBinary, bool &$isBig, bool &$isBold, bool &$isCenter, bool &$isHeading, bool &$qrInserted): void
+    {
+        switch ($token) {
+            case self::MARKER_BIG:
+                $isBig = true;
+                return;
+
+            case self::MARKER_NOBIG:
+                $isBig = false;
+                fwrite($socket, "\x1B\x21" . chr(self::MODE_NORMAL));
+                return;
+
+            case self::MARKER_CENTER:
+                $isCenter = true;
+                fwrite($socket, "\x1B\x61\x01");
+                return;
+
+            case self::MARKER_NOCENTER:
+                $isCenter = false;
+                fwrite($socket, "\x1B\x61\x00");
+                return;
+
+            case self::MARKER_BOLD:
+                $isBold = true;
+                fwrite($socket, "\x1B\x45\x01");
+                return;
+
+            case self::MARKER_NOBOLD:
+                $isBold = false;
+                fwrite($socket, "\x1B\x45\x00");
+                return;
+
+            case self::MARKER_HEADING:
+                $isHeading = true;
+                return;
+
+            case self::MARKER_NOHEADING:
+                $isHeading = false;
+                fwrite($socket, "\x1B\x21" . chr(self::MODE_NORMAL));
+                return;
+
+            case self::MARKER_CENTER_HW:
+                fwrite($socket, "\x1B\x61\x01");
+                return;
+
+            case self::MARKER_NOCENTER_HW:
+                fwrite($socket, "\x1B\x61\x00");
+                return;
+
+            case self::MARKER_QR:
+                if ($qrBinary !== '') {
+                    fwrite($socket, $qrBinary);
+                    $qrInserted = true;
+                }
+                return;
+        }
     }
 
     /**

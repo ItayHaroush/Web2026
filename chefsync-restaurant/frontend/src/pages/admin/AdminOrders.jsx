@@ -1421,7 +1421,13 @@ export default function AdminOrders() {
                                             הזמנה עתידית
                                         </div>
                                         <p className="text-indigo-600 dark:text-indigo-400 text-sm font-bold">
-                                            מתוזמנת ל: {new Date(selectedOrder.scheduled_for).toLocaleString('he-IL', { weekday: 'long', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                                            מתוזמנת ל: {(() => {
+                                                const s = new Date(selectedOrder.scheduled_for);
+                                                const isToday = s.toDateString() === new Date().toDateString();
+                                                return isToday
+                                                    ? s.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
+                                                    : s.toLocaleString('he-IL', { weekday: 'long', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+                                            })()}
                                         </p>
                                         {new Date(selectedOrder.scheduled_for).getTime() - Date.now() > 60 * 60 * 1000 && selectedOrder.status === 'pending' && (
                                             <p className="text-xs text-indigo-500 dark:text-indigo-400 mt-1">
