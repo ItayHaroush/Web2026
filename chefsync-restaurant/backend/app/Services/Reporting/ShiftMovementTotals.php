@@ -36,6 +36,30 @@ final class ShiftMovementTotals
 
         $paymentMovements = $movements->where('type', 'payment');
 
+        // Split payments create 2 movements (cash + credit) for 1 order.
+        // Count unique order_ids so a split counts as 1 transaction total,
+        // and as 1 in each sub-category. Movements without order_id count individually.
+        $splitOrderIds = $paymentMovements
+            ->whereNotNull('order_id')
+            ->groupBy('order_id')
+            ->filter(fn ($group) => $group->count() > 1)
+            ->keys()
+            ->all();
+
+        $cashPaymentCount = $paymentMovements->where('payment_method', 'cash')->count();
+        $creditPaymentCount = $paymentMovements->where('payment_method', 'credit')->count();
+        $totalPaymentCount = $paymentMovements->count();
+
+        // Each split order was double-counted (once per method) — subtract the extras
+        foreach ($splitOrderIds as $orderId) {
+            $group = $paymentMovements->where('order_id', $orderId);
+            $hasCash = $group->where('payment_method', 'cash')->isNotEmpty();
+            $hasCredit = $group->where('payment_method', 'credit')->isNotEmpty();
+            if ($hasCash && $hasCredit) {
+                $totalPaymentCount--;
+            }
+        }
+
         return new self(
             $cashPayments,
             $creditPayments,
@@ -44,11 +68,11 @@ final class ShiftMovementTotals
             $cashOut,
             $refundsTotal,
             $cashRefunds,
-            $paymentMovements->count(),
-            $paymentMovements->where('payment_method', 'cash')->count(),
-            $paymentMovements->where('payment_method', 'credit')->count(),
+            $totalPaymentCount,
+            $cashPaymentCount,
+            $creditPaymentCount,
             $movements->where('type', 'refund')->count(),
-            $paymentMovements->whereNotNull('order_id')->count(),
+            $paymentMovements->whereNotNull('order_id')->unique('order_id')->count(),
         );
     }
 

@@ -1193,8 +1193,8 @@ export default function AdminOrders() {
                                         <div className="space-y-3">
                                             <div className="flex items-center justify-between">
                                                 <div className="flex items-center gap-2 text-sm font-bold text-gray-700">
-                                                    {getOrderDisplayPaymentMethod(selectedOrder) === 'credit_card' ? <FaCreditCard size={14} className="text-brand-primary" /> : <FaMoneyBillWave size={14} className="text-green-500" />}
-                                                    {getOrderDisplayPaymentMethod(selectedOrder) === 'credit_card' ? 'כרטיס אשראי' : 'מזומן'}
+                                                    {getOrderDisplayPaymentMethod(selectedOrder) === 'credit_card' ? <FaCreditCard size={14} className="text-brand-primary" /> : getOrderDisplayPaymentMethod(selectedOrder) === 'split' ? <><FaMoneyBillWave size={14} className="text-green-500" /><FaCreditCard size={14} className="text-brand-primary" /></> : <FaMoneyBillWave size={14} className="text-green-500" />}
+                                                    {getOrderDisplayPaymentMethod(selectedOrder) === 'credit_card' ? 'כרטיס אשראי' : getOrderDisplayPaymentMethod(selectedOrder) === 'split' ? 'תשלום מפוצל' : 'מזומן'}
                                                 </div>
                                                 <div className={`px-2.5 py-1 rounded-lg text-[10px] font-black border ${selectedOrder.payment_status === 'paid' ? 'bg-green-50 text-green-700 border-green-200' :
                                                     selectedOrder.payment_status === 'pending' ? 'bg-orange-50 text-orange-700 border-orange-200' :

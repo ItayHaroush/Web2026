@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\CashMovement;
 use App\Models\DailyReport;
 use App\Models\Order;
 use App\Models\PaymentSession;
@@ -139,10 +140,15 @@ class PrintService
         }
 
         $hasPaymentQr = $qrUrl !== null && $qrBinary !== '';
+        $isPendingCash = $order->payment_status === Order::PAYMENT_PENDING
+            && $order->payment_method === 'cash';
         $jobCount = 0;
 
         foreach ($printers as $printer) {
-            $payload = $this->buildReceiptPayload($order, $printer, array_merge($extraData, ['has_payment_qr' => $hasPaymentQr]));
+            $payload = $this->buildReceiptPayload($order, $printer, array_merge($extraData, [
+                'has_payment_qr' => $hasPaymentQr,
+                'is_pending_cash' => $isPendingCash,
+            ]));
 
             $jobPayload = [
                 'text' => $payload,
@@ -242,6 +248,45 @@ class PrintService
                 'payload' => [
                     'text' => $payload,
                     'type' => 'daily_report_slip',
+                ],
+            ]);
+
+            $this->executeJob($job, $printer, $payload, bypassHoursCheck: true);
+            $jobCount++;
+        }
+
+        return $jobCount;
+    }
+
+    /**
+     * בון דוח סגירת משמרת (Z report) — כל מדפסות receipt/general.
+     */
+    public function printShiftReportSlip(int $restaurantId, ?string $tenantId, array $reportData): int
+    {
+        $printers = Printer::where('restaurant_id', $restaurantId)
+            ->where('is_active', true)
+            ->whereIn('role', ['receipt', 'general'])
+            ->get();
+
+        if ($printers->isEmpty()) {
+            return 0;
+        }
+
+        $jobCount = 0;
+
+        foreach ($printers as $printer) {
+            $payload = $this->buildShiftReportSlipPayload($reportData, $printer);
+
+            $job = PrintJob::create([
+                'tenant_id' => $tenantId,
+                'restaurant_id' => $restaurantId,
+                'printer_id' => $printer->id,
+                'order_id' => null,
+                'role' => 'receipt',
+                'status' => 'pending',
+                'payload' => [
+                    'text' => $payload,
+                    'type' => 'shift_report_slip',
                 ],
             ]);
 
@@ -529,16 +574,16 @@ class PrintService
     private function formatOrderPackagingLabel(Order $order): string
     {
         if ($order->delivery_method === 'delivery') {
-            return 'אריזה: חמגשית TA';
+            return 'חמגשית TA';
         }
         if ($order->order_type === 'takeaway') {
             return 'חמגשית TA';
         }
         if ($order->order_type === 'dine_in') {
-            return 'אריזה: צלחת';
+            return 'ישיבה במקום - צלחת';
         }
         if (($order->delivery_method ?? '') === 'pickup') {
-            return 'אריזה: חמגשית TA';
+            return 'חמגשית TA';
         }
         return '';
     }
@@ -914,6 +959,7 @@ class PrintService
         $width = $this->getLineWidth($printer);
         $separator = str_repeat('=', $width);
         $dash = str_repeat('-', $width);
+        $sap = str_repeat('█', $width);
 
         $lines = [];
 
@@ -1020,12 +1066,29 @@ class PrintService
         $lines[] = 'סה"כ: ' . $this->formatShekelAmount((float) $totalAmount);
         $lines[] = '{{/HEADING}}';
 
-        $paymentLabel = match ($order->payment_method) {
-            'cash' => 'מזומן',
-            'credit_card' => 'אשראי',
-            default => $order->payment_method ?? '—',
-        };
-        $lines[] = "תשלום: {$paymentLabel}";
+        $splitCash = (float) ($extraData['split_cash'] ?? 0);
+        $splitCredit = (float) ($extraData['split_credit'] ?? 0);
+        $isSplitPayment = $splitCash > 0 && $splitCredit > 0;
+
+        if ($isSplitPayment) {
+            $lines[] = '{{BOLD}}';
+            $lines[] = 'תשלום מפוצל';
+            $lines[] = '{{/BOLD}}';
+            $lines[] = 'מזומן: ' . $this->formatShekelAmount($splitCash);
+            $lines[] = 'אשראי: ' . $this->formatShekelAmount($splitCredit);
+        } else {
+            $effectiveMethod = $order->effectiveCollectedPaymentMethod();
+            $paymentLabel = match ($effectiveMethod) {
+                'cash' => 'מזומן',
+                'credit_card' => 'אשראי',
+                'split' => 'תשלום מפוצל',
+                default => $effectiveMethod ?? '—',
+            };
+            $lines[] = "תשלום: {$paymentLabel}";
+            if ($effectiveMethod === 'split') {
+                $this->appendSplitBreakdownFromMovements($order, $lines);
+            }
+        }
 
         if (! empty($extraData['change']) && $extraData['change'] > 0) {
             $lines[] = 'עודף: ' . $this->formatShekelAmount((float) $extraData['change']);
@@ -1038,8 +1101,26 @@ class PrintService
 
         if (! empty($extraData['has_payment_qr'])) {
             $lines[] = $separator;
-            $lines[] = 'לתשלום סרקו את הברקוד';
+            $lines[] = '{{HEADING}}{{BOLD}}';
+            $lines[] = 'שלמו עם TakeEat';
+            $lines[] = '{{/HEADING}}{{/BOLD}}';
+            $lines[] = '';
+            $lines[] = 'סרקו את הברקוד לתשלום';
             $lines[] = '{{QR}}';
+            $lines[] = $separator;
+        }
+
+        if (! empty($extraData['is_pending_cash'])) {
+            if (empty($extraData['has_payment_qr'])) {
+                $lines[] = $separator;
+            }
+            $lines[] = '';
+            $lines[] = $sap;
+            $lines[] = '{{HEADING}}{{BOLD}}';
+            $lines[] = 'ממתין לתשלום';
+            $lines[] = '{{/HEADING}}{{/BOLD}}';
+            $lines[] = $sap;
+            $lines[] = '';
             $lines[] = $separator;
         }
 
@@ -1063,6 +1144,7 @@ class PrintService
         $width = $this->getLineWidth($printer);
         $separator = str_repeat('=', $width);
         $dash = str_repeat('-', $width);
+        $sap = str_repeat('█', $width);
 
         $lines = [];
 
@@ -1083,6 +1165,7 @@ class PrintService
             $lines[] = '{{BOLD}}{{BIG}}';
             $lines[] = $this->centerText('הזמנה עתידית', $printer);
             $lines[] = '{{/BIG}}{{/BOLD}}';
+            $lines[] = $sap;
             if ($order->scheduled_for) {
                 $isToday = $order->scheduled_for->isSameDay(now());
                 $scheduledLabel = $isToday
@@ -1126,9 +1209,11 @@ class PrintService
         $receiptItemDone = 0;
 
         foreach ($receiptGroups as $categoryLabel => $bucket) {
+            $lines[] = $sap;
             $lines[] = '{{BIG}}';
             $lines[] = $this->centerText("— {$categoryLabel} —", $printer);
             $lines[] = '{{/BIG}}';
+            $lines[] = $sap;
 
             foreach ($bucket as $item) {
                 $name = $item->menuItem?->name ?? $item->name ?? 'פריט';
@@ -1175,12 +1260,33 @@ class PrintService
         );
         $lines[] = '{{/BIG}}';
 
-        $paymentLabel = match ($order->payment_method) {
-            'cash' => 'מזומן',
-            'credit_card' => 'אשראי',
-            default => $order->payment_method ?? '—',
-        };
-        $lines[] = $this->centerText("תשלום: {$paymentLabel}", $printer);
+        $splitCash = (float) ($extraData['split_cash'] ?? 0);
+        $splitCredit = (float) ($extraData['split_credit'] ?? 0);
+        $isSplitPayment = $splitCash > 0 && $splitCredit > 0;
+
+        if ($isSplitPayment) {
+            $lines[] = $this->centerText('תשלום מפוצל', $printer);
+            $lines[] = $this->centerText(
+                'מזומן: ' . $this->formatShekelAmount($splitCash),
+                $printer
+            );
+            $lines[] = $this->centerText(
+                'אשראי: ' . $this->formatShekelAmount($splitCredit),
+                $printer
+            );
+        } else {
+            $effectiveMethod = $order->effectiveCollectedPaymentMethod();
+            $paymentLabel = match ($effectiveMethod) {
+                'cash' => 'מזומן',
+                'credit_card' => 'אשראי',
+                'split' => 'תשלום מפוצל',
+                default => $effectiveMethod ?? '—',
+            };
+            $lines[] = $this->centerText("תשלום: {$paymentLabel}", $printer);
+            if ($effectiveMethod === 'split') {
+                $this->appendSplitBreakdownFromMovements($order, $lines, $printer);
+            }
+        }
 
         if (! empty($extraData['change']) && $extraData['change'] > 0) {
             $lines[] = $this->centerText(
@@ -1196,8 +1302,24 @@ class PrintService
 
         if (! empty($extraData['has_payment_qr'])) {
             $lines[] = $separator;
-            $lines[] = $this->centerText('לתשלום סרקו את הברקוד', $printer);
+            $lines[] = '{{BIG}}';
+            $lines[] = $this->centerText('שלמו עם TakeEat', $printer);
+            $lines[] = '{{/BIG}}';
+            $lines[] = '';
+            $lines[] = $this->centerText('סרקו את הברקוד לתשלום', $printer);
             $lines[] = '{{QR}}';
+            $lines[] = $separator;
+        }
+
+        if (! empty($extraData['is_pending_cash'])) {
+            if (empty($extraData['has_payment_qr'])) {
+                $lines[] = $separator;
+            }
+            $lines[] = '';
+            $lines[] = '{{BIG}}';
+            $lines[] = $this->centerText('ממתין לתשלום', $printer);
+            $lines[] = '{{/BIG}}';
+            $lines[] = '';
             $lines[] = $separator;
         }
 
@@ -1223,6 +1345,7 @@ class PrintService
         $netRevenue = (float) ($report->net_revenue ?: $report->total_revenue);
 
         $lines = [
+            '{{CENTER_HW}}',
             $separator,
             $this->centerText('דוח יומי מפורט', $printer),
             $separator,
@@ -1322,6 +1445,119 @@ class PrintService
         $lines[] = $this->receiptLineLabelAndAmount('ממוצע:', $this->formatShekelAmount((float) $report->avg_order_value), $width);
         $lines[] = $dash;
         $lines[] = $this->centerText('Powered by TakeEat', $printer);
+        $lines[] = '{{/CENTER_HW}}';
+        $lines[] = '';
+
+        return implode("\n", $lines);
+    }
+
+    private function buildShiftReportSlipPayload(array $r, Printer $printer): string
+    {
+        $width = $this->getLineWidth($printer);
+        $separator = str_repeat('=', $width);
+        $dash = str_repeat('-', $width);
+
+        $lines = [
+            '{{CENTER_HW}}',
+            $separator,
+            $this->centerText('דוח סגירת משמרת', $printer),
+            $separator,
+        ];
+
+        $lines[] = $this->centerText("משמרת #{$r['shift_id']}", $printer);
+        $lines[] = '';
+        $lines[] = $this->receiptLineLabelAndAmount('קופאי:', $r['cashier'] ?? '—', $width);
+        $lines[] = $this->receiptLineLabelAndAmount('פתיחה:', $r['opened_at'] ?? '—', $width);
+        $lines[] = $this->receiptLineLabelAndAmount('סגירה:', $r['closed_at'] ?? '—', $width);
+
+        $duration = (int) ($r['duration_minutes'] ?? 0);
+        $durationLabel = $duration >= 60
+            ? intdiv($duration, 60) . ' שעות ו-' . ($duration % 60) . ' דקות'
+            : $duration . ' דקות';
+        $lines[] = $this->receiptLineLabelAndAmount('משך:', $durationLabel, $width);
+        $lines[] = '';
+
+        // --- מכירות ---
+        $lines[] = $this->centerText('--- מכירות ---', $printer);
+        $cashCount = (int) ($r['cash_payment_count'] ?? 0);
+        $creditCount = (int) ($r['credit_payment_count'] ?? 0);
+        $totalCount = (int) ($r['total_payment_count'] ?? 0);
+        $lines[] = $this->receiptLineLabelAndAmount("מזומן ({$cashCount}):", $this->formatShekelAmount((float) ($r['cash_payments'] ?? 0)), $width);
+        $lines[] = $this->receiptLineLabelAndAmount("אשראי ({$creditCount}):", $this->formatShekelAmount((float) ($r['credit_payments'] ?? 0)), $width);
+        if (((float) ($r['credit_in'] ?? 0)) > 0) {
+            $lines[] = $this->receiptLineLabelAndAmount('כניסות אשראי:', $this->formatShekelAmount((float) $r['credit_in']), $width);
+        }
+        if (((int) ($r['refund_count'] ?? 0)) > 0) {
+            $lines[] = $this->receiptLineLabelAndAmount("החזרים ({$r['refund_count']}):", '-' . $this->formatShekelAmount((float) ($r['refunds'] ?? 0)), $width);
+        }
+        $lines[] = $dash;
+        $lines[] = $this->receiptLineLabelAndAmount("סה\"כ מכירות ({$totalCount}):", $this->formatShekelAmount((float) ($r['total_sales'] ?? 0)), $width);
+        $lines[] = '';
+
+        // --- תנועות מזומן ---
+        $lines[] = $this->centerText('--- תנועות מזומן ---', $printer);
+        $lines[] = $this->receiptLineLabelAndAmount('יתרת פתיחה:', $this->formatShekelAmount((float) ($r['opening_balance'] ?? 0)), $width);
+        $lines[] = $this->receiptLineLabelAndAmount('+ תקבולי מזומן:', $this->formatShekelAmount((float) ($r['cash_payments'] ?? 0)), $width);
+        if (((float) ($r['cash_in'] ?? 0)) > 0) {
+            $lines[] = $this->receiptLineLabelAndAmount('+ כניסות מזומן:', $this->formatShekelAmount((float) $r['cash_in']), $width);
+        }
+        if (((float) ($r['cash_out'] ?? 0)) > 0) {
+            $lines[] = $this->receiptLineLabelAndAmount('- יציאות מזומן:', $this->formatShekelAmount((float) $r['cash_out']), $width);
+        }
+        $lines[] = $dash;
+        $lines[] = $this->receiptLineLabelAndAmount('יתרה צפויה:', $this->formatShekelAmount((float) ($r['expected_balance'] ?? 0)), $width);
+        if ($r['closing_balance'] !== null) {
+            $lines[] = $this->receiptLineLabelAndAmount('ספירה בפועל:', $this->formatShekelAmount((float) $r['closing_balance']), $width);
+            $variance = (float) ($r['variance'] ?? 0);
+            if ($variance == 0) {
+                $lines[] = $this->centerText('הקופה מאוזנת', $printer);
+            } else {
+                $sign = $variance > 0 ? '+' : '';
+                $lines[] = $this->receiptLineLabelAndAmount('הפרש:', $sign . $this->formatShekelAmount($variance), $width);
+            }
+        }
+        $lines[] = '';
+
+        // --- הזמנות המשמרת ---
+        $orders = $r['orders'] ?? [];
+        if (! empty($orders)) {
+            $lines[] = $this->centerText("--- הזמנות ({$totalCount}) ---", $printer);
+            foreach ($orders as $o) {
+                $src = match ($o['source'] ?? '') {
+                    'pos' => 'POS',
+                    'kiosk' => 'קיוסק',
+                    default => 'אתר',
+                };
+                $total = $this->formatShekelAmount((float) ($o['total'] ?? 0));
+                $lines[] = "#{$o['id']} {$src} {$o['payment_method']} {$o['payment_status']} {$total}";
+            }
+            $lines[] = '';
+        }
+
+        // --- פירוט תנועות ---
+        $movements = $r['movements'] ?? [];
+        if (! empty($movements)) {
+            $lines[] = $this->centerText('--- פירוט תנועות ---', $printer);
+            foreach ($movements as $m) {
+                $typeLabel = match ($m['type'] ?? '') {
+                    'payment' => '',
+                    'cash_in' => 'כניסת מזומן',
+                    'cash_out' => 'יציאת מזומן',
+                    'refund' => 'החזר',
+                    default => $m['type'] ?? '',
+                };
+                $sign = in_array($m['type'], ['cash_out', 'refund']) ? '-' : '+';
+                $amountStr = $sign . $this->formatShekelAmount((float) ($m['amount'] ?? 0));
+                $desc = $m['description'] ?? $typeLabel;
+                $time = $m['time'] ?? '';
+                $lines[] = "{$time} {$desc} {$amountStr}";
+            }
+            $lines[] = '';
+        }
+
+        $lines[] = $separator;
+        $lines[] = $this->centerText('Powered by TakeEat', $printer);
+        $lines[] = '{{/CENTER_HW}}';
         $lines[] = '';
 
         return implode("\n", $lines);
@@ -1336,6 +1572,7 @@ class PrintService
         $openingBalance = $this->formatShekelAmount((float) ($data['opening_balance'] ?? 0));
 
         $lines = [
+            '{{CENTER_HW}}',
             $separator,
             $this->centerText('פתיחת קופה', $printer),
             $separator,
@@ -1350,6 +1587,7 @@ class PrintService
             '',
             $separator,
             $this->centerText('Powered by TakeEat', $printer),
+            '{{/CENTER_HW}}',
             '',
         ];
 
@@ -1366,6 +1604,7 @@ class PrintService
         $employee = $data['employee'] ?? '—';
 
         $lines = [
+            '{{CENTER_HW}}',
             $separator,
             $this->centerText($isClockIn ? 'כניסה — שעון נוכחות' : 'יציאה — שעון נוכחות', $printer),
             $separator,
@@ -1405,6 +1644,7 @@ class PrintService
         $lines[] = '';
         $lines[] = $separator;
         $lines[] = $this->centerText('Powered by TakeEat', $printer);
+        $lines[] = '{{/CENTER_HW}}';
         $lines[] = '';
 
         return implode("\n", $lines);
@@ -1754,6 +1994,46 @@ class PrintService
     private function formatShekelAmount(float $amount): string
     {
         return number_format($amount, 2, '.', '') . ' ש"ח';
+    }
+
+    /**
+     * Append split payment breakdown from CashMovement records (for reprints).
+     */
+    private function appendSplitBreakdownFromMovements(Order $order, array &$lines, ?Printer $printer = null): void
+    {
+        $movements = CashMovement::where('order_id', $order->id)
+            ->where('type', 'payment')
+            ->get();
+
+        $cashSum = 0;
+        $creditSum = 0;
+        foreach ($movements as $m) {
+            if ($m->payment_method === 'cash') {
+                $cashSum += (float) $m->amount;
+            } else {
+                $creditSum += (float) $m->amount;
+            }
+        }
+
+        if ($cashSum > 0 || $creditSum > 0) {
+            $cashLine = 'מזומן: ' . $this->formatShekelAmount($cashSum);
+            $creditLine = 'אשראי: ' . $this->formatShekelAmount($creditSum);
+            if ($printer) {
+                if ($cashSum > 0) {
+                    $lines[] = $this->centerText($cashLine, $printer);
+                }
+                if ($creditSum > 0) {
+                    $lines[] = $this->centerText($creditLine, $printer);
+                }
+            } else {
+                if ($cashSum > 0) {
+                    $lines[] = $cashLine;
+                }
+                if ($creditSum > 0) {
+                    $lines[] = $creditLine;
+                }
+            }
+        }
     }
 
     /**

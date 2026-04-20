@@ -69,6 +69,8 @@ export const posApi = {
         api.get('/admin/pos/shift/history', { headers: posHeaders(headers, token) }),
     shiftReport: (shiftId, headers, token) =>
         api.get(`/admin/pos/shift/${shiftId}/report`, { headers: posHeaders(headers, token) }),
+    printShiftReport: (shiftId, headers, token) =>
+        api.post(`/admin/pos/shift/${shiftId}/print-report`, {}, { headers: posHeaders(headers, token) }),
     getClockedIn: (headers, token) =>
         api.get('/admin/pos/clocked-in', { headers: posHeaders(headers, token) }),
 

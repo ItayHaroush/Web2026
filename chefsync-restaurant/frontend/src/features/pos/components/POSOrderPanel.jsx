@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { FaCheckCircle, FaFire, FaBell, FaTruck, FaBan, FaClock, FaShekelSign, FaClipboardList, FaMotorcycle, FaPrint, FaUtensils, FaUndo, FaGlobe, FaMapMarkerAlt, FaCreditCard, FaMoneyBillWave } from 'react-icons/fa';
 import posApi from '../api/posApi';
 import CancelOrderModal from '../../../components/CancelOrderModal';
+import CashDeliveryModal from './CashDeliveryModal';
 import { ORDER_STATUS_AWAITING_PAYMENT_HE, getOrderDisplayPaymentMethod, paymentStatusBadgeLabel, shouldShowPaymentStatusBadge } from '../../../utils/orderPaymentLabels';
 import POSManagerAuth from './POSManagerAuth';
 import { useRestaurantStatus } from '../../../context/RestaurantStatusContext';
@@ -103,6 +104,7 @@ export default function POSOrderPanel({ headers, posToken, mode = 'active' }) {
     const [refunding, setRefunding] = useState(null);
     const [pendingRefundId, setPendingRefundId] = useState(null);
     const [cancelModal, setCancelModal] = useState({ isOpen: false, orderId: null });
+    const [cashDeliveryModal, setCashDeliveryModal] = useState({ isOpen: false, order: null });
 
     const showPrintMsg = (text, isError = false) => {
         setPrintMsg({ text, isError });
@@ -199,6 +201,23 @@ export default function POSOrderPanel({ headers, posToken, mode = 'active' }) {
         }
     };
 
+    const handleCashDelivery = (order) => {
+        setCashDeliveryModal({ isOpen: true, order });
+    };
+
+    const handleCashDeliveryConfirm = async (orderId, actualPaymentMethod) => {
+        try {
+            await posApi.updateOrderStatus(orderId, {
+                status: 'delivered',
+                actual_payment_method: actualPaymentMethod,
+            }, headers);
+            fetchOrders();
+        } catch (e) {
+            const msg = e.response?.data?.message || 'שגיאה בעדכון סטטוס';
+            alert(msg);
+        }
+    };
+
     const isActive = (status) => !['delivered', 'cancelled'].includes(status);
     const filtered = mode === 'active'
         ? orders.filter(o => isActive(o.status))
@@ -249,6 +268,7 @@ export default function POSOrderPanel({ headers, posToken, mode = 'active' }) {
                         expanded={expandedId === order.id}
                         onToggle={() => setExpandedId(expandedId === order.id ? null : order.id)}
                         onUpdateStatus={updateStatus}
+                        onCashDelivery={handleCashDelivery}
                         onCancel={(orderId) => setCancelModal({ isOpen: true, orderId })}
                         showActions={mode === 'active'}
                         onPrintReceipt={canPrint ? handlePrintReceipt : null}
@@ -275,6 +295,15 @@ export default function POSOrderPanel({ headers, posToken, mode = 'active' }) {
                 onClose={() => setCancelModal({ isOpen: false, orderId: null })}
                 onConfirm={(orderId, reason) => updateStatus(orderId, 'cancelled', reason)}
             />
+
+            <CashDeliveryModal
+                isOpen={cashDeliveryModal.isOpen}
+                order={cashDeliveryModal.order}
+                headers={headers}
+                posToken={posToken}
+                onConfirm={handleCashDeliveryConfirm}
+                onClose={() => setCashDeliveryModal({ isOpen: false, order: null })}
+            />
         </div>
     );
 }
@@ -291,11 +320,21 @@ function posPaymentRowCaption(order) {
     return paymentStatusBadgeLabel(order);
 }
 
+function needsCashCollection(order) {
+    if (order.payment_method !== 'cash') return false;
+    // B2C cash not yet collected
+    if (order.payment_status === 'pending') return true;
+    // Paid via QR/credit link (not at POS counter)
+    if (order.payment_status === 'paid' && order.source !== 'pos') return true;
+    return false;
+}
+
 function OrderCard({
     order,
     expanded,
     onToggle,
     onUpdateStatus,
+    onCashDelivery,
     onCancel,
     showActions = true,
     onPrintReceipt,
@@ -412,7 +451,13 @@ function OrderCard({
                                 return (
                                     <button
                                         key={ns}
-                                        onClick={() => onUpdateStatus(order.id, ns)}
+                                        onClick={() => {
+                                            if (ns === 'delivered' && needsCashCollection(order)) {
+                                                onCashDelivery(order);
+                                            } else {
+                                                onUpdateStatus(order.id, ns);
+                                            }
+                                        }}
                                         className={`flex-1 min-w-[120px] py-3 rounded-xl font-black text-white text-sm transition-all active:scale-95 ${nsConfig.color}`}
                                     >
                                         {nsConfig.label} ←

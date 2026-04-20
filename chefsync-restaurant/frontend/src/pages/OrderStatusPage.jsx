@@ -575,30 +575,51 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
                         </div>
                         <div className="flex items-start gap-3">
                             <div className="mt-1 text-orange-600">
-                                <FaInfoCircle className="text-lg" />
+                                {order.status === ORDER_STATUS.DELIVERED
+                                    ? <FaCheckCircle className="text-lg text-green-600" />
+                                    : <FaInfoCircle className="text-lg" />}
                             </div>
                             <div className="flex-1">
-                                <p className="text-xs font-semibold text-gray-500 dark:text-brand-dark-muted uppercase tracking-wide mb-1">זמן הכנה משוער</p>
-                                {order.eta_minutes ? (
-                                    <div className="flex items-center gap-2">
-                                        <p className="font-bold text-gray-900 dark:text-brand-dark-text">{order.eta_minutes} דקות</p>
-                                        {order.eta_note && (
-                                            <div className="relative group">
-                                                <button
-                                                    type="button"
-                                                    className="w-5 h-5 rounded-full bg-orange-100 text-orange-600 text-xs font-bold flex items-center justify-center hover:bg-orange-200 transition"
-                                                    aria-label="מידע נוסף על זמן משוער"
-                                                >
-                                                    <FaInfoCircle />
-                                                </button>
-                                                <div className="absolute z-10 hidden group-hover:block group-focus-within:block top-7 right-0 bg-gray-900 text-white text-xs px-3 py-2 rounded-lg shadow-lg max-w-xs whitespace-pre-wrap">
-                                                    {order.eta_note}
-                                                </div>
-                                            </div>
+                                {order.status === ORDER_STATUS.DELIVERED ? (
+                                    <>
+                                        <p className="text-xs font-semibold text-gray-500 dark:text-brand-dark-muted uppercase tracking-wide mb-1">סטטוס</p>
+                                        {!order.rating && !reviewSuccess ? (
+                                            <button
+                                                type="button"
+                                                onClick={() => document.getElementById('order-review-section')?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
+                                                className="font-bold text-green-700 dark:text-green-400 hover:underline cursor-pointer"
+                                            >
+                                                ההזמנה נמסרה — מלא ביקורת ↓
+                                            </button>
+                                        ) : (
+                                            <p className="font-bold text-green-700 dark:text-green-400">ההזמנה נמסרה בהצלחה</p>
                                         )}
-                                    </div>
+                                    </>
                                 ) : (
-                                    <p className="text-sm text-gray-500 dark:text-brand-dark-muted">ממתין לאישור המסעדה</p>
+                                    <>
+                                        <p className="text-xs font-semibold text-gray-500 dark:text-brand-dark-muted uppercase tracking-wide mb-1">זמן הכנה משוער</p>
+                                        {order.eta_minutes ? (
+                                            <div className="flex items-center gap-2">
+                                                <p className="font-bold text-gray-900 dark:text-brand-dark-text">{order.eta_minutes} דקות</p>
+                                                {order.eta_note && (
+                                                    <div className="relative group">
+                                                        <button
+                                                            type="button"
+                                                            className="w-5 h-5 rounded-full bg-orange-100 text-orange-600 text-xs font-bold flex items-center justify-center hover:bg-orange-200 transition"
+                                                            aria-label="מידע נוסף על זמן משוער"
+                                                        >
+                                                            <FaInfoCircle />
+                                                        </button>
+                                                        <div className="absolute z-10 hidden group-hover:block group-focus-within:block top-7 right-0 bg-gray-900 text-white text-xs px-3 py-2 rounded-lg shadow-lg max-w-xs whitespace-pre-wrap">
+                                                            {order.eta_note}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <p className="text-sm text-gray-500 dark:text-brand-dark-muted">ממתין לאישור המסעדה</p>
+                                        )}
+                                    </>
                                 )}
                             </div>
                         </div>

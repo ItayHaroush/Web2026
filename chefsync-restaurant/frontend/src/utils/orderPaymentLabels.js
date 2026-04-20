@@ -24,6 +24,7 @@ export function paymentStatusBadgeLabel(order) {
     const ps = order?.payment_status;
     const pm = getOrderDisplayPaymentMethod(order);
     if (ps === 'paid') {
+        if (pm === 'split') return 'שולם בתשלום מפוצל';
         return pm === 'credit_card' ? 'שולם באשראי' : 'שולם במזומן';
     }
     if (ps === 'failed') {

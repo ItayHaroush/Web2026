@@ -399,7 +399,7 @@ export default function POSCashRegister({ headers, posToken, isManager, onShiftC
                     </button>
                 </div>
 
-                {zReport && <ZReportModal report={zReport} onClose={() => setZReport(null)} />}
+                {zReport && <ZReportModal report={zReport} headers={headers} posToken={posToken} onClose={() => setZReport(null)} />}
                 {showHistory && (
                     <ShiftHistoryModal
                         shifts={historyShifts}
@@ -721,7 +721,7 @@ export default function POSCashRegister({ headers, posToken, isManager, onShiftC
                 </Modal>
             )}
 
-            {zReport && <ZReportModal report={zReport} onClose={() => setZReport(null)} />}
+            {zReport && <ZReportModal report={zReport} headers={headers} posToken={posToken} onClose={() => setZReport(null)} />}
             {showHistory && (
                 <ShiftHistoryModal
                     shifts={historyShifts}
@@ -795,7 +795,9 @@ export default function POSCashRegister({ headers, posToken, isManager, onShiftC
     );
 }
 
-function ZReportModal({ report, onClose }) {
+function ZReportModal({ report, headers, posToken, onClose }) {
+    const [escPosPrinting, setEscPosPrinting] = useState(false);
+    const [escPosMsg, setEscPosMsg] = useState(null);
     const r = report;
     const varianceColor = r.variance === 0
         ? 'text-emerald-400'
@@ -808,6 +810,21 @@ function ZReportModal({ report, onClose }) {
         : <FaExclamationTriangle className={r.variance > 0 ? 'text-blue-400' : 'text-red-400'} />;
 
     const durationText = formatDuration(r.duration_minutes);
+
+    const handleEscPosPrint = async () => {
+        setEscPosPrinting(true);
+        setEscPosMsg(null);
+        try {
+            const res = await posApi.printShiftReport(r.shift_id, headers, posToken);
+            const jobs = res.data?.jobs ?? 0;
+            setEscPosMsg({ text: res.data?.message || (jobs > 0 ? 'נשלח להדפסה' : 'לא נמצאה מדפסת'), isError: jobs === 0 });
+        } catch (e) {
+            setEscPosMsg({ text: e.response?.data?.message || 'שגיאה בהדפסה', isError: true });
+        } finally {
+            setEscPosPrinting(false);
+            setTimeout(() => setEscPosMsg(null), 3000);
+        }
+    };
 
     return (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[300] flex items-center justify-center p-4" onClick={onClose}>
@@ -958,7 +975,7 @@ function ZReportModal({ report, onClose }) {
                                                 <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-slate-600/50 text-slate-300 shrink-0">
                                                     {src}
                                                 </span>
-                                                <span className={`text-xs px-1.5 py-0.5 rounded shrink-0 ${o.payment_method === 'מזומן' ? 'bg-amber-500/20 text-amber-400' : 'bg-blue-500/20 text-blue-400'}`}>
+                                                <span className={`text-xs px-1.5 py-0.5 rounded shrink-0 ${o.payment_method === 'מזומן' ? 'bg-amber-500/20 text-amber-400' : o.payment_method === 'מפוצל' ? 'bg-purple-500/20 text-purple-400' : 'bg-blue-500/20 text-blue-400'}`}>
                                                     {o.payment_method}
                                                 </span>
                                                 <span className={`text-xs shrink-0 ${o.payment_status === 'שולם' ? 'text-emerald-500' : o.payment_status === 'בוטל' ? 'text-red-500' : o.payment_status === 'נכשל' ? 'text-red-400 font-bold' : 'text-amber-500'}`}>
@@ -1002,19 +1019,33 @@ function ZReportModal({ report, onClose }) {
                     )}
                 </div>
 
-                <div className="sticky bottom-0 bg-slate-800 border-t border-slate-700 px-6 py-4 flex gap-3 rounded-b-3xl">
-                    <button
-                        onClick={() => printDailyReport(r)}
-                        className="flex-1 py-3 bg-blue-500/20 text-blue-400 font-black rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all hover:bg-blue-500/30"
-                    >
-                        <FaPrint /> הדפסה
-                    </button>
-                    <button
-                        onClick={onClose}
-                        className="flex-1 py-3 bg-slate-700 text-white font-black rounded-2xl active:scale-95 transition-all hover:bg-slate-600"
-                    >
-                        סגור
-                    </button>
+                <div className="sticky bottom-0 bg-slate-800 border-t border-slate-700 px-6 py-4 space-y-2 rounded-b-3xl">
+                    {escPosMsg && (
+                        <div className={`text-center text-sm font-bold py-2 rounded-xl ${escPosMsg.isError ? 'bg-red-500/20 text-red-400' : 'bg-emerald-500/20 text-emerald-400'}`}>
+                            {escPosMsg.text}
+                        </div>
+                    )}
+                    <div className="flex gap-3">
+                        <button
+                            onClick={() => printDailyReport(r)}
+                            className="flex-1 py-3 bg-blue-500/20 text-blue-400 font-black rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all hover:bg-blue-500/30"
+                        >
+                            <FaPrint /> דפדפן
+                        </button>
+                        <button
+                            onClick={handleEscPosPrint}
+                            disabled={escPosPrinting}
+                            className="flex-1 py-3 bg-orange-500/20 text-orange-400 font-black rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all hover:bg-orange-500/30 disabled:opacity-50"
+                        >
+                            <FaReceipt /> {escPosPrinting ? 'שולח...' : 'מדפסת קופה'}
+                        </button>
+                        <button
+                            onClick={onClose}
+                            className="flex-1 py-3 bg-slate-700 text-white font-black rounded-2xl active:scale-95 transition-all hover:bg-slate-600"
+                        >
+                            סגור
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

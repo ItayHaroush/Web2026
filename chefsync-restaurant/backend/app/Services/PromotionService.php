@@ -305,7 +305,11 @@ class PromotionService
                     }
                 } elseif ($reward->reward_type === 'discount_percent') {
                     $itemsTotal = $this->discountableItemsSubtotal($lineItems, $reward);
-                    $totalDiscount += round($itemsTotal * ((float) $reward->reward_value / 100), 2) * $timesQualified;
+                    $scope = $reward->discount_scope ?? 'whole_cart';
+                    // whole_cart: אחוז הנחה פעם אחת על כל הסל (לא מוכפל)
+                    // selected_items: אחוז הנחה על הפריטים הרלוונטיים (כבר מחושב לפי כמויות)
+                    $discountMultiplier = $scope === 'whole_cart' ? 1 : $timesQualified;
+                    $totalDiscount += round($itemsTotal * ((float) $reward->reward_value / 100), 2) * $discountMultiplier;
                 } elseif ($reward->reward_type === 'discount_fixed') {
                     $scope = $reward->discount_scope ?? 'whole_cart';
                     $ids = $reward->discount_menu_item_ids ?? [];

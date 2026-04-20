@@ -25,15 +25,21 @@ class RestaurantPaymentService
     }
 
     /**
-     * האם המסעדה מוכנה לקבל תשלומי אשראי
+     * האם המסעדה מוכנה לקבל תשלומי אשראי.
+     * עבור מזומן — מספיק שהמסוף מוגדר (QR על הקבלה לא תלוי בדגל credit_card_enabled).
      */
-    public function isRestaurantReady(Restaurant $restaurant): bool
+    public function isRestaurantReady(Restaurant $restaurant, ?string $paymentMethod = null): bool
     {
-        return $restaurant->hyp_terminal_verified
+        $terminalReady = $restaurant->hyp_terminal_verified
             && !empty($restaurant->hyp_terminal_id)
             && !empty($restaurant->hyp_terminal_password)
-            && !empty($restaurant->hyp_api_key)
-            && config('payment.credit_card_enabled');
+            && !empty($restaurant->hyp_api_key);
+
+        if ($paymentMethod !== null && $paymentMethod !== 'credit_card') {
+            return $terminalReady;
+        }
+
+        return $terminalReady && config('payment.credit_card_enabled');
     }
 
     /**

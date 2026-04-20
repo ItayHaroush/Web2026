@@ -462,6 +462,7 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'tenant'])->group(function (
                 Route::get('/shift/summary', [\App\Http\Controllers\POSController::class, 'shiftSummary'])->name('admin.pos.shift.summary');
                 Route::get('/shift/history', [\App\Http\Controllers\POSController::class, 'shiftHistory'])->name('admin.pos.shift.history');
                 Route::get('/shift/{id}/report', [\App\Http\Controllers\POSController::class, 'shiftReport'])->name('admin.pos.shift.report');
+                Route::post('/shift/{id}/print-report', [\App\Http\Controllers\POSController::class, 'printShiftReport'])->name('admin.pos.shift.print-report');
 
                 Route::get('/clocked-in', [\App\Http\Controllers\POSController::class, 'getClockedInEmployees'])->name('admin.pos.clocked-in');
 

@@ -21,6 +21,7 @@ use App\Services\CustomerOrderPushService;
 use App\Services\FcmService;
 use App\Services\OrderEventService;
 use App\Services\PhoneValidationService;
+use App\Services\PrintService;
 use App\Services\PromotionService;
 use App\Services\RestaurantPaymentService;
 use App\Services\SystemErrorReporter;
@@ -749,7 +750,11 @@ class OrderController extends Controller
             $restaurant = Restaurant::withoutGlobalScope('tenant')->find($restaurantId);
             $restaurantPaymentService = app(RestaurantPaymentService::class);
 
-            if ($restaurant && $restaurantPaymentService->isRestaurantReady($restaurant)) {
+            if ($restaurant && $restaurantPaymentService->isRestaurantReady($restaurant, $paymentMethod)) {
+                $sessionTimeout = $paymentMethod === 'credit_card'
+                    ? config('payment.order_payment.session_timeout_minutes', 15)
+                    : 1440; // 24 שעות — מזומן: QR על הקבלה צריך להישאר תקף עד מסירה
+
                 $session = PaymentSession::create([
                     'tenant_id' => $tenantId,
                     'restaurant_id' => $restaurantId,
@@ -757,7 +762,7 @@ class OrderController extends Controller
                     'session_token' => \Illuminate\Support\Str::uuid()->toString(),
                     'amount' => $order->total_amount,
                     'status' => 'pending',
-                    'expires_at' => now()->addMinutes(config('payment.order_payment.session_timeout_minutes', 15)),
+                    'expires_at' => now()->addMinutes($sessionTimeout),
                 ]);
 
                 $paymentUrl = $restaurantPaymentService->generateOrderPaymentUrl($restaurant, $order, $session);
@@ -769,6 +774,15 @@ class OrderController extends Controller
                 if ($paymentMethod !== 'credit_card') {
                     $paymentUrl = null;
                     $sessionToken = null;
+                }
+            }
+
+            // מזומן B2C (לא עתידית): הדפסת קבלה מיידית עם QR לתשלום
+            if ($paymentMethod !== 'credit_card' && ! ($order->is_future_order) && ! ($validated['is_test'] ?? false)) {
+                try {
+                    app(PrintService::class)->printReceipt($order->fresh());
+                } catch (\Exception $e) {
+                    Log::warning('Auto receipt print for cash order failed', ['order_id' => $order->id, 'error' => $e->getMessage()]);
                 }
             }
 
@@ -1073,8 +1087,9 @@ class OrderController extends Controller
                 Log::warning('Failed to log order status change event', ['error' => $e->getMessage()]);
             }
 
-            // הפעלת הדפסה למטבח כשהזמנה מאושרת (קופה כבר מדפיסה בון בעת תשלום / מעבר ל-preparing)
-            if ($validated['status'] === 'preparing' && ($order->source ?? null) !== 'pos') {
+            // הפעלת הדפסה למטבח — רק אם לא הודפס כבר ב-received (דרך AdminController)
+            $printOnStatus = $validated['status'] === 'preparing' && $oldStatus === 'pending';
+            if ($printOnStatus && ($order->source ?? null) !== 'pos') {
                 try {
                     app(\App\Services\PrintService::class)->printOrder($order);
                 } catch (\Exception $e) {

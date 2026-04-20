@@ -289,6 +289,30 @@ class POSController extends Controller
         ]);
     }
 
+    public function printShiftReport(Request $request, $id)
+    {
+        $user = $request->user();
+        $restaurantId = $user->restaurant_id;
+        $shift = CashRegisterShift::where('restaurant_id', $restaurantId)
+            ->findOrFail($id);
+
+        $restaurant = Restaurant::find($restaurantId);
+        $tenantId = $restaurant?->tenant_id;
+
+        $reportData = $this->buildZReport($shift);
+        $jobs = app(PrintService::class)->printShiftReportSlip(
+            $restaurantId,
+            $tenantId,
+            $reportData
+        );
+
+        return response()->json([
+            'success' => true,
+            'jobs' => $jobs,
+            'message' => $jobs > 0 ? "נשלחו {$jobs} הדפסות" : 'לא נמצאה מדפסת קופה פעילה',
+        ]);
+    }
+
     public function currentShift(Request $request)
     {
         $user = $request->user();
@@ -1146,8 +1170,9 @@ class POSController extends Controller
             }
 
             // עדכון ההזמנה
+            $isSplit = $cashAmount > 0 && $creditAmount > 0;
             $orderPaidUpdates = [
-                'payment_method' => $creditAmount > 0 ? 'credit_card' : 'cash',
+                'payment_method' => $isSplit ? 'split' : ($creditAmount > 0 ? 'credit_card' : 'cash'),
                 'payment_status' => 'paid',
                 'payment_transaction_id' => $paymentResult['transaction_id'] ?? null,
                 'paid_at' => now(),
@@ -1194,7 +1219,10 @@ class POSController extends Controller
             try {
                 $printService = app(PrintService::class);
                 $freshOrder = $order->fresh()->load('items.menuItem.category', 'restaurant');
-                $printResults['receipt'] = $printService->printReceipt($freshOrder);
+                $printResults['receipt'] = $printService->printReceipt($freshOrder, [
+                    'split_cash' => $cashAmount,
+                    'split_credit' => $creditAmount,
+                ]);
             } catch (\Exception $e) {
                 Log::error('POS split payment print failed: ' . $e->getMessage());
             }
@@ -1829,7 +1857,11 @@ class POSController extends Controller
                 'id' => $o->id,
                 'customer_name' => $o->customer_name,
                 'total' => (float) $o->total_amount,
-                'payment_method' => $o->effectiveCollectedPaymentMethod() === 'credit_card' ? 'אשראי' : 'מזומן',
+                'payment_method' => match ($o->effectiveCollectedPaymentMethod()) {
+                    'credit_card' => 'אשראי',
+                    'split' => 'מפוצל',
+                    default => 'מזומן',
+                },
                 'payment_status' => $payLabel,
                 'status' => $o->status,
                 'source' => $o->source ?? 'website',

@@ -2593,6 +2593,7 @@ class AdminController extends Controller
             ], 422);
         }
 
+        $previousStatus = $order->status;
         $order->status = $request->status;
         $order->updated_by_name = $user->name;
         $order->updated_by_user_id = $user->id;
@@ -2652,8 +2653,11 @@ class AdminController extends Controller
 
         $order->save();
 
-        // הפעלת הדפסה למטבח כשהזמנה מאושרת (התקבלה) או עוברת להכנה
-        if (in_array($request->status, ['received', 'preparing']) && ($order->source ?? null) !== 'pos') {
+        // הפעלת הדפסה למטבח כשהזמנה מאושרת (התקבלה) — פעם אחת בלבד
+        // אם הגיעה ישירות ל-preparing (דילוג על received) — גם מדפיסה
+        $printOnStatus = $request->status === 'received'
+            || ($request->status === 'preparing' && $previousStatus === 'pending');
+        if ($printOnStatus && ($order->source ?? null) !== 'pos') {
             try {
                 app(\App\Services\PrintService::class)->printOrder($order);
             } catch (\Exception $e) {

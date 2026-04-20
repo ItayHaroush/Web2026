@@ -91,7 +91,9 @@ export function computeClientPromotionDiscount(cartTotal, cartItems, metPromotio
                         return acc;
                     }, 0);
                 }
-                sum += Math.round(itemsTotal * (parseFloat(reward.reward_value) / 100) * 100) / 100 * times;
+                // whole_cart: apply percent once; selected_items: multiply by times
+                const discountMultiplier = scope === 'whole_cart' ? 1 : times;
+                sum += Math.round(itemsTotal * (parseFloat(reward.reward_value) / 100) * 100) / 100 * discountMultiplier;
             } else if (reward.reward_type === 'discount_fixed') {
                 const scope = reward.discount_scope || 'whole_cart';
                 const ids = reward.discount_menu_item_ids || [];
