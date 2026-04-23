@@ -22,6 +22,12 @@ class SeoRenderer
 
     public const CACHE_PREFIX = 'seo:restaurant:';
 
+    /** מפתח cache לשלד index.html (חייב להתאים ל־hashes של /assets ב-Vercel) */
+    public const SHELL_CACHE_KEY = 'seo:shell:html';
+
+    /** TTL קצר יותר מדפי מסעדה — אחרי deploy לפרונט חייבים hashes מעודכנים */
+    public const SHELL_CACHE_TTL_SECONDS = 120;
+
     /**
      * רנדור ציבורי לדף שיתוף מסעדה (/r/{slug})
      */
@@ -64,6 +70,31 @@ class SeoRenderer
     public static function forgetLanding(): void
     {
         Cache::forget(self::CACHE_PREFIX . 'hub:landing');
+    }
+
+    /**
+     * מנקה מטמון שלד + כל ה-HTML שכבר הורנדר (כולל /r/ ו-/{tenant}/menu), כי הוא מוטבע בו נתיבי /assets/ מה-build.
+     * להריץ אחרי **כל** deploy לפרונט (Vite משנה hashes). אם לא — דף שיתוף יחזיר script ישן ו-Vercel יגיש index.html בטעות (MIME error, דף לבן).
+     * ל- hub עם ?city= המפתח מורכב — במקרה קיצון: php artisan cache:clear
+     */
+    public static function bustAfterFrontendDeploy(): void
+    {
+        Cache::forget(self::SHELL_CACHE_KEY);
+        Restaurant::withoutGlobalScope('tenant')
+            ->pluck('id')
+            ->each(function ($id) {
+                Cache::forget(self::CACHE_PREFIX . 'share:' . $id);
+                Cache::forget(self::CACHE_PREFIX . 'menu:' . $id);
+            });
+        foreach (['hub:list', 'hub:new', 'hub:about', 'hub:landing'] as $hub) {
+            Cache::forget(self::CACHE_PREFIX . $hub);
+        }
+    }
+
+    /** @deprecated use bustAfterFrontendDeploy() */
+    public static function forgetShell(): void
+    {
+        self::bustAfterFrontendDeploy();
     }
 
     /**
@@ -991,16 +1022,36 @@ HTML;
 
     /**
      * טוען את שלד ה-HTML של ה-SPA.
-     * סדר ניסיונות:
-     * 1. קובץ לוקאלי לפי SEO_SHELL_PATH / FRONTEND_INDEX_PATH
-     * 2. URL מרוחק לפי SEO_SHELL_URL (שלד נמשך + נשמר ב-cache ל-10 דקות)
+     * סדר ניסיונות (חשוב ל-sync מול Vite):
+     * 1. URL מרוחק לפי SEO_SHELL_URL — מומלץ: https://www.takeeat.co.il/index.html (אותו index כמו בפרוד)
+     * 2. קובץ לוקאלי לפי SEO_SHELL_PATH / FRONTEND_INDEX_PATH / ../frontend/dist/index.html
      * 3. שלד מובנה מינימלי (fallback)
+     *
+     * המטמון קצר (SHELL_CACHE_TTL_SECONDS) כדי שלאחר deploy לפרונט לא יישארו hashes ישנים ב-/assets.
      */
     protected function loadShell(): string
     {
-        $cacheKey = 'seo:shell:html';
+        return Cache::remember(self::SHELL_CACHE_KEY, self::SHELL_CACHE_TTL_SECONDS, function () {
+            $url = env('SEO_SHELL_URL');
+            if ($url && is_string($url)) {
+                try {
+                    $response = Http::timeout(8)
+                        ->withHeaders(['Accept' => 'text/html'])
+                        ->get($url);
+                    if ($response->ok()) {
+                        $content = $response->body();
+                        if (stripos($content, '</head>') !== false && stripos($content, '/assets/') !== false) {
+                            return $content;
+                        }
+                    }
+                } catch (\Throwable $e) {
+                    Log::warning('SeoRenderer: failed to fetch shell URL', [
+                        'url' => $url,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
 
-        return Cache::remember($cacheKey, 600, function () {
             $path = env('SEO_SHELL_PATH') ?: env('FRONTEND_INDEX_PATH');
             if ($path && is_string($path) && is_file($path) && is_readable($path)) {
                 $content = @file_get_contents($path);
@@ -1017,23 +1068,7 @@ HTML;
                 }
             }
 
-            $url = env('SEO_SHELL_URL');
-            if ($url) {
-                try {
-                    $response = Http::timeout(5)->get($url);
-                    if ($response->ok()) {
-                        $content = $response->body();
-                        if (stripos($content, '</head>') !== false) {
-                            return $content;
-                        }
-                    }
-                } catch (\Throwable $e) {
-                    Log::warning('SeoRenderer: failed to fetch shell URL', [
-                        'url' => $url,
-                        'error' => $e->getMessage(),
-                    ]);
-                }
-            }
+            Log::warning('SeoRenderer: using minimal fallback shell — set SEO_SHELL_URL for production');
 
             return $this->fallbackShell();
         });
