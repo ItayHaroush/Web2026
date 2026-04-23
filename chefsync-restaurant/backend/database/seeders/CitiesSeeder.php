@@ -33,6 +33,7 @@ class CitiesSeeder extends Seeder
             ['name' => 'Ramat Gan', 'hebrew_name' => 'רמת גן', 'region' => 'מרכז', 'latitude' => 32.0856, 'longitude' => 34.8186, 'list_order' => 100],
             ['name' => 'Petah Tikva', 'hebrew_name' => 'פתח תקווה', 'region' => 'מרכז', 'latitude' => 32.0878, 'longitude' => 34.8573, 'list_order' => 100],
             ['name' => 'Hertzeliya', 'hebrew_name' => 'הרצליה', 'region' => 'מרכז', 'latitude' => 32.1702, 'longitude' => 34.7667, 'list_order' => 100],
+            ['name' => 'Netanya', 'hebrew_name' => 'נתניה', 'region' => 'מרכז', 'latitude' => 32.3324, 'longitude' => 34.8575, 'list_order' => 100],
             ['name' => 'Holon', 'hebrew_name' => 'חולון', 'region' => 'מרכז', 'latitude' => 31.9875, 'longitude' => 34.7620, 'list_order' => 100],
             ['name' => 'Bat Yam', 'hebrew_name' => 'בת ים', 'region' => 'מרכז', 'latitude' => 31.9556, 'longitude' => 34.7615, 'list_order' => 100],
             ['name' => 'Giv\'atayim', 'hebrew_name' => 'גבעתיים', 'region' => 'מרכז', 'latitude' => 32.0641, 'longitude' => 34.8080, 'list_order' => 100],

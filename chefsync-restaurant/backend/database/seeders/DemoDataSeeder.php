@@ -243,8 +243,7 @@ class DemoDataSeeder extends Seeder
             foreach ($restaurantZones as $i => $zone) {
                 $cityId = $cityMap[$zone['city']] ?? null;
 
-                // Netanya might not exist in cities seeder – skip if not found
-                if (!$cityId && $zone['city'] !== 'Netanya') {
+                if (!$cityId) {
                     $this->command->warn("  ⚠️ עיר {$zone['city']} לא נמצאה בטבלת cities");
                 }
 

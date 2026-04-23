@@ -2,7 +2,13 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { CustomerLayout } from '../layouts/CustomerLayout';
 import { Link, useNavigate } from 'react-router-dom';
-import { getAllRestaurants, getCities } from '../services/restaurantService';
+import {
+    getAllRestaurants,
+    getCities,
+    filterCitiesWithRestaurants,
+    filterRestaurantsBySelectedCity,
+    restaurantCityMatchesRow,
+} from '../services/restaurantService';
 import LocationPickerModal from '../components/LocationPickerModal';
 import apiClient from '../services/apiClient';
 import logo from '../images/ChefSyncLogoIcon.png';
@@ -224,21 +230,21 @@ export default function HomePage() {
             setLoading(true);
             setError(null);
 
-            let citiesList = cities;
-            if (!citiesList.length) {
-                citiesList = await getCities();
-                if (import.meta.env.DEV) {
-                    console.log('Cities loaded:', citiesList);
-                }
-                setCities(citiesList);
-            }
-
-            const result = await getAllRestaurants(selectedCity || null);
+            const citiesFull = await getCities();
+            const allResult = await getAllRestaurants(null);
             if (import.meta.env.DEV) {
-                console.log('Restaurants loaded:', result);
+                console.log('Cities (full), restaurants (all):', citiesFull, allResult);
             }
 
-            let restaurantsList = result.data || [];
+            const allRestaurants = allResult.data || [];
+            const citiesForSelect = filterCitiesWithRestaurants(citiesFull, allRestaurants);
+            setCities(citiesForSelect);
+
+            let restaurantsList = filterRestaurantsBySelectedCity(
+                allRestaurants,
+                selectedCity,
+                citiesFull
+            );
 
             // אם יש מיקום משתמש, חשב מרחק ומיין
             if (userLocation && restaurantsList.length > 0) {
@@ -261,8 +267,8 @@ export default function HomePage() {
                 // בחירה אוטומטית של העיר הקרובה ביותר (רק בפעם הראשונה)
                 if (!autoSelectedCity && !selectedCity && restaurantsList.length > 0 && restaurantsList[0].distance !== null) {
                     const closestRestaurant = restaurantsList[0];
-                    const match = citiesList.find(
-                        (c) => c.name === closestRestaurant.city || c.hebrew_name === closestRestaurant.city
+                    const match = citiesForSelect.find((c) =>
+                        restaurantCityMatchesRow(closestRestaurant.city, c)
                     );
                     setSelectedCity(match ? match.name : closestRestaurant.city);
                     setAutoSelectedCity(true);

@@ -22,7 +22,8 @@ export const getAllRestaurants = async (city = null) => {
 };
 
 /**
- * רשימת ערים מה-API (טבלת cities) — כולל ערים בלי מסעדות, למיון/סינון נכון בעמוד הבית
+ * רשימת ערים מה-API (טבלת cities). לעמוד הבית: filterCitiesWithRestaurants;
+ * בטפסי הרשמה/אזורי משלוח: הרשימה המלאה.
  */
 export const getCities = async () => {
     try {
@@ -44,4 +45,53 @@ export const getCities = async () => {
         console.error('getCities fallback failed:', e);
         return [];
     }
+};
+
+/**
+ * נרמול לצורך השוואת שם עיר (מסעדה ↔ טבלת cities)
+ */
+const normalizeForCityMatch = (s) => {
+    if (s == null || s === '') return '';
+    let t = String(s).trim().replace(/\s+/g, ' ');
+    t = t.replace(/קריית/g, 'קרית');
+    if (!/[\u0590-\u05FF]/.test(t)) t = t.toLowerCase();
+    return t;
+};
+
+export const restaurantCityMatchesRow = (restaurantCity, row) => {
+    if (!row) return false;
+    const rc = restaurantCity;
+    if (rc == null || rc === '') return false;
+    if (normalizeForCityMatch(rc) === normalizeForCityMatch(row.name)) return true;
+    if (row.hebrew_name && normalizeForCityMatch(rc) === normalizeForCityMatch(row.hebrew_name)) {
+        return true;
+    }
+    return false;
+};
+
+/**
+ * ערים שבהן יש לפחות מסעדה אחת — לעמוד הבית
+ */
+export const filterCitiesWithRestaurants = (cities, restaurants) => {
+    if (!Array.isArray(cities) || !Array.isArray(restaurants)) return [];
+    return cities.filter((c) => {
+        if (!c) return false;
+        return restaurants.some((r) => r && restaurantCityMatchesRow(r.city, c));
+    });
+};
+
+/**
+ * מסנן מסעדות לפי עיר (value ב-select = cities.name)
+ */
+export const filterRestaurantsBySelectedCity = (restaurants, selectedCityName, citiesLookup) => {
+    if (!selectedCityName || !Array.isArray(restaurants)) return restaurants;
+    const row = (citiesLookup || []).find((c) => c && c.name === selectedCityName);
+    if (row) {
+        return restaurants.filter((r) => restaurantCityMatchesRow(r?.city, row));
+    }
+    return restaurants.filter(
+        (r) =>
+            r?.city === selectedCityName ||
+            normalizeForCityMatch(r?.city) === normalizeForCityMatch(selectedCityName)
+    );
 };
