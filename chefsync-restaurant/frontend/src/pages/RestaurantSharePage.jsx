@@ -153,23 +153,15 @@ export default function RestaurantSharePage() {
     const [searchParams] = useSearchParams();
     const { setCustomerInfo } = useCart();
 
-    // Use state initializer for instant value (prevents flash of content or white screen issues on hydration mismatch if logic was complex)
     const [isInApp] = useState(checkInApp);
-
-    if (isInApp) {
-        return <InAppRestrictedView />;
-    }
-
     const [restaurant, setRestaurant] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
     const orderType = normalizeOrderType(searchParams.get('type'));
 
-    const origin = typeof window !== 'undefined' ? window.location.origin : '';
-
     useEffect(() => {
-        if (!slugParam) return;
+        if (isInApp || !slugParam) return;
 
         const load = async () => {
             try {
@@ -183,16 +175,13 @@ export default function RestaurantSharePage() {
                     throw new Error('Invalid restaurant response');
                 }
 
-                // Canonical redirect: support /r/{tenant_id} but prefer /r/{slug}
                 if (slugParam !== data.slug) {
                     const target = buildShareUrl({ origin: window.location.origin, slug: data.slug, type: orderType });
                     navigate(target.replace(window.location.origin, ''), { replace: true });
                 }
 
-                // Ensure tenant is set for the rest of the app (X-Tenant-ID)
                 localStorage.setItem('tenantId', data.tenant_id);
 
-                // Preselect order type (delivery/pickup) if provided
                 if (orderType) {
                     setCustomerInfo((prev) => ({ ...prev, delivery_method: orderType }));
                 }
@@ -207,7 +196,11 @@ export default function RestaurantSharePage() {
 
         load();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [slugParam]);
+    }, [slugParam, isInApp]);
+
+    if (isInApp) {
+        return <InAppRestrictedView />;
+    }
 
     const isOpenNow = restaurant?.is_open_now ?? restaurant?.is_open;
     const isClosed = isOpenNow === false;

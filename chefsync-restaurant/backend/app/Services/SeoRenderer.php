@@ -25,19 +25,24 @@ class SeoRenderer
     /** מפתח cache לשלד index.html (חייב להתאים ל־hashes של /assets ב-Vercel) */
     public const SHELL_CACHE_KEY = 'seo:shell:html';
 
-    /** TTL קצר יותר מדפי מסעדה — אחרי deploy לפרונט חייבים hashes מעודכנים */
-    public const SHELL_CACHE_TTL_SECONDS = 120;
+    /**
+     * מטמון שלד index.html. קצר — אחרי deploy ל-frontend הקריאה ל-SEO_SHELL_URL
+     * חייבת להתעדכן, אחרת /assets/ יביא HTML במקום CSS/JS (MIME / דף לבן).
+     */
+    public const SHELL_CACHE_TTL_SECONDS = 30;
 
     /**
      * רנדור ציבורי לדף שיתוף מסעדה (/r/{slug})
      */
     public function renderSharePage(Restaurant $restaurant): string
     {
-        $cacheKey = self::CACHE_PREFIX . 'share:' . $restaurant->id;
-
-        return Cache::remember($cacheKey, self::CACHE_TTL_SECONDS, function () use ($restaurant) {
-            return $this->buildHtml($restaurant, $this->buildShareMeta($restaurant));
+        // מטמון רק meta — לא HTML מלא, כי שלד Vite (נתיבי /assets) משתנים בכל build.
+        $cacheKey = self::CACHE_PREFIX . 'meta:share:' . $restaurant->id;
+        $meta = Cache::remember($cacheKey, self::CACHE_TTL_SECONDS, function () use ($restaurant) {
+            return $this->buildShareMeta($restaurant);
         });
+
+        return $this->buildHtml($restaurant, $meta);
     }
 
     /**
@@ -45,11 +50,12 @@ class SeoRenderer
      */
     public function renderMenuPage(Restaurant $restaurant): string
     {
-        $cacheKey = self::CACHE_PREFIX . 'menu:' . $restaurant->id;
-
-        return Cache::remember($cacheKey, self::CACHE_TTL_SECONDS, function () use ($restaurant) {
-            return $this->buildHtml($restaurant, $this->buildMenuMeta($restaurant));
+        $cacheKey = self::CACHE_PREFIX . 'meta:menu:' . $restaurant->id;
+        $meta = Cache::remember($cacheKey, self::CACHE_TTL_SECONDS, function () use ($restaurant) {
+            return $this->buildMenuMeta($restaurant);
         });
+
+        return $this->buildHtml($restaurant, $meta);
     }
 
     /**
@@ -57,6 +63,8 @@ class SeoRenderer
      */
     public static function forgetRestaurant(Restaurant $restaurant): void
     {
+        Cache::forget(self::CACHE_PREFIX . 'meta:share:' . $restaurant->id);
+        Cache::forget(self::CACHE_PREFIX . 'meta:menu:' . $restaurant->id);
         Cache::forget(self::CACHE_PREFIX . 'share:' . $restaurant->id);
         Cache::forget(self::CACHE_PREFIX . 'menu:' . $restaurant->id);
         // דפי hub תלויים ברשימת המסעדות, לכן מוצאים גם אותם מהמטמון
@@ -83,6 +91,8 @@ class SeoRenderer
         Restaurant::withoutGlobalScope('tenant')
             ->pluck('id')
             ->each(function ($id) {
+                Cache::forget(self::CACHE_PREFIX . 'meta:share:' . $id);
+                Cache::forget(self::CACHE_PREFIX . 'meta:menu:' . $id);
                 Cache::forget(self::CACHE_PREFIX . 'share:' . $id);
                 Cache::forget(self::CACHE_PREFIX . 'menu:' . $id);
             });
@@ -106,9 +116,11 @@ class SeoRenderer
     {
         $cacheKey = self::CACHE_PREFIX . 'hub:list' . ($cityFilter ? ':city:' . md5($cityFilter) : '');
 
-        return Cache::remember($cacheKey, self::CACHE_TTL_SECONDS, function () use ($restaurants, $cityFilter) {
-            return $this->buildHubHtml($this->buildRestaurantsListMeta($restaurants, $cityFilter));
+        $meta = Cache::remember($cacheKey, self::CACHE_TTL_SECONDS, function () use ($restaurants, $cityFilter) {
+            return $this->buildRestaurantsListMeta($restaurants, $cityFilter);
         });
+
+        return $this->buildHubHtml($meta);
     }
 
     /**
@@ -120,9 +132,11 @@ class SeoRenderer
     {
         $cacheKey = self::CACHE_PREFIX . 'hub:new';
 
-        return Cache::remember($cacheKey, self::CACHE_TTL_SECONDS, function () use ($restaurants) {
-            return $this->buildHubHtml($this->buildNewRestaurantsMeta($restaurants));
+        $meta = Cache::remember($cacheKey, self::CACHE_TTL_SECONDS, function () use ($restaurants) {
+            return $this->buildNewRestaurantsMeta($restaurants);
         });
+
+        return $this->buildHubHtml($meta);
     }
 
     /**
@@ -132,9 +146,11 @@ class SeoRenderer
     {
         $cacheKey = self::CACHE_PREFIX . 'hub:about';
 
-        return Cache::remember($cacheKey, self::CACHE_TTL_SECONDS * 6, function () {
-            return $this->buildHubHtml($this->buildAboutMeta());
+        $meta = Cache::remember($cacheKey, self::CACHE_TTL_SECONDS * 6, function () {
+            return $this->buildAboutMeta();
         });
+
+        return $this->buildHubHtml($meta);
     }
 
     /**
@@ -145,9 +161,11 @@ class SeoRenderer
     {
         $cacheKey = self::CACHE_PREFIX . 'hub:landing';
 
-        return Cache::remember($cacheKey, self::CACHE_TTL_SECONDS * 6, function () {
-            return $this->buildHubHtml($this->buildLandingMeta());
+        $meta = Cache::remember($cacheKey, self::CACHE_TTL_SECONDS * 6, function () {
+            return $this->buildLandingMeta();
         });
+
+        return $this->buildHubHtml($meta);
     }
 
     /**
@@ -1021,66 +1039,103 @@ HTML;
     }
 
     /**
+     * שלד build של Vite (יש בו /assets/*.js) — בלי זה ה-SPA לא נטען (דף לבן).
+     */
+    protected function isValidViteProdShell(string $html): bool
+    {
+        if (stripos($html, '</head>') === false) {
+            return false;
+        }
+        if (preg_match('#/src/main\.(jsx|tsx)|@vite|vite/client#i', $html)) {
+            return false;
+        }
+        if (stripos($html, '/assets/') === false) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * @return string|null ה-HTML אם תקין, אחרת null
+     */
+    protected function tryHttpShell(string $url): ?string
+    {
+        if ($url === '') {
+            return null;
+        }
+        try {
+            $response = Http::timeout(12)
+                ->withHeaders(['Accept' => 'text/html'])
+                ->get($url);
+            if (! $response->ok()) {
+                return null;
+            }
+            $content = $response->body();
+            if ($this->isValidViteProdShell($content)) {
+                return $content;
+            }
+        } catch (\Throwable $e) {
+            Log::warning('SeoRenderer: failed to fetch shell URL', [
+                'url' => $url,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return null;
+    }
+
+    /**
      * טוען את שלד ה-HTML של ה-SPA.
      * סדר ניסיונות (חשוב ל-sync מול Vite):
-     * 1. URL מרוחק לפי SEO_SHELL_URL — מומלץ: https://www.takeeat.co.il/index.html (אותו index כמו בפרוד)
-     * 2. קובץ לוקאלי לפי SEO_SHELL_PATH / FRONTEND_INDEX_PATH / ../frontend/dist/index.html
-     * 3. שלד מובנה מינימלי (fallback)
-     *
-     * המטמון קצר (SHELL_CACHE_TTL_SECONDS) כדי שלאחר deploy לפרונט לא יישארו hashes ישנים ב-/assets.
+     * 1. SEO_SHELL_URL (אם הוגדר)
+     * 2. תמיד: FRONTEND_URL + /index.html — גם בלי .env מפורש
+     * 3. קבצי index מקומיים (dist) — validated כפרודקשן
+     * 4. fallback: אין כאן <script> ל-Vite — מוצגת הודעה + קישור (דף "לבן" בלי React מוסבר למשתמש)
      */
     protected function loadShell(): string
     {
         return Cache::remember(self::SHELL_CACHE_KEY, self::SHELL_CACHE_TTL_SECONDS, function () {
-            $url = env('SEO_SHELL_URL');
-            if ($url && is_string($url)) {
-                try {
-                    $response = Http::timeout(8)
-                        ->withHeaders(['Accept' => 'text/html'])
-                        ->get($url);
-                    if ($response->ok()) {
-                        $content = $response->body();
-                        if (stripos($content, '</head>') !== false && stripos($content, '/assets/') !== false) {
-                            return $content;
-                        }
-                    }
-                } catch (\Throwable $e) {
-                    Log::warning('SeoRenderer: failed to fetch shell URL', [
-                        'url' => $url,
-                        'error' => $e->getMessage(),
-                    ]);
+            $candidates = [];
+            $fromEnv = env('SEO_SHELL_URL');
+            if (is_string($fromEnv) && $fromEnv !== '') {
+                $candidates[] = $fromEnv;
+            }
+            $candidates[] = $this->frontendUrl() . '/index.html';
+            $candidates = array_values(array_unique($candidates));
+            foreach ($candidates as $u) {
+                $html = $this->tryHttpShell($u);
+                if ($html !== null) {
+                    return $html;
                 }
             }
 
-            $path = env('SEO_SHELL_PATH') ?: env('FRONTEND_INDEX_PATH');
-            if ($path && is_string($path) && is_file($path) && is_readable($path)) {
+            $paths = array_filter([
+                env('SEO_SHELL_PATH'),
+                env('FRONTEND_INDEX_PATH'),
+                base_path('../frontend/dist/index.html'),
+            ], static function ($p) {
+                return is_string($p) && $p !== '' && is_file($p) && is_readable($p);
+            });
+            foreach ($paths as $path) {
                 $content = @file_get_contents($path);
-                if ($content && stripos($content, '</head>') !== false) {
+                if ($content && $this->isValidViteProdShell($content)) {
                     return $content;
                 }
             }
 
-            $defaultPath = base_path('../frontend/dist/index.html');
-            if (is_file($defaultPath) && is_readable($defaultPath)) {
-                $content = @file_get_contents($defaultPath);
-                if ($content && stripos($content, '</head>') !== false) {
-                    return $content;
-                }
-            }
-
-            Log::warning('SeoRenderer: using minimal fallback shell — set SEO_SHELL_URL for production');
+            Log::error('SeoRenderer: no valid Vite index shell — /r/ pages will be broken without client JS. Set SEO_SHELL_URL or allow outbound fetch to FRONTEND_URL.');
 
             return $this->fallbackShell();
         });
     }
 
     /**
-     * שלד מובנה מינימלי — עובד גם בלי הגישה לקובץ של Vite.
-     * הדפדפן יקבל HTML תקין עם meta-tags, והסקריפט הראשי יטען דרך ה-CDN של הפרונטנד.
+     * שלד חירום — אין בו bundle של Vite, לכן אין React. חייב HTML גלוי למשתמש.
      */
     protected function fallbackShell(): string
     {
-        $frontend = $this->frontendUrl();
+        $frontend = e($this->frontendUrl());
         $gscToken = env('GOOGLE_SITE_VERIFICATION', '');
         $gscTag = $gscToken
             ? '<meta name="google-site-verification" content="' . e($gscToken) . '" />'
@@ -1096,8 +1151,13 @@ HTML;
     {$gscTag}
     <link rel="icon" type="image/png" href="{$frontend}/icons/chefsync-logo-v2-192.png" />
     <link rel="apple-touch-icon" href="{$frontend}/icons/chefsync-logo-v2-180.png" />
+    <title>TakeEat</title>
 </head>
-<body>
+<body style="margin:0;font-family:system-ui,-apple-system,sans-serif;background:#0f172a;color:#e2e8f8;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;direction:rtl;text-align:center;">
+    <div style="max-width:26rem">
+        <p style="font-size:1.1rem;font-weight:600;margin:0 0 12px 0">זמנית לא הצלחנו לטעון את ממשק המסעדה.</p>
+        <p style="font-size:0.95rem;opacity:0.85;margin:0 0 20px 0">נסו לרענן, או עברו ל<a href="{$frontend}" style="color:#fb923c">עמוד הבית</a>.</p>
+    </div>
     <div id="root"></div>
     <noscript>כדי לצפות בתפריט ולהזמין, הפעל JavaScript בדפדפן.</noscript>
 </body>
