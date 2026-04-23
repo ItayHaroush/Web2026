@@ -1,6 +1,21 @@
 {
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/sitemap.xml",
+      "destination": "https://api.chefsync.co.il/sitemap.xml"
+    },
+    {
+      "source": "/r/:slug",
+      "destination": "https://api.chefsync.co.il/r/:slug"
+    },
+    {
+      "source": "/:tenantId/menu",
+      "destination": "https://api.chefsync.co.il/:tenantId/menu"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
   ],
   "headers": [
     {
@@ -22,6 +37,37 @@
         {
           "key": "Cache-Control",
           "value": "no-cache, no-store, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/sitemap.xml",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600, s-maxage=3600"
+        },
+        {
+          "key": "Content-Type",
+          "value": "application/xml; charset=UTF-8"
+        }
+      ]
+    },
+    {
+      "source": "/r/:slug",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=300, s-maxage=300, stale-while-revalidate=3600"
+        }
+      ]
+    },
+    {
+      "source": "/:tenantId/menu",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=300, s-maxage=300, stale-while-revalidate=3600"
         }
       ]
     }
