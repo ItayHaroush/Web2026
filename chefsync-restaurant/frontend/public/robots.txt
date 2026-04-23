@@ -1,10 +1,12 @@
 User-agent: *
 Allow: /
+# /register לבד = חשבון סועד; /register-restaurant = דף B2B — Disallow: /register חוסם גם prefix ל- register-restaurant
+Allow: /register-restaurant
+Disallow: /register-restaurant/success
+Disallow: /register$
 Disallow: /admin
 Disallow: /dashboard
-Disallow: /login
-Disallow: /register
-Disallow: /register-restaurant/success
+Disallow: /login$
 Disallow: /checkout
 Disallow: /*/cart
 Disallow: /*/order-status

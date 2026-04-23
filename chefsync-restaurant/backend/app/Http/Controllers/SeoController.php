@@ -231,7 +231,6 @@ class SeoController extends Controller
         return response($body, 200, [
             'Content-Type' => 'application/xml; charset=UTF-8',
             'Cache-Control' => 'public, max-age=3600',
-            'X-Robots-Tag' => 'noindex',
         ]);
     }
 
@@ -246,11 +245,13 @@ class SeoController extends Controller
         $lines = [
             'User-agent: *',
             'Allow: /',
+            '# /register as exact path only — bare Disallow: /register blocks /register-restaurant (prefix)',
+            'Allow: /register-restaurant',
+            'Disallow: /register-restaurant/success',
+            'Disallow: /register$',
             'Disallow: /admin',
             'Disallow: /dashboard',
-            'Disallow: /login',
-            'Disallow: /register',
-            'Disallow: /register-restaurant/success',
+            'Disallow: /login$',
             'Disallow: /checkout',
             'Disallow: /*/cart',
             'Disallow: /*/order-status',
