@@ -1,5 +1,17 @@
 import React from 'react';
-import { Helmet } from 'react-helmet-async';
+
+/**
+ * קומפוננטי SEO לצד-לקוח.
+ *
+ * הערות:
+ * 1. ה-SEO הקריטי (meta tags + JSON-LD) מוזרק בצד-השרת על ידי Laravel
+ *    דרך SeoController/SeoRenderer עבור /r/{slug} ו-/{tenantId}/menu.
+ *    זה מה שגוגל ומדיות חברתיות רואים בעת סריקה ראשונה.
+ * 2. React 19 מרים אוטומטית <title>, <meta>, <link> שמוזרקים בתוך
+ *    רכיבי JSX אל <head> — ללא צורך ב-react-helmet-async.
+ * 3. הקומפוננטים האלה מעדכנים את ה-<head> בעת ניווט SPA פנימי,
+ *    כך שאם המשתמש משתף דף אחרי ניווט — הטאגים יהיו עדכניים.
+ */
 
 const FRONTEND_URL = 'https://www.takeeat.co.il';
 const DEFAULT_LOGO = `${FRONTEND_URL}/icons/chefsync-logo-v2-512.png`;
@@ -45,45 +57,32 @@ const buildKeywords = (restaurant) => {
     return Array.from(new Set(kw)).join(', ');
 };
 
-const buildRestaurantJsonLd = (restaurant, canonicalUrl, image) => {
-    if (!restaurant) return null;
-
-    const address = {
-        '@type': 'PostalAddress',
-        addressCountry: 'IL',
-    };
-    if (restaurant.address) address.streetAddress = restaurant.address;
-    if (restaurant.city) address.addressLocality = restaurant.city;
-
-    const geo = restaurant.latitude && restaurant.longitude
-        ? {
-            '@type': 'GeoCoordinates',
-            latitude: Number(restaurant.latitude),
-            longitude: Number(restaurant.longitude),
-        }
-        : null;
-
-    const payload = {
-        '@context': 'https://schema.org',
-        '@type': 'Restaurant',
-        '@id': `${canonicalUrl}#restaurant`,
-        name: restaurant.name,
-        url: canonicalUrl,
-        image,
-        telephone: restaurant.phone || undefined,
-        servesCuisine: restaurant.cuisine_type || undefined,
-        priceRange: '₪₪',
-        description: buildDescription(restaurant, 'share'),
-        address: Object.keys(address).length > 1 ? address : undefined,
-        geo: geo || undefined,
-        hasMap: geo
-            ? `https://www.google.com/maps/search/?api=1&query=${geo.latitude},${geo.longitude}`
-            : undefined,
-        acceptsReservations: false,
-    };
-
-    return JSON.parse(JSON.stringify(payload)); // מסנן undefined
-};
+function MetaTags({ title, description, keywords, robots, canonicalUrl, ogType, image }) {
+    return (
+        <>
+            <title>{title}</title>
+            <meta name="description" content={description} />
+            <meta name="keywords" content={keywords} />
+            <meta name="robots" content={robots} />
+            <link rel="canonical" href={canonicalUrl} />
+            <meta property="og:type" content={ogType} />
+            <meta property="og:site_name" content="TakeEat" />
+            <meta property="og:title" content={title} />
+            <meta property="og:description" content={description} />
+            <meta property="og:url" content={canonicalUrl} />
+            <meta property="og:locale" content="he_IL" />
+            <meta property="og:image" content={image} />
+            <meta property="og:image:secure_url" content={image} />
+            <meta property="og:image:type" content="image/png" />
+            <meta property="og:image:width" content="512" />
+            <meta property="og:image:height" content="512" />
+            <meta name="twitter:card" content="summary_large_image" />
+            <meta name="twitter:title" content={title} />
+            <meta name="twitter:description" content={description} />
+            <meta name="twitter:image" content={image} />
+        </>
+    );
+}
 
 /**
  * SEO לדף שיתוף מסעדה: /r/{slug}
@@ -103,46 +102,27 @@ export function ShareSeo({ restaurant }) {
         ? 'index, follow'
         : 'noindex, nofollow';
 
-    const jsonLd = buildRestaurantJsonLd(restaurant, canonicalUrl, image);
-
     return (
-        <Helmet>
-            <title>{title}</title>
-            <meta name="description" content={description} />
-            <meta name="keywords" content={keywords} />
-            <meta name="robots" content={robots} />
-            <link rel="canonical" href={canonicalUrl} />
-            <meta property="og:type" content="restaurant.restaurant" />
-            <meta property="og:site_name" content="TakeEat" />
-            <meta property="og:title" content={title} />
-            <meta property="og:description" content={description} />
-            <meta property="og:url" content={canonicalUrl} />
-            <meta property="og:locale" content="he_IL" />
-            <meta property="og:image" content={image} />
-            <meta property="og:image:secure_url" content={image} />
-            <meta property="og:image:type" content="image/png" />
-            <meta property="og:image:width" content="512" />
-            <meta property="og:image:height" content="512" />
-            <meta name="twitter:card" content="summary_large_image" />
-            <meta name="twitter:title" content={title} />
-            <meta name="twitter:description" content={description} />
-            <meta name="twitter:image" content={image} />
-            {jsonLd && (
-                <script type="application/ld+json">
-                    {JSON.stringify(jsonLd)}
-                </script>
-            )}
-        </Helmet>
+        <MetaTags
+            title={title}
+            description={description}
+            keywords={keywords}
+            robots={robots}
+            canonicalUrl={canonicalUrl}
+            ogType="restaurant.restaurant"
+            image={image}
+        />
     );
 }
 
 /**
  * SEO לעמוד תפריט: /{tenantId}/menu
  *
- * menuSections (optional): [{ name, items: [{ name, description?, price?, image_url? }] }]
- * אם מסופק — יוזרק schema.org Menu מלא.
+ * menuSections כרגע לא בשימוש בצד-לקוח — ה-JSON-LD של ה-Menu
+ * מוזרק על ידי Laravel בשרת, וזה מה שגוגל קורא. נשאר בחתימה
+ * לצורך תאימות עם קריאות קיימות.
  */
-export function MenuSeo({ restaurant, menuSections = null }) {
+export function MenuSeo({ restaurant, menuSections = null }) { // eslint-disable-line no-unused-vars
     if (!restaurant) return null;
 
     const tenantId = restaurant.tenant_id;
@@ -157,73 +137,16 @@ export function MenuSeo({ restaurant, menuSections = null }) {
         ? 'index, follow'
         : 'noindex, nofollow';
 
-    const baseJsonLd = buildRestaurantJsonLd(restaurant, canonicalUrl, image) || {};
-
-    if (Array.isArray(menuSections) && menuSections.length > 0) {
-        const sections = menuSections.slice(0, 50).map((section) => {
-            const items = (section.items || []).slice(0, 30).map((item) => {
-                const entry = {
-                    '@type': 'MenuItem',
-                    name: item.name,
-                };
-                if (item.description) {
-                    entry.description = String(item.description).replace(/<[^>]+>/g, '').slice(0, 300);
-                }
-                if (item.image_url) {
-                    entry.image = item.image_url;
-                }
-                if (item.price && Number(item.price) > 0) {
-                    entry.offers = {
-                        '@type': 'Offer',
-                        price: String(item.price),
-                        priceCurrency: 'ILS',
-                    };
-                }
-                return entry;
-            });
-
-            return {
-                '@type': 'MenuSection',
-                name: section.name,
-                hasMenuItem: items,
-            };
-        }).filter((s) => s.hasMenuItem && s.hasMenuItem.length > 0);
-
-        if (sections.length > 0) {
-            baseJsonLd.hasMenu = {
-                '@type': 'Menu',
-                name: `תפריט ${restaurant.name || ''}`.trim(),
-                hasMenuSection: sections,
-            };
-        }
-    }
-
     return (
-        <Helmet>
-            <title>{title}</title>
-            <meta name="description" content={description} />
-            <meta name="keywords" content={keywords} />
-            <meta name="robots" content={robots} />
-            <link rel="canonical" href={canonicalUrl} />
-            <meta property="og:type" content="restaurant.menu" />
-            <meta property="og:site_name" content="TakeEat" />
-            <meta property="og:title" content={title} />
-            <meta property="og:description" content={description} />
-            <meta property="og:url" content={canonicalUrl} />
-            <meta property="og:locale" content="he_IL" />
-            <meta property="og:image" content={image} />
-            <meta property="og:image:secure_url" content={image} />
-            <meta property="og:image:type" content="image/png" />
-            <meta property="og:image:width" content="512" />
-            <meta property="og:image:height" content="512" />
-            <meta name="twitter:card" content="summary_large_image" />
-            <meta name="twitter:title" content={title} />
-            <meta name="twitter:description" content={description} />
-            <meta name="twitter:image" content={image} />
-            <script type="application/ld+json">
-                {JSON.stringify(baseJsonLd)}
-            </script>
-        </Helmet>
+        <MetaTags
+            title={title}
+            description={description}
+            keywords={keywords}
+            robots={robots}
+            canonicalUrl={canonicalUrl}
+            ogType="restaurant.menu"
+            image={image}
+        />
     );
 }
 
