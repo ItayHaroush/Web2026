@@ -226,7 +226,9 @@ class SeoController extends Controller
         $xml->endElement();
         $xml->endDocument();
 
-        return response($xml->outputMemory(), 200, [
+        $body = ltrim($xml->outputMemory(), "\xEF\xBB\xBF \t\r\n");
+
+        return response($body, 200, [
             'Content-Type' => 'application/xml; charset=UTF-8',
             'Cache-Control' => 'public, max-age=3600',
             'X-Robots-Tag' => 'noindex',

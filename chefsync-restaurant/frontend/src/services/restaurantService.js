@@ -22,19 +22,26 @@ export const getAllRestaurants = async (city = null) => {
 };
 
 /**
- * קבל רשימת ערים ייחודיות
+ * רשימת ערים מה-API (טבלת cities) — כולל ערים בלי מסעדות, למיון/סינון נכון בעמוד הבית
  */
 export const getCities = async () => {
     try {
-        const response = await getAllRestaurants();
-        if (!response || !response.data) {
-            console.error('Invalid response:', response);
-            return [];
+        const response = await apiClient.get('/cities');
+        const raw = response.data?.data || response.data?.cities || [];
+        if (Array.isArray(raw) && raw.length > 0) {
+            return raw;
         }
-        const cities = [...new Set(response.data.map(r => r.city))];
-        return cities.sort();
     } catch (error) {
         console.error('Error fetching cities:', error);
+    }
+    // גיבוי: ערים שמופיעות ממסעדות בלבד (התנהגות ישנה)
+    try {
+        const r = await getAllRestaurants();
+        if (!r?.data?.length) return [];
+        const names = [...new Set(r.data.map((x) => x.city).filter(Boolean))];
+        return names.sort().map((name) => ({ name, hebrew_name: name }));
+    } catch (e) {
+        console.error('getCities fallback failed:', e);
         return [];
     }
 };

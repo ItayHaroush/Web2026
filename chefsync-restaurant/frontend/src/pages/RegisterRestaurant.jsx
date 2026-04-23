@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../services/apiClient';
+import { getCities } from '../services/restaurantService';
 import { requestPhoneCode } from '../services/phoneAuthService';
 import { toast } from 'react-hot-toast';
 import { isValidIsraeliMobile } from '../utils/phone';
@@ -37,6 +38,7 @@ export default function RegisterRestaurant() {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     const [cities, setCities] = useState([]);
+    const [citiesReady, setCitiesReady] = useState(false);
     const [selectedTier, setSelectedTier] = useState('pro');
     const [pricing, setPricing] = useState(DEFAULT_PRICING);
     const [pricingLoaded, setPricingLoaded] = useState(false);
@@ -106,16 +108,24 @@ export default function RegisterRestaurant() {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(draft));
     }, [form, selectedTier, currentStep, agreedTerms, logoPreview]);
 
+    const loadCities = useCallback(async () => {
+        setCitiesReady(false);
+        try {
+            const items = await getCities();
+            setCities(Array.isArray(items) ? items : []);
+        } catch (err) {
+            console.error('שגיאה בטעינת רשימת ערים', err);
+            setCities([]);
+        } finally {
+            setCitiesReady(true);
+        }
+    }, []);
+
     useEffect(() => {
-        const loadCities = async () => {
-            try {
-                const { data } = await api.get('/cities');
-                const items = data?.cities || data?.data || [];
-                setCities(items);
-            } catch (err) {
-                console.error('שגיאה בטעינת רשימת ערים', err);
-            }
-        };
+        void loadCities();
+    }, [loadCities]);
+
+    useEffect(() => {
         const loadPricing = async () => {
             try {
                 const { data } = await api.get('/pricing');
@@ -128,7 +138,6 @@ export default function RegisterRestaurant() {
                 setPricingLoaded(true);
             }
         };
-        loadCities();
         loadPricing();
     }, []);
 
@@ -338,7 +347,7 @@ export default function RegisterRestaurant() {
                 <ProgressStepper currentStep={currentStep} />
 
                 {/* Step Content */}
-                <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+                <div className="bg-white rounded-2xl shadow-xl border border-gray-100">
                     <div
                         ref={contentRef}
                         className={`transition-all duration-300 ease-in-out ${getSlideClasses()}`}
@@ -362,16 +371,34 @@ export default function RegisterRestaurant() {
                         )}
 
                         {currentStep === 2 && (
-                            <StepRestaurantDetails
-                                form={form}
-                                handleChange={handleChange}
-                                cities={cities}
-                                logoPreview={logoPreview}
-                                handleLogoChange={handleLogoChange}
-                                stepErrors={stepErrors}
-                                onNext={goNext}
-                                onBack={goBack}
-                            />
+                            !citiesReady ? (
+                                <div className="flex flex-col items-center justify-center py-24 px-6">
+                                    <div className="animate-spin rounded-full h-12 w-12 border-2 border-brand-primary border-t-transparent mb-4" />
+                                    <p className="text-gray-600 font-medium">טוענים רשימת ערים…</p>
+                                </div>
+                            ) : cities.length === 0 ? (
+                                <div className="p-10 text-center">
+                                    <p className="text-gray-700 mb-4">לא ניתן היה לטעון רשימת ערים. בדקו חיבור לרשת או נסו שוב.</p>
+                                    <button
+                                        type="button"
+                                        onClick={() => void loadCities()}
+                                        className="px-6 py-2 rounded-xl bg-brand-primary text-white font-semibold hover:opacity-90"
+                                    >
+                                        נסו שוב
+                                    </button>
+                                </div>
+                            ) : (
+                                <StepRestaurantDetails
+                                    form={form}
+                                    handleChange={handleChange}
+                                    cities={cities}
+                                    logoPreview={logoPreview}
+                                    handleLogoChange={handleLogoChange}
+                                    stepErrors={stepErrors}
+                                    onNext={goNext}
+                                    onBack={goBack}
+                                />
+                            )
                         )}
 
                         {currentStep === 3 && (
@@ -389,6 +416,7 @@ export default function RegisterRestaurant() {
                         {currentStep === 4 && (
                             <StepSummary
                                 form={form}
+                                cities={cities}
                                 selectedTier={selectedTier}
                                 pricing={pricing}
                                 currentPrice={currentPrice}
@@ -920,10 +948,13 @@ function StepOwnerDetails({ form, handleChange, handleSendCode, codeSending, ste
 /* ========================================
    Step 4: Summary & Submit
 ======================================== */
-function StepSummary({ form, selectedTier, pricing, currentPrice, logoPreview, loading, stepErrors, agreedTerms, setAgreedTerms, handleSubmit, onBack, goToStep }) {
+function StepSummary({ form, cities, selectedTier, pricing, currentPrice, logoPreview, loading, stepErrors, agreedTerms, setAgreedTerms, handleSubmit, onBack, goToStep }) {
     const tierLabels = { basic: 'אתר הזמנות', pro: 'ניהול חכם', enterprise: 'מסעדה מלאה' };
     const typeLabels = { pizza: 'פיצרייה', shawarma: 'שווארמה / פלאפל', burger: 'המבורגר', bistro: 'ביסטרו / שף', catering: 'קייטרינג', general: 'כללי' };
     const isEnterprise = selectedTier === 'enterprise';
+    const cityLabel = (cities || []).find(
+        (x) => x.name === form.city || x.hebrew_name === form.city
+    )?.hebrew_name || form.city;
 
     return (
         <div className="p-6 md:p-10">
@@ -957,7 +988,7 @@ function StepSummary({ form, selectedTier, pricing, currentPrice, logoPreview, l
                         <span className="text-sm font-mono text-brand-primary">takeeat.co.il/{form.tenant_id}</span>
                     </div>
                     <SummaryRow label="טלפון" value={form.phone} />
-                    <SummaryRow label="עיר" value={form.city} />
+                    <SummaryRow label="עיר" value={cityLabel} />
                     {form.address && <SummaryRow label="כתובת" value={form.address} />}
                     <SummaryRow label="סוג" value={typeLabels[form.restaurant_type] || form.restaurant_type} />
                     {logoPreview && (
@@ -1110,7 +1141,8 @@ function Select({ label, name, value, onChange, options = [], placeholder = '', 
                 value={value}
                 onChange={onChange}
                 required={required}
-                className={`w-full px-4 py-2 border rounded-lg focus:outline-none bg-white text-right transition-colors ${error ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-brand-primary'}`}
+                aria-label={label}
+                className={`relative z-10 w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary/25 bg-white text-right transition-colors ${error ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-brand-primary'}`}
             >
                 <option value="" disabled>{placeholder || 'בחר'}</option>
                 {options.map((opt) => (

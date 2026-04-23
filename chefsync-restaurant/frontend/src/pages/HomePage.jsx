@@ -224,7 +224,15 @@ export default function HomePage() {
             setLoading(true);
             setError(null);
 
-            // טען מסעדות
+            let citiesList = cities;
+            if (!citiesList.length) {
+                citiesList = await getCities();
+                if (import.meta.env.DEV) {
+                    console.log('Cities loaded:', citiesList);
+                }
+                setCities(citiesList);
+            }
+
             const result = await getAllRestaurants(selectedCity || null);
             if (import.meta.env.DEV) {
                 console.log('Restaurants loaded:', result);
@@ -253,21 +261,15 @@ export default function HomePage() {
                 // בחירה אוטומטית של העיר הקרובה ביותר (רק בפעם הראשונה)
                 if (!autoSelectedCity && !selectedCity && restaurantsList.length > 0 && restaurantsList[0].distance !== null) {
                     const closestRestaurant = restaurantsList[0];
-                    setSelectedCity(closestRestaurant.city);
+                    const match = citiesList.find(
+                        (c) => c.name === closestRestaurant.city || c.hebrew_name === closestRestaurant.city
+                    );
+                    setSelectedCity(match ? match.name : closestRestaurant.city);
                     setAutoSelectedCity(true);
                 }
             }
 
             setRestaurants(restaurantsList);
-
-            // טען רשימת ערים
-            if (cities.length === 0) {
-                const citiesList = await getCities();
-                if (import.meta.env.DEV) {
-                    console.log('Cities loaded:', citiesList);
-                }
-                setCities(citiesList);
-            }
         } catch (err) {
             console.error('Error loading data:', err);
             setError('שגיאה בטעינת המסעדות: ' + err.message);
@@ -474,11 +476,13 @@ export default function HomePage() {
                                     className="w-full pr-8 pl-2 py-2.5 sm:py-3 bg-gray-50 dark:bg-brand-dark-border/50 border border-gray-200 dark:border-brand-dark-border rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary text-gray-700 dark:text-gray-300 font-semibold text-xs sm:text-sm transition-all appearance-none cursor-pointer"
                                 >
                                     <option value="">כל הערים</option>
-                                    {cities.filter(Boolean).map((city, index) => (
-                                        <option key={`${city}-${index}`} value={city}>
-                                            {city}
-                                        </option>
-                                    ))}
+                                    {cities.filter(Boolean).map((city) => {
+                                        const value = typeof city === 'string' ? city : city.name;
+                                        const label = typeof city === 'string' ? city : (city.hebrew_name || city.name);
+                                        return (
+                                            <option key={value} value={value}>{label}</option>
+                                        );
+                                    })}
                                 </select>
                             </div>
 

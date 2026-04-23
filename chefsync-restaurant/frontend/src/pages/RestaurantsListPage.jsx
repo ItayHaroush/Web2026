@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { CustomerLayout } from '../layouts/CustomerLayout';
 import { getAllRestaurants } from '../services/restaurantService';
+import api from '../services/apiClient';
 import { resolveAssetUrl } from '../utils/assets';
 import { RestaurantsListSeo } from '../components/seo/RestaurantSeo';
 import { FaMapMarkerAlt, FaUtensils, FaArrowLeft, FaSearch } from 'react-icons/fa';
@@ -18,6 +19,18 @@ export default function RestaurantsListPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [cityOptions, setCityOptions] = useState([]);
+
+    useEffect(() => {
+        let cancelled = false;
+        api.get('/cities')
+            .then((res) => {
+                const rows = res.data?.data || res.data?.cities || [];
+                if (!cancelled && Array.isArray(rows)) setCityOptions(rows);
+            })
+            .catch(() => { if (!cancelled) setCityOptions([]); });
+        return () => { cancelled = true; };
+    }, []);
 
     useEffect(() => {
         let cancelled = false;
@@ -39,9 +52,12 @@ export default function RestaurantsListPage() {
     }, [cityParam]);
 
     const cities = useMemo(() => {
+        if (cityOptions.length > 0) {
+            return [...cityOptions].sort((a, b) => (a.list_order ?? 100) - (b.list_order ?? 100) || (a.hebrew_name || a.name).localeCompare(b.hebrew_name || b.name, 'he'));
+        }
         const set = new Set(restaurants.map(r => r.city).filter(Boolean));
         return [...set].sort();
-    }, [restaurants]);
+    }, [restaurants, cityOptions]);
 
     const filtered = useMemo(() => {
         if (!searchTerm.trim()) return restaurants;
@@ -53,17 +69,23 @@ export default function RestaurantsListPage() {
         );
     }, [restaurants, searchTerm]);
 
+    const cityParamHe = useMemo(() => {
+        if (!cityParam) return '';
+        const m = cityOptions.find(c => c.name === cityParam || c.hebrew_name === cityParam);
+        return m?.hebrew_name || cityParam;
+    }, [cityParam, cityOptions]);
+
     const pageTitle = cityParam
-        ? `מסעדות ב${cityParam}`
+        ? `מסעדות ב${cityParamHe || cityParam}`
         : 'כל המסעדות ב-TakeEat';
 
     const intro = cityParam
-        ? `גלו את כל המסעדות ב${cityParam} שזמינות להזמנת אוכל אונליין דרך TakeEat. משלוח מהיר, איסוף עצמי, תפריט דיגיטלי מלא ותשלום מאובטח — ישירות מהמסעדה, בלי עמלות מוגזמות.`
+        ? `גלו את כל המסעדות ב${cityParamHe || cityParam} שזמינות להזמנת אוכל אונליין דרך TakeEat. משלוח מהיר, איסוף עצמי, תפריט דיגיטלי מלא ותשלום מאובטח — ישירות מהמסעדה, בלי עמלות מוגזמות.`
         : 'רשימת כל המסעדות בישראל שזמינות להזמנת אוכל אונליין דרך TakeEat. מגוון מטבחים, ערים וסגנונות — מזרחי, איטלקי, אסייתי, המבורגרים, פלאפל, פסטה ועוד. הזמינו ישירות מהמסעדה במחיר המקורי שלה.';
 
     return (
         <CustomerLayout>
-            <RestaurantsListSeo city={cityParam || null} />
+            <RestaurantsListSeo city={cityParamHe || cityParam || null} />
 
             <div className="py-6">
                 {/* Breadcrumb */}
@@ -74,7 +96,7 @@ export default function RestaurantsListPage() {
                     {cityParam && (
                         <>
                             <span className="mx-2">/</span>
-                            <span aria-current="page">{cityParam}</span>
+                            <span aria-current="page">{cityParamHe || cityParam}</span>
                         </>
                     )}
                 </nav>
@@ -112,9 +134,12 @@ export default function RestaurantsListPage() {
                             className="sm:w-60 px-4 py-3 rounded-xl border border-gray-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-bg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-primary"
                         >
                             <option value="">כל הערים</option>
-                            {cities.map(c => (
-                                <option key={c} value={c}>{c}</option>
-                            ))}
+                            {cities.map((c) => {
+                                if (typeof c === 'string') {
+                                    return <option key={c} value={c}>{c}</option>;
+                                }
+                                return <option key={c.name} value={c.name}>{c.hebrew_name || c.name}</option>;
+                            })}
                         </select>
                     </div>
                 </div>

@@ -131,8 +131,11 @@ class RegisterRestaurantController extends Controller
                 $latitude = $validated['latitude'];
                 $longitude = $validated['longitude'];
             } else {
-                // חיפוש אוטומטי לפי עיר (Fallback)
-                $cityData = City::where('hebrew_name', $validated['city'])->first();
+                // חיפוש אוטומטי לפי עיר (Fallback) — ההרשמה שולחת name באנגלית (exists:cities,name)
+                $cityData = City::where(function ($q) use ($validated) {
+                    $q->where('name', $validated['city'])
+                        ->orWhere('hebrew_name', $validated['city']);
+                })->first();
                 $latitude = $cityData?->latitude;
                 $longitude = $cityData?->longitude;
             }

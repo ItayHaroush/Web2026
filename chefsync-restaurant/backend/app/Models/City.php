@@ -12,5 +12,6 @@ class City extends Model
         'region',
         'latitude',
         'longitude',
+        'list_order',
     ];
 }

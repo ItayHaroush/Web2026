@@ -592,7 +592,7 @@ class SuperAdminController extends Controller
      */
     public function getCities()
     {
-        $cities = City::orderBy('hebrew_name')->get();
+        $cities = City::orderBy('list_order')->orderBy('hebrew_name')->get();
 
         return response()->json([
             'success' => true,

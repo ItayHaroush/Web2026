@@ -1212,10 +1212,12 @@ export default function MenuPage({ isPreviewMode = false }) {
                                     <h4 className="text-sm font-bold text-gray-900 dark:text-brand-dark-text">אמצעי תשלום</h4>
                                 </div>
                                 <div className="pl-6 flex flex-wrap gap-2">
+                                    {(restaurant.available_payment_methods || ['cash']).includes('cash') && (
                                     <span className="text-xs text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-800 px-2.5 py-1 rounded-md flex items-center gap-1.5">
                                         <FaMoneyBillWave size={10} />
                                         מזומן
                                     </span>
+                                    )}
                                     {restaurant.available_payment_methods?.includes('credit_card') && (
                                         <span className="text-xs text-brand-muted dark:text-orange-200 bg-brand-light dark:bg-brand-primary/20 border border-brand-primary/20 dark:border-brand-primary/40 px-2.5 py-1 rounded-md flex items-center gap-1.5">
                                             <FaCreditCard size={10} className="text-brand-primary dark:text-orange-300" />
