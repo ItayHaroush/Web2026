@@ -5,6 +5,7 @@ import { SiWaze } from 'react-icons/si';
 import apiClient from '../services/apiClient';
 import { resolveAssetUrl } from '../utils/assets';
 import { useCart } from '../context/CartContext';
+import { ShareSeo } from '../components/seo/RestaurantSeo';
 
 // --- In-App Browser Detection (Synchronous) ---
 const checkInApp = () => {
@@ -268,6 +269,7 @@ export default function RestaurantSharePage() {
 
     return (
         <div className="min-h-screen bg-gray-900 text-white font-[Rubik] relative overflow-hidden flex flex-col items-center py-12 px-6" dir="rtl">
+            <ShareSeo restaurant={restaurant} />
             {/* Background Overlay */}
             <div
                 className="absolute inset-0 z-0 bg-cover bg-center opacity-20 pointer-events-none blur-3xl scale-110 grayscale"

@@ -4,11 +4,29 @@ use App\Http\Controllers\CustomInvoiceController;
 use App\Http\Controllers\EmailMarketingUnsubscribeController;
 use App\Http\Controllers\HypOrderRedirectController;
 use App\Http\Controllers\HypSubscriptionRedirectController;
+use App\Http\Controllers\SeoController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return ['message' => 'TakeEat API'];
 });
+
+// -----------------------------------------------------------------------------
+//  SEO — sitemap, robots, ושלדים דינמיים לדפי המסעדה
+// -----------------------------------------------------------------------------
+//  חשוב: הנתיבים האלה צריכים להגיע ל-Laravel לפני שהם נתפסים על ידי שרת
+//  הסטטי של ה-SPA (Vite). ה-vhost/reverse-proxy של ה-webserver חייב להעביר
+//  את /sitemap.xml, /robots.txt, /r/{slug} ואת /{tenantId}/menu ל-Laravel.
+Route::get('/sitemap.xml', [SeoController::class, 'sitemap'])->name('seo.sitemap');
+Route::get('/robots.txt', [SeoController::class, 'robots'])->name('seo.robots');
+
+Route::get('/r/{slug}', [SeoController::class, 'showShare'])
+    ->where('slug', '[A-Za-z0-9\-_]+')
+    ->name('seo.share');
+
+Route::get('/{tenantId}/menu', [SeoController::class, 'showMenu'])
+    ->where('tenantId', '[A-Za-z0-9\-_]+')
+    ->name('seo.menu');
 
 // ביטול הרשמה למיילים שיווקיים (RFC 8058 — GET וגם POST one-click)
 Route::match(['get', 'post'], '/email/marketing/unsubscribe', [EmailMarketingUnsubscribeController::class, 'unsubscribe'])

@@ -1,0 +1,98 @@
+# =============================================================================
+#  SEO ROUTING — עליך להעביר את הנתיבים הבאים ל-Laravel לפני שה-SPA הסטטי מטפל בהם:
+#    GET /sitemap.xml       → SeoController::sitemap
+#    GET /robots.txt        → SeoController::robots
+#    GET /r/{slug}          → SeoController::showShare
+#    GET /{tenantId}/menu   → SeoController::showMenu
+#  בלי ההגדרה הזו, גוגל יראה את שלד ה-SPA הגנרי בלי meta-tags דינמיים.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+#  Nginx דוגמה (vhost אחד שמחזיק גם SPA וגם Laravel backend)
+# -----------------------------------------------------------------------------
+# הנחה: Laravel רץ כ-fastcgi/php-fpm על /var/www/.../backend/public
+# וה-SPA הבנוי נמצא ב-/var/www/.../frontend/dist
+
+server {
+    listen 443 ssl http2;
+    server_name www.takeeat.co.il takeeat.co.il;
+
+    root /var/www/Web2026/chefsync-restaurant/frontend/dist;
+    index index.html;
+
+    # --- SEO routes → Laravel ---
+    # sitemap + robots
+    location = /sitemap.xml { try_files $uri @laravel; }
+    location = /robots.txt  { try_files $uri @laravel; }
+
+    # /r/{slug}
+    location ~ ^/r/[A-Za-z0-9_\-]+$ { try_files $uri @laravel; }
+
+    # /{tenantId}/menu  (רק /menu; לא /cart, לא /order-status)
+    location ~ ^/[A-Za-z0-9_\-]+/menu/?$ { try_files $uri @laravel; }
+
+    # --- Laravel API + SEO fallback ---
+    location @laravel {
+        rewrite ^(.*)$ /index.php last;
+    }
+
+    location /api/ {
+        try_files $uri @laravel;
+    }
+
+    location ~ \.php$ {
+        root /var/www/Web2026/chefsync-restaurant/backend/public;
+        fastcgi_pass unix:/var/run/php/php8.2-fpm.sock;
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $document_root/index.php;
+    }
+
+    # --- SPA fallback (כל שאר הנתיבים) ---
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
+
+# -----------------------------------------------------------------------------
+#  אלטרנטיבה: SPA + Laravel על תתי-דומיינים (מומלץ לפרודקשן נקי)
+# -----------------------------------------------------------------------------
+# אם הפרונט ב-www.takeeat.co.il והבקאנד ב-api.takeeat.co.il, תצטרך להגדיר שכל
+# הנתיבים ה-SEO (/sitemap.xml, /robots.txt, /r/*, /*/menu) יעברו proxy_pass ל-api:
+#
+# server {
+#     server_name www.takeeat.co.il;
+#     location = /sitemap.xml { proxy_pass https://api.takeeat.co.il; }
+#     location = /robots.txt  { proxy_pass https://api.takeeat.co.il; }
+#     location ~ ^/r/[A-Za-z0-9_\-]+$    { proxy_pass https://api.takeeat.co.il; }
+#     location ~ ^/[A-Za-z0-9_\-]+/menu$ { proxy_pass https://api.takeeat.co.il; }
+#     location / { try_files $uri $uri/ /index.html; }
+# }
+
+# -----------------------------------------------------------------------------
+#  Apache (.htaccess) — אם אתה על Apache/Hostinger
+# -----------------------------------------------------------------------------
+# קובץ: frontend/dist/.htaccess
+#
+# <IfModule mod_rewrite.c>
+#     RewriteEngine On
+#     RewriteBase /
+#
+#     # העבר ל-Laravel (הנחה: /backend הוא alias ל-backend/public)
+#     RewriteRule ^sitemap\.xml$                          /backend/index.php [L]
+#     RewriteRule ^robots\.txt$                           /backend/index.php [L]
+#     RewriteRule ^r/[A-Za-z0-9_-]+/?$                    /backend/index.php [L]
+#     RewriteRule ^[A-Za-z0-9_-]+/menu/?$                 /backend/index.php [L]
+#
+#     # SPA fallback
+#     RewriteCond %{REQUEST_FILENAME} !-f
+#     RewriteCond %{REQUEST_FILENAME} !-d
+#     RewriteRule ^ index.html [L]
+# </IfModule>
+
+# =============================================================================
+#  בדיקת תקינות מהירה אחרי הגדרה:
+#    curl -I https://www.takeeat.co.il/sitemap.xml        # → Content-Type: application/xml
+#    curl -sI https://www.takeeat.co.il/r/<slug>          # → Content-Type: text/html
+#    curl -s https://www.takeeat.co.il/r/<slug> | grep -E '<title>|og:title|application/ld+json'
+#  אם יוצא התוכן הייחודי של המסעדה — הניתוב עובד.
+# =============================================================================

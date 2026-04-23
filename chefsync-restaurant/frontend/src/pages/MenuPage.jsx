@@ -17,6 +17,7 @@ import MenuItemModal from '../components/MenuItemModal';
 import FutureOrderModal from '../components/FutureOrderModal';
 import TopDismissibleBanner from '../components/TopDismissibleBanner';
 import { getSuggestions } from '../components/SuggestionCards';
+import { MenuSeo } from '../components/seo/RestaurantSeo';
 
 /**
  * עמוד תפריט - עיצוב בסגנון Wolt
@@ -580,6 +581,10 @@ export default function MenuPage({ isPreviewMode = false }) {
 
     return (
         <CustomerLayout>
+            {!isPreviewMode && restaurant && (
+                <MenuSeo restaurant={restaurant} menuSections={menu} />
+            )}
+
             <TopDismissibleBanner
                 open={!!closedRestaurantNotice}
                 onClose={() => setClosedRestaurantNotice(null)}

@@ -1,5 +1,16 @@
 User-agent: *
 Allow: /
+Disallow: /admin
+Disallow: /dashboard
+Disallow: /login
+Disallow: /register
+Disallow: /register-restaurant/success
+Disallow: /checkout
+Disallow: /*/cart
+Disallow: /*/order-status
+Disallow: /*/order-status/*
+Disallow: /preview
+Disallow: /api/
 
 User-agent: facebookexternalhit
 Allow: /
