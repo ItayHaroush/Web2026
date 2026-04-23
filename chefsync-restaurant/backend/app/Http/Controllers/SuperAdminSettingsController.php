@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\PolicyVersion;
 use App\Models\SystemError;
 use App\Models\SystemSetting;
+use App\Services\SeoRenderer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -171,6 +172,9 @@ class SuperAdminSettingsController extends Controller
             'billing',
             'מחירי חבילות (basic/pro/enterprise)'
         );
+
+        // ניקוי SEO cache של דף /landing כדי שמחירים חדשים יופיעו ב-JSON-LD של Google
+        SeoRenderer::forgetLanding();
 
         Log::info('Pricing tiers updated by super admin', [
             'user_id' => $request->user()->id,

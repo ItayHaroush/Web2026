@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { CustomerLayout } from '../layouts/CustomerLayout';
+import { LandingSeo } from '../components/seo/RestaurantSeo';
 import {
     FaGift,
     FaMapLocationDot,
@@ -252,6 +253,7 @@ export default function LandingPage() {
 
     return (
         <CustomerLayout>
+            <LandingSeo />
             <div className="-mx-4 sm:-mx-6 lg:-mx-8">
 
                 {/* ═══════════════════════════════════════════

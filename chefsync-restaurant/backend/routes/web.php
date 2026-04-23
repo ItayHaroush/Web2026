@@ -20,6 +20,12 @@ Route::get('/', function () {
 Route::get('/sitemap.xml', [SeoController::class, 'sitemap'])->name('seo.sitemap');
 Route::get('/robots.txt', [SeoController::class, 'robots'])->name('seo.robots');
 
+// Hub pages
+Route::get('/restaurants', [SeoController::class, 'showRestaurantsList'])->name('seo.restaurants');
+Route::get('/restaurants/new', [SeoController::class, 'showNewRestaurants'])->name('seo.restaurants.new');
+Route::get('/about', [SeoController::class, 'showAbout'])->name('seo.about');
+Route::get('/landing', [SeoController::class, 'showLanding'])->name('seo.landing');
+
 Route::get('/r/{slug}', [SeoController::class, 'showShare'])
     ->where('slug', '[A-Za-z0-9\-_]+')
     ->name('seo.share');

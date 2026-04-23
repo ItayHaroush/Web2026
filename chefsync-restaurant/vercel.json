@@ -7,6 +7,22 @@
       "destination": "https://api.chefsync.co.il/sitemap.xml"
     },
     {
+      "source": "/restaurants/new",
+      "destination": "https://api.chefsync.co.il/restaurants/new"
+    },
+    {
+      "source": "/restaurants",
+      "destination": "https://api.chefsync.co.il/restaurants"
+    },
+    {
+      "source": "/about",
+      "destination": "https://api.chefsync.co.il/about"
+    },
+    {
+      "source": "/landing",
+      "destination": "https://api.chefsync.co.il/landing"
+    },
+    {
       "source": "/r/:slug",
       "destination": "https://api.chefsync.co.il/r/:slug"
     },
@@ -52,6 +68,42 @@
         {
           "key": "Content-Type",
           "value": "application/xml; charset=UTF-8"
+        }
+      ]
+    },
+    {
+      "source": "/restaurants",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=300, s-maxage=300, stale-while-revalidate=3600"
+        }
+      ]
+    },
+    {
+      "source": "/restaurants/new",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=300, s-maxage=300, stale-while-revalidate=3600"
+        }
+      ]
+    },
+    {
+      "source": "/about",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600, s-maxage=3600"
+        }
+      ]
+    },
+    {
+      "source": "/landing",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600, s-maxage=3600"
         }
       ]
     },

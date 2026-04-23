@@ -9,6 +9,7 @@ import logo from '../images/ChefSyncLogoIcon.png';
 import { resolveAssetUrl } from '../utils/assets';
 import announcementService from '../services/announcementService';
 import { PRODUCT_BYLINE_HE, PRODUCT_NAME } from '../constants/brand';
+import { HomeSeo } from '../components/seo/RestaurantSeo';
 import {
     FaRocket,
     FaUserShield,
@@ -319,6 +320,7 @@ export default function HomePage() {
 
     return (
         <CustomerLayout>
+            <HomeSeo />
             {/* פופאפ הודעה כללית */}
             {popupAnnouncement && (
                 <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setDismissedPopup(true)}>

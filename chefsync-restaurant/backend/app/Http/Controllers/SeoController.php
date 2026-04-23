@@ -72,6 +72,85 @@ class SeoController extends Controller
     }
 
     /**
+     * מציג את רשימת המסעדות (/restaurants) כדף Hub עם ItemList JSON-LD.
+     * תומך בסינון לפי עיר: /restaurants?city=תל+אביב
+     */
+    public function showRestaurantsList(Request $request): Response
+    {
+        $cityFilter = trim((string) $request->query('city', ''));
+
+        $query = Restaurant::withoutGlobalScope('tenant')
+            ->where('is_approved', true)
+            ->where(function ($q) {
+                $q->where('is_demo', false)->orWhereNull('is_demo');
+            })
+            ->whereIn('subscription_status', ['active', 'trial'])
+            ->whereNotNull('tenant_id')
+            ->orderBy('name');
+
+        if ($cityFilter !== '') {
+            $query->where('city', $cityFilter);
+        }
+
+        $restaurants = $query->limit(200)->get([
+            'id', 'name', 'slug', 'tenant_id', 'cuisine_type', 'city',
+            'logo_url', 'address', 'phone',
+        ]);
+
+        $html = $this->seoRenderer->renderRestaurantsList($restaurants, $cityFilter !== '' ? $cityFilter : null);
+
+        return $this->htmlResponse($html, 200);
+    }
+
+    /**
+     * מציג את רשימת המסעדות החדשות שהצטרפו ב-30 הימים האחרונים (/restaurants/new)
+     */
+    public function showNewRestaurants(Request $request): Response
+    {
+        $since = Carbon::now()->subDays(30);
+
+        $restaurants = Restaurant::withoutGlobalScope('tenant')
+            ->where('is_approved', true)
+            ->where(function ($q) {
+                $q->where('is_demo', false)->orWhereNull('is_demo');
+            })
+            ->whereIn('subscription_status', ['active', 'trial'])
+            ->whereNotNull('tenant_id')
+            ->where('created_at', '>=', $since)
+            ->orderByDesc('created_at')
+            ->limit(50)
+            ->get([
+                'id', 'name', 'slug', 'tenant_id', 'cuisine_type', 'city',
+                'logo_url', 'address', 'phone', 'created_at',
+            ]);
+
+        $html = $this->seoRenderer->renderNewRestaurants($restaurants);
+
+        return $this->htmlResponse($html, 200);
+    }
+
+    /**
+     * מציג את דף "איך זה עובד" / About (/about) עם FAQPage JSON-LD
+     */
+    public function showAbout(Request $request): Response
+    {
+        $html = $this->seoRenderer->renderAbout();
+
+        return $this->htmlResponse($html, 200);
+    }
+
+    /**
+     * דף נחיתה B2B (/landing) — ממוקד לבעלי מסעדות.
+     * מזריק SoftwareApplication + Service JSON-LD.
+     */
+    public function showLanding(Request $request): Response
+    {
+        $html = $this->seoRenderer->renderLandingPage();
+
+        return $this->htmlResponse($html, 200);
+    }
+
+    /**
      * sitemap.xml דינמי — כולל את כל המסעדות המאושרות והלא-דמו שהמנוי שלהן פעיל.
      * URL: /sitemap.xml
      */
@@ -98,6 +177,10 @@ class SeoController extends Controller
 
         $staticUrls = [
             ['loc' => $frontendUrl . '/', 'priority' => '1.0', 'changefreq' => 'daily'],
+            ['loc' => $frontendUrl . '/restaurants', 'priority' => '0.9', 'changefreq' => 'daily'],
+            ['loc' => $frontendUrl . '/restaurants/new', 'priority' => '0.7', 'changefreq' => 'daily'],
+            ['loc' => $frontendUrl . '/landing', 'priority' => '0.9', 'changefreq' => 'weekly'],
+            ['loc' => $frontendUrl . '/about', 'priority' => '0.6', 'changefreq' => 'monthly'],
             ['loc' => $frontendUrl . '/register-restaurant', 'priority' => '0.7', 'changefreq' => 'weekly'],
         ];
 

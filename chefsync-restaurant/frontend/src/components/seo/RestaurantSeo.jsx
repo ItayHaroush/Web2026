@@ -150,4 +150,116 @@ export function MenuSeo({ restaurant, menuSections = null }) { // eslint-disable
     );
 }
 
-export default { ShareSeo, MenuSeo };
+/**
+ * SEO לדף Hub גנרי (/restaurants, /about וכו').
+ * הערה: ה-JSON-LD המלא (ItemList / FAQPage) מוזרק ע"י Laravel בצד-השרת,
+ * כך שגוגל רואה אותו בעת הסריקה. כאן רק meta-tags לצורך ניווט SPA פנימי.
+ */
+export function RestaurantsListSeo({ city = null }) {
+    const canonicalUrl = `${FRONTEND_URL}/restaurants${city ? `?city=${encodeURIComponent(city)}` : ''}`;
+    const title = city
+        ? `מסעדות ב${city} · הזמנת אוכל אונליין | TakeEat`
+        : 'כל המסעדות ב-TakeEat · הזמנת אוכל אונליין בישראל | טייק איט';
+    const description = city
+        ? `רשימת כל המסעדות ב${city} שזמינות להזמנת אוכל אונליין דרך TakeEat — משלוח מהיר, איסוף עצמי, תפריט מלא ותשלום מאובטח.`
+        : 'רשימת כל המסעדות הזמינות להזמנת אוכל אונליין דרך TakeEat. מגוון מטבחים, ערים וסגנונות — משלוח מהיר, איסוף עצמי ותפריט דיגיטלי מלא.';
+    const keywords = city
+        ? `מסעדות ב${city}, הזמנת אוכל ב${city}, משלוח אוכל ב${city}, מסעדות, TakeEat, טייק איט`
+        : 'מסעדות, מסעדות בישראל, רשימת מסעדות, הזמנת אוכל, משלוח אוכל, איסוף עצמי, תפריט אונליין, TakeEat, טייק איט';
+
+    return (
+        <MetaTags
+            title={title}
+            description={description}
+            keywords={keywords}
+            robots="index, follow, max-snippet:-1, max-image-preview:large"
+            canonicalUrl={canonicalUrl}
+            ogType="website"
+            image={DEFAULT_LOGO}
+        />
+    );
+}
+
+export function NewRestaurantsSeo() {
+    const canonicalUrl = `${FRONTEND_URL}/restaurants/new`;
+    const title = 'מסעדות חדשות ב-TakeEat · הזמנת אוכל מהמסעדות החדשות בישראל';
+    const description = 'המסעדות החדשות שהצטרפו ל-TakeEat לאחרונה. גלו מקומות חדשים ומטבחים מגוונים — הזמנת אוכל אונליין, משלוח מהיר ואיסוף עצמי. הזמינו ישירות מהמסעדה.';
+    const keywords = 'מסעדות חדשות, מסעדה חדשה, פתיחה, TakeEat, טייק איט, הזמנת אוכל, משלוח אוכל';
+
+    return (
+        <MetaTags
+            title={title}
+            description={description}
+            keywords={keywords}
+            robots="index, follow, max-snippet:-1, max-image-preview:large"
+            canonicalUrl={canonicalUrl}
+            ogType="website"
+            image={DEFAULT_LOGO}
+        />
+    );
+}
+
+export function LandingSeo() {
+    const canonicalUrl = `${FRONTEND_URL}/landing`;
+    const title = 'מערכת הזמנות למסעדה · ללא עמלות על הזמנה | TakeEat';
+    const description = 'TakeEat — מערכת הזמנות מלאה למסעדה: תפריט דיגיטלי, ניהול הזמנות, סליקה, משלוחים ודוחות. דמי מנוי חודשיים קבועים, ללא עמלה על כל הזמנה. חלופה לאפליקציות המשלוחים לבעלי מסעדות.';
+    const keywords = 'מערכת הזמנות למסעדה, מערכת ניהול מסעדה, תפריט דיגיטלי למסעדה, סליקה למסעדה, מסעדה דיגיטלית, חלופה לאפליקציות משלוחים, מסעדה ללא עמלות, TakeEat, טייק איט';
+
+    return (
+        <MetaTags
+            title={title}
+            description={description}
+            keywords={keywords}
+            robots="index, follow, max-snippet:-1, max-image-preview:large"
+            canonicalUrl={canonicalUrl}
+            ogType="website"
+            image={DEFAULT_LOGO}
+        />
+    );
+}
+
+export function AboutSeo() {
+    const canonicalUrl = `${FRONTEND_URL}/about`;
+    const title = 'איך זה עובד · מה זה TakeEat? | טייק איט';
+    const description = 'TakeEat (טייק איט) היא פלטפורמה ישראלית להזמנת אוכל ישירות מהמסעדה — ללא עמלות מוגזמות. גלו איך זה עובד: משלוח מהיר, איסוף עצמי, תפריט דיגיטלי מלא ותשלום מאובטח.';
+    const keywords = 'מה זה TakeEat, איך זה עובד, הזמנת אוכל ללא עמלות, ישירות מהמסעדה, טייק איט, ChefSync, מערכת הזמנות למסעדה';
+
+    return (
+        <MetaTags
+            title={title}
+            description={description}
+            keywords={keywords}
+            robots="index, follow, max-snippet:-1, max-image-preview:large"
+            canonicalUrl={canonicalUrl}
+            ogType="website"
+            image={DEFAULT_LOGO}
+        />
+    );
+}
+
+/**
+ * SEO לעמוד הבית: /
+ * מחזיר את ה-meta tags לערכי ברירת המחדל של האתר (TakeEat Homepage)
+ * כשמשתמש מנווט חזרה אל / אחרי שביקר בדף מסעדה.
+ */
+export function HomeSeo() {
+    const canonicalUrl = `${FRONTEND_URL}/`;
+    const title = 'TakeEat · הזמנת אוכל אונליין מהמסעדות בישראל | טייק איט';
+    const description = 'TakeEat (טייק איט) – הזמנת אוכל אונליין מהמסעדות המובילות בישראל. משלוח מהיר, איסוף עצמי, תפריט מלא, תשלום מאובטח ומעקב הזמנה בזמן אמת. הזמינו עכשיו במחיר מהמסעדה.';
+    const keywords = 'הזמנת אוכל, הזמנת אוכל אונליין, משלוח אוכל, משלוחי אוכל, איסוף עצמי, מסעדות, תפריט אונליין, הזמנה ממסעדה, טייק איט, TakeEat, ChefSync, מערכת הזמנות למסעדה';
+    const image = DEFAULT_LOGO;
+
+    return (
+        <MetaTags
+            title={title}
+            description={description}
+            keywords={keywords}
+            robots="index, follow, max-snippet:-1, max-image-preview:large"
+            canonicalUrl={canonicalUrl}
+            ogType="website"
+            image={image}
+        />
+    );
+}
+
+export default { ShareSeo, MenuSeo, HomeSeo, RestaurantsListSeo, NewRestaurantsSeo, AboutSeo, LandingSeo };

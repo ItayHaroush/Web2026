@@ -383,8 +383,19 @@ export function CustomerLayout({ children }) {
             </main>
 
             {/* Footer — mt-auto כשהתוכן קצר, הפוטר נשאר בתחתית מסך */}
-            <footer className="mt-auto bg-white dark:bg-brand-dark-surface border-t border-gray-100 dark:border-brand-dark-border text-center py-6 text-sm text-gray-500 dark:text-brand-dark-muted">
-                <p>{PRODUCT_NAME} © 2026 · {COMPANY_LEGAL_NAME} - {PRODUCT_TAGLINE_HE}</p>
+            <footer className="mt-auto bg-white dark:bg-brand-dark-surface border-t border-gray-100 dark:border-brand-dark-border py-8 text-sm text-gray-500 dark:text-brand-dark-muted">
+                <div className="max-w-6xl mx-auto px-6">
+                    <nav aria-label="Footer" className="flex flex-wrap justify-center gap-x-6 gap-y-2 mb-4">
+                        <Link to="/restaurants" className="hover:text-brand-primary transition-colors">כל המסעדות</Link>
+                        <Link to="/restaurants/new" className="hover:text-brand-primary transition-colors">מסעדות חדשות</Link>
+                        <Link to="/about" className="hover:text-brand-primary transition-colors">איך זה עובד</Link>
+                        <Link to="/landing" className="hover:text-brand-primary transition-colors">לבעלי מסעדות</Link>
+                        <Link to="/register-restaurant" className="hover:text-brand-primary transition-colors">הרשמת מסעדה</Link>
+                        <Link to="/legal/privacy" className="hover:text-brand-primary transition-colors">מדיניות פרטיות</Link>
+                        <Link to="/legal/end-user" className="hover:text-brand-primary transition-colors">תנאי שימוש</Link>
+                    </nav>
+                    <p className="text-center">{PRODUCT_NAME} © 2026 · {COMPANY_LEGAL_NAME} - {PRODUCT_TAGLINE_HE}</p>
+                </div>
             </footer>
 
             {/* User Profile Modal */}

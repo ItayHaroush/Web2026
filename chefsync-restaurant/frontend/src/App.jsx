@@ -75,6 +75,9 @@ import SuperAdminHolidays from './pages/super-admin/SuperAdminHolidays';
 import DebugAPI from './pages/DebugAPI';
 import RegisterRestaurant from './pages/RegisterRestaurant';
 import LandingPage from './pages/LandingPage';
+import RestaurantsListPage from './pages/RestaurantsListPage';
+import NewRestaurantsPage from './pages/NewRestaurantsPage';
+import AboutPage from './pages/AboutPage';
 import RestaurantSharePage from './pages/RestaurantSharePage';
 import VerifyEmailPage from './pages/VerifyEmailPage';
 import TermsEndUser from './pages/legal/TermsEndUser';
@@ -152,6 +155,13 @@ function AppRoutes() {
         <Route path="/" element={<HomePage />} />
         <Route path="/landing" element={<LandingPage />} />
         <Route path="/register-restaurant" element={<RegisterRestaurant />} />
+
+        {/* SEO Hub pages — חשוב: ה-routes האלה חייבים להגיע ל-React בצד-לקוח.
+            ב-Vercel יש rewrites שמעבירים visits ראשונים ל-Laravel (שמזריק JSON-LD + meta),
+            אך ניווט SPA פנימי מטפל ברוטינג הזה כאן. */}
+        <Route path="/restaurants" element={<RestaurantsListPage />} />
+        <Route path="/restaurants/new" element={<NewRestaurantsPage />} />
+        <Route path="/about" element={<AboutPage />} />
         <Route path="/menu" element={tenantId ? <MenuPage /> : <Navigate to="/" />} />
         <Route path="/cart" element={tenantId ? <CartPage /> : <Navigate to="/" />} />
         <Route path="/order-status/:orderId" element={tenantId ? <OrderStatusPage /> : <Navigate to="/" />} />

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Http\Controllers\SuperAdminSettingsController;
 use App\Models\Category;
 use App\Models\MenuItem;
 use App\Models\Restaurant;
@@ -52,6 +53,70 @@ class SeoRenderer
     {
         Cache::forget(self::CACHE_PREFIX . 'share:' . $restaurant->id);
         Cache::forget(self::CACHE_PREFIX . 'menu:' . $restaurant->id);
+        // דפי hub תלויים ברשימת המסעדות, לכן מוצאים גם אותם מהמטמון
+        Cache::forget(self::CACHE_PREFIX . 'hub:list');
+        Cache::forget(self::CACHE_PREFIX . 'hub:new');
+    }
+
+    /**
+     * מנקה את ה-SEO cache של עמוד ה-landing. קורא כש-pricing_tiers מתעדכן.
+     */
+    public static function forgetLanding(): void
+    {
+        Cache::forget(self::CACHE_PREFIX . 'hub:landing');
+    }
+
+    /**
+     * רנדור hub עמוד רשימת המסעדות (/restaurants)
+     *
+     * @param iterable<int, Restaurant> $restaurants
+     */
+    public function renderRestaurantsList(iterable $restaurants, ?string $cityFilter = null): string
+    {
+        $cacheKey = self::CACHE_PREFIX . 'hub:list' . ($cityFilter ? ':city:' . md5($cityFilter) : '');
+
+        return Cache::remember($cacheKey, self::CACHE_TTL_SECONDS, function () use ($restaurants, $cityFilter) {
+            return $this->buildHubHtml($this->buildRestaurantsListMeta($restaurants, $cityFilter));
+        });
+    }
+
+    /**
+     * רנדור hub עמוד מסעדות חדשות (/restaurants/new)
+     *
+     * @param iterable<int, Restaurant> $restaurants
+     */
+    public function renderNewRestaurants(iterable $restaurants): string
+    {
+        $cacheKey = self::CACHE_PREFIX . 'hub:new';
+
+        return Cache::remember($cacheKey, self::CACHE_TTL_SECONDS, function () use ($restaurants) {
+            return $this->buildHubHtml($this->buildNewRestaurantsMeta($restaurants));
+        });
+    }
+
+    /**
+     * רנדור דף "איך זה עובד" / About (/about)
+     */
+    public function renderAbout(): string
+    {
+        $cacheKey = self::CACHE_PREFIX . 'hub:about';
+
+        return Cache::remember($cacheKey, self::CACHE_TTL_SECONDS * 6, function () {
+            return $this->buildHubHtml($this->buildAboutMeta());
+        });
+    }
+
+    /**
+     * רנדור דף נחיתה B2B (/landing) — ממוקד בבעלי מסעדות.
+     * כולל SoftwareApplication + Service JSON-LD.
+     */
+    public function renderLandingPage(): string
+    {
+        $cacheKey = self::CACHE_PREFIX . 'hub:landing';
+
+        return Cache::remember($cacheKey, self::CACHE_TTL_SECONDS * 6, function () {
+            return $this->buildHubHtml($this->buildLandingMeta());
+        });
     }
 
     /**
@@ -426,6 +491,502 @@ HTML;
     protected function frontendUrl(): string
     {
         return rtrim(config('app.frontend_url', env('FRONTEND_URL', 'https://www.takeeat.co.il')), '/');
+    }
+
+    // =========================================================================
+    //  Hub pages — /restaurants, /restaurants/new, /about
+    // =========================================================================
+
+    /**
+     * בניית meta + JSON-LD ל-/restaurants
+     *
+     * @param iterable<int, Restaurant> $restaurants
+     * @return array<string, mixed>
+     */
+    protected function buildRestaurantsListMeta(iterable $restaurants, ?string $cityFilter = null): array
+    {
+        $frontend = $this->frontendUrl();
+        $url = $frontend . '/restaurants' . ($cityFilter ? '?city=' . rawurlencode($cityFilter) : '');
+        $image = $frontend . '/icons/chefsync-logo-v2-512.png';
+
+        $title = $cityFilter
+            ? $this->truncate("מסעדות ב{$cityFilter} · הזמנת אוכל אונליין | TakeEat", 65)
+            : 'כל המסעדות ב-TakeEat · הזמנת אוכל אונליין בישראל | טייק איט';
+
+        $description = $cityFilter
+            ? "רשימת כל המסעדות ב{$cityFilter} שזמינות להזמנת אוכל אונליין דרך TakeEat — משלוח מהיר, איסוף עצמי, תפריט מלא ותשלום מאובטח."
+            : 'רשימת כל המסעדות הזמינות להזמנת אוכל אונליין דרך TakeEat. מגוון מטבחים, ערים וסגנונות — משלוח מהיר, איסוף עצמי ותפריט דיגיטלי מלא. הזמינו ישירות מהמסעדה.';
+
+        $keywords = 'מסעדות, מסעדות בישראל, רשימת מסעדות, הזמנת אוכל, משלוח אוכל, איסוף עצמי, תפריט אונליין, TakeEat, טייק איט';
+        if ($cityFilter) {
+            $keywords = "מסעדות ב{$cityFilter}, הזמנת אוכל ב{$cityFilter}, משלוח אוכל ב{$cityFilter}, " . $keywords;
+        }
+
+        return [
+            'url' => $url,
+            'title' => $title,
+            'description' => $this->truncate($description, 160),
+            'image' => $image,
+            'keywords' => $keywords,
+            'robots' => 'index, follow, max-snippet:-1, max-image-preview:large',
+            'ogType' => 'website',
+            'jsonLd' => [
+                $this->buildItemListJsonLd($restaurants, $url, $cityFilter ? "מסעדות ב{$cityFilter}" : 'כל המסעדות ב-TakeEat'),
+                $this->buildBreadcrumbJsonLd([
+                    ['name' => 'דף הבית', 'url' => $frontend . '/'],
+                    ['name' => $cityFilter ? "מסעדות ב{$cityFilter}" : 'מסעדות', 'url' => $url],
+                ]),
+            ],
+        ];
+    }
+
+    /**
+     * @param iterable<int, Restaurant> $restaurants
+     * @return array<string, mixed>
+     */
+    protected function buildNewRestaurantsMeta(iterable $restaurants): array
+    {
+        $frontend = $this->frontendUrl();
+        $url = $frontend . '/restaurants/new';
+        $image = $frontend . '/icons/chefsync-logo-v2-512.png';
+
+        return [
+            'url' => $url,
+            'title' => 'מסעדות חדשות ב-TakeEat · הזמנת אוכל מהמסעדות החדשות בישראל',
+            'description' => $this->truncate('המסעדות החדשות שהצטרפו ל-TakeEat לאחרונה. גלו מקומות חדשים ומטבחים מגוונים — הזמנת אוכל אונליין, משלוח מהיר ואיסוף עצמי. הזמינו ישירות מהמסעדה.', 160),
+            'image' => $image,
+            'keywords' => 'מסעדות חדשות, מסעדות חדשות בישראל, מסעדה חדשה, פתיחה, TakeEat, טייק איט, הזמנת אוכל, משלוח אוכל',
+            'robots' => 'index, follow, max-snippet:-1, max-image-preview:large',
+            'ogType' => 'website',
+            'jsonLd' => [
+                $this->buildItemListJsonLd($restaurants, $url, 'מסעדות חדשות ב-TakeEat'),
+                $this->buildBreadcrumbJsonLd([
+                    ['name' => 'דף הבית', 'url' => $frontend . '/'],
+                    ['name' => 'מסעדות', 'url' => $frontend . '/restaurants'],
+                    ['name' => 'חדשות', 'url' => $url],
+                ]),
+            ],
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function buildAboutMeta(): array
+    {
+        $frontend = $this->frontendUrl();
+        $url = $frontend . '/about';
+        $image = $frontend . '/icons/chefsync-logo-v2-512.png';
+
+        return [
+            'url' => $url,
+            'title' => 'איך זה עובד · מה זה TakeEat? | טייק איט',
+            'description' => $this->truncate('TakeEat (טייק איט) היא פלטפורמה ישראלית להזמנת אוכל ישירות מהמסעדה — ללא עמלות מוגזמות. גלו איך זה עובד: משלוח מהיר, איסוף עצמי, תפריט דיגיטלי מלא ותשלום מאובטח.', 160),
+            'image' => $image,
+            'keywords' => 'מה זה TakeEat, איך זה עובד, הזמנת אוכל ללא עמלות, ישירות מהמסעדה, טייק איט, ChefSync, מערכת הזמנות למסעדה',
+            'robots' => 'index, follow, max-snippet:-1, max-image-preview:large',
+            'ogType' => 'website',
+            'jsonLd' => [
+                [
+                    '@context' => 'https://schema.org',
+                    '@type' => 'AboutPage',
+                    '@id' => $url . '#about',
+                    'url' => $url,
+                    'name' => 'איך זה עובד · TakeEat',
+                    'description' => 'TakeEat היא פלטפורמה ישראלית להזמנת אוכל ישירות מהמסעדה.',
+                    'inLanguage' => 'he-IL',
+                    'isPartOf' => ['@id' => $frontend . '/#website'],
+                    'about' => ['@id' => $frontend . '/#organization'],
+                ],
+                $this->buildFaqJsonLd(),
+                $this->buildBreadcrumbJsonLd([
+                    ['name' => 'דף הבית', 'url' => $frontend . '/'],
+                    ['name' => 'איך זה עובד', 'url' => $url],
+                ]),
+            ],
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function buildLandingMeta(): array
+    {
+        $frontend = $this->frontendUrl();
+        $url = $frontend . '/landing';
+        $image = $frontend . '/icons/chefsync-logo-v2-512.png';
+
+        // שליפת מחירי החבילות מה-SystemSetting (ניתן לעדכון ע"י סופר-אדמין)
+        $pricing = $this->loadPricingTiers();
+        $monthlyPrices = [];
+        $tierOffers = [];
+
+        foreach ($pricing as $tierKey => $tier) {
+            $monthly = (float) ($tier['monthly'] ?? 0);
+            $yearly = (float) ($tier['yearly'] ?? 0);
+            $label = (string) ($tier['label'] ?? $tierKey);
+
+            // Enterprise (0) לא נכלל בטווח המחירים — מוצג כ"מותאם אישית"
+            if ($monthly <= 0) {
+                continue;
+            }
+
+            $monthlyPrices[] = $monthly;
+
+            $tierOffers[] = [
+                '@type' => 'Offer',
+                '@id' => $url . '#offer-' . $tierKey,
+                'name' => $label,
+                'category' => $tierKey,
+                'priceCurrency' => 'ILS',
+                'price' => (string) (int) $monthly,
+                'priceSpecification' => array_values(array_filter([
+                    [
+                        '@type' => 'UnitPriceSpecification',
+                        'price' => (string) (int) $monthly,
+                        'priceCurrency' => 'ILS',
+                        'unitCode' => 'MON',
+                        'name' => 'מנוי חודשי',
+                    ],
+                    $yearly > 0 ? [
+                        '@type' => 'UnitPriceSpecification',
+                        'price' => (string) (int) $yearly,
+                        'priceCurrency' => 'ILS',
+                        'unitCode' => 'ANN',
+                        'name' => 'מנוי שנתי',
+                    ] : null,
+                ])),
+                'availability' => 'https://schema.org/InStock',
+                'url' => $url,
+                'seller' => ['@id' => $frontend . '/#organization'],
+                'description' => isset($tier['features']) && is_array($tier['features'])
+                    ? implode(' · ', array_slice($tier['features'], 0, 6))
+                    : null,
+            ];
+        }
+
+        // AggregateOffer: Google יציג "החל מ-X₪" בתוצאות
+        $lowPrice = $monthlyPrices ? min($monthlyPrices) : null;
+        $highPrice = $monthlyPrices ? max($monthlyPrices) : null;
+
+        $aggregateOffer = $lowPrice !== null
+            ? [
+                '@type' => 'AggregateOffer',
+                'priceCurrency' => 'ILS',
+                'lowPrice' => (string) (int) $lowPrice,
+                'highPrice' => (string) (int) $highPrice,
+                'offerCount' => count($tierOffers),
+                'offers' => $tierOffers,
+            ]
+            : null;
+
+        $descriptionPriceHint = $lowPrice !== null
+            ? sprintf(' החל מ-%d₪ לחודש.', (int) $lowPrice)
+            : '';
+
+        return [
+            'url' => $url,
+            'title' => 'מערכת הזמנות למסעדה · ללא עמלות על הזמנה | TakeEat',
+            'description' => $this->truncate('TakeEat — מערכת הזמנות מלאה למסעדה: תפריט דיגיטלי, ניהול הזמנות, סליקה, משלוחים ודוחות. דמי מנוי חודשיים קבועים, ללא עמלה על כל הזמנה.' . $descriptionPriceHint, 160),
+            'image' => $image,
+            'keywords' => 'מערכת הזמנות למסעדה, מערכת ניהול מסעדה, תפריט דיגיטלי למסעדה, מערכת תפריט אונליין, סליקה למסעדה, מסעדה דיגיטלית, ניהול הזמנות מסעדה, אתר הזמנות למסעדה, חלופה לאפליקציות משלוחים, מסעדה ללא עמלות, POS למסעדה, TakeEat, טייק איט, ChefSync',
+            'robots' => 'index, follow, max-snippet:-1, max-image-preview:large',
+            'ogType' => 'website',
+            'jsonLd' => array_values(array_filter([
+                [
+                    '@context' => 'https://schema.org',
+                    '@type' => 'SoftwareApplication',
+                    '@id' => $url . '#software',
+                    'name' => 'TakeEat',
+                    'alternateName' => ['טייק איט', 'ChefSync'],
+                    'applicationCategory' => 'BusinessApplication',
+                    'applicationSubCategory' => 'Restaurant Management Software',
+                    'operatingSystem' => 'Web, iOS, Android',
+                    'url' => $url,
+                    'image' => $image,
+                    'description' => 'מערכת הזמנות ותפריט דיגיטלי למסעדות — ניהול הזמנות, סליקה, משלוחים ודוחות. ללא עמלה על כל הזמנה, רק דמי מנוי חודשיים קבועים.',
+                    'offers' => $aggregateOffer,
+                    'featureList' => [
+                        'תפריט דיגיטלי מלא עם קטגוריות ותמונות',
+                        'ניהול הזמנות בזמן אמת',
+                        'סליקה מאובטחת דרך HYP',
+                        'חשבוניות אוטומטיות',
+                        'ניהול משלוחים ואיסוף עצמי',
+                        'דוחות מכירות וסטטיסטיקות',
+                        'דומיין דיגיטלי ייעודי למסעדה',
+                        'עמוד שיתוף למסעדה ברשתות חברתיות',
+                    ],
+                    'inLanguage' => 'he-IL',
+                    'provider' => ['@id' => $frontend . '/#organization'],
+                ],
+                [
+                    '@context' => 'https://schema.org',
+                    '@type' => 'Service',
+                    '@id' => $url . '#service',
+                    'name' => 'מערכת הזמנות למסעדה',
+                    'serviceType' => 'Restaurant Ordering Platform',
+                    'url' => $url,
+                    'provider' => ['@id' => $frontend . '/#organization'],
+                    'areaServed' => ['@type' => 'Country', 'name' => 'Israel'],
+                    'audience' => [
+                        '@type' => 'BusinessAudience',
+                        'audienceType' => 'Restaurant owners',
+                    ],
+                    'description' => 'פלטפורמה מלאה להזמנת אוכל אונליין עבור מסעדות: תפריט דיגיטלי, ניהול הזמנות, סליקה ומשלוחים. ללא עמלה על כל הזמנה.',
+                    'offers' => $aggregateOffer,
+                ],
+                $this->buildBreadcrumbJsonLd([
+                    ['name' => 'דף הבית', 'url' => $frontend . '/'],
+                    ['name' => 'לבעלי מסעדות', 'url' => $url],
+                ]),
+            ])),
+        ];
+    }
+
+    /**
+     * טעינה בטוחה של מחירי החבילות. אם SuperAdminSettingsController לא זמין
+     * (טעינה מוקדמת / טסט) — מחזיר מערך ריק.
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    protected function loadPricingTiers(): array
+    {
+        try {
+            if (class_exists(SuperAdminSettingsController::class)) {
+                $tiers = SuperAdminSettingsController::getPricingArray();
+                return is_array($tiers) ? $tiers : [];
+            }
+        } catch (\Throwable $e) {
+            Log::warning('SeoRenderer: failed to load pricing tiers', [
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return [];
+    }
+
+    /**
+     * @param iterable<int, Restaurant> $restaurants
+     * @return array<string, mixed>
+     */
+    protected function buildItemListJsonLd(iterable $restaurants, string $pageUrl, string $listName): array
+    {
+        $items = [];
+        $position = 1;
+        foreach ($restaurants as $restaurant) {
+            $slug = $restaurant->slug ?: $restaurant->tenant_id;
+            if (!$slug) {
+                continue;
+            }
+
+            $rUrl = $this->frontendUrl() . '/r/' . rawurlencode($slug);
+            $items[] = [
+                '@type' => 'ListItem',
+                'position' => $position++,
+                'url' => $rUrl,
+                'item' => array_filter([
+                    '@type' => 'Restaurant',
+                    '@id' => $rUrl . '#restaurant',
+                    'name' => $restaurant->name,
+                    'url' => $rUrl,
+                    'image' => $this->resolveLogo($restaurant),
+                    'servesCuisine' => $restaurant->cuisine_type ?: null,
+                    'address' => $restaurant->city
+                        ? [
+                            '@type' => 'PostalAddress',
+                            'addressLocality' => $restaurant->city,
+                            'addressCountry' => 'IL',
+                        ]
+                        : null,
+                ], fn ($v) => $v !== null && $v !== ''),
+            ];
+        }
+
+        return [
+            '@context' => 'https://schema.org',
+            '@type' => 'ItemList',
+            '@id' => $pageUrl . '#itemlist',
+            'name' => $listName,
+            'url' => $pageUrl,
+            'numberOfItems' => count($items),
+            'itemListElement' => $items,
+            'inLanguage' => 'he-IL',
+        ];
+    }
+
+    /**
+     * @param array<int, array{name: string, url: string}> $crumbs
+     * @return array<string, mixed>
+     */
+    protected function buildBreadcrumbJsonLd(array $crumbs): array
+    {
+        $list = [];
+        foreach ($crumbs as $i => $c) {
+            $list[] = [
+                '@type' => 'ListItem',
+                'position' => $i + 1,
+                'name' => $c['name'],
+                'item' => $c['url'],
+            ];
+        }
+
+        return [
+            '@context' => 'https://schema.org',
+            '@type' => 'BreadcrumbList',
+            'itemListElement' => $list,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function buildFaqJsonLd(): array
+    {
+        $faqs = [
+            [
+                'q' => 'מה זה TakeEat?',
+                'a' => 'TakeEat (טייק איט) היא פלטפורמה ישראלית שמאפשרת למסעדות למכור אוכל אונליין ישירות לסועדים, ללא עמלות מוגזמות של אפליקציות משלוחים. הסועדים מקבלים תפריט דיגיטלי מלא, משלוח או איסוף עצמי, ומעקב הזמנה בזמן אמת.',
+            ],
+            [
+                'q' => 'כמה עולה להזמין ב-TakeEat?',
+                'a' => 'המחירים ב-TakeEat הם המחירים המקוריים של המסעדה — ללא תוספות סמויות. דמי משלוח נקבעים על ידי המסעדה עצמה.',
+            ],
+            [
+                'q' => 'אילו אמצעי תשלום נתמכים?',
+                'a' => 'ניתן לשלם בכרטיס אשראי, ביט, Apple Pay ו-Google Pay. התשלום מאובטח ועובר דרך ספקי סליקה מורשים (HYP).',
+            ],
+            [
+                'q' => 'האם אפשר להזמין במשלוח וגם באיסוף עצמי?',
+                'a' => 'כן. כל מסעדה מגדירה אילו אפשרויות הגשה זמינות — משלוח, איסוף עצמי, או שתיהן.',
+            ],
+            [
+                'q' => 'אני בעל מסעדה — איך נרשמים ל-TakeEat?',
+                'a' => 'אפשר להירשם דרך עמוד הרשמת מסעדה באתר. ההרשמה כוללת הגדרת תפריט, חיבור ל-HYP לתשלומים וקבלת דומיין דיגיטלי למסעדה.',
+            ],
+        ];
+
+        $mainEntity = [];
+        foreach ($faqs as $faq) {
+            $mainEntity[] = [
+                '@type' => 'Question',
+                'name' => $faq['q'],
+                'acceptedAnswer' => [
+                    '@type' => 'Answer',
+                    'text' => $faq['a'],
+                ],
+            ];
+        }
+
+        return [
+            '@context' => 'https://schema.org',
+            '@type' => 'FAQPage',
+            'mainEntity' => $mainEntity,
+        ];
+    }
+
+    /**
+     * בונה HTML עבור דף hub (ללא תלות במסעדה ספציפית)
+     *
+     * @param array<string, mixed> $meta
+     */
+    protected function buildHubHtml(array $meta): string
+    {
+        $shell = $this->loadShell();
+        $metaBlock = $this->renderHubMetaBlock($meta);
+
+        $patternsToStrip = [
+            '/<title>.*?<\/title>/us',
+            '/<meta\s+name=["\']description["\'][^>]*>\s*/ius',
+            '/<meta\s+name=["\']keywords["\'][^>]*>\s*/ius',
+            '/<meta\s+name=["\']robots["\'][^>]*>\s*/ius',
+            '/<meta\s+property=["\']og:title["\'][^>]*>\s*/ius',
+            '/<meta\s+property=["\']og:description["\'][^>]*>\s*/ius',
+            '/<meta\s+property=["\']og:image["\'][^>]*>\s*/ius',
+            '/<meta\s+property=["\']og:image:secure_url["\'][^>]*>\s*/ius',
+            '/<meta\s+property=["\']og:image:width["\'][^>]*>\s*/ius',
+            '/<meta\s+property=["\']og:image:height["\'][^>]*>\s*/ius',
+            '/<meta\s+property=["\']og:image:type["\'][^>]*>\s*/ius',
+            '/<meta\s+property=["\']og:image:alt["\'][^>]*>\s*/ius',
+            '/<meta\s+property=["\']og:url["\'][^>]*>\s*/ius',
+            '/<meta\s+property=["\']og:type["\'][^>]*>\s*/ius',
+            '/<meta\s+name=["\']twitter:title["\'][^>]*>\s*/ius',
+            '/<meta\s+name=["\']twitter:description["\'][^>]*>\s*/ius',
+            '/<meta\s+name=["\']twitter:image["\'][^>]*>\s*/ius',
+            '/<link\s+rel=["\']canonical["\'][^>]*>\s*/ius',
+        ];
+
+        $html = preg_replace($patternsToStrip, '', $shell) ?? $shell;
+
+        $html = preg_replace(
+            '/<\/head>/i',
+            $metaBlock . "\n</head>",
+            $html,
+            1
+        ) ?? $html;
+
+        return $html;
+    }
+
+    /**
+     * בלוק meta ייעודי לדפי hub — כולל תמיכה במספר JSON-LD blocks
+     *
+     * @param array<string, mixed> $meta
+     */
+    protected function renderHubMetaBlock(array $meta): string
+    {
+        $title = e($meta['title']);
+        $description = e($meta['description']);
+        $url = e($meta['url']);
+        $image = $meta['image'] ? e($meta['image']) : '';
+        $keywords = e($meta['keywords']);
+        $robots = e($meta['robots']);
+        $ogType = e($meta['ogType'] ?? 'website');
+
+        $jsonLdList = $meta['jsonLd'] ?? [];
+        if (!is_array($jsonLdList) || !isset($jsonLdList[0])) {
+            $jsonLdList = $jsonLdList ? [$jsonLdList] : [];
+        }
+
+        $jsonLdBlocks = '';
+        foreach ($jsonLdList as $jsonLd) {
+            $encoded = json_encode(
+                $jsonLd,
+                JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT
+            );
+            $jsonLdBlocks .= "\n    <script type=\"application/ld+json\">\n{$encoded}\n    </script>";
+        }
+
+        $imageTags = '';
+        if ($image) {
+            $imageTags = <<<HTML
+    <meta property="og:image" content="{$image}" />
+    <meta property="og:image:secure_url" content="{$image}" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="512" />
+    <meta property="og:image:height" content="512" />
+    <meta name="twitter:image" content="{$image}" />
+HTML;
+        }
+
+        return <<<HTML
+    <!-- SEO: Hub page meta injected by Laravel SeoRenderer -->
+    <title>{$title}</title>
+    <meta name="description" content="{$description}" />
+    <meta name="keywords" content="{$keywords}" />
+    <meta name="robots" content="{$robots}" />
+    <link rel="canonical" href="{$url}" />
+    <meta property="og:type" content="{$ogType}" />
+    <meta property="og:site_name" content="TakeEat" />
+    <meta property="og:title" content="{$title}" />
+    <meta property="og:description" content="{$description}" />
+    <meta property="og:url" content="{$url}" />
+    <meta property="og:locale" content="he_IL" />
+{$imageTags}
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="{$title}" />
+    <meta name="twitter:description" content="{$description}" />{$jsonLdBlocks}
+    <!-- /SEO -->
+HTML;
     }
 
     /**
