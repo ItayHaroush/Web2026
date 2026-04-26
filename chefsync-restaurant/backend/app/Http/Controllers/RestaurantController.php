@@ -253,21 +253,22 @@ class RestaurantController extends Controller
     public function publicShowByTenant(Request $request, string $tenantId)
     {
         try {
-            $restaurant = Restaurant::query()
-                ->where('tenant_id', $tenantId)
-                ->orWhere('slug', $tenantId)
+            $tenantId = trim($tenantId);
+            $restaurant = Restaurant::withoutGlobalScopes()
+                ->where(function ($q) use ($tenantId) {
+                    $q->where('tenant_id', $tenantId)->orWhere('slug', $tenantId);
+                })
                 ->with('deliveryZones')
                 ->firstOrFail();
 
-            // במצב פריוויו - תמיד להציג את המסעדה (גם אם לא מאושרת)
+            // דמו ציבורי נחסם; מסעדה חדשה לפני אישור עדיין נגישה לבעלים/שיתוף (ללא אינדוקס ב-SEO).
             $isPreviewMode = $request->header('X-Preview-Mode') === 'true';
 
-            // אם לא במצב פריוויו והמסעדה לא מאושרת - חסימה
-            if (!$isPreviewMode && !$restaurant->is_approved) {
+            if (!$isPreviewMode && ($restaurant->is_demo ?? false)) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'המסעדה ממתינה לאישור מנהל מערכת',
-                    'error' => 'restaurant_not_approved',
+                    'message' => 'המסעדה לא זמינה',
+                    'error' => 'restaurant_not_available',
                 ], 403);
             }
 

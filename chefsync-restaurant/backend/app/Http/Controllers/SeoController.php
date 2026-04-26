@@ -29,9 +29,11 @@ class SeoController extends Controller
      */
     public function showShare(Request $request, string $slug): Response
     {
-        $restaurant = Restaurant::withoutGlobalScope('tenant')
-            ->where('slug', $slug)
-            ->orWhere('tenant_id', $slug)
+        $slug = trim($slug);
+        $restaurant = Restaurant::withoutGlobalScopes()
+            ->where(function ($q) use ($slug) {
+                $q->where('slug', $slug)->orWhere('tenant_id', $slug);
+            })
             ->first();
 
         if (!$restaurant) {
@@ -53,9 +55,11 @@ class SeoController extends Controller
      */
     public function showMenu(Request $request, string $tenantId): Response
     {
-        $restaurant = Restaurant::withoutGlobalScope('tenant')
-            ->where('tenant_id', $tenantId)
-            ->orWhere('slug', $tenantId)
+        $tenantId = trim($tenantId);
+        $restaurant = Restaurant::withoutGlobalScopes()
+            ->where(function ($q) use ($tenantId) {
+                $q->where('tenant_id', $tenantId)->orWhere('slug', $tenantId);
+            })
             ->first();
 
         if (!$restaurant) {
@@ -279,19 +283,13 @@ class SeoController extends Controller
     }
 
     /**
-     * האם המסעדה לא צריכה להיות אינדוקסת (דמו/לא מאושרת/מנוי לא פעיל)?
+     * האם להחזיר 404 + הפניה לבית במקום דף שיתוף/תפריט.
+     * מסעדות לא מאושרות עדיין מקבלות HTML (עם noindex ב-SeoRenderer) כדי שבעלים
+     * יוכלו לשתף קישור לפני אישור; רק דמו נחסם כאן.
      */
     protected function isHiddenFromIndex(Restaurant $restaurant): bool
     {
-        if (!$restaurant->is_approved) {
-            return true;
-        }
-
-        if ($restaurant->is_demo) {
-            return true;
-        }
-
-        return false;
+        return (bool) $restaurant->is_demo;
     }
 
     protected function htmlResponse(string $html, int $status = 200): Response
@@ -326,6 +324,9 @@ HTML;
         return response($html, 404, [
             'Content-Type' => 'text/html; charset=UTF-8',
             'X-Robots-Tag' => 'noindex',
+            // מניעת מטמון Edge/CDN על 404 — אחרת אחרי תיקון/אישור עדיין מוחזרת הפניה לבית
+            'Cache-Control' => 'private, no-store, no-cache, must-revalidate',
+            'Pragma' => 'no-cache',
         ]);
     }
 }
