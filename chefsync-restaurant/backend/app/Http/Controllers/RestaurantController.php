@@ -261,7 +261,6 @@ class RestaurantController extends Controller
         try {
             $rows = Restaurant::query()
                 ->where('is_approved', true)
-                ->where('is_demo', false)
                 ->whereNotNull('logo_url')
                 ->where('logo_url', '!=', '')
                 ->orderBy('name')
@@ -294,17 +293,6 @@ class RestaurantController extends Controller
                 })
                 ->with('deliveryZones')
                 ->firstOrFail();
-
-            // דמו ציבורי נחסם; מסעדה חדשה לפני אישור עדיין נגישה לבעלים/שיתוף (ללא אינדוקס ב-SEO).
-            $isPreviewMode = $request->header('X-Preview-Mode') === 'true';
-
-            if (!$isPreviewMode && ($restaurant->is_demo ?? false)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'המסעדה לא זמינה',
-                    'error' => 'restaurant_not_available',
-                ], 403);
-            }
 
             return response()->json([
                 'success' => true,

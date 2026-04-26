@@ -9,7 +9,6 @@ import { ORDER_STATUS, ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from '../const
 import RatingWidget from '../components/RatingWidget';
 import api from '../services/apiClient';
 import CountdownTimer from '../components/CountdownTimer';
-import TopDismissibleBanner from '../components/TopDismissibleBanner';
 import { getOrderDisplayPaymentMethod } from '../utils/orderPaymentLabels';
 import { notifyActiveOrdersStorageChanged } from '../utils/activeOrdersStorage';
 import SoundManager from '../services/SoundManager';
@@ -66,9 +65,6 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
     const [reviewText, setReviewText] = useState('');
     const [submittingReview, setSubmittingReview] = useState(false);
     const [reviewSuccess, setReviewSuccess] = useState(false);
-
-    /** באנר דמו עליון — נסגר ידנית; זכירה לפי הזמנה בסשן */
-    const [demoTopBannerDismissed, setDemoTopBannerDismissed] = useState(false);
 
     // הרשמת לקוח
     const { isRecognized, isRegistered, loginWithPhone, customer } = useCustomer();
@@ -134,24 +130,6 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
                 .catch(err => console.error('Failed to load restaurant:', err));
         }
     }, [effectiveTenantId]);
-
-    useEffect(() => {
-        if (!orderId || !effectiveTenantId) return;
-        try {
-            setDemoTopBannerDismissed(sessionStorage.getItem(`order_demo_banner_${effectiveTenantId}_${orderId}`) === '1');
-        } catch {
-            setDemoTopBannerDismissed(false);
-        }
-    }, [orderId, effectiveTenantId]);
-
-    const dismissDemoTopBanner = useCallback(() => {
-        if (effectiveTenantId && orderId) {
-            try {
-                sessionStorage.setItem(`order_demo_banner_${effectiveTenantId}_${orderId}`, '1');
-            } catch { /* ignore */ }
-        }
-        setDemoTopBannerDismissed(true);
-    }, [effectiveTenantId, orderId]);
 
     // פתיחה מפוש "הוסף ביקורת" — גלילה לאזור הדירוג
     useEffect(() => {
@@ -1108,27 +1086,13 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
         </div>
     );
 
-    const demoTopBanner =
-        restaurant?.is_demo &&
-        !demoTopBannerDismissed && (
-            <TopDismissibleBanner
-                open
-                onClose={dismissDemoTopBanner}
-                title="הזמנה להמחשה בלבד"
-                message="זו הזמנת דמו — אינה אמיתית ואינה משפיעה על המסעדה."
-                variant="demo"
-            />
-        );
-
     // במצב preview לא צריך CustomerLayout (כבר יש AdminLayout)
     return isPreviewMode ? (
         <>
-            {demoTopBanner}
             {content}
         </>
     ) : (
         <CustomerLayout>
-            {demoTopBanner}
             {content}
         </CustomerLayout>
     );

@@ -40,9 +40,6 @@ class SeoAudit extends Command
 
         $restaurants = Restaurant::withoutGlobalScope('tenant')
             ->where('is_approved', true)
-            ->where(function ($q) {
-                $q->where('is_demo', false)->orWhereNull('is_demo');
-            })
             ->whereIn('subscription_status', ['active', 'trial'])
             ->whereNotNull('tenant_id')
             ->orderByDesc('updated_at')

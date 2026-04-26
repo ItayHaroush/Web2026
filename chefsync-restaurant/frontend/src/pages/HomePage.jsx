@@ -20,7 +20,6 @@ import {
     FaRocket,
     FaUserShield,
     FaMobileAlt,
-    FaMask,
     FaMapMarkerAlt,
     FaUtensils,
     FaArrowLeft,
@@ -566,12 +565,6 @@ export default function HomePage() {
                                                         {item.description && <p className="text-xs text-gray-400 truncate">{item.description}</p>}
                                                         <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 mt-0.5 min-w-0">
                                                             <span className="text-[11px] text-brand-primary font-semibold truncate max-w-full">{item.restaurant_name}</span>
-                                                            {item.is_demo && (
-                                                                <span className="text-[9px] font-bold bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 px-1.5 py-0.5 rounded inline-flex items-center gap-0.5 shrink-0">
-                                                                    <FaMask className="w-2 h-2 shrink-0" />
-                                                                    להמחשה
-                                                                </span>
-                                                            )}
                                                             {!item.is_open_now && (
                                                                 <span className="text-[9px] font-bold bg-rose-100 dark:bg-rose-900/30 text-rose-500 dark:text-rose-400 px-1.5 py-0.5 rounded">
                                                                     סגור
@@ -678,13 +671,6 @@ export default function HomePage() {
                                         <div className="absolute top-3 left-3 sm:top-4 sm:left-4 bg-white/90 backdrop-blur-md text-brand-primary px-2 py-1 sm:px-3 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-black shadow-lg border border-white/50 flex items-center gap-0.5 sm:gap-1">
                                             <FaMapMarkerAlt className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                                             {restaurant.distance.toFixed(1)} ק"מ
-                                        </div>
-                                    )}
-
-                                    {restaurant.is_demo && (
-                                        <div className="absolute bottom-3 left-3 sm:bottom-4 sm:left-4 max-w-[calc(50%-1.25rem)] bg-gradient-to-r from-amber-500 to-orange-600 text-white px-2 py-1 sm:px-3 sm:py-1.5 rounded-full text-[8px] sm:text-[10px] font-black shadow-xl border border-white/20 uppercase tracking-wide sm:tracking-widest flex items-center gap-1">
-                                            <FaMask className="text-[10px] sm:text-xs shrink-0" />
-                                            <span className="truncate leading-tight">מסעדה לדוגמא</span>
                                         </div>
                                     )}
 

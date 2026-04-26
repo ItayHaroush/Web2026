@@ -1674,6 +1674,7 @@ class PrintService
             $this->centerText('סרקו לעמוד המסעדה', $printer),
             $separator,
             '{{QR}}',
+            '{{CENTER_HW}}',
             '',
             '{{BOLD}}',
             $this->centerText($name, $printer),

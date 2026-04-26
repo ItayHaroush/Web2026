@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useCustomer } from '../context/CustomerContext';
 import { CustomerLayout } from '../layouts/CustomerLayout';
-import { FaMask, FaBoxOpen, FaStickyNote, FaTimes, FaShoppingCart, FaUser, FaPhone, FaMapMarkerAlt, FaMoneyBillWave, FaCreditCard, FaTruck, FaStore, FaHome, FaEdit, FaComment, FaExclamationTriangle, FaGift, FaSearch, FaClock, FaPlus, FaMinus, FaStar } from 'react-icons/fa';
+import { FaBoxOpen, FaStickyNote, FaTimes, FaShoppingCart, FaUser, FaPhone, FaMapMarkerAlt, FaMoneyBillWave, FaCreditCard, FaTruck, FaStore, FaHome, FaEdit, FaComment, FaExclamationTriangle, FaGift, FaSearch, FaClock, FaPlus, FaMinus, FaStar } from 'react-icons/fa';
 import orderService from '../services/orderService';
 import menuService from '../services/menuService';
 import { UI_TEXT } from '../constants/ui';
@@ -792,23 +792,6 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                                 </h3>
                                 <p className="hidden sm:block text-sm text-purple-800">
                                     אתה צופה בסל כמנהל מסעדה. ההזמנה תסומן כ-<strong>הזמנת דוגמה</strong> ולא תשפיע על מונים ודוחות.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* באנר דמו */}
-                {restaurant?.is_demo && !isPreviewMode && (
-                    <div className="bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 border border-amber-400 sm:border-2 rounded-lg sm:rounded-2xl p-2 sm:p-4 shadow-sm sm:shadow-lg">
-                        <div className="flex items-start gap-2 sm:gap-3">
-                            <div className="bg-amber-500 rounded-full p-1.5 sm:p-3 shrink-0 animate-pulse">
-                                <FaMask className="text-sm sm:text-2xl text-white" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <h3 className="font-bold text-amber-900 text-xs sm:text-lg sm:mb-1 leading-snug truncate">דמו — ללא אימות טלפון, הכל לדוגמה.</h3>
-                                <p className="hidden sm:block text-sm text-amber-800">
-                                    זוהי הזמנת דמו - <strong>אין צורך באימות טלפון</strong>. כל השלבים מסומלצים.
                                 </p>
                             </div>
                         </div>

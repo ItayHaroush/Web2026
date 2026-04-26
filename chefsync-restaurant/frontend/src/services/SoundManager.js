@@ -158,8 +158,15 @@ function setupAutoUnlock() {
  * - fcm_push: מ-push event ישיר (הכי אמין, גם ב-PWA)
  * - fcm_message: מ-onBackgroundMessage של Firebase (fallback)
  */
-function listenServiceWorkerMessages(onNewOrder) {
+/**
+ * @param {(payload: object) => void} [onNewOrder]
+ * @param {{ shouldPlayOrderSound?: () => boolean }} [options] — אם מחזיר false, לא משמיעים (למשל תצוגה מקדימה / סופר־אדמין)
+ */
+function listenServiceWorkerMessages(onNewOrder, options = {}) {
     if (!navigator.serviceWorker) return () => { };
+    const shouldPlayOrderSound = typeof options.shouldPlayOrderSound === 'function'
+        ? options.shouldPlayOrderSound
+        : () => true;
 
     const handler = (event) => {
         let dataType = null;
@@ -176,7 +183,9 @@ function listenServiceWorkerMessages(onNewOrder) {
         }
 
         if (dataType === 'new_order') {
-            play();
+            if (shouldPlayOrderSound()) {
+                play();
+            }
             if (onNewOrder) onNewOrder(payload);
         }
     };

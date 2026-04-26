@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { FaWhatsapp, FaPhoneAlt, FaMask, FaShoppingBag, FaTruck, FaClock, FaShieldAlt, FaExclamationTriangle, FaInfoCircle, FaCreditCard, FaMoneyBillWave, FaGift, FaTimes, FaPlus, FaArrowLeft, FaChevronLeft, FaTag, FaCheckCircle, FaHistory, FaMapMarkerAlt } from 'react-icons/fa';
+import { FaWhatsapp, FaPhoneAlt, FaShoppingBag, FaTruck, FaClock, FaShieldAlt, FaExclamationTriangle, FaInfoCircle, FaCreditCard, FaMoneyBillWave, FaGift, FaTimes, FaPlus, FaArrowLeft, FaChevronLeft, FaTag, FaCheckCircle, FaHistory, FaMapMarkerAlt } from 'react-icons/fa';
 import { SiWaze } from 'react-icons/si';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
@@ -60,8 +60,6 @@ export default function MenuPage({ isPreviewMode = false }) {
     /** פופ־אפ עליון: מסעדה סגורה (במקום טוסט) */
     const [closedRestaurantNotice, setClosedRestaurantNotice] = useState(null);
 
-    /** מודל הסבר מסעדת דמו — נסגר רק בלחיצת אישור (פעם אחת לסשן) */
-    const [showDemoDisclaimerModal, setShowDemoDisclaimerModal] = useState(false);
     const [reorderDialog, setReorderDialog] = useState(null);
     const [pendingReorderItems, setPendingReorderItems] = useState(null);
     /** פופ־אפ «הזמנות שלי» — נסגר ב־X ונשמר לסשן לפי מסעדה */
@@ -169,34 +167,6 @@ export default function MenuPage({ isPreviewMode = false }) {
         }
         setOrdersHintDismissed(true);
     }, [effectiveTenantId]);
-
-    const acknowledgeDemoDisclaimer = useCallback(() => {
-        if (effectiveTenantId) {
-            try {
-                sessionStorage.setItem(`demo_menu_ack_${effectiveTenantId}`, '1');
-            } catch { /* ignore */ }
-        }
-        setShowDemoDisclaimerModal(false);
-    }, [effectiveTenantId]);
-
-    /** מסעדת דמו: פופ־אפ הסבר פעם לסשן (עד אישור) */
-    useEffect(() => {
-        if (new URLSearchParams(window.location.search).has('embed')) { setShowDemoDisclaimerModal(false); return; }
-        if (!restaurant?.is_demo || !effectiveTenantId) {
-            setShowDemoDisclaimerModal(false);
-            return;
-        }
-        try {
-            if (sessionStorage.getItem(`demo_menu_ack_${effectiveTenantId}`) === '1') {
-                setShowDemoDisclaimerModal(false);
-                return;
-            }
-        } catch {
-            setShowDemoDisclaimerModal(true);
-            return;
-        }
-        setShowDemoDisclaimerModal(true);
-    }, [restaurant?.is_demo, effectiveTenantId]);
 
     const getWazeLink = () => {
         const query = [restaurant?.address, restaurant?.city].filter(Boolean).join(', ');
@@ -1000,56 +970,6 @@ export default function MenuPage({ isPreviewMode = false }) {
                 onAdd={handleAddFromModal}
                 isOrderingEnabled={canOrder || (canPreOrder && futureOrderApproved) || (canScheduleFuture && futureOrderApproved)}
             />
-
-            {/* מודל מסעדת דמו — אישור מפורש */}
-            {showDemoDisclaimerModal && restaurant?.is_demo && (
-                <div
-                    className="fixed inset-0 z-[10000] flex items-end sm:items-center justify-center sm:p-4"
-                    dir="rtl"
-                    role="dialog"
-                    aria-modal="true"
-                    aria-labelledby="demo-disclaimer-title"
-                >
-                    <div className="absolute inset-0 bg-slate-950/65 backdrop-blur-md" aria-hidden />
-                    <div className="relative w-full sm:max-w-md animate-slide-up sm:animate-none">
-                        <div className="bg-white dark:bg-brand-dark-surface rounded-t-[1.75rem] sm:rounded-3xl shadow-2xl border border-amber-200/80 dark:border-amber-900/40 overflow-hidden ring-1 ring-black/5">
-                            <div className="relative bg-gradient-to-br from-amber-400 via-orange-500 to-rose-500 px-6 pt-8 pb-10 text-white">
-                                <div className="absolute inset-0 opacity-25 bg-[radial-gradient(circle_at_20%_20%,white,transparent_45%),radial-gradient(circle_at_80%_0%,white,transparent_40%)]" />
-                                <div className="relative flex flex-col items-center text-center gap-3">
-                                    <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30 shadow-lg">
-                                        <FaMask className="text-4xl text-white drop-shadow" aria-hidden />
-                                    </div>
-                                    <p className="text-[11px] font-black uppercase tracking-[0.2em] text-white/90">סביבת הדגמה</p>
-                                    <h2 id="demo-disclaimer-title" className="text-2xl sm:text-[1.65rem] font-black leading-tight px-1">
-                                        מסעדה לדוגמה
-                                    </h2>
-                                </div>
-                            </div>
-                            <div className="px-5 sm:px-6 pt-2 pb-6 sm:pb-7 -mt-6 relative">
-                                <div className="rounded-2xl bg-amber-50/95 dark:bg-amber-950/35 border border-amber-200/90 dark:border-amber-800/50 p-4 sm:p-5 shadow-sm">
-                                    <p className="text-sm text-amber-950 dark:text-amber-100/95 leading-relaxed font-medium text-center">
-                                        זוהי <strong>מסעדת דמו</strong> לצורכי הדגמה והיכרות עם המערכת בלבד.
-                                        <span className="block mt-2 text-amber-900/90 dark:text-amber-200/90 text-[13px]">
-                                            הזמנות ותשלומים כאן אינם אמיתיים ואינם נשלחים לטיפול עסקי.
-                                        </span>
-                                    </p>
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={acknowledgeDemoDisclaimer}
-                                    className="mt-5 w-full py-3.5 rounded-2xl font-black text-base text-white bg-gradient-to-l from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 dark:from-amber-500 dark:to-orange-600 shadow-lg shadow-orange-500/25 transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
-                                >
-                                    <FaCheckCircle className="text-xl opacity-95" aria-hidden />
-                                    הבנתי, המשך לתפריט
-                                </button>
-                                <p className="text-center text-[11px] text-gray-400 dark:text-gray-500 mt-3 font-medium">
-                                    לחיצה מהווה אישור שהבנתם שמדובר בסביבת הדגמה
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
 
             {/* מודל מידע נוסף */}
             {showInfoModal && restaurant && (

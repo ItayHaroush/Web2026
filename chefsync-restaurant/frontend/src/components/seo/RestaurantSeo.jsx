@@ -98,9 +98,7 @@ export function ShareSeo({ restaurant }) {
     const description = buildDescription(restaurant, 'share');
     const image = resolveLogo(restaurant.logo_url);
     const keywords = buildKeywords(restaurant);
-    const robots = restaurant.is_approved && !restaurant.is_demo
-        ? 'index, follow'
-        : 'noindex, nofollow';
+    const robots = restaurant.is_approved ? 'index, follow' : 'noindex, nofollow';
 
     return (
         <MetaTags
@@ -133,9 +131,7 @@ export function MenuSeo({ restaurant, menuSections = null }) { // eslint-disable
     const description = buildDescription(restaurant, 'menu');
     const image = resolveLogo(restaurant.logo_url);
     const keywords = buildKeywords(restaurant);
-    const robots = restaurant.is_approved && !restaurant.is_demo
-        ? 'index, follow'
-        : 'noindex, nofollow';
+    const robots = restaurant.is_approved ? 'index, follow' : 'noindex, nofollow';
 
     return (
         <MetaTags

@@ -102,8 +102,12 @@ export default function SuperAdminDashboard() {
 
             const title = payload?.notification?.title || payload?.data?.title || 'TakeEat';
             const body = payload?.notification?.body || payload?.data?.body || 'התראה חדשה';
+            const dataType = payload?.data?.type;
 
-            SoundManager.play();
+            // צלצול מטבח רק להזמנה חדשה — לא לכל הודעת מערכת (מניעת רעש בכניסה לדשבורד / ריענון)
+            if (dataType === 'new_order') {
+                SoundManager.play();
+            }
 
             if (Notification?.permission === 'granted') {
                 try {

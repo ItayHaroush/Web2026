@@ -40,10 +40,6 @@ class SeoController extends Controller
             return $this->notFound();
         }
 
-        if ($this->isHiddenFromIndex($restaurant)) {
-            return $this->notFound();
-        }
-
         $html = $this->seoRenderer->renderSharePage($restaurant);
 
         return $this->htmlResponse($html, $restaurant->is_approved ? 200 : 200);
@@ -66,10 +62,6 @@ class SeoController extends Controller
             return $this->notFound();
         }
 
-        if ($this->isHiddenFromIndex($restaurant)) {
-            return $this->notFound();
-        }
-
         $html = $this->seoRenderer->renderMenuPage($restaurant);
 
         return $this->htmlResponse($html, 200);
@@ -85,9 +77,6 @@ class SeoController extends Controller
 
         $query = Restaurant::withoutGlobalScope('tenant')
             ->where('is_approved', true)
-            ->where(function ($q) {
-                $q->where('is_demo', false)->orWhereNull('is_demo');
-            })
             ->whereIn('subscription_status', ['active', 'trial'])
             ->whereNotNull('tenant_id')
             ->orderBy('name');
@@ -115,9 +104,6 @@ class SeoController extends Controller
 
         $restaurants = Restaurant::withoutGlobalScope('tenant')
             ->where('is_approved', true)
-            ->where(function ($q) {
-                $q->where('is_demo', false)->orWhereNull('is_demo');
-            })
             ->whereIn('subscription_status', ['active', 'trial'])
             ->whereNotNull('tenant_id')
             ->where('created_at', '>=', $since)
@@ -155,7 +141,7 @@ class SeoController extends Controller
     }
 
     /**
-     * sitemap.xml דינמי — כולל את כל המסעדות המאושרות והלא-דמו שהמנוי שלהן פעיל.
+     * sitemap.xml דינמי — כולל את כל המסעדות המאושרות שהמנוי שלהן פעיל.
      * URL: /sitemap.xml
      */
     public function sitemap(Request $request): Response
@@ -164,9 +150,6 @@ class SeoController extends Controller
 
         $restaurants = Restaurant::withoutGlobalScope('tenant')
             ->where('is_approved', true)
-            ->where(function ($q) {
-                $q->where('is_demo', false)->orWhereNull('is_demo');
-            })
             ->whereIn('subscription_status', ['active', 'trial'])
             ->whereNotNull('tenant_id')
             ->orderBy('id')
@@ -280,16 +263,6 @@ class SeoController extends Controller
             'Content-Type' => 'text/plain; charset=UTF-8',
             'Cache-Control' => 'public, max-age=3600',
         ]);
-    }
-
-    /**
-     * האם להחזיר 404 + הפניה לבית במקום דף שיתוף/תפריט.
-     * מסעדות לא מאושרות עדיין מקבלות HTML (עם noindex ב-SeoRenderer) כדי שבעלים
-     * יוכלו לשתף קישור לפני אישור; רק דמו נחסם כאן.
-     */
-    protected function isHiddenFromIndex(Restaurant $restaurant): bool
-    {
-        return (bool) $restaurant->is_demo;
     }
 
     protected function htmlResponse(string $html, int $status = 200): Response

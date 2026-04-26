@@ -17,12 +17,24 @@ import { PRODUCT_NAME } from '../constants/brand';
  * 4. האזנה ל-postMessage מ-Service Worker
  * 5. ניקוי badge כשהחלון חוזר לפוקוס
  */
+function isRestaurantOrderAlertsMuted(user, impersonating) {
+    try {
+        if (localStorage.getItem('isPreviewMode') === 'true') return true;
+    } catch {
+        /* ignore */
+    }
+    // סופר־אדמין ללא התחזות למסעדה — אין צלצולי הזמנות מטבח (רק דשבורד מערכת / FCM נפרד)
+    if (user?.is_super_admin === true && !impersonating) return true;
+    return false;
+}
+
 export default function AdminNotificationProvider({ children }) {
-    const { user, getAuthHeaders } = useAdminAuth();
+    const { user, getAuthHeaders, impersonating } = useAdminAuth();
     const navigate = useNavigate();
     const lastFcmMessageIdsRef = useRef(new Set());
     const fcmNotifCountRef = useRef(0);
     const lastKnownOrderCountRef = useRef(null);
+    const lastPollTenantRef = useRef(null);
 
     // חסימת צלצולים ב-5 שניות הראשונות אחרי אתחול/ריענון
     // מונע צלצולי שווא מ-FCM/SW/polling שמתעוררים בזמן טעינה
@@ -43,21 +55,34 @@ export default function AdminNotificationProvider({ children }) {
         const role = user.role || '';
         const isSuperAdmin = user.is_super_admin === true;
         if (!isSuperAdmin && !['owner', 'manager', 'employee'].includes(role)) return;
+        if (isSuperAdmin && !impersonating) return;
 
         let isFirstPoll = true;
         let cancelled = false;
         const poll = async () => {
             if (cancelled) return;
+            const alertsMuted = isRestaurantOrderAlertsMuted(user, impersonating);
+            let pollTenant = '';
+            try {
+                pollTenant = localStorage.getItem('tenantId') || '';
+            } catch {
+                pollTenant = '';
+            }
+            if (lastPollTenantRef.current !== pollTenant) {
+                lastPollTenantRef.current = pollTenant;
+                lastKnownOrderCountRef.current = null;
+            }
             try {
                 const res = await api.get('/admin/orders?per_page=1', { headers: getAuthHeaders() });
                 if (cancelled) return;
                 const orders = res.data?.orders?.data || res.data?.orders || [];
                 const latestOrder = orders[0];
                 const latestId = latestOrder?.id ?? null;
-                if (latestId && lastKnownOrderCountRef.current !== null && latestId > lastKnownOrderCountRef.current) {
+                const prevKnownId = lastKnownOrderCountRef.current;
+                if (latestId && prevKnownId !== null && latestId > prevKnownId) {
                     const isFuturePending = latestOrder?.is_future_order &&
                         (latestOrder?.status === 'pending' || latestOrder?.status === 'awaiting_payment');
-                    if (!isFirstPoll && !isFuturePending) {
+                    if (!alertsMuted && !isFirstPoll && !isFuturePending) {
                         SoundManager.play();
                         if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
                             try { new Notification('הזמנה חדשה', { body: `הזמנה #${latestId}`, icon: '/icon-192.png', silent: true }); } catch (_) { }
@@ -74,7 +99,7 @@ export default function AdminNotificationProvider({ children }) {
         poll();
         const interval = setInterval(poll, 15_000);
         return () => { cancelled = true; clearInterval(interval); };
-    }, [user, getAuthHeaders]);
+    }, [user, getAuthHeaders, impersonating]);
 
     // FCM — צלצול רק ל-new_order (רק למשתמשי אדמין)
     useEffect(() => {
@@ -82,17 +107,23 @@ export default function AdminNotificationProvider({ children }) {
         const role = user.role || '';
         const isSuperAdmin = user.is_super_admin === true;
         if (!isSuperAdmin && !['owner', 'manager', 'employee'].includes(role)) return undefined;
+        if (isSuperAdmin && !impersonating) return undefined;
 
         // האזנה ל-postMessage מ-Service Worker (כשהאפליקציה פתוחה)
         const unsubSw = SoundManager.listenServiceWorkerMessages((payload) => {
+            if (isRestaurantOrderAlertsMuted(user, impersonating)) return;
             const title = payload?.notification?.title || payload?.data?.title || PRODUCT_NAME;
             const body = payload?.notification?.body || payload?.data?.body || 'הזמנה חדשה';
             if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
                 try { new Notification(title, { body, icon: '/icon-192.png', silent: true }); } catch (_) { }
             }
+        }, {
+            shouldPlayOrderSound: () => !isRestaurantOrderAlertsMuted(user, impersonating),
         });
 
         const unsubscribe = listenForegroundMessages((payload) => {
+            const alertsMuted = isRestaurantOrderAlertsMuted(user, impersonating);
+
             const msgId = payload?.messageId || payload?.data?.messageId || payload?.data?.google?.message_id;
             if (msgId) {
                 if (lastFcmMessageIdsRef.current.has(msgId)) return;
@@ -101,14 +132,8 @@ export default function AdminNotificationProvider({ children }) {
             }
 
             const dataType = payload?.data?.type;
-            if (dataType === 'new_order') {
-                SoundManager.play();
-            }
 
-            const title = payload?.notification?.title || payload?.data?.title || PRODUCT_NAME;
-            const body = payload?.notification?.body || payload?.data?.body || 'התראה חדשה';
-
-            // future_order_created — בלי צלצול; רענן דשבורד בלבד
+            // future_order_created — תמיד לרענן דשבורד; בלי צלצול (גם בתצוגה מקדימה)
             if (dataType === 'future_order_created') {
                 try {
                     window.dispatchEvent(new CustomEvent('takeeat:future-order-created', {
@@ -117,6 +142,17 @@ export default function AdminNotificationProvider({ children }) {
                 } catch { /* ignore */ }
                 return;
             }
+
+            if (alertsMuted) {
+                return;
+            }
+
+            if (dataType === 'new_order') {
+                SoundManager.play();
+            }
+
+            const title = payload?.notification?.title || payload?.data?.title || PRODUCT_NAME;
+            const body = payload?.notification?.body || payload?.data?.body || 'התראה חדשה';
 
             if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
                 try {
@@ -148,7 +184,7 @@ export default function AdminNotificationProvider({ children }) {
             if (typeof unsubscribe === 'function') unsubscribe();
             unsubSw();
         };
-    }, [user, navigate]);
+    }, [user, impersonating, navigate]);
 
     // ניקוי badge כשחוזרים לפוקוס
     useEffect(() => {
