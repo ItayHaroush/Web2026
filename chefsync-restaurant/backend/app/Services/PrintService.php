@@ -1661,6 +1661,7 @@ class PrintService
         return $m === 0 ? "{$h} שעות" : "{$h} שע' {$m} דק'";
     }
 
+
     private function buildShareQrSlipTextPayload(Restaurant $restaurant, Printer $printer): string
     {
         $width = $this->getLineWidth($printer);
@@ -1674,6 +1675,7 @@ class PrintService
             $this->centerText('סרקו לעמוד המסעדה', $printer),
             $separator,
             '{{QR}}',
+            '{{CENTER_HW}}',
             '',
             '{{BOLD}}',
             $this->centerText($name, $printer),
