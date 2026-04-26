@@ -648,6 +648,11 @@ Route::post('/kiosk/{token}/orders/{orderId}/charge-pinpad', [KioskController::c
 // רשימת מסעדות - ללא צורך ב-tenant
 Route::get('/restaurants', [RestaurantController::class, 'index'])->name('restaurants.index');
 
+// דף נחיתה — לוגואי שותפים (מאושרים + לוגו), ללא tenant
+Route::get('/public/landing-partners', [RestaurantController::class, 'landingPartners'])
+    ->middleware('throttle:120,1')
+    ->name('public.landing-partners');
+
 // הודעות כלליות לפלטפורמה — ציבורי
 Route::get('/platform/announcements/active', [SuperAdminAnnouncementController::class, 'active'])->name('platform.announcements.active');
 

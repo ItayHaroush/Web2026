@@ -1,7 +1,9 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { CustomerLayout } from '../layouts/CustomerLayout';
 import { LandingSeo } from '../components/seo/RestaurantSeo';
+import { apiClient } from '../services/apiClient';
+import { resolveAssetUrl } from '../utils/assets';
 import {
     FaGift,
     FaMapLocationDot,
@@ -107,9 +109,46 @@ function FeatureImageCarousel({ images }) {
     );
 }
 
+const LANDING_CAROUSEL_FALLBACK = [
+    { name: 'TakeEat', tenant_id: null, logo_url: '/icons/chefsync-logo-v2-512.png' },
+    { name: 'חלבוד', tenant_id: null, logo_url: '/logos/halabud.png' },
+];
+
+function landingPartnerLogoSrc(logoUrl) {
+    if (!logoUrl) return '';
+    if (/^https?:\/\//i.test(logoUrl)) return logoUrl;
+    if (logoUrl.startsWith('/storage')) return resolveAssetUrl(logoUrl);
+    return logoUrl;
+}
+
 export default function LandingPage() {
     const [activeDevice, setActiveDevice] = useState('mobile');
+    const [landingPartners, setLandingPartners] = useState(undefined);
     const mockupRef = useRef(null);
+
+    useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            try {
+                const { data } = await apiClient.get('/public/landing-partners');
+                if (cancelled) return;
+                const list = data?.data;
+                setLandingPartners(Array.isArray(list) ? list : []);
+            } catch {
+                if (!cancelled) setLandingPartners([]);
+            }
+        })();
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    const partnersForLogoCarousel = useMemo(() => {
+        if (landingPartners === undefined || landingPartners.length === 0) {
+            return LANDING_CAROUSEL_FALLBACK;
+        }
+        return landingPartners;
+    }, [landingPartners]);
 
     const switchDevice = (key) => {
         setActiveDevice(key);
@@ -576,18 +615,35 @@ export default function LandingPage() {
                         <div className="flex gap-16 animate-ticker">
                             {[1, 2].map((round) => (
                                 <React.Fragment key={round}>
-                                    <div className="flex items-center justify-center min-w-[240px] h-32 grayscale hover:grayscale-0 transition-all duration-300">
-                                        <img src="/icons/chefsync-logo-v2-512.png" alt="TakeEat" className="h-24 w-auto object-contain opacity-60 hover:opacity-100 transition-opacity mix-blend-multiply dark:mix-blend-lighten" />
-                                    </div>
-                                    <div className="flex items-center justify-center min-w-[240px] h-32 grayscale hover:grayscale-0 transition-all duration-300">
-                                        <img src="/logos/halabud.png" alt="חלבוד" className="h-24 w-auto object-contain opacity-60 hover:opacity-100 transition-opacity mix-blend-multiply dark:mix-blend-lighten" />
-                                    </div>
-                                    <div className="flex items-center justify-center min-w-[240px] h-32 grayscale hover:grayscale-0 transition-all duration-300">
-                                        <img src="/logos/halabud.png" alt="חלבוד" className="h-24 w-auto object-contain opacity-60 hover:opacity-100 transition-opacity mix-blend-multiply dark:mix-blend-lighten" />
-                                    </div>
-                                    <div className="flex items-center justify-center min-w-[240px] h-32 grayscale hover:grayscale-0 transition-all duration-300">
-                                        <img src="/logos/halabud.png" alt="חלבוד" className="h-24 w-auto object-contain opacity-60 hover:opacity-100 transition-opacity mix-blend-multiply dark:mix-blend-lighten" />
-                                    </div>
+                                    {partnersForLogoCarousel.map((p, idx) => {
+                                        const src = landingPartnerLogoSrc(p.logo_url);
+                                        if (!src) return null;
+                                        const img = (
+                                            <img
+                                                src={src}
+                                                alt={p.name || 'מסעדה'}
+                                                className="h-24 w-auto max-w-[200px] object-contain opacity-60 hover:opacity-100 transition-opacity mix-blend-multiply dark:mix-blend-lighten"
+                                            />
+                                        );
+                                        return (
+                                            <div
+                                                key={`${round}-${p.tenant_id ?? p.name}-${idx}`}
+                                                className="flex items-center justify-center min-w-[240px] h-32 grayscale hover:grayscale-0 transition-all duration-300"
+                                            >
+                                                {p.tenant_id ? (
+                                                    <Link
+                                                        to={`/${p.tenant_id}/menu`}
+                                                        className="flex items-center justify-center w-full h-full px-2"
+                                                        title={`תפריט ${p.name}`}
+                                                    >
+                                                        {img}
+                                                    </Link>
+                                                ) : (
+                                                    <span className="flex items-center justify-center w-full h-full px-2">{img}</span>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
                                 </React.Fragment>
                             ))}
                         </div>

@@ -211,13 +211,22 @@ function RestaurantCard({ restaurant }) {
     const slug = restaurant.slug || restaurant.tenant_id;
     const href = `/r/${slug}`;
     const logo = resolveAssetUrl(restaurant.logo_url);
+    const isDemo = Boolean(restaurant.is_demo);
 
     return (
         <Link
             to={href}
             className="group block bg-white dark:bg-brand-dark-surface rounded-2xl shadow-sm hover:shadow-lg transition-all border border-gray-100 dark:border-brand-dark-border overflow-hidden"
         >
-            <div className="aspect-[16/10] bg-gray-100 dark:bg-brand-dark-bg flex items-center justify-center overflow-hidden">
+            <div className="relative aspect-[16/10] bg-gray-100 dark:bg-brand-dark-bg flex items-center justify-center overflow-hidden">
+                {isDemo && (
+                    <span
+                        className="absolute end-3 top-3 z-10 inline-flex items-center rounded-full border border-amber-200/80 bg-amber-50/95 px-2.5 py-1 text-[11px] font-bold text-amber-900 shadow-sm backdrop-blur-sm dark:border-amber-500/30 dark:bg-amber-950/80 dark:text-amber-100"
+                        dir="rtl"
+                    >
+                        מסעדה לדוגמה
+                    </span>
+                )}
                 {logo ? (
                     <img
                         src={logo}
@@ -230,18 +239,28 @@ function RestaurantCard({ restaurant }) {
                 )}
             </div>
             <div className="p-4">
-                <h3 className="font-bold text-lg text-gray-900 dark:text-white mb-1 line-clamp-1">
-                    {restaurant.name}
-                </h3>
-                <div className="flex flex-wrap items-center gap-3 text-sm text-gray-500 dark:text-brand-dark-muted">
+                <div className="mb-1 flex flex-wrap items-center gap-2">
+                    <h3 className="font-bold text-lg text-gray-900 dark:text-white line-clamp-1 min-w-0 flex-1">
+                        {restaurant.name}
+                    </h3>
+                    {isDemo && (
+                        <span
+                            className="shrink-0 rounded-md bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900 dark:bg-amber-900/50 dark:text-amber-200"
+                            dir="rtl"
+                        >
+                            לדוגמה
+                        </span>
+                    )}
+                </div>
+                <div className="flex flex-wrap items-center gap-2 text-sm text-gray-500 dark:text-brand-dark-muted">
                     {restaurant.cuisine_type && (
-                        <span className="inline-flex items-center gap-1">
+                        <span className="inline-flex items-center gap-1 rounded-md bg-gray-100 px-2 py-0.5 dark:bg-brand-dark-bg">
                             <FaUtensils className="text-xs" />
                             {restaurant.cuisine_type}
                         </span>
                     )}
                     {restaurant.city && (
-                        <span className="inline-flex items-center gap-1">
+                        <span className="inline-flex items-center gap-1 rounded-md bg-gray-100 px-2 py-0.5 dark:bg-brand-dark-bg">
                             <FaMapMarkerAlt className="text-xs" />
                             {restaurant.city}
                         </span>
