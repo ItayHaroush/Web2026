@@ -42,8 +42,6 @@ class RestaurantController extends Controller
 
         return [
             'id' => $restaurant->id,
-            // נדרש ל־/restaurants/new (סינון 30 יום אחרונים בלקוח)
-            'created_at' => $restaurant->created_at?->toIso8601String(),
             'tenant_id' => $restaurant->tenant_id,
             'slug' => $restaurant->slug,
             'name' => $restaurant->name,
@@ -252,37 +250,6 @@ class RestaurantController extends Controller
      * מיועד לעמודי תפריט ציבוריים: /:tenantId/menu
      * לא מסנן לפי is_open כדי שמשתמש חדש יראה את דף המסעדה המלא גם אם היא סגורה.
      */
-    /**
-     * לוגואים לקרוסלת "מסעדות שעובדות עם המערכת" בדף נחיתה (ללא אימות).
-     * מסעדה מופיעה אחרי אישור ורק אם הוגדר לה לוגו.
-     */
-    public function landingPartners()
-    {
-        try {
-            $rows = Restaurant::query()
-                ->where('is_approved', true)
-                ->whereNotNull('logo_url')
-                ->where('logo_url', '!=', '')
-                ->orderBy('name')
-                ->get(['name', 'tenant_id', 'logo_url']);
-
-            return response()->json([
-                'success' => true,
-                'data' => $rows->map(fn (Restaurant $r) => [
-                    'name' => $r->name,
-                    'tenant_id' => $r->tenant_id,
-                    'logo_url' => $r->logo_url,
-                ])->values(),
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'שגיאה בטעינת רשימת שותפים',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
-    }
-
     public function publicShowByTenant(Request $request, string $tenantId)
     {
         try {
@@ -293,6 +260,19 @@ class RestaurantController extends Controller
                 })
                 ->with('deliveryZones')
                 ->firstOrFail();
+
+            // דמו ציבורי נחסם; מסעדה חדשה לפני אישור עדיין נגישה לבעלים/שיתוף (ללא אינדוקס ב-SEO).
+            $isPreviewMode = $request->header('X-Preview-Mode') === 'true';
+            // בסביבת local לא חוסמים דמו — נוח לאב-טיפוס בלי DB / מצב preview.
+            $allowPublicDemo = app()->environment('local');
+
+            if (!$isPreviewMode && !$allowPublicDemo && ($restaurant->is_demo ?? false)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'המסעדה לא זמינה',
+                    'error' => 'restaurant_not_available',
+                ], 403);
+            }
 
             return response()->json([
                 'success' => true,

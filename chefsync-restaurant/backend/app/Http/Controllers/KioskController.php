@@ -32,6 +32,7 @@ class KioskController extends Controller
         $user = $request->user();
         $restaurant = Restaurant::withoutGlobalScopes()->find($user->restaurant_id);
         $tier = $restaurant->tier ?? 'basic';
+        $capsTier = $restaurant->effectiveTierForFeature('kiosks');
 
         $kiosks = Kiosk::where('restaurant_id', $user->restaurant_id)
             ->orderBy('created_at', 'desc')
@@ -49,9 +50,11 @@ class KioskController extends Controller
                 'kiosks' => $kiosks,
                 'tier' => $tier,
                 'limits' => [
-                    'max_kiosks' => config("tier_features.tier_limits.{$tier}.max_kiosks", 0),
-                    'max_tables' => in_array($tier, ['pro', 'enterprise']) ? ($tier === 'enterprise' ? 999 : 10) : 0,
-                    'custom_design_allowed' => in_array($tier, ['pro', 'enterprise']),
+                    'max_kiosks' => $restaurant->effectiveMaxKiosks(),
+                    'max_tables' => in_array($capsTier, ['pro', 'enterprise'], true)
+                        ? ($capsTier === 'enterprise' ? 999 : 10)
+                        : 0,
+                    'custom_design_allowed' => in_array($capsTier, ['pro', 'enterprise'], true),
                 ],
             ],
         ]);
@@ -72,9 +75,9 @@ class KioskController extends Controller
         ]);
 
         $restaurant = Restaurant::withoutGlobalScopes()->find($user->restaurant_id);
-        $tier = $restaurant->tier ?? 'basic';
+        $capsTier = $restaurant->effectiveTierForFeature('kiosks');
 
-        $maxKiosks = config("tier_features.tier_limits.{$tier}.max_kiosks", 0);
+        $maxKiosks = $restaurant->effectiveMaxKiosks();
         if ($maxKiosks !== null) {
             $currentCount = Kiosk::where('restaurant_id', $user->restaurant_id)->count();
             if ($currentCount >= $maxKiosks) {
@@ -86,7 +89,7 @@ class KioskController extends Controller
         }
 
         $designOptions = $request->input('design_options', null);
-        if ($tier === 'basic' && $designOptions) {
+        if ($capsTier === 'basic' && $designOptions) {
             $designOptions = null;
         }
 
@@ -126,11 +129,11 @@ class KioskController extends Controller
 
         $kiosk = Kiosk::where('restaurant_id', $user->restaurant_id)->findOrFail($id);
         $restaurant = Restaurant::withoutGlobalScopes()->find($user->restaurant_id);
-        $tier = $restaurant->tier ?? 'basic';
+        $capsTier = $restaurant->effectiveTierForFeature('kiosks');
 
         $updateData = $request->only(['name', 'design_options', 'require_name', 'payment_terminal_id']);
 
-        if ($tier === 'basic' && isset($updateData['design_options'])) {
+        if ($capsTier === 'basic' && isset($updateData['design_options'])) {
             $updateData['design_options'] = null;
         }
 
@@ -156,9 +159,9 @@ class KioskController extends Controller
         $user = $request->user();
         $kiosk = Kiosk::where('restaurant_id', $user->restaurant_id)->findOrFail($id);
         $restaurant = Restaurant::withoutGlobalScopes()->find($user->restaurant_id);
-        $tier = $restaurant->tier ?? 'basic';
+        $capsTier = $restaurant->effectiveTierForFeature('kiosks');
 
-        $maxTables = $tier === 'enterprise' ? 999 : ($tier === 'pro' ? 10 : 0);
+        $maxTables = $capsTier === 'enterprise' ? 999 : ($capsTier === 'pro' ? 10 : 0);
         $tables = array_unique(array_values($request->tables));
 
         if (count($tables) > $maxTables) {

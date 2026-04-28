@@ -64,6 +64,8 @@ const ADMIN_RULES = [
     [/^\/admin\/pos\/?$/, 'admin_pos'],
     [/^\/admin\/auth-debug\/?$/, 'admin_auth_debug'],
     [/^\/admin\/settings-hub\/?$/, 'admin_settings_hub'],
+    [/^\/admin\/guide\/?$/, 'admin_restaurant_guide'],
+    [/^\/admin\/guide\/install\/?$/, 'admin_restaurant_guide'],
     [/^\/admin\/settings\/?$/, 'admin_user_settings'],
     [/^\/admin\/abandoned-cart-reminders\/?$/, 'admin_abandoned_cart_reminders'],
 ];

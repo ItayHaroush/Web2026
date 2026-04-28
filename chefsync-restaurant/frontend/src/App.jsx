@@ -13,6 +13,7 @@ import CookieConsent from './components/CookieConsent';
 import AnalyticsPublicTracker from './components/AnalyticsPublicTracker';
 import FacebookInAppWarning from './components/FacebookInAppWarning';
 import PWAInstallBanner from './components/PWAInstallBanner';
+import { InstallPromptProvider } from './context/InstallPromptContext';
 import PwaCustomerEngagement from './components/PwaCustomerEngagement';
 import HomePage from './pages/HomePage';
 import MenuPage from './pages/MenuPage';
@@ -49,6 +50,7 @@ import AdminReportsCenter from './pages/admin/AdminReportsCenter';
 import AdminMyHours from './pages/admin/AdminMyHours';
 import AdminDevices from './pages/admin/AdminDevices';
 import AdminSettingsHub from './pages/admin/AdminSettingsHub';
+import AdminRestaurantGuide from './pages/admin/AdminRestaurantGuide';
 import AdminAbandonedCartReminders from './pages/admin/AdminAbandonedCartReminders';
 import SuperAdminDashboard from './pages/super-admin/SuperAdminDashboard';
 import SuperAdminReports from './pages/super-admin/SuperAdminReports';
@@ -402,6 +404,18 @@ function AppRoutes() {
           }
         />
         <Route
+          path="/admin/guide"
+          element={
+            <AdminRoute>
+              <AdminRestaurantGuide />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/guide/install"
+          element={<Navigate to={{ pathname: '/admin/guide', hash: 'install' }} replace />}
+        />
+        <Route
           path="/admin/abandoned-cart-reminders"
           element={
             <AdminRoute>
@@ -606,6 +620,7 @@ function AppRoutes() {
 export default function App() {
   return (
     <Router>
+      <InstallPromptProvider>
       <ThemeProvider>
         <AdminAuthProvider>
           <AdminNotificationProvider>
@@ -634,6 +649,7 @@ export default function App() {
           </AdminNotificationProvider>
         </AdminAuthProvider>
       </ThemeProvider>
+      </InstallPromptProvider>
     </Router>
   );
 }

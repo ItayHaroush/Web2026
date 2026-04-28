@@ -1949,6 +1949,10 @@ class AdminController extends Controller
         $restaurant->payment_failure_grace_days_left = $daysLeftInGrace;
         $restaurant->is_in_grace_period = $restaurant->isInGracePeriod();
         $restaurant->subscription_paused = ! $restaurant->hasAccess();
+        // ימים נותרים בניסיון — מתאים ל-backend (ceil) בהתאם ל-trial_started_at/trial_ends_at
+        if ($restaurant->subscription_status === 'trial') {
+            $restaurant->setAttribute('days_left_in_trial', $restaurant->getDaysLeftInTrial());
+        }
 
         return response()->json([
             'success' => true,
@@ -2792,11 +2796,13 @@ class AdminController extends Controller
             'data' => [
                 'tier' => $restaurant->tier,
                 'subscription_status' => $restaurant->subscription_status,
+                'trial_started_at' => $restaurant->trial_started_at,
                 'trial_ends_at' => $restaurant->trial_ends_at,
                 'subscription_ends_at' => $restaurant->subscription_ends_at,
                 'subscription_plan' => $restaurant->subscription_plan,
                 'has_access' => $restaurant->hasAccess(),
                 'days_left_in_trial' => $restaurant->getDaysLeftInTrial(),
+                'trial_period_total_days' => $restaurant->trial_period_total_days,
                 'days_left_in_subscription' => $restaurant->getDaysLeftInSubscription(),
                 'outstanding_amount' => $subscription?->outstanding_amount,
                 'next_charge_at' => $subscription?->next_charge_at,

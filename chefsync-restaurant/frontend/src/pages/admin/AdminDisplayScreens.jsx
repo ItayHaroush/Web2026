@@ -250,7 +250,7 @@ export default function AdminDisplayScreens({ embedded = false }) {
                         </div>
                     </div>
                     {isManager() && (
-                        <div className="hidden md:flex items-center gap-4">
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 md:gap-4 w-full md:w-auto">
                             <UpgradeBanner requiredTier="enterprise" context="displays" feature="display_screens" variant="inline" />
                             <button
                                 onClick={canCreateMore ? openNew : () => window.open('https://wa.me/972547466508?text=שלום, אני מעוניין בחבילת מסעדה מלאה – מסכי תצוגה נוספים', '_blank')}
@@ -268,7 +268,7 @@ export default function AdminDisplayScreens({ embedded = false }) {
             )}
 
             {embedded && isManager() && (
-                <div className="hidden md:flex items-center justify-end gap-4 mb-6 px-4">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center sm:justify-end gap-4 mb-6 px-4">
                     <UpgradeBanner requiredTier="enterprise" context="displays" feature="display_screens" variant="inline" />
                     <button
                         type="button"

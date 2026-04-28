@@ -450,8 +450,9 @@ class SuperAdminBillingController extends Controller
         $restaurant = Restaurant::findOrFail($id);
         $prices = SuperAdminSettingsController::getPricingArray();
         $tier = $validated['tier'];
+        $trialStartsAt = now();
         $trialDays = (int) ($validated['trial_days'] ?? 60);
-        $trialEndsAt = now()->addDays($trialDays)->endOfDay();
+        $trialEndsAt = $trialStartsAt->copy()->addDays($trialDays)->endOfDay();
 
         DB::beginTransaction();
         try {
@@ -462,6 +463,7 @@ class SuperAdminBillingController extends Controller
                 'subscription_plan'     => null,
                 'tier'                  => $tier,
                 'ai_credits_monthly'    => in_array($tier, ['pro', 'enterprise']) ? ($prices[$tier]['ai_credits'] ?? 500) : 0,
+                'trial_started_at'      => $trialStartsAt,
                 'trial_ends_at'         => $trialEndsAt,
                 'subscription_ends_at'  => null,
                 'last_payment_at'       => null,

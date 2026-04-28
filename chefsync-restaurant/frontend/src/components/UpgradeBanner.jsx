@@ -104,14 +104,15 @@ export default function UpgradeBanner({ variant = 'inline', context = '', requir
 
     // variant === 'inline' (default)
     return (
-        <div className={`flex items-center justify-between gap-3 ${isEnterprise ? 'bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-200' : 'bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200'} border rounded-2xl px-5 py-3`}>
-            <div className="flex items-center gap-3">
-                <ButtonIcon className={isEnterprise ? 'text-purple-500' : 'text-amber-500'} size={16} />
+        <div className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 ${isEnterprise ? 'bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-200' : 'bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200'} border rounded-2xl px-5 py-3`}>
+            <div className="flex items-start gap-3 min-w-0">
+                <ButtonIcon className={`shrink-0 ${isEnterprise ? 'text-purple-500' : 'text-amber-500'}`} size={16} />
                 <p className="text-sm font-bold text-gray-700">{message}</p>
             </div>
             <button
+                type="button"
                 onClick={handleClick}
-                className={`${isEnterprise ? 'bg-purple-500 hover:bg-purple-600' : 'bg-amber-500 hover:bg-amber-600'} text-white px-4 py-2 rounded-xl font-black text-xs transition-all whitespace-nowrap`}
+                className={`${isEnterprise ? 'bg-purple-500 hover:bg-purple-600' : 'bg-amber-500 hover:bg-amber-600'} text-white px-4 py-2 rounded-xl font-black text-xs transition-all whitespace-nowrap w-full sm:w-auto shrink-0 text-center`}
             >
                 {buttonText}
             </button>

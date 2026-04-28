@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
 import GlobalErrorBoundary from './GlobalErrorBoundary.jsx'
+import { getFirebaseMessagingSwUrl } from './utils/deployVersion.js'
 
 // ✅ Signal Init
 window.REACT_LOADED = true;
@@ -21,7 +22,7 @@ const isFacebookBrowser = () => {
 if ('serviceWorker' in navigator && !isFacebookBrowser()) {
   window.addEventListener('load', () => {
     navigator.serviceWorker
-      .register('/firebase-messaging-sw.js')
+      .register(getFirebaseMessagingSwUrl())
       .then((reg) => {
         const url = reg?.active?.scriptURL || reg?.installing?.scriptURL || reg?.waiting?.scriptURL;
         console.log('[SW] registered', url || '(no scriptURL yet)');

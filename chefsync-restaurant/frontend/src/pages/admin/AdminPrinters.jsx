@@ -346,7 +346,7 @@ export default function AdminPrinters({ embedded = false }) {
                         </div>
                     </div>
                     {isManager() && (
-                        <div className="hidden md:flex items-center gap-4">
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 md:gap-4 w-full md:w-auto">
                             {activeTab === 'printers' && !canCreateMorePrinters && (
                                 <UpgradeBanner requiredTier="enterprise" context="printers" feature="printers" variant="inline" />
                             )}

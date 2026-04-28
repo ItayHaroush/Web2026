@@ -22,6 +22,7 @@ class Restaurant extends Model
     protected $appends = [
         'is_open_now',
         'active_holiday_info',
+        'trial_period_total_days',
     ];
 
     protected $fillable = [
@@ -58,6 +59,7 @@ class Restaurant extends Model
         'operating_hours',
         'subscription_status',
         'trial_ends_at',
+        'trial_started_at',
         'subscription_ends_at',
         'subscription_plan',
         'tier', // basic, pro, enterprise
@@ -131,6 +133,7 @@ class Restaurant extends Model
         'common_allergens' => 'array',  // JSON array של אלרגנים
         'operating_hours' => 'array',
         'trial_ends_at' => 'datetime',
+        'trial_started_at' => 'datetime',
         'subscription_ends_at' => 'datetime',
         'last_payment_at' => 'datetime',
         'next_payment_at' => 'datetime',
@@ -365,6 +368,44 @@ class Restaurant extends Model
     }
 
     /**
+     * Tier לחישוב יכולות/מגבלות לפי תכנית + דריסות סופר־אדמין (feature = full → כמו Enterprise).
+     *
+     * @param  string  $featureKey  מפתח מ־tier_features (למשל display_screens, kiosks, printers)
+     */
+    public function effectiveTierForFeature(string $featureKey): string
+    {
+        $actual = $this->tier ?? 'basic';
+        $resolved = $this->getResolvedFeatures();
+
+        if (($resolved[$featureKey] ?? 'demo') === 'full') {
+            return 'enterprise';
+        }
+
+        return $actual;
+    }
+
+    public function effectiveMaxScreens(): ?int
+    {
+        $t = $this->effectiveTierForFeature('display_screens');
+
+        return config("tier_features.tier_limits.{$t}.max_screens");
+    }
+
+    public function effectiveMaxKiosks(): ?int
+    {
+        $t = $this->effectiveTierForFeature('kiosks');
+
+        return config("tier_features.tier_limits.{$t}.max_kiosks");
+    }
+
+    public function effectiveMaxPrinters(): ?int
+    {
+        $t = $this->effectiveTierForFeature('printers');
+
+        return config("tier_features.tier_limits.{$t}.max_printers");
+    }
+
+    /**
      * בדיקה האם המסעדה בתקופת ניסיון
      */
     public function isOnTrial(): bool
@@ -424,11 +465,40 @@ class Restaurant extends Model
      */
     public function getDaysLeftInTrial(): int
     {
-        if (!$this->isOnTrial()) {
+        if (!$this->isOnTrial() || ! $this->trial_ends_at) {
             return 0;
         }
 
-        return max(0, now()->diffInDays($this->trial_ends_at, false));
+        $seconds = $this->trial_ends_at->getTimestamp() - now()->getTimestamp();
+
+        return max(0, (int) ceil($seconds / 86400));
+    }
+
+    /**
+     * אורך תקפת הניסיון בימים (מנקודת תחילה עד סיום) — לתצוגת מונה.
+     */
+    public function getTrialPeriodTotalDaysAttribute(): ?int
+    {
+        if (! $this->trial_ends_at) {
+            return null;
+        }
+
+        if ($this->trial_started_at) {
+            $seconds = max(0, $this->trial_ends_at->getTimestamp() - $this->trial_started_at->getTimestamp());
+
+            return max(1, (int) ceil($seconds / 86400));
+        }
+
+        // legacy: בלי trial_started_at — הערכה ממועד הרשמה או ברירת מחדל מההגדרות
+        if ($this->created_at) {
+            $seconds = max(0, $this->trial_ends_at->getTimestamp() - $this->created_at->getTimestamp());
+
+            return max(1, (int) ceil($seconds / 86400));
+        }
+
+        $fallback = (int) (\App\Models\SystemSetting::get('trial_duration_days') ?? 60);
+
+        return max(1, $fallback);
     }
 
     /**
