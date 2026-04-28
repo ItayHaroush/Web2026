@@ -1,6 +1,7 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import AdminLayout from '../../layouts/AdminLayout';
 import { useAdminAuth } from '../../context/AdminAuthContext';
+import { useInstallPrompt } from '../../context/InstallPromptContext';
 import {
     FaCog,
     FaStore,
@@ -17,6 +18,8 @@ import {
     FaTv,
     FaTabletAlt,
     FaPlus,
+    FaDownload,
+    FaBookOpen,
 } from 'react-icons/fa';
 
 function SettingCard({ icon, title, description, to, badge }) {
@@ -48,6 +51,16 @@ function SettingCard({ icon, title, description, to, badge }) {
 
 export default function AdminSettingsHub() {
     const { isManager, isOwner } = useAdminAuth();
+    const navigate = useNavigate();
+    const { canInstall, isStandalone, promptInstall } = useInstallPrompt();
+
+    const handleQuickPwaInstall = async () => {
+        if (canInstall) {
+            await promptInstall();
+        } else {
+            navigate({ pathname: '/admin/guide', hash: 'install' });
+        }
+    };
 
     const settings = [
         {
@@ -99,6 +112,13 @@ export default function AdminSettingsHub() {
             description: 'תצוגה מקדימה של התפריט כפי שנראה ללקוח.',
             to: '/admin/simulator',
             show: isManager(),
+        },
+        {
+            icon: <FaBookOpen size={20} />,
+            title: 'הדרכה והתקנה',
+            description: 'מדריך מלא: התקנת אפליקציה, הזמנות, תפריט, משלוחים, מכשירים ועוד.',
+            to: '/admin/guide',
+            show: true,
         },
         {
             icon: <FaUserCog size={20} />,
@@ -158,6 +178,21 @@ export default function AdminSettingsHub() {
                                 <FaPlus size={10} className="opacity-60" />
                                 קיוסק
                             </Link>
+                            {!isStandalone && (
+                                <button
+                                    type="button"
+                                    onClick={handleQuickPwaInstall}
+                                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-emerald-200 text-sm font-black text-emerald-800 hover:bg-emerald-50 hover:border-emerald-400 transition-colors"
+                                    title={
+                                        canInstall
+                                            ? 'התקנת הניהול כאפליקציה מהמסך הראשי'
+                                            : 'עמוד הדרכה והתקנה'
+                                    }
+                                >
+                                    <FaDownload size={14} />
+                                    התקנה מהירה
+                                </button>
+                            )}
                         </div>
                     </div>
                 )}

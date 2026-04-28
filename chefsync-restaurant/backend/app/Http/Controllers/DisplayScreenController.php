@@ -29,6 +29,7 @@ class DisplayScreenController extends Controller
         $user = $request->user();
         $restaurant = Restaurant::withoutGlobalScopes()->find($user->restaurant_id);
         $tier = $restaurant->tier ?? 'basic';
+        $capsTier = $restaurant->effectiveTierForFeature('display_screens');
 
         $screens = DisplayScreen::where('restaurant_id', $user->restaurant_id)
             ->orderBy('created_at', 'desc')
@@ -46,17 +47,17 @@ class DisplayScreenController extends Controller
                 'screens' => $screens,
                 'tier' => $tier,
                 'limits' => [
-                    'max_screens' => config("tier_features.tier_limits.{$tier}.max_screens", 0),
-                    'carousel_allowed' => in_array($tier, ['pro', 'enterprise']),
-                    'branding_required' => !in_array($tier, ['pro', 'enterprise']),
-                    'allowed_presets' => in_array($tier, ['pro', 'enterprise']) ? self::ALL_PRESETS : self::BASIC_PRESETS,
-                    'promotions_allowed' => in_array($tier, ['pro', 'enterprise']),
-                    'badges_allowed' => in_array($tier, ['pro', 'enterprise']),
-                    'logo_overlay_allowed' => in_array($tier, ['pro', 'enterprise']),
-                    'fonts_allowed' => in_array($tier, ['pro', 'enterprise']),
-                    'custom_background_allowed' => in_array($tier, ['pro', 'enterprise']),
-                    'widgets_allowed' => in_array($tier, ['pro', 'enterprise']),
-                    'layout_controls_allowed' => in_array($tier, ['pro', 'enterprise']),
+                    'max_screens' => $restaurant->effectiveMaxScreens(),
+                    'carousel_allowed' => in_array($capsTier, ['pro', 'enterprise']),
+                    'branding_required' => !in_array($capsTier, ['pro', 'enterprise']),
+                    'allowed_presets' => in_array($capsTier, ['pro', 'enterprise']) ? self::ALL_PRESETS : self::BASIC_PRESETS,
+                    'promotions_allowed' => in_array($capsTier, ['pro', 'enterprise']),
+                    'badges_allowed' => in_array($capsTier, ['pro', 'enterprise']),
+                    'logo_overlay_allowed' => in_array($capsTier, ['pro', 'enterprise']),
+                    'fonts_allowed' => in_array($capsTier, ['pro', 'enterprise']),
+                    'custom_background_allowed' => in_array($capsTier, ['pro', 'enterprise']),
+                    'widgets_allowed' => in_array($capsTier, ['pro', 'enterprise']),
+                    'layout_controls_allowed' => in_array($capsTier, ['pro', 'enterprise']),
                 ],
             ],
         ]);
@@ -125,10 +126,10 @@ class DisplayScreenController extends Controller
 
         $user = $request->user();
         $restaurant = Restaurant::withoutGlobalScopes()->find($user->restaurant_id);
-        $tier = $restaurant->tier ?? 'basic';
+        $capsTier = $restaurant->effectiveTierForFeature('display_screens');
 
-        // בדיקת מגבלת מסכים
-        $maxScreens = config("tier_features.tier_limits.{$tier}.max_screens", 0);
+        // בדיקת מגבלת מסכים (כולל דריסת full מסופר־אדמין → מגבלות Enterprise)
+        $maxScreens = $restaurant->effectiveMaxScreens();
         if ($maxScreens !== null) {
             $currentCount = DisplayScreen::where('restaurant_id', $user->restaurant_id)->count();
             if ($currentCount >= $maxScreens) {
@@ -139,24 +140,24 @@ class DisplayScreenController extends Controller
             }
         }
 
-        // בייסיק: רק סטטי
-        if ($tier === 'basic' && $request->display_type === 'rotating') {
+        // בייסיק ללא דריסה: רק סטטי
+        if ($capsTier === 'basic' && $request->display_type === 'rotating') {
             return response()->json([
                 'success' => false,
                 'message' => 'תצוגת קרוסלה זמינה רק בתוכנית Pro ומעלה.',
             ], 403);
         }
 
-        // בדיקת פריסטים לפי tier
+        // בדיקת פריסטים לפי tier אפקטיבי (כולל full)
         $preset = $request->input('design_preset', 'classic');
-        $allowedPresets = in_array($tier, ['pro', 'enterprise']) ? self::ALL_PRESETS : self::BASIC_PRESETS;
+        $allowedPresets = in_array($capsTier, ['pro', 'enterprise']) ? self::ALL_PRESETS : self::BASIC_PRESETS;
         if (!in_array($preset, $allowedPresets)) {
             $preset = 'classic';
         }
 
         // design_options - הסר פיצ'רי Pro מבייסיק
         $designOptions = $request->input('design_options', null);
-        if ($tier === 'basic' && $designOptions) {
+        if ($capsTier === 'basic' && $designOptions) {
             unset($designOptions['logo_overlay'], $designOptions['promotion']);
             unset($designOptions['fonts']);
             unset($designOptions['layout']);
@@ -183,7 +184,7 @@ class DisplayScreenController extends Controller
             'content_mode' => $request->input('content_mode', 'auto_available'),
             'refresh_interval' => $request->input('refresh_interval', 30),
             'rotation_speed' => $request->input('rotation_speed', 5),
-            'show_branding' => !in_array($tier, ['pro', 'enterprise']),
+            'show_branding' => !in_array($capsTier, ['pro', 'enterprise']),
             'is_active' => true,
         ]);
 
@@ -261,10 +262,10 @@ class DisplayScreenController extends Controller
         $user = $request->user();
         $screen = DisplayScreen::where('restaurant_id', $user->restaurant_id)->findOrFail($id);
         $restaurant = Restaurant::withoutGlobalScopes()->find($user->restaurant_id);
-        $tier = $restaurant->tier ?? 'basic';
+        $capsTier = $restaurant->effectiveTierForFeature('display_screens');
 
-        // בייסיק: רק סטטי
-        if ($tier === 'basic' && $request->input('display_type') === 'rotating') {
+        // בייסיק ללא דריסה: רק סטטי
+        if ($capsTier === 'basic' && $request->input('display_type') === 'rotating') {
             return response()->json([
                 'success' => false,
                 'message' => 'תצוגת קרוסלה זמינה רק בתוכנית Pro ומעלה.',
@@ -273,7 +274,7 @@ class DisplayScreenController extends Controller
 
         // בייסיק: רק פריסטים בסיסיים
         if ($request->has('design_preset')) {
-            $allowedPresets = in_array($tier, ['pro', 'enterprise']) ? self::ALL_PRESETS : self::BASIC_PRESETS;
+            $allowedPresets = in_array($capsTier, ['pro', 'enterprise']) ? self::ALL_PRESETS : self::BASIC_PRESETS;
             if (!in_array($request->design_preset, $allowedPresets)) {
                 $request->merge(['design_preset' => 'classic']);
             }
@@ -291,7 +292,7 @@ class DisplayScreenController extends Controller
         ]);
 
         // design_options - הסר פיצ'רי Pro מבייסיק
-        if ($tier === 'basic' && isset($updateData['design_options'])) {
+        if ($capsTier === 'basic' && isset($updateData['design_options'])) {
             unset($updateData['design_options']['logo_overlay'], $updateData['design_options']['promotion']);
             unset($updateData['design_options']['fonts']);
             unset($updateData['design_options']['layout']);
@@ -310,7 +311,7 @@ class DisplayScreenController extends Controller
         }
 
         // כפה ברנדינג בבייסיק
-        $updateData['show_branding'] = !in_array($tier, ['pro', 'enterprise']);
+        $updateData['show_branding'] = !in_array($capsTier, ['pro', 'enterprise']);
 
         $screen->update($updateData);
 
@@ -394,12 +395,12 @@ class DisplayScreenController extends Controller
         $user = $request->user();
         $screen = DisplayScreen::where('restaurant_id', $user->restaurant_id)->findOrFail($id);
         $restaurant = Restaurant::withoutGlobalScopes()->find($user->restaurant_id);
-        $tier = $restaurant->tier ?? 'basic';
+        $capsTier = $restaurant->effectiveTierForFeature('display_screens');
 
         $syncData = [];
         foreach ($request->items as $item) {
             $pivotData = ['sort_order' => $item['sort_order']];
-            if (!empty($item['badge']) && $tier === 'pro') {
+            if (!empty($item['badge']) && in_array($capsTier, ['pro', 'enterprise'], true)) {
                 $pivotData['badge'] = json_encode($item['badge']);
             }
             $syncData[$item['menu_item_id']] = $pivotData;

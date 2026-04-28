@@ -155,10 +155,10 @@ export default function SuperAdminReports() {
             const headers = getAuthHeaders();
             await api.post(`/super-admin/billing/restaurants/${activateModal.id}/reset-trial`, {
                 tier: activateForm.tier,
-                trial_days: activateForm.trial_days ?? 14,
+                trial_days: activateForm.trial_days ?? 60,
                 note: activateForm.note,
             }, { headers });
-            toast.success(`המסעדה הוחזרה לתקופת ניסיון (${activateForm.trial_days ?? 14} ימים)`);
+            toast.success(`המסעדה הוחזרה לתקופת ניסיון (${activateForm.trial_days ?? 60} ימים)`);
             setActivateModal(null);
             fetchData();
         } catch (error) {
@@ -556,7 +556,7 @@ export default function SuperAdminReports() {
                                                                     onClick={() => {
                                                                         setActivateModal(r);
                                                                         const hasCustom = r.monthly_price && r.monthly_price != 600;
-                                                                        setActivateForm({ tier: r.tier || 'basic', plan_type: r.subscription_plan || 'monthly', note: '', record_payment: false, payment_reference: '', trial_days: 14, free_months: 1, free_note: '', custom_price_enabled: !!hasCustom, custom_monthly_price: hasCustom ? r.monthly_price : '', custom_yearly_price: r.yearly_price && r.yearly_price != 5000 ? r.yearly_price : '', abandoned_cart_package_size: '', abandoned_cart_package_amount: '', abandoned_cart_package_custom: false, setup_fee: '' });
+                                                                        setActivateForm({ tier: r.tier || 'basic', plan_type: r.subscription_plan || 'monthly', note: '', record_payment: false, payment_reference: '', trial_days: 60, free_months: 1, free_note: '', custom_price_enabled: !!hasCustom, custom_monthly_price: hasCustom ? r.monthly_price : '', custom_yearly_price: r.yearly_price && r.yearly_price != 5000 ? r.yearly_price : '', abandoned_cart_package_size: '', abandoned_cart_package_amount: '', abandoned_cart_package_custom: false, setup_fee: '' });
                                                                         setWizardStep(1);
                                                                         setWizardAction('activate');
                                                                     }}
@@ -569,7 +569,7 @@ export default function SuperAdminReports() {
                                                             <button
                                                                 onClick={() => {
                                                                     setActivateModal(r);
-                                                                    setActivateForm({ tier: r.tier || 'basic', plan_type: r.subscription_plan || 'monthly', note: '', record_payment: false, payment_reference: '', trial_days: 14, free_months: 1, free_note: '', custom_price_enabled: false, custom_monthly_price: '', custom_yearly_price: '', abandoned_cart_package_size: '', abandoned_cart_package_amount: '', abandoned_cart_package_custom: false, setup_fee: '' });
+                                                                    setActivateForm({ tier: r.tier || 'basic', plan_type: r.subscription_plan || 'monthly', note: '', record_payment: false, payment_reference: '', trial_days: 60, free_months: 1, free_note: '', custom_price_enabled: false, custom_monthly_price: '', custom_yearly_price: '', abandoned_cart_package_size: '', abandoned_cart_package_amount: '', abandoned_cart_package_custom: false, setup_fee: '' });
                                                                     setWizardStep(1);
                                                                     setWizardAction('activate');
                                                                 }}

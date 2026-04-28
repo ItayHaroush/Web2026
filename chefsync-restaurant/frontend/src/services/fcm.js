@@ -1,5 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { deleteToken, getMessaging, getToken, onMessage } from 'firebase/messaging';
+import { getFirebaseMessagingSwUrl } from '../utils/deployVersion.js';
 
 // ⚠️ CRITICAL: Detect Facebook/Instagram browsers that don't support Firebase
 const isFacebookBrowser = () => {
@@ -87,7 +88,7 @@ export async function requestCustomerFcmToken() {
 
     let swReg;
     try {
-        swReg = await navigator.serviceWorker.register('/firebase-messaging-sw.js', { scope: '/' });
+        swReg = await navigator.serviceWorker.register(getFirebaseMessagingSwUrl(), { scope: '/' });
     } catch (err) {
         console.error('[FCM customer] SW register failed', err);
         throw err;
@@ -125,7 +126,7 @@ export async function getCustomerFcmTokenIfPermitted() {
 
     let swReg;
     try {
-        swReg = await navigator.serviceWorker.register('/firebase-messaging-sw.js', { scope: '/' });
+        swReg = await navigator.serviceWorker.register(getFirebaseMessagingSwUrl(), { scope: '/' });
     } catch (err) {
         console.error('[FCM customer] SW register failed', err);
         return null;
@@ -164,7 +165,7 @@ export async function getAdminFcmTokenIfPermitted() {
 
     let swReg;
     try {
-        swReg = await navigator.serviceWorker.register('/firebase-messaging-sw.js', { scope: '/' });
+        swReg = await navigator.serviceWorker.register(getFirebaseMessagingSwUrl(), { scope: '/' });
     } catch (err) {
         console.error('[FCM admin] SW register failed', err);
         return null;
@@ -197,7 +198,7 @@ export async function requestFcmToken() {
     // Register and wait until the SW is active to avoid "no active Service Worker" errors
     let swReg;
     try {
-        swReg = await navigator.serviceWorker.register('/firebase-messaging-sw.js', { scope: '/' });
+        swReg = await navigator.serviceWorker.register(getFirebaseMessagingSwUrl(), { scope: '/' });
     } catch (err) {
         console.error('[FCM] SW register failed', err);
         throw err;

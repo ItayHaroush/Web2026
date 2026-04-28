@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "bump-version": "node scripts/bump-deploy-version.mjs",
     "build": "vite build",
+    "build:deploy": "npm run bump-version && npm run build",
     "lint": "eslint .",
     "preview": "vite preview"
   },

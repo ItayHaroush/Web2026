@@ -201,9 +201,17 @@ class SuperAdminSettingsController extends Controller
             $tiers = array_replace_recursive(self::$defaultPricing, $tiers);
         }
 
+        $trialDurationDays = (int) (\App\Models\SystemSetting::get('trial_duration_days') ?? 60);
+        $ordersLimitEnabled = \App\Models\SystemSetting::get('orders_limit_enabled') !== false;
+        $basicTrialOrdersCap = config('tier_features.tier_limits.basic.orders_limit_trial');
+
         return response()->json([
             'success' => true,
-            'data' => $tiers,
+            'data' => array_merge($tiers, [
+                'trial_duration_days' => $trialDurationDays,
+                'orders_limit_enabled' => $ordersLimitEnabled,
+                'basic_trial_orders_limit' => $basicTrialOrdersCap,
+            ]),
         ]);
     }
 

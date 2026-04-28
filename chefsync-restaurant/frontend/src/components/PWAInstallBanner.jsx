@@ -1,71 +1,42 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FaDownload, FaTimes } from 'react-icons/fa';
+import { useInstallPrompt } from '../context/InstallPromptContext';
 
 /**
- * PWA Install Banner
- * מוצג לפי אסטרטגיית טיימינג:
- * - לא בביקור ראשון
- * - אחרי הזמנה ראשונה: באנר קטן
- * - אחרי 3 הזמנות: interstitial
- * - מקסימום 3 הצגות, כיבוד דיסמיס
+ * PWA Install Banner — משותף עם InstallPromptProvider (כפתור מפורש בהגדרות משתמש).
  */
 
 const DISMISS_KEY = 'pwa_install_dismissed_count';
 const MAX_DISMISSALS = 3;
 
 export default function PWAInstallBanner() {
-    const [installPrompt, setInstallPrompt] = useState(null);
+    const { canInstall, isIos, promptInstall } = useInstallPrompt();
     const [showBanner, setShowBanner] = useState(false);
-    const [isIos, setIsIos] = useState(false);
 
     useEffect(() => {
-        // iOS detection — no beforeinstallprompt
-        const ua = navigator.userAgent;
-        const isIosDevice = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
-        setIsIos(isIosDevice);
+        if (!canInstall || isIos) return;
 
-        // Check dismissals
         const dismissed = parseInt(localStorage.getItem(DISMISS_KEY) || '0', 10);
         if (dismissed >= MAX_DISMISSALS) return;
 
-        // Check if already installed
-        if (window.matchMedia('(display-mode: standalone)').matches) return;
+        const t = setTimeout(() => setShowBanner(true), 2000);
+        return () => clearTimeout(t);
+    }, [canInstall, isIos]);
 
-        const handler = (e) => {
-            e.preventDefault();
-            setInstallPrompt(e);
-            // Show after short delay (don't show instantly)
-            setTimeout(() => setShowBanner(true), 2000);
-        };
-
-        window.addEventListener('beforeinstallprompt', handler);
-        return () => window.removeEventListener('beforeinstallprompt', handler);
-    }, []);
-
-    const handleInstall = useCallback(async () => {
-        if (!installPrompt) return;
-
-        try {
-            await installPrompt.prompt();
-            const { outcome } = await installPrompt.userChoice;
-            if (outcome === 'accepted') {
-                setShowBanner(false);
-                setInstallPrompt(null);
-            }
-        } catch (err) {
-            console.error('Install prompt failed:', err);
+    const handleInstall = async () => {
+        const { outcome } = await promptInstall();
+        if (outcome === 'accepted') {
+            setShowBanner(false);
         }
-    }, [installPrompt]);
+    };
 
-    const handleDismiss = useCallback(() => {
+    const handleDismiss = () => {
         setShowBanner(false);
         const current = parseInt(localStorage.getItem(DISMISS_KEY) || '0', 10);
         localStorage.setItem(DISMISS_KEY, (current + 1).toString());
-    }, []);
+    };
 
-    if (!showBanner) return null;
-    // Don't show on iOS (no install prompt support — would need manual instructions)
-    if (isIos) return null;
+    if (!showBanner || !canInstall || isIos) return null;
 
     return (
         <div className="fixed bottom-0 left-0 right-0 z-50 p-4 animate-slide-up">
@@ -85,12 +56,14 @@ export default function PWAInstallBanner() {
 
                 <div className="flex items-center gap-2 flex-shrink-0">
                     <button
+                        type="button"
                         onClick={handleInstall}
                         className="bg-brand-primary text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-brand-secondary transition"
                     >
                         התקן
                     </button>
                     <button
+                        type="button"
                         onClick={handleDismiss}
                         className="text-gray-400 hover:text-gray-600 transition p-1"
                         aria-label="סגור"

@@ -263,8 +263,10 @@ class RestaurantController extends Controller
 
             // דמו ציבורי נחסם; מסעדה חדשה לפני אישור עדיין נגישה לבעלים/שיתוף (ללא אינדוקס ב-SEO).
             $isPreviewMode = $request->header('X-Preview-Mode') === 'true';
+            // בסביבת local לא חוסמים דמו — נוח לאב-טיפוס בלי DB / מצב preview.
+            $allowPublicDemo = app()->environment('local');
 
-            if (!$isPreviewMode && ($restaurant->is_demo ?? false)) {
+            if (!$isPreviewMode && !$allowPublicDemo && ($restaurant->is_demo ?? false)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'המסעדה לא זמינה',

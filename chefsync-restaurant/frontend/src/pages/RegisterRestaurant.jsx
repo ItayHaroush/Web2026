@@ -11,6 +11,9 @@ import { GiKebabSpit, GiChefToque } from 'react-icons/gi';
 import TakeEatIcon from '../images/TakeEatIcon.jpeg';
 
 const DEFAULT_PRICING = {
+    trial_duration_days: 60,
+    orders_limit_enabled: true,
+    basic_trial_orders_limit: 50,
     basic: { monthly: 299, yearly: 2990, ai_credits: 1, trial_ai_credits: 1 },
     pro: { monthly: 449, yearly: 4490, ai_credits: 500, trial_ai_credits: 50 },
     enterprise: { monthly: 0, yearly: 0, ai_credits: 1000, contactOnly: true },
@@ -318,6 +321,8 @@ export default function RegisterRestaurant() {
             ? pricing[selectedTier]?.yearly
             : pricing[selectedTier]?.monthly;
 
+    const configuredTrialDays = Math.max(1, parseInt(String(pricing?.trial_duration_days ?? 60), 10) || 60);
+
     // Animation classes
     const getSlideClasses = () => {
         if (!isAnimating) return 'translate-x-0 opacity-100';
@@ -340,7 +345,9 @@ export default function RegisterRestaurant() {
                 {/* Header */}
                 <div className="text-center mb-8">
                     <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">הצטרפו ל-TakeEat</h1>
-                    <p className="text-gray-500 text-lg">60 יום ניסיון חינם. ללא כרטיס אשראי.</p>
+                    <p className="text-gray-500 text-lg">
+                        {configuredTrialDays} יום ניסיון חינם (לפי הגדרות המערכת). ללא כרטיס אשראי.
+                    </p>
                 </div>
 
                 {/* Progress Stepper */}
@@ -358,6 +365,7 @@ export default function RegisterRestaurant() {
                                     selectedTier={selectedTier}
                                     setSelectedTier={setSelectedTier}
                                     pricing={pricing}
+                                    configuredTrialDays={configuredTrialDays}
                                     form={form}
                                     setForm={setForm}
                                     stepErrors={stepErrors}
@@ -419,6 +427,7 @@ export default function RegisterRestaurant() {
                                 cities={cities}
                                 selectedTier={selectedTier}
                                 pricing={pricing}
+                                configuredTrialDays={configuredTrialDays}
                                 currentPrice={currentPrice}
                                 logoPreview={logoPreview}
                                 loading={loading}
@@ -587,7 +596,7 @@ function ProgressStepper({ currentStep }) {
 /* ========================================
    Step 1: Plan Selection
 ======================================== */
-function StepPlan({ selectedTier, setSelectedTier, pricing, form, setForm, stepErrors, onNext }) {
+function StepPlan({ selectedTier, setSelectedTier, pricing, configuredTrialDays, form, setForm, stepErrors, onNext }) {
     const isEnterprise = selectedTier === 'enterprise';
 
     return (
@@ -595,7 +604,8 @@ function StepPlan({ selectedTier, setSelectedTier, pricing, form, setForm, stepE
             <div className="text-center mb-8">
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">בחרו את התכנית המתאימה למסעדה שלכם</h2>
                 <p className="text-gray-500 max-w-xl mx-auto">
-                    כל התכניות כוללות 60 יום ניסיון חינם. התחילו לקבל הזמנות תוך דקות, שדרגו בכל רגע.
+                    כל התכניות כוללות {configuredTrialDays} יום ניסיון חינם (לפי הגדרות הפלטפורמה). התחילו לקבל הזמנות תוך
+                    דקות, שדרגו בכל רגע.
                 </p>
             </div>
 
@@ -603,7 +613,9 @@ function StepPlan({ selectedTier, setSelectedTier, pricing, form, setForm, stepE
             <div className="flex justify-center mb-6">
                 <div className="inline-flex items-center gap-2 bg-green-50 border border-green-200 rounded-full px-5 py-2">
                     <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                    <span className="text-green-700 font-semibold text-sm">60 יום ניסיון חינם - ללא התחייבות</span>
+                    <span className="text-green-700 font-semibold text-sm">
+                        {configuredTrialDays} יום ניסיון חינם - ללא התחייבות
+                    </span>
                 </div>
             </div>
 
@@ -948,13 +960,16 @@ function StepOwnerDetails({ form, handleChange, handleSendCode, codeSending, ste
 /* ========================================
    Step 4: Summary & Submit
 ======================================== */
-function StepSummary({ form, cities, selectedTier, pricing, currentPrice, logoPreview, loading, stepErrors, agreedTerms, setAgreedTerms, handleSubmit, onBack, goToStep }) {
+function StepSummary({ form, cities, selectedTier, pricing, configuredTrialDays, currentPrice, logoPreview, loading, stepErrors, agreedTerms, setAgreedTerms, handleSubmit, onBack, goToStep }) {
     const tierLabels = { basic: 'אתר הזמנות', pro: 'ניהול חכם', enterprise: 'מסעדה מלאה' };
     const typeLabels = { pizza: 'פיצרייה', shawarma: 'שווארמה / פלאפל', burger: 'המבורגר', bistro: 'ביסטרו / שף', catering: 'קייטרינג', general: 'כללי' };
     const isEnterprise = selectedTier === 'enterprise';
     const cityLabel = (cities || []).find(
         (x) => x.name === form.city || x.hebrew_name === form.city
     )?.hebrew_name || form.city;
+
+    const ordersLimitEnabled = pricing?.orders_limit_enabled !== false;
+    const basicCap = pricing?.basic_trial_orders_limit;
 
     return (
         <div className="p-6 md:p-10">
@@ -1010,8 +1025,18 @@ function StepSummary({ form, cities, selectedTier, pricing, currentPrice, logoPr
                 {!isEnterprise && (
                     <div className="bg-green-50 border border-green-200 rounded-xl p-4">
                         <p className="text-green-700 font-semibold text-sm">ללא חיוב מיידי</p>
-                        <p className="text-green-600 text-xs mt-1">
-                            60 יום ניסיון חינם או 50 הזמנות ראשונות. ניתן לשלם ולנעול מחיר בכל רגע.
+                        <p className="text-green-600 text-xs mt-1 leading-relaxed">
+                            {configuredTrialDays} ימי ניסיון חינם לפי הגדרות תקפת הניסיון במערכת.
+                            {ordersLimitEnabled && typeof basicCap === 'number' ? (
+                                <>
+                                    {' '}
+                                    בחבילת Basic בלבד עשויה לחול מגבלת תדירות (עד {basicCap} הזמנות בחודש בזמן הניסיון) רק כשהגבלת ההזמנות פועלת
+                                    בשירות.
+                                </>
+                            ) : (
+                                <> ללא מגבלת כמות הזמנות בשלב הניסיון לפי המצב הנוכחי במערכת.</>
+                            )}{' '}
+                            ניתן לשלם ולנעול מחיר בכל רגע.
                         </p>
                     </div>
                 )}
@@ -1062,7 +1087,7 @@ function StepSummary({ form, cities, selectedTier, pricing, currentPrice, logoPr
                     ) : (
                         <>
                             <FaCheck />
-                            <span>{isEnterprise ? 'שלח בקשת הצטרפות' : 'סיום הרשמה — התחלת 60 יום ניסיון'}</span>
+                            <span>{isEnterprise ? 'שלח בקשת הצטרפות' : `סיום הרשמה — התחלת ${configuredTrialDays} יום ניסיון`}</span>
                         </>
                     )}
                 </button>

@@ -98,7 +98,8 @@ class RegisterRestaurantController extends Controller
         $monthlyFeeForTracking = $isYearly ? round($yearlyPrice / 12, 2) : $monthlyPrice;
 
         $trialDays = (int) (\App\Models\SystemSetting::get('trial_duration_days') ?? 60);
-        $trialEndsAt = now()->addDays($trialDays)->endOfDay();
+        $trialStartsAt = now();
+        $trialEndsAt = $trialStartsAt->copy()->addDays($trialDays)->endOfDay();
         $planDurationEnd = $isYearly
             ? $trialEndsAt->copy()->addYear()
             : $trialEndsAt->copy()->addMonth();
@@ -157,6 +158,7 @@ class RegisterRestaurantController extends Controller
                 'tier' => $tier,
                 'ai_credits_monthly' => $aiCreditsMonthly,
                 'subscription_status' => $subscriptionStatus,
+                'trial_started_at' => $subscriptionStatus === 'trial' ? $trialStartsAt : null,
                 'trial_ends_at' => $trialEndsAt,
                 'subscription_plan' => $isYearly ? 'yearly' : 'monthly',
                 'subscription_ends_at' => $subscriptionStatus === 'active' ? $planDurationEnd : $trialEndsAt,

@@ -37,9 +37,6 @@ export default function AdminLayout({ children }) {
     const [subscriptionData, setSubscriptionData] = useState(null);
     const [pendingHolidays, setPendingHolidays] = useState([]);
     const [showHolidayModal, setShowHolidayModal] = useState(false);
-    const [holidayMinimized, setHolidayMinimized] = useState(
-        () => sessionStorage.getItem('holidayDismissedSession') === '1'
-    );
     const [alertsOpen, setAlertsOpen] = useState(false);
     const { user, logout, isOwner, isManager, getAuthHeaders, impersonating, isSuperAdmin, hasPosAccess } = useAdminAuth();
     const { restaurantStatus, setRestaurantStatus, setSubscriptionInfo } = useRestaurantStatus();
@@ -81,7 +78,10 @@ export default function AdminLayout({ children }) {
                     // שמור נתוני subscription לתצוגת Trial Banner + Payment Failed Banner
                     setSubscriptionData({
                         subscription_status: restaurant.subscription_status,
+                        trial_started_at: restaurant.trial_started_at,
                         trial_ends_at: restaurant.trial_ends_at,
+                        trial_period_total_days: restaurant.trial_period_total_days,
+                        days_left_in_trial: typeof restaurant.days_left_in_trial === 'number' ? restaurant.days_left_in_trial : null,
                         tier: restaurant.tier,
                         subscription_plan: restaurant.subscription_plan,
                         payment_failed_at: restaurant.payment_failed_at,
@@ -126,7 +126,6 @@ export default function AdminLayout({ children }) {
                 // פתח מלא רק אם לא דחה בסשן הנוכחי
                 if (unanswered.length > 0 && sessionStorage.getItem('holidayDismissedSession') !== '1') {
                     setShowHolidayModal(true);
-                    setHolidayMinimized(false);
                 }
             } catch (e) {
                 // silent — לא נכשלים על חגים
@@ -258,7 +257,7 @@ export default function AdminLayout({ children }) {
                             navigate={navigate}
                             alertsOpen={alertsOpen}
                             setAlertsOpen={setAlertsOpen}
-                            onHolidayClick={() => { setShowHolidayModal(true); setHolidayMinimized(false); }}
+                            onHolidayClick={() => setShowHolidayModal(true)}
                         />
 
                         {children}
@@ -278,9 +277,7 @@ export default function AdminLayout({ children }) {
                 show={showHolidayModal}
                 onClose={() => {
                     setShowHolidayModal(false);
-                    // אחרי דלג — ממזער לכפתור צף + שומר בסשן שלא יקפוץ שוב
                     if (pendingHolidays.length > 0) {
-                        setHolidayMinimized(true);
                         sessionStorage.setItem('holidayDismissedSession', '1');
                     }
                 }}
@@ -289,37 +286,12 @@ export default function AdminLayout({ children }) {
                         const res = await holidayService.getUpcomingHolidays();
                         const unanswered = (res.data || []).filter(h => !h.response);
                         setPendingHolidays(unanswered);
-                        // אם אין עוד חגים ממתינים — נקה הכל
                         if (unanswered.length === 0) {
-                            setHolidayMinimized(false);
                             sessionStorage.removeItem('holidayDismissedSession');
                         }
                     } catch (e) { }
                 }}
             />
-
-            {/* כפתור צף ממוזער — חגים ממתינים */}
-            {holidayMinimized && !showHolidayModal && pendingHolidays.length > 0 && (
-                <button
-                    onClick={() => {
-                        setShowHolidayModal(true);
-                        setHolidayMinimized(false);
-                    }}
-                    className="fixed bottom-6 right-6 z-[900] flex items-center gap-2 bg-white border border-amber-300 shadow-lg shadow-amber-100 rounded-2xl px-4 py-3 hover:shadow-xl hover:border-amber-400 transition-all group animate-[fadeIn_0.3s_ease-out]"
-                    dir="rtl"
-                >
-                    <span className="text-xl">🕎</span>
-                    <div className="text-right">
-                        <p className="text-sm font-black text-gray-800">
-                            {pendingHolidays.length === 1 ? pendingHolidays[0].name : `${pendingHolidays.length} חגים`}
-                        </p>
-                        <p className="text-[10px] text-amber-600 font-bold">לחץ לעדכון שעות</p>
-                    </div>
-                    <span className="w-5 h-5 bg-amber-500 text-white text-[10px] font-black rounded-full flex items-center justify-center">
-                        {pendingHolidays.length}
-                    </span>
-                </button>
-            )}
         </div>
     );
 }
@@ -335,9 +307,17 @@ function AlertsPanel({ restaurantStatus, subscriptionData, pendingHolidays, isOw
         alerts.push({ id: 'paused', label: 'מנוי מושהה' });
     }
     if (subscriptionData?.subscription_status === 'trial' && subscriptionData?.trial_ends_at) {
-        const daysLeft = Math.ceil((new Date(subscriptionData.trial_ends_at) - new Date()) / (1000 * 60 * 60 * 24));
+        const daysLeft =
+            typeof subscriptionData.days_left_in_trial === 'number'
+                ? subscriptionData.days_left_in_trial
+                : Math.max(0, Math.ceil((new Date(subscriptionData.trial_ends_at) - new Date()) / (1000 * 60 * 60 * 24)));
         if (daysLeft > 0) {
-            alerts.push({ id: 'trial', label: `ניסיון — ${daysLeft} ימים` });
+            const tot = subscriptionData?.trial_period_total_days;
+            alerts.push({
+                id: 'trial',
+                label:
+                    typeof tot === 'number' && tot > 0 ? `ניסיון — ${daysLeft}/${tot} ימים` : `ניסיון — ${daysLeft} ימים`,
+            });
         }
     }
     if (subscriptionData?.subscription_status === 'active' && subscriptionData?.payment_failed_at && subscriptionData?.is_in_grace_period) {
@@ -471,28 +451,53 @@ function SubscriptionPausedBanner() {
 }
 
 // Trial Banner Component
-function TrialBanner({ subscription_status, trial_ends_at, tier, subscription_plan, navigate }) {
+function TrialBanner({ subscription_status, trial_ends_at, trial_period_total_days, days_left_in_trial, tier, subscription_plan, navigate }) {
     if (subscription_status !== 'trial' || !trial_ends_at) return null;
 
-    const daysLeft = Math.ceil((new Date(trial_ends_at) - new Date()) / (1000 * 60 * 60 * 24));
+    const daysLeft =
+        typeof days_left_in_trial === 'number'
+            ? Math.max(0, days_left_in_trial)
+            : Math.max(0, Math.ceil((new Date(trial_ends_at) - new Date()) / (1000 * 60 * 60 * 24)));
 
     if (daysLeft <= 0) return null; // אם פג התוקף, Middleware יפנה ל-paywall
+
+    const total =
+        typeof trial_period_total_days === 'number' && trial_period_total_days > 0 ? trial_period_total_days : null;
+    const tierLabel =
+        tier === 'basic' ? 'Basic' : tier === 'pro' ? 'Pro' : tier === 'enterprise' ? 'Enterprise' : tier || '';
 
     return (
         <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
             <div className="flex items-center justify-between gap-4 flex-wrap">
-                <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center text-gray-500">
+                <div className="flex items-center gap-4 min-w-0">
+                    <div className="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center text-gray-500 shrink-0">
                         <FaClock size={24} />
                     </div>
-                    <div>
-                        <h3 className="text-xl font-black text-gray-900">
-                            תקופת ניסיון פעילה
-                        </h3>
+                    <div className="min-w-0">
+                        <h3 className="text-xl font-black text-gray-900">תקופת ניסיון פעילה</h3>
                         <p className="text-gray-600 font-medium mt-1">
                             נותרו <strong className="text-gray-900">{daysLeft} ימים</strong>
-                            {' '}לתקופת הניסיון החינמית • תוכנית: <strong>{tier === 'basic' ? 'Basic' : 'Pro'}</strong>
+                            {total != null && (
+                                <>
+                                    {' '}
+                                    מתוך <strong className="text-gray-900">{total}</strong> ימים בתקפת הניסיון
+                                </>
+                            )}{' '}
+                            • תוכנית: <strong>{tierLabel}</strong>
+                            {subscription_plan === 'annual' ? ' • מחזור שנתי' : subscription_plan === 'monthly' ? ' • מחזור חודשי' : ''}
                         </p>
+                        {total != null && total > 0 && (
+                            <div className="mt-3 max-w-md">
+                                <div className="h-2 rounded-full bg-gray-100 overflow-hidden" role="presentation">
+                                    <div
+                                        className="h-full bg-emerald-500 rounded-full transition-all duration-300"
+                                        style={{
+                                            width: `${Math.min(100, Math.max(0, (daysLeft / total) * 100))}%`,
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
                 <button

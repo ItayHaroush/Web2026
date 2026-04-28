@@ -181,7 +181,7 @@ export default function AdminKiosks({ embedded = false }) {
                         </div>
                     </div>
                     {isManager() && (
-                        <div className="hidden md:flex items-center gap-4">
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 md:gap-4 w-full md:w-auto">
                             <UpgradeBanner requiredTier="enterprise" context="kiosks" feature="kiosks" variant="inline" />
                             <button
                                 onClick={canCreateMore ? openNew : atLimitAction}
@@ -199,7 +199,7 @@ export default function AdminKiosks({ embedded = false }) {
             )}
 
             {embedded && isManager() && (
-                <div className="hidden md:flex items-center justify-end gap-4 mb-6 px-4">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center sm:justify-end gap-4 mb-6 px-4">
                     <UpgradeBanner requiredTier="enterprise" context="kiosks" feature="kiosks" variant="inline" />
                     <button
                         type="button"

@@ -1668,24 +1668,27 @@ class PrintService
         $separator = str_repeat('=', $width);
         $name = $restaurant->name ?? 'המסעדה';
 
-        $lines = [
-            '{{CENTER_HW}}',
-            $separator,
-            $this->centerText('הזמנה מהירה מהנייד', $printer),
-            $this->centerText('סרקו לעמוד המסעדה', $printer),
-            $separator,
-            '{{QR}}',
-            '{{CENTER_HW}}',
-            '',
-            '{{BOLD}}',
-            $this->centerText($name, $printer),
-            '{{/BOLD}}',
-            str_repeat('-', $width),
-            '',
-            $this->centerText('Powered by TakeEat', $printer),
-            '{{/CENTER_HW}}',
-            '',
-        ];
+        $lines = [];
+
+        $lines[] = '{{CENTER_HW}}';
+        $lines[] = '{{HEADING}}';
+        $lines[] = $name;
+        $lines[] = '{{/HEADING}}';
+        $lines[] = $separator;
+        $lines[] = '';
+        $lines[] = '{{BOLD}}';
+        $lines[] = 'הזמנה מהירה מהנייד';
+        $lines[] = 'סרקו לעמוד המסעדה';
+        $lines[] = '{{/BOLD}}';
+        $lines[] = $separator;
+        $lines[] = '';
+        $lines[] = '{{QR}}';
+        $lines[] = '';
+        $lines[] = str_repeat('-', $width);
+        $lines[] = '';
+        $lines[] = 'Powered by TakeEat';
+        $lines[] = '{{/CENTER_HW}}';
+        $lines[] = '';
 
         return implode("\n", $lines);
     }

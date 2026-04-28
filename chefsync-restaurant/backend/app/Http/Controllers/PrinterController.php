@@ -25,7 +25,7 @@ class PrinterController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
-        $maxPrinters = config("tier_features.tier_limits.{$tier}.max_printers", 0);
+        $maxPrinters = $restaurant->effectiveMaxPrinters();
 
         return response()->json([
             'success' => true,
@@ -71,9 +71,8 @@ class PrinterController extends Controller
             ], 404);
         }
 
-        // בדיקת מגבלת מדפסות לפי tier
-        $tier = $restaurant->tier ?? 'basic';
-        $maxPrinters = config("tier_features.tier_limits.{$tier}.max_printers", 0);
+        // בדיקת מגבלת מדפסות — כולל דריסת full (מגבלות Enterprise)
+        $maxPrinters = $restaurant->effectiveMaxPrinters();
         if ($maxPrinters !== null) {
             $currentCount = Printer::where('restaurant_id', $restaurant->id)->count();
             if ($currentCount >= $maxPrinters) {
