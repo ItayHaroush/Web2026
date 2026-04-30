@@ -690,7 +690,13 @@ export default function HomePage() {
                                         <h3 className="text-base sm:text-xl font-bold text-brand-dark dark:text-brand-dark-text group-hover:text-brand-primary transition-colors line-clamp-2 sm:line-clamp-1 tracking-tight min-w-0">
                                             {restaurant.name}
                                         </h3>
-                                        {(restaurant.cuisine_type || restaurant.restaurant_type) && (
+                                        <div className="flex shrink-0 flex-col items-end gap-1">
+                                            {restaurant.is_approved === false && (
+                                                <span className="rounded-md bg-amber-500 px-1.5 py-0.5 text-[8px] sm:text-[9px] font-black uppercase tracking-wide text-white">
+                                                    ממתין לאישור
+                                                </span>
+                                            )}
+                                            {(restaurant.cuisine_type || restaurant.restaurant_type) && (
                                             <span className="shrink-0 bg-gray-100 dark:bg-brand-dark-border text-gray-600 dark:text-brand-dark-muted text-[9px] sm:text-[10px] font-black px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-md uppercase tracking-wider">
                                                 {restaurant.cuisine_type || (restaurant.restaurant_type ? ({
                                                     pizza: 'פיצה',
@@ -701,7 +707,8 @@ export default function HomePage() {
                                                     general: 'כללי'
                                                 }[restaurant.restaurant_type] || restaurant.restaurant_type) : '')}
                                             </span>
-                                        )}
+                                            )}
+                                        </div>
                                     </div>
 
                                     <p className="text-xs sm:text-sm text-gray-500 mb-3 sm:mb-5 line-clamp-2 leading-snug sm:leading-relaxed min-h-0 sm:min-h-[40px] font-medium">

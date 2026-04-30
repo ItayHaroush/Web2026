@@ -175,51 +175,65 @@ class RestaurantController extends Controller
                 return $this->landingPartners($request);
             }
 
-            $query = Restaurant::query()->where('is_approved', true)->with('deliveryZones');
+            $applyListingFilters = function ($query) use ($request): void {
+                if ($request->has('city')) {
+                    $cityInput = $request->city;
+                    if (! empty($cityInput)) {
+                        $cityModel = City::where('hebrew_name', $cityInput)
+                            ->orWhere('name', $cityInput)
+                            ->first();
 
-            // סינון לפי עיר
-            if ($request->has('city')) {
-                $cityInput = $request->city;
-                if (!empty($cityInput)) {
-                    // מצא את העיר בטבלת הערים (עברית או אנגלית) והחזר את שתי האפשרויות לסינון
-                    $cityModel = City::where('hebrew_name', $cityInput)
-                        ->orWhere('name', $cityInput)
-                        ->first();
-
-                    if ($cityModel) {
-                        $query->whereIn('city', [
-                            $cityModel->hebrew_name ?? $cityInput,
-                            $cityModel->name ?? $cityInput,
-                        ]);
-                    } else {
-                        // אם לא נמצאה התאמה בטבלת הערים, בצע סינון ישיר
-                        $query->where('city', $cityInput);
+                        if ($cityModel) {
+                            $query->whereIn('city', [
+                                $cityModel->hebrew_name ?? $cityInput,
+                                $cityModel->name ?? $cityInput,
+                            ]);
+                        } else {
+                            $query->where('city', $cityInput);
+                        }
                     }
                 }
+
+                if ($request->has('cuisine_type')) {
+                    $query->where('cuisine_type', $request->cuisine_type);
+                }
+            };
+
+            $allowPublicDemo = app()->environment('local');
+
+            $approvedQuery = Restaurant::query()->where('is_approved', true)->with('deliveryZones');
+            $applyListingFilters($approvedQuery);
+            $approved = $approvedQuery->orderBy('name')->get();
+
+            // ממתינות לאישור — להופיע אחרי המאושרות (שיתוף קישור / Hub); בלי דמו בפרודקשן
+            $pendingQuery = Restaurant::query()->where('is_approved', false)->with('deliveryZones');
+            if (! $allowPublicDemo) {
+                $pendingQuery->where('is_demo', false);
             }
+            $applyListingFilters($pendingQuery);
+            $pending = $pendingQuery->orderBy('name')->get();
 
-            // סינון לפי סוג מטבח
-            if ($request->has('cuisine_type')) {
-                $query->where('cuisine_type', $request->cuisine_type);
-            }
+            $sortChunk = function ($collection) {
+                return $collection
+                    ->sort(function ($a, $b) {
+                        $aOpen = (bool) ($a->is_open_now ?? false);
+                        $bOpen = (bool) ($b->is_open_now ?? false);
+                        if ($aOpen !== $bOpen) {
+                            return $bOpen <=> $aOpen;
+                        }
+                        $aFuture = (bool) ($a->allow_future_orders ?? false);
+                        $bFuture = (bool) ($b->allow_future_orders ?? false);
 
-            $restaurants = $query->orderBy('name')->get();
+                        return $bFuture <=> $aFuture;
+                    })
+                    ->values();
+            };
 
-            // מיון: פתוחות קודם, בתוך כל קבוצה - הזמנה מראש קודם
-            $restaurants = $restaurants
-                ->sort(function ($a, $b) {
-                    $aOpen = (bool) ($a->is_open_now ?? false);
-                    $bOpen = (bool) ($b->is_open_now ?? false);
-                    if ($aOpen !== $bOpen) return $bOpen <=> $aOpen;
-                    $aFuture = (bool) ($a->allow_future_orders ?? false);
-                    $bFuture = (bool) ($b->allow_future_orders ?? false);
-                    return $bFuture <=> $aFuture;
-                })
-                ->values();
+            $restaurants = $sortChunk($approved)->concat($sortChunk($pending));
 
             return response()->json([
                 'success' => true,
-                'data' => $restaurants->map(fn(Restaurant $r) => $this->toPublicRestaurantPayload($r))->values(),
+                'data' => $restaurants->map(fn (Restaurant $r) => $this->toPublicRestaurantPayload($r))->values(),
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -230,7 +244,7 @@ class RestaurantController extends Controller
         }
     }
 
-    /**     * חיפוש מנות בתפריטים של מסעדות מאושרות (לפי עיר)
+    /**     * חיפוש מנות בתפריטים (מסעדות מאושרות + ממתינות לאישור; דמו רק ב-local)
      */
     public function searchMenuItems(Request $request)
     {
@@ -240,8 +254,12 @@ class RestaurantController extends Controller
                 return response()->json(['success' => true, 'data' => []]);
             }
 
-            // מצא מסעדות מאושרות בעיר הנבחרת
-            $restaurantQuery = Restaurant::where('is_approved', true);
+            $allowPublicDemo = app()->environment('local');
+
+            $restaurantQuery = Restaurant::query();
+            if (! $allowPublicDemo) {
+                $restaurantQuery->where('is_demo', false);
+            }
             if ($request->filled('city')) {
                 $cityInput = $request->city;
                 $cityModel = City::where('hebrew_name', $cityInput)

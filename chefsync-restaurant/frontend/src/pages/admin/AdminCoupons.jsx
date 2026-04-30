@@ -101,6 +101,8 @@ export default function AdminCoupons() {
     const [promoWizardStep, setPromoWizardStep] = useState(1);
     const [form, setForm] = useState(emptyForm());
     const [serverErrors, setServerErrors] = useState({});
+    /** אחרי ניסיון המשך אשף / שמירה — מציגים שגיאות שדות; לפני כן לא מציפים "בחר קטגוריה" באדום */
+    const [promoValidationAttempted, setPromoValidationAttempted] = useState(false);
 
     const formErrors = useMemo(() => {
         const err = {};
@@ -149,6 +151,19 @@ export default function AdminCoupons() {
         return err;
     }, [form]);
 
+    const serverErrorText = (key) => {
+        const e = serverErrors[key];
+        if (!e) return null;
+        return Array.isArray(e) ? e[0] : String(e);
+    };
+
+    const fieldError = (key) => {
+        const server = serverErrorText(key);
+        if (server) return server;
+        if (!promoValidationAttempted) return undefined;
+        return formErrors[key];
+    };
+
     const fetchData = useCallback(async () => {
         try {
             setLoading(true);
@@ -178,6 +193,7 @@ export default function AdminCoupons() {
         setEditingPromo(null);
         setForm(emptyForm());
         setServerErrors({});
+        setPromoValidationAttempted(false);
         setPromoWizardStep(1);
         setModalOpen(true);
     };
@@ -235,20 +251,27 @@ export default function AdminCoupons() {
             rewards,
         });
         setServerErrors({});
+        setPromoValidationAttempted(false);
         setPromoWizardStep(1);
         setModalOpen(true);
     };
 
     const goPromoWizardNext = () => {
         if (!editingPromo && promoWizardStep === 1) {
-            if (!form.name?.trim()) return;
+            if (!form.name?.trim()) {
+                setPromoValidationAttempted(true);
+                return;
+            }
         }
         if (!editingPromo && promoWizardStep === 2) {
             const validRuleCount = (form.rules || []).filter((r) => {
                 const cid = r.required_category_id;
                 return cid !== '' && cid != null && Number(cid) > 0;
             }).length;
-            if (validRuleCount === 0) return;
+            if (validRuleCount === 0) {
+                setPromoValidationAttempted(true);
+                return;
+            }
         }
         setPromoWizardStep((s) => Math.min(3, s + 1));
     };
@@ -256,6 +279,7 @@ export default function AdminCoupons() {
     const goPromoWizardPrev = () => setPromoWizardStep((s) => Math.max(1, s - 1));
 
     const handleSave = async () => {
+        setPromoValidationAttempted(true);
         if (Object.keys(formErrors).length > 0) {
             return;
         }
@@ -401,12 +425,6 @@ export default function AdminCoupons() {
         return true;
     };
 
-    const serverErrorText = (key) => {
-        const e = serverErrors[key];
-        if (!e) return null;
-        return Array.isArray(e) ? e[0] : String(e);
-    };
-
     return (
         <AdminLayout>
             <div className="max-w-6xl mx-auto space-y-6 sm:space-y-8 pb-28 sm:pb-32 animate-in fade-in duration-500 w-full min-w-0 overflow-x-hidden">
@@ -538,7 +556,7 @@ export default function AdminCoupons() {
                                     </p>
                                 )}
                             </div>
-                            <button type="button" onClick={() => { setModalOpen(false); setPromoWizardStep(1); setServerErrors({}); }} className="p-2 text-gray-400 hover:text-gray-600 rounded-xl hover:bg-gray-50 shrink-0">
+                            <button type="button" onClick={() => { setModalOpen(false); setPromoWizardStep(1); setServerErrors({}); setPromoValidationAttempted(false); }} className="p-2 text-gray-400 hover:text-gray-600 rounded-xl hover:bg-gray-50 shrink-0">
                                 <FaTimes size={18} />
                             </button>
                         </div>
@@ -554,11 +572,11 @@ export default function AdminCoupons() {
                                         type="text"
                                         value={form.name}
                                         onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                                        className={`w-full min-w-0 border rounded-xl px-4 py-3 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none text-base ${formErrors.name || serverErrorText('name') ? 'border-red-300' : 'border-gray-200'}`}
+                                        className={`w-full min-w-0 border rounded-xl px-4 py-3 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none text-base ${fieldError('name') ? 'border-red-300' : 'border-gray-200'}`}
                                         placeholder="למשל: קנה 2 פיצות וקבל קינוח"
                                     />
-                                    {(formErrors.name || serverErrorText('name')) && (
-                                        <p className="text-xs text-red-600 mt-1 font-medium">{formErrors.name || serverErrorText('name')}</p>
+                                    {fieldError('name') && (
+                                        <p className="text-xs text-red-600 mt-1 font-medium">{fieldError('name')}</p>
                                     )}
                                 </div>
                                 <div>
@@ -736,8 +754,13 @@ export default function AdminCoupons() {
                             {(editingPromo || promoWizardStep === 2) && (
                             <div className="space-y-4">
                                 <h3 className="font-bold text-gray-800 border-b border-gray-100 pb-2">תנאים (AND)</h3>
-                                {(formErrors.rules_global || serverErrorText('rules')) && (
-                                    <p className="text-sm text-red-600 font-medium">{formErrors.rules_global || serverErrorText('rules')}</p>
+                                {categories.length === 0 && (
+                                    <p className="text-sm text-amber-800 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2 font-medium">
+                                        אין קטגוריות במסעדה. יש להוסיף קטגוריות בניהול תפריט לפני הגדרת תנאי מבצע.
+                                    </p>
+                                )}
+                                {(fieldError('rules_global') || serverErrorText('rules')) && (
+                                    <p className="text-sm text-red-600 font-medium">{fieldError('rules_global') || serverErrorText('rules')}</p>
                                 )}
                                 {form.rules.map((rule, i) => (
                                     <div key={i} className="flex flex-col sm:flex-row sm:items-center gap-3 bg-gray-50 rounded-xl p-3 min-w-0">
@@ -745,14 +768,14 @@ export default function AdminCoupons() {
                                             type="number"
                                             value={rule.min_quantity}
                                             onChange={e => updateRule(i, 'min_quantity', parseInt(e.target.value, 10) || 1)}
-                                            className={`w-20 border rounded-lg px-3 py-2 text-center focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none ${formErrors[`rules.${i}.min_quantity`] || serverErrorText(`rules.${i}.min_quantity`) ? 'border-red-300' : 'border-gray-200'}`}
+                                            className={`w-20 border rounded-lg px-3 py-2 text-center focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none ${fieldError(`rules.${i}.min_quantity`) ? 'border-red-300' : 'border-gray-200'}`}
                                             min={1}
                                         />
                                         <span className="text-sm text-gray-500 font-medium">פריטים מ-</span>
                                         <select
                                             value={rule.required_category_id === '' ? '' : String(rule.required_category_id)}
                                             onChange={e => updateRule(i, 'required_category_id', e.target.value === '' ? '' : parseInt(e.target.value, 10))}
-                                            className={`flex-1 min-w-0 border rounded-lg px-3 py-2 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none text-base ${formErrors[`rules.${i}.required_category_id`] || serverErrorText(`rules.${i}.required_category_id`) ? 'border-red-300' : 'border-gray-200'}`}
+                                            className={`flex-1 min-w-0 border rounded-lg px-3 py-2 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none text-base ${fieldError(`rules.${i}.required_category_id`) ? 'border-red-300' : 'border-gray-200'}`}
                                         >
                                             <option value="">בחר קטגוריה</option>
                                             {categories.map(cat => (
@@ -764,9 +787,9 @@ export default function AdminCoupons() {
                                                 <FaTimes size={14} />
                                             </button>
                                         )}
-                                        {(formErrors[`rules.${i}.required_category_id`] || formErrors[`rules.${i}.min_quantity`] || serverErrorText(`rules.${i}.required_category_id`) || serverErrorText(`rules.${i}.min_quantity`)) && (
+                                        {(fieldError(`rules.${i}.required_category_id`) || fieldError(`rules.${i}.min_quantity`)) && (
                                             <p className="text-xs text-red-600 sm:col-span-full w-full">
-                                                {formErrors[`rules.${i}.required_category_id`] || serverErrorText(`rules.${i}.required_category_id`) || formErrors[`rules.${i}.min_quantity`] || serverErrorText(`rules.${i}.min_quantity`)}
+                                                {fieldError(`rules.${i}.required_category_id`) || fieldError(`rules.${i}.min_quantity`)}
                                             </p>
                                         )}
                                     </div>
@@ -910,7 +933,7 @@ export default function AdminCoupons() {
                                                                         const selected = Array.from(e.target.selectedOptions, (opt) => parseInt(opt.value, 10));
                                                                         updateReward(i, 'discount_menu_item_ids', selected);
                                                                     }}
-                                                                    className={`w-full border rounded-lg px-2 py-1 text-sm focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none ${formErrors[`rewards.${i}.discount_menu_item_ids`] || serverErrorText(`rewards.${i}.discount_menu_item_ids`) ? 'border-red-300' : 'border-gray-200'}`}
+                                                                    className={`w-full border rounded-lg px-2 py-1 text-sm focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none ${fieldError(`rewards.${i}.discount_menu_item_ids`) ? 'border-red-300' : 'border-gray-200'}`}
                                                                 >
                                                                     {menuItems.map((item) => (
                                                                         <option key={item.id} value={item.id}>
@@ -918,8 +941,8 @@ export default function AdminCoupons() {
                                                                         </option>
                                                                     ))}
                                                                 </select>
-                                                                {(formErrors[`rewards.${i}.discount_menu_item_ids`] || serverErrorText(`rewards.${i}.discount_menu_item_ids`)) && (
-                                                                    <p className="text-xs text-red-600 mt-1">{formErrors[`rewards.${i}.discount_menu_item_ids`] || serverErrorText(`rewards.${i}.discount_menu_item_ids`)}</p>
+                                                                {fieldError(`rewards.${i}.discount_menu_item_ids`) && (
+                                                                    <p className="text-xs text-red-600 mt-1">{fieldError(`rewards.${i}.discount_menu_item_ids`)}</p>
                                                                 )}
                                                             </div>
                                                         )}
@@ -933,18 +956,18 @@ export default function AdminCoupons() {
                                                         type="number"
                                                         value={reward.reward_value}
                                                         onChange={e => updateReward(i, 'reward_value', e.target.value)}
-                                                        className={`w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none ${formErrors[`rewards.${i}.reward_value`] || serverErrorText(`rewards.${i}.reward_value`) ? 'border-red-300' : 'border-gray-200'}`}
+                                                        className={`w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none ${fieldError(`rewards.${i}.reward_value`) ? 'border-red-300' : 'border-gray-200'}`}
                                                         min={0}
                                                         step={reward.reward_type === 'discount_percent' ? 1 : 0.01}
                                                     />
-                                                    {(formErrors[`rewards.${i}.reward_value`] || serverErrorText(`rewards.${i}.reward_value`)) && (
-                                                        <p className="text-xs text-red-600 mt-1">{formErrors[`rewards.${i}.reward_value`] || serverErrorText(`rewards.${i}.reward_value`)}</p>
+                                                    {fieldError(`rewards.${i}.reward_value`) && (
+                                                        <p className="text-xs text-red-600 mt-1">{fieldError(`rewards.${i}.reward_value`)}</p>
                                                     )}
                                                 </div>
                                             </div>
                                         )}
-                                        {reward.reward_type === 'free_item' && (formErrors[`rewards.${i}.free`] || serverErrorText(`rewards.${i}.reward_menu_item_id`) || serverErrorText(`rewards.${i}.reward_category_id`)) && (
-                                            <p className="text-xs text-red-600">{formErrors[`rewards.${i}.free`] || serverErrorText(`rewards.${i}.reward_menu_item_id`) || serverErrorText(`rewards.${i}.reward_category_id`)}</p>
+                                        {reward.reward_type === 'free_item' && (fieldError(`rewards.${i}.free`) || serverErrorText(`rewards.${i}.reward_menu_item_id`) || serverErrorText(`rewards.${i}.reward_category_id`)) && (
+                                            <p className="text-xs text-red-600">{fieldError(`rewards.${i}.free`) || serverErrorText(`rewards.${i}.reward_menu_item_id`) || serverErrorText(`rewards.${i}.reward_category_id`)}</p>
                                         )}
                                     </div>
                                 ))}
@@ -978,7 +1001,7 @@ export default function AdminCoupons() {
                             )}
                             <button
                                 type="button"
-                                onClick={() => { setModalOpen(false); setPromoWizardStep(1); setServerErrors({}); }}
+                                onClick={() => { setModalOpen(false); setPromoWizardStep(1); setServerErrors({}); setPromoValidationAttempted(false); }}
                                 className="order-3 px-6 py-3 rounded-xl text-gray-600 font-bold hover:bg-gray-50 w-full sm:w-auto"
                             >
                                 ביטול
@@ -987,7 +1010,7 @@ export default function AdminCoupons() {
                                 <button
                                     type="button"
                                     onClick={handleSave}
-                                    disabled={saving || !form.name?.trim() || Object.keys(formErrors).length > 0}
+                                    disabled={saving || !form.name?.trim()}
                                     className="order-1 sm:order-4 px-8 py-3 rounded-xl bg-gray-900 text-white font-bold hover:bg-black transition-colors disabled:opacity-50 w-full sm:w-auto"
                                 >
                                     {saving ? 'שומר...' : editingPromo ? 'עדכן' : 'צור מבצע'}

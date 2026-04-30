@@ -664,6 +664,17 @@ export default function MenuPage({ isPreviewMode = false }) {
                 variant="error"
             />
 
+            {!isPreviewMode && restaurant?.is_approved === false && (
+                <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-500/35 dark:bg-amber-950/25">
+                    <p className="text-sm font-bold text-amber-900 dark:text-amber-100">
+                        המסעדה ממתינה לאישור מנהל המערכת
+                    </p>
+                    <p className="mt-1 text-xs font-medium leading-relaxed text-amber-800 dark:text-amber-200/95">
+                        ניתן לעיין בתפריט ולבנות סל לצורך בדיקה. השלמת הזמנה תתאפשר לאחר האישור — עד אז תוצג הודעה בשלב התשלום.
+                    </p>
+                </div>
+            )}
+
             {/* פופ־אפ עליון-ימני — לקוח מזוהה */}
             {isRecognized && customer?.name && !isPreviewMode && !ordersHintDismissed && (
                 <div

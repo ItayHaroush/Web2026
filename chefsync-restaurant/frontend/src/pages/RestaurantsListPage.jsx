@@ -9,7 +9,7 @@ import { FaMapMarkerAlt, FaUtensils, FaArrowLeft, FaSearch } from 'react-icons/f
 
 /**
  * עמוד hub: /restaurants
- * תוכן שלם עבור SEO — כל המסעדות המאושרות, עם אפשרות סינון לפי עיר.
+ * תוכן שלם עבור SEO — מאושרות וממתינות לאישור (מסומנות בממשק), עם סינון לפי עיר.
  * Laravel מזריק meta + ItemList JSON-LD בצד-שרת, React מרנדר את הגריד.
  */
 export default function RestaurantsListPage() {
@@ -38,7 +38,7 @@ export default function RestaurantsListPage() {
         getAllRestaurants(cityParam || null)
             .then((res) => {
                 if (cancelled) return;
-                const data = (res?.data || []).filter(r => r && r.is_approved !== false);
+                const data = (res?.data || []).filter(Boolean);
                 setRestaurants(data);
                 setLoading(false);
             })
@@ -218,6 +218,11 @@ function RestaurantCard({ restaurant }) {
             className="group block bg-white dark:bg-brand-dark-surface rounded-2xl shadow-sm hover:shadow-lg transition-all border border-gray-100 dark:border-brand-dark-border overflow-hidden"
         >
             <div className="relative aspect-[16/10] bg-gray-100 dark:bg-brand-dark-bg flex items-center justify-center overflow-hidden">
+                {restaurant.is_approved === false && (
+                    <span className="absolute top-3 right-3 z-10 rounded-full bg-amber-500 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-white shadow-md">
+                        ממתין לאישור
+                    </span>
+                )}
                 {logo ? (
                     <img
                         src={logo}
