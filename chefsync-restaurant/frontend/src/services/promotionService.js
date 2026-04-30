@@ -30,6 +30,8 @@ class PromotionService {
         // שלח image רק אם קיים file חדש
         if (image instanceof File) {
             fd.append('image', image);
+        } else if (typeof Blob !== 'undefined' && image instanceof Blob && image.size > 0) {
+            fd.append('image', image, 'promotion.jpg');
         }
         // שלח remove_image כ-'1' אם צריך להסיר
         if (data.remove_image) {

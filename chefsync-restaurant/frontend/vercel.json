@@ -53,6 +53,10 @@
         {
           "key": "Accept-Ranges",
           "value": "none"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "geolocation=(self)"
         }
       ]
     },
@@ -66,6 +70,10 @@
         {
           "key": "Cache-Control",
           "value": "no-cache, no-store, must-revalidate"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "geolocation=(self)"
         }
       ]
     },

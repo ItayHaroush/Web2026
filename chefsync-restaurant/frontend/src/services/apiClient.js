@@ -77,6 +77,11 @@ try {
 
 // Interceptor לשמירת Tenant ID בכל בקשה
 apiClient.interceptors.request.use((config) => {
+    // FormData חייב boundary אוטומטי — שימור Content-Type: application/json מה-default שובר העלאת קבצים (מבצעים וכו').
+    if (config.data instanceof FormData) {
+        delete config.headers['Content-Type'];
+    }
+
     const tenantId = getTenantId();
     const urlTenantId = getTenantIdFromUrl();
     const token = localStorage.getItem('authToken') || localStorage.getItem('admin_token');

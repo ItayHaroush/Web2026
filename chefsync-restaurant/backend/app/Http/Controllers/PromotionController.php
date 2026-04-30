@@ -434,8 +434,10 @@ class PromotionController extends Controller
             'rewards.*.discount_menu_item_ids' => 'nullable|array',
             'rewards.*.discount_menu_item_ids.*' => ['integer', Rule::exists('menu_items', 'id')->where('tenant_id', $tenantId)],
         ];
-        // תמונה: nullable כדי שעדכون בלא תמונה או עם הסרה לא יגרום לשגיאה
-        $rules['image'] = 'nullable|image|max:12288';
+        // Validate image only when multipart file is present
+        if ($request->hasFile('image')) {
+            $rules['image'] = ['required', 'image', 'max:12288'];
+        }
         if ($isUpdate) {
             // remove_image יכול להגיע כ-string ('0', '1', 'true', 'false') מ-FormData או כ-boolean
             $rules['remove_image'] = 'nullable|in:0,1,true,false';
