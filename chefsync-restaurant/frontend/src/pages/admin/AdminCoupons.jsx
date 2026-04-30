@@ -233,7 +233,7 @@ export default function AdminCoupons() {
             name: promo.name || '',
             description: promo.description || '',
             image: null,
-            imagePreview: null,
+            imagePreview: promo.image_url ? resolveAssetUrl(promo.image_url) : null,
             removeImage: false,
             start_at: promo.start_at ? promo.start_at.slice(0, 16) : '',
             end_at: promo.end_at ? promo.end_at.slice(0, 16) : '',
@@ -561,6 +561,17 @@ export default function AdminCoupons() {
                             </button>
                         </div>
 
+                        {!editingPromo && promoWizardStep > 1 && form.imagePreview && (
+                            <div className="shrink-0 px-4 sm:px-6 py-2 border-b border-gray-100 bg-emerald-50/60 flex items-center gap-3">
+                                <img
+                                    src={form.imagePreview}
+                                    alt=""
+                                    className="w-14 h-10 sm:w-16 sm:h-11 object-cover rounded-lg border border-emerald-200/80 shrink-0"
+                                />
+                                <p className="text-xs font-bold text-emerald-900">תמונת המבצע (נבחרה בשלב פרטים בסיסיים)</p>
+                            </div>
+                        )}
+
                         <div className="p-4 sm:p-6 space-y-6 flex-1 overflow-y-auto min-h-0">
                             {/* Part 1: Basic Details */}
                             {(editingPromo || promoWizardStep === 1) && (
@@ -594,12 +605,12 @@ export default function AdminCoupons() {
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">תמונת מבצע</label>
                                     <p className="text-xs text-gray-500 mb-2">תמונות גדולות נדחסות אוטומטית לפני השליחה כדי למנוע שגיאת העלאה.</p>
-                                    {(form.imagePreview || (editingPromo?.image_url && !form.removeImage)) && (
+                                    {!form.removeImage && (form.imagePreview || editingPromo?.image_url) && (
                                         <div className="relative inline-block mb-2">
                                             <img
                                                 src={form.imagePreview || resolveAssetUrl(editingPromo?.image_url)}
                                                 alt="תמונת מבצע"
-                                                className="w-32 h-20 object-cover rounded-xl border border-gray-200"
+                                                className="w-32 h-20 object-cover rounded-xl border border-gray-200 bg-gray-100"
                                             />
                                             <button
                                                 type="button"
@@ -629,12 +640,19 @@ export default function AdminCoupons() {
                                             }
                                             try {
                                                 const processed = await compressPromotionImage(file);
-                                                setForm(f => ({
-                                                    ...f,
-                                                    image: processed,
-                                                    imagePreview: URL.createObjectURL(processed),
-                                                    removeImage: false,
-                                                }));
+                                                setForm((f) => {
+                                                    if (f.imagePreview?.startsWith?.('blob:')) {
+                                                        try {
+                                                            URL.revokeObjectURL(f.imagePreview);
+                                                        } catch { /* ignore */ }
+                                                    }
+                                                    return {
+                                                        ...f,
+                                                        image: processed,
+                                                        imagePreview: URL.createObjectURL(processed),
+                                                        removeImage: false,
+                                                    };
+                                                });
                                             } catch (err) {
                                                 console.error(err);
                                                 alert('לא ניתן לעבד את התמונה. נסה קובץ אחר.');
