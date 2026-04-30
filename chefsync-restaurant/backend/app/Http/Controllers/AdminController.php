@@ -1909,7 +1909,7 @@ class AdminController extends Controller
                 'tenant_id' => $restaurant->tenant_id,
                 'addon_group_id' => $newGroup->id,
                 'name' => $addon->name,
-                'price' => $addon->price,
+                'price_delta' => $addon->price_delta,
                 'category_ids' => $addon->category_ids,
                 'is_active' => $addon->is_active,
                 'sort_order' => $addon->sort_order,
