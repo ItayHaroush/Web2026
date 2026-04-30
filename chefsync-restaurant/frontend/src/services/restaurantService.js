@@ -22,6 +22,16 @@ export const getAllRestaurants = async (city = null) => {
 };
 
 /**
+ * מסעדות שהצטרפו לאחרונה (כולל לפני אישור) — ל-/restaurants/new
+ */
+export const getRecentRestaurants = async (days = 30) => {
+    const response = await apiClient.get('/restaurants', {
+        params: { recent: 1, days },
+    });
+    return response.data;
+};
+
+/**
  * רשימת ערים מה-API (טבלת cities). לעמוד הבית: filterCitiesWithRestaurants;
  * בטפסי הרשמה/אזורי משלוח: הרשימה המלאה.
  */

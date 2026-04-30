@@ -179,7 +179,7 @@ export function RestaurantsListSeo({ city = null }) {
 export function NewRestaurantsSeo() {
     const canonicalUrl = `${FRONTEND_URL}/restaurants/new`;
     const title = 'מסעדות חדשות ב-TakeEat · הזמנת אוכל מהמסעדות החדשות בישראל';
-    const description = 'המסעדות החדשות שהצטרפו ל-TakeEat לאחרונה. גלו מקומות חדשים ומטבחים מגוונים — הזמנת אוכל אונליין, משלוח מהיר ואיסוף עצמי. הזמינו ישירות מהמסעדה.';
+    const description = 'מסעדות שנרשמו ל-TakeEat לאחרונה, כולל מקומות בטרם אישור סופי. גלו מקומות חדשים — הזמנה אונליין, משלוח ואיסוף עצמי כשהמסעדה פעילה.';
     const keywords = 'מסעדות חדשות, מסעדה חדשה, פתיחה, TakeEat, טייק איט, הזמנת אוכל, משלוח אוכל';
 
     return (

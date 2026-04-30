@@ -80,7 +80,45 @@ class RestaurantController extends Controller
             'delivery_minimum' => $restaurant->delivery_minimum ?? 0,
             'allow_future_orders' => (bool) ($restaurant->allow_future_orders ?? false),
             'holiday_closures' => $this->getHolidayClosures($restaurant),
+            'created_at' => $restaurant->created_at?->toIso8601String(),
         ];
+    }
+
+    /**
+     * מסעדות שהצטרפו לאחרונה — כולל לפני אישור סופר־אדמין (ל-hub /restaurants/new).
+     * לא כולל דמו בפרודקשן.
+     */
+    public function recentJoined(Request $request)
+    {
+        try {
+            $days = (int) $request->input('days', 30);
+            $days = max(1, min($days, 90));
+            $since = now()->subDays($days);
+
+            $allowPublicDemo = app()->environment('local');
+
+            $query = Restaurant::query()
+                ->where('created_at', '>=', $since)
+                ->with('deliveryZones')
+                ->orderByDesc('created_at');
+
+            if (! $allowPublicDemo) {
+                $query->where('is_demo', false);
+            }
+
+            $restaurants = $query->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $restaurants->map(fn (Restaurant $r) => $this->toPublicRestaurantPayload($r))->values(),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'שגיאה בטעינת מסעדות חדשות',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**
@@ -128,6 +166,15 @@ class RestaurantController extends Controller
     public function index(Request $request)
     {
         try {
+            // תואם פרוקסי שמאשר רק את נתיב הבסיס /restaurants — ללא תתי־נתיבים נפרדים
+            if ($request->boolean('recent')) {
+                return $this->recentJoined($request);
+            }
+
+            if ($request->boolean('landing_partners')) {
+                return $this->landingPartners($request);
+            }
+
             $query = Restaurant::query()->where('is_approved', true)->with('deliveryZones');
 
             // סינון לפי עיר
@@ -287,6 +334,31 @@ class RestaurantController extends Controller
                 'error' => $e->getMessage(),
             ], 404);
         }
+    }
+
+    /**
+     * לוגואים לקרוסלת דף הנחיתה — מסעדות מאושרות בלבד, ללא מסעדות דמו (בכל הסביבות).
+     */
+    public function landingPartners(Request $request)
+    {
+        $rows = Restaurant::query()
+            ->where('is_approved', true)
+            ->where('is_demo', false)
+            ->orderBy('name')
+            ->get(['id', 'tenant_id', 'slug', 'name', 'logo_url']);
+
+        $payload = $rows->map(fn (Restaurant $r) => [
+            'id' => $r->id,
+            'tenant_id' => $r->tenant_id,
+            'slug' => $r->slug,
+            'name' => $r->name,
+            'logo_url' => $r->logo_url,
+        ])->values();
+
+        return response()->json([
+            'success' => true,
+            'data' => $payload,
+        ]);
     }
 
     /**

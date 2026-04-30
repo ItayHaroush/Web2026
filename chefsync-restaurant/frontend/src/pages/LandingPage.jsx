@@ -130,7 +130,9 @@ export default function LandingPage() {
         let cancelled = false;
         (async () => {
             try {
-                const { data } = await apiClient.get('/public/landing-partners');
+                const { data } = await apiClient.get('/restaurants', {
+                    params: { landing_partners: 1 },
+                });
                 if (cancelled) return;
                 const list = data?.data;
                 setLandingPartners(Array.isArray(list) ? list : []);
@@ -617,29 +619,37 @@ export default function LandingPage() {
                                 <React.Fragment key={round}>
                                     {partnersForLogoCarousel.map((p, idx) => {
                                         const src = landingPartnerLogoSrc(p.logo_url);
-                                        if (!src) return null;
-                                        const img = (
+                                        const menuSlug = p.tenant_id || p.slug;
+                                        const slideKey = `${p.id ?? ''}-${p.tenant_id ?? ''}-${p.slug ?? ''}-${p.name ?? ''}-${idx}`;
+                                        const imgOrPlaceholder = src ? (
                                             <img
                                                 src={src}
                                                 alt={p.name || 'מסעדה'}
                                                 className="h-24 w-auto max-w-[200px] object-contain opacity-60 hover:opacity-100 transition-opacity mix-blend-multiply dark:mix-blend-lighten"
                                             />
+                                        ) : (
+                                            <div className="flex flex-col items-center justify-center gap-2 px-4 text-center min-h-[96px]">
+                                                <FaUtensils className="text-4xl text-gray-400 dark:text-gray-500" aria-hidden />
+                                                <span className="text-xs font-bold text-gray-500 dark:text-brand-dark-muted max-w-[180px] line-clamp-2">
+                                                    {p.name || 'מסעדה'}
+                                                </span>
+                                            </div>
                                         );
                                         return (
                                             <div
-                                                key={`${round}-${p.tenant_id ?? p.name}-${idx}`}
+                                                key={`${round}-${slideKey}`}
                                                 className="flex items-center justify-center min-w-[240px] h-32 grayscale hover:grayscale-0 transition-all duration-300"
                                             >
-                                                {p.tenant_id ? (
+                                                {menuSlug ? (
                                                     <Link
-                                                        to={`/${p.tenant_id}/menu`}
+                                                        to={`/${menuSlug}/menu`}
                                                         className="flex items-center justify-center w-full h-full px-2"
                                                         title={`תפריט ${p.name}`}
                                                     >
-                                                        {img}
+                                                        {imgOrPlaceholder}
                                                     </Link>
                                                 ) : (
-                                                    <span className="flex items-center justify-center w-full h-full px-2">{img}</span>
+                                                    <span className="flex items-center justify-center w-full h-full px-2">{imgOrPlaceholder}</span>
                                                 )}
                                             </div>
                                         );

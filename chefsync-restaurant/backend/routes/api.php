@@ -648,6 +648,11 @@ Route::post('/kiosk/{token}/orders/{orderId}/charge-pinpad', [KioskController::c
 // רשימת מסעדות - ללא צורך ב-tenant
 Route::get('/restaurants', [RestaurantController::class, 'index'])->name('restaurants.index');
 
+// מסעדות חדשות (לפי תאריך הצטרפות, כולל לפני אישור) — לפני /restaurants/by-tenant כדי שלא יילכד כפרמטר דינמי
+Route::get('/restaurants/recent', [RestaurantController::class, 'recentJoined'])
+    ->middleware('throttle:120,1')
+    ->name('restaurants.recent');
+
 // דף נחיתה — לוגואי שותפים (מאושרים + לוגו), ללא tenant
 Route::get('/public/landing-partners', [RestaurantController::class, 'landingPartners'])
     ->middleware('throttle:120,1')

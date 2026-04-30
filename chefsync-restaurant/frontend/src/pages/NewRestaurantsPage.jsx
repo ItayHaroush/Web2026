@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CustomerLayout } from '../layouts/CustomerLayout';
-import { getAllRestaurants } from '../services/restaurantService';
+import { getRecentRestaurants } from '../services/restaurantService';
 import { resolveAssetUrl } from '../utils/assets';
 import { NewRestaurantsSeo } from '../components/seo/RestaurantSeo';
 import { FaMapMarkerAlt, FaUtensils, FaClock, FaStar } from 'react-icons/fa';
@@ -20,17 +20,11 @@ export default function NewRestaurantsPage() {
     useEffect(() => {
         let cancelled = false;
         setLoading(true);
-        getAllRestaurants()
+        getRecentRestaurants(DAYS_WINDOW)
             .then((res) => {
                 if (cancelled) return;
-                const all = (res?.data || []).filter(r => r && r.is_approved !== false);
-                const since = Date.now() - DAYS_WINDOW * 24 * 60 * 60 * 1000;
-                const recent = all.filter(r => {
-                    if (!r.created_at) return false;
-                    return new Date(r.created_at).getTime() >= since;
-                });
-                recent.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-                setRestaurants(recent);
+                const list = (res?.data || []).filter((r) => r && r.id);
+                setRestaurants(list);
                 setLoading(false);
             })
             .catch((err) => {
@@ -72,8 +66,8 @@ export default function NewRestaurantsPage() {
                         מסעדות חדשות ב-TakeEat
                     </h1>
                     <p className="text-base sm:text-lg text-gray-600 dark:text-brand-dark-muted max-w-3xl leading-relaxed">
-                        המסעדות שהצטרפו ל-TakeEat ב-{DAYS_WINDOW} הימים האחרונים. גלו מקומות חדשים ומטבחים מגוונים,
-                        והזמינו אוכל ישירות מהמסעדה — משלוח מהיר או איסוף עצמי, בלי עמלות מוגזמות.
+                        המסעדות שנרשמו ל-TakeEat ב-{DAYS_WINDOW} הימים האחרונים — גם לפני אישור סופי (מסומנות «בקרוב»).
+                        גלו מקומות חדשים והזמינו ישירות מהמסעדה כשהיא מאושרת — משלוח או איסוף עצמי.
                     </p>
                 </header>
 
@@ -109,8 +103,15 @@ export default function NewRestaurantsPage() {
                                     to={`/r/${slug}`}
                                     className="group block bg-white dark:bg-brand-dark-surface rounded-2xl shadow-sm hover:shadow-lg transition-all border border-gray-100 dark:border-brand-dark-border overflow-hidden relative"
                                 >
-                                    <div className="absolute top-3 right-3 z-10 px-2 py-1 rounded-full bg-amber-500 text-white text-[10px] font-bold shadow">
-                                        חדש
+                                    <div className="absolute top-3 right-3 z-10 flex flex-wrap justify-end gap-1 max-w-[calc(100%-1rem)]">
+                                        {!r.is_approved && (
+                                            <span className="px-2 py-1 rounded-full bg-slate-600 text-white text-[10px] font-bold shadow">
+                                                בקרוב
+                                            </span>
+                                        )}
+                                        <span className="px-2 py-1 rounded-full bg-amber-500 text-white text-[10px] font-bold shadow">
+                                            חדש
+                                        </span>
                                     </div>
                                     <div className="aspect-[16/10] bg-gray-100 dark:bg-brand-dark-bg flex items-center justify-center overflow-hidden">
                                         {logo ? (
