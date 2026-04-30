@@ -59,12 +59,13 @@ class MenuController extends Controller
                 },
             ])->where('tenant_id', $tenantId)->first();
 
-            if (!$restaurant || (!$restaurant->is_approved && !$isPreviewMode)) {
+            // תפריט ציבורי זמין גם לפני אישור (קישור לשיתוף / אב-טיפוס). חסימת ביצוע הזמנה נשארת ב-OrderController.
+            if (!$restaurant) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'המסעדה ממתינה לאישור מנהל מערכת ואינה זמינה עדיין להזמנות',
-                    'error' => 'restaurant_not_approved',
-                ], 403);
+                    'message' => 'מסעדה לא נמצאה',
+                    'error' => 'restaurant_not_found',
+                ], 404);
             }
 
             $restaurantVariants = $restaurant?->variants ?? collect();
