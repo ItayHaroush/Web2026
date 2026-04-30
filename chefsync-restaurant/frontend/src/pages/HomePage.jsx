@@ -32,7 +32,8 @@ import {
     FaSearch,
     FaUserPlus,
     FaBell,
-    FaTimes
+    FaTimes,
+    FaMask
 } from 'react-icons/fa';
 import { HiGlobeAlt, HiLocationMarker } from 'react-icons/hi';
 
@@ -683,6 +684,13 @@ export default function HomePage() {
                                         <FaCalendarAlt className="w-2 h-2 sm:w-2.5 sm:h-2.5 shrink-0" />
                                         <span className="truncate leading-tight">{restaurant.allow_future_orders ? 'הזמנה מראש' : 'ללא הזמנה מראש'}</span>
                                     </div>
+
+                                    {restaurant.is_demo && (
+                                        <div className="absolute bottom-2 left-2 z-[1] max-w-[min(calc(100%-1rem),14rem)] sm:bottom-3 sm:left-3 flex items-center gap-1.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-full text-[10px] sm:text-xs font-bold shadow-xl border-2 border-white leading-tight">
+                                            <FaMask className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" aria-hidden />
+                                            <span className="truncate">מסעדה לדוגמא</span>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="p-3 sm:p-5">

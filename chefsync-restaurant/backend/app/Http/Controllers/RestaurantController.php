@@ -264,10 +264,16 @@ class RestaurantController extends Controller
             $allowPublicDemo = app()->environment('local');
 
             $restaurantQuery = Restaurant::query();
-            if (! $allowPublicDemo) {
-                $restaurantQuery->where('is_demo', false);
-            }
-            if (! $request->boolean('include_pending')) {
+            if ($request->boolean('include_pending')) {
+                if (! $allowPublicDemo) {
+                    $restaurantQuery->where(function ($q) {
+                        $q->where('is_approved', true)
+                            ->orWhere(function ($q2) {
+                                $q2->where('is_approved', false)->where('is_demo', false);
+                            });
+                    });
+                }
+            } else {
                 $restaurantQuery->where('is_approved', true);
             }
             if ($request->filled('city')) {
@@ -337,19 +343,6 @@ class RestaurantController extends Controller
                 })
                 ->with('deliveryZones')
                 ->firstOrFail();
-
-            // דמו ציבורי נחסם; מסעדה חדשה לפני אישור עדיין נגישה לבעלים/שיתוף (ללא אינדוקס ב-SEO).
-            $isPreviewMode = $request->header('X-Preview-Mode') === 'true';
-            // בסביבת local לא חוסמים דמו — נוח לאב-טיפוס בלי DB / מצב preview.
-            $allowPublicDemo = app()->environment('local');
-
-            if (!$isPreviewMode && !$allowPublicDemo && ($restaurant->is_demo ?? false)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'המסעדה לא זמינה',
-                    'error' => 'restaurant_not_available',
-                ], 403);
-            }
 
             return response()->json([
                 'success' => true,
