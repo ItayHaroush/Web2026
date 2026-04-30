@@ -24,6 +24,7 @@ class RestaurantAddonGroup extends Model
         'source_include_prices',
         'source_addon_fixed_price',
         'source_selection_weight',
+        'first_addon_unit_free',
     ];
 
     protected $casts = [
@@ -36,6 +37,7 @@ class RestaurantAddonGroup extends Model
         'source_include_prices' => 'boolean',
         'source_addon_fixed_price' => 'decimal:2',
         'source_selection_weight' => 'integer',
+        'first_addon_unit_free' => 'boolean',
     ];
 
     /**

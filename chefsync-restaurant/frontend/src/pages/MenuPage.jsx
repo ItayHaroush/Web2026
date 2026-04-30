@@ -17,6 +17,7 @@ import MenuItemModal from '../components/MenuItemModal';
 import FutureOrderModal from '../components/FutureOrderModal';
 import TopDismissibleBanner from '../components/TopDismissibleBanner';
 import { getSuggestions } from '../components/SuggestionCards';
+import { sumAddonsBilledWithGroupRules } from '../utils/cart';
 import { MenuSeo } from '../components/seo/RestaurantSeo';
 
 /**
@@ -1359,7 +1360,20 @@ export default function MenuPage({ isPreviewMode = false }) {
                                         disabled={(suggestionAddonPicker.addon_groups || []).filter(g => g.is_required || (g.min_select && g.min_select > 0)).some(g => (suggestionSelectedAddons[g.id] || []).length < (g.min_select || 1))}
                                         className="w-full py-1.5 rounded-lg font-black text-xs transition-all disabled:bg-gray-200 disabled:text-gray-400 dark:disabled:bg-brand-dark-border dark:disabled:text-brand-dark-muted bg-brand-primary text-white active:scale-95"
                                     >
-                                        הוסף לסל ·  ₪{(() => { const extras = (suggestionAddonPicker.addon_groups || []).flatMap(g => (suggestionSelectedAddons[g.id] || []).map(id => (g.addons || []).find(a => a.id === id)?.price_delta || 0)); return (suggestionAddonPicker.price + extras.reduce((s, v) => s + v, 0)).toFixed(2); })()}
+                                        הוסף לסל ·  ₪{(() => {
+                                            const extrasAddons = (suggestionAddonPicker.addon_groups || []).flatMap(g =>
+                                                (suggestionSelectedAddons[g.id] || []).map(id => {
+                                                    const addon = (g.addons || []).find(a => a.id === id);
+                                                    return {
+                                                        price_delta: addon?.price_delta || 0,
+                                                        quantity: 1,
+                                                        addon_group_id: g.id,
+                                                        first_addon_unit_free: Boolean(g.first_addon_unit_free),
+                                                    };
+                                                }),
+                                            );
+                                            return (suggestionAddonPicker.price + sumAddonsBilledWithGroupRules(extrasAddons)).toFixed(2);
+                                        })()}
                                     </button>
                                 </div>
                             </div>

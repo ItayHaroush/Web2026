@@ -17,13 +17,18 @@ export default function KioskItemDetail({ item, onAddToCart, onClose, orderType,
     );
     const totalPrice = Number((unitPrice * qty).toFixed(2));
 
-    const toggleAddon = (addon) => {
+    const toggleAddon = (group, addon) => {
         setSelectedAddons(prev => {
             const exists = prev.find(a => a.id === addon.id);
             if (exists) {
                 return prev.filter(a => a.id !== addon.id);
             }
-            return [...prev, { ...addon, on_side: false }];
+            return [...prev, {
+                ...addon,
+                on_side: false,
+                addon_group_id: group.id,
+                first_addon_unit_free: Boolean(group.first_addon_unit_free),
+            }];
         });
     };
 
@@ -114,7 +119,7 @@ export default function KioskItemDetail({ item, onAddToCart, onClose, orderType,
                                     return (
                                         <div key={addon.id} className="flex items-center gap-2">
                                             <button
-                                                onClick={() => toggleAddon(addon)}
+                                                onClick={() => toggleAddon(group, addon)}
                                                 className={`flex-1 flex items-center justify-between p-3 rounded-xl border-2 transition-all ${isSelected
                                                     ? 'bg-amber-50 border-amber-300 text-amber-700'
                                                     : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'

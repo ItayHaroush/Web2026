@@ -16,6 +16,7 @@ use App\Models\Printer;
 use App\Models\Restaurant;
 use App\Models\TableTab;
 use App\Models\User;
+use App\Services\AddonPricingService;
 use App\Services\FcmService;
 use App\Services\OrderRefundService;
 use App\Services\PosPaymentService;
@@ -527,12 +528,9 @@ class POSController extends Controller
 
         $totalAmount = 0;
         foreach ($request->items as $item) {
-            $totalAmount += $item['price'] * $item['quantity'];
-            if (! empty($item['addons'])) {
-                foreach ($item['addons'] as $addon) {
-                    $totalAmount += ($addon['price'] ?? 0) * ($item['quantity'] ?? 1);
-                }
-            }
+            $qty = $item['quantity'] ?? 1;
+            $totalAmount += $item['price'] * $qty;
+            $totalAmount += AddonPricingService::sumFromPosAddonPayload($item['addons'] ?? null) * $qty;
         }
 
         // הנחה
@@ -574,17 +572,16 @@ class POSController extends Controller
         ]);
 
         foreach ($request->items as $item) {
-            $addonTotal = 0;
             $addonsArray = [];
             if (! empty($item['addons'])) {
                 foreach ($item['addons'] as $a) {
-                    $addonTotal += ($a['price'] ?? 0);
                     $addonsArray[] = [
                         'name' => $a['name'] ?? '',
                         'price' => $a['price'] ?? 0,
                     ];
                 }
             }
+            $addonTotal = AddonPricingService::sumFromPosAddonPayload($item['addons'] ?? null);
             $order->items()->create([
                 'menu_item_id' => $item['menu_item_id'],
                 'quantity' => $item['quantity'],
@@ -1428,26 +1425,22 @@ class POSController extends Controller
         // פתיחה עם פריטים בבקשה אחת (API): יוצרים הזמנה + בון מטבח לפריטים אלו בלבד
         $totalAmount = 0;
         foreach ($items as $item) {
-            $totalAmount += $item['price'] * $item['quantity'];
-            if (! empty($item['addons'])) {
-                foreach ($item['addons'] as $addon) {
-                    $totalAmount += ($addon['price'] ?? 0) * ($item['quantity'] ?? 1);
-                }
-            }
+            $qty = $item['quantity'] ?? 1;
+            $totalAmount += $item['price'] * $qty;
+            $totalAmount += AddonPricingService::sumFromPosAddonPayload($item['addons'] ?? null) * $qty;
         }
 
         $order = $this->createDineInTabOrder($restaurantId, $tenantId, $request->table_number, $totalAmount);
 
         $newLineItems = collect();
         foreach ($items as $item) {
-            $addonTotal = 0;
             $addonsArray = [];
             if (! empty($item['addons'])) {
                 foreach ($item['addons'] as $a) {
-                    $addonTotal += ($a['price'] ?? 0);
                     $addonsArray[] = ['name' => $a['name'] ?? '', 'price' => $a['price'] ?? 0];
                 }
             }
+            $addonTotal = AddonPricingService::sumFromPosAddonPayload($item['addons'] ?? null);
             $newLineItems->push($order->items()->create([
                 'menu_item_id' => $item['menu_item_id'],
                 'quantity' => $item['quantity'],
@@ -1540,15 +1533,14 @@ class POSController extends Controller
         $addedAmount = 0;
         $newLineItems = collect();
         foreach ($request->items as $item) {
-            $addonTotal = 0;
             $addonsArray = [];
             if (! empty($item['addons'])) {
                 foreach ($item['addons'] as $a) {
-                    $addonTotal += ($a['price'] ?? 0);
                     $addonsArray[] = ['name' => $a['name'] ?? '', 'price' => $a['price'] ?? 0];
                 }
             }
 
+            $addonTotal = AddonPricingService::sumFromPosAddonPayload($item['addons'] ?? null);
             $itemTotal = ($item['price'] + $addonTotal) * $item['quantity'];
             $addedAmount += $itemTotal;
 

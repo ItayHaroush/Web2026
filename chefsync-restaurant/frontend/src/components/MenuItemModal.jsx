@@ -57,12 +57,16 @@ export default function MenuItemModal({
 
     const selectedAddonObjects = addonGroups.flatMap((group) => {
         const selectedIds = selectedAddons[group.id] || [];
-        return (group.addons || []).filter((addon) => selectedIds.includes(addon.id));
+        return (group.addons || [])
+            .filter((addon) => selectedIds.includes(addon.id))
+            .map((addon) => ({ addon, group }));
     });
-    const normalizedAddons = selectedAddonObjects.map(addon => ({
+    const normalizedAddons = selectedAddonObjects.map(({ addon, group }) => ({
         ...normalizeAddon(addon),
         on_side: addonOnSide[addon.id] || false,
         quantity: addonQuantities[addon.id] || 1,
+        addon_group_id: group.id,
+        first_addon_unit_free: Boolean(group.first_addon_unit_free),
     }));
 
     const unitPrice = calculateUnitPrice(basePrice, normalizedVariant, normalizedAddons);

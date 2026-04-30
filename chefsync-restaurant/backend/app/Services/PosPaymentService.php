@@ -135,12 +135,9 @@ class PosPaymentService
         // חישוב סכום
         $totalAmount = 0;
         foreach ($orderData['items'] as $item) {
-            $totalAmount += $item['price'] * $item['quantity'];
-            if (! empty($item['addons'])) {
-                foreach ($item['addons'] as $addon) {
-                    $totalAmount += ($addon['price'] ?? 0) * ($item['quantity'] ?? 1);
-                }
-            }
+            $qty = $item['quantity'] ?? 1;
+            $totalAmount += $item['price'] * $qty;
+            $totalAmount += AddonPricingService::sumFromPosAddonPayload($item['addons'] ?? null) * $qty;
         }
 
         $orderType = $orderData['order_type'] ?? 'takeaway';
@@ -167,17 +164,16 @@ class PosPaymentService
 
         // יצירת פריטים
         foreach ($orderData['items'] as $item) {
-            $addonTotal = 0;
             $addonsArray = [];
             if (! empty($item['addons'])) {
                 foreach ($item['addons'] as $a) {
-                    $addonTotal += ($a['price'] ?? 0);
                     $addonsArray[] = [
                         'name' => $a['name'] ?? '',
                         'price' => $a['price'] ?? 0,
                     ];
                 }
             }
+            $addonTotal = AddonPricingService::sumFromPosAddonPayload($item['addons'] ?? null);
             $order->items()->create([
                 'menu_item_id' => $item['menu_item_id'],
                 'quantity' => $item['quantity'],

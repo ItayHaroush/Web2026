@@ -15,6 +15,7 @@ use App\Models\OrderItem;
 use App\Models\PaymentSession;
 use App\Models\Restaurant;
 use App\Models\User;
+use App\Services\AddonPricingService;
 use App\Services\BasePriceService;
 use App\Services\CustomerOrderMailService;
 use App\Services\CustomerOrderPushService;
@@ -399,7 +400,6 @@ class OrderController extends Controller
                 }
 
                 $addonsDetails = [];
-                $addonsTotal = 0.0;
 
                 foreach ($availableAddonGroups as $group) {
                     $selectedForGroup = collect($selectedAddonsByGroup[$group->id] ?? []);
@@ -458,10 +458,9 @@ class OrderController extends Controller
                         }
                     });
 
-                    $selectedForGroup->each(function ($selection) use (&$addonsDetails, &$addonsTotal, $group) {
+                    $selectedForGroup->each(function ($selection) use (&$addonsDetails, $group) {
                         $addonModel = $selection['addon'];
                         $qty = (int) ($selection['quantity'] ?? 1);
-                        $addonPrice = round((float) $addonModel->price_delta * $qty, 2);
                         $addonsDetails[] = [
                             'id' => $addonModel->id,
                             'name' => $addonModel->name,
@@ -471,11 +470,27 @@ class OrderController extends Controller
                             'group_name' => $group->name,
                             'on_side' => $selection['on_side'] ?? false,
                         ];
-                        $addonsTotal += $addonPrice;
                     });
                 }
 
-                $addonsTotal = round($addonsTotal, 2);
+                $addonsTotal = 0.0;
+                foreach ($availableAddonGroups as $group) {
+                    $selectedForGroup = collect($selectedAddonsByGroup[$group->id] ?? []);
+                    if ($selectedForGroup->isEmpty()) {
+                        continue;
+                    }
+
+                    $lines = $selectedForGroup->map(fn ($sel) => [
+                        'unit_delta' => (float) $sel['addon']->price_delta,
+                        'quantity' => (int) ($sel['quantity'] ?? 1),
+                    ])->values()->all();
+
+                    $addonsTotal += ($group->first_addon_unit_free ?? false)
+                        ? AddonPricingService::sumBilledFromOrderedLines($lines)
+                        : AddonPricingService::sumFullCatalogLines($lines);
+                    $addonsTotal = round($addonsTotal, 2);
+                }
+
                 $basePrice = round((float) $menuItem->price, 2);
                 $unitPrice = round($basePrice + $variantDelta + $addonsTotal, 2);
                 $lineTotal = round($unitPrice * $quantity, 2);

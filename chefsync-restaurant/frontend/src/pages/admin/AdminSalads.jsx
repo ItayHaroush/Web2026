@@ -59,6 +59,7 @@ export default function AdminSalads({ embedded = false }) {
         max_selections: '',
         is_active: true,
         placement: 'inside',
+        first_addon_unit_free: false,
         source_type: 'manual',
         source_category_id: '',
         source_include_prices: true,
@@ -94,6 +95,7 @@ export default function AdminSalads({ embedded = false }) {
                             ? ''
                             : String(group.max_selections),
                         placement: group.placement || 'inside',
+                        first_addon_unit_free: Boolean(group.first_addon_unit_free),
                     };
                     return acc;
                 }, {});
@@ -236,6 +238,7 @@ export default function AdminSalads({ embedded = false }) {
                     min_selections: Number(edit.min_selections) || 0,
                     max_selections: maxVal,
                     placement: edit.placement || 'inside',
+                    first_addon_unit_free: Boolean(edit.first_addon_unit_free),
                 },
                 { headers: getAuthHeaders() }
             );
@@ -268,6 +271,7 @@ export default function AdminSalads({ embedded = false }) {
                 max_selections: group.max_selections === null || group.max_selections === 0 ? '' : String(group.max_selections),
                 is_active: Boolean(group.is_active),
                 placement: group.placement || 'inside',
+                first_addon_unit_free: Boolean(group.first_addon_unit_free),
                 source_type: group.source_type || 'manual',
                 source_category_id: group.source_category_id ? String(group.source_category_id) : '',
                 source_include_prices: group.source_include_prices !== undefined ? Boolean(group.source_include_prices) : true,
@@ -285,6 +289,7 @@ export default function AdminSalads({ embedded = false }) {
                 max_selections: '',
                 is_active: true,
                 placement: 'inside',
+                first_addon_unit_free: false,
                 source_type: 'manual',
                 source_category_id: '',
                 source_include_prices: true,
@@ -306,6 +311,7 @@ export default function AdminSalads({ embedded = false }) {
             max_selections: '',
             is_active: true,
             placement: 'inside',
+            first_addon_unit_free: false,
             source_type: 'manual',
             source_category_id: '',
             source_include_prices: true,
@@ -359,6 +365,7 @@ export default function AdminSalads({ embedded = false }) {
             max_selections: maxVal,
             is_active: groupForm.is_active,
             placement: groupForm.placement || 'inside',
+            first_addon_unit_free: Boolean(groupForm.first_addon_unit_free),
             source_type: groupForm.source_type || 'manual',
             source_category_id: groupForm.source_type === 'category' && groupForm.source_category_id
                 ? Number(groupForm.source_category_id)
@@ -764,6 +771,26 @@ export default function AdminSalads({ embedded = false }) {
                                         <p className="text-[10px] text-gray-400 text-center font-bold">החצים משנים את סדר הופעת הקבוצה ללקוח</p>
                                     </div>
                                 </div>
+                            </div>
+
+                            <div className="px-10 pb-4">
+                                <label className="flex items-start gap-3 p-4 bg-amber-50/90 rounded-[1.5rem] cursor-pointer border border-amber-100">
+                                    <input
+                                        type="checkbox"
+                                        className="mt-1 rounded border-gray-300 text-brand-primary focus:ring-brand-primary"
+                                        checked={groupEdits[selectedGroup.id]?.first_addon_unit_free ?? false}
+                                        onChange={(e) => {
+                                            const val = e.target.checked;
+                                            setGroupEdits((prev) => ({
+                                                ...prev,
+                                                [selectedGroup.id]: { ...prev[selectedGroup.id], first_addon_unit_free: val },
+                                            }));
+                                        }}
+                                    />
+                                    <span className="text-sm font-bold text-gray-800 leading-snug">
+                                        תוספת ראשונה בקבוצה חינם — יחידת מחיר אחת מהבחירה הראשונה בעלות חיובית לא תחויב (רק בתוך קבוצה זו).
+                                    </span>
+                                </label>
                             </div>
 
                             <div className="p-8 pt-0 flex justify-center">
@@ -1397,6 +1424,18 @@ export default function AdminSalads({ embedded = false }) {
                                                 </button>
                                             </div>
                                         </div>
+
+                                        <label className="flex items-start gap-3 p-4 sm:p-5 bg-amber-50 rounded-2xl sm:rounded-[1.5rem] cursor-pointer border border-amber-100">
+                                            <input
+                                                type="checkbox"
+                                                className="mt-1 rounded border-gray-300 text-brand-primary focus:ring-brand-primary"
+                                                checked={Boolean(groupForm.first_addon_unit_free)}
+                                                onChange={(e) => setGroupForm({ ...groupForm, first_addon_unit_free: e.target.checked })}
+                                            />
+                                            <span className="text-sm font-bold text-gray-800 leading-snug">
+                                                תוספת ראשונה בקבוצה חינם — יחידת מחיר אחת מהבחירה הראשונה בעלות חיובית לא תחויב (בתוך קבוצה זו בלבד).
+                                            </span>
+                                        </label>
                                     </div>
                                 )}
                             </div>

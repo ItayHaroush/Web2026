@@ -18,6 +18,7 @@ class MenuItemAddonGroup extends Model
         'is_required',
         'is_active',
         'sort_order',
+        'first_addon_unit_free',
     ];
 
     protected $casts = [
@@ -26,6 +27,7 @@ class MenuItemAddonGroup extends Model
         'is_required' => 'boolean',
         'is_active' => 'boolean',
         'sort_order' => 'integer',
+        'first_addon_unit_free' => 'boolean',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];

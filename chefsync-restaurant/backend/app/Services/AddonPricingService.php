@@ -1,0 +1,103 @@
+<?php
+
+namespace App\Services;
+
+/**
+ * חישוב תוספות לפי סדר הבחירה: יחידת מחיר אחת מהתוספת הראשונה עם delta חיובי פטורה.
+ */
+final class AddonPricingService
+{
+    /**
+     * @param  array<int, array<string, mixed>>  $orderedLines  כל שורה: unit_delta (או price), quantity אופציונלי (ברירת מחדל 1)
+     */
+    public static function sumBilledFromOrderedLines(array $orderedLines): float
+    {
+        $total = 0.0;
+        $freeApplied = false;
+
+        foreach ($orderedLines as $line) {
+            $delta = round((float) ($line['unit_delta'] ?? $line['price'] ?? 0), 2);
+            $qty = (int) ($line['quantity'] ?? $line['qty'] ?? 1);
+            $qty = max(1, $qty);
+
+            $subtotal = round($delta * $qty, 2);
+
+            if (! $freeApplied && $delta > 0.0) {
+                $subtotal = round(max(0.0, $subtotal - $delta), 2);
+                $freeApplied = true;
+            }
+
+            $total = round($total + $subtotal, 2);
+        }
+
+        return $total;
+    }
+
+    /**
+     * סיכום מלא ללא פטור (לקבוצות שלא מוגדרות עם תוספת ראשונה חינם).
+     *
+     * @param  array<int, array<string, mixed>>  $orderedLines
+     */
+    public static function sumFullCatalogLines(array $orderedLines): float
+    {
+        $total = 0.0;
+
+        foreach ($orderedLines as $line) {
+            $delta = round((float) ($line['unit_delta'] ?? $line['price'] ?? 0), 2);
+            $qty = max(1, (int) ($line['quantity'] ?? $line['qty'] ?? 1));
+            $total = round($total + round($delta * $qty, 2), 2);
+        }
+
+        return $total;
+    }
+
+    /**
+     * תוספות POS: מחיר ליחידה תחת price; קיבוץ לפי addon_group_id / group_id.
+     * קבוצת `_legacy` ללא מזהה — תמיד חיוב מלא (תאימות לאחור).
+     */
+    public static function sumFromPosAddonPayload(?array $addons): float
+    {
+        if ($addons === null || $addons === []) {
+            return 0.0;
+        }
+
+        /** @var array<string, array{apply_first_free: bool, lines: array<int, array<string, mixed>>}> $buckets */
+        $buckets = [];
+
+        foreach ($addons as $a) {
+            if (! is_array($a)) {
+                continue;
+            }
+
+            $gid = isset($a['addon_group_id'])
+                ? 'g_' . (string) $a['addon_group_id']
+                : (isset($a['group_id']) ? 'g_' . (string) $a['group_id'] : '_legacy');
+
+            if (! isset($buckets[$gid])) {
+                $buckets[$gid] = [
+                    'apply_first_free' => false,
+                    'lines' => [],
+                ];
+            }
+
+            $buckets[$gid]['apply_first_free'] = $buckets[$gid]['apply_first_free']
+                || (bool) ($a['first_addon_unit_free'] ?? false);
+
+            $buckets[$gid]['lines'][] = [
+                'unit_delta' => (float) ($a['price'] ?? 0),
+                'quantity' => max(1, (int) ($a['quantity'] ?? $a['qty'] ?? 1)),
+            ];
+        }
+
+        $total = 0.0;
+
+        foreach ($buckets as $bucket) {
+            $total += $bucket['apply_first_free']
+                ? self::sumBilledFromOrderedLines($bucket['lines'])
+                : self::sumFullCatalogLines($bucket['lines']);
+            $total = round($total, 2);
+        }
+
+        return round($total, 2);
+    }
+}

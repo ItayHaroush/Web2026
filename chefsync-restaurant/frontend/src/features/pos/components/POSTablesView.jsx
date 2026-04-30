@@ -5,7 +5,7 @@ import posApi from '../api/posApi';
 import POSAmountKeypad from './POSAmountKeypad';
 import POSManagerAuth from './POSManagerAuth';
 import POSMenuItemModal, { posItemNeedsConfiguration } from './POSMenuItemModal';
-import { buildCartKey } from '../../../utils/cart';
+import { buildCartKey, sumAddonsBilledWithGroupRules } from '../../../utils/cart';
 
 export default function POSTablesView({ headers, posToken, shift }) {
     // Require open shift
@@ -656,9 +656,17 @@ function AddItemsModal({ tab, headers, posToken, onClose, onAdded }) {
     };
 
     const lineUnitTotal = (row) => {
-        let u = row.price;
-        if (row.addons?.length) row.addons.forEach(a => { u += (a.price || 0); });
-        return u * row.quantity;
+        const addonsBill = row.addons?.length
+            ? sumAddonsBilledWithGroupRules(
+                row.addons.map(a => ({
+                    price_delta: a.price ?? 0,
+                    quantity: 1,
+                    addon_group_id: a.addon_group_id,
+                    first_addon_unit_free: a.first_addon_unit_free,
+                })),
+            )
+            : 0;
+        return (row.price + addonsBill) * row.quantity;
     };
 
     const cartTotal = cart.reduce((sum, item) => sum + lineUnitTotal(item), 0);

@@ -11,6 +11,7 @@ use App\Models\Restaurant;
 use App\Models\FcmToken;
 use App\Models\MonitoringAlert;
 use App\Models\NotificationLog;
+use App\Services\AddonPricingService;
 use App\Services\FcmService;
 use App\Services\PosPaymentService;
 use App\Services\PromotionService;
@@ -329,6 +330,7 @@ class KioskController extends Controller
                         'min_selections' => $g->min_selections ?? 0,
                         'max_selections' => $g->max_selections,
                         'selection_type' => $g->selection_type ?? 'multiple',
+                        'first_addon_unit_free' => (bool) ($g->first_addon_unit_free ?? false),
                         'addons' => $g->addons->map(fn($a) => [
                             'id' => $a->id,
                             'name' => $a->name,
@@ -345,6 +347,7 @@ class KioskController extends Controller
                         'min_selections' => $g->min_selections ?? 0,
                         'max_selections' => $g->max_selections,
                         'selection_type' => $g->selection_type ?? 'multiple',
+                        'first_addon_unit_free' => (bool) ($g->first_addon_unit_free ?? false),
                         'addons' => $g->addons->map(fn($a) => [
                             'id' => $a->id,
                             'name' => $a->name,
@@ -559,7 +562,7 @@ class KioskController extends Controller
                     : $this->resolveAddonGroups($menuItem->addonGroups);
 
                 $addonsDetails = [];
-                $addonsTotal = 0.0;
+                $groupLines = [];
 
                 foreach ($addonEntries as $addonEntry) {
                     $addonId = $addonEntry['addon_id']; // string or int (e.g. 5 or 'cat_item_5')
@@ -582,6 +585,14 @@ class KioskController extends Controller
                     }
 
                     $addonPrice = round((float) $matchedAddon->price_delta, 2);
+                    $gid = $matchedGroup->id;
+                    if (! isset($groupLines[$gid])) {
+                        $groupLines[$gid] = [];
+                    }
+                    $groupLines[$gid][] = [
+                        'unit_delta' => $addonPrice,
+                        'quantity' => 1,
+                    ];
                     $addonsDetails[] = [
                         'id' => $matchedAddon->id,
                         'name' => $matchedAddon->name,
@@ -590,10 +601,19 @@ class KioskController extends Controller
                         'group_name' => $matchedGroup->name,
                         'on_side' => $addonEntry['on_side'] ?? false,
                     ];
-                    $addonsTotal += $addonPrice;
                 }
 
-                $addonsTotal = round($addonsTotal, 2);
+                $addonsTotal = 0.0;
+                foreach ($availableAddonGroups as $group) {
+                    $lines = $groupLines[$group->id] ?? [];
+                    if ($lines === []) {
+                        continue;
+                    }
+                    $addonsTotal += ($group->first_addon_unit_free ?? false)
+                        ? AddonPricingService::sumBilledFromOrderedLines($lines)
+                        : AddonPricingService::sumFullCatalogLines($lines);
+                    $addonsTotal = round($addonsTotal, 2);
+                }
                 $basePrice = round((float) $menuItem->price, 2);
 
                 // התאמת מחיר לישיבה

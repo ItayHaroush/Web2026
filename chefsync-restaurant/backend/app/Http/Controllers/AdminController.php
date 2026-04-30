@@ -477,6 +477,7 @@ class AdminController extends Controller
                     'is_required' => $originalGroup->is_required,
                     'is_active' => $originalGroup->is_active,
                     'sort_order' => $originalGroup->sort_order,
+                    'first_addon_unit_free' => (bool) ($originalGroup->first_addon_unit_free ?? false),
                 ]);
 
                 // העתקת תוספות בודדות בקבוצה
@@ -1649,6 +1650,7 @@ class AdminController extends Controller
             'source_include_prices' => 'sometimes|boolean',
             'source_addon_fixed_price' => 'nullable|numeric|min:0',
             'source_selection_weight' => 'sometimes|nullable|integer|min:1|max:10',
+            'first_addon_unit_free' => 'sometimes|boolean',
         ]);
 
         $restaurant = $this->resolveRestaurant($request);
@@ -1705,6 +1707,7 @@ class AdminController extends Controller
             'source_include_prices' => $sourceIncludePrices,
             'source_addon_fixed_price' => $sourceAddonFixedPrice,
             'source_selection_weight' => $sourceSelectionWeight,
+            'first_addon_unit_free' => $request->boolean('first_addon_unit_free', false),
         ]);
 
         return response()->json([
@@ -1737,6 +1740,7 @@ class AdminController extends Controller
             'source_include_prices' => 'sometimes|boolean',
             'source_addon_fixed_price' => 'nullable|numeric|min:0',
             'source_selection_weight' => 'sometimes|nullable|integer|min:1|max:10',
+            'first_addon_unit_free' => 'sometimes|boolean',
         ]);
 
         $restaurant = $this->resolveRestaurant($request);
@@ -1780,6 +1784,10 @@ class AdminController extends Controller
 
         if ($request->has('source_selection_weight')) {
             $payload['source_selection_weight'] = max(1, min(10, (int) ($request->input('source_selection_weight') ?: 1)));
+        }
+
+        if ($request->has('first_addon_unit_free')) {
+            $payload['first_addon_unit_free'] = $request->boolean('first_addon_unit_free');
         }
 
         // טיפול ב-max_selections = 0 (ללא הגבלה - יהפך ל-null)
@@ -1889,6 +1897,7 @@ class AdminController extends Controller
             'source_include_prices' => $originalGroup->source_include_prices ?? true,
             'source_addon_fixed_price' => $originalGroup->source_addon_fixed_price,
             'source_selection_weight' => $originalGroup->source_selection_weight ?? 1,
+            'first_addon_unit_free' => (bool) ($originalGroup->first_addon_unit_free ?? false),
         ]);
 
         // העתק את כל הפריטים

@@ -9,7 +9,7 @@ import { FaCashRegister } from 'react-icons/fa';
 import POSSplitPaymentModal from './POSSplitPaymentModal';
 import POSMenuItemModal, { posItemNeedsConfiguration } from './POSMenuItemModal';
 import POSAmountKeypad from './POSAmountKeypad';
-import { buildCartKey } from '../../../utils/cart';
+import { buildCartKey, sumAddonsBilledWithGroupRules } from '../../../utils/cart';
 
 export default function POSNewOrder({ headers, posToken, onOrderCreated, shift }) {
     // Require open shift
@@ -84,11 +84,15 @@ function POSNewOrderInner({ headers, posToken, onOrderCreated }) {
     });
 
     const lineUnitTotal = (row) => {
-        let u = row.price;
-        if (row.addons?.length) {
-            row.addons.forEach(a => { u += (a.price || 0); });
-        }
-        return u * row.quantity;
+        const addonsBill = row.addons?.length ? sumAddonsBilledWithGroupRules(
+            row.addons.map(a => ({
+                price_delta: a.price ?? 0,
+                quantity: 1,
+                addon_group_id: a.addon_group_id,
+                first_addon_unit_free: a.first_addon_unit_free,
+            })),
+        ) : 0;
+        return (row.price + addonsBill) * row.quantity;
     };
 
     const mergeCartLine = (line) => {
@@ -133,11 +137,17 @@ function POSNewOrderInner({ headers, posToken, onOrderCreated }) {
     };
 
     const cartSubtotal = cart.reduce((sum, item) => {
-        let itemTotal = item.price * item.quantity;
-        if (item.addons) {
-            item.addons.forEach(a => { itemTotal += (a.price || 0) * item.quantity; });
-        }
-        return sum + itemTotal;
+        const addonsBill = item.addons?.length
+            ? sumAddonsBilledWithGroupRules(
+                item.addons.map(a => ({
+                    price_delta: a.price ?? 0,
+                    quantity: 1,
+                    addon_group_id: a.addon_group_id,
+                    first_addon_unit_free: a.first_addon_unit_free,
+                })),
+            )
+            : 0;
+        return sum + (item.price + addonsBill) * item.quantity;
     }, 0);
 
     const discVal = parseFloat(discountValue) || 0;

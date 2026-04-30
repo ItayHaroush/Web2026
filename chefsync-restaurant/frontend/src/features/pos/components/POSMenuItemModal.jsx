@@ -13,13 +13,18 @@ export default function POSMenuItemModal({ item, onAdd, onClose }) {
     const unitPrice = calculateUnitPrice(item.price, selectedVariant, selectedAddons, 0);
     const totalPrice = Number((unitPrice * qty).toFixed(2));
 
-    const toggleAddon = (addon) => {
+    const toggleAddon = (group, addon) => {
         setSelectedAddons(prev => {
             const exists = prev.find(a => a.id === addon.id);
             if (exists) {
                 return prev.filter(a => a.id !== addon.id);
             }
-            return [...prev, { ...addon, on_side: false }];
+            return [...prev, {
+                ...addon,
+                on_side: false,
+                addon_group_id: group.id,
+                first_addon_unit_free: Boolean(group.first_addon_unit_free),
+            }];
         });
     };
 
@@ -35,6 +40,8 @@ export default function POSMenuItemModal({ item, onAdd, onClose }) {
             name: a.name,
             price: a.price_delta ?? a.price ?? 0,
             on_side: a.on_side || false,
+            addon_group_id: a.addon_group_id,
+            first_addon_unit_free: a.first_addon_unit_free,
         }));
         const line = {
             menu_item_id: item.id,
@@ -118,7 +125,7 @@ export default function POSMenuItemModal({ item, onAdd, onClose }) {
                                         <div key={addon.id} className="flex items-center gap-2">
                                             <button
                                                 type="button"
-                                                onClick={() => toggleAddon(addon)}
+                                                onClick={() => toggleAddon(group, addon)}
                                                 className={`flex-1 flex items-center justify-between p-3 rounded-xl border transition-all ${isSelected
                                                     ? 'bg-orange-500/15 border-orange-500/50 text-orange-200'
                                                     : 'bg-slate-900 border-slate-700 text-slate-300 hover:border-slate-600'

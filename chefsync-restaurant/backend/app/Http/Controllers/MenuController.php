@@ -153,6 +153,7 @@ class MenuController extends Controller
                                         'max_select' => $maxSelect,
                                         'is_required' => (bool) $group->is_required,
                                         'placement' => $group->placement ?? 'inside',
+                                        'first_addon_unit_free' => (bool) ($group->first_addon_unit_free ?? false),
                                         'addons' => $group->addons->map(function ($addon) {
                                             return [
                                                 'id' => $addon->id,
@@ -174,6 +175,7 @@ class MenuController extends Controller
                                         'max_select' => $group->max_selections,
                                         'is_required' => (bool) $group->is_required,
                                         'placement' => $group->placement ?? 'inside',
+                                        'first_addon_unit_free' => (bool) ($group->first_addon_unit_free ?? false),
                                         'addons' => $group->addons->map(function ($addon) {
                                             return [
                                                 'id' => $addon->id,
