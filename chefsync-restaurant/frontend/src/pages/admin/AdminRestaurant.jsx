@@ -100,6 +100,8 @@ export default function AdminRestaurant() {
     const [justFetched, setJustFetched] = useState(false);
     const [openDayPanels, setOpenDayPanels] = useState({});
     const shareQrRef = useRef(null);
+    /** סכום מינימום אחרון לפני כיבוי — לשחזור בעת הפעלה מחדש של הטוגל */
+    const lastDeliveryMinimumRef = useRef('60');
     const [resettingDineIn, setResettingDineIn] = useState(false);
     const normalizeOperatingHours = (oh) => {
         if (!oh) return {};
@@ -198,6 +200,28 @@ export default function AdminRestaurant() {
 
     const handleChange = (field, value) => {
         setRestaurant((prev) => ({ ...prev, [field]: value }));
+    };
+
+    useEffect(() => {
+        const v = parseFloat(restaurant?.delivery_minimum);
+        if (restaurant != null && !Number.isNaN(v) && v > 0) {
+            lastDeliveryMinimumRef.current = String(v);
+        }
+    }, [restaurant?.delivery_minimum]);
+
+    const deliveryMinimumActive = parseFloat(restaurant?.delivery_minimum ?? 0) > 0;
+
+    const toggleDeliveryMinimumActive = () => {
+        if (!restaurant) return;
+        if (deliveryMinimumActive) {
+            const cur = parseFloat(restaurant.delivery_minimum);
+            if (!Number.isNaN(cur) && cur > 0) {
+                lastDeliveryMinimumRef.current = String(cur);
+            }
+            handleChange('delivery_minimum', '0');
+        } else {
+            handleChange('delivery_minimum', lastDeliveryMinimumRef.current || '60');
+        }
     };
 
     const handleOperatingDaysChange = (day, checked) => {
@@ -717,22 +741,58 @@ export default function AdminRestaurant() {
 
                             {/* הגדרות הזמנה נוספות */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-6">
-                                <div className="space-y-2 p-5 bg-gray-50 rounded-3xl border border-gray-100">
-                                    <h4 className="font-black text-gray-800 flex items-center gap-2">
-                                        💰 מינימום הזמנה למשלוח
-                                    </h4>
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-xl font-black text-gray-500">₪</span>
-                                        <input
-                                            type="number"
-                                            min="0"
-                                            step="1"
-                                            value={restaurant.delivery_minimum ?? 0}
-                                            onChange={(e) => handleChange('delivery_minimum', e.target.value)}
-                                            className="w-full px-4 py-3 bg-white border-2 border-transparent focus:border-brand-primary rounded-xl focus:outline-none text-gray-900 font-black text-center text-xl"
-                                        />
+                                <div className="space-y-4 p-5 bg-gray-50 rounded-3xl border border-gray-100">
+                                    <div className="flex items-start justify-between gap-4">
+                                        <div className="min-w-0">
+                                            <h4 className="font-black text-gray-800 flex items-center gap-2">
+                                                💰 מינימום הזמנה למשלוח
+                                            </h4>
+                                            <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+                                                {deliveryMinimumActive
+                                                    ? 'נדרש סכום מינימלי לפני אישור הזמנה במשלוח'
+                                                    : 'כבוי — אין סף מינימום, כל סכום מתקבל במשלוח'}
+                                            </p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            role="switch"
+                                            aria-checked={deliveryMinimumActive}
+                                            aria-label={deliveryMinimumActive ? 'כבה מינימום הזמנה למשלוח' : 'הפעל מינימום הזמנה למשלוח'}
+                                            onClick={() => toggleDeliveryMinimumActive()}
+                                            className={`shrink-0 w-11 h-7 flex items-center rounded-full p-1 transition-colors ${deliveryMinimumActive ? 'bg-brand-primary' : 'bg-gray-300'
+                                                }`}
+                                        >
+                                            <span
+                                                className={`bg-white w-5 h-5 rounded-full shadow-sm transform transition-transform ${deliveryMinimumActive ? '-translate-x-4' : 'translate-x-0'
+                                                    }`}
+                                            />
+                                        </button>
                                     </div>
-                                    <p className="text-xs text-gray-500">0 = ללא מינימום</p>
+
+                                    {deliveryMinimumActive ? (
+                                        <div className="flex items-center gap-2 pt-2 border-t border-gray-100">
+                                            <span className="text-xl font-black text-gray-500">₪</span>
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                step="1"
+                                                value={restaurant.delivery_minimum ?? ''}
+                                                onChange={(e) => {
+                                                    const v = e.target.value;
+                                                    const n = parseFloat(v);
+                                                    if (v !== '' && !Number.isNaN(n) && n > 0) {
+                                                        lastDeliveryMinimumRef.current = v;
+                                                    }
+                                                    handleChange('delivery_minimum', v);
+                                                }}
+                                                className="w-full px-4 py-3 bg-white border-2 border-transparent focus:border-brand-primary rounded-xl focus:outline-none text-gray-900 font-black text-center text-xl"
+                                            />
+                                        </div>
+                                    ) : (
+                                        <p className="text-xs font-bold text-gray-400 pt-2 border-t border-gray-100">
+                                            הפעילו את המתג והזינו סכום כדי לחייב מינימום
+                                        </p>
+                                    )}
                                 </div>
 
                                 <div className="space-y-2 p-5 bg-gray-50 rounded-3xl border border-gray-100">

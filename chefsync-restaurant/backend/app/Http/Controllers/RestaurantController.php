@@ -61,7 +61,9 @@ class RestaurantController extends Controller
             'is_open_now' => (bool) ($restaurant->is_open_now ?? false),
             'operating_days' => $restaurant->operating_days ?? [],
             'operating_hours' => $restaurant->operating_hours ?? [],
-            'has_delivery' => $restaurant->relationLoaded('deliveryZones') ? $restaurant->deliveryZones->isNotEmpty() : false,
+            // תואם הגדרות המסעדה (דגל has_delivery). קודם חושב רק לפי אזורים → מסעדה בלי אזורים קיבלה תמיד false.
+            // השלמת הזמנה במשלוח עדיין דורשת אזור משלוח פעיל — ראו OrderController::validateDeliveryLocation.
+            'has_delivery' => (bool) ($restaurant->has_delivery ?? false),
             'has_pickup' => $restaurant->has_pickup ?? true,
             'share_incentive_text' => $restaurant->share_incentive_text,
             'delivery_time_minutes' => $restaurant->delivery_time_minutes,
