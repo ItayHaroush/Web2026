@@ -161,7 +161,10 @@ class RestaurantController extends Controller
     }
 
     /**
-     * קבל רשימת כל המסעדות (ללא צורך באימות)
+     * קבל רשימת מסעדות ציבורית (ללא אימות).
+     *
+     * ברירת מחדל: רק is_approved=true (דף הבית, נפילת ערים וכו').
+     * include_pending=1: גם ממתינות לאישור — לעמוד Hub ‎/restaurants (SEO / שיתוף קישור).
      */
     public function index(Request $request)
     {
@@ -205,14 +208,6 @@ class RestaurantController extends Controller
             $applyListingFilters($approvedQuery);
             $approved = $approvedQuery->orderBy('name')->get();
 
-            // ממתינות לאישור — להופיע אחרי המאושרות (שיתוף קישור / Hub); בלי דמו בפרודקשן
-            $pendingQuery = Restaurant::query()->where('is_approved', false)->with('deliveryZones');
-            if (! $allowPublicDemo) {
-                $pendingQuery->where('is_demo', false);
-            }
-            $applyListingFilters($pendingQuery);
-            $pending = $pendingQuery->orderBy('name')->get();
-
             $sortChunk = function ($collection) {
                 return $collection
                     ->sort(function ($a, $b) {
@@ -229,7 +224,17 @@ class RestaurantController extends Controller
                     ->values();
             };
 
-            $restaurants = $sortChunk($approved)->concat($sortChunk($pending));
+            $restaurants = $sortChunk($approved);
+
+            if ($request->boolean('include_pending')) {
+                $pendingQuery = Restaurant::query()->where('is_approved', false)->with('deliveryZones');
+                if (! $allowPublicDemo) {
+                    $pendingQuery->where('is_demo', false);
+                }
+                $applyListingFilters($pendingQuery);
+                $pending = $pendingQuery->orderBy('name')->get();
+                $restaurants = $restaurants->concat($sortChunk($pending));
+            }
 
             return response()->json([
                 'success' => true,
@@ -244,7 +249,9 @@ class RestaurantController extends Controller
         }
     }
 
-    /**     * חיפוש מנות בתפריטים (מסעדות מאושרות + ממתינות לאישור; דמו רק ב-local)
+    /**
+     * חיפוש מנות בתפריטים (ציבורי).
+     * ברירת מחדל: רק מסעדות מאושרות. include_pending=1 — כמו רשימת ה-Hub.
      */
     public function searchMenuItems(Request $request)
     {
@@ -259,6 +266,9 @@ class RestaurantController extends Controller
             $restaurantQuery = Restaurant::query();
             if (! $allowPublicDemo) {
                 $restaurantQuery->where('is_demo', false);
+            }
+            if (! $request->boolean('include_pending')) {
+                $restaurantQuery->where('is_approved', true);
             }
             if ($request->filled('city')) {
                 $cityInput = $request->city;

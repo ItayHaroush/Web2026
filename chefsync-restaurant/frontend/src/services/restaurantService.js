@@ -2,12 +2,15 @@ import apiClient from './apiClient';
 import { API_BASE_URL } from '../constants/api';
 
 /**
- * קבל רשימת כל המסעדות
+ * קבל רשימת מסעדות ציבורית.
+ * @param {string|null} city
+ * @param {{ includePending?: boolean }} options includePending=true — מאושרות + ממתינות (עמוד /restaurants)
  */
-export const getAllRestaurants = async (city = null) => {
+export const getAllRestaurants = async (city = null, options = {}) => {
     try {
         const params = {};
         if (city) params.city = city;
+        if (options.includePending) params.include_pending = 1;
 
         // 🔥 שימוש ב-apiClient (עם interceptors)
         const response = await apiClient.get(`/restaurants`, {

@@ -35,7 +35,7 @@ export default function RestaurantsListPage() {
     useEffect(() => {
         let cancelled = false;
         setLoading(true);
-        getAllRestaurants(cityParam || null)
+        getAllRestaurants(cityParam || null, { includePending: true })
             .then((res) => {
                 if (cancelled) return;
                 const data = (res?.data || []).filter(Boolean);
