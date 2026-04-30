@@ -37,6 +37,10 @@ import { GiKebabSpit, GiChefToque } from 'react-icons/gi';
 
 const DAYS_OF_WEEK = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 
+/** תואם placeholders בשדות type="time" — חייב להישמר ב-state ובשרת גם אם המשתמש לא נגע בשורת ברירת המחדל */
+const DEFAULT_OPERATING_OPEN = '09:00';
+const DEFAULT_OPERATING_CLOSE = '23:00';
+
 // חשב סטטוס פתיחה: יום מיוחד (תאריך) > שעות יום ספציפי > ברירת מחדל
 const calculateIsOpen = (operatingDays = {}, operatingHours = {}) => {
     const now = new Date();
@@ -109,8 +113,8 @@ export default function AdminRestaurant() {
     // ודא שתמיד יש מבנה מלא לפני שליחה
     const buildOperatingHoursPayload = (operatingHours = {}, operatingDays = {}) => {
         const normalized = normalizeOperatingHours(operatingHours);
-        const defaultOpen = normalized.default?.open ?? normalized.open ?? null;
-        const defaultClose = normalized.default?.close ?? normalized.close ?? null;
+        const defaultOpen = normalized.default?.open ?? normalized.open ?? DEFAULT_OPERATING_OPEN;
+        const defaultClose = normalized.default?.close ?? normalized.close ?? DEFAULT_OPERATING_CLOSE;
 
         // השלם ימים חסרים עם מצב סגור/פתוח לפי operating_days
         const daysMap = { ...(normalized.days || {}) };
@@ -197,24 +201,30 @@ export default function AdminRestaurant() {
     };
 
     const handleOperatingDaysChange = (day, checked) => {
-        setRestaurant((prev) => ({
-            ...prev,
-            operating_days: {
-                ...prev.operating_days,
-                [day]: checked,
-            },
-            operating_hours: {
-                default: prev.operating_hours?.default || prev.operating_hours || {},
-                special_days: prev.operating_hours?.special_days || {},
-                days: {
-                    ...(prev.operating_hours?.days || {}),
-                    [day]: {
-                        ...(prev.operating_hours?.days?.[day] || {}),
-                        closed: !checked,
+        setRestaurant((prev) => {
+            const defOpen = prev.operating_hours?.default?.open ?? prev.operating_hours?.open ?? DEFAULT_OPERATING_OPEN;
+            const defClose = prev.operating_hours?.default?.close ?? prev.operating_hours?.close ?? DEFAULT_OPERATING_CLOSE;
+            return {
+                ...prev,
+                operating_days: {
+                    ...prev.operating_days,
+                    [day]: checked,
+                },
+                operating_hours: {
+                    default: prev.operating_hours?.default || prev.operating_hours || {},
+                    special_days: prev.operating_hours?.special_days || {},
+                    days: {
+                        ...(prev.operating_hours?.days || {}),
+                        [day]: {
+                            ...(prev.operating_hours?.days?.[day] || {}),
+                            closed: !checked,
+                            open: prev.operating_hours?.days?.[day]?.open ?? defOpen,
+                            close: prev.operating_hours?.days?.[day]?.close ?? defClose,
+                        },
                     },
                 },
-            },
-        }));
+            };
+        });
     };
 
     const handleOperatingHoursChange = (field, value) => {

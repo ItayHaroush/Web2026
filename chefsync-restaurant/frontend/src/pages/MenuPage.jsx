@@ -20,6 +20,101 @@ import { getSuggestions } from '../components/SuggestionCards';
 import { sumAddonsBilledWithGroupRules } from '../utils/cart';
 import { MenuSeo } from '../components/seo/RestaurantSeo';
 
+const MENU_DAY_ORDER_HE = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+const DEFAULT_MENU_OPEN = '09:00';
+const DEFAULT_MENU_CLOSE = '23:00';
+
+const ENGLISH_DAY_TO_HEBREW = {
+    sunday: 'ראשון',
+    monday: 'שני',
+    tuesday: 'שלישי',
+    wednesday: 'רביעי',
+    thursday: 'חמישי',
+    friday: 'שישי',
+    saturday: 'שבת',
+};
+
+/** תצוגת שעות ללקוח — מיזוג יום + default כמו ב-backend (אובייקט יום ללא זמנים עדיין יורש מ-default) */
+function normalizeOperatingHoursForCustomerDisplay(raw) {
+    let oh = raw;
+    if (oh == null) return null;
+    if (typeof oh === 'string') {
+        try {
+            oh = JSON.parse(oh);
+        } catch {
+            return null;
+        }
+    }
+    if (typeof oh !== 'object' || oh === null || Array.isArray(oh)) return null;
+
+    const out = { ...oh };
+
+    if ((!out.default || typeof out.default !== 'object') && typeof out.open === 'string' && typeof out.close === 'string') {
+        out.default = { open: out.open, close: out.close };
+    }
+
+    out.default = out.default && typeof out.default === 'object' ? out.default : {};
+
+    let days = out.days;
+    if (days == null) {
+        out.days = {};
+    } else if (Array.isArray(days)) {
+        const mapped = {};
+        MENU_DAY_ORDER_HE.forEach((heName, idx) => {
+            const slot = days[idx];
+            if (slot && typeof slot === 'object') mapped[heName] = slot;
+        });
+        out.days = mapped;
+    } else if (typeof days === 'object') {
+        const mapped = {};
+        Object.entries(days).forEach(([key, v]) => {
+            if (!v || typeof v !== 'object') return;
+            const lower = typeof key === 'string' ? key.trim().toLowerCase() : key;
+            const hebrewKey = ENGLISH_DAY_TO_HEBREW[lower] ?? key;
+            mapped[hebrewKey] = v;
+        });
+        out.days = mapped;
+    } else {
+        out.days = {};
+    }
+
+    out.special_days =
+        out.special_days && typeof out.special_days === 'object' && !Array.isArray(out.special_days)
+            ? out.special_days
+            : {};
+
+    return out;
+}
+
+function trimTimeForDisplay(t) {
+    if (t == null || t === '') return '';
+    const s = String(t).trim();
+    return s.length >= 5 ? s.slice(0, 5) : s;
+}
+
+function resolveDayHoursMerged(oh, hebrewDay) {
+    if (!oh) return { closed: false, open: '', close: '' };
+    const def = oh.default || {};
+    const fallbackOpen = trimTimeForDisplay(def.open ?? oh.open ?? DEFAULT_MENU_OPEN);
+    const fallbackClose = trimTimeForDisplay(def.close ?? oh.close ?? DEFAULT_MENU_CLOSE);
+    const dayCfg = oh.days?.[hebrewDay];
+    const closed = !!(dayCfg && dayCfg.closed);
+    const open = trimTimeForDisplay(dayCfg?.open ?? fallbackOpen);
+    const close = trimTimeForDisplay(dayCfg?.close ?? fallbackClose);
+    return { closed, open, close };
+}
+
+function hasOperatingHoursToShowInMenu(ohNormalized) {
+    if (!ohNormalized) return false;
+    const defOpen = trimTimeForDisplay(ohNormalized.default?.open ?? ohNormalized.open ?? DEFAULT_MENU_OPEN);
+    const defClose = trimTimeForDisplay(ohNormalized.default?.close ?? ohNormalized.close ?? DEFAULT_MENU_CLOSE);
+    if (defOpen && defClose) return true;
+    return MENU_DAY_ORDER_HE.some((day) => {
+        const h = resolveDayHoursMerged(ohNormalized, day);
+        return h.closed || (h.open && h.close);
+    });
+}
+
 /**
  * עמוד תפריט - עיצוב בסגנון Wolt
  * @param {boolean} isPreviewMode - האם זה מצב תצוגה מקדימה (admin)
@@ -347,6 +442,11 @@ export default function MenuPage({ isPreviewMode = false }) {
         }
         return [];
     }, [restaurant?.common_allergens]);
+
+    const displayOperatingHours = useMemo(
+        () => normalizeOperatingHoursForCustomerDisplay(restaurant?.operating_hours),
+        [restaurant?.operating_hours],
+    );
 
     const isOpenNow = restaurant?.is_open_now ?? restaurant?.is_open;
     const deliveryMinAmount = restaurant ? (parseFloat(restaurant.delivery_minimum) || 0) : 0;
@@ -1167,42 +1267,30 @@ export default function MenuPage({ isPreviewMode = false }) {
                                         </p>
                                     </div>
 
-                                    {/* שעות שבועיות */}
-                                    {(() => {
-                                        const hasAnyValidHours = restaurant.operating_hours &&
-                                            (restaurant.operating_hours.days || restaurant.operating_hours.default) &&
-                                            ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'].some(day => {
-                                                const dayHours = restaurant.operating_hours?.days?.[day] || restaurant.operating_hours?.default;
-                                                return dayHours && (dayHours.open || dayHours.close || dayHours.closed);
-                                            });
+                                    {/* שעות שבועיות — מיזוג יום + default + ברירות תואמות לאדמין כשחסרים מחרוזות ב-API */}
+                                    {!hasOperatingHoursToShowInMenu(displayOperatingHours) ? (
+                                        <p className="text-xs text-gray-400 dark:text-gray-500 italic">לא עודכנו שעות פעילות</p>
+                                    ) : (
+                                        <div className="space-y-1.5 text-sm">
+                                            {MENU_DAY_ORDER_HE.map((day, index) => {
+                                                const { closed, open, close } = resolveDayHoursMerged(displayOperatingHours, day);
+                                                const isToday = new Date().getDay() === index;
+                                                const line = closed ? 'סגור' : open && close ? `${open} - ${close}` : '-';
 
-                                        if (!hasAnyValidHours) {
-                                            return <p className="text-xs text-gray-400 dark:text-gray-500 italic">לא עודכנו שעות פעילות</p>;
-                                        }
-
-                                        return (
-                                            <div className="space-y-1.5 text-sm">
-                                                {['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'].map((day, index) => {
-                                                    const dayHours = restaurant.operating_hours?.days?.[day] || restaurant.operating_hours?.default;
-                                                    const isClosed = dayHours?.closed;
-                                                    const isToday = new Date().getDay() === index;
-                                                    const hasValidHours = dayHours && dayHours.open && dayHours.close;
-
-                                                    return (
-                                                        <div key={day} className={`flex justify-between ${isToday ? 'font-bold text-gray-900 dark:text-brand-dark-text' : 'text-gray-500 dark:text-brand-dark-muted'}`}>
-                                                            <span>{day}</span>
-                                                            <span className={isClosed ? 'text-gray-400 dark:text-gray-500' : ''}>
-                                                                {isClosed ? 'סגור' : (hasValidHours ? `${dayHours.open} - ${dayHours.close}` : '-')}
-                                                            </span>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        );
-                                    })()}
+                                                return (
+                                                    <div key={day} className={`flex justify-between ${isToday ? 'font-bold text-gray-900 dark:text-brand-dark-text' : 'text-gray-500 dark:text-brand-dark-muted'}`}>
+                                                        <span>{day}</span>
+                                                        <span className={closed ? 'text-gray-400 dark:text-gray-500' : ''}>
+                                                            {line}
+                                                        </span>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
 
                                     {/* הערות שעות */}
-                                    {restaurant.operating_hours?.special_days && Object.keys(restaurant.operating_hours.special_days).length > 0 && (
+                                    {displayOperatingHours?.special_days && Object.keys(displayOperatingHours.special_days).length > 0 && (
                                         <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
                                             * ייתכנו שינויים בימים מיוחדים
                                         </p>

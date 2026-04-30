@@ -2227,14 +2227,23 @@ class AdminController extends Controller
             try {
                 $operatingHours = json_decode($request->input('operating_hours'), true);
                 if (is_array($operatingHours)) {
-                    // תמיכה לאחור: מבנה ישן עם open/close בלבד
+                    // תמיכה לאחור: open/close בשורש — שומרים days / special_days אם היו כבר בבקשה
                     if (isset($operatingHours['open']) && isset($operatingHours['close'])) {
+                        $legacyOpen = $operatingHours['open'];
+                        $legacyClose = $operatingHours['close'];
+                        $existingSpecial = isset($operatingHours['special_days']) && is_array($operatingHours['special_days'])
+                            ? $operatingHours['special_days']
+                            : [];
+                        $existingDays = isset($operatingHours['days']) && is_array($operatingHours['days'])
+                            ? $operatingHours['days']
+                            : [];
                         $operatingHours = [
                             'default' => [
-                                'open' => $operatingHours['open'],
-                                'close' => $operatingHours['close'],
+                                'open' => $legacyOpen,
+                                'close' => $legacyClose,
                             ],
-                            'special_days' => [],
+                            'special_days' => $existingSpecial,
+                            'days' => $existingDays,
                         ];
                     }
 

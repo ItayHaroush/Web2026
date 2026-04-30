@@ -515,9 +515,7 @@ class Restaurant extends Model
 
     public function getIsOpenNowAttribute(): bool
     {
-        if ($this->is_approved === false) {
-            return false;
-        }
+        // פתיחה לפי לוח זמנים גם לפני אישור סופר־אדמין; חסימת הזמנה — ב-OrderController וכדומה.
 
         // כפיית סטטוס ידנית — גוברת על הכל (כולל חגים)
         // המסעדן כפה סטטוס ידנית, זה עדיפות עליונה
