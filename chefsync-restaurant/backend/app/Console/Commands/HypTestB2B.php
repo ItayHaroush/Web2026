@@ -13,7 +13,8 @@ class HypTestB2B extends Command
         {restaurant_id : ID של מסעדה קיימת ב-DB}
         {--step=pay : שלב: pay | status | find | charge}
         {--amount=0.01 : סכום לחיוב (ברירת מחדל 0.01)}
-        {--trans= : Transaction ID לשליפת טוקן ידנית (עם --step=find)}';
+        {--trans= : Transaction ID לשליפת טוקן ידנית (עם --step=find)}
+        {--userid= : תעודת זהות ישראלית לשדה HYP UserId (בעיקר לשלב charge)}';
 
     protected $description = 'בדיקת תשלום B2B מול HYP: תשלום ראשוני -> שמירת טוקן -> חיוב חוזר';
 
@@ -143,12 +144,17 @@ class HypTestB2B extends Command
             return 0;
         }
 
+        $useridOpt = $this->option('userid');
+        $hypUserId = ($useridOpt !== null && $useridOpt !== '')
+            ? Restaurant::normalizeHypSoftNationalId((string) $useridOpt)
+            : $restaurant->hypSoftNationalIdDigits();
+
         $result = $hypService->chargeSoft(
             $amount,
             $token,
             $expiry,
             "TakeEat B2B Test Charge - {$restaurant->name}",
-            ['name' => $restaurant->name]
+            ['name' => $restaurant->name, 'user_id' => $hypUserId]
         );
 
         $this->newLine();

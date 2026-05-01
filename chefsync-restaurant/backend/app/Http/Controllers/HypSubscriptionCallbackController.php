@@ -116,6 +116,15 @@ class HypSubscriptionCallbackController extends Controller
             }
         }
 
+        // ת״ז מ-HYP UserId בחזרה מוצלחת — חובה לחלק מהמסופים בחיוב Soft (הודעת שגוייה "cvv2/id" לעיתים = ת״ז)
+        $normalizedNationalId = Restaurant::normalizeHypSoftNationalId($params['hyp_user_id'] ?? '');
+        if ($normalizedNationalId !== '000000000') {
+            $restaurant->update(['hyp_soft_national_id' => $normalizedNationalId]);
+            Log::info('[HYP-SUB] hyp_soft_national_id saved from redirect UserId', [
+                'restaurant_id' => $restaurant->id,
+            ]);
+        }
+
         // שליפת session data (tier, plan_type) מ-cache
         $sessionData = Cache::pull("hyp_session:{$restaurantId}");
         $tier = $sessionData['tier'] ?? ($restaurant->tier ?? 'basic');

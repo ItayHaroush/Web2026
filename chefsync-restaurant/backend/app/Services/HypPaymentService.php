@@ -422,6 +422,8 @@ class HypPaymentService
             'token'          => $request->query('Token', ''),
             'brand'          => $request->query('Brand', ''),
             'errMsg'         => $request->query('ErrMsg', ''),
+            /** תעודת זהות שנשלחה/אושרה בעסקה — חשוב לחיובי Soft חוזרים כשהמסוף דורש UserId */
+            'hyp_user_id'    => $request->query('UserId', ''),
         ];
     }
 

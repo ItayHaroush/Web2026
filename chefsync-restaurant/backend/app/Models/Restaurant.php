@@ -89,6 +89,8 @@ class Restaurant extends Model
         'hyp_card_token',
         'hyp_card_expiry',
         'hyp_card_last4',
+        /** ת״ז לשדה HYP UserId (חיוב מנוי / Soft) — לא כרטיס אשראי */
+        'hyp_soft_national_id',
         'payment_failed_at',
         'payment_failure_count',
         'hyp_setup_fee_charged',
@@ -114,6 +116,7 @@ class Restaurant extends Model
         'hyp_terminal_password',
         'hyp_api_key',
         'hyp_card_token',
+        'hyp_soft_national_id',
         'zcredit_terminal_password',
         'ezcount_api_key',
     ];
@@ -692,6 +695,28 @@ class Restaurant extends Model
             'open_time' => $response?->open_time,
             'close_time' => $response?->close_time,
         ];
+    }
+
+    /**
+     * נירמול ת״ז ישראלית לשדה HYP UserId (חיובי מנוי / Soft — לא CVV).
+     */
+    public static function normalizeHypSoftNationalId(?string $raw): string
+    {
+        $digits = preg_replace('/\D/', '', (string) ($raw ?? ''));
+        if ($digits === '') {
+            return '000000000';
+        }
+        $digits = substr($digits, -9);
+
+        return str_pad($digits, 9, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * ת״ז השמורה למסעדה לשימוש ב-HYP UserId (אם ריק — אפסים; עלול להיכשל במסופים שדורשים מזהה).
+     */
+    public function hypSoftNationalIdDigits(): string
+    {
+        return self::normalizeHypSoftNationalId($this->hyp_soft_national_id);
     }
 
     public static function calculateIsOpen(array $operatingDays = [], array $operatingHours = [], ?Carbon $now = null): bool

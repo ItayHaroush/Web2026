@@ -74,7 +74,7 @@ class HypSubscriptionRedirectController extends Controller
             'Info'       => $info,
             'Coin'       => $this->hypService->getCoin(),
             'Tash'       => '1',
-            'UserId'     => '000000000',
+            'UserId'     => $restaurant->hypSoftNationalIdDigits(),
             'PageLang'   => 'HEB',
             'UTF8'       => 'True',
             'UTF8out'    => 'True',

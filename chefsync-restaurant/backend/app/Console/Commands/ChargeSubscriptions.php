@@ -86,7 +86,10 @@ class ChargeSubscriptions extends Command
                 $restaurant->hyp_card_token,
                 $restaurant->hyp_card_expiry ?? '',
                 "TakeEat מנוי חודשי - {$restaurant->name}",
-                ['name' => $restaurant->name]
+                [
+                    'name'    => $restaurant->name,
+                    'user_id' => $restaurant->hypSoftNationalIdDigits(),
+                ]
             );
 
             if ($result['success']) {
