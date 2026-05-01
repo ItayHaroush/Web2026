@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { useRestaurantStatus } from '../../context/RestaurantStatusContext';
 import AdminLayout from '../../layouts/AdminLayout';
@@ -32,6 +32,8 @@ import {
     FaShieldAlt,
     FaChair,
     FaTrashAlt,
+    FaExclamationTriangle,
+    FaImage,
 } from 'react-icons/fa';
 import { GiKebabSpit, GiChefToque } from 'react-icons/gi';
 
@@ -95,6 +97,12 @@ export default function AdminRestaurant() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [logoPreview, setLogoPreview] = useState(null);
+    const [menuHeroPreview, setMenuHeroPreview] = useState(null);
+    const [menuHeroFile, setMenuHeroFile] = useState(null);
+    const [removeMenuHero, setRemoveMenuHero] = useState(false);
+    const [shareHeroPreview, setShareHeroPreview] = useState(null);
+    const [shareHeroFile, setShareHeroFile] = useState(null);
+    const [removeShareHero, setRemoveShareHero] = useState(false);
     const [overrideStatus, setOverrideStatus] = useState(false);
     const [calculatedStatus, setCalculatedStatus] = useState(false);
     const [justFetched, setJustFetched] = useState(false);
@@ -103,6 +111,8 @@ export default function AdminRestaurant() {
     /** סכום מינימום אחרון לפני כיבוי — לשחזור בעת הפעלה מחדש של הטוגל */
     const lastDeliveryMinimumRef = useRef('60');
     const [resettingDineIn, setResettingDineIn] = useState(false);
+    /** ספירת אזורי משלוח פעילים — להתראה כשהמשלוח מוצג ללקוח אך אין כיסוי גיאוגרפי */
+    const [deliveryZonesCheck, setDeliveryZonesCheck] = useState({ status: 'idle', activeCount: 0 });
     const normalizeOperatingHours = (oh) => {
         if (!oh) return {};
         if (oh.default || oh.special_days || oh.days) return oh;
@@ -174,6 +184,8 @@ export default function AdminRestaurant() {
                     is_open: Boolean(response.data.restaurant.is_open),
                     is_override_status: Boolean(response.data.restaurant.is_override_status),
                     is_approved: Boolean(response.data.restaurant.is_approved),
+                    has_delivery: Boolean(response.data.restaurant.has_delivery ?? true),
+                    has_pickup: Boolean(response.data.restaurant.has_pickup ?? true),
                     operating_hours: normalizeOperatingHours(response.data.restaurant.operating_hours),
                 };
                 normalized.operating_hours = buildOperatingHoursPayload(
@@ -183,6 +195,12 @@ export default function AdminRestaurant() {
                 console.log('📩 Fetched restaurant:', normalized);
                 setRestaurant(normalized);
                 setLogoPreview(normalized.logo_url ? resolveAssetUrl(normalized.logo_url) : null);
+                setMenuHeroPreview(normalized.menu_hero_background_url ? resolveAssetUrl(normalized.menu_hero_background_url) : null);
+                setMenuHeroFile(null);
+                setRemoveMenuHero(false);
+                setShareHeroPreview(normalized.share_hero_background_url ? resolveAssetUrl(normalized.share_hero_background_url) : null);
+                setShareHeroFile(null);
+                setRemoveShareHero(false);
                 setOverrideStatus(normalized.is_override_status || false);
                 setRestaurantStatus({
                     is_open: normalized.is_open,
@@ -208,6 +226,28 @@ export default function AdminRestaurant() {
             lastDeliveryMinimumRef.current = String(v);
         }
     }, [restaurant?.delivery_minimum]);
+
+    useEffect(() => {
+        if (!restaurant || !Boolean(restaurant.has_delivery)) {
+            setDeliveryZonesCheck({ status: 'idle', activeCount: 0 });
+            return;
+        }
+        let cancelled = false;
+        setDeliveryZonesCheck((prev) => ({ ...prev, status: 'loading' }));
+        api.get('/admin/delivery-zones', { headers: getAuthHeaders() })
+            .then((res) => {
+                if (cancelled || !res.data?.success) return;
+                const zones = res.data.zones || [];
+                const activeCount = zones.filter((z) => z.is_active !== false && z.is_active !== 0).length;
+                setDeliveryZonesCheck({ status: 'ok', activeCount });
+            })
+            .catch(() => {
+                if (!cancelled) setDeliveryZonesCheck({ status: 'error', activeCount: 0 });
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [restaurant?.has_delivery, restaurant?.id, getAuthHeaders]);
 
     const deliveryMinimumActive = parseFloat(restaurant?.delivery_minimum ?? 0) > 0;
 
@@ -289,6 +329,32 @@ export default function AdminRestaurant() {
     const handleLogo = (file) => {
         setRestaurant((prev) => ({ ...prev, logo: file }));
         setLogoPreview(URL.createObjectURL(file));
+    };
+
+    const handleMenuHero = (file) => {
+        if (!file) return;
+        setMenuHeroFile(file);
+        setMenuHeroPreview(URL.createObjectURL(file));
+        setRemoveMenuHero(false);
+    };
+
+    const handleRemoveMenuHero = () => {
+        setMenuHeroFile(null);
+        setMenuHeroPreview(null);
+        setRemoveMenuHero(true);
+    };
+
+    const handleShareHero = (file) => {
+        if (!file) return;
+        setShareHeroFile(file);
+        setShareHeroPreview(URL.createObjectURL(file));
+        setRemoveShareHero(false);
+    };
+
+    const handleRemoveShareHero = () => {
+        setShareHeroFile(null);
+        setShareHeroPreview(null);
+        setRemoveShareHero(true);
     };
 
     const isApproved = restaurant?.is_approved ?? false;
@@ -377,6 +443,18 @@ export default function AdminRestaurant() {
             if (restaurant.logo) {
                 formData.append('logo', restaurant.logo);
             }
+            if (menuHeroFile) {
+                formData.append('menu_hero_background', menuHeroFile);
+            }
+            if (removeMenuHero) {
+                formData.append('remove_menu_hero_background', '1');
+            }
+            if (shareHeroFile) {
+                formData.append('share_hero_background', shareHeroFile);
+            }
+            if (removeShareHero) {
+                formData.append('remove_share_hero_background', '1');
+            }
 
             // ✅ Laravel PUT + multipart workaround
             formData.append('_method', 'PUT');
@@ -400,6 +478,12 @@ export default function AdminRestaurant() {
                 console.log('✅ Updating state with:', normalized);
                 setRestaurant({ ...normalized });
                 setLogoPreview(normalized.logo_url ? resolveAssetUrl(normalized.logo_url) : null);
+                setMenuHeroPreview(normalized.menu_hero_background_url ? resolveAssetUrl(normalized.menu_hero_background_url) : null);
+                setMenuHeroFile(null);
+                setRemoveMenuHero(false);
+                setShareHeroPreview(normalized.share_hero_background_url ? resolveAssetUrl(normalized.share_hero_background_url) : null);
+                setShareHeroFile(null);
+                setRemoveShareHero(false);
             }
 
             alert('נשמר בהצלחה');
@@ -678,6 +762,31 @@ export default function AdminRestaurant() {
                                 </div>
                                 <h3 className="text-xl font-black text-gray-900">זמני הכנה (בדקות)</h3>
                             </div>
+
+                            {Boolean(restaurant.has_delivery) &&
+                                deliveryZonesCheck.status === 'ok' &&
+                                deliveryZonesCheck.activeCount === 0 && (
+                                    <div
+                                        role="alert"
+                                        className="mb-6 flex flex-col gap-3 rounded-2xl border-2 border-amber-400 bg-amber-50 p-4 text-amber-950 sm:flex-row sm:items-start sm:gap-4"
+                                    >
+                                        <FaExclamationTriangle className="mt-0.5 h-6 w-6 shrink-0 text-amber-600" aria-hidden />
+                                        <div className="min-w-0 flex-1 space-y-2">
+                                            <p className="text-sm font-black leading-snug">
+                                                משלוח מוצג ללקוחות, אך אין אזור משלוח פעיל במערכת
+                                            </p>
+                                            <p className="text-xs font-medium leading-relaxed text-amber-900/90">
+                                                ללא פוליגון או עיר מוגדרים באזורי המשלוח, לקוחות לא יוכלו להשלים הזמנה עם משלוח (בדיקת כתובת תיכשל). יש להגדיר לפחות אזור משלוח אחד ולוודא שהוא פעיל.
+                                            </p>
+                                            <Link
+                                                to="/admin/delivery-zones"
+                                                className="inline-flex items-center gap-2 text-sm font-black text-amber-800 underline decoration-2 underline-offset-2 hover:text-amber-950"
+                                            >
+                                                פתיחת ניהול אזורי משלוח
+                                            </Link>
+                                        </div>
+                                    </div>
+                                )}
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div className="space-y-4 p-5 bg-gray-50 rounded-3xl border border-gray-100">
@@ -967,6 +1076,88 @@ export default function AdminRestaurant() {
                                     </label>
                                 </div>
                                 <p className="text-[10px] text-gray-400 font-bold text-center">מומלץ: תמונה ריבועית על רקע לבן/שקוף</p>
+                            </div>
+                        </section>
+
+                        <section className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 p-6">
+                            <h3 className="font-black text-gray-900 mb-2 flex items-center gap-2">
+                                <FaImage className="text-orange-500" /> רקע לכותרת בתפריט הלקוחות
+                            </h3>
+                            <p className="text-xs text-gray-500 mb-5 leading-relaxed">
+                                תמונה רחבה שתופיע בראש עמוד התפריט הציבורי במקום רקע ה־gradient (הלוגו והטקסטים יוצגו מעליה). השאר ריק כדי לחזור לברירת המחדל.
+                            </p>
+                            <div className="flex flex-col gap-4">
+                                <div className="relative w-full aspect-[21/9] max-h-48 rounded-2xl overflow-hidden bg-gray-100 border-2 border-dashed border-gray-200 flex items-center justify-center">
+                                    {menuHeroPreview ? (
+                                        <img src={menuHeroPreview} alt="רקע תפריט" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <span className="text-sm font-bold text-gray-400">ללא גרפיקת רקע — יוצג עיצוב הרקע הרגיל</span>
+                                    )}
+                                    <label className="absolute bottom-3 right-3 bg-brand-primary text-white p-3 rounded-2xl shadow-lg cursor-pointer hover:bg-brand-dark transition-all">
+                                        <FaCamera size={18} />
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            className="hidden"
+                                            onChange={(e) => handleMenuHero(e.target.files?.[0])}
+                                        />
+                                    </label>
+                                </div>
+                                <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
+                                    {(restaurant?.menu_hero_background_url || menuHeroPreview || menuHeroFile) && !removeMenuHero && (
+                                        <button
+                                            type="button"
+                                            onClick={handleRemoveMenuHero}
+                                            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-black border border-rose-200 text-rose-700 bg-rose-50 hover:bg-rose-100 transition-colors"
+                                        >
+                                            <FaTrashAlt /> הסר רקע (חזרה לברירת מחדל)
+                                        </button>
+                                    )}
+                                    {removeMenuHero && (
+                                        <p className="text-xs font-bold text-amber-700">הרקע יוסר בשמירה — לחץ &quot;שמור&quot;</p>
+                                    )}
+                                </div>
+                            </div>
+                        </section>
+
+                        <section className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 p-6">
+                            <h3 className="font-black text-gray-900 mb-2 flex items-center gap-2">
+                                <FaShareAlt className="text-violet-500" /> רקע לעמוד השיתוף (/r/…)
+                            </h3>
+                            <p className="text-xs text-gray-500 mb-5 leading-relaxed">
+                                תמונה רחבה לרקע דף הקישור לשיתוף (לפני כניסה לתפריט). ללא תמונה — נשאר הרקע עם טשטוש הלוגו כמו היום.
+                            </p>
+                            <div className="flex flex-col gap-4">
+                                <div className="relative w-full aspect-[21/9] max-h-48 rounded-2xl overflow-hidden bg-gray-100 border-2 border-dashed border-gray-200 flex items-center justify-center">
+                                    {shareHeroPreview ? (
+                                        <img src={shareHeroPreview} alt="רקע שיתוף" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <span className="text-sm font-bold text-gray-400 px-2 text-center">ללא תמונה — רקע ברירת מחדל מהלוגו</span>
+                                    )}
+                                    <label className="absolute bottom-3 right-3 bg-brand-primary text-white p-3 rounded-2xl shadow-lg cursor-pointer hover:bg-brand-dark transition-all">
+                                        <FaCamera size={18} />
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            className="hidden"
+                                            onChange={(e) => handleShareHero(e.target.files?.[0])}
+                                        />
+                                    </label>
+                                </div>
+                                <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
+                                    {(restaurant?.share_hero_background_url || shareHeroPreview || shareHeroFile) && !removeShareHero && (
+                                        <button
+                                            type="button"
+                                            onClick={handleRemoveShareHero}
+                                            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-black border border-rose-200 text-rose-700 bg-rose-50 hover:bg-rose-100 transition-colors"
+                                        >
+                                            <FaTrashAlt /> הסר רקע שיתוף
+                                        </button>
+                                    )}
+                                    {removeShareHero && (
+                                        <p className="text-xs font-bold text-amber-700">הרקע יוסר בשמירה — לחץ &quot;שמור&quot;</p>
+                                    )}
+                                </div>
                             </div>
                         </section>
 

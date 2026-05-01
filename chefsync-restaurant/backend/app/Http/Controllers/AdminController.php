@@ -1963,6 +1963,11 @@ class AdminController extends Controller
             $restaurant->setAttribute('days_left_in_trial', $restaurant->getDaysLeftInTrial());
         }
 
+        $restaurant->setAttribute(
+            'delivery_missing_active_zone',
+            $restaurant->deliveryEnabledButMissingActiveZone()
+        );
+
         return response()->json([
             'success' => true,
             'restaurant' => $restaurant,
@@ -2025,6 +2030,10 @@ class AdminController extends Controller
             'operating_days' => 'nullable|string',
             'operating_hours' => 'nullable|string',
             'logo' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
+            'menu_hero_background' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
+            'remove_menu_hero_background' => 'sometimes|boolean',
+            'share_hero_background' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
+            'remove_share_hero_background' => 'sometimes|boolean',
             'enable_dine_in_pricing' => 'sometimes|boolean',
             'delivery_minimum' => 'nullable|numeric|min:0',
             'allow_future_orders' => 'sometimes|boolean',
@@ -2325,6 +2334,36 @@ class AdminController extends Controller
             'isEmpty' => empty($updateData),
         ]);
 
+        if ($request->boolean('remove_menu_hero_background')) {
+            if ($restaurant->menu_hero_background_url) {
+                $this->deleteImage($restaurant->menu_hero_background_url);
+            }
+            $updateData['menu_hero_background_url'] = null;
+        } elseif ($request->hasFile('menu_hero_background')) {
+            if ($restaurant->menu_hero_background_url) {
+                $this->deleteImage($restaurant->menu_hero_background_url);
+            }
+            $updateData['menu_hero_background_url'] = $this->uploadImage(
+                $request->file('menu_hero_background'),
+                'menu-heroes'
+            );
+        }
+
+        if ($request->boolean('remove_share_hero_background')) {
+            if ($restaurant->share_hero_background_url) {
+                $this->deleteImage($restaurant->share_hero_background_url);
+            }
+            $updateData['share_hero_background_url'] = null;
+        } elseif ($request->hasFile('share_hero_background')) {
+            if ($restaurant->share_hero_background_url) {
+                $this->deleteImage($restaurant->share_hero_background_url);
+            }
+            $updateData['share_hero_background_url'] = $this->uploadImage(
+                $request->file('share_hero_background'),
+                'share-heroes'
+            );
+        }
+
         // 🛡️ הגנה אחרונה - סנן null מכל השדות הקריטיים
         $updateData = array_filter($updateData, function ($value, $key) {
             // אפשר null רק לשדות שיכולים להיות ריקים
@@ -2333,6 +2372,8 @@ class AdminController extends Controller
                 'cuisine_type',
                 'address',
                 'logo_url',
+                'menu_hero_background_url',
+                'share_hero_background_url',
                 'share_incentive_text',
                 'delivery_time_minutes',
                 'delivery_time_note',

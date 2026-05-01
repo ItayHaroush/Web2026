@@ -18,7 +18,8 @@ import {
     FaLayerGroup,
     FaTimes,
     FaSave,
-    FaUndo
+    FaUndo,
+    FaExclamationTriangle,
 } from 'react-icons/fa';
 
 const emptyForm = {
@@ -38,6 +39,7 @@ const DEFAULT_CENTER = [32.0853, 34.7818];
 export default function AdminDeliveryZones() {
     const { getAuthHeaders, isManager } = useAdminAuth();
     const [zones, setZones] = useState([]);
+    const [hasDeliveryEnabled, setHasDeliveryEnabled] = useState(false);
     const [cities, setCities] = useState([]);
     const [loading, setLoading] = useState(true);
     const [modalOpen, setModalOpen] = useState(false);
@@ -68,8 +70,17 @@ export default function AdminDeliveryZones() {
             }
         } catch (error) {
             console.error('Failed to fetch delivery zones', error.response?.data || error.message);
-        } finally {
-            setLoading(false);
+        }
+    };
+
+    const fetchRestaurantDeliveryFlag = async () => {
+        try {
+            const res = await api.get('/admin/restaurant', { headers: getAuthHeaders() });
+            if (res.data?.success && res.data.restaurant) {
+                setHasDeliveryEnabled(Boolean(res.data.restaurant.has_delivery ?? false));
+            }
+        } catch {
+            /* לא חוסמים את העמוד — ההתראה תושב אם נדע*/
         }
     };
 
@@ -84,12 +95,24 @@ export default function AdminDeliveryZones() {
         }
     };
 
+    const fetchInitialData = async () => {
+        setLoading(true);
+        try {
+            await Promise.all([fetchZones(), fetchRestaurantDeliveryFlag(), fetchCities()]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     useEffect(() => {
-        fetchZones();
-        fetchCities();
+        fetchInitialData();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    const activeDeliveryZonesCount = useMemo(
+        () => zones.filter((z) => z.is_active !== false && z.is_active !== 0).length,
+        [zones]
+    );
     const openNew = () => {
         setEditZone(null);
         setForm(emptyForm);
@@ -244,6 +267,33 @@ export default function AdminDeliveryZones() {
                         </button>
                     )}
                 </div>
+
+                {hasDeliveryEnabled && activeDeliveryZonesCount === 0 && (
+                    <div
+                        role="alert"
+                        className="flex flex-col gap-3 rounded-2xl border-2 border-amber-400 bg-amber-50 p-5 text-amber-950 sm:flex-row sm:items-start sm:gap-4"
+                    >
+                        <FaExclamationTriangle className="mt-0.5 h-7 w-7 shrink-0 text-amber-600" aria-hidden />
+                        <div className="min-w-0 flex-1 space-y-2">
+                            <p className="text-base font-black leading-snug">
+                                משלוח מוצג ללקוחות בממשק ההזמנה, אך אין כאן אזור משלוח פעיל
+                            </p>
+                            <p className="text-sm font-medium leading-relaxed text-amber-900/90">
+                                יש להוסיף אזור (פוליגון או עיר) ולשמור כ<strong>פעיל</strong>. עד אז לקוחות לא יוכלו להשלים הזמנה עם משלוח.
+                            </p>
+                            {isManager() && (
+                                <button
+                                    type="button"
+                                    onClick={openNew}
+                                    className="inline-flex items-center gap-2 rounded-xl bg-amber-600 px-4 py-2.5 text-sm font-black text-white shadow-md transition hover:bg-amber-700"
+                                >
+                                    <FaPlus />
+                                    הוספת אזור משלוח עכשיו
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                )}
 
                 {/* Zones Grid */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-8">

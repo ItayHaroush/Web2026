@@ -508,13 +508,13 @@ export default function MenuPage({ isPreviewMode = false }) {
 
         if (futureOrderApproved && scheduledFor) {
             return (
-                <div className="inline-flex max-w-full min-w-0 items-stretch overflow-hidden rounded-full border border-cyan-500/45 shadow-sm dark:border-cyan-400/40">
+                <div className="inline-flex max-w-full min-w-0 items-stretch overflow-hidden rounded-full border border-slate-200/95 bg-white shadow-sm dark:border-slate-600 dark:bg-slate-900/95">
                     <button
                         type="button"
                         onClick={() => setShowFutureOrderModal(true)}
-                        className="flex max-w-[11rem] min-w-0 items-center gap-1 rounded-r-none px-2.5 py-1.5 text-xs font-bold leading-tight bg-gradient-to-br from-cyan-50 to-teal-50 text-cyan-900 hover:opacity-95 dark:from-cyan-950/50 dark:to-teal-950/40 dark:text-cyan-100"
+                        className="flex max-w-[11rem] min-w-0 items-center gap-1 rounded-r-none px-2.5 py-1.5 text-xs font-bold leading-tight text-brand-primary hover:bg-slate-50 dark:text-orange-300 dark:hover:bg-slate-800/80"
                     >
-                        <FaCheckCircle className="h-3 w-3 shrink-0 text-cyan-600 dark:text-cyan-400" aria-hidden />
+                        <FaCheckCircle className="h-3 w-3 shrink-0 text-brand-primary dark:text-orange-400" aria-hidden />
                         <span className="truncate">{scheduledLabel}</span>
                     </button>
                     <button
@@ -524,7 +524,7 @@ export default function MenuPage({ isPreviewMode = false }) {
                             setFutureOrderApproved(false);
                             setScheduledFor(null);
                         }}
-                        className="flex shrink-0 items-center justify-center rounded-l-none border-r border-cyan-200/80 bg-cyan-100 px-2 text-cyan-800 hover:bg-cyan-200 dark:border-cyan-700/50 dark:bg-cyan-900/60 dark:text-cyan-200 dark:hover:bg-cyan-800/80"
+                        className="flex shrink-0 items-center justify-center rounded-l-none border-r border-slate-200/90 bg-slate-100 px-2 text-slate-700 hover:bg-slate-200 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
                         aria-label="ביטול תזמון הזמנה עתידית"
                     >
                         <FaTimes className="h-3 w-3" />
@@ -537,9 +537,9 @@ export default function MenuPage({ isPreviewMode = false }) {
             <button
                 type="button"
                 onClick={() => setShowFutureOrderModal(true)}
-                className="inline-flex items-center gap-1.5 rounded-full border border-cyan-500/40 bg-gradient-to-br from-cyan-50 to-teal-50/90 px-3 py-1.5 text-xs font-black text-cyan-900 shadow-sm transition hover:border-cyan-500/70 hover:shadow dark:border-cyan-400/35 dark:from-cyan-950/45 dark:to-teal-950/30 dark:text-cyan-100"
+                className="inline-flex items-center gap-1.5 rounded-full border border-slate-200/95 bg-white px-3 py-1.5 text-xs font-black text-brand-primary shadow-sm transition hover:border-brand-primary/35 hover:shadow dark:border-slate-600 dark:bg-slate-900/95 dark:text-orange-300"
             >
-                <FaClock className="h-3 w-3 shrink-0" aria-hidden />
+                <FaClock className="h-3 w-3 shrink-0 text-brand-primary dark:text-orange-400" aria-hidden />
                 <span>הזמנה עתידית</span>
             </button>
         );
@@ -792,10 +792,27 @@ export default function MenuPage({ isPreviewMode = false }) {
 
             {/* Hero Section - סגנון Wolt (מובייל: גובה דינמי — בלי חיתוך לוגו/תגית) */}
             <div className="relative -mx-4 sm:-mx-6 lg:-mx-8 -mt-8 mb-8">
-                {/* רקע עם לוגו גדול */}
-                <div className="relative min-h-[13rem] h-auto sm:h-72 sm:min-h-0 bg-gradient-to-br from-brand-dark via-brand-primary to-brand-secondary overflow-hidden">
-                    {/* לוגואים מעומעמים ברקע */}
-                    {restaurant?.logo_url && (
+                <div
+                    className={`relative min-h-[13rem] h-auto sm:h-72 sm:min-h-0 overflow-hidden ${
+                        restaurant?.menu_hero_background_url
+                            ? ''
+                            : 'bg-gradient-to-br from-brand-dark via-brand-primary to-brand-secondary'
+                    }`}
+                >
+                    {restaurant?.menu_hero_background_url && (
+                        <>
+                            <div
+                                className="absolute inset-0 bg-cover bg-center"
+                                style={{
+                                    backgroundImage: `url(${resolveAssetUrl(restaurant.menu_hero_background_url)})`,
+                                }}
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/45 to-black/30" aria-hidden />
+                        </>
+                    )}
+
+                    {/* לוגואים מעומעמים ברקע — רק כשאין תמונת רקע מותאמת */}
+                    {!restaurant?.menu_hero_background_url && restaurant?.logo_url && (
                         <>
                             <div
                                 className="absolute -top-10 -right-10 w-64 h-64 opacity-10"
@@ -864,19 +881,19 @@ export default function MenuPage({ isPreviewMode = false }) {
                         <div className="bg-white dark:bg-brand-dark-surface rounded-2xl shadow-xl border border-gray-100/90 dark:border-brand-dark-border px-3 py-3 sm:px-4 sm:py-3.5">
                             {/* שורה עליונה: 3 בעמודה — פתוח · משלוחים · איסוף */}
                             <div className="grid grid-cols-3 gap-2 sm:gap-2">
-                                <div className={`flex min-w-0 items-center justify-center gap-1 rounded-full border px-2 py-1.5 text-center text-xs font-black shadow-sm ${isOpenNow ? 'border-emerald-200/90 bg-emerald-50 text-emerald-800 dark:border-emerald-800/50 dark:bg-emerald-950/35 dark:text-emerald-200' : 'border-rose-200/90 bg-rose-50 text-rose-800 dark:border-rose-800/40 dark:bg-rose-950/30 dark:text-rose-200'}`}>
+                                <div className="flex min-w-0 items-center justify-center gap-1 rounded-full border border-slate-200/95 bg-white px-2 py-1.5 text-center text-xs font-black shadow-sm dark:border-slate-600 dark:bg-slate-900/95">
                                     <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${isOpenNow ? 'animate-pulse bg-emerald-500' : 'bg-rose-500'}`} />
-                                    <span className="truncate">{isOpenNow ? 'פתוח' : 'סגור'}</span>
+                                    <span className="truncate text-slate-800 dark:text-slate-100">{isOpenNow ? 'פתוח' : 'סגור'}</span>
                                 </div>
 
                                 {restaurant.has_delivery ? (
-                                    <div className="flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-full border border-orange-200/80 bg-orange-50 px-2 py-1.5 text-orange-900 shadow-sm dark:border-orange-800/40 dark:bg-orange-950/30 dark:text-orange-100">
-                                        <div className="flex items-center justify-center gap-1 text-xs font-black">
-                                            <FaTruck className="h-3 w-3 shrink-0" aria-hidden />
-                                            <span className="truncate">משלוחים</span>
+                                    <div className="flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-full border border-slate-200/95 bg-white px-2 py-1.5 shadow-sm dark:border-slate-600 dark:bg-slate-900/95">
+                                        <div className="flex items-center justify-center gap-1 text-xs font-black text-slate-800 dark:text-slate-100">
+                                            <FaTruck className="h-3 w-3 shrink-0 text-slate-600 dark:text-slate-400" aria-hidden />
+                                            <span className="truncate">משלוח זמין</span>
                                         </div>
-                                        <span className={`text-[10px] font-bold leading-none ${deliveryMinAmount > 0 ? 'text-orange-700 dark:text-orange-300' : 'text-orange-700/95 dark:text-orange-300/95'}`}>
-                                            {deliveryMinAmount > 0 ? `מינ׳ ₪${deliveryMinAmount.toFixed(0)}` : 'ללא מינימום'}
+                                        <span className="text-[10px] font-bold leading-none text-slate-600 dark:text-slate-400">
+                                            {deliveryMinAmount > 0 ? `מינימום למשלוח: ₪${deliveryMinAmount.toFixed(0)}` : 'ללא מינימום למשלוח'}
                                         </span>
                                     </div>
                                 ) : (
@@ -884,9 +901,9 @@ export default function MenuPage({ isPreviewMode = false }) {
                                 )}
 
                                 {restaurant.has_pickup ? (
-                                    <div className="inline-flex min-w-0 items-center justify-center gap-1 rounded-full border border-violet-200/90 bg-violet-50 px-2.5 py-1.5 text-violet-800 shadow-sm dark:border-violet-800/45 dark:bg-violet-950/35 dark:text-violet-200">
-                                        <FaShoppingBag className="h-3 w-3 shrink-0" aria-hidden />
-                                        <span className="truncate text-xs font-black">איסוף</span>
+                                    <div className="inline-flex min-w-0 items-center justify-center gap-1 rounded-full border border-slate-200/95 bg-white px-2.5 py-1.5 shadow-sm dark:border-slate-600 dark:bg-slate-900/95">
+                                        <FaShoppingBag className="h-3 w-3 shrink-0 text-slate-600 dark:text-slate-400" aria-hidden />
+                                        <span className="truncate text-xs font-black text-slate-800 dark:text-slate-100">איסוף עצמי זמין</span>
                                     </div>
                                 ) : (
                                     <div className="rounded-full border border-transparent min-h-[2.25rem]" aria-hidden />
@@ -900,14 +917,14 @@ export default function MenuPage({ isPreviewMode = false }) {
                             </div>
 
                             {/* שורה שנייה: הזמנה עתידית · מידע נוסף */}
-                            <div className="flex flex-wrap items-center justify-center gap-2 lg:justify-start">
+                            <div className="flex flex-wrap items-center justify-center gap-2">
                                 {allowsFutureOrders && renderFutureOrderRestaurantTag()}
                                 <button
                                     type="button"
                                     onClick={() => setShowInfoModal(true)}
-                                    className="inline-flex items-center gap-1.5 rounded-full border-2 border-brand-primary/30 bg-gradient-to-br from-orange-50 to-amber-50/90 px-3 py-1.5 text-xs font-black text-brand-primary shadow-sm transition hover:border-brand-primary/55 hover:shadow dark:from-orange-950/40 dark:to-amber-950/25 dark:text-orange-300 dark:border-orange-500/35"
+                                    className="inline-flex items-center gap-1.5 rounded-full border border-slate-200/95 bg-white px-3 py-1.5 text-xs font-black text-brand-primary shadow-sm transition hover:border-brand-primary/35 hover:shadow dark:border-slate-600 dark:bg-slate-900/95 dark:text-orange-300"
                                 >
-                                    <FaInfoCircle className="h-3 w-3 shrink-0" aria-hidden />
+                                    <FaInfoCircle className="h-3 w-3 shrink-0 text-brand-primary dark:text-orange-400" aria-hidden />
                                     מידע נוסף
                                 </button>
                             </div>
@@ -916,42 +933,61 @@ export default function MenuPage({ isPreviewMode = false }) {
                 )}
             </div>
 
-            {/* באנר מבצעים פעילים */}
+            {/* באנר מבצעים פעילים — שורה אחת, קוביות + גלילה אופקית */}
             {bannerPromotions.length > 0 && (
-                <div className="mb-6 space-y-2">
-                    {bannerPromotions.map((promo) => {
-                        const rewardText = promo.rewards?.map(r => {
-                            if (r.reward_type === 'free_item' && r.reward_menu_item_name) return `${r.reward_menu_item_name} במתנה`;
-                            if (r.reward_type === 'free_item' && r.reward_category_name) return `${r.reward_category_name} במתנה`;
-                            if (r.reward_type === 'discount_percent') return `${r.reward_value}% הנחה${r.discount_scope === 'selected_items' ? ' (נבחרים)' : ''}`;
-                            if (r.reward_type === 'discount_fixed') return `₪${r.reward_value} הנחה${r.discount_scope === 'selected_items' ? ' ליחידה' : ''}`;
-                            if (r.reward_type === 'fixed_price') return `במחיר מיוחד ₪${r.reward_value}`;
-                            return 'הטבה מיוחדת';
-                        }).join(' + ') || 'הטבה מיוחדת';
+                <div className="mb-6 -mx-1 px-1">
+                    <div className="flex flex-row gap-3 overflow-x-auto pb-1 snap-x snap-mandatory [scrollbar-width:thin]">
+                        {bannerPromotions.map((promo) => {
+                            const rewardText = promo.rewards?.map(r => {
+                                if (r.reward_type === 'free_item' && r.reward_menu_item_name) return `${r.reward_menu_item_name} במתנה`;
+                                if (r.reward_type === 'free_item' && r.reward_category_name) return `${r.reward_category_name} במתנה`;
+                                if (r.reward_type === 'discount_percent') return `${r.reward_value}% הנחה${r.discount_scope === 'selected_items' ? ' (נבחרים)' : ''}`;
+                                if (r.reward_type === 'discount_fixed') return `₪${r.reward_value} הנחה${r.discount_scope === 'selected_items' ? ' ליחידה' : ''}`;
+                                if (r.reward_type === 'fixed_price') return `במחיר מיוחד ₪${r.reward_value}`;
+                                return 'הטבה מיוחדת';
+                            }).join(' + ') || 'הטבה מיוחדת';
 
-                        const ruleCategory = promo.rules?.[0];
+                            const ruleCategory = promo.rules?.[0];
 
-                        return (
-                            <button
-                                key={promo.id}
-                                onClick={() => {
-                                    if (ruleCategory?.required_category_id) {
-                                        scrollToCategory(ruleCategory.required_category_id);
-                                    }
-                                }}
-                                className="w-full bg-gradient-to-l from-amber-500 to-orange-500 rounded-2xl p-4 flex items-center gap-3 text-white shadow-lg shadow-orange-500/20 hover:shadow-xl hover:from-amber-400 hover:to-orange-400 transition-all active:scale-[0.98]"
-                            >
-                                <div className="bg-white/20 backdrop-blur-sm p-2.5 rounded-xl shrink-0">
-                                    <FaTag className="text-lg" />
-                                </div>
-                                <div className="flex-1 text-right min-w-0">
-                                    <p className="font-black text-sm sm:text-base truncate">{promo.name}</p>
-                                    <p className="text-xs sm:text-sm opacity-90 truncate">{rewardText}</p>
-                                </div>
-                                <FaChevronLeft className="text-white/80 text-lg shrink-0" />
-                            </button>
-                        );
-                    })}
+                            return (
+                                <button
+                                    key={promo.id}
+                                    type="button"
+                                    onClick={() => {
+                                        if (ruleCategory?.required_category_id) {
+                                            scrollToCategory(ruleCategory.required_category_id);
+                                        }
+                                    }}
+                                    className="snap-start shrink-0 w-[min(76vw,210px)] sm:w-[220px] rounded-2xl overflow-hidden border border-orange-200/80 dark:border-orange-900/40 bg-gradient-to-b from-amber-500 to-orange-600 text-white shadow-lg shadow-orange-500/25 text-right flex flex-col transition-all hover:shadow-xl hover:brightness-105 active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+                                >
+                                    {promo.image_url ? (
+                                        <div className="relative h-24 sm:h-28 w-full shrink-0">
+                                            <img
+                                                src={resolveAssetUrl(promo.image_url)}
+                                                alt={promo.name}
+                                                className="absolute inset-0 h-full w-full object-cover"
+                                            />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-orange-900/90 via-orange-900/20 to-transparent" />
+                                        </div>
+                                    ) : (
+                                        <div className="h-24 sm:h-28 shrink-0 flex items-center justify-center bg-white/10">
+                                            <FaTag className="text-3xl text-white/90" aria-hidden />
+                                        </div>
+                                    )}
+                                    <div className="p-3 flex flex-col gap-1 min-w-0 flex-1">
+                                        <p className="font-black text-xs sm:text-sm leading-snug line-clamp-2">{promo.name}</p>
+                                        <p className="text-[10px] sm:text-xs font-bold text-white/90 leading-snug line-clamp-3">{rewardText}</p>
+                                        {ruleCategory?.required_category_id && (
+                                            <span className="mt-1 inline-flex items-center gap-1 text-[10px] font-black text-white/80">
+                                                <FaChevronLeft className="text-[10px] opacity-80" aria-hidden />
+                                                לקטגוריה
+                                            </span>
+                                        )}
+                                    </div>
+                                </button>
+                            );
+                        })}
+                    </div>
                 </div>
             )}
 
@@ -1294,18 +1330,32 @@ export default function MenuPage({ isPreviewMode = false }) {
                                         <FaTruck className="text-gray-400 dark:text-gray-500" size={14} />
                                         <h4 className="text-sm font-bold text-gray-900 dark:text-brand-dark-text">משלוח ואיסוף</h4>
                                     </div>
-                                    <div className="pl-6 space-y-1.5">
-                                        {restaurant.has_delivery && (
-                                            <div className="flex items-center justify-between text-sm">
-                                                <span className="text-gray-600 dark:text-brand-dark-muted">מינימום הזמנה למשלוח:</span>
-                                                <span className="font-bold text-brand-primary">
-                                                    {deliveryMinAmount > 0 ? `₪${deliveryMinAmount.toFixed(0)}` : 'ללא מינימום'}
+                                    <div className="pl-6 space-y-1.5 text-sm leading-snug text-gray-800 dark:text-brand-dark-muted">
+                                        <p className="flex flex-wrap items-center justify-start gap-x-3 gap-y-1 text-gray-800 dark:text-brand-dark-muted">
+                                            {restaurant.has_delivery && (
+                                                <span>
+                                                    משלוח{' '}
+                                                    <span className="font-black text-brand-primary dark:text-orange-300">זמין</span>
                                                 </span>
-                                            </div>
-                                        )}
-                                        {restaurant.has_pickup && (
-                                            <p className="text-sm text-gray-600 dark:text-brand-dark-muted">
-                                                איסוף עצמי מהמסעדה זמין.
+                                            )}
+                                            {restaurant.has_delivery && restaurant.has_pickup && (
+                                                <span className="text-gray-400 dark:text-gray-500 font-light select-none" aria-hidden>
+                                                    |
+                                                </span>
+                                            )}
+                                            {restaurant.has_pickup && (
+                                                <span>
+                                                    איסוף עצמי{' '}
+                                                    <span className="font-black text-brand-primary dark:text-orange-300">זמין</span>
+                                                </span>
+                                            )}
+                                        </p>
+                                        {restaurant.has_delivery && deliveryMinAmount > 0 && (
+                                            <p className="text-gray-600 dark:text-gray-400 pr-1">
+                                                מינימום למשלוח:{' '}
+                                                <span className="font-bold text-gray-900 dark:text-brand-dark-text">
+                                                    ₪{deliveryMinAmount.toFixed(0)}
+                                                </span>
                                             </p>
                                         )}
                                     </div>

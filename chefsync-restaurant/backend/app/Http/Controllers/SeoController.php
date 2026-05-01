@@ -77,6 +77,7 @@ class SeoController extends Controller
 
         $query = Restaurant::withoutGlobalScope('tenant')
             ->where('is_approved', true)
+            ->where('is_demo', false)
             ->whereIn('subscription_status', ['active', 'trial'])
             ->whereNotNull('tenant_id')
             ->orderBy('name');
@@ -104,6 +105,7 @@ class SeoController extends Controller
 
         $restaurants = Restaurant::withoutGlobalScope('tenant')
             ->where('is_approved', true)
+            ->where('is_demo', false)
             ->whereIn('subscription_status', ['active', 'trial'])
             ->whereNotNull('tenant_id')
             ->where('created_at', '>=', $since)
@@ -141,7 +143,7 @@ class SeoController extends Controller
     }
 
     /**
-     * sitemap.xml דינמי — כולל את כל המסעדות המאושרות שהמנוי שלהן פעיל.
+     * sitemap.xml דינמי — כולל מסעדות מאושרות (לא דמו) שהמנוי שלהן פעיל.
      * URL: /sitemap.xml
      */
     public function sitemap(Request $request): Response
@@ -150,6 +152,7 @@ class SeoController extends Controller
 
         $restaurants = Restaurant::withoutGlobalScope('tenant')
             ->where('is_approved', true)
+            ->where('is_demo', false)
             ->whereIn('subscription_status', ['active', 'trial'])
             ->whereNotNull('tenant_id')
             ->orderBy('id')

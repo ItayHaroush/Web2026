@@ -28,7 +28,8 @@ import {
     FaCog,
     FaServer,
     FaBell,
-    FaChevronDown
+    FaChevronDown,
+    FaRoute,
 } from 'react-icons/fa';
 
 export default function AdminLayout({ children }) {
@@ -74,6 +75,7 @@ export default function AdminLayout({ children }) {
                         is_override: restaurant.is_override_status || false,
                         is_approved: restaurant.is_approved ?? false,
                         active_orders_count: restaurant.active_orders_count || 0,
+                        delivery_missing_active_zone: Boolean(restaurant.delivery_missing_active_zone),
                     });
                     // שמור נתוני subscription לתצוגת Trial Banner + Payment Failed Banner
                     setSubscriptionData({
@@ -243,6 +245,7 @@ export default function AdminLayout({ children }) {
                         isCollapsed={isCollapsed}
                         endContent={statusBadge}
                         notificationCount={restaurantStatus.active_orders_count || 0}
+                        deliveryMissingActiveZone={!!restaurantStatus.delivery_missing_active_zone}
                         impersonating={!!impersonating}
                         profilePath="/admin/settings"
                     />
@@ -302,6 +305,9 @@ function AlertsPanel({ restaurantStatus, subscriptionData, pendingHolidays, isOw
 
     if (restaurantStatus.is_approved === false) {
         alerts.push({ id: 'approval', label: 'ממתין לאישור' });
+    }
+    if (restaurantStatus.delivery_missing_active_zone) {
+        alerts.push({ id: 'delivery-zone', label: 'משלוח ללא אזור פעיל' });
     }
     if (subscriptionData?.subscription_paused && !isOwner() && !isManager()) {
         alerts.push({ id: 'paused', label: 'מנוי מושהה' });
@@ -363,6 +369,28 @@ function AlertsPanel({ restaurantStatus, subscriptionData, pendingHolidays, isOw
                                     <p className="font-bold text-sm">ממתין לאישור מנהל מערכת</p>
                                     <p className="text-xs text-gray-500">פעולות פתיחה/סגירה והזמנות מנוטרלות עד לאישור.</p>
                                 </div>
+                            </div>
+                        </div>
+                    )}
+                    {restaurantStatus.delivery_missing_active_zone && (
+                        <div className="rounded-xl border border-amber-200 bg-amber-50/80 p-3 text-amber-950">
+                            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                                <div className="flex items-start gap-2">
+                                    <FaRoute className="text-amber-600 mt-0.5 shrink-0" size={14} />
+                                    <div>
+                                        <p className="font-bold text-sm text-amber-950">משלוח מופעל ללא אזור משלוח פעיל</p>
+                                        <p className="text-xs text-amber-900/85 mt-1 leading-relaxed">
+                                            בהגדרות המסעדה המשלוח דולק, אך אין אזור משלוח פעיל. לקוחות לא יוכלו להשלים הזמנת משלוח עד שתוגדר לפחות אזור אחד פעיל (או שתכבו משלוח בהגדרות).
+                                        </p>
+                                    </div>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => navigate('/admin/delivery-zones')}
+                                    className="shrink-0 self-start sm:self-center px-4 py-2 rounded-xl text-xs font-black bg-amber-600 text-white hover:bg-amber-700 transition-colors"
+                                >
+                                    לניהול אזורי משלוח
+                                </button>
                             </div>
                         </div>
                     )}

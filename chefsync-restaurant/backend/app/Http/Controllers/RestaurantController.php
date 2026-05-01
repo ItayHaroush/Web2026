@@ -49,6 +49,8 @@ class RestaurantController extends Controller
             'cuisine_type' => $restaurant->cuisine_type ?? null,
             'restaurant_type' => $restaurant->restaurant_type ?? null,
             'logo_url' => $restaurant->logo_url,
+            'menu_hero_background_url' => $restaurant->menu_hero_background_url,
+            'share_hero_background_url' => $restaurant->share_hero_background_url,
             'phone' => $restaurant->phone,
             'address' => $restaurant->address,
             'city' => $restaurant->city,
@@ -61,9 +63,8 @@ class RestaurantController extends Controller
             'is_open_now' => (bool) ($restaurant->is_open_now ?? false),
             'operating_days' => $restaurant->operating_days ?? [],
             'operating_hours' => $restaurant->operating_hours ?? [],
-            // תואם הגדרות המסעדה (דגל has_delivery). קודם חושב רק לפי אזורים → מסעדה בלי אזורים קיבלה תמיד false.
-            // השלמת הזמנה במשלוח עדיין דורשת אזור משלוח פעיל — ראו OrderController::validateDeliveryLocation.
-            'has_delivery' => (bool) ($restaurant->has_delivery ?? false),
+            // תצוגת לקוח: משלוח רק אם הדגל דולק ויש לפחות אזור משלוח פעיל (כמו בשלב יצירת הזמנה).
+            'has_delivery' => $restaurant->offersDeliveryToCustomers(),
             'has_pickup' => $restaurant->has_pickup ?? true,
             'share_incentive_text' => $restaurant->share_incentive_text,
             'delivery_time_minutes' => $restaurant->delivery_time_minutes,

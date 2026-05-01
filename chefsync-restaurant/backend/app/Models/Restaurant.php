@@ -55,6 +55,8 @@ class Restaurant extends Model
         'allow_future_orders',
         'description',
         'logo_url',
+        'menu_hero_background_url',
+        'share_hero_background_url',
         'operating_days',
         'operating_hours',
         'subscription_status',
@@ -191,6 +193,28 @@ class Restaurant extends Model
     public function deliveryZones(): HasMany
     {
         return $this->hasMany(DeliveryZone::class)->orderBy('sort_order');
+    }
+
+    /**
+     * משלוח כפי שהלקוח רואה — דגל המסעדה ולפחות אזור משלוח פעיל (תואם OrderController::validateDeliveryLocation).
+     */
+    public function offersDeliveryToCustomers(): bool
+    {
+        if (! ($this->has_delivery ?? false)) {
+            return false;
+        }
+
+        if ($this->relationLoaded('deliveryZones')) {
+            return $this->deliveryZones->contains(fn ($zone) => (bool) ($zone->is_active ?? false));
+        }
+
+        return $this->deliveryZones()->where('is_active', true)->exists();
+    }
+
+    /** משלוח מופעל במסד אך אין אזור משלוח פעיל — דורש תשומת לב בממשק הניהול */
+    public function deliveryEnabledButMissingActiveZone(): bool
+    {
+        return (bool) ($this->has_delivery ?? false) && ! $this->offersDeliveryToCustomers();
     }
 
     /**

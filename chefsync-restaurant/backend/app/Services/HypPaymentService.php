@@ -155,12 +155,17 @@ class HypPaymentService
      */
     public function chargeSoft(float $amount, string $token, string $expiry, string $description, array $clientInfo = []): array
     {
-        // expiry format: MMYY - HYP soft expects Tmonth (MM) and Tyear (YYYY per docs)
+        // expiry בשדה hyp_card_expiry: בדרך כלל MM + YY או MM + YYYY (מתועדים מ-getToken)
         $tmonth = substr($expiry, 0, 2);
         $tyear = substr($expiry, 2, 4);
         if (strlen($tyear) === 2) {
             $tyear = '20' . $tyear;
         }
+
+        // Order / Tash / J5 / MoreData / UserId — מיושרים לדוגמת Soft הרשמית (Yaad/HYP);
+        // חסרים מהם יגרמו למסופים מסוימים לסרב בלי ErrMsg ברור.
+        $orderRef = $clientInfo['order'] ?? ('CS' . str_replace('.', '', uniqid('', true)));
+        $orderRef = substr((string) $orderRef, 0, 48);
 
         $query = [
             'action'     => 'soft',
@@ -168,25 +173,38 @@ class HypPaymentService
             'PassP'      => $this->passp,
             'Amount'     => number_format($amount, 2, '.', ''),
             'CC'         => $token,
-            'Tmonth'     => $tmonth,
+            // דוגמאות HYP משתמשות לעיתים ב-Tmonth ללא אפס מוביל (4 במקום 04)
+            'Tmonth'     => (string) (int) $tmonth,
             'Tyear'      => $tyear,
             'Token'      => 'True',
             'Info'       => $description,
             'Coin'       => $this->coin,
+            'Order'      => $orderRef,
+            'Tash'       => $clientInfo['tash'] ?? '1',
+            'J5'         => 'False',
+            'MoreData'   => 'True',
             'UTF8'       => 'True',
             'UTF8out'    => 'True',
+            'UserId'     => $clientInfo['user_id'] ?? '000000000',
         ];
 
         if (!empty($clientInfo['name'])) {
             $query['ClientName'] = $clientInfo['name'];
         }
-        if (!empty($clientInfo['user_id'])) {
-            $query['UserId'] = $clientInfo['user_id'];
+        if (!empty($clientInfo['client_lname'])) {
+            $query['ClientLName'] = $clientInfo['client_lname'];
+        }
+        if (!empty($clientInfo['email'])) {
+            $query['email'] = $clientInfo['email'];
+        }
+        if (!empty($clientInfo['phone'])) {
+            $query['cell'] = $clientInfo['phone'];
         }
 
         try {
             Log::info('HYP chargeSoft request', [
                 'amount' => $amount,
+                'order' => $orderRef,
                 'tmonth' => $tmonth,
                 'tyear'  => $tyear,
                 'token_preview' => substr($token, 0, 8) . '...',

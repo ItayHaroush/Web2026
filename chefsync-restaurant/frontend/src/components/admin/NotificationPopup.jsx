@@ -10,7 +10,12 @@ const SEVERITY_STYLES = {
     critical: { bg: 'bg-red-50', border: 'border-red-200', icon: <FaExclamationTriangle className="text-red-500" size={14} /> },
 };
 
-export default function NotificationPopup({ notificationCount = 0, tenantId = null, isSuperAdmin = false }) {
+export default function NotificationPopup({
+    notificationCount = 0,
+    deliveryMissingActiveZone = false,
+    tenantId = null,
+    isSuperAdmin = false,
+}) {
     const [open, setOpen] = useState(false);
     const [alerts, setAlerts] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -77,6 +82,14 @@ export default function NotificationPopup({ notificationCount = 0, tenantId = nu
 
     // Bell shows active orders badge (preserving original behavior)
     const hasActiveOrders = notificationCount > 0;
+    const bellTitle =
+        hasActiveOrders && deliveryMissingActiveZone
+            ? `${notificationCount} הזמנות פעילות • התראת משלוח: חסר אזור פעיל`
+            : hasActiveOrders
+              ? `${notificationCount} הזמנות פעילות`
+              : deliveryMissingActiveZone
+                ? 'התראת הגדרות: משלוח ללא אזור משלוח פעיל'
+                : 'אין התראות חדשות';
 
     return (
         <div className="relative" ref={ref}>
@@ -84,10 +97,22 @@ export default function NotificationPopup({ notificationCount = 0, tenantId = nu
             <button
                 type="button"
                 onClick={handleToggle}
-                className={`p-2 transition-colors relative ${hasActiveOrders ? 'text-orange-600 animate-pulse-slow' : 'text-gray-400 hover:text-orange-600'}`}
-                title={hasActiveOrders ? `${notificationCount} הזמנות פעילות` : 'אין התראות חדשות'}
+                className={`p-2 transition-colors relative ${
+                    hasActiveOrders
+                        ? 'text-orange-600 animate-pulse-slow'
+                        : deliveryMissingActiveZone
+                          ? 'text-amber-600'
+                          : 'text-gray-400 hover:text-orange-600'
+                }`}
+                title={bellTitle}
             >
                 <FaBell size={20} />
+                {deliveryMissingActiveZone && (
+                    <span
+                        className="absolute top-0.5 left-0.5 w-2 h-2 rounded-full bg-amber-400 ring-2 ring-white"
+                        aria-hidden
+                    />
+                )}
                 {hasActiveOrders && (
                     <span className="absolute top-1 right-1 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full border-2 border-white flex items-center justify-center">
                         {notificationCount > 9 ? '9+' : notificationCount}
@@ -109,6 +134,23 @@ export default function NotificationPopup({ notificationCount = 0, tenantId = nu
                             <div className="flex-1">
                                 <p className="text-sm font-bold text-orange-800">{notificationCount} הזמנות פתוחות</p>
                                 <p className="text-[10px] text-orange-500">לחץ למעבר לדף הזמנות</p>
+                            </div>
+                        </button>
+                    )}
+
+                    {deliveryMissingActiveZone && (
+                        <button
+                            type="button"
+                            onClick={() => { setOpen(false); navigate('/admin/delivery-zones'); }}
+                            className="w-full flex items-start gap-3 px-4 py-3 bg-amber-50 hover:bg-amber-100 border-b border-amber-100 transition-colors text-right"
+                        >
+                            <FaExclamationTriangle className="text-amber-600 shrink-0 mt-0.5" size={16} />
+                            <div className="flex-1 min-w-0">
+                                <p className="text-sm font-bold text-amber-950">משלוח ללא אזור משלוח פעיל</p>
+                                <p className="text-[11px] text-amber-900/90 mt-1 leading-relaxed">
+                                    המשלוח מופעל בהגדרות אך אין אזור פעיל — לקוחות לא יוכלו להשלים הזמנת משלוח.
+                                </p>
+                                <p className="text-[10px] font-black text-brand-primary mt-2">מעבר לניהול אזורי משלוח</p>
                             </div>
                         </button>
                     )}

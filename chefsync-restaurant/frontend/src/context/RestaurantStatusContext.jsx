@@ -8,6 +8,7 @@ export function RestaurantStatusProvider({ children }) {
         is_open_now: false,
         is_override: false,
         is_approved: true,
+        delivery_missing_active_zone: false,
     });
     const [subscriptionInfo, setSubscriptionInfo] = useState({
         tier: null,

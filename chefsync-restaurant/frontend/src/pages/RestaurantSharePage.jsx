@@ -216,6 +216,7 @@ export default function RestaurantSharePage() {
     const pickupTime = restaurant?.pickup_time_minutes;
     const deliveryNote = restaurant?.delivery_time_note;
     const pickupNote = restaurant?.pickup_time_note;
+    const deliveryMinAmount = parseFloat(restaurant?.delivery_minimum) || 0;
 
     const goToMenu = (type) => {
         const normalized = normalizeOrderType(type);
@@ -263,14 +264,25 @@ export default function RestaurantSharePage() {
     return (
         <div className="min-h-screen bg-gray-900 text-white font-[Rubik] relative overflow-hidden flex flex-col items-center py-12 px-6" dir="rtl">
             <ShareSeo restaurant={restaurant} />
-            {/* Background Overlay */}
-            <div
-                className="absolute inset-0 z-0 bg-cover bg-center opacity-20 pointer-events-none blur-3xl scale-110 grayscale"
-                style={{
-                    backgroundImage: restaurant.logo_url ? `url(${resolveAssetUrl(restaurant.logo_url)})` : 'none',
-                    backgroundColor: '#111827' // fallback
-                }}
-            ></div>
+            {restaurant.share_hero_background_url ? (
+                <>
+                    <div
+                        className="absolute inset-0 z-0 bg-cover bg-center pointer-events-none"
+                        style={{
+                            backgroundImage: `url(${resolveAssetUrl(restaurant.share_hero_background_url)})`,
+                        }}
+                    />
+                    <div className="absolute inset-0 z-0 bg-gradient-to-b from-black/75 via-black/50 to-gray-900/95 pointer-events-none" aria-hidden />
+                </>
+            ) : (
+                <div
+                    className="absolute inset-0 z-0 bg-cover bg-center opacity-20 pointer-events-none blur-3xl scale-110 grayscale"
+                    style={{
+                        backgroundImage: restaurant.logo_url ? `url(${resolveAssetUrl(restaurant.logo_url)})` : 'none',
+                        backgroundColor: '#111827',
+                    }}
+                />
+            )}
 
             <div className="relative z-10 w-full max-w-md flex flex-col gap-8 text-center animate-[slideDown_0.5s_ease-out]">
                 {/* Identity */}
@@ -329,6 +341,20 @@ export default function RestaurantSharePage() {
                         <p className="text-red-400/80 text-sm mt-1">
                             אבל אל דאגה, התפריט פתוח להתרשמות
                         </p>
+                    </div>
+                )}
+                {(canDelivery || canPickup) && (
+                    <div className="text-sm text-gray-300 leading-relaxed space-y-1">
+                        <p className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 font-medium">
+                            {canDelivery && <span>משלוח זמין</span>}
+                            {canDelivery && canPickup && <span className="text-gray-500 font-light select-none" aria-hidden>|</span>}
+                            {canPickup && <span>איסוף עצמי זמין</span>}
+                        </p>
+                        {canDelivery && deliveryMinAmount > 0 && (
+                            <p className="text-gray-400 text-center">
+                                מינימום למשלוח: <span className="font-bold text-gray-200">₪{deliveryMinAmount.toFixed(0)}</span>
+                            </p>
+                        )}
                     </div>
                 )}
                 {/* Main Actions */}

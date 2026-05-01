@@ -1066,7 +1066,7 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-3 space-y-1">
                             <div className="flex items-center gap-2 text-red-700 dark:text-red-400 text-sm font-medium">
                                 <FaExclamationTriangle className="shrink-0" />
-                                <span>מינימום הזמנה למשלוח: ₪{deliveryMinimum.toFixed(2)}</span>
+                                <span>מינימום למשלוח: ₪{deliveryMinimum.toFixed(0)}</span>
                             </div>
                             <p className="text-red-600 dark:text-red-400 font-black text-base text-center">
                                 חסרים ₪{(deliveryMinimum - total).toFixed(2)} להזמנה
@@ -1554,7 +1554,7 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                             </div>
                             <div className="p-6 space-y-4 text-center">
                                 <p className="text-gray-700 dark:text-gray-300 text-lg">
-                                    מינימום הזמנה למשלוח: <span className="font-black text-brand-primary">₪{deliveryMinimum.toFixed(2)}</span>
+                                    מינימום למשלוח: <span className="font-black text-brand-primary">₪{deliveryMinimum.toFixed(0)}</span>
                                 </p>
                                 <p className="text-red-600 dark:text-red-400 font-black text-xl">
                                     חסרים ₪{(deliveryMinimum - total).toFixed(2)} להזמנה

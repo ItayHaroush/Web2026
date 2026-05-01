@@ -509,7 +509,7 @@ class DisplayScreenController extends Controller
                     'logo_url' => $restaurant->logo_url ?? null,
                     'operating_days' => $restaurant->operating_days ?? [],
                     'operating_hours' => $restaurant->operating_hours ?? [],
-                    'has_delivery' => $restaurant->has_delivery ?? false,
+                    'has_delivery' => $restaurant->offersDeliveryToCustomers(),
                     'has_pickup' => $restaurant->has_pickup ?? false,
                     'delivery_time_minutes' => $restaurant->delivery_time_minutes ?? null,
                     'pickup_time_minutes' => $restaurant->pickup_time_minutes ?? null,

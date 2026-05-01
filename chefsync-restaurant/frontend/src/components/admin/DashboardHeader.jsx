@@ -12,6 +12,7 @@ const DashboardHeader = ({
     isCollapsed,
     endContent,
     notificationCount = 0,
+    deliveryMissingActiveZone = false,
     impersonating = false,
     profilePath,
 }) => {
@@ -65,6 +66,7 @@ const DashboardHeader = ({
                     {/* Notifications */}
                     <NotificationPopup
                         notificationCount={notificationCount}
+                        deliveryMissingActiveZone={deliveryMissingActiveZone}
                         tenantId={user?.restaurant?.tenant_id || user?.tenant_id}
                         isSuperAdmin={user?.is_super_admin}
                     />
