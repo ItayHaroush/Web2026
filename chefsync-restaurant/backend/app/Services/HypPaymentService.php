@@ -104,13 +104,15 @@ class HypPaymentService
                 ->withHeaders(['Referer' => $this->referer])
                 ->get($this->baseUrl, $query);
 
+            $responseBody = $response->body();
+
             Log::info('HYP getToken response', [
                 'http_status'  => $response->status(),
-                'body_preview' => substr($response->body(), 0, 500),
+                'body_preview' => substr($responseBody, 0, 500),
                 'trans_id'     => $transactionId,
             ]);
 
-            $result = $this->parseResponse($response->body());
+            $result = $this->parseResponse($responseBody);
 
             if (($result['CCode'] ?? '') === '0' && !empty($result['Token'])) {
                 $tmonth = $result['Tmonth'] ?? '';
@@ -139,10 +141,18 @@ class HypPaymentService
                 ];
             }
 
+            $truncatedBody = $this->truncateHypResponseBody($responseBody);
+
+            Log::warning('HYP getToken declined or missing token', [
+                'trans_id'       => $transactionId,
+                'response_body' => $truncatedBody,
+            ]);
+
             return [
                 'success' => false,
                 'token'   => null,
                 'error'   => $result['ErrMsg'] ?? 'Failed to get token',
+                'raw_response' => $truncatedBody,
             ];
         } catch (\Exception $e) {
             Log::error('HYP getToken failed', ['error' => $e->getMessage(), 'trans_id' => $transactionId]);
@@ -214,12 +224,14 @@ class HypPaymentService
                 ->withHeaders(['Referer' => $this->referer])
                 ->get($this->baseUrl, $query);
 
+            $responseBody = $response->body();
+
             Log::info('HYP chargeSoft response', [
-                'http_status' => $response->status(),
-                'body_preview' => substr($response->body(), 0, 300),
+                'http_status'   => $response->status(),
+                'body_preview' => substr($responseBody, 0, 300),
             ]);
 
-            $result = $this->parseResponse($response->body());
+            $result = $this->parseResponse($responseBody);
 
             $ccode = (int) ($result['CCode'] ?? -1);
 
@@ -232,11 +244,21 @@ class HypPaymentService
                 ];
             }
 
+            $bodyForLog = $this->truncateHypResponseBody($responseBody);
+
+            Log::warning('HYP chargeSoft declined', [
+                'http_status'    => $response->status(),
+                'ccode'          => $ccode,
+                'order'          => $orderRef,
+                'response_body' => $bodyForLog,
+            ]);
+
             return [
                 'success'        => false,
                 'transaction_id' => $result['Id'] ?? '',
                 'ccode'          => $ccode,
                 'error'          => $result['ErrMsg'] ?? "CCode: {$ccode}",
+                'raw_response'   => $bodyForLog,
             ];
         } catch (\Exception $e) {
             Log::error('HYP chargeSoft failed', ['error' => $e->getMessage(), 'amount' => $amount]);
@@ -512,6 +534,24 @@ class HypPaymentService
             }
         }
 
+        // השגיאה לפעמים תחת errMsg ולפעמים ErrMsg (parse_str רגיש לרישיות)
+        if (($result['ErrMsg'] ?? '') === '' && isset($result['errMsg'])) {
+            $result['ErrMsg'] = $result['errMsg'];
+        }
+
         return $result;
+    }
+
+    /**
+     * גוף תשובת HYP ללוג — לא חותך בשינוי משמעות כרגיל קצר
+     */
+    private function truncateHypResponseBody(string $body, int $maxLen = 4096): string
+    {
+        $body = trim($body);
+        if (strlen($body) <= $maxLen) {
+            return $body;
+        }
+
+        return substr($body, 0, $maxLen) . '…[truncated]';
     }
 }

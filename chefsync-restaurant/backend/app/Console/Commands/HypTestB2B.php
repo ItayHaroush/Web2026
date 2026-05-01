@@ -161,6 +161,11 @@ class HypTestB2B extends Command
             $this->error('חיוב נכשל!');
             $this->line("CCode: {$result['ccode']}");
             $this->line("Error:  {$result['error']}");
+            if (!empty($result['raw_response'])) {
+                $this->newLine();
+                $this->warn('גוף תשובה מלא מ-HYP:');
+                $this->line($result['raw_response']);
+            }
         }
 
         $this->newLine();

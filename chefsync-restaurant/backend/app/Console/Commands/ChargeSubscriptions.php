@@ -94,6 +94,13 @@ class ChargeSubscriptions extends Command
                 $charged++;
                 $this->info("  מסעדה #{$restaurant->id} ({$restaurant->name}) – חויב ₪{$amount} בהצלחה.");
             } else {
+                if (!empty($result['raw_response'])) {
+                    Log::warning('billing:charge-subscriptions: HYP chargeSoft raw response', [
+                        'restaurant_id'   => $restaurant->id,
+                        'response_body'   => $result['raw_response'],
+                        'ccode'          => $result['ccode'] ?? null,
+                    ]);
+                }
                 $this->handleChargeFailure($restaurant, $subscription, $result['error'] ?? 'Unknown error');
                 $failed++;
                 $this->error("  מסעדה #{$restaurant->id} ({$restaurant->name}) – חיוב נכשל: {$result['error']}");
