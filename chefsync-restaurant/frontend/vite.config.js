@@ -28,34 +28,8 @@ export default defineConfig({
     target: 'es2020', // ⚠️ Safer target for wider compatibility (In-App Browsers)
     sourcemap: true,   // ✅ Enable source maps for debugging production errors
     chunkSizeWarningLimit: 1500,
-    rollupOptions: {
-      output: {
-        // פיצול וונדורים מינימלי — רק הענקים מקבלים chunk נפרד.
-        // לא לפצל כל ספרייה קטנה כדי לא לייצר עומס בקשות מיותר.
-        manualChunks(id) {
-          if (!id.includes('node_modules')) return undefined;
-          // ⚠️ כל ספרייה שמשתמשת ב-React חייבת לשבת יחד איתו באותו chunk,
-          // אחרת עלול להיווצר race ב-ESM evaluation (React.forwardRef is undefined).
-          if (
-            id.includes('/react-router') ||
-            id.includes('/react-hot-toast') ||
-            id.includes('/react-dom') ||
-            id.includes('/react/') ||
-            id.includes('/scheduler/') ||
-            id.includes('/react-leaflet') ||
-            id.includes('/@react-leaflet') ||
-            id.includes('/recharts') ||
-            id.includes('/react-icons')
-          ) {
-            return 'react-vendor';
-          }
-          // ⚠️ לא לפצל את leaflet/recharts/וכו' לחבילות נפרדות —
-          // יש בהן תלויות פנימיות מעגליות שמובילות ל-TDZ ("Cannot access X before initialization")
-          // כשהן רצות מחוץ ל-chunk המכיל את כל ה-graph שלהן.
-          if (id.includes('/firebase')) return 'firebase-vendor';
-          return 'vendor';
-        },
-      },
-    },
+    // ⚠️ אין manualChunks ידני: ספריות כמו leaflet/recharts מכילות תלויות מעגליות
+    // שכשהן נדחסות ידנית לחבילה אחת גורמות ל-TDZ ("Cannot access X before initialization").
+    // ה-code-splitting האוטומטי של Vite + lazy() ברמת הראוטים נותן את עיקר הרווח.
   },
 })
