@@ -34,10 +34,22 @@ export default defineConfig({
         // לא לפצל כל ספרייה קטנה כדי לא לייצר עומס בקשות מיותר.
         manualChunks(id) {
           if (!id.includes('node_modules')) return undefined;
-          if (id.includes('/react-router')) return 'router';
-          if (id.includes('/react-hot-toast') || id.includes('/react-dom') || id.includes('/react/')) return 'react-vendor';
-          if (id.includes('/leaflet') || id.includes('/react-leaflet')) return 'map-vendor';
-          if (id.includes('/recharts')) return 'charts-vendor';
+          // ⚠️ כל ספרייה שמשתמשת ב-React חייבת לשבת יחד איתו באותו chunk,
+          // אחרת עלול להיווצר race ב-ESM evaluation (React.forwardRef is undefined).
+          if (
+            id.includes('/react-router') ||
+            id.includes('/react-hot-toast') ||
+            id.includes('/react-dom') ||
+            id.includes('/react/') ||
+            id.includes('/scheduler/') ||
+            id.includes('/react-leaflet') ||
+            id.includes('/@react-leaflet') ||
+            id.includes('/recharts') ||
+            id.includes('/react-icons')
+          ) {
+            return 'react-vendor';
+          }
+          if (id.includes('/leaflet')) return 'map-vendor';
           if (id.includes('/firebase')) return 'firebase-vendor';
           return 'vendor';
         },
