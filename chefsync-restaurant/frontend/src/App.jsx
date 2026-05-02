@@ -17,84 +17,122 @@ import PWAInstallBanner from './components/PWAInstallBanner';
 import { InstallPromptProvider } from './context/InstallPromptContext';
 import PwaCustomerEngagement from './components/PwaCustomerEngagement';
 
+// === Lazy loader עם רענון אוטומטי כשה-chunk נעלם אחרי deploy ===
+// כשהמשתמש משאיר טאב פתוח ואנחנו מעלים build חדש, ה-chunks הישנים נמחקים.
+// ה-rewrite של Vercel מחזיר index.html במקום JS → דפדפן זורק:
+//   "TypeError: 'text/html' is not a valid JavaScript MIME type" / "Failed to fetch dynamically imported module".
+// במקרה כזה נרענן פעם אחת אוטומטית כדי לטעון את ה-build העדכני.
+const CHUNK_RELOAD_KEY = 'takeeat:chunkReloadAttempt';
+function lazyWithRetry(loader) {
+  return lazy(async () => {
+    try {
+      return await loader();
+    } catch (err) {
+      const msg = String(err?.message || err || '');
+      const isChunkError =
+        /Failed to fetch dynamically imported module/i.test(msg) ||
+        /Importing a module script failed/i.test(msg) ||
+        /Loading chunk \d+ failed/i.test(msg) ||
+        /'text\/html' is not a valid JavaScript MIME type/i.test(msg) ||
+        /ChunkLoadError/i.test(err?.name || '');
+      if (isChunkError && typeof window !== 'undefined') {
+        const already = sessionStorage.getItem(CHUNK_RELOAD_KEY);
+        if (!already) {
+          sessionStorage.setItem(CHUNK_RELOAD_KEY, '1');
+          window.location.reload();
+          // החזרת promise תלוי שלא ייפתר עד שהדף יתרענן.
+          return new Promise(() => {});
+        }
+      }
+      throw err;
+    }
+  });
+}
+// ניקוי הדגל לאחר טעינה מוצלחת של האפליקציה (בריצה ראשונה אחרי הרענון).
+if (typeof window !== 'undefined') {
+  window.addEventListener('load', () => {
+    try { sessionStorage.removeItem(CHUNK_RELOAD_KEY); } catch (_) { /* noop */ }
+  });
+}
+
 // === Lazy-loaded pages — code splitting ===
 // עמודי לקוח
-const HomePage = lazy(() => import('./pages/HomePage'));
-const MenuPage = lazy(() => import('./pages/MenuPage'));
-const CartPage = lazy(() => import('./pages/CartPage'));
-const OrderStatusPage = lazy(() => import('./pages/OrderStatusPage'));
-const CustomerOrderHistory = lazy(() => import('./pages/CustomerOrderHistory'));
-const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
-const RegisterRestaurant = lazy(() => import('./pages/RegisterRestaurant'));
-const LandingPage = lazy(() => import('./pages/LandingPage'));
-const RestaurantsListPage = lazy(() => import('./pages/RestaurantsListPage'));
-const NewRestaurantsPage = lazy(() => import('./pages/NewRestaurantsPage'));
-const AboutPage = lazy(() => import('./pages/AboutPage'));
-const RestaurantSharePage = lazy(() => import('./pages/RestaurantSharePage'));
-const VerifyEmailPage = lazy(() => import('./pages/VerifyEmailPage'));
-const PaymentCallback = lazy(() => import('./pages/PaymentCallback'));
-const DebugAPI = lazy(() => import('./pages/DebugAPI'));
-const ScreenViewer = lazy(() => import('./pages/ScreenViewer'));
-const KioskViewer = lazy(() => import('./pages/KioskViewer'));
+const HomePage = lazyWithRetry(() => import('./pages/HomePage'));
+const MenuPage = lazyWithRetry(() => import('./pages/MenuPage'));
+const CartPage = lazyWithRetry(() => import('./pages/CartPage'));
+const OrderStatusPage = lazyWithRetry(() => import('./pages/OrderStatusPage'));
+const CustomerOrderHistory = lazyWithRetry(() => import('./pages/CustomerOrderHistory'));
+const NotFoundPage = lazyWithRetry(() => import('./pages/NotFoundPage'));
+const RegisterRestaurant = lazyWithRetry(() => import('./pages/RegisterRestaurant'));
+const LandingPage = lazyWithRetry(() => import('./pages/LandingPage'));
+const RestaurantsListPage = lazyWithRetry(() => import('./pages/RestaurantsListPage'));
+const NewRestaurantsPage = lazyWithRetry(() => import('./pages/NewRestaurantsPage'));
+const AboutPage = lazyWithRetry(() => import('./pages/AboutPage'));
+const RestaurantSharePage = lazyWithRetry(() => import('./pages/RestaurantSharePage'));
+const VerifyEmailPage = lazyWithRetry(() => import('./pages/VerifyEmailPage'));
+const PaymentCallback = lazyWithRetry(() => import('./pages/PaymentCallback'));
+const DebugAPI = lazyWithRetry(() => import('./pages/DebugAPI'));
+const ScreenViewer = lazyWithRetry(() => import('./pages/ScreenViewer'));
+const KioskViewer = lazyWithRetry(() => import('./pages/KioskViewer'));
 
 // משפטי
-const TermsEndUser = lazy(() => import('./pages/legal/TermsEndUser'));
-const TermsRestaurant = lazy(() => import('./pages/legal/TermsRestaurant'));
-const PrivacyPolicy = lazy(() => import('./pages/legal/PrivacyPolicy'));
+const TermsEndUser = lazyWithRetry(() => import('./pages/legal/TermsEndUser'));
+const TermsRestaurant = lazyWithRetry(() => import('./pages/legal/TermsRestaurant'));
+const PrivacyPolicy = lazyWithRetry(() => import('./pages/legal/PrivacyPolicy'));
 
 // אדמין
-const AdminLogin = lazy(() => import('./pages/admin/AdminLogin'));
-const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
-const AdminOrders = lazy(() => import('./pages/admin/AdminOrders'));
-const AdminEmployees = lazy(() => import('./pages/admin/AdminEmployees'));
-const AdminRestaurant = lazy(() => import('./pages/admin/AdminRestaurant'));
-const AdminMenuPreview = lazy(() => import('./pages/admin/AdminMenuPreview'));
-const AdminCartPreview = lazy(() => import('./pages/admin/AdminCartPreview'));
-const AdminOrderStatusPreview = lazy(() => import('./pages/admin/AdminOrderStatusPreview'));
-const AdminTerminal = lazy(() => import('./pages/admin/AdminTerminal'));
-const AdminPaywall = lazy(() => import('./pages/admin/AdminPaywall'));
-const PaymentDemo = lazy(() => import('./pages/admin/PaymentDemo'));
-const PaymentSuccess = lazy(() => import('./pages/admin/PaymentSuccess'));
-const PaymentError = lazy(() => import('./pages/admin/PaymentError'));
-const AdminDeliveryZones = lazy(() => import('./pages/admin/AdminDeliveryZones'));
-const AdminCoupons = lazy(() => import('./pages/admin/AdminCoupons'));
-const AdminSimulator = lazy(() => import('./pages/admin/AdminSimulator'));
-const AdminQrCode = lazy(() => import('./pages/admin/AdminQrCode'));
-const POSLite = lazy(() => import('./features/pos/POSLite'));
-const AdminPaymentSettings = lazy(() => import('./pages/admin/AdminPaymentSettings'));
-const AdminUserSettings = lazy(() => import('./pages/admin/AdminUserSettings'));
-const AdminAuthDebug = lazy(() => import('./pages/admin/AdminAuthDebug'));
-const AdminMenuManagement = lazy(() => import('./pages/admin/AdminMenuManagement'));
-const AdminReportsCenter = lazy(() => import('./pages/admin/AdminReportsCenter'));
-const AdminMyHours = lazy(() => import('./pages/admin/AdminMyHours'));
-const AdminDevices = lazy(() => import('./pages/admin/AdminDevices'));
-const AdminSettingsHub = lazy(() => import('./pages/admin/AdminSettingsHub'));
-const AdminRestaurantGuide = lazy(() => import('./pages/admin/AdminRestaurantGuide'));
-const AdminAbandonedCartReminders = lazy(() => import('./pages/admin/AdminAbandonedCartReminders'));
+const AdminLogin = lazyWithRetry(() => import('./pages/admin/AdminLogin'));
+const AdminDashboard = lazyWithRetry(() => import('./pages/admin/AdminDashboard'));
+const AdminOrders = lazyWithRetry(() => import('./pages/admin/AdminOrders'));
+const AdminEmployees = lazyWithRetry(() => import('./pages/admin/AdminEmployees'));
+const AdminRestaurant = lazyWithRetry(() => import('./pages/admin/AdminRestaurant'));
+const AdminMenuPreview = lazyWithRetry(() => import('./pages/admin/AdminMenuPreview'));
+const AdminCartPreview = lazyWithRetry(() => import('./pages/admin/AdminCartPreview'));
+const AdminOrderStatusPreview = lazyWithRetry(() => import('./pages/admin/AdminOrderStatusPreview'));
+const AdminTerminal = lazyWithRetry(() => import('./pages/admin/AdminTerminal'));
+const AdminPaywall = lazyWithRetry(() => import('./pages/admin/AdminPaywall'));
+const PaymentDemo = lazyWithRetry(() => import('./pages/admin/PaymentDemo'));
+const PaymentSuccess = lazyWithRetry(() => import('./pages/admin/PaymentSuccess'));
+const PaymentError = lazyWithRetry(() => import('./pages/admin/PaymentError'));
+const AdminDeliveryZones = lazyWithRetry(() => import('./pages/admin/AdminDeliveryZones'));
+const AdminCoupons = lazyWithRetry(() => import('./pages/admin/AdminCoupons'));
+const AdminSimulator = lazyWithRetry(() => import('./pages/admin/AdminSimulator'));
+const AdminQrCode = lazyWithRetry(() => import('./pages/admin/AdminQrCode'));
+const POSLite = lazyWithRetry(() => import('./features/pos/POSLite'));
+const AdminPaymentSettings = lazyWithRetry(() => import('./pages/admin/AdminPaymentSettings'));
+const AdminUserSettings = lazyWithRetry(() => import('./pages/admin/AdminUserSettings'));
+const AdminAuthDebug = lazyWithRetry(() => import('./pages/admin/AdminAuthDebug'));
+const AdminMenuManagement = lazyWithRetry(() => import('./pages/admin/AdminMenuManagement'));
+const AdminReportsCenter = lazyWithRetry(() => import('./pages/admin/AdminReportsCenter'));
+const AdminMyHours = lazyWithRetry(() => import('./pages/admin/AdminMyHours'));
+const AdminDevices = lazyWithRetry(() => import('./pages/admin/AdminDevices'));
+const AdminSettingsHub = lazyWithRetry(() => import('./pages/admin/AdminSettingsHub'));
+const AdminRestaurantGuide = lazyWithRetry(() => import('./pages/admin/AdminRestaurantGuide'));
+const AdminAbandonedCartReminders = lazyWithRetry(() => import('./pages/admin/AdminAbandonedCartReminders'));
 
 // סופר-אדמין
-const SuperAdminDashboard = lazy(() => import('./pages/super-admin/SuperAdminDashboard'));
-const SuperAdminReports = lazy(() => import('./pages/super-admin/SuperAdminReports'));
-const SuperAdminInvoices = lazy(() => import('./pages/super-admin/SuperAdminInvoices'));
-const SuperAdminManualBilling = lazy(() => import('./pages/super-admin/SuperAdminManualBilling'));
-const SuperAdminSettings = lazy(() => import('./pages/super-admin/SuperAdminSettings'));
-const SuperAdminOrderDebug = lazy(() => import('./pages/super-admin/SuperAdminOrderDebug'));
-const SuperAdminProfile = lazy(() => import('./pages/super-admin/SuperAdminProfile'));
-const RegionalSettings = lazy(() => import('./pages/super-admin/settings/RegionalSettings'));
-const BillingSettings = lazy(() => import('./pages/super-admin/settings/BillingSettings'));
-const SecuritySettings = lazy(() => import('./pages/super-admin/settings/SecuritySettings'));
-const NotificationSettings = lazy(() => import('./pages/super-admin/settings/NotificationSettings'));
-const PolicySettings = lazy(() => import('./pages/super-admin/settings/PolicySettings'));
-const DatabaseMaintenance = lazy(() => import('./pages/super-admin/settings/DatabaseMaintenance'));
-const DebugAuth = lazy(() => import('./pages/super-admin/DebugAuth'));
-const SuperAdminAbandonedCarts = lazy(() => import('./pages/super-admin/SuperAdminAbandonedCarts'));
-const SuperAdminAnalytics = lazy(() => import('./pages/super-admin/SuperAdminAnalytics'));
-const SuperAdminCustomers = lazy(() => import('./pages/super-admin/SuperAdminCustomers'));
-const SuperAdminCustomerDetail = lazy(() => import('./pages/super-admin/SuperAdminCustomerDetail'));
-const SuperAdminNotificationCenter = lazy(() => import('./pages/super-admin/SuperAdminNotificationCenter'));
-const SuperAdminEmailManagement = lazy(() => import('./pages/super-admin/SuperAdminEmailManagement'));
-const SuperAdminAnnouncements = lazy(() => import('./pages/super-admin/SuperAdminAnnouncements'));
-const SuperAdminHolidays = lazy(() => import('./pages/super-admin/SuperAdminHolidays'));
+const SuperAdminDashboard = lazyWithRetry(() => import('./pages/super-admin/SuperAdminDashboard'));
+const SuperAdminReports = lazyWithRetry(() => import('./pages/super-admin/SuperAdminReports'));
+const SuperAdminInvoices = lazyWithRetry(() => import('./pages/super-admin/SuperAdminInvoices'));
+const SuperAdminManualBilling = lazyWithRetry(() => import('./pages/super-admin/SuperAdminManualBilling'));
+const SuperAdminSettings = lazyWithRetry(() => import('./pages/super-admin/SuperAdminSettings'));
+const SuperAdminOrderDebug = lazyWithRetry(() => import('./pages/super-admin/SuperAdminOrderDebug'));
+const SuperAdminProfile = lazyWithRetry(() => import('./pages/super-admin/SuperAdminProfile'));
+const RegionalSettings = lazyWithRetry(() => import('./pages/super-admin/settings/RegionalSettings'));
+const BillingSettings = lazyWithRetry(() => import('./pages/super-admin/settings/BillingSettings'));
+const SecuritySettings = lazyWithRetry(() => import('./pages/super-admin/settings/SecuritySettings'));
+const NotificationSettings = lazyWithRetry(() => import('./pages/super-admin/settings/NotificationSettings'));
+const PolicySettings = lazyWithRetry(() => import('./pages/super-admin/settings/PolicySettings'));
+const DatabaseMaintenance = lazyWithRetry(() => import('./pages/super-admin/settings/DatabaseMaintenance'));
+const DebugAuth = lazyWithRetry(() => import('./pages/super-admin/DebugAuth'));
+const SuperAdminAbandonedCarts = lazyWithRetry(() => import('./pages/super-admin/SuperAdminAbandonedCarts'));
+const SuperAdminAnalytics = lazyWithRetry(() => import('./pages/super-admin/SuperAdminAnalytics'));
+const SuperAdminCustomers = lazyWithRetry(() => import('./pages/super-admin/SuperAdminCustomers'));
+const SuperAdminCustomerDetail = lazyWithRetry(() => import('./pages/super-admin/SuperAdminCustomerDetail'));
+const SuperAdminNotificationCenter = lazyWithRetry(() => import('./pages/super-admin/SuperAdminNotificationCenter'));
+const SuperAdminEmailManagement = lazyWithRetry(() => import('./pages/super-admin/SuperAdminEmailManagement'));
+const SuperAdminAnnouncements = lazyWithRetry(() => import('./pages/super-admin/SuperAdminAnnouncements'));
+const SuperAdminHolidays = lazyWithRetry(() => import('./pages/super-admin/SuperAdminHolidays'));
 
 import { Toaster } from 'react-hot-toast';
 import './App.css';
