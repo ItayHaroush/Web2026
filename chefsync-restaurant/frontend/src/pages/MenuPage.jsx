@@ -887,12 +887,19 @@ export default function MenuPage({ isPreviewMode = false }) {
                                 </div>
 
                                 {restaurant.has_delivery ? (
-                                    <div className="flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-full border border-slate-200/95 bg-white px-2 py-1.5 shadow-sm dark:border-slate-600 dark:bg-slate-900/95">
+                                    <div
+                                        className="flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-full border border-slate-200/95 bg-white px-2 py-1.5 shadow-sm dark:border-slate-600 dark:bg-slate-900/95"
+                                        aria-label={
+                                            deliveryMinAmount > 0
+                                                ? `משלוח זמין, מינימום למשלוח ₪${deliveryMinAmount.toFixed(0)}`
+                                                : 'משלוח זמין, ללא מינימום למשלוח'
+                                        }
+                                    >
                                         <div className="flex items-center justify-center gap-1 text-xs font-black text-slate-800 dark:text-slate-100">
-                                            <FaTruck className="h-3 w-3 shrink-0 text-slate-600 dark:text-slate-400" aria-hidden />
-                                            <span className="truncate">משלוח זמין</span>
+                                            <FaTruck className="h-4 w-4 shrink-0 text-slate-600 dark:text-slate-400 sm:h-3 sm:w-3" aria-hidden />
+                                            <span className="truncate hidden sm:inline">משלוח זמין</span>
                                         </div>
-                                        <span className="text-[10px] font-bold leading-none text-slate-600 dark:text-slate-400">
+                                        <span className="hidden text-[10px] font-bold leading-none text-slate-600 dark:text-slate-400 sm:block">
                                             {deliveryMinAmount > 0 ? `מינימום למשלוח: ₪${deliveryMinAmount.toFixed(0)}` : 'ללא מינימום למשלוח'}
                                         </span>
                                     </div>
@@ -901,9 +908,12 @@ export default function MenuPage({ isPreviewMode = false }) {
                                 )}
 
                                 {restaurant.has_pickup ? (
-                                    <div className="inline-flex min-w-0 items-center justify-center gap-1 rounded-full border border-slate-200/95 bg-white px-2.5 py-1.5 shadow-sm dark:border-slate-600 dark:bg-slate-900/95">
-                                        <FaShoppingBag className="h-3 w-3 shrink-0 text-slate-600 dark:text-slate-400" aria-hidden />
-                                        <span className="truncate text-xs font-black text-slate-800 dark:text-slate-100">איסוף עצמי זמין</span>
+                                    <div
+                                        className="inline-flex min-w-0 items-center justify-center gap-1 rounded-full border border-slate-200/95 bg-white px-2.5 py-1.5 shadow-sm dark:border-slate-600 dark:bg-slate-900/95"
+                                        aria-label="איסוף עצמי זמין"
+                                    >
+                                        <FaShoppingBag className="h-4 w-4 shrink-0 text-slate-600 dark:text-slate-400 sm:h-3 sm:w-3" aria-hidden />
+                                        <span className="hidden truncate text-xs font-black text-slate-800 dark:text-slate-100 sm:inline">איסוף עצמי זמין</span>
                                     </div>
                                 ) : (
                                     <div className="rounded-full border border-transparent min-h-[2.25rem]" aria-hidden />

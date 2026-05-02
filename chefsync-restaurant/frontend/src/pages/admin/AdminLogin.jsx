@@ -24,11 +24,15 @@ export default function AdminLogin() {
             const user = JSON.parse(localStorage.getItem('user') || '{}');
 
             if (user.is_super_admin) {
+                // Preload super-admin dashboard chunk in parallel with redirect
+                import('../super-admin/SuperAdminDashboard');
                 toast.success('ברוכים הבאים, מנהל מערכת!');
                 navigate('/super-admin/dashboard');
             } else if (user.has_access === false && ['owner', 'manager'].includes(user.role)) {
                 navigate('/admin/paywall');
             } else {
+                // Preload admin dashboard chunk in parallel with redirect
+                import('./AdminDashboard');
                 navigate('/admin/dashboard');
             }
         } else {

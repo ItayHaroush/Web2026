@@ -325,7 +325,7 @@ export default function RestaurantSharePage() {
                         {restLines.length > 0 && (
                             <>
                                 <br />
-                                <span className="text-sm text-gray-500 mt-1 block">
+                                <span className="mt-1 block text-xl font-medium text-gray-300 leading-relaxed">
                                     {restLines.join(' · ')}
                                 </span>
                             </>

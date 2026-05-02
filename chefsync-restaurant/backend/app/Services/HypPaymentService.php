@@ -162,9 +162,61 @@ class HypPaymentService
 
     /**
      * חיוב server-to-server דרך Soft Protocol (חיוב חוזר עם טוקן)
+     *
+     * אם המסוף מחזיר CCode=6 ("cvv2/id שגוי") — לרוב זה אומר שה-UserId ששלחנו
+     * אינו תואם לת״ז שהוצמדה לטוקן ב-Pay Page. במקרה זה ננסה פעם נוספת עם
+     * UserId חלופי (000000000 או הת״ז שב-clientInfo) כדי לתפוס טוקנים ישנים
+     * שנוצרו לפני שמירת hyp_soft_national_id.
      */
     public function chargeSoft(float $amount, string $token, string $expiry, string $description, array $clientInfo = []): array
     {
+        $primaryUserId = $clientInfo['user_id'] ?? '000000000';
+        $result = $this->performSoftCharge($amount, $token, $expiry, $description, $clientInfo, $primaryUserId);
+
+        // Fallback ל-CCode=6: ננסה עם UserId אלטרנטיבי
+        if (!$result['success'] && (int) ($result['ccode'] ?? -1) === 6) {
+            $fallbackUserId = $primaryUserId === '000000000' ? null : '000000000';
+
+            if ($fallbackUserId !== null) {
+                Log::warning('HYP chargeSoft CCode=6 — retrying with fallback UserId', [
+                    'primary_user_id'  => $primaryUserId,
+                    'fallback_user_id' => $fallbackUserId,
+                ]);
+
+                $retryResult = $this->performSoftCharge(
+                    $amount,
+                    $token,
+                    $expiry,
+                    $description,
+                    $clientInfo,
+                    $fallbackUserId
+                );
+
+                if ($retryResult['success']) {
+                    Log::info('HYP chargeSoft succeeded on fallback UserId — consider updating hyp_soft_national_id', [
+                        'used_user_id' => $fallbackUserId,
+                    ]);
+                    $retryResult['used_fallback_user_id'] = $fallbackUserId;
+                }
+
+                return $retryResult;
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * ביצוע בקשת Soft יחידה — extracted כדי לאפשר retry עם UserId שונה
+     */
+    private function performSoftCharge(
+        float $amount,
+        string $token,
+        string $expiry,
+        string $description,
+        array $clientInfo,
+        string $userId
+    ): array {
         // expiry בשדה hyp_card_expiry: בדרך כלל MM + YY או MM + YYYY (מתועדים מ-getToken)
         $tmonth = substr($expiry, 0, 2);
         $tyear = substr($expiry, 2, 4);
@@ -195,7 +247,7 @@ class HypPaymentService
             'MoreData'   => 'True',
             'UTF8'       => 'True',
             'UTF8out'    => 'True',
-            'UserId'     => $clientInfo['user_id'] ?? '000000000',
+            'UserId'     => $userId,
         ];
 
         if (!empty($clientInfo['name'])) {
@@ -217,6 +269,7 @@ class HypPaymentService
                 'order' => $orderRef,
                 'tmonth' => $tmonth,
                 'tyear'  => $tyear,
+                'user_id' => $userId,
                 'token_preview' => substr($token, 0, 8) . '...',
             ]);
 
@@ -250,6 +303,7 @@ class HypPaymentService
                 'http_status'    => $response->status(),
                 'ccode'          => $ccode,
                 'order'          => $orderRef,
+                'user_id'        => $userId,
                 'response_body' => $bodyForLog,
             ]);
 

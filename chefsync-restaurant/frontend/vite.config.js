@@ -27,5 +27,21 @@ export default defineConfig({
   build: {
     target: 'es2020', // ⚠️ Safer target for wider compatibility (In-App Browsers)
     sourcemap: true,   // ✅ Enable source maps for debugging production errors
+    chunkSizeWarningLimit: 1500,
+    rollupOptions: {
+      output: {
+        // פיצול וונדורים מינימלי — רק הענקים מקבלים chunk נפרד.
+        // לא לפצל כל ספרייה קטנה כדי לא לייצר עומס בקשות מיותר.
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return undefined;
+          if (id.includes('/react-router')) return 'router';
+          if (id.includes('/react-hot-toast') || id.includes('/react-dom') || id.includes('/react/')) return 'react-vendor';
+          if (id.includes('/leaflet') || id.includes('/react-leaflet')) return 'map-vendor';
+          if (id.includes('/recharts')) return 'charts-vendor';
+          if (id.includes('/firebase')) return 'firebase-vendor';
+          return 'vendor';
+        },
+      },
+    },
   },
 })

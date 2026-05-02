@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AdminAuthProvider, useAdminAuth } from './context/AdminAuthContext';
@@ -15,78 +16,103 @@ import FacebookInAppWarning from './components/FacebookInAppWarning';
 import PWAInstallBanner from './components/PWAInstallBanner';
 import { InstallPromptProvider } from './context/InstallPromptContext';
 import PwaCustomerEngagement from './components/PwaCustomerEngagement';
-import HomePage from './pages/HomePage';
-import MenuPage from './pages/MenuPage';
-import CartPage from './pages/CartPage';
-import OrderStatusPage from './pages/OrderStatusPage';
-import CustomerOrderHistory from './pages/CustomerOrderHistory';
-import NotFoundPage from './pages/NotFoundPage';
-import AdminLogin from './pages/admin/AdminLogin';
-import AdminDashboard from './pages/admin/AdminDashboard';
-import AdminOrders from './pages/admin/AdminOrders';
-import AdminEmployees from './pages/admin/AdminEmployees';
-import AdminRestaurant from './pages/admin/AdminRestaurant';
-import AdminMenuPreview from './pages/admin/AdminMenuPreview';
-import AdminCartPreview from './pages/admin/AdminCartPreview';
-import AdminOrderStatusPreview from './pages/admin/AdminOrderStatusPreview';
-import AdminTerminal from './pages/admin/AdminTerminal';
-import AdminPaywall from './pages/admin/AdminPaywall';
-import PaymentDemo from './pages/admin/PaymentDemo';
-import PaymentSuccess from './pages/admin/PaymentSuccess';
-import PaymentError from './pages/admin/PaymentError';
-import AdminDeliveryZones from './pages/admin/AdminDeliveryZones';
-import AdminCoupons from './pages/admin/AdminCoupons';
-import AdminSimulator from './pages/admin/AdminSimulator';
-import AdminQrCode from './pages/admin/AdminQrCode';
-import ScreenViewer from './pages/ScreenViewer';
-import KioskViewer from './pages/KioskViewer';
-import POSLite from './features/pos/POSLite';
-import AdminPaymentSettings from './pages/admin/AdminPaymentSettings';
-import AdminUserSettings from './pages/admin/AdminUserSettings';
-import PaymentCallback from './pages/PaymentCallback';
-import AdminAuthDebug from './pages/admin/AdminAuthDebug';
-import AdminMenuManagement from './pages/admin/AdminMenuManagement';
-import AdminReportsCenter from './pages/admin/AdminReportsCenter';
-import AdminMyHours from './pages/admin/AdminMyHours';
-import AdminDevices from './pages/admin/AdminDevices';
-import AdminSettingsHub from './pages/admin/AdminSettingsHub';
-import AdminRestaurantGuide from './pages/admin/AdminRestaurantGuide';
-import AdminAbandonedCartReminders from './pages/admin/AdminAbandonedCartReminders';
-import SuperAdminDashboard from './pages/super-admin/SuperAdminDashboard';
-import SuperAdminReports from './pages/super-admin/SuperAdminReports';
-import SuperAdminInvoices from './pages/super-admin/SuperAdminInvoices';
-import SuperAdminManualBilling from './pages/super-admin/SuperAdminManualBilling';
-import SuperAdminSettings from './pages/super-admin/SuperAdminSettings';
-import SuperAdminOrderDebug from './pages/super-admin/SuperAdminOrderDebug';
-import SuperAdminProfile from './pages/super-admin/SuperAdminProfile';
-import RegionalSettings from './pages/super-admin/settings/RegionalSettings';
-import BillingSettings from './pages/super-admin/settings/BillingSettings';
-import SecuritySettings from './pages/super-admin/settings/SecuritySettings';
-import NotificationSettings from './pages/super-admin/settings/NotificationSettings';
-import PolicySettings from './pages/super-admin/settings/PolicySettings';
-import DatabaseMaintenance from './pages/super-admin/settings/DatabaseMaintenance';
-import DebugAuth from './pages/super-admin/DebugAuth';
-import SuperAdminAbandonedCarts from './pages/super-admin/SuperAdminAbandonedCarts';
-import SuperAdminAnalytics from './pages/super-admin/SuperAdminAnalytics';
-import SuperAdminCustomers from './pages/super-admin/SuperAdminCustomers';
-import SuperAdminCustomerDetail from './pages/super-admin/SuperAdminCustomerDetail';
-import SuperAdminNotificationCenter from './pages/super-admin/SuperAdminNotificationCenter';
-import SuperAdminEmailManagement from './pages/super-admin/SuperAdminEmailManagement';
-import SuperAdminAnnouncements from './pages/super-admin/SuperAdminAnnouncements';
-import SuperAdminHolidays from './pages/super-admin/SuperAdminHolidays';
-import DebugAPI from './pages/DebugAPI';
-import RegisterRestaurant from './pages/RegisterRestaurant';
-import LandingPage from './pages/LandingPage';
-import RestaurantsListPage from './pages/RestaurantsListPage';
-import NewRestaurantsPage from './pages/NewRestaurantsPage';
-import AboutPage from './pages/AboutPage';
-import RestaurantSharePage from './pages/RestaurantSharePage';
-import VerifyEmailPage from './pages/VerifyEmailPage';
-import TermsEndUser from './pages/legal/TermsEndUser';
-import TermsRestaurant from './pages/legal/TermsRestaurant';
-import PrivacyPolicy from './pages/legal/PrivacyPolicy';
+
+// === Lazy-loaded pages — code splitting ===
+// עמודי לקוח
+const HomePage = lazy(() => import('./pages/HomePage'));
+const MenuPage = lazy(() => import('./pages/MenuPage'));
+const CartPage = lazy(() => import('./pages/CartPage'));
+const OrderStatusPage = lazy(() => import('./pages/OrderStatusPage'));
+const CustomerOrderHistory = lazy(() => import('./pages/CustomerOrderHistory'));
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
+const RegisterRestaurant = lazy(() => import('./pages/RegisterRestaurant'));
+const LandingPage = lazy(() => import('./pages/LandingPage'));
+const RestaurantsListPage = lazy(() => import('./pages/RestaurantsListPage'));
+const NewRestaurantsPage = lazy(() => import('./pages/NewRestaurantsPage'));
+const AboutPage = lazy(() => import('./pages/AboutPage'));
+const RestaurantSharePage = lazy(() => import('./pages/RestaurantSharePage'));
+const VerifyEmailPage = lazy(() => import('./pages/VerifyEmailPage'));
+const PaymentCallback = lazy(() => import('./pages/PaymentCallback'));
+const DebugAPI = lazy(() => import('./pages/DebugAPI'));
+const ScreenViewer = lazy(() => import('./pages/ScreenViewer'));
+const KioskViewer = lazy(() => import('./pages/KioskViewer'));
+
+// משפטי
+const TermsEndUser = lazy(() => import('./pages/legal/TermsEndUser'));
+const TermsRestaurant = lazy(() => import('./pages/legal/TermsRestaurant'));
+const PrivacyPolicy = lazy(() => import('./pages/legal/PrivacyPolicy'));
+
+// אדמין
+const AdminLogin = lazy(() => import('./pages/admin/AdminLogin'));
+const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
+const AdminOrders = lazy(() => import('./pages/admin/AdminOrders'));
+const AdminEmployees = lazy(() => import('./pages/admin/AdminEmployees'));
+const AdminRestaurant = lazy(() => import('./pages/admin/AdminRestaurant'));
+const AdminMenuPreview = lazy(() => import('./pages/admin/AdminMenuPreview'));
+const AdminCartPreview = lazy(() => import('./pages/admin/AdminCartPreview'));
+const AdminOrderStatusPreview = lazy(() => import('./pages/admin/AdminOrderStatusPreview'));
+const AdminTerminal = lazy(() => import('./pages/admin/AdminTerminal'));
+const AdminPaywall = lazy(() => import('./pages/admin/AdminPaywall'));
+const PaymentDemo = lazy(() => import('./pages/admin/PaymentDemo'));
+const PaymentSuccess = lazy(() => import('./pages/admin/PaymentSuccess'));
+const PaymentError = lazy(() => import('./pages/admin/PaymentError'));
+const AdminDeliveryZones = lazy(() => import('./pages/admin/AdminDeliveryZones'));
+const AdminCoupons = lazy(() => import('./pages/admin/AdminCoupons'));
+const AdminSimulator = lazy(() => import('./pages/admin/AdminSimulator'));
+const AdminQrCode = lazy(() => import('./pages/admin/AdminQrCode'));
+const POSLite = lazy(() => import('./features/pos/POSLite'));
+const AdminPaymentSettings = lazy(() => import('./pages/admin/AdminPaymentSettings'));
+const AdminUserSettings = lazy(() => import('./pages/admin/AdminUserSettings'));
+const AdminAuthDebug = lazy(() => import('./pages/admin/AdminAuthDebug'));
+const AdminMenuManagement = lazy(() => import('./pages/admin/AdminMenuManagement'));
+const AdminReportsCenter = lazy(() => import('./pages/admin/AdminReportsCenter'));
+const AdminMyHours = lazy(() => import('./pages/admin/AdminMyHours'));
+const AdminDevices = lazy(() => import('./pages/admin/AdminDevices'));
+const AdminSettingsHub = lazy(() => import('./pages/admin/AdminSettingsHub'));
+const AdminRestaurantGuide = lazy(() => import('./pages/admin/AdminRestaurantGuide'));
+const AdminAbandonedCartReminders = lazy(() => import('./pages/admin/AdminAbandonedCartReminders'));
+
+// סופר-אדמין
+const SuperAdminDashboard = lazy(() => import('./pages/super-admin/SuperAdminDashboard'));
+const SuperAdminReports = lazy(() => import('./pages/super-admin/SuperAdminReports'));
+const SuperAdminInvoices = lazy(() => import('./pages/super-admin/SuperAdminInvoices'));
+const SuperAdminManualBilling = lazy(() => import('./pages/super-admin/SuperAdminManualBilling'));
+const SuperAdminSettings = lazy(() => import('./pages/super-admin/SuperAdminSettings'));
+const SuperAdminOrderDebug = lazy(() => import('./pages/super-admin/SuperAdminOrderDebug'));
+const SuperAdminProfile = lazy(() => import('./pages/super-admin/SuperAdminProfile'));
+const RegionalSettings = lazy(() => import('./pages/super-admin/settings/RegionalSettings'));
+const BillingSettings = lazy(() => import('./pages/super-admin/settings/BillingSettings'));
+const SecuritySettings = lazy(() => import('./pages/super-admin/settings/SecuritySettings'));
+const NotificationSettings = lazy(() => import('./pages/super-admin/settings/NotificationSettings'));
+const PolicySettings = lazy(() => import('./pages/super-admin/settings/PolicySettings'));
+const DatabaseMaintenance = lazy(() => import('./pages/super-admin/settings/DatabaseMaintenance'));
+const DebugAuth = lazy(() => import('./pages/super-admin/DebugAuth'));
+const SuperAdminAbandonedCarts = lazy(() => import('./pages/super-admin/SuperAdminAbandonedCarts'));
+const SuperAdminAnalytics = lazy(() => import('./pages/super-admin/SuperAdminAnalytics'));
+const SuperAdminCustomers = lazy(() => import('./pages/super-admin/SuperAdminCustomers'));
+const SuperAdminCustomerDetail = lazy(() => import('./pages/super-admin/SuperAdminCustomerDetail'));
+const SuperAdminNotificationCenter = lazy(() => import('./pages/super-admin/SuperAdminNotificationCenter'));
+const SuperAdminEmailManagement = lazy(() => import('./pages/super-admin/SuperAdminEmailManagement'));
+const SuperAdminAnnouncements = lazy(() => import('./pages/super-admin/SuperAdminAnnouncements'));
+const SuperAdminHolidays = lazy(() => import('./pages/super-admin/SuperAdminHolidays'));
+
 import { Toaster } from 'react-hot-toast';
 import './App.css';
+
+/**
+ * ספינר עגול לטעינת עמודים (Suspense fallback ועוד).
+ */
+function PageLoader() {
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-white dark:bg-brand-dark-bg" role="status" aria-live="polite">
+      <div className="relative h-14 w-14">
+        <div className="absolute inset-0 rounded-full border-4 border-brand-primary/15 dark:border-brand-primary/25" />
+        <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-brand-primary border-r-brand-primary animate-spin" />
+      </div>
+      <span className="sr-only">טוען...</span>
+    </div>
+  );
+}
 
 /**
  * ממשק ראשי של האפליקציה
@@ -97,7 +123,7 @@ function AdminRoute({ children }) {
   const { isAuthenticated, loading, user, impersonating } = useAdminAuth();
 
   if (loading) {
-    return <div className="flex items-center justify-center min-h-screen">טוען...</div>;
+    return <PageLoader />;
   }
 
   if (!isAuthenticated) {
@@ -116,7 +142,7 @@ function SuperAdminRoute({ children }) {
   const { isAuthenticated, loading, user } = useAdminAuth();
 
   if (loading) {
-    return <div className="flex items-center justify-center min-h-screen">טוען...</div>;
+    return <PageLoader />;
   }
 
   if (!isAuthenticated) {
@@ -136,7 +162,7 @@ function AppRoutes() {
   const { isAuthenticated: isAdmin } = useAdminAuth();
 
   if (isLoading) {
-    return <div className="flex items-center justify-center min-h-screen">טוען...</div>;
+    return <PageLoader />;
   }
   if (import.meta.env.DEV) {
     console.log('Tenant ID:', tenantId);
@@ -144,6 +170,7 @@ function AppRoutes() {
   return (
     <>
       <AnalyticsPublicTracker />
+      <Suspense fallback={<PageLoader />}>
       <Routes>
         {/* Debug */}
         <Route path="/debug-api" element={<DebugAPI />} />
@@ -612,6 +639,7 @@ function AppRoutes() {
 
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
+      </Suspense>
       <PwaCustomerEngagement />
     </>
   );
