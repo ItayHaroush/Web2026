@@ -49,7 +49,9 @@ export default defineConfig({
           ) {
             return 'react-vendor';
           }
-          if (id.includes('/leaflet')) return 'map-vendor';
+          // ⚠️ לא לפצל את leaflet/recharts/וכו' לחבילות נפרדות —
+          // יש בהן תלויות פנימיות מעגליות שמובילות ל-TDZ ("Cannot access X before initialization")
+          // כשהן רצות מחוץ ל-chunk המכיל את כל ה-graph שלהן.
           if (id.includes('/firebase')) return 'firebase-vendor';
           return 'vendor';
         },
