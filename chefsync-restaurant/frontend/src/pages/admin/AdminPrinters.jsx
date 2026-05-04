@@ -640,15 +640,25 @@ export default function AdminPrinters({ embedded = false }) {
                                     </div>
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-2">קודפייג עברית (ESC t)</label>
-                                    <select value={deviceForm.codepage_id} onChange={e => setDeviceForm({ ...deviceForm, codepage_id: parseInt(e.target.value) })} dir="ltr" className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none">
-                                        <option value={10}>10 — PC862 Hebrew (סטנדרטי, SNBC / Epson)</option>
-                                        <option value={15}>15 — WPC1255 Hebrew (Bixolon ואחרים)</option>
-                                        <option value={25}>25 — PC862 טבלה חלופית</option>
-                                        <option value={61}>61 — Hebrew (דגמים סיניים)</option>
-                                        <option value={0}>0 — PC437 (ברירת מחדל / לבדיקה)</option>
-                                    </select>
-                                    <p className="text-xs text-gray-400 mt-1">אם העברית מופיעה כערבית — נסה ערך 15 או 61</p>
+                                    <label className="block text-sm font-bold text-gray-700 mb-2">קודפייג עברית (ESC t) — 0–255</label>
+                                    <input
+                                        type="number"
+                                        min={0}
+                                        max={255}
+                                        value={deviceForm.codepage_id}
+                                        onChange={e => setDeviceForm({ ...deviceForm, codepage_id: parseInt(e.target.value) || 0 })}
+                                        dir="ltr"
+                                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                                    />
+                                    <div className="text-xs text-gray-500 mt-2 space-y-1">
+                                        <div className="font-bold">ערכים לניסיון (לפי מסדר מומלץ):</div>
+                                        <div><span className="font-mono bg-amber-100 px-1">41</span> — PC862 Hebrew (מפרט EPSON חדש, ACE / Xprinter / Rongta) <strong className="text-green-700">⚫ נסה קודם</strong></div>
+                                        <div><span className="font-mono bg-amber-100 px-1">54</span> — WPC1255 Hebrew (מפרט EPSON חדש)</div>
+                                        <div><span className="font-mono bg-gray-100 px-1">10</span> — PC862 (מפרט ישן, Epson/SNBC)</div>
+                                        <div><span className="font-mono bg-gray-100 px-1">15</span> — WPC1255 (מפרט ישן, Bixolon)</div>
+                                        <div><span className="font-mono bg-gray-100 px-1">17</span> / <span className="font-mono bg-gray-100 px-1">25</span> / <span className="font-mono bg-gray-100 px-1">32</span> / <span className="font-mono bg-gray-100 px-1">33</span> / <span className="font-mono bg-gray-100 px-1">47</span> / <span className="font-mono bg-gray-100 px-1">61</span> — דגמים סיניים אחרים</div>
+                                        <div className="text-amber-700 font-bold pt-1">אם יוצא בערבית = המדפסת בברירת מחדל PC864. נסה קודם כל ערך מהרשימה.</div>
+                                    </div>
                                 </div>
                                 <button type="submit" className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black hover:bg-indigo-500 transition-all">{editDevice ? 'עדכן מכשיר' : 'רשום מכשיר'}</button>
                             </form>

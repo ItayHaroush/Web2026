@@ -26,9 +26,9 @@ object PrinterBridge {
      * the bytes we send must be encoded in the same table.
      */
     private fun charsetForCodepage(id: Int): Charset = when (id) {
-        15, 16, 17 -> Charset.forName("windows-1255")  // WPC1255 Hebrew (Bixolon, some Epson)
-        0           -> Charset.forName("IBM437")         // PC437 default / test
-        else        -> Charset.forName("IBM862")         // PC862 Hebrew (SNBC, standard)
+        16, 17, 54 -> Charset.forName("windows-1255")  // WPC1255 Hebrew (54=EPSON new spec)
+        0          -> Charset.forName("IBM437")         // PC437 default / test
+        else       -> Charset.forName("IBM862")         // PC862 Hebrew (10/15 legacy, 41=EPSON new, 25/32/33/47/61 clones)
     }
 
     private val cp862: Charset = Charset.forName("IBM862")
@@ -58,7 +58,7 @@ object PrinterBridge {
         val errorMessage: String? = null,
     )
 
-    fun print(ip: String, port: Int, payload: String, binarySuffix: ByteArray? = null, doubleHeight: Boolean = true, lineWidth: Int = 42, timeoutMs: Int = 5000, codepageId: Int = 10): PrintResult {
+    fun print(ip: String, port: Int, payload: String, binarySuffix: ByteArray? = null, doubleHeight: Boolean = true, lineWidth: Int = 42, timeoutMs: Int = 5000, codepageId: Int = 15): PrintResult {
         return try {
             val socket = Socket()
             socket.connect(java.net.InetSocketAddress(ip, port), timeoutMs)
