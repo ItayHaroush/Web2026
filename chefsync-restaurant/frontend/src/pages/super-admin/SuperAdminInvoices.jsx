@@ -386,7 +386,7 @@ export default function SuperAdminInvoices() {
                 (parseFloat(editForm.commission_fee) || 0) +
                 (parseFloat(editForm.abandoned_cart_fee) || 0) +
                 (parseFloat(editForm.setup_fee) || 0)) *
-                100
+            100
         ) / 100;
 
     const StatCard = ({ title, value, subtitle, accent = 'blue', icon }) => {
@@ -804,11 +804,10 @@ export default function SuperAdminInvoices() {
                                     min="0"
                                     max="100"
                                     disabled={billingConfigForm.billing_model === 'flat'}
-                                    className={`mt-1 w-full border rounded-xl px-3 py-2 font-bold ${
-                                        billingConfigForm.billing_model === 'flat'
+                                    className={`mt-1 w-full border rounded-xl px-3 py-2 font-bold ${billingConfigForm.billing_model === 'flat'
                                             ? 'border-gray-100 text-gray-300 bg-gray-50 cursor-not-allowed'
                                             : 'border-gray-200 text-gray-900'
-                                    }`}
+                                        }`}
                                     value={billingConfigForm.billing_model === 'flat' ? '' : billingConfigForm.commission_percent}
                                     onChange={(e) => setBillingConfigForm((f) => ({ ...f, commission_percent: e.target.value }))}
                                 />

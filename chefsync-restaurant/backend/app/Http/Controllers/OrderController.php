@@ -483,7 +483,7 @@ class OrderController extends Controller
                         continue;
                     }
 
-                    $lines = $selectedForGroup->map(fn ($sel) => [
+                    $lines = $selectedForGroup->map(fn($sel) => [
                         'unit_delta' => in_array($sel['placement'] ?? 'whole', ['right', 'left', 'right_half', 'left_half'])
                             ? (float) ceil((float) $sel['addon']->price_delta / 2)
                             : (float) $sel['addon']->price_delta,

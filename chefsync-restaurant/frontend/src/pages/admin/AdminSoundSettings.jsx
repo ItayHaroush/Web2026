@@ -14,10 +14,10 @@ import {
 // ── אפשרויות ──────────────────────────────────────────────────
 
 const PATTERNS = [
-    { value: 'once',       label: 'צלצול יחיד',   desc: 'צלצול אחד בכל התראה' },
-    { value: 'double',     label: 'כפול',          desc: 'שני צלצולים ברצף' },
-    { value: 'triple',     label: 'משולש',         desc: 'שלושה צלצולים ברצף' },
-    { value: 'continuous', label: 'רציף',          desc: 'מנגן ברצף (בשילוב עם "עד קבלה")' },
+    { value: 'once', label: 'צלצול יחיד', desc: 'צלצול אחד בכל התראה' },
+    { value: 'double', label: 'כפול', desc: 'שני צלצולים ברצף' },
+    { value: 'triple', label: 'משולש', desc: 'שלושה צלצולים ברצף' },
+    { value: 'continuous', label: 'רציף', desc: 'מנגן ברצף (בשילוב עם "עד קבלה")' },
 ];
 
 const MODES = [
@@ -34,7 +34,7 @@ const MODES = [
 ];
 
 const DURATIONS = [
-    { value: 5,  label: '5 שניות' },
+    { value: 5, label: '5 שניות' },
     { value: 10, label: '10 שניות' },
     { value: 15, label: '15 שניות' },
     { value: 20, label: '20 שניות' },
@@ -47,12 +47,12 @@ const DURATIONS = [
 export default function AdminSoundSettings() {
     const navigate = useNavigate();
 
-    const [enabled,  setEnabledState]  = useState(() => SoundManager.isEnabled());
-    const [volume,   setVolumeState]   = useState(() => Math.round(SoundManager.getVolume() * 100));
-    const [pattern,  setPatternState]  = useState(() => SoundManager.getPattern());
-    const [mode,     setModeState]     = useState(() => SoundManager.getRingMode());
+    const [enabled, setEnabledState] = useState(() => SoundManager.isEnabled());
+    const [volume, setVolumeState] = useState(() => Math.round(SoundManager.getVolume() * 100));
+    const [pattern, setPatternState] = useState(() => SoundManager.getPattern());
+    const [mode, setModeState] = useState(() => SoundManager.getRingMode());
     const [duration, setDurationState] = useState(() => SoundManager.getRingDuration());
-    const [testing,  setTesting]       = useState(false);
+    const [testing, setTesting] = useState(false);
 
     const handleEnabledToggle = () => {
         const next = !enabled;
@@ -87,7 +87,7 @@ export default function AdminSoundSettings() {
         // בדיקה עם ההגדרות הנוכחיות, אבל עצור אחרי 5 שניות לכל היותר
         const origMode = SoundManager.getRingMode();
         SoundManager.setRingMode('timed');
-        const origDur  = SoundManager.getRingDuration();
+        const origDur = SoundManager.getRingDuration();
         SoundManager.setRingDuration(5);
 
         SoundManager.playAlert();
@@ -184,17 +184,15 @@ export default function AdminSoundSettings() {
                                     <div
                                         key={m.value}
                                         onClick={() => handleModeSelect(m.value)}
-                                        className={`flex items-start gap-4 p-4 rounded-2xl border-2 cursor-pointer transition-all ${
-                                            mode === m.value
+                                        className={`flex items-start gap-4 p-4 rounded-2xl border-2 cursor-pointer transition-all ${mode === m.value
                                                 ? 'border-orange-400 bg-orange-50'
                                                 : 'border-gray-100 bg-gray-50 hover:border-gray-200'
-                                        }`}
+                                            }`}
                                     >
-                                        <div className={`mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
-                                            mode === m.value
+                                        <div className={`mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${mode === m.value
                                                 ? 'border-orange-500 bg-orange-500'
                                                 : 'border-gray-300'
-                                        }`}>
+                                            }`}>
                                             {mode === m.value && <FaCheck size={9} className="text-white" />}
                                         </div>
                                         <div>
@@ -216,11 +214,10 @@ export default function AdminSoundSettings() {
                                             <button
                                                 key={d.value}
                                                 onClick={() => handleDurationSelect(d.value)}
-                                                className={`px-4 py-2 rounded-xl text-sm font-black transition-all ${
-                                                    duration === d.value
+                                                className={`px-4 py-2 rounded-xl text-sm font-black transition-all ${duration === d.value
                                                         ? 'bg-orange-500 text-white shadow-md shadow-orange-200'
                                                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                                }`}
+                                                    }`}
                                             >
                                                 {d.label}
                                             </button>
@@ -233,11 +230,10 @@ export default function AdminSoundSettings() {
                         {/* כפתור בדיקה */}
                         <button
                             onClick={handleTest}
-                            className={`w-full flex items-center justify-center gap-3 py-4 rounded-2xl text-base font-black transition-all ${
-                                testing
+                            className={`w-full flex items-center justify-center gap-3 py-4 rounded-2xl text-base font-black transition-all ${testing
                                     ? 'bg-red-500 text-white shadow-lg shadow-red-200'
                                     : 'bg-orange-500 text-white shadow-lg shadow-orange-200 hover:bg-orange-600'
-                            }`}
+                                }`}
                         >
                             <FaPlay size={14} className={testing ? 'animate-pulse' : ''} />
                             {testing ? 'מנגן... (לחץ לעצור)' : 'בדוק צלצול'}
@@ -264,11 +260,10 @@ function OptionCard({ selected, onClick, label, desc }) {
     return (
         <div
             onClick={onClick}
-            className={`relative p-4 rounded-2xl border-2 cursor-pointer transition-all ${
-                selected
+            className={`relative p-4 rounded-2xl border-2 cursor-pointer transition-all ${selected
                     ? 'border-orange-400 bg-orange-50'
                     : 'border-gray-100 bg-gray-50 hover:border-gray-200'
-            }`}
+                }`}
         >
             {selected && (
                 <div className="absolute top-3 left-3 w-5 h-5 rounded-full bg-orange-500 flex items-center justify-center">
@@ -285,14 +280,12 @@ function Toggle({ checked, onChange }) {
     return (
         <button
             onClick={onChange}
-            className={`relative w-12 h-6 rounded-full transition-colors focus:outline-none ${
-                checked ? 'bg-orange-500' : 'bg-gray-300'
-            }`}
+            className={`relative w-12 h-6 rounded-full transition-colors focus:outline-none ${checked ? 'bg-orange-500' : 'bg-gray-300'
+                }`}
         >
             <span
-                className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${
-                    checked ? 'right-0.5' : 'left-0.5'
-                }`}
+                className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${checked ? 'right-0.5' : 'left-0.5'
+                    }`}
             />
         </button>
     );

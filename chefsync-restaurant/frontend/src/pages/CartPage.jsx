@@ -891,8 +891,8 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                                         {/* מובייל — שורה קומפקטית + שורת פירוט */}
                                         <div
                                             className={`sm:hidden ${itemIndex < cartItems.length - 1
-                                                    ? 'border-b border-gray-200 dark:border-brand-dark-border'
-                                                    : ''
+                                                ? 'border-b border-gray-200 dark:border-brand-dark-border'
+                                                : ''
                                                 }`}
                                         >
                                             <div className="flex items-center gap-1.5 w-full px-2 py-2 min-h-[2.75rem]">

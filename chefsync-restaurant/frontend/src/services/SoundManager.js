@@ -10,9 +10,9 @@
 
 const SOUND_PATH = '/sounds/Order-up-bell-sound.mp3';
 const STORAGE_KEY = 'admin_sound_enabled';
-const STORAGE_VOLUME   = 'admin_sound_volume';    // 0-1
-const STORAGE_PATTERN  = 'admin_sound_pattern';   // 'once' | 'double' | 'triple' | 'continuous'
-const STORAGE_MODE     = 'admin_sound_mode';      // 'timed' | 'acknowledge'
+const STORAGE_VOLUME = 'admin_sound_volume';    // 0-1
+const STORAGE_PATTERN = 'admin_sound_pattern';   // 'once' | 'double' | 'triple' | 'continuous'
+const STORAGE_MODE = 'admin_sound_mode';      // 'timed' | 'acknowledge'
 const STORAGE_DURATION = 'admin_sound_duration';  // seconds (for timed mode)
 
 let audioElement = null;
@@ -114,10 +114,10 @@ function _playOnce(volume) {
  * מחזיר stopFn (ניתן להתעלם)
  */
 function play() {
-    if (!isEnabled()) return () => {};
-    if (Date.now() < globalMuteUntil) return () => {};
+    if (!isEnabled()) return () => { };
+    if (Date.now() < globalMuteUntil) return () => { };
     const now = Date.now();
-    if (now - lastPlayTime < 2000) return () => {};
+    if (now - lastPlayTime < 2000) return () => { };
     return playAlert();
 }
 
@@ -126,8 +126,8 @@ function play() {
  * מחזיר stopFn שאפשר לקרוא לו כדי להפסיק
  */
 function playAlert() {
-    if (!isEnabled()) return () => {};
-    if (Date.now() < globalMuteUntil) return () => {};
+    if (!isEnabled()) return () => { };
+    if (Date.now() < globalMuteUntil) return () => { };
 
     // עצור צלצול קודם אם קיים
     if (currentAlertStop) { currentAlertStop(); currentAlertStop = null; }

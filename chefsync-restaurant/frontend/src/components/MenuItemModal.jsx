@@ -439,11 +439,10 @@ export default function MenuItemModal({
                                                                         e.stopPropagation();
                                                                         setAddonPlacement(prev => ({ ...prev, [addon.id]: p }));
                                                                     }}
-                                                                    className={`text-xs px-2 py-1 rounded-full border transition-all ${
-                                                                        (addonPlacement[addon.id] || 'whole') === p
+                                                                    className={`text-xs px-2 py-1 rounded-full border transition-all ${(addonPlacement[addon.id] || 'whole') === p
                                                                             ? 'bg-orange-500 text-white border-orange-500'
                                                                             : 'bg-white text-gray-600 border-gray-300 hover:border-orange-400'
-                                                                    }`}
+                                                                        }`}
                                                                 >
                                                                     {label}
                                                                 </button>
