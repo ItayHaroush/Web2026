@@ -405,8 +405,8 @@ export default function AdminPrinters({ embedded = false }) {
                                 onClick={() => handleTemplateChange('classic')}
                                 disabled={savingTemplate}
                                 className={`px-6 py-3 rounded-2xl font-bold transition-all text-sm ${printTemplate === 'classic'
-                                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-200'
-                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-200'
+                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                     }`}
                             >
                                 קלאסי
@@ -415,8 +415,8 @@ export default function AdminPrinters({ embedded = false }) {
                                 onClick={() => handleTemplateChange('enhanced')}
                                 disabled={savingTemplate}
                                 className={`px-6 py-3 rounded-2xl font-bold transition-all text-sm ${printTemplate === 'enhanced'
-                                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-200'
-                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-200'
+                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                     }`}
                             >
                                 משופר ✨
