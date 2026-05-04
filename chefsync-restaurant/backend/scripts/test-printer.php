@@ -1,4 +1,5 @@
 <?php
+
 /**
  * סקריפט בדיקת מדפסת — שולח ESC/POS ישירות דרך TCP socket
  * שימוש: php scripts/test-printer.php [ip] [port]
