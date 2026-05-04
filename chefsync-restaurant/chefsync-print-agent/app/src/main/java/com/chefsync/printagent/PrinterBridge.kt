@@ -20,6 +20,17 @@ object PrinterBridge {
     private val ESC_DOUBLE_HEIGHT = byteArrayOf(0x1B, 0x21, 0x10)
     private val ESC_FONT_NORMAL = byteArrayOf(0x1B, 0x21, 0x00)
 
+    /**
+     * Maps ESC t codepage number to the Java Charset used for encoding.
+     * ESC t tells the printer which character table to use;
+     * the bytes we send must be encoded in the same table.
+     */
+    private fun charsetForCodepage(id: Int): Charset = when (id) {
+        15, 16, 17 -> Charset.forName("windows-1255")  // WPC1255 Hebrew (Bixolon, some Epson)
+        0           -> Charset.forName("IBM437")         // PC437 default / test
+        else        -> Charset.forName("IBM862")         // PC862 Hebrew (SNBC, standard)
+    }
+
     private val cp862: Charset = Charset.forName("IBM862")
     /** GS V 1 — חיתוך חלקי (Epson-תואם); 0 = מלא */
     private val ESC_CUT = byteArrayOf(0x1D, 0x56, 0x01)
@@ -54,6 +65,7 @@ object PrinterBridge {
             socket.soTimeout = timeoutMs
 
             val out: OutputStream = socket.getOutputStream()
+            val charset = charsetForCodepage(codepageId)
             val hasMarkers = ALL_MARKERS.any { payload.contains(it) }
             val prepared = prepareThermalRtlPayload(payload, lineWidth)
 
@@ -63,7 +75,7 @@ object PrinterBridge {
 
             if (hasMarkers) {
                 // Selective mode: process inline markers per line
-                val qrInserted = writeWithInlineMarkers(out, prepared, binarySuffix)
+                val qrInserted = writeWithInlineMarkers(out, prepared, binarySuffix, charset)
                 // Only append suffix at end if {{QR}} was not found
                 if (!qrInserted && binarySuffix != null && binarySuffix.isNotEmpty()) {
                     out.write(binarySuffix)
@@ -73,7 +85,7 @@ object PrinterBridge {
                 if (doubleHeight) {
                     out.write(ESC_DOUBLE_HEIGHT)
                 }
-                out.write(prepared.toByteArray(cp862))
+                out.write(prepared.toByteArray(charset))
                 out.write(ESC_FONT_NORMAL)
                 if (binarySuffix != null && binarySuffix.isNotEmpty()) {
                     out.write(binarySuffix)
@@ -121,7 +133,7 @@ object PrinterBridge {
      *
      * @return true if {{QR}} was found and binary was inserted
      */
-    private fun writeWithInlineMarkers(out: OutputStream, text: String, qrBinary: ByteArray? = null): Boolean {
+    private fun writeWithInlineMarkers(out: OutputStream, text: String, qrBinary: ByteArray? = null, charset: Charset = cp862): Boolean {
         var isBig = false
         var isHeading = false
         var qrInserted = false
@@ -205,7 +217,7 @@ object PrinterBridge {
         for (line in text.split("\n")) {
             if (consumeMarkerLine(line)) continue
             out.write(if (isHeading) ESC_HEADING else if (isBig) ESC_DOUBLE_HEIGHT else ESC_FONT_NORMAL)
-            out.write((line + "\n").toByteArray(cp862))
+            out.write((line + "\n").toByteArray(charset))
         }
         out.write(ESC_FONT_NORMAL)
         out.write(ESC_ALIGN_LEFT)
