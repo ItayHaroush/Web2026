@@ -61,6 +61,7 @@ class PrintAgentController extends Controller
                     'target_port' => $job->target_port,
                     'created_at' => $job->created_at?->toIso8601String(),
                     'double_height' => ($job->payload['type'] ?? '') === 'kitchen_ticket',
+                    'codepage_id' => $device->codepage_id ?? 10,
                 ];
                 if (! empty($job->payload['escpos_binary_suffix']) && is_string($job->payload['escpos_binary_suffix'])) {
                     $row['escpos_binary_suffix'] = $job->payload['escpos_binary_suffix'];
@@ -164,6 +165,7 @@ class PrintAgentController extends Controller
             'role' => $request->input('role'),
             'printer_ip' => $request->input('printer_ip'),
             'printer_port' => $request->input('printer_port', 9100),
+            'codepage_id' => $request->input('codepage_id', 10),
         ]);
 
         return response()->json([
@@ -190,10 +192,11 @@ class PrintAgentController extends Controller
             'role' => 'sometimes|in:kitchen,receipt,bar,general',
             'printer_ip' => 'nullable|ip',
             'printer_port' => 'nullable|integer|min:1|max:65535',
+            'codepage_id' => 'nullable|integer|min:0|max:255',
         ]);
 
         $device = PrintDevice::where('restaurant_id', $user->restaurant_id)->findOrFail($id);
-        $device->update($request->only(['name', 'role', 'printer_ip', 'printer_port']));
+        $device->update($request->only(['name', 'role', 'printer_ip', 'printer_port', 'codepage_id']));
 
         return response()->json([
             'success' => true,

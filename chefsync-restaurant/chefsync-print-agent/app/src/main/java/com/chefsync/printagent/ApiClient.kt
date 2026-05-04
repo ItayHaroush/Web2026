@@ -24,6 +24,7 @@ data class PrintJobData(
     val created_at: String?,
     val escpos_binary_suffix: String? = null,
     val double_height: Boolean? = null,
+    val codepage_id: Int? = null,
 )
 
 data class AckRequest(

@@ -12,8 +12,9 @@ object PrinterBridge {
 
     /**
      * SNBC BTP-S80: Hebrew CP table 10 (ESC t 0x0A) + CP862. LTR printer → RTL prep before encode.
+     * Override per-device via codepageId parameter.
      */
-    private val ESC_HEBREW_TABLE = byteArrayOf(0x1B, 0x74, 0x0A)
+    private fun escHebrewTable(codepageId: Int): ByteArray = byteArrayOf(0x1B, 0x74, codepageId.toByte())
     private val ESC_CHAR_SPACING_0 = byteArrayOf(0x1B, 0x20, 0x00)
     /** כפול גובה בלבד — רוחב רגיל, תואם line_width בלי שבירת שורות */
     private val ESC_DOUBLE_HEIGHT = byteArrayOf(0x1B, 0x21, 0x10)
@@ -46,7 +47,7 @@ object PrinterBridge {
         val errorMessage: String? = null,
     )
 
-    fun print(ip: String, port: Int, payload: String, binarySuffix: ByteArray? = null, doubleHeight: Boolean = true, lineWidth: Int = 42, timeoutMs: Int = 5000): PrintResult {
+    fun print(ip: String, port: Int, payload: String, binarySuffix: ByteArray? = null, doubleHeight: Boolean = true, lineWidth: Int = 42, timeoutMs: Int = 5000, codepageId: Int = 10): PrintResult {
         return try {
             val socket = Socket()
             socket.connect(java.net.InetSocketAddress(ip, port), timeoutMs)
@@ -57,7 +58,7 @@ object PrinterBridge {
             val prepared = prepareThermalRtlPayload(payload, lineWidth)
 
             out.write(ESC_INIT)
-            out.write(ESC_HEBREW_TABLE)
+            out.write(escHebrewTable(codepageId))
             out.write(ESC_CHAR_SPACING_0)
 
             if (hasMarkers) {

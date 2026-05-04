@@ -18,6 +18,7 @@ class PrintDevice extends Model
         'printer_ip',
         'printer_port',
         'is_active',
+        'codepage_id',
         'last_seen_at',
         'last_error_message',
         'last_error_at',
@@ -26,6 +27,7 @@ class PrintDevice extends Model
     protected $casts = [
         'is_active' => 'boolean',
         'printer_port' => 'integer',
+        'codepage_id' => 'integer',
         'last_seen_at' => 'datetime',
         'last_error_at' => 'datetime',
         'created_at' => 'datetime',

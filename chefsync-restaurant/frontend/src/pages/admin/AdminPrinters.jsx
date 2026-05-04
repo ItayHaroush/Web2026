@@ -75,7 +75,7 @@ const DEFAULT_FORM = {
     category_ids: [],
 };
 
-const DEVICE_FORM = { name: '', role: 'kitchen', printer_ip: '', printer_port: 9100 };
+const DEVICE_FORM = { name: '', role: 'kitchen', printer_ip: '', printer_port: 9100, codepage_id: 10 };
 
 export default function AdminPrinters({ embedded = false }) {
     const [searchParams, setSearchParams] = useSearchParams();
@@ -265,6 +265,7 @@ export default function AdminPrinters({ embedded = false }) {
             role: device.role || 'kitchen',
             printer_ip: device.printer_ip || '',
             printer_port: device.printer_port || 9100,
+            codepage_id: device.codepage_id ?? 10,
         });
         setNewToken(null);
         setShowDeviceModal(true);
@@ -637,6 +638,17 @@ export default function AdminPrinters({ embedded = false }) {
                                         <label className="block text-sm font-bold text-gray-700 mb-2">פורט</label>
                                         <input type="number" value={deviceForm.printer_port} onChange={e => setDeviceForm({ ...deviceForm, printer_port: parseInt(e.target.value) || 9100 })} dir="ltr" className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none" />
                                     </div>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-2">קודפייג עברית (ESC t)</label>
+                                    <select value={deviceForm.codepage_id} onChange={e => setDeviceForm({ ...deviceForm, codepage_id: parseInt(e.target.value) })} dir="ltr" className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none">
+                                        <option value={10}>10 — PC862 Hebrew (סטנדרטי, SNBC / Epson)</option>
+                                        <option value={15}>15 — WPC1255 Hebrew (Bixolon ואחרים)</option>
+                                        <option value={25}>25 — PC862 טבלה חלופית</option>
+                                        <option value={61}>61 — Hebrew (דגמים סיניים)</option>
+                                        <option value={0}>0 — PC437 (ברירת מחדל / לבדיקה)</option>
+                                    </select>
+                                    <p className="text-xs text-gray-400 mt-1">אם העברית מופיעה כערבית — נסה ערך 15 או 61</p>
                                 </div>
                                 <button type="submit" className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black hover:bg-indigo-500 transition-all">{editDevice ? 'עדכן מכשיר' : 'רשום מכשיר'}</button>
                             </form>
