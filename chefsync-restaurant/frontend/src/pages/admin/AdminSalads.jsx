@@ -60,6 +60,7 @@ export default function AdminSalads({ embedded = false }) {
         is_active: true,
         placement: 'inside',
         first_addon_unit_free: false,
+        allow_half_placement: false,
         source_type: 'manual',
         source_category_id: '',
         source_include_prices: true,
@@ -96,6 +97,7 @@ export default function AdminSalads({ embedded = false }) {
                             : String(group.max_selections),
                         placement: group.placement || 'inside',
                         first_addon_unit_free: Boolean(group.first_addon_unit_free),
+                        allow_half_placement: Boolean(group.allow_half_placement),
                     };
                     return acc;
                 }, {});
@@ -239,6 +241,7 @@ export default function AdminSalads({ embedded = false }) {
                     max_selections: maxVal,
                     placement: edit.placement || 'inside',
                     first_addon_unit_free: Boolean(edit.first_addon_unit_free),
+                    allow_half_placement: Boolean(edit.allow_half_placement),
                 },
                 { headers: getAuthHeaders() }
             );
@@ -272,6 +275,7 @@ export default function AdminSalads({ embedded = false }) {
                 is_active: Boolean(group.is_active),
                 placement: group.placement || 'inside',
                 first_addon_unit_free: Boolean(group.first_addon_unit_free),
+                allow_half_placement: Boolean(group.allow_half_placement),
                 source_type: group.source_type || 'manual',
                 source_category_id: group.source_category_id ? String(group.source_category_id) : '',
                 source_include_prices: group.source_include_prices !== undefined ? Boolean(group.source_include_prices) : true,
@@ -290,6 +294,7 @@ export default function AdminSalads({ embedded = false }) {
                 is_active: true,
                 placement: 'inside',
                 first_addon_unit_free: false,
+                allow_half_placement: false,
                 source_type: 'manual',
                 source_category_id: '',
                 source_include_prices: true,
@@ -312,6 +317,7 @@ export default function AdminSalads({ embedded = false }) {
             is_active: true,
             placement: 'inside',
             first_addon_unit_free: false,
+            allow_half_placement: false,
             source_type: 'manual',
             source_category_id: '',
             source_include_prices: true,
@@ -366,6 +372,7 @@ export default function AdminSalads({ embedded = false }) {
             is_active: groupForm.is_active,
             placement: groupForm.placement || 'inside',
             first_addon_unit_free: Boolean(groupForm.first_addon_unit_free),
+            allow_half_placement: Boolean(groupForm.allow_half_placement),
             source_type: groupForm.source_type || 'manual',
             source_category_id: groupForm.source_type === 'category' && groupForm.source_category_id
                 ? Number(groupForm.source_category_id)
@@ -789,6 +796,26 @@ export default function AdminSalads({ embedded = false }) {
                                     />
                                     <span className="text-sm font-bold text-gray-800 leading-snug">
                                         תוספת ראשונה בקבוצה חינם — יחידת מחיר אחת מהבחירה הראשונה בעלות חיובית לא תחויב (רק בתוך קבוצה זו).
+                                    </span>
+                                </label>
+                            </div>
+
+                            <div className="px-10 pb-4">
+                                <label className="flex items-start gap-3 p-4 bg-blue-50/90 rounded-[1.5rem] cursor-pointer border border-blue-100">
+                                    <input
+                                        type="checkbox"
+                                        className="mt-1 rounded border-gray-300 text-brand-primary focus:ring-brand-primary"
+                                        checked={groupEdits[selectedGroup.id]?.allow_half_placement ?? false}
+                                        onChange={(e) => {
+                                            const val = e.target.checked;
+                                            setGroupEdits((prev) => ({
+                                                ...prev,
+                                                [selectedGroup.id]: { ...prev[selectedGroup.id], allow_half_placement: val },
+                                            }));
+                                        }}
+                                    />
+                                    <span className="text-sm font-bold text-gray-800 leading-snug">
+                                        בחירת חצי פיצה — לקוח יוכל לבחור תוספת לחצי ימין / חצי שמאל במחיר מחצית.
                                     </span>
                                 </label>
                             </div>
@@ -1434,6 +1461,18 @@ export default function AdminSalads({ embedded = false }) {
                                             />
                                             <span className="text-sm font-bold text-gray-800 leading-snug">
                                                 תוספת ראשונה בקבוצה חינם — יחידת מחיר אחת מהבחירה הראשונה בעלות חיובית לא תחויב (בתוך קבוצה זו בלבד).
+                                            </span>
+                                        </label>
+
+                                        <label className="flex items-start gap-3 p-4 sm:p-5 bg-blue-50 rounded-2xl sm:rounded-[1.5rem] cursor-pointer border border-blue-100">
+                                            <input
+                                                type="checkbox"
+                                                className="mt-1 rounded border-gray-300 text-brand-primary focus:ring-brand-primary"
+                                                checked={Boolean(groupForm.allow_half_placement)}
+                                                onChange={(e) => setGroupForm({ ...groupForm, allow_half_placement: e.target.checked })}
+                                            />
+                                            <span className="text-sm font-bold text-gray-800 leading-snug">
+                                                בחירת חצי פיצה — לקוח יוכל לבחור תוספת לחצי ימין / חצי שמאל במחיר מחצית.
                                             </span>
                                         </label>
                                     </div>

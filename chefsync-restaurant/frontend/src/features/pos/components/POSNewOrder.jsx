@@ -9,7 +9,7 @@ import { FaCashRegister } from 'react-icons/fa';
 import POSSplitPaymentModal from './POSSplitPaymentModal';
 import POSMenuItemModal, { posItemNeedsConfiguration } from './POSMenuItemModal';
 import POSAmountKeypad from './POSAmountKeypad';
-import { buildCartKey, sumAddonsBilledWithGroupRules } from '../../../utils/cart';
+import { buildCartKey, sumAddonsBilledWithGroupRules, formatAddonLabel } from '../../../utils/cart';
 
 export default function POSNewOrder({ headers, posToken, onOrderCreated, shift }) {
     // Require open shift
@@ -90,6 +90,7 @@ function POSNewOrderInner({ headers, posToken, onOrderCreated }) {
                 quantity: 1,
                 addon_group_id: a.addon_group_id,
                 first_addon_unit_free: a.first_addon_unit_free,
+                placement: a.placement,
             })),
         ) : 0;
         return (row.price + addonsBill) * row.quantity;
@@ -144,6 +145,7 @@ function POSNewOrderInner({ headers, posToken, onOrderCreated }) {
                     quantity: 1,
                     addon_group_id: a.addon_group_id,
                     first_addon_unit_free: a.first_addon_unit_free,
+                    placement: a.placement,
                 })),
             )
             : 0;
@@ -358,7 +360,7 @@ function POSNewOrderInner({ headers, posToken, onOrderCreated }) {
                                 <p className="text-slate-500 text-xs mb-1">{item.variant_name}</p>
                             )}
                             {item.addons?.length > 0 && (
-                                <p className="text-slate-500 text-xs mb-1">{item.addons.map(a => (a.quantity || 1) > 1 ? `${a.name} ×${a.quantity}` : a.name).join(', ')}</p>
+                                <p className="text-slate-500 text-xs mb-1">{item.addons.map(a => { const lbl = formatAddonLabel(a.name, a.placement); return (a.quantity || 1) > 1 ? `${lbl} ×${a.quantity}` : lbl; }).join(', ')}</p>
                             )}
                             <div className="flex items-center justify-between mt-2">
                                 <div className="flex items-center gap-2">

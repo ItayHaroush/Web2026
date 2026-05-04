@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAdminAuth } from './AdminAuthContext';
 import api from '../services/apiClient';
@@ -35,6 +35,26 @@ export default function AdminNotificationProvider({ children }) {
     const fcmNotifCountRef = useRef(0);
     const lastKnownOrderCountRef = useRef(null);
     const lastPollTenantRef = useRef(null);
+
+    // באנר אישור הזמנה (מצב "עד קבלה")
+    const [ackBanner, setAckBanner] = useState(null); // { orderId, stopFn }
+    const stopFnRef = useRef(null); // מאחסן את stopFn הפעיל
+
+    const triggerAlert = useCallback((orderId) => {
+        // עצור צלצול קודם
+        if (stopFnRef.current) { stopFnRef.current(); stopFnRef.current = null; }
+        const stopFn = SoundManager.playAlert();
+        stopFnRef.current = stopFn;
+        // הצג באנר רק במצב "עד קבלה"
+        if (SoundManager.getRingMode() === 'acknowledge') {
+            setAckBanner({ orderId, stopFn });
+        }
+    }, []);
+
+    const dismissAckBanner = useCallback(() => {
+        if (stopFnRef.current) { stopFnRef.current(); stopFnRef.current = null; }
+        setAckBanner(null);
+    }, []);
 
     // חסימת צלצולים ב-5 שניות הראשונות אחרי אתחול/ריענון
     // מונע צלצולי שווא מ-FCM/SW/polling שמתעוררים בזמן טעינה
@@ -83,7 +103,7 @@ export default function AdminNotificationProvider({ children }) {
                     const isFuturePending = latestOrder?.is_future_order &&
                         (latestOrder?.status === 'pending' || latestOrder?.status === 'awaiting_payment');
                     if (!alertsMuted && !isFirstPoll && !isFuturePending) {
-                        SoundManager.play();
+                        triggerAlert(latestId);
                         if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
                             try { new Notification('הזמנה חדשה', { body: `הזמנה #${latestId}`, icon: '/icon-192.png', silent: true }); } catch (_) { }
                         }
@@ -99,7 +119,7 @@ export default function AdminNotificationProvider({ children }) {
         poll();
         const interval = setInterval(poll, 15_000);
         return () => { cancelled = true; clearInterval(interval); };
-    }, [user, getAuthHeaders, impersonating]);
+    }, [user, getAuthHeaders, impersonating, triggerAlert]);
 
     // FCM — צלצול רק ל-new_order (רק למשתמשי אדמין)
     useEffect(() => {
@@ -117,8 +137,9 @@ export default function AdminNotificationProvider({ children }) {
             if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
                 try { new Notification(title, { body, icon: '/icon-192.png', silent: true }); } catch (_) { }
             }
+            triggerAlert(payload?.data?.orderId);
         }, {
-            shouldPlayOrderSound: () => !isRestaurantOrderAlertsMuted(user, impersonating),
+            shouldPlayOrderSound: () => false, // triggerAlert handles sound
         });
 
         const unsubscribe = listenForegroundMessages((payload) => {
@@ -148,7 +169,7 @@ export default function AdminNotificationProvider({ children }) {
             }
 
             if (dataType === 'new_order') {
-                SoundManager.play();
+                triggerAlert(payload?.data?.orderId);
             }
 
             const title = payload?.notification?.title || payload?.data?.title || PRODUCT_NAME;
@@ -184,7 +205,7 @@ export default function AdminNotificationProvider({ children }) {
             if (typeof unsubscribe === 'function') unsubscribe();
             unsubSw();
         };
-    }, [user, impersonating, navigate]);
+    }, [user, impersonating, navigate, triggerAlert]);
 
     // ניקוי badge כשחוזרים לפוקוס
     useEffect(() => {
@@ -199,5 +220,52 @@ export default function AdminNotificationProvider({ children }) {
         return () => document.removeEventListener('visibilitychange', clearBadge);
     }, []);
 
-    return children;
+    return (
+        <>
+            {children}
+            {/* באנר "עד קבלת הזמנה" — מוצג רק במצב acknowledge */}
+            {ackBanner && (
+                <div
+                    dir="rtl"
+                    style={{
+                        position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)',
+                        zIndex: 99999, display: 'flex', alignItems: 'center', gap: 14,
+                        background: 'linear-gradient(135deg,#1a1a2e 0%,#16213e 100%)',
+                        border: '2px solid #f97316', borderRadius: 16,
+                        padding: '14px 22px', boxShadow: '0 8px 32px rgba(249,115,22,0.35)',
+                        animation: 'takeeat-ack-pulse 1.2s ease-in-out infinite alternate',
+                        minWidth: 280, maxWidth: '90vw',
+                    }}
+                >
+                    <style>{`
+                        @keyframes takeeat-ack-pulse {
+                            from { box-shadow: 0 8px 32px rgba(249,115,22,0.35); }
+                            to   { box-shadow: 0 8px 48px rgba(249,115,22,0.7); }
+                        }
+                    `}</style>
+                    <span style={{ fontSize: 26 }}>🔔</span>
+                    <div style={{ flex: 1 }}>
+                        <div style={{ color: '#f97316', fontWeight: 900, fontSize: 15, lineHeight: 1.2 }}>
+                            הזמנה חדשה!
+                        </div>
+                        {ackBanner.orderId && (
+                            <div style={{ color: '#94a3b8', fontSize: 12, marginTop: 2 }}>
+                                הזמנה #{ackBanner.orderId}
+                            </div>
+                        )}
+                    </div>
+                    <button
+                        onClick={dismissAckBanner}
+                        style={{
+                            background: '#f97316', color: '#fff', border: 'none', borderRadius: 10,
+                            padding: '8px 18px', fontWeight: 900, fontSize: 14, cursor: 'pointer',
+                            whiteSpace: 'nowrap',
+                        }}
+                    >
+                        קיבלתי ✓
+                    </button>
+                </div>
+            )}
+        </>
+    );
 }

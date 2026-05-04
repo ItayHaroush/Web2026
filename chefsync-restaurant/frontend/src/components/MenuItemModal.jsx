@@ -37,6 +37,7 @@ export default function MenuItemModal({
     const [selectedVariantId, setSelectedVariantId] = useState(defaultVariantId);
     const [selectedAddons, setSelectedAddons] = useState(defaultAddonState);
     const [addonOnSide, setAddonOnSide] = useState({}); // { addonId: true/false }
+    const [addonPlacement, setAddonPlacement] = useState({}); // { addonId: 'whole'|'right'|'left' }
     const [addonQuantities, setAddonQuantities] = useState({}); // { addonId: quantity }
     const [qty, setQty] = useState(1);
 
@@ -44,6 +45,7 @@ export default function MenuItemModal({
         setSelectedVariantId(defaultVariantId);
         setSelectedAddons(defaultAddonState);
         setAddonOnSide({});
+        setAddonPlacement({});
         setAddonQuantities({});
         setQty(1);
     }, [defaultVariantId, defaultAddonState, item?.id]);
@@ -64,6 +66,7 @@ export default function MenuItemModal({
     const normalizedAddons = selectedAddonObjects.map(({ addon, group }) => ({
         ...normalizeAddon(addon),
         on_side: addonOnSide[addon.id] || false,
+        placement: group.allow_half_placement ? (addonPlacement[addon.id] || 'whole') : undefined,
         quantity: addonQuantities[addon.id] || 1,
         addon_group_id: group.id,
         first_addon_unit_free: Boolean(group.first_addon_unit_free),
@@ -422,6 +425,30 @@ export default function MenuItemModal({
                                                             <FaBoxOpen className="text-orange-600" />
                                                             <span className="text-gray-600 font-medium">בצד</span>
                                                         </label>
+                                                    )}
+                                                    {group.allow_half_placement && selection.includes(addon.id) && (
+                                                        <div
+                                                            className="flex gap-1 mt-1 mr-8"
+                                                            onClick={(e) => e.stopPropagation()}
+                                                        >
+                                                            {[['whole', 'שלם'], ['right', 'חצי ימין'], ['left', 'חצי שמאל']].map(([p, label]) => (
+                                                                <button
+                                                                    key={p}
+                                                                    type="button"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setAddonPlacement(prev => ({ ...prev, [addon.id]: p }));
+                                                                    }}
+                                                                    className={`text-xs px-2 py-1 rounded-full border transition-all ${
+                                                                        (addonPlacement[addon.id] || 'whole') === p
+                                                                            ? 'bg-orange-500 text-white border-orange-500'
+                                                                            : 'bg-white text-gray-600 border-gray-300 hover:border-orange-400'
+                                                                    }`}
+                                                                >
+                                                                    {label}
+                                                                </button>
+                                                            ))}
+                                                        </div>
                                                     )}
                                                 </div>
                                             ))}

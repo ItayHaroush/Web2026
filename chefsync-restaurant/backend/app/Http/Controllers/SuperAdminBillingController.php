@@ -1096,6 +1096,7 @@ class SuperAdminBillingController extends Controller
             'base_fee' => 'nullable|numeric|min:0',
             'original_base_fee' => 'nullable|numeric|min:0',
             'commission_fee' => 'nullable|numeric|min:0',
+            'commission_percent' => 'nullable|numeric|min:0|max:100',
             'abandoned_cart_fee' => 'nullable|numeric|min:0',
             'setup_fee' => 'nullable|numeric|min:0',
             'total_due' => 'nullable|numeric|min:0',
@@ -1103,7 +1104,7 @@ class SuperAdminBillingController extends Controller
 
         $invoice = MonthlyInvoice::findOrFail($id);
 
-        $amountFieldKeys = ['base_fee', 'original_base_fee', 'commission_fee', 'abandoned_cart_fee', 'setup_fee', 'total_due'];
+        $amountFieldKeys = ['base_fee', 'original_base_fee', 'commission_fee', 'commission_percent', 'abandoned_cart_fee', 'setup_fee', 'total_due'];
         $hasAmountPatch = $request->hasAny($amountFieldKeys);
 
         $hasStatus = $request->filled('status');
@@ -1130,6 +1131,10 @@ class SuperAdminBillingController extends Controller
                 if ($request->has($key)) {
                     $updates[$key] = round((float) $validated[$key], 2);
                 }
+            }
+
+            if ($request->has('commission_percent')) {
+                $updates['commission_percent'] = round((float) $validated['commission_percent'], 2);
             }
 
             if ($request->has('original_base_fee')) {
@@ -1208,6 +1213,22 @@ class SuperAdminBillingController extends Controller
             'success' => true,
             'message' => "סופקו {$count} חשבוניות",
             'finalized_count' => $count,
+        ]);
+    }
+
+    public function getBillingConfig(int $id)
+    {
+        $restaurant = Restaurant::findOrFail($id);
+        $subscription = RestaurantSubscription::where('restaurant_id', $restaurant->id)->first();
+        $config = $subscription
+            ? $subscription->getEffectiveBillingConfig()
+            : ['billing_model' => 'flat', 'base_fee' => 0, 'commission_percent' => 0];
+
+        return response()->json([
+            'success' => true,
+            'billing_model' => $config['billing_model'] ?? 'flat',
+            'base_fee' => $config['base_fee'] ?? 0,
+            'commission_percent' => $config['commission_percent'] ?? 0,
         ]);
     }
 

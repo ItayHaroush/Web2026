@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { formatAddonLabel } from '../utils/cart';
 import { useCustomer } from '../context/CustomerContext';
 import { CustomerLayout } from '../layouts/CustomerLayout';
 import { FaBoxOpen, FaUser, FaPhone, FaClock, FaInfoCircle, FaUtensils, FaShoppingBag, FaCheckCircle, FaExclamationTriangle, FaMapMarkerAlt, FaCreditCard, FaMoneyBillWave, FaGift, FaHeart, FaRedo, FaFileInvoiceDollar, FaDownload, FaWhatsapp } from 'react-icons/fa';
@@ -1009,13 +1010,13 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
                                         <>
                                             {addons.filter(a => !a.on_side).length > 0 && (
                                                 <div className="text-sm text-gray-700 dark:text-gray-300">
-                                                    תוספות: {addons.filter(a => !a.on_side).map(a => (a.quantity || 1) > 1 ? `${a.name} ×${a.quantity}` : a.name).join(' · ')}
+                                                    תוספות: {addons.filter(a => !a.on_side).map(a => { const lbl = formatAddonLabel(a.name, a.placement); return (a.quantity || 1) > 1 ? `${lbl} ×${a.quantity}` : lbl; }).join(' · ')}
                                                 </div>
                                             )}
                                             {addons.filter(a => a.on_side).length > 0 && (
                                                 <div className="text-sm text-orange-600 font-medium flex items-center gap-1">
                                                     <FaBoxOpen />
-                                                    <span>בצד: {addons.filter(a => a.on_side).map(a => (a.quantity || 1) > 1 ? `${a.name} ×${a.quantity}` : a.name).join(' · ')}</span>
+                                                    <span>בצד: {addons.filter(a => a.on_side).map(a => { const lbl = formatAddonLabel(a.name, a.placement); return (a.quantity || 1) > 1 ? `${lbl} ×${a.quantity}` : lbl; }).join(' · ')}</span>
                                                 </div>
                                             )}
                                         </>

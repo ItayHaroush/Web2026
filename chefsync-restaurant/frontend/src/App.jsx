@@ -109,6 +109,7 @@ const AdminDevices = lazyWithRetry(() => import('./pages/admin/AdminDevices'));
 const AdminSettingsHub = lazyWithRetry(() => import('./pages/admin/AdminSettingsHub'));
 const AdminRestaurantGuide = lazyWithRetry(() => import('./pages/admin/AdminRestaurantGuide'));
 const AdminAbandonedCartReminders = lazyWithRetry(() => import('./pages/admin/AdminAbandonedCartReminders'));
+const AdminSoundSettings = lazyWithRetry(() => import('./pages/admin/AdminSoundSettings'));
 
 // סופר-אדמין
 const SuperAdminDashboard = lazyWithRetry(() => import('./pages/super-admin/SuperAdminDashboard'));
@@ -457,6 +458,14 @@ function AppRoutes() {
             element={
               <AdminRoute>
                 <AdminSettingsHub />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/sound-settings"
+            element={
+              <AdminRoute>
+                <AdminSoundSettings />
               </AdminRoute>
             }
           />

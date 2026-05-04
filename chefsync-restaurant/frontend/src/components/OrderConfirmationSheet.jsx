@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { FaTimes, FaTrash, FaUser, FaPhone, FaStore, FaTruck, FaMapMarkerAlt, FaMoneyBillWave, FaCreditCard, FaComment, FaBoxOpen, FaSpinner, FaCheckCircle, FaGift } from 'react-icons/fa';
 import { resolveAssetUrl } from '../utils/assets';
+import { formatAddonLabel } from '../utils/cart';
 
 /**
  * מודל אישור הזמנה - Bottom Sheet
@@ -98,8 +99,8 @@ export default function OrderConfirmationSheet({
                         <h3 className="text-sm font-bold text-gray-500 dark:text-brand-dark-muted uppercase tracking-wide mb-3">פריטים בהזמנה</h3>
                         <div className="space-y-3">
                             {cartItems.map((item) => {
-                                const addonsInside = (item.addons || []).filter(a => !a.on_side).map(a => (a.quantity || 1) > 1 ? `${a.name} ×${a.quantity}` : a.name);
-                                const addonsOnSide = (item.addons || []).filter(a => a.on_side).map(a => (a.quantity || 1) > 1 ? `${a.name} ×${a.quantity}` : a.name);
+                                const addonsInside = (item.addons || []).filter(a => !a.on_side).map(a => { const lbl = formatAddonLabel(a.name, a.placement); return (a.quantity || 1) > 1 ? `${lbl} ×${a.quantity}` : lbl; });
+                                const addonsOnSide = (item.addons || []).filter(a => a.on_side).map(a => { const lbl = formatAddonLabel(a.name, a.placement); return (a.quantity || 1) > 1 ? `${lbl} ×${a.quantity}` : lbl; });
 
                                 return (
                                     <div key={item.cartKey} className="flex justify-between items-start gap-3 py-2 border-b border-gray-50 dark:border-brand-dark-border/50 last:border-0">

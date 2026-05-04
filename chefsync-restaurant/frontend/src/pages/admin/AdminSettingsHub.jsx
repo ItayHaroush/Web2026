@@ -20,6 +20,7 @@ import {
     FaPlus,
     FaDownload,
     FaBookOpen,
+    FaBell,
 } from 'react-icons/fa';
 
 function SettingCard({ icon, title, description, to, badge }) {
@@ -118,6 +119,13 @@ export default function AdminSettingsHub() {
             title: 'הדרכה והתקנה',
             description: 'מדריך מלא: התקנת אפליקציה, הזמנות, תפריט, משלוחים, מכשירים ועוד.',
             to: '/admin/guide',
+            show: true,
+        },
+        {
+            icon: <FaBell size={20} />,
+            title: 'הגדרות צלצול',
+            description: 'עוצמה, סוג צלצול ומשך ההתראה הקולית להזמנות חדשות.',
+            to: '/admin/sound-settings',
             show: true,
         },
         {

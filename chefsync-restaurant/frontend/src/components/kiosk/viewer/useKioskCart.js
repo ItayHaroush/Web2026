@@ -79,6 +79,7 @@ export default function useKioskCart() {
                 addons: item.addons.map(a => ({
                     addon_id: a.id,
                     on_side: a.on_side || false,
+                    ...(a.placement && a.placement !== 'whole' ? { placement: a.placement } : {}),
                 })),
                 qty: item.qty,
             })),

@@ -1651,6 +1651,7 @@ class AdminController extends Controller
             'source_addon_fixed_price' => 'nullable|numeric|min:0',
             'source_selection_weight' => 'sometimes|nullable|integer|min:1|max:10',
             'first_addon_unit_free' => 'sometimes|boolean',
+            'allow_half_placement' => 'sometimes|boolean',
         ]);
 
         $restaurant = $this->resolveRestaurant($request);
@@ -1708,6 +1709,7 @@ class AdminController extends Controller
             'source_addon_fixed_price' => $sourceAddonFixedPrice,
             'source_selection_weight' => $sourceSelectionWeight,
             'first_addon_unit_free' => $request->boolean('first_addon_unit_free', false),
+            'allow_half_placement' => $request->boolean('allow_half_placement', false),
         ]);
 
         return response()->json([
@@ -1741,6 +1743,7 @@ class AdminController extends Controller
             'source_addon_fixed_price' => 'nullable|numeric|min:0',
             'source_selection_weight' => 'sometimes|nullable|integer|min:1|max:10',
             'first_addon_unit_free' => 'sometimes|boolean',
+            'allow_half_placement' => 'sometimes|boolean',
         ]);
 
         $restaurant = $this->resolveRestaurant($request);
@@ -1788,6 +1791,10 @@ class AdminController extends Controller
 
         if ($request->has('first_addon_unit_free')) {
             $payload['first_addon_unit_free'] = $request->boolean('first_addon_unit_free');
+        }
+
+        if ($request->has('allow_half_placement')) {
+            $payload['allow_half_placement'] = $request->boolean('allow_half_placement');
         }
 
         // טיפול ב-max_selections = 0 (ללא הגבלה - יהפך ל-null)

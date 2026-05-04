@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { FaTimes, FaMinus, FaPlus, FaShoppingCart } from 'react-icons/fa';
-import { calculateUnitPrice, buildCartKey } from '../../../utils/cart';
+import { calculateUnitPrice, buildCartKey, formatAddonLabel } from '../../../utils/cart';
 
 /**
  * בחירת וריאציה ותוספות לפריט POS — התאמה לזרימת קיוסק/אתר.
@@ -8,15 +8,22 @@ import { calculateUnitPrice, buildCartKey } from '../../../utils/cart';
 export default function POSMenuItemModal({ item, onAdd, onClose }) {
     const [selectedVariant, setSelectedVariant] = useState(null);
     const [selectedAddons, setSelectedAddons] = useState([]);
+    const [addonPlacement, setAddonPlacement] = useState({});
     const [qty, setQty] = useState(1);
 
-    const unitPrice = calculateUnitPrice(item.price, selectedVariant, selectedAddons, 0);
+    const selectedAddonsWithPlacement = selectedAddons.map(a => ({
+        ...a,
+        placement: addonPlacement[a.id] || 'whole',
+    }));
+
+    const unitPrice = calculateUnitPrice(item.price, selectedVariant, selectedAddonsWithPlacement, 0);
     const totalPrice = Number((unitPrice * qty).toFixed(2));
 
     const toggleAddon = (group, addon) => {
         setSelectedAddons(prev => {
             const exists = prev.find(a => a.id === addon.id);
             if (exists) {
+                setAddonPlacement(p => { const n = { ...p }; delete n[addon.id]; return n; });
                 return prev.filter(a => a.id !== addon.id);
             }
             return [...prev, {
@@ -34,12 +41,17 @@ export default function POSMenuItemModal({ item, onAdd, onClose }) {
         );
     };
 
+    const setPlacement = (addonId, placement) => {
+        setAddonPlacement(prev => ({ ...prev, [addonId]: placement }));
+    };
+
     const handleAdd = () => {
-        const addonsPayload = selectedAddons.map(a => ({
+        const addonsPayload = selectedAddonsWithPlacement.map(a => ({
             id: a.id,
             name: a.name,
             price: a.price_delta ?? a.price ?? 0,
             on_side: a.on_side || false,
+            placement: a.placement !== 'whole' ? a.placement : undefined,
             addon_group_id: a.addon_group_id,
             first_addon_unit_free: a.first_addon_unit_free,
         }));
@@ -121,32 +133,60 @@ export default function POSMenuItemModal({ item, onAdd, onClose }) {
                             <div className="space-y-2">
                                 {group.addons && group.addons.map(addon => {
                                     const isSelected = selectedAddons.some(a => a.id === addon.id);
+                                    const placement = addonPlacement[addon.id] || 'whole';
+                                    const priceDelta = addon.price_delta ?? 0;
+                                    const halfPrice = group.allow_half_placement ? Math.ceil(priceDelta / 2) : priceDelta;
                                     return (
-                                        <div key={addon.id} className="flex items-center gap-2">
-                                            <button
-                                                type="button"
-                                                onClick={() => toggleAddon(group, addon)}
-                                                className={`flex-1 flex items-center justify-between p-3 rounded-xl border transition-all ${isSelected
-                                                    ? 'bg-orange-500/15 border-orange-500/50 text-orange-200'
-                                                    : 'bg-slate-900 border-slate-700 text-slate-300 hover:border-slate-600'
-                                                    }`}
-                                            >
-                                                <span className="font-bold text-sm">{addon.name}</span>
-                                                {(addon.price_delta ?? 0) > 0 && (
-                                                    <span className="text-xs font-bold">+{Number(addon.price_delta).toFixed(2)} ₪</span>
-                                                )}
-                                            </button>
-                                            {isSelected && (
+                                        <div key={addon.id}>
+                                            <div className="flex items-center gap-2">
                                                 <button
                                                     type="button"
-                                                    onClick={() => toggleAddonOnSide(addon.id)}
-                                                    className={`px-3 py-3 rounded-xl text-xs font-bold border whitespace-nowrap ${selectedAddons.find(a => a.id === addon.id)?.on_side
-                                                        ? 'bg-blue-500/20 border-blue-500 text-blue-300'
-                                                        : 'bg-slate-900 border-slate-700 text-slate-500'
+                                                    onClick={() => toggleAddon(group, addon)}
+                                                    className={`flex-1 flex items-center justify-between p-3 rounded-xl border transition-all ${isSelected
+                                                        ? 'bg-orange-500/15 border-orange-500/50 text-orange-200'
+                                                        : 'bg-slate-900 border-slate-700 text-slate-300 hover:border-slate-600'
                                                         }`}
                                                 >
-                                                    בצד
+                                                    <span className="font-bold text-sm">
+                                                        {isSelected ? formatAddonLabel(addon.name, placement) : addon.name}
+                                                    </span>
+                                                    {priceDelta > 0 && (
+                                                        <span className="text-xs font-bold">
+                                                            {isSelected && group.allow_half_placement && placement !== 'whole'
+                                                                ? `+${halfPrice.toFixed(2)} ₪`
+                                                                : `+${priceDelta.toFixed(2)} ₪`}
+                                                        </span>
+                                                    )}
                                                 </button>
+                                                {isSelected && !group.allow_half_placement && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => toggleAddonOnSide(addon.id)}
+                                                        className={`px-3 py-3 rounded-xl text-xs font-bold border whitespace-nowrap ${selectedAddons.find(a => a.id === addon.id)?.on_side
+                                                            ? 'bg-blue-500/20 border-blue-500 text-blue-300'
+                                                            : 'bg-slate-900 border-slate-700 text-slate-500'
+                                                            }`}
+                                                    >
+                                                        בצד
+                                                    </button>
+                                                )}
+                                            </div>
+                                            {isSelected && group.allow_half_placement && (
+                                                <div className="flex gap-1 mt-1 mr-1">
+                                                    {[['whole', 'שלם'], ['right', 'חצי ימין'], ['left', 'חצי שמאל']].map(([val, label]) => (
+                                                        <button
+                                                            key={val}
+                                                            type="button"
+                                                            onClick={() => setPlacement(addon.id, val)}
+                                                            className={`px-2 py-1 rounded-lg text-xs font-bold border transition-all ${placement === val
+                                                                ? 'bg-orange-500/20 border-orange-500 text-orange-300'
+                                                                : 'bg-slate-900 border-slate-700 text-slate-500 hover:border-slate-500'
+                                                                }`}
+                                                        >
+                                                            {label}
+                                                        </button>
+                                                    ))}
+                                                </div>
                                             )}
                                         </div>
                                     );

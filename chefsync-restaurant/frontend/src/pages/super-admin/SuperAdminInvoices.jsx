@@ -22,7 +22,8 @@ import {
     FaChevronRight,
     FaFilePdf,
     FaEnvelope,
-    FaEdit
+    FaEdit,
+    FaCog
 } from 'react-icons/fa';
 
 export default function SuperAdminInvoices() {
@@ -42,6 +43,7 @@ export default function SuperAdminInvoices() {
     const [editForm, setEditForm] = useState({
         base_fee: '',
         commission_fee: '',
+        commission_percent: '',
         abandoned_cart_fee: '',
         setup_fee: '',
         original_base_fee: '',
@@ -49,6 +51,10 @@ export default function SuperAdminInvoices() {
         notes: '',
     });
     const [editSaving, setEditSaving] = useState(false);
+    const [billingConfigRestaurant, setBillingConfigRestaurant] = useState(null);
+    const [billingConfigForm, setBillingConfigForm] = useState({ billing_model: 'flat', base_fee: '', commission_percent: '' });
+    const [billingConfigSaving, setBillingConfigSaving] = useState(false);
+    const [billingConfigLoading, setBillingConfigLoading] = useState(false);
 
     useEffect(() => {
         fetchInvoices();
@@ -173,6 +179,7 @@ export default function SuperAdminInvoices() {
         setEditForm({
             base_fee: String(inv.base_fee ?? ''),
             commission_fee: String(inv.commission_fee ?? ''),
+            commission_percent: inv.commission_percent != null && Number(inv.commission_percent) > 0 ? String(inv.commission_percent) : '',
             abandoned_cart_fee: String(inv.abandoned_cart_fee ?? ''),
             setup_fee: String(inv.setup_fee ?? ''),
             original_base_fee: inv.original_base_fee != null ? String(inv.original_base_fee) : '',
@@ -196,6 +203,9 @@ export default function SuperAdminInvoices() {
                 abandoned_cart_fee: parseFloat(editForm.abandoned_cart_fee) || 0,
                 setup_fee: parseFloat(editForm.setup_fee) || 0,
             };
+            if (editForm.commission_percent.trim() !== '') {
+                body.commission_percent = parseFloat(editForm.commission_percent);
+            }
             if (editForm.original_base_fee.trim() !== '') {
                 body.original_base_fee = parseFloat(editForm.original_base_fee);
             } else if (editInvoice.original_base_fee != null) {
@@ -248,6 +258,65 @@ export default function SuperAdminInvoices() {
         if (pdfUrl) URL.revokeObjectURL(pdfUrl);
         setPdfUrl(null);
         setPreviewInvoice(null);
+    };
+
+    const openBillingConfigModal = async (inv) => {
+        setBillingConfigRestaurant(inv.restaurant);
+        // fallback מיידי מה-invoice
+        setBillingConfigForm({
+            billing_model: inv.billing_model || 'flat',
+            base_fee: String(inv.base_fee ?? ''),
+            commission_percent: inv.commission_percent != null ? String(inv.commission_percent) : '',
+        });
+        // fetch הערכים האמיתיים מה-subscription
+        setBillingConfigLoading(true);
+        try {
+            const res = await api.get(
+                `/super-admin/billing/restaurants/${inv.restaurant.id}/billing-config`,
+                { headers: getAuthHeaders() }
+            );
+            const d = res.data;
+            setBillingConfigForm({
+                billing_model: d.billing_model || 'flat',
+                base_fee: String(d.base_fee ?? 0),
+                commission_percent: d.commission_percent != null ? String(d.commission_percent) : '',
+            });
+        } catch {
+            // נשאר עם ה-fallback
+        } finally {
+            setBillingConfigLoading(false);
+        }
+    };
+
+    const closeBillingConfigModal = () => {
+        setBillingConfigRestaurant(null);
+        setBillingConfigSaving(false);
+    };
+
+    const handleSaveBillingConfig = async () => {
+        if (!billingConfigRestaurant) return;
+        const model = billingConfigForm.billing_model;
+        const baseFee = parseFloat(billingConfigForm.base_fee) || 0;
+        const commissionPercent = parseFloat(billingConfigForm.commission_percent) || 0;
+        if (model === 'percentage' && commissionPercent <= 0) {
+            toast.error('יש להזין אחוז עמלה גדול מ-0 עבור מודל אחוזים');
+            return;
+        }
+        setBillingConfigSaving(true);
+        try {
+            await api.put(
+                `/super-admin/billing/restaurants/${billingConfigRestaurant.id}/billing-config`,
+                { billing_model: model, base_fee: baseFee, commission_percent: commissionPercent },
+                { headers: getAuthHeaders() }
+            );
+            toast.success('הגדרות החיוב עודכנו בהצלחה');
+            closeBillingConfigModal();
+            fetchInvoices();
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'שגיאה בעדכון הגדרות חיוב');
+        } finally {
+            setBillingConfigSaving(false);
+        }
     };
 
     const handleSendEmail = async (invoiceId, email) => {
@@ -609,6 +678,13 @@ export default function SuperAdminInvoices() {
                                             </td>
                                             <td className="px-6 py-4 text-center">
                                                 <div className="flex justify-center gap-2">
+                                                    <button
+                                                        onClick={() => openBillingConfigModal(inv)}
+                                                        title="הגדרות חיוב קבועות"
+                                                        className="p-2 bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-lg hover:bg-indigo-600 hover:text-white transition-all"
+                                                    >
+                                                        <FaCog size={12} />
+                                                    </button>
                                                     {inv.status !== 'paid' && (
                                                         <button
                                                             onClick={() => openEditModal(inv)}
@@ -673,6 +749,93 @@ export default function SuperAdminInvoices() {
                 />
             )}
 
+            {billingConfigRestaurant && (
+                <div className="fixed inset-0 z-[90] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={closeBillingConfigModal}>
+                    <div
+                        className="bg-white rounded-3xl shadow-2xl max-w-md w-full border border-gray-100"
+                        onClick={(e) => e.stopPropagation()}
+                        dir="rtl"
+                    >
+                        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+                            <div>
+                                <h3 className="text-lg font-black text-gray-900 flex items-center gap-2">
+                                    <FaCog className="text-indigo-500" size={16} />
+                                    הגדרות חיוב
+                                    {billingConfigLoading && <FaSync className="text-gray-400 animate-spin" size={13} />}
+                                </h3>
+                                <p className="text-xs text-gray-400 mt-0.5">{billingConfigRestaurant.name}</p>
+                            </div>
+                            <button type="button" onClick={closeBillingConfigModal} className="p-2 rounded-xl text-gray-400 hover:bg-gray-100 hover:text-gray-700">
+                                <FaTimes size={18} />
+                            </button>
+                        </div>
+                        <div className="p-6 space-y-4 text-right">
+                            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-xl py-2 px-3">
+                                שינוי זה ישפיע על <strong>כל החשבוניות העתידיות</strong> של מסעדה זו. החשבונית הנוכחית לא תשתנה.
+                            </p>
+                            <label className="block text-xs font-bold text-gray-500">
+                                מודל חיוב
+                                <select
+                                    className="mt-1 w-full border border-gray-200 rounded-xl px-3 py-2 font-bold text-gray-900 bg-white"
+                                    value={billingConfigForm.billing_model}
+                                    onChange={(e) => setBillingConfigForm((f) => ({ ...f, billing_model: e.target.value }))}
+                                >
+                                    <option value="flat">קבוע (Fixed)</option>
+                                    <option value="percentage">אחוזים (% ממחזור)</option>
+                                    <option value="hybrid">משולב (בסיס + אחוזים)</option>
+                                </select>
+                            </label>
+                            <label className="block text-xs font-bold text-gray-500">
+                                {billingConfigForm.billing_model === 'percentage' ? 'עמלת בסיס (₪0 אם רק אחוזים)' : 'דמי בסיס חודשיים (₪)'}
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    className="mt-1 w-full border border-gray-200 rounded-xl px-3 py-2 font-bold text-gray-900"
+                                    value={billingConfigForm.base_fee}
+                                    onChange={(e) => setBillingConfigForm((f) => ({ ...f, base_fee: e.target.value }))}
+                                />
+                            </label>
+                            <label className={`block text-xs font-bold ${billingConfigForm.billing_model === 'flat' ? 'text-gray-300' : 'text-gray-500'}`}>
+                                אחוז עמלה (%){billingConfigForm.billing_model === 'flat' && <span className="font-normal"> — לא רלוונטי במודל קבוע</span>}
+                                <input
+                                    type="number"
+                                    step="0.1"
+                                    min="0"
+                                    max="100"
+                                    disabled={billingConfigForm.billing_model === 'flat'}
+                                    className={`mt-1 w-full border rounded-xl px-3 py-2 font-bold ${
+                                        billingConfigForm.billing_model === 'flat'
+                                            ? 'border-gray-100 text-gray-300 bg-gray-50 cursor-not-allowed'
+                                            : 'border-gray-200 text-gray-900'
+                                    }`}
+                                    value={billingConfigForm.billing_model === 'flat' ? '' : billingConfigForm.commission_percent}
+                                    onChange={(e) => setBillingConfigForm((f) => ({ ...f, commission_percent: e.target.value }))}
+                                />
+                            </label>
+                            {billingConfigForm.billing_model !== 'flat' && billingConfigForm.commission_percent !== '' && (
+                                <p className="text-xs text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-xl py-2 px-3">
+                                    לדוגמה: מחזור של ₪10,000 → עמלה ₪{(Math.round(parseFloat(billingConfigForm.commission_percent || 0) / 100 * 10000 * 100) / 100).toLocaleString()}
+                                </p>
+                            )}
+                            <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
+                                <button type="button" onClick={closeBillingConfigModal} className="px-4 py-2 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-100">
+                                    ביטול
+                                </button>
+                                <button
+                                    type="button"
+                                    disabled={billingConfigSaving}
+                                    onClick={handleSaveBillingConfig}
+                                    className="px-5 py-2 rounded-xl text-sm font-black text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50"
+                                >
+                                    {billingConfigSaving ? 'שומר…' : 'שמור הגדרות'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {editInvoice && (
                 <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
                     <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto border border-gray-100">
@@ -705,17 +868,45 @@ export default function SuperAdminInvoices() {
                                         onChange={(e) => setEditForm((f) => ({ ...f, base_fee: e.target.value }))}
                                     />
                                 </label>
-                                <label className="block text-xs font-bold text-gray-500">
+                                <div className="block text-xs font-bold text-gray-500">
                                     עמלה
+                                    {/* שורת חישוב לפי אחוז */}
+                                    {Number(editInvoice?.order_revenue || 0) > 0 && (
+                                        <div className="mt-1 mb-1 flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-xl px-3 py-2">
+                                            <span className="text-blue-700 text-[11px] font-bold whitespace-nowrap">% על ₪{Number(editInvoice.order_revenue).toLocaleString()}:</span>
+                                            <input
+                                                type="number"
+                                                step="0.1"
+                                                min="0"
+                                                max="100"
+                                                placeholder="0"
+                                                className="w-16 border border-blue-200 rounded-lg px-2 py-1 text-sm font-bold text-blue-900 bg-white text-center"
+                                                value={editForm.commission_percent}
+                                                onChange={(e) => {
+                                                    const pct = e.target.value;
+                                                    const computed = pct !== '' && !isNaN(parseFloat(pct))
+                                                        ? String(Math.round(parseFloat(pct) / 100 * Number(editInvoice.order_revenue) * 100) / 100)
+                                                        : '';
+                                                    setEditForm((f) => ({ ...f, commission_percent: pct, ...(computed !== '' ? { commission_fee: computed } : {}) }));
+                                                }}
+                                            />
+                                            <span className="text-blue-600 text-[11px]">%</span>
+                                            {editForm.commission_percent !== '' && (
+                                                <span className="text-green-700 text-[11px] font-black mr-auto">
+                                                    = ₪{(Math.round(parseFloat(editForm.commission_percent || 0) / 100 * Number(editInvoice.order_revenue) * 100) / 100).toLocaleString()}
+                                                </span>
+                                            )}
+                                        </div>
+                                    )}
                                     <input
                                         type="number"
                                         step="0.01"
                                         min="0"
                                         className="mt-1 w-full border border-gray-200 rounded-xl px-3 py-2 font-bold text-gray-900"
                                         value={editForm.commission_fee}
-                                        onChange={(e) => setEditForm((f) => ({ ...f, commission_fee: e.target.value }))}
+                                        onChange={(e) => setEditForm((f) => ({ ...f, commission_fee: e.target.value, commission_percent: '' }))}
                                     />
-                                </label>
+                                </div>
                                 <label className="block text-xs font-bold text-gray-500">
                                     תזכורות סל נטוש
                                     <input

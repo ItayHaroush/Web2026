@@ -19,6 +19,7 @@ class MenuItemAddonGroup extends Model
         'is_active',
         'sort_order',
         'first_addon_unit_free',
+        'allow_half_placement',
     ];
 
     protected $casts = [
@@ -28,6 +29,7 @@ class MenuItemAddonGroup extends Model
         'is_active' => 'boolean',
         'sort_order' => 'integer',
         'first_addon_unit_free' => 'boolean',
+        'allow_half_placement' => 'boolean',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];

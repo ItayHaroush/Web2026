@@ -133,6 +133,7 @@ Route::prefix('super-admin')->middleware(['auth:sanctum', 'super_admin'])->group
     Route::post('/billing/invoices/{id}/send-email', [SuperAdminBillingController::class, 'sendInvoiceEmail'])->name('super-admin.billing.invoices.send-email');
 
     // הגדרות חיוב פר-מסעדה
+    Route::get('/billing/restaurants/{id}/billing-config', [SuperAdminBillingController::class, 'getBillingConfig'])->name('super-admin.billing.config.get');
     Route::put('/billing/restaurants/{id}/billing-config', [SuperAdminBillingController::class, 'updateBillingConfig'])->name('super-admin.billing.config.update');
     Route::post('/billing/restaurants/{id}/activate', [SuperAdminBillingController::class, 'manualActivateSubscription'])->name('super-admin.billing.activate');
     Route::post('/billing/restaurants/{id}/reset-trial', [SuperAdminBillingController::class, 'resetToTrial'])->name('super-admin.billing.reset-trial');

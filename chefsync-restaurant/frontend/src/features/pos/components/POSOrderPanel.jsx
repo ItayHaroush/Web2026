@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { FaCheckCircle, FaFire, FaBell, FaTruck, FaBan, FaClock, FaShekelSign, FaClipboardList, FaMotorcycle, FaPrint, FaUtensils, FaUndo, FaGlobe, FaMapMarkerAlt, FaCreditCard, FaMoneyBillWave } from 'react-icons/fa';
 import posApi from '../api/posApi';
+import { formatAddonLabel } from '../../../utils/cart';
 import CancelOrderModal from '../../../components/CancelOrderModal';
 import CashDeliveryModal from './CashDeliveryModal';
 import { ORDER_STATUS_AWAITING_PAYMENT_HE, getOrderDisplayPaymentMethod, paymentStatusBadgeLabel, shouldShowPaymentStatusBadge } from '../../../utils/orderPaymentLabels';
@@ -61,7 +62,7 @@ function normalizeOrder(raw) {
         unit_price: parseFloat(i.price_at_order || i.unit_price || i.price || 0),
         variant_name: i.variant_name || null,
         addons_text: Array.isArray(i.addons) && i.addons.length
-            ? i.addons.map(a => { const name = a.name || a; const qty = a.quantity || 1; return qty > 1 ? `${name} ×${qty}` : name; }).filter(Boolean).join(', ')
+            ? i.addons.map(a => { const name = typeof a === 'string' ? a : (a.name || ''); const lbl = formatAddonLabel(name, a.placement); const qty = a.quantity || 1; return qty > 1 ? `${lbl} ×${qty}` : lbl; }).filter(Boolean).join(', ')
             : (i.addons_text || null),
     }));
 

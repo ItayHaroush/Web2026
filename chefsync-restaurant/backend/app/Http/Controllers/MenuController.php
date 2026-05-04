@@ -155,6 +155,7 @@ class MenuController extends Controller
                                         'is_required' => (bool) $group->is_required,
                                         'placement' => $group->placement ?? 'inside',
                                         'first_addon_unit_free' => (bool) ($group->first_addon_unit_free ?? false),
+                                        'allow_half_placement' => (bool) ($group->allow_half_placement ?? false),
                                         'addons' => $group->addons->map(function ($addon) {
                                             return [
                                                 'id' => $addon->id,
@@ -177,6 +178,7 @@ class MenuController extends Controller
                                         'is_required' => (bool) $group->is_required,
                                         'placement' => $group->placement ?? 'inside',
                                         'first_addon_unit_free' => (bool) ($group->first_addon_unit_free ?? false),
+                                        'allow_half_placement' => (bool) ($group->allow_half_placement ?? false),
                                         'addons' => $group->addons->map(function ($addon) {
                                             return [
                                                 'id' => $addon->id,

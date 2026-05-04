@@ -20,6 +20,26 @@ export const normalizeVariant = (variant) => {
         price_delta: sanitizeNumber(variant.price_delta ?? variant.priceDelta ?? 0),
     };
 };
+export const placementLabels = {
+    right: 'חצי ימין',
+    right_half: 'חצי ימין',
+    left: 'חצי שמאל',
+    left_half: 'חצי שמאל',
+};
+
+export const formatAddonLabel = (name, placement) => {
+    const label = placementLabels[placement ?? 'whole'];
+    return label ? `${name} (${label})` : name;
+};
+
+export const isHalfPlacement = (placement) =>
+    placement === 'right' || placement === 'left' ||
+    placement === 'right_half' || placement === 'left_half';
+
+export const getAddonEffectiveDelta = (addon) => {
+    const delta = sanitizeNumber(addon?.price_delta ?? addon?.price ?? 0);
+    return isHalfPlacement(addon?.placement) ? Math.ceil(delta / 2) : delta;
+};
 
 export const normalizeAddon = (addon) => {
     if (!addon) {
@@ -39,6 +59,10 @@ export const normalizeAddon = (addon) => {
         on_side: addon.on_side ?? false,
         quantity: Math.max(1, Math.round(sanitizeNumber(addon.quantity ?? 1, 1))),
     };
+
+    if (addon.placement) {
+        base.placement = addon.placement;
+    }
 
     if (addon.addon_group_id != null && addon.addon_group_id !== '') {
         base.addon_group_id = addon.addon_group_id;
@@ -73,7 +97,7 @@ export const sumFullCatalogAddons = (addons = []) => {
     }
     let sum = 0;
     for (const addon of addons) {
-        const delta = sanitizeNumber(addon?.price_delta ?? addon?.price ?? 0);
+        const delta = getAddonEffectiveDelta(addon);
         const addonQty = Math.max(1, sanitizeNumber(addon?.quantity ?? 1, 1));
         sum += delta * addonQty;
     }
@@ -88,7 +112,7 @@ export const sumAddonsBilledWithFirstUnitFree = (addons = []) => {
     let freeUsed = false;
     let sum = 0;
     for (const addon of addons) {
-        const delta = sanitizeNumber(addon?.price_delta ?? addon?.price ?? 0);
+        const delta = getAddonEffectiveDelta(addon);
         const addonQty = Math.max(1, sanitizeNumber(addon?.quantity ?? 1, 1));
         let line = delta * addonQty;
         if (!freeUsed && delta > 0) {
@@ -139,7 +163,7 @@ export const sumAddonsBilledWithGroupRules = (addons = []) => {
             b.applyFirstFree = b.applyFirstFree || Boolean(addon.first_addon_unit_free);
         }
         b.lines.push({
-            price_delta: sanitizeNumber(addon?.price_delta ?? addon?.price ?? 0),
+            price_delta: getAddonEffectiveDelta(addon),
             quantity: Math.max(1, sanitizeNumber(addon?.quantity ?? 1, 1)),
         });
     }
@@ -212,6 +236,8 @@ export default {
     normalizeAddon,
     buildCartKey,
     sumFullCatalogAddons,
+    isHalfPlacement,
+    getAddonEffectiveDelta,
     sumAddonsBilledWithFirstUnitFree,
     sumAddonsBilledWithGroupRules,
     calculateUnitPrice,

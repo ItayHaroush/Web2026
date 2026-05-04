@@ -48,26 +48,24 @@ export default function AdminTerminal() {
     const formatAddons = (addons) => {
         if (!Array.isArray(addons) || addons.length === 0) return { inside: '', onSide: '' };
 
+        const HALF_LABELS = { right: 'חצי ימין', right_half: 'חצי ימין', left: 'חצי שמאל', left_half: 'חצי שמאל' };
         const formatName = (addon) => {
-            const name = typeof addon === 'string' ? addon : (addon?.name ?? addon?.addon_name);
+            const name = typeof addon === 'string' ? addon : (addon?.name ?? addon?.addon_name ?? '');
             const qty = typeof addon === 'object' ? (addon?.quantity || 1) : 1;
-            return qty > 1 ? `${name} ×${qty}` : name;
+            const placement = typeof addon === 'object' ? addon?.placement : null;
+            const halfLabel = HALF_LABELS[placement];
+            const base = qty > 1 ? `${name} ×${qty}` : name;
+            return halfLabel ? `${base} (${halfLabel})` : base;
         };
 
         const inside = addons
-            .filter(addon => {
-                const onSide = typeof addon === 'object' ? addon?.on_side : false;
-                return !onSide;
-            })
+            .filter(addon => !(typeof addon === 'object' ? addon?.on_side : false))
             .map(formatName)
             .filter(Boolean)
             .join(' · ');
 
         const onSide = addons
-            .filter(addon => {
-                const onSide = typeof addon === 'object' ? addon?.on_side : false;
-                return onSide;
-            })
+            .filter(addon => (typeof addon === 'object' ? addon?.on_side : false))
             .map(formatName)
             .filter(Boolean)
             .join(' · ');

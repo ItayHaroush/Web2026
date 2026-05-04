@@ -84,7 +84,10 @@ final class AddonPricingService
                 || (bool) ($a['first_addon_unit_free'] ?? false);
 
             $buckets[$gid]['lines'][] = [
-                'unit_delta' => (float) ($a['price'] ?? 0),
+                'unit_delta' => self::effectivePosAddonPrice(
+                    (float) ($a['price'] ?? 0),
+                    $a['placement'] ?? null
+                ),
                 'quantity' => max(1, (int) ($a['quantity'] ?? $a['qty'] ?? 1)),
             ];
         }
@@ -99,5 +102,17 @@ final class AddonPricingService
         }
 
         return round($total, 2);
+    }
+
+    /**
+     * מחשב מחיר אפקטיבי לתוספת POS: חצי מחיר כאשר placement הוא חצי פיצה.
+     */
+    private static function effectivePosAddonPrice(float $price, ?string $placement): float
+    {
+        $halfPlacements = ['right', 'left', 'right_half', 'left_half'];
+        if ($placement !== null && in_array($placement, $halfPlacements, true)) {
+            return (float) ceil($price / 2);
+        }
+        return $price;
     }
 }

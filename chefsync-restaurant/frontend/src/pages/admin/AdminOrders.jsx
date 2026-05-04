@@ -74,36 +74,20 @@ export default function AdminOrders() {
     const orderPanelRef = useRef(null);
     const isLocked = restaurantStatus?.is_approved === false;
 
-    const formatAddons = (addons) => {
+       const formatAddons = (addons) => {
         if (!Array.isArray(addons) || addons.length === 0) return { inside: '', onSide: '' };
-
-        const formatName = (addon) => {
-            const name = typeof addon === 'string' ? addon : (addon?.name ?? addon?.addon_name);
+        const fmt = (addon) => {
+            const name = typeof addon === 'string' ? addon : (addon?.name ?? addon?.addon_name ?? '');
             const qty = typeof addon === 'object' ? (addon?.quantity || 1) : 1;
-            return qty > 1 ? `${name} ×${qty}` : name;
+            const placement = typeof addon === 'object' ? addon?.placement : null;
+            const base = qty > 1 ? `${name} ×${qty}` : name;
+            const label = { right: 'חצי ימין', right_half: 'חצי ימין', left: 'חצי שמאל', left_half: 'חצי שמאל' }[placement];
+            return label ? `${base} (${label})` : base;
         };
-
-        const inside = addons
-            .filter(addon => {
-                const onSide = typeof addon === 'object' ? addon?.on_side : false;
-                return !onSide;
-            })
-            .map(formatName)
-            .filter(Boolean)
-            .join(' · ');
-
-        const onSide = addons
-            .filter(addon => {
-                const onSide = typeof addon === 'object' ? addon?.on_side : false;
-                return onSide;
-            })
-            .map(formatName)
-            .filter(Boolean)
-            .join(' · ');
-
+        const inside = addons.filter(a => !a?.on_side).map(fmt).filter(Boolean).join(' · ');
+        const onSide = addons.filter(a => a?.on_side).map(fmt).filter(Boolean).join(' · ');
         return { inside, onSide };
     };
-
     const getItemCategoryLabel = (item) => (
         item?.category_name
         || item?.menu_item?.category?.name

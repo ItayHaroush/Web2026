@@ -763,12 +763,27 @@ class PrintService
                 }
 
                 $addons = is_array($item->addons) ? $item->addons : [];
+                $regularAddonNames = [];
                 foreach ($addons as $addon) {
                     $addonName = is_string($addon) ? $addon : ($addon['name'] ?? $addon['addon_name'] ?? '');
                     $onSide = is_array($addon) && ! empty($addon['on_side']);
-                    if ($addonName) {
-                        $label = $onSide ? "בצד: {$addonName}" : $addonName;
-                        $lines[] = $this->centerText($label, $printer);
+                    $halfLabel = $this->resolveHalfLabel(is_array($addon) ? ($addon['placement'] ?? null) : null);
+                    if (! $addonName) {
+                        continue;
+                    }
+                    if ($halfLabel) {
+                        $addonName .= " ({$halfLabel})";
+                    }
+                    if ($onSide) {
+                        $lines[] = $this->centerText("בצד: {$addonName}", $printer);
+                    } else {
+                        $regularAddonNames[] = $addonName;
+                    }
+                }
+                if (! empty($regularAddonNames)) {
+                    $lines[] = $this->centerText('תוספות:', $printer);
+                    foreach ($regularAddonNames as $rn) {
+                        $lines[] = $this->centerText($rn, $printer);
                     }
                 }
 
@@ -908,12 +923,27 @@ class PrintService
                 }
 
                 $addons = is_array($item->addons) ? $item->addons : [];
+                $regularAddonNames = [];
                 foreach ($addons as $addon) {
                     $addonName = is_string($addon) ? $addon : ($addon['name'] ?? $addon['addon_name'] ?? '');
                     $onSide = is_array($addon) && ! empty($addon['on_side']);
-                    if ($addonName) {
-                        $label = $onSide ? "בצד: {$addonName}" : "תוספת: {$addonName}";
-                        $lines[] = $label;
+                    $halfLabel = $this->resolveHalfLabel(is_array($addon) ? ($addon['placement'] ?? null) : null);
+                    if (! $addonName) {
+                        continue;
+                    }
+                    if ($halfLabel) {
+                        $addonName .= " ({$halfLabel})";
+                    }
+                    if ($onSide) {
+                        $lines[] = "בצד: {$addonName}";
+                    } else {
+                        $regularAddonNames[] = $addonName;
+                    }
+                }
+                if (! empty($regularAddonNames)) {
+                    $lines[] = 'תוספות:';
+                    foreach ($regularAddonNames as $rn) {
+                        $lines[] = $rn;
                     }
                 }
 
@@ -1038,13 +1068,22 @@ class PrintService
                 $lines[] = '{{/BOLD}}';
 
                 $addons = is_array($item->addons) ? $item->addons : [];
+                $receiptAddonNames = [];
                 foreach ($addons as $addon) {
                     $addonName = is_string($addon) ? $addon : ($addon['name'] ?? '');
-                    $addonPrice = is_array($addon) ? (float) ($addon['price'] ?? 0) : 0.0;
-
-                    if ($addonName) {
-                        $price = $addonPrice > 0 ? ' ' . $this->formatShekelAmount($addonPrice) : '';
-                        $lines[] = "תוספת: {$addonName}{$price}";
+                    $halfLabel = $this->resolveHalfLabel(is_array($addon) ? ($addon['placement'] ?? null) : null);
+                    if (! $addonName) {
+                        continue;
+                    }
+                    if ($halfLabel) {
+                        $addonName .= " ({$halfLabel})";
+                    }
+                    $receiptAddonNames[] = $addonName;
+                }
+                if (! empty($receiptAddonNames)) {
+                    $lines[] = 'תוספות:';
+                    foreach ($receiptAddonNames as $rn) {
+                        $lines[] = $rn;
                     }
                 }
 
@@ -1226,13 +1265,22 @@ class PrintService
                 $lines[] = $this->centerText("{$qty}x {$name}", $printer);
 
                 $addons = is_array($item->addons) ? $item->addons : [];
+                $classicReceiptAddonNames = [];
                 foreach ($addons as $addon) {
                     $addonName = is_string($addon) ? $addon : ($addon['name'] ?? '');
-                    $addonPrice = is_array($addon) ? (float) ($addon['price'] ?? 0) : 0.0;
-
-                    if ($addonName) {
-                        $price = $addonPrice > 0 ? ' ' . $this->formatShekelAmount($addonPrice) : '';
-                        $lines[] = $this->centerText("{$addonName}{$price}", $printer);
+                    $halfLabel = $this->resolveHalfLabel(is_array($addon) ? ($addon['placement'] ?? null) : null);
+                    if (! $addonName) {
+                        continue;
+                    }
+                    if ($halfLabel) {
+                        $addonName .= " ({$halfLabel})";
+                    }
+                    $classicReceiptAddonNames[] = $addonName;
+                }
+                if (! empty($classicReceiptAddonNames)) {
+                    $lines[] = $this->centerText('תוספות:', $printer);
+                    foreach ($classicReceiptAddonNames as $rn) {
+                        $lines[] = $this->centerText($rn, $printer);
                     }
                 }
 
@@ -2063,5 +2111,17 @@ class PrintService
         }
 
         return $groups;
+    }
+
+    /**
+     * Returns a Hebrew half-placement label (e.g. 'חצי ימין') or null for whole/no placement.
+     */
+    private function resolveHalfLabel(?string $placement): ?string
+    {
+        return match ($placement) {
+            'right', 'right_half' => 'חצי ימין',
+            'left', 'left_half'   => 'חצי שמאל',
+            default               => null,
+        };
     }
 }

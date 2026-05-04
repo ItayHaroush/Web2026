@@ -575,10 +575,17 @@ class POSController extends Controller
             $addonsArray = [];
             if (! empty($item['addons'])) {
                 foreach ($item['addons'] as $a) {
-                    $addonsArray[] = [
+                    $addonEntry = [
                         'name' => $a['name'] ?? '',
                         'price' => $a['price'] ?? 0,
                     ];
+                    if (! empty($a['placement']) && $a['placement'] !== 'whole') {
+                        $addonEntry['placement'] = $a['placement'];
+                    }
+                    if (! empty($a['on_side'])) {
+                        $addonEntry['on_side'] = true;
+                    }
+                    $addonsArray[] = $addonEntry;
                 }
             }
             $addonTotal = AddonPricingService::sumFromPosAddonPayload($item['addons'] ?? null);
@@ -1966,14 +1973,7 @@ class POSController extends Controller
                 'quantity' => (int) $i->quantity,
                 'unit_price' => (float) $i->price_at_order,
                 'variant_name' => $i->variant_name,
-                'addons_text' => $i->addons
-                    ? collect($i->addons)->map(function ($a) {
-                        $name = $a['name'] ?? '';
-                        $qty = (int) ($a['quantity'] ?? 1);
-
-                        return $qty > 1 ? "{$name} ×{$qty}" : $name;
-                    })->filter()->join(', ')
-                    : null,
+                'addons' => $i->addons ?? [],
             ])->toArray(),
         ];
     }
@@ -2000,9 +2000,7 @@ class POSController extends Controller
                 'quantity' => (int) $i->quantity,
                 'unit_price' => (float) $i->price_at_order,
                 'variant_name' => $i->variant_name,
-                'addons_text' => $i->addons
-                    ? collect($i->addons)->map(fn($a) => $a['name'] ?? '')->filter()->join(', ')
-                    : null,
+                'addons' => $i->addons ?? [],
             ])->toArray() : [],
         ];
     }

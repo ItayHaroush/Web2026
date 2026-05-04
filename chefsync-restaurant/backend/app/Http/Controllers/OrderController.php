@@ -79,6 +79,7 @@ class OrderController extends Controller
                 'items.*.addons.*.addon_id' => 'required',  // integer or 'cat_item_X' for category-based addons
                 'items.*.addons.*.on_side' => 'nullable|boolean',
                 'items.*.addons.*.quantity' => 'nullable|integer|min:1|max:99',
+                'items.*.addons.*.placement' => 'nullable|string|in:whole,right,left,right_half,left_half',
                 'items.*.qty' => 'nullable|integer|min:1',
                 'items.*.quantity' => 'nullable|integer|min:1',
                 'is_test' => 'nullable|boolean',        // הזמנת בדיקה (מצב preview)
@@ -396,6 +397,7 @@ class OrderController extends Controller
                         'group' => $matchedGroup,
                         'on_side' => $addonEntry['on_side'] ?? false,
                         'quantity' => max(1, min(99, (int) ($addonEntry['quantity'] ?? 1))),
+                        'placement' => $addonEntry['placement'] ?? 'whole',
                     ];
                 }
 
@@ -469,6 +471,7 @@ class OrderController extends Controller
                             'group_id' => $group->id,
                             'group_name' => $group->name,
                             'on_side' => $selection['on_side'] ?? false,
+                            'placement' => $selection['placement'] ?? 'whole',
                         ];
                     });
                 }
@@ -481,7 +484,9 @@ class OrderController extends Controller
                     }
 
                     $lines = $selectedForGroup->map(fn ($sel) => [
-                        'unit_delta' => (float) $sel['addon']->price_delta,
+                        'unit_delta' => in_array($sel['placement'] ?? 'whole', ['right', 'left', 'right_half', 'left_half'])
+                            ? (float) ceil((float) $sel['addon']->price_delta / 2)
+                            : (float) $sel['addon']->price_delta,
                         'quantity' => (int) ($sel['quantity'] ?? 1),
                     ])->values()->all();
 
