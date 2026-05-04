@@ -6,8 +6,10 @@ import AdminLayout from '../../layouts/AdminLayout';
 import FeatureGate from '../../components/FeatureGate';
 import UpgradeBanner from '../../components/UpgradeBanner';
 import MobileAddFab from '../../components/admin/MobileAddFab';
-import { FaPrint, FaPlus, FaNetworkWired, FaEdit, FaTrash, FaPowerOff, FaCopy, FaCheck, FaTimes, FaExclamationTriangle } from 'react-icons/fa';
+import { FaPrint, FaPlus, FaNetworkWired, FaEdit, FaTrash, FaPowerOff, FaCopy, FaCheck, FaTimes, FaExclamationTriangle, FaAndroid, FaDownload } from 'react-icons/fa';
 import api from '../../services/apiClient';
+
+const APK_DOWNLOAD_URL = 'https://api.chefsync.co.il/downloads/chefsync-print-agent.apk';
 import {
     getPrinters,
     createPrinter,
@@ -490,6 +492,13 @@ export default function AdminPrinters({ embedded = false }) {
                                     <FaPlus /> רישום מכשיר ראשון
                                 </button>
                             )}
+                            <a
+                                href={APK_DOWNLOAD_URL}
+                                download
+                                className="mt-4 flex items-center gap-2 text-sm text-indigo-600 hover:text-indigo-800 hover:underline font-semibold"
+                            >
+                                <FaAndroid /> הורד אפליקציית Agent לאנדרואיד
+                            </a>
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -593,6 +602,13 @@ export default function AdminPrinters({ embedded = false }) {
                                     </button>
                                 </div>
                                 <p className="text-xs text-red-500 font-bold">שימו לב: הטוקן מוצג פעם אחת בלבד ולא ניתן לשחזרו</p>
+                                <a
+                                    href={APK_DOWNLOAD_URL}
+                                    download
+                                    className="w-full py-3 border-2 border-indigo-200 text-indigo-700 rounded-2xl font-bold hover:bg-indigo-50 transition-all flex items-center justify-center gap-2"
+                                >
+                                    <FaDownload size={14} /> הורד אפליקציית Agent (.apk)
+                                </a>
                                 <button onClick={closeDeviceModal} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black hover:bg-indigo-500 transition-all">סגור</button>
                             </div>
                         ) : (
