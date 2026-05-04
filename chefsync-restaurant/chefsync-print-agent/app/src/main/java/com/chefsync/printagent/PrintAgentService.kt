@@ -167,7 +167,7 @@ class PrintAgentService : Service() {
         return Notification.Builder(this, CHANNEL_ID)
             .setContentTitle("ChefSync Print Agent")
             .setContentText(text)
-            .setSmallIcon(android.R.drawable.ic_menu_print)
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentIntent(pendingIntent)
             .setOngoing(true)
             .build()
