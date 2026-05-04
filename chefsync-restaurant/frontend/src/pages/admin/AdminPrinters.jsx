@@ -403,22 +403,20 @@ export default function AdminPrinters({ embedded = false }) {
                             <button
                                 onClick={() => handleTemplateChange('classic')}
                                 disabled={savingTemplate}
-                                className={`px-6 py-3 rounded-2xl font-bold transition-all text-sm ${
-                                    printTemplate === 'classic'
+                                className={`px-6 py-3 rounded-2xl font-bold transition-all text-sm ${printTemplate === 'classic'
                                         ? 'bg-blue-600 text-white shadow-lg shadow-blue-200'
                                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                }`}
+                                    }`}
                             >
                                 קלאסי
                             </button>
                             <button
                                 onClick={() => handleTemplateChange('enhanced')}
                                 disabled={savingTemplate}
-                                className={`px-6 py-3 rounded-2xl font-bold transition-all text-sm ${
-                                    printTemplate === 'enhanced'
+                                className={`px-6 py-3 rounded-2xl font-bold transition-all text-sm ${printTemplate === 'enhanced'
                                         ? 'bg-blue-600 text-white shadow-lg shadow-blue-200'
                                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                }`}
+                                    }`}
                             >
                                 משופר ✨
                             </button>
