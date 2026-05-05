@@ -327,7 +327,7 @@ class PromotionService
             }
 
             // מחיר קבוע לחבילה: סכום יחידות לפי כללי הקטגוריות פחות (reward_value × פעמים שעומד)
-            $fixedPriceRewards = $promotion->rewards->filter(fn ($r) => $r->reward_type === 'fixed_price');
+            $fixedPriceRewards = $promotion->rewards->filter(fn($r) => $r->reward_type === 'fixed_price');
             if ($fixedPriceRewards->isNotEmpty() && $promotion->rules->isNotEmpty()) {
                 $targetTotal = 0.0;
                 foreach ($fixedPriceRewards as $fr) {
@@ -368,7 +368,7 @@ class PromotionService
         }
 
         return round(array_sum(array_map(
-            fn ($li) => $this->lineSubtotal($li),
+            fn($li) => $this->lineSubtotal($li),
             $lineItems
         )), 2);
     }
@@ -387,7 +387,7 @@ class PromotionService
      */
     private function itemsSubtotalForMenuItemIds(array $lineItems, array $menuItemIds): float
     {
-        $idSet = array_flip(array_map(static fn ($id) => (int) $id, $menuItemIds));
+        $idSet = array_flip(array_map(static fn($id) => (int) $id, $menuItemIds));
         $sum = 0.0;
         foreach ($lineItems as $li) {
             $mid = (int) ($li['menu_item_id'] ?? 0);
@@ -407,7 +407,7 @@ class PromotionService
      */
     private function fixedDiscountSelectedItems(array $lineItems, array $menuItemIds, float $perUnit, int $timesQualified): float
     {
-        $idSet = array_flip(array_map(static fn ($id) => (int) $id, $menuItemIds));
+        $idSet = array_flip(array_map(static fn($id) => (int) $id, $menuItemIds));
         $perApplication = 0.0;
         foreach ($lineItems as $li) {
             $mid = (int) ($li['menu_item_id'] ?? 0);

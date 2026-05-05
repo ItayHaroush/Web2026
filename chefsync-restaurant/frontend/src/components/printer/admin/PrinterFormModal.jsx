@@ -73,9 +73,8 @@ export default function PrinterFormModal({ form, setForm, editPrinter, categorie
                                         key={r.value}
                                         type="button"
                                         onClick={() => setForm({ ...form, role: r.value })}
-                                        className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl font-bold transition-all border-2 text-right ${
-                                            isSelected ? colors.selected : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'
-                                        }`}
+                                        className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl font-bold transition-all border-2 text-right ${isSelected ? colors.selected : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'
+                                            }`}
                                     >
                                         <Icon size={20} className={isSelected ? colors.icon : 'text-gray-400'} />
                                         <div className="flex-1">
@@ -97,7 +96,7 @@ export default function PrinterFormModal({ form, setForm, editPrinter, categorie
                                 className={`flex items-center justify-center gap-2 px-4 py-4 rounded-2xl font-black transition-all border-2 text-sm ${form.type === 'browser'
                                     ? 'bg-emerald-50 border-emerald-400 text-emerald-700'
                                     : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'
-                                }`}
+                                    }`}
                             >
                                 <FaDesktop size={14} /> דפדפן
                             </button>
@@ -107,7 +106,7 @@ export default function PrinterFormModal({ form, setForm, editPrinter, categorie
                                 className={`flex items-center justify-center gap-2 px-4 py-4 rounded-2xl font-black transition-all border-2 text-sm ${form.type === 'network'
                                     ? 'bg-blue-50 border-blue-400 text-blue-700'
                                     : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'
-                                }`}
+                                    }`}
                             >
                                 <FaWifi size={14} /> רשת
                             </button>
@@ -117,7 +116,7 @@ export default function PrinterFormModal({ form, setForm, editPrinter, categorie
                                 className={`flex items-center justify-center gap-2 px-4 py-4 rounded-2xl font-black transition-all border-2 text-sm ${form.type === 'usb'
                                     ? 'bg-purple-50 border-purple-400 text-purple-700'
                                     : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'
-                                }`}
+                                    }`}
                             >
                                 <FaUsb size={14} /> USB
                             </button>
@@ -168,7 +167,7 @@ export default function PrinterFormModal({ form, setForm, editPrinter, categorie
                                 className={`px-5 py-4 rounded-2xl font-black transition-all border-2 ${form.paper_width === '80mm'
                                     ? 'bg-emerald-50 border-emerald-400 text-emerald-700'
                                     : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'
-                                }`}
+                                    }`}
                             >
                                 80mm (סטנדרט)
                             </button>
@@ -178,7 +177,7 @@ export default function PrinterFormModal({ form, setForm, editPrinter, categorie
                                 className={`px-5 py-4 rounded-2xl font-black transition-all border-2 ${form.paper_width === '58mm'
                                     ? 'bg-emerald-50 border-emerald-400 text-emerald-700'
                                     : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'
-                                }`}
+                                    }`}
                             >
                                 58mm (קומפקט)
                             </button>
@@ -207,7 +206,7 @@ export default function PrinterFormModal({ form, setForm, editPrinter, categorie
                                                 className={`px-4 py-2.5 rounded-xl text-sm font-black transition-all border-2 ${isSelected
                                                     ? 'bg-amber-50 border-amber-400 text-amber-700'
                                                     : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'
-                                                }`}
+                                                    }`}
                                             >
                                                 {cat.icon || ''} {cat.name}
                                             </button>
@@ -241,7 +240,7 @@ export default function PrinterFormModal({ form, setForm, editPrinter, categorie
                                                 className={`px-4 py-2.5 rounded-xl text-sm font-black transition-all border-2 ${isSelected
                                                     ? 'bg-rose-50 border-rose-400 text-rose-700 line-through'
                                                     : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'
-                                                }`}
+                                                    }`}
                                                 title={isSelected ? 'מוסתר במדפסת זו' : 'מודפס במדפסת זו'}
                                             >
                                                 {isSelected ? '🚫 ' : ''}{group.name}

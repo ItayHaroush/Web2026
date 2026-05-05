@@ -816,11 +816,10 @@ export default function MenuPage({ isPreviewMode = false }) {
             {/* Hero Section - סגנון Wolt (מובייל: גובה דינמי — בלי חיתוך לוגו/תגית) */}
             <div className="relative -mx-4 sm:-mx-6 lg:-mx-8 -mt-8 mb-8">
                 <div
-                    className={`relative min-h-[13rem] h-auto sm:h-72 sm:min-h-0 overflow-hidden ${
-                        restaurant?.menu_hero_background_url
+                    className={`relative min-h-[13rem] h-auto sm:h-72 sm:min-h-0 overflow-hidden ${restaurant?.menu_hero_background_url
                             ? ''
                             : 'bg-gradient-to-br from-brand-dark via-brand-primary to-brand-secondary'
-                    }`}
+                        }`}
                 >
                     {restaurant?.menu_hero_background_url && (
                         <>
@@ -1106,82 +1105,82 @@ export default function MenuPage({ isPreviewMode = false }) {
                                         const itemAvailableNow = item.is_available_now !== false;
                                         const itemUnavailableReason = item.unavailable_reason || 'הפריט אינו זמין כרגע';
                                         return (
-                                        <div
-                                            key={item.id}
-                                            onClick={() => {
-                                                handleOpenItemModal(item);
-                                            }}
-                                            className={`bg-white dark:bg-brand-dark-surface rounded-xl sm:rounded-2xl shadow-sm transition-all duration-300 overflow-hidden group border border-gray-100 dark:border-brand-dark-border relative ${!itemAvailableNow ? 'cursor-not-allowed opacity-70' : (canOrder || canPreOrder) ? 'cursor-pointer hover:shadow-xl hover:border-brand-primary/30' : 'cursor-not-allowed opacity-80'}`}
-                                        >
-                                            {/* תמונה / לוגו placeholder — קומפקטי במובייל */}
-                                            <div className="relative h-32 sm:h-44 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-brand-dark-border/50 dark:to-brand-dark-bg overflow-hidden">
-                                                {item.image_url ? (
-                                                    <img
-                                                        src={resolveAssetUrl(item.image_url)}
-                                                        alt={item.name}
-                                                        className={`w-full h-full object-cover transition-transform duration-500 ${itemAvailableNow ? 'group-hover:scale-110' : 'grayscale'}`}
-                                                    />
-                                                ) : restaurant?.logo_url ? (
-                                                    <div className="absolute inset-0 flex items-center justify-center p-6">
+                                            <div
+                                                key={item.id}
+                                                onClick={() => {
+                                                    handleOpenItemModal(item);
+                                                }}
+                                                className={`bg-white dark:bg-brand-dark-surface rounded-xl sm:rounded-2xl shadow-sm transition-all duration-300 overflow-hidden group border border-gray-100 dark:border-brand-dark-border relative ${!itemAvailableNow ? 'cursor-not-allowed opacity-70' : (canOrder || canPreOrder) ? 'cursor-pointer hover:shadow-xl hover:border-brand-primary/30' : 'cursor-not-allowed opacity-80'}`}
+                                            >
+                                                {/* תמונה / לוגו placeholder — קומפקטי במובייל */}
+                                                <div className="relative h-32 sm:h-44 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-brand-dark-border/50 dark:to-brand-dark-bg overflow-hidden">
+                                                    {item.image_url ? (
                                                         <img
-                                                            src={resolveAssetUrl(restaurant.logo_url)}
-                                                            alt=""
-                                                            className="w-full h-full object-contain opacity-20"
+                                                            src={resolveAssetUrl(item.image_url)}
+                                                            alt={item.name}
+                                                            className={`w-full h-full object-cover transition-transform duration-500 ${itemAvailableNow ? 'group-hover:scale-110' : 'grayscale'}`}
                                                         />
-                                                    </div>
-                                                ) : null}
+                                                    ) : restaurant?.logo_url ? (
+                                                        <div className="absolute inset-0 flex items-center justify-center p-6">
+                                                            <img
+                                                                src={resolveAssetUrl(restaurant.logo_url)}
+                                                                alt=""
+                                                                className="w-full h-full object-contain opacity-20"
+                                                            />
+                                                        </div>
+                                                    ) : null}
 
-                                                {/* תווית "אינו זמין כרגע" */}
-                                                {!itemAvailableNow && (
-                                                    <div className="absolute inset-0 bg-slate-900/55 backdrop-blur-[1px] flex flex-col items-center justify-center text-white text-center px-3">
-                                                        <FaClock className="text-2xl mb-1.5 drop-shadow" />
-                                                        <p className="text-xs sm:text-sm font-black leading-tight drop-shadow">
+                                                    {/* תווית "אינו זמין כרגע" */}
+                                                    {!itemAvailableNow && (
+                                                        <div className="absolute inset-0 bg-slate-900/55 backdrop-blur-[1px] flex flex-col items-center justify-center text-white text-center px-3">
+                                                            <FaClock className="text-2xl mb-1.5 drop-shadow" />
+                                                            <p className="text-xs sm:text-sm font-black leading-tight drop-shadow">
+                                                                {itemUnavailableReason}
+                                                            </p>
+                                                        </div>
+                                                    )}
+
+                                                    {/* כפתור הוספה מהיר */}
+                                                    {itemAvailableNow && (
+                                                        <div className="absolute bottom-2 left-2 right-2 sm:bottom-3 sm:left-3 sm:right-3">
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleOpenItemModal(item);
+                                                                }}
+                                                                disabled={!canOrder && !canPreOrder}
+                                                                className={`w-full text-white py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-sm sm:text-base font-bold shadow-lg transform translate-y-2 opacity-0 transition-all duration-300 flex items-center justify-center gap-1.5 sm:gap-2 ${(canOrder || canPreOrder) ? 'bg-brand-primary hover:bg-brand-secondary group-hover:translate-y-0 group-hover:opacity-100' : 'bg-gray-400 cursor-not-allowed'}`}
+                                                            >
+                                                                <span>הוסף</span>
+                                                                <span className="bg-white/20 px-1.5 sm:px-2 py-0.5 rounded-lg text-xs sm:text-sm">₪{item.price}</span>
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {/* פרטי המנה */}
+                                                <div className="p-3 sm:p-4">
+                                                    <div className="flex justify-between items-start gap-2 mb-1 sm:mb-2">
+                                                        <h3 className={`text-sm sm:text-base font-bold transition-colors line-clamp-2 sm:line-clamp-1 ${itemAvailableNow ? 'text-brand-dark dark:text-brand-dark-text group-hover:text-brand-primary' : 'text-gray-500 dark:text-brand-dark-muted'}`}>
+                                                            {item.name}
+                                                        </h3>
+                                                        <span className={`font-bold whitespace-nowrap text-sm sm:text-base shrink-0 ${itemAvailableNow ? 'text-brand-primary' : 'text-gray-400 line-through'}`}>
+                                                            ₪{item.price}
+                                                        </span>
+                                                    </div>
+                                                    {item.description && (
+                                                        <p className="text-gray-500 dark:text-brand-dark-muted text-xs sm:text-sm line-clamp-2 leading-snug sm:leading-relaxed">
+                                                            {item.description}
+                                                        </p>
+                                                    )}
+                                                    {!itemAvailableNow && (
+                                                        <p className="mt-2 text-[11px] font-black text-rose-600 flex items-center gap-1">
+                                                            <FaClock size={10} />
                                                             {itemUnavailableReason}
                                                         </p>
-                                                    </div>
-                                                )}
-
-                                                {/* כפתור הוספה מהיר */}
-                                                {itemAvailableNow && (
-                                                    <div className="absolute bottom-2 left-2 right-2 sm:bottom-3 sm:left-3 sm:right-3">
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleOpenItemModal(item);
-                                                            }}
-                                                            disabled={!canOrder && !canPreOrder}
-                                                            className={`w-full text-white py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-sm sm:text-base font-bold shadow-lg transform translate-y-2 opacity-0 transition-all duration-300 flex items-center justify-center gap-1.5 sm:gap-2 ${(canOrder || canPreOrder) ? 'bg-brand-primary hover:bg-brand-secondary group-hover:translate-y-0 group-hover:opacity-100' : 'bg-gray-400 cursor-not-allowed'}`}
-                                                        >
-                                                            <span>הוסף</span>
-                                                            <span className="bg-white/20 px-1.5 sm:px-2 py-0.5 rounded-lg text-xs sm:text-sm">₪{item.price}</span>
-                                                        </button>
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            {/* פרטי המנה */}
-                                            <div className="p-3 sm:p-4">
-                                                <div className="flex justify-between items-start gap-2 mb-1 sm:mb-2">
-                                                    <h3 className={`text-sm sm:text-base font-bold transition-colors line-clamp-2 sm:line-clamp-1 ${itemAvailableNow ? 'text-brand-dark dark:text-brand-dark-text group-hover:text-brand-primary' : 'text-gray-500 dark:text-brand-dark-muted'}`}>
-                                                        {item.name}
-                                                    </h3>
-                                                    <span className={`font-bold whitespace-nowrap text-sm sm:text-base shrink-0 ${itemAvailableNow ? 'text-brand-primary' : 'text-gray-400 line-through'}`}>
-                                                        ₪{item.price}
-                                                    </span>
+                                                    )}
                                                 </div>
-                                                {item.description && (
-                                                    <p className="text-gray-500 dark:text-brand-dark-muted text-xs sm:text-sm line-clamp-2 leading-snug sm:leading-relaxed">
-                                                        {item.description}
-                                                    </p>
-                                                )}
-                                                {!itemAvailableNow && (
-                                                    <p className="mt-2 text-[11px] font-black text-rose-600 flex items-center gap-1">
-                                                        <FaClock size={10} />
-                                                        {itemUnavailableReason}
-                                                    </p>
-                                                )}
                                             </div>
-                                        </div>
                                         );
                                     })
                                 )}
@@ -1425,10 +1424,10 @@ export default function MenuPage({ isPreviewMode = false }) {
                                 </div>
                                 <div className="pl-6 flex flex-wrap gap-2">
                                     {(restaurant.available_payment_methods || ['cash']).includes('cash') && (
-                                    <span className="text-xs text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-800 px-2.5 py-1 rounded-md flex items-center gap-1.5">
-                                        <FaMoneyBillWave size={10} />
-                                        מזומן
-                                    </span>
+                                        <span className="text-xs text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-800 px-2.5 py-1 rounded-md flex items-center gap-1.5">
+                                            <FaMoneyBillWave size={10} />
+                                            מזומן
+                                        </span>
                                     )}
                                     {restaurant.available_payment_methods?.includes('credit_card') && (
                                         <span className="text-xs text-brand-muted dark:text-orange-200 bg-brand-light dark:bg-brand-primary/20 border border-brand-primary/20 dark:border-brand-primary/40 px-2.5 py-1 rounded-md flex items-center gap-1.5">
