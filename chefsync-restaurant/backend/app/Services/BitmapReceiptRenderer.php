@@ -90,10 +90,20 @@ class BitmapReceiptRenderer
         $align = 'center'; // ברירת מחדל: מרוכז (כמו Classic template)
 
         // מרקרים לפתיחה/סגירה
-        $openTags  = ['{{BIG}}' => 'big', '{{BOLD}}' => 'bold', '{{HEADING}}' => 'heading',
-            '{{CENTER}}' => 'center', '{{CENTER_HW}}' => 'center_hw'];
-        $closeTags = ['{{/BIG}}' => 'big', '{{/BOLD}}' => 'bold', '{{/HEADING}}' => 'heading',
-            '{{/CENTER}}' => 'center', '{{/CENTER_HW}}' => 'center_hw'];
+        $openTags  = [
+            '{{BIG}}' => 'big',
+            '{{BOLD}}' => 'bold',
+            '{{HEADING}}' => 'heading',
+            '{{CENTER}}' => 'center',
+            '{{CENTER_HW}}' => 'center_hw'
+        ];
+        $closeTags = [
+            '{{/BIG}}' => 'big',
+            '{{/BOLD}}' => 'bold',
+            '{{/HEADING}}' => 'heading',
+            '{{/CENTER}}' => 'center',
+            '{{/CENTER_HW}}' => 'center_hw'
+        ];
 
         foreach ($rawLines as $raw) {
             $line = trim($raw);
@@ -415,7 +425,7 @@ class BitmapReceiptRenderer
         $mirrors = ['(' => ')', ')' => '(', '[' => ']', ']' => '[', '{' => '}', '}' => '{'];
 
         return implode('', array_map(
-            fn (string $c) => $mirrors[$c] ?? $c,
+            fn(string $c) => $mirrors[$c] ?? $c,
             array_reverse($chars)
         ));
     }
@@ -428,8 +438,16 @@ class BitmapReceiptRenderer
         $bbox = @imagettfbbox($size, 0, $this->fontPath, $text);
         if ($bbox === false) {
             // fallback: הערכה גסה
-            return [0, 0, (int) ($size * mb_strlen($text, 'UTF-8') * 0.6), 0,
-                (int) ($size * mb_strlen($text, 'UTF-8') * 0.6), $size, 0, $size];
+            return [
+                0,
+                0,
+                (int) ($size * mb_strlen($text, 'UTF-8') * 0.6),
+                0,
+                (int) ($size * mb_strlen($text, 'UTF-8') * 0.6),
+                $size,
+                0,
+                $size
+            ];
         }
 
         return $bbox;
