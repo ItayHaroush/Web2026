@@ -75,6 +75,22 @@ class PrintService
 
             $payload = $this->buildKitchenTicket($order, $relevantItems, $printer);
 
+            $kitchenJobPayload = [
+                'text' => $payload,
+                'type' => 'kitchen_ticket',
+                'items_count' => $relevantItems->count(),
+            ];
+            $kitchenSendText = $payload;
+
+            if ($this->getTemplate($order) === 'bitmap') {
+                $bitmapBytes = $this->buildBitmapBytes($payload, $printer);
+                if ($bitmapBytes !== null) {
+                    $kitchenJobPayload['text'] = '';
+                    $kitchenJobPayload['escpos_binary_suffix'] = base64_encode($bitmapBytes);
+                    $kitchenSendText = '';
+                }
+            }
+
             $job = PrintJob::create([
                 'tenant_id' => $order->tenant_id,
                 'restaurant_id' => $order->restaurant_id,
@@ -82,14 +98,10 @@ class PrintService
                 'order_id' => $order->id,
                 'role' => 'kitchen',
                 'status' => 'pending',
-                'payload' => [
-                    'text' => $payload,
-                    'type' => 'kitchen_ticket',
-                    'items_count' => $relevantItems->count(),
-                ],
+                'payload' => $kitchenJobPayload,
             ]);
 
-            $this->executeJob($job, $printer, $payload);
+            $this->executeJob($job, $printer, $kitchenSendText);
             $jobCount++;
         }
 
@@ -154,7 +166,16 @@ class PrintService
                 'text' => $payload,
                 'type' => 'receipt',
             ];
-            if ($qrBinary !== '') {
+            $receiptSendText = $payload;
+
+            if ($this->getTemplate($order) === 'bitmap') {
+                $bitmapBytes = $this->buildBitmapBytes($payload, $printer);
+                if ($bitmapBytes !== null) {
+                    $jobPayload['text'] = '';
+                    $jobPayload['escpos_binary_suffix'] = base64_encode($bitmapBytes);
+                    $receiptSendText = '';
+                }
+            } elseif ($qrBinary !== '') {
                 $jobPayload['escpos_binary_suffix'] = $qrBinary;
                 $jobPayload['qr_url'] = $qrUrl;
             }
@@ -169,7 +190,7 @@ class PrintService
                 'payload' => $jobPayload,
             ]);
 
-            $this->executeJob($job, $printer, $payload);
+            $this->executeJob($job, $printer, $receiptSendText);
             $jobCount++;
         }
 
@@ -825,6 +846,30 @@ class PrintService
     private function getTemplate(Order $order): string
     {
         return $order->restaurant?->print_template ?? 'classic';
+    }
+
+    /**
+     * ממיר payload טקסטי לבתים ESC/POS raster bitmap.
+     * מחזיר null אם הרנדר נכשל (ניפול ל-classic בשכבה הקוראת).
+     */
+    private function buildBitmapBytes(string $textPayload, Printer $printer): ?string
+    {
+        try {
+            $widthPx = $this->getLineWidth($printer) > 40 ? 576 : 384; // 80mm or 58mm
+            $renderer = new BitmapReceiptRenderer($widthPx);
+
+            if (! $renderer->isAvailable()) {
+                Log::warning('PrintService: BitmapReceiptRenderer not available (GD/font missing) — falling back to text');
+
+                return null;
+            }
+
+            return $renderer->render($textPayload);
+        } catch (\Exception $e) {
+            Log::error('PrintService: Bitmap render failed', ['error' => $e->getMessage()]);
+
+            return null;
+        }
     }
 
     /**
@@ -1830,10 +1875,11 @@ class PrintService
             $suffixRaw = '';
             if (! empty($job->payload['escpos_binary_suffix']) && is_string($job->payload['escpos_binary_suffix'])) {
                 $decoded = base64_decode($job->payload['escpos_binary_suffix'], true);
-                if ($decoded !== false && strlen($decoded) <= 10000) { // ~10KB max
+                // Limit: 500KB — enough for 80mm bitmap raster (~33KB) and QR codes (~4KB)
+                if ($decoded !== false && strlen($decoded) <= 500000) {
                     $suffixRaw = $decoded;
                 } else {
-                    Log::warning('PrintService: Invalid or oversized base64 QR suffix', [
+                    Log::warning('PrintService: Invalid or oversized escpos_binary_suffix', [
                         'job_id' => $job->id,
                         'size' => is_string($decoded) ? strlen($decoded) : 'invalid',
                     ]);

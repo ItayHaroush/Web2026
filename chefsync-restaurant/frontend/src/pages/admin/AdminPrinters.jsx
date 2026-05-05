@@ -421,12 +421,24 @@ export default function AdminPrinters({ embedded = false }) {
                             >
                                 משופר ✨
                             </button>
+                            <button
+                                onClick={() => handleTemplateChange('bitmap')}
+                                disabled={savingTemplate}
+                                className={`px-6 py-3 rounded-2xl font-bold transition-all text-sm ${printTemplate === 'bitmap'
+                                    ? 'bg-purple-600 text-white shadow-lg shadow-purple-200'
+                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                    }`}
+                            >
+                                תמונה 🖼️
+                            </button>
                         </div>
                     </div>
                     <div className="mt-3 text-xs text-gray-400">
                         {printTemplate === 'classic'
                             ? 'תבנית קלאסית — כל הפריטים בגודל גדול, ריווח ידני'
-                            : 'תבנית משופרת — מרכוז חומרתי, כותרות גדולות, פריטים Bold, תוספות בגודל רגיל'}
+                            : printTemplate === 'enhanced'
+                            ? 'תבנית משופרת — מרכוז חומרתי, כותרות גדולות, פריטים Bold, תוספות בגודל רגיל'
+                            : 'תבנית תמונה — הבון מרונדר כtמונה ומודפס כ-bitmap, ללא תלות בקידוד טקסט'}
                     </div>
                 </div>
             )}

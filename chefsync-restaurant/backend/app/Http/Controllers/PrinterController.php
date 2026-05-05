@@ -366,7 +366,7 @@ class PrinterController extends Controller
         }
 
         $request->validate([
-            'print_template' => 'required|string|in:classic,enhanced',
+            'print_template' => 'required|string|in:classic,enhanced,bitmap',
         ]);
 
         $restaurant = Restaurant::withoutGlobalScopes()->find($user->restaurant_id);
