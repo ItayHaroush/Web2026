@@ -18,6 +18,7 @@ import {
     togglePrinter,
     testPrint,
     updatePrintTemplate,
+    getAvailableAddonGroups,
 } from '../../services/printerService';
 import {
     getPrintDevices,
@@ -73,6 +74,7 @@ const DEFAULT_FORM = {
     port: 9100,
     paper_width: '80mm',
     category_ids: [],
+    addon_group_ids: [],
 };
 
 const DEVICE_FORM = { name: '', role: 'kitchen', printer_ip: '', printer_port: 9100, codepage_id: 10 };
@@ -86,6 +88,7 @@ export default function AdminPrinters({ embedded = false }) {
 
     const [printers, setPrinters] = useState([]);
     const [categories, setCategories] = useState([]);
+    const [addonGroups, setAddonGroups] = useState([]);
     const [devices, setDevices] = useState([]);
     const [limits, setLimits] = useState({});
     const [loading, setLoading] = useState(true);
@@ -104,10 +107,11 @@ export default function AdminPrinters({ embedded = false }) {
 
     const fetchData = async () => {
         try {
-            const [printersRes, categoriesRes, devicesRes] = await Promise.all([
+            const [printersRes, categoriesRes, devicesRes, addonGroupsRes] = await Promise.all([
                 getPrinters(),
                 api.get('/admin/categories', { headers: getAuthHeaders() }),
                 getPrintDevices(),
+                getAvailableAddonGroups().catch(() => ({ success: false })),
             ]);
             if (printersRes.success) {
                 setPrinters(printersRes.printers || []);
@@ -116,6 +120,7 @@ export default function AdminPrinters({ embedded = false }) {
             }
             if (categoriesRes.data?.success) setCategories(categoriesRes.data.categories || []);
             if (devicesRes.success) setDevices(devicesRes.devices || []);
+            if (addonGroupsRes?.success) setAddonGroups(addonGroupsRes.addon_groups || []);
         } catch (error) {
             console.error('Failed to fetch data:', error);
         } finally {
@@ -203,6 +208,7 @@ export default function AdminPrinters({ embedded = false }) {
             port: printer.port || 9100,
             paper_width: printer.paper_width || '80mm',
             category_ids: (printer.categories || []).map(c => c.id),
+            addon_group_ids: (printer.addon_groups || []).map(g => g.id),
         });
         setShowModal(true);
     };
@@ -590,6 +596,7 @@ export default function AdminPrinters({ embedded = false }) {
                     setForm={setForm}
                     editPrinter={editPrinter}
                     categories={categories}
+                    addonGroups={addonGroups}
                     onSubmit={handleSubmit}
                     onClose={closeModal}
                 />

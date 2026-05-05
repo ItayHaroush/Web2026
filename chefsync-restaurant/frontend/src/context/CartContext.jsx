@@ -25,7 +25,18 @@ const createEmptyCustomerInfo = () => ({
 
 export function CartProvider({ children }) {
     const { addToast } = useToast();
-    const [currentTenantId, setCurrentTenantId] = useState(null);
+    // אתחול מ-localStorage כדי שהסל הטעון יישאר משויך לטננט הנכון
+    const [currentTenantId, setCurrentTenantId] = useState(() => {
+        const tenantId = localStorage.getItem('tenantId');
+        if (!tenantId) return null;
+        const savedCart = localStorage.getItem(`cart_${tenantId}`);
+        const savedTimestamp = localStorage.getItem(`cart_timestamp_${tenantId}`);
+        if (savedCart && savedTimestamp) {
+            const hoursSinceLastUpdate = (Date.now() - parseInt(savedTimestamp, 10)) / (1000 * 60 * 60);
+            if (hoursSinceLastUpdate < CART_EXPIRY_HOURS) return tenantId;
+        }
+        return tenantId;
+    });
     const [phoneVerified, setPhoneVerified] = useState(false);
     const [scheduledFor, setScheduledForRaw] = useState('');
     const scheduledAtRef = useRef(null);
@@ -240,6 +251,26 @@ export function CartProvider({ children }) {
         }
     }, [commitCartItems, currentTenantId]);
 
+    // האזנה לאירוע החלפת מסעדה (מטריק מסעדה אחרת באותה tab) —
+    // useEffect הקודם לא יירה כשמדובר רק על localStorage באותו tab
+    useEffect(() => {
+        const handleTenantChanged = (e) => {
+            const newTenant = e?.detail || localStorage.getItem('tenantId');
+            if (!newTenant || newTenant === currentTenantId) return;
+            if (currentTenantId !== null) {
+                console.log('[CartContext] tenant_changed event → clearing cart from', currentTenantId, 'to', newTenant);
+                commitCartItems([]);
+                setCustomerInfo(createEmptyCustomerInfo());
+                localStorage.removeItem(`cart_${currentTenantId}`);
+                localStorage.removeItem(`cart_timestamp_${currentTenantId}`);
+                localStorage.removeItem(`customer_info_${currentTenantId}`);
+            }
+            setCurrentTenantId(newTenant);
+        };
+        window.addEventListener('tenant_changed', handleTenantChanged);
+        return () => window.removeEventListener('tenant_changed', handleTenantChanged);
+    }, [commitCartItems, currentTenantId]);
+
     // Internal function to actually add the item to state
     const processAddItem = useCallback((normalizedItem) => {
         commitCartItems((prevItems) => {
@@ -280,9 +311,11 @@ export function CartProvider({ children }) {
         const newItemRestaurant = normalizedItem.restaurantId || currentTenant;
 
         // בדוק אם יש פריטים בסל ואם כן, קבל את ה-restaurant ID של הפריט הראשון
+        // ⚠️ חשוב: fallback ל-currentTenantId (React state — tenant של הסל הקיים)
+        // ולא ל-currentTenant (localStorage — שכבר עודכן למסעדה החדשה בעת הניווט!)
         let firstItemRestaurant = null;
         if (cartItems.length > 0) {
-            firstItemRestaurant = cartItems[0].restaurantId || currentTenant;
+            firstItemRestaurant = cartItems[0].restaurantId || currentTenantId || currentTenant;
         }
 
         console.log('🛒 Cart Check:', {
@@ -311,7 +344,7 @@ export function CartProvider({ children }) {
         }
 
         processAddItem(normalizedItem);
-    }, [commitCartItems, addToast, cartItems, processAddItem]);
+    }, [commitCartItems, addToast, cartItems, processAddItem, currentTenantId]);
 
     const handleConfirmClearCart = () => {
         // נקה סל ועבור למסעדה החדשה
@@ -434,6 +467,7 @@ export function CartProvider({ children }) {
         setPhoneVerified,
         scheduledFor,
         setScheduledFor,
+        currentTenantId,
     };
 
     return (

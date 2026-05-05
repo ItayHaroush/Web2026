@@ -52,9 +52,10 @@ function computeFixedPriceBundleDiscount(cartItems, promo) {
             const avail = remain[idx];
             if (!avail) continue;
             const take = Math.min(needLeft, avail);
-            const lineTotal = Number(item.totalPrice) || 0;
-            const q = item.qty || 1;
-            allocated += (lineTotal / q) * take;
+            // מחיר קבוע מחליף רק את מחיר הבסיס (+ וריאציה); תוספות בתשלום מתווספות על גביו
+            const variantDelta = Number(item.variant?.price_delta ?? 0);
+            const baseUnitPrice = Math.max(0, Number(item.basePrice ?? 0) + variantDelta);
+            allocated += baseUnitPrice * take;
             remain[idx] -= take;
             needLeft -= take;
         }

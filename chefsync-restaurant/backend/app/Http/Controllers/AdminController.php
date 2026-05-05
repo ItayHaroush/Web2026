@@ -613,6 +613,9 @@ class AdminController extends Controller
             'max_addons' => $maxAddons,
             'dine_in_adjustment' => $request->input('dine_in_adjustment'),
             'addon_selection_weight' => $request->filled('addon_selection_weight') ? max(1, min(10, (int) $request->addon_selection_weight)) : null,
+            'availability_start_time' => $request->filled('availability_start_time') ? $request->input('availability_start_time') : null,
+            'availability_end_time' => $request->filled('availability_end_time') ? $request->input('availability_end_time') : null,
+            'availability_days' => $this->parseAvailabilityDays($request->input('availability_days')),
         ]);
 
         return response()->json([
@@ -641,6 +644,9 @@ class AdminController extends Controller
             'max_addons' => 'nullable|integer|min:1|max:99',
             'dine_in_adjustment' => 'nullable|numeric',
             'addon_selection_weight' => 'nullable|integer|min:1|max:10',
+            'availability_start_time' => 'nullable|date_format:H:i',
+            'availability_end_time' => 'nullable|date_format:H:i',
+            'availability_days' => 'nullable|string',
         ]);
 
         if ($request->hasFile('image')) {
@@ -686,6 +692,18 @@ class AdminController extends Controller
         if ($request->has('addon_selection_weight')) {
             $v = $request->input('addon_selection_weight');
             $payload['addon_selection_weight'] = ($v === '' || $v === null) ? null : max(1, min(10, (int) $v));
+        }
+
+        if ($request->has('availability_start_time')) {
+            $v = $request->input('availability_start_time');
+            $payload['availability_start_time'] = ($v === '' || $v === null) ? null : $v;
+        }
+        if ($request->has('availability_end_time')) {
+            $v = $request->input('availability_end_time');
+            $payload['availability_end_time'] = ($v === '' || $v === null) ? null : $v;
+        }
+        if ($request->has('availability_days')) {
+            $payload['availability_days'] = $this->parseAvailabilityDays($request->input('availability_days'));
         }
 
         $item->update($payload);
@@ -3286,6 +3304,36 @@ class AdminController extends Controller
                 'card_last4' => $restaurant->hyp_card_last4,
             ],
         ]);
+    }
+
+    /**
+     * המרת קלט availability_days (JSON string / array) למערך של מספרי ימים 0-6, או null
+     */
+    private function parseAvailabilityDays($raw): ?array
+    {
+        if ($raw === null || $raw === '') {
+            return null;
+        }
+        $arr = is_array($raw) ? $raw : json_decode((string) $raw, true);
+        if (!is_array($arr)) {
+            return null;
+        }
+        $days = [];
+        foreach ($arr as $d) {
+            if (is_numeric($d)) {
+                $i = (int) $d;
+                if ($i >= 0 && $i <= 6) {
+                    $days[] = $i;
+                }
+            }
+        }
+        $days = array_values(array_unique($days));
+        // אם נבחרו כל 7 הימים -> כלל לא נשמור הגבלה
+        if (count($days) === 0 || count($days) === 7) {
+            return null;
+        }
+        sort($days);
+        return $days;
     }
 
     // =============================================

@@ -30,6 +30,9 @@ class MenuItem extends Model
         'max_addons',
         'dine_in_adjustment',
         'addon_selection_weight',  // משקל בחירה כשהפריט מוצג כתוספת מקושרת לקטגוריה (null=ברירת מחדל קבוצה)
+        'availability_start_time', // שעת התחלת זמינות יומית (null = כל היום)
+        'availability_end_time',   // שעת סיום זמינות יומית
+        'availability_days',       // ימי זמינות בשבוע [0-6] (null = כל הימים)
     ];
 
     protected $casts = [
@@ -42,6 +45,7 @@ class MenuItem extends Model
         'allergen_tags' => 'array',  // JSON array של אלרגנים
         'dine_in_adjustment' => 'decimal:2',
         'addon_selection_weight' => 'integer',
+        'availability_days' => 'array',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
@@ -95,6 +99,66 @@ class MenuItem extends Model
             return (float) $this->dine_in_adjustment;
         }
         return (float) ($this->category?->dine_in_adjustment ?? 0);
+    }
+
+    /**
+     * האם יש לפריט חלון זמינות מוגדר (שעות/ימים)
+     */
+    public function hasAvailabilityWindow(): bool
+    {
+        return !empty($this->availability_start_time)
+            || !empty($this->availability_end_time)
+            || (is_array($this->availability_days) && count($this->availability_days) > 0);
+    }
+
+    /**
+     * בדיקה האם הפריט זמין כעת לפי שעות וימים שהוגדרו.
+     * מחזיר ['available' => bool, 'reason' => string|null]
+     */
+    public function checkCurrentAvailability(?\DateTimeInterface $now = null): array
+    {
+        $now = $now ?: now();
+
+        // בדיקת ימים
+        $days = $this->availability_days;
+        if (is_array($days) && count($days) > 0) {
+            $today = (int) $now->format('w'); // 0=Sunday
+            if (!in_array($today, array_map('intval', $days), true)) {
+                return [
+                    'available' => false,
+                    'reason' => 'הפריט אינו זמין היום',
+                ];
+            }
+        }
+
+        $start = $this->availability_start_time;
+        $end = $this->availability_end_time;
+        if (!$start && !$end) {
+            return ['available' => true, 'reason' => null];
+        }
+
+        $current = $now->format('H:i:s');
+        $startStr = $start ? substr((string) $start, 0, 8) : '00:00:00';
+        $endStr = $end ? substr((string) $end, 0, 8) : '23:59:59';
+
+        // טווח רגיל באותו יום
+        if ($startStr <= $endStr) {
+            $inRange = $current >= $startStr && $current <= $endStr;
+        } else {
+            // טווח שעובר חצות (למשל 22:00 - 02:00)
+            $inRange = $current >= $startStr || $current <= $endStr;
+        }
+
+        if ($inRange) {
+            return ['available' => true, 'reason' => null];
+        }
+
+        $startDisp = substr($startStr, 0, 5);
+        $endDisp = substr($endStr, 0, 5);
+        return [
+            'available' => false,
+            'reason' => "הפריט זמין בין {$startDisp} ל-{$endDisp}",
+        ];
     }
 
     protected static function booted()

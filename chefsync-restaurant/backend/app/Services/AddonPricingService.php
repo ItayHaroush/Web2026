@@ -13,21 +13,29 @@ final class AddonPricingService
     public static function sumBilledFromOrderedLines(array $orderedLines): float
     {
         $total = 0.0;
-        $freeApplied = false;
+        $freeCredit = 0.0;
+        $freeInitialized = false;
 
         foreach ($orderedLines as $line) {
             $delta = round((float) ($line['unit_delta'] ?? $line['price'] ?? 0), 2);
-            $qty = (int) ($line['quantity'] ?? $line['qty'] ?? 1);
-            $qty = max(1, $qty);
+            $qty = max(1, (int) ($line['quantity'] ?? $line['qty'] ?? 1));
+            $isHalf = (bool) ($line['is_half'] ?? false);
 
-            $subtotal = round($delta * $qty, 2);
-
-            if (! $freeApplied && $delta > 0.0) {
-                $subtotal = round(max(0.0, $subtotal - $delta), 2);
-                $freeApplied = true;
+            // אתחול קרדיט חופשי: תוספת מלאה אחת — עבור חצי פיצה הקרדיט הוא 2× המחיר (= מנה שלמה)
+            if (! $freeInitialized && $delta > 0.0) {
+                $freeCredit = $isHalf ? round($delta * 2, 2) : $delta;
+                $freeInitialized = true;
             }
 
-            $total = round($total + $subtotal, 2);
+            $lineTotal = round($delta * $qty, 2);
+
+            if ($freeCredit > 0.0 && $delta > 0.0) {
+                $discount = min($freeCredit, $lineTotal);
+                $lineTotal = round(max(0.0, $lineTotal - $discount), 2);
+                $freeCredit = round(max(0.0, $freeCredit - $discount), 2);
+            }
+
+            $total = round($total + $lineTotal, 2);
         }
 
         return $total;
@@ -83,11 +91,13 @@ final class AddonPricingService
             $buckets[$gid]['apply_first_free'] = $buckets[$gid]['apply_first_free']
                 || (bool) ($a['first_addon_unit_free'] ?? false);
 
+            $halfPlacements = ['right', 'left', 'right_half', 'left_half'];
             $buckets[$gid]['lines'][] = [
                 'unit_delta' => self::effectivePosAddonPrice(
                     (float) ($a['price'] ?? 0),
                     $a['placement'] ?? null
                 ),
+                'is_half' => isset($a['placement']) && in_array($a['placement'], $halfPlacements, true),
                 'quantity' => max(1, (int) ($a['quantity'] ?? $a['qty'] ?? 1)),
             ];
         }

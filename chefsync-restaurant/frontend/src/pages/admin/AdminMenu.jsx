@@ -70,6 +70,9 @@ export default function AdminMenu({ embedded = false }) {
         addons_group_scope: [],
         dine_in_adjustment: '',
         addon_selection_weight: '',  // ריק=ברירת מחדל קבוצה. 2=פריט אחד נספר כשתי בחירות (כשמוצג כתוספת מקושרת לקטגוריה)
+        availability_start_time: '',
+        availability_end_time: '',
+        availability_days: [], // [] = כל הימים
     });
 
     useEffect(() => {
@@ -229,6 +232,16 @@ export default function AdminMenu({ embedded = false }) {
             formData.append('addon_selection_weight', form.addon_selection_weight);
         }
 
+        // חלון זמינות
+        formData.append('availability_start_time', form.availability_start_time || '');
+        formData.append('availability_end_time', form.availability_end_time || '');
+        formData.append(
+            'availability_days',
+            Array.isArray(form.availability_days) && form.availability_days.length > 0
+                ? JSON.stringify(form.availability_days.map(Number))
+                : ''
+        );
+
         console.log('📤 Submitting menu item:', {
             name: form.name,
             price: form.price,
@@ -360,6 +373,13 @@ export default function AdminMenu({ embedded = false }) {
             addons_group_scope: groupScope,
             dine_in_adjustment: item.dine_in_adjustment ?? '',
             addon_selection_weight: item.addon_selection_weight != null ? String(item.addon_selection_weight) : '',
+            availability_start_time: item.availability_start_time ? String(item.availability_start_time).slice(0, 5) : '',
+            availability_end_time: item.availability_end_time ? String(item.availability_end_time).slice(0, 5) : '',
+            availability_days: Array.isArray(item.availability_days)
+                ? item.availability_days.map(Number)
+                : (typeof item.availability_days === 'string' && item.availability_days
+                    ? (() => { try { return JSON.parse(item.availability_days).map(Number); } catch { return []; } })()
+                    : []),
         });
         setMenuWizardStep(1);
         setShowModal(true);
@@ -388,6 +408,9 @@ export default function AdminMenu({ embedded = false }) {
             addons_group_scope: [],
             dine_in_adjustment: '',
             addon_selection_weight: '',
+            availability_start_time: '',
+            availability_end_time: '',
+            availability_days: [],
         });
         setMenuWizardStep(1);
         setShowModal(true);
@@ -418,6 +441,9 @@ export default function AdminMenu({ embedded = false }) {
             addons_group_scope: [],
             dine_in_adjustment: '',
             addon_selection_weight: '',
+            availability_start_time: '',
+            availability_end_time: '',
+            availability_days: [],
         });
     };
 
@@ -1246,6 +1272,100 @@ export default function AdminMenu({ embedded = false }) {
                                                 </div>
                                                 <p className="text-[9px] text-gray-400 mt-1">ריק = שימוש בברירת מחדל מהקבוצה המקושרת</p>
                                             </div>
+                                        </div>
+                                    </div>
+
+                                    {/* חלון זמינות לפי שעה ויום */}
+                                    <div className="pt-4 border-t border-gray-100">
+                                        <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2 mb-3">
+                                            <span className="w-1 h-1 bg-brand-primary rounded-full" />
+                                            זמינות הפריט
+                                        </h3>
+                                        <div className="bg-emerald-50 rounded-2xl p-4 border border-emerald-100 space-y-4">
+                                            <p className="text-[11px] text-emerald-800 font-bold leading-relaxed">
+                                                הגדר באילו שעות וימים הפריט זמין להזמנה. השאר ריק כדי שהפריט יהיה זמין כל היום, בכל הימים.
+                                            </p>
+                                            <div className="grid grid-cols-2 gap-3" dir="rtl">
+                                                <div>
+                                                    <label className="text-[10px] font-black text-emerald-700 uppercase tracking-wide block mb-1">משעה</label>
+                                                    <input
+                                                        type="time"
+                                                        dir="ltr"
+                                                        value={form.availability_start_time || ''}
+                                                        onChange={(e) => setForm({ ...form, availability_start_time: e.target.value })}
+                                                        className="w-full px-3 py-2 rounded-lg text-center font-black text-xs bg-white border border-emerald-200 focus:ring-2 focus:ring-emerald-300/50"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="text-[10px] font-black text-emerald-700 uppercase tracking-wide block mb-1">עד שעה</label>
+                                                    <input
+                                                        type="time"
+                                                        dir="ltr"
+                                                        value={form.availability_end_time || ''}
+                                                        onChange={(e) => setForm({ ...form, availability_end_time: e.target.value })}
+                                                        className="w-full px-3 py-2 rounded-lg text-center font-black text-xs bg-white border border-emerald-200 focus:ring-2 focus:ring-emerald-300/50"
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label className="text-[10px] font-black text-emerald-700 uppercase tracking-wide block mb-2">ימים זמינים (השאר ריק = כל הימים)</label>
+                                                <div className="flex flex-wrap gap-1.5">
+                                                    {[
+                                                        { v: 0, label: 'א׳' },
+                                                        { v: 1, label: 'ב׳' },
+                                                        { v: 2, label: 'ג׳' },
+                                                        { v: 3, label: 'ד׳' },
+                                                        { v: 4, label: 'ה׳' },
+                                                        { v: 5, label: 'ו׳' },
+                                                        { v: 6, label: 'ש׳' },
+                                                    ].map((d) => {
+                                                        const selected = (form.availability_days || []).includes(d.v);
+                                                        return (
+                                                            <button
+                                                                key={d.v}
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    const cur = form.availability_days || [];
+                                                                    setForm({
+                                                                        ...form,
+                                                                        availability_days: selected
+                                                                            ? cur.filter((x) => x !== d.v)
+                                                                            : [...cur, d.v],
+                                                                    });
+                                                                }}
+                                                                className={`w-9 h-9 rounded-xl text-xs font-black border transition-all ${selected
+                                                                    ? 'bg-emerald-500 text-white border-emerald-500 shadow-sm'
+                                                                    : 'bg-white text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                                                                    }`}
+                                                            >
+                                                                {d.label}
+                                                            </button>
+                                                        );
+                                                    })}
+                                                    {(form.availability_days || []).length > 0 && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setForm({ ...form, availability_days: [] })}
+                                                            className="px-3 h-9 rounded-xl text-[10px] font-black bg-white text-gray-500 border border-gray-200 hover:bg-gray-50"
+                                                        >
+                                                            נקה
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            {(form.availability_start_time || form.availability_end_time) && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setForm({
+                                                        ...form,
+                                                        availability_start_time: '',
+                                                        availability_end_time: '',
+                                                    })}
+                                                    className="text-[10px] font-bold text-emerald-700 underline"
+                                                >
+                                                    איפוס שעות
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                 </div>

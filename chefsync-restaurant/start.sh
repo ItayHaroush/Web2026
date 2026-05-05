@@ -1,7 +1,7 @@
 #!/bin/bash
 # Quick Start Script for TakeEat
 
-set -e
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 echo "🚀 TakeEat - Quick Start"
 echo "========================"
@@ -9,29 +9,35 @@ echo "========================"
 # Frontend Setup
 echo ""
 echo "📦 Setting up Frontend..."
-cd frontend
+cd "$SCRIPT_DIR/frontend"
 npm install
 echo "✅ Frontend ready"
 
-# Backend reminder
+# Backend Setup
 echo ""
-echo "🔧 Backend Setup (Manual)"
-echo "========================"
+echo "🔧 Setting up Backend..."
+cd "$SCRIPT_DIR/backend"
+composer install --no-interaction
+if [ ! -f .env ]; then
+    cp .env.example .env
+    php artisan key:generate
+fi
+echo "✅ Backend ready"
+
+# Start Backend in background
 echo ""
-echo "Run the following in another terminal:"
-echo ""
-echo "  cd backend"
-echo "  composer install"
-echo "  cp .env.example .env"
-echo "  php artisan key:generate"
-echo "  php artisan migrate"
-echo "  php artisan db:seed --class=RestaurantSeeder"
-echo "  php artisan serve"
-echo ""
+echo "🖥️  Starting Backend on http://localhost:8000 ..."
+php artisan serve --host=127.0.0.1 --port=8000 &
+BACKEND_PID=$!
+echo "   Backend PID: $BACKEND_PID"
 
 # Start Frontend
 echo ""
-echo "🌐 Starting Frontend..."
-echo "🎯 Open: http://localhost:5173"
+echo "🌐 Starting Frontend on http://localhost:5173 ..."
 echo ""
+cd "$SCRIPT_DIR/frontend"
+
+# Kill backend when frontend exits
+trap "echo ''; echo '🛑 Stopping backend...'; kill $BACKEND_PID 2>/dev/null" EXIT
+
 npm run dev

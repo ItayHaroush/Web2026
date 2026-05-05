@@ -51,3 +51,9 @@ export const updatePrintTemplate = async (template) => {
     const response = await apiClient.patch('/admin/printers/template', { print_template: template });
     return response.data;
 };
+
+// רשימת קבוצות תוספות "כלליות" (לא מקושרות לקטגוריה) — לבחירת סינון במדפסת
+export const getAvailableAddonGroups = async () => {
+    const response = await apiClient.get('/admin/printers/available-addon-groups');
+    return response.data;
+};

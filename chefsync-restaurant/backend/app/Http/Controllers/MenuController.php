@@ -192,6 +192,8 @@ class MenuController extends Controller
                                     ];
                                 })->values()->toArray();
 
+                            $availabilityCheck = $item->checkCurrentAvailability();
+
                             return [
                                 'id' => $item->id,
                                 'name' => $item->name,
@@ -200,6 +202,14 @@ class MenuController extends Controller
                                 'image_url' => $item->image_url,
                                 'variants' => $variants,
                                 'addon_groups' => $addonGroups,
+                                'availability_start_time' => $item->availability_start_time
+                                    ? substr((string) $item->availability_start_time, 0, 5) : null,
+                                'availability_end_time' => $item->availability_end_time
+                                    ? substr((string) $item->availability_end_time, 0, 5) : null,
+                                'availability_days' => is_array($item->availability_days)
+                                    ? array_map('intval', $item->availability_days) : null,
+                                'is_available_now' => $availabilityCheck['available'],
+                                'unavailable_reason' => $availabilityCheck['reason'],
                             ];
                         })->values()->toArray(),
                     ];

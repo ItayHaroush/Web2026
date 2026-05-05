@@ -47,6 +47,14 @@ class Printer extends Model
         return $this->belongsToMany(Category::class, 'printer_category');
     }
 
+    /**
+     * קבוצות תוספות שיוסתרו מהדפסה במדפסת זו (רק קבוצות "כלליות" שלא מקושרות לקטגוריה).
+     */
+    public function addonGroups(): BelongsToMany
+    {
+        return $this->belongsToMany(RestaurantAddonGroup::class, 'printer_addon_group', 'printer_id', 'addon_group_id');
+    }
+
     public function printJobs(): HasMany
     {
         return $this->hasMany(PrintJob::class);

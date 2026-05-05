@@ -21,7 +21,7 @@ class PrinterController extends Controller
         $tier = $restaurant->tier ?? 'basic';
 
         $printers = Printer::where('restaurant_id', $user->restaurant_id)
-            ->with('categories:id,name,icon')
+            ->with(['categories:id,name,icon', 'addonGroups:id,name'])
             ->orderBy('created_at', 'desc')
             ->get();
 
@@ -61,6 +61,8 @@ class PrinterController extends Controller
             'paper_width' => 'required|in:80mm,58mm',
             'category_ids' => 'nullable|array',
             'category_ids.*' => 'integer|exists:categories,id',
+            'addon_group_ids' => 'nullable|array',
+            'addon_group_ids.*' => 'integer|exists:restaurant_addon_groups,id',
         ]);
 
         $restaurant = $user->restaurant;
@@ -99,10 +101,14 @@ class PrinterController extends Controller
             $printer->categories()->sync($request->input('category_ids', []));
         }
 
+        if ($request->has('addon_group_ids')) {
+            $this->syncAddonGroupsForPrinter($printer, $request->input('addon_group_ids', []));
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'המדפסת נוספה בהצלחה!',
-            'printer' => $printer->load('categories:id,name,icon'),
+            'printer' => $printer->load(['categories:id,name,icon', 'addonGroups:id,name']),
         ], 201);
     }
 
@@ -129,6 +135,8 @@ class PrinterController extends Controller
             'paper_width' => 'sometimes|in:80mm,58mm',
             'category_ids' => 'nullable|array',
             'category_ids.*' => 'integer|exists:categories,id',
+            'addon_group_ids' => 'nullable|array',
+            'addon_group_ids.*' => 'integer|exists:restaurant_addon_groups,id',
         ]);
 
         $restaurant = $user->restaurant;
@@ -148,10 +156,14 @@ class PrinterController extends Controller
             $printer->categories()->sync($request->input('category_ids', []));
         }
 
+        if ($request->has('addon_group_ids')) {
+            $this->syncAddonGroupsForPrinter($printer, $request->input('addon_group_ids', []));
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'המדפסת עודכנה בהצלחה!',
-            'printer' => $printer->load('categories:id,name,icon'),
+            'printer' => $printer->load(['categories:id,name,icon', 'addonGroups:id,name']),
         ]);
     }
 
@@ -179,6 +191,7 @@ class PrinterController extends Controller
 
         $printer = Printer::where('restaurant_id', $restaurant->id)->findOrFail($id);
         $printer->categories()->detach();
+        $printer->addonGroups()->detach();
         $printer->delete();
 
         return response()->json([
@@ -384,5 +397,58 @@ class PrinterController extends Controller
             'print_template' => $restaurant->print_template,
             'message' => 'תצורת הדפסה עודכנה בהצלחה!',
         ]);
+    }
+
+    /**
+     * רשימת קבוצות תוספות "כלליות" (לא מקושרות לקטגוריה) — לבחירה ב-UI של הגדרות מדפסת.
+     * GET /api/admin/printers/available-addon-groups
+     */
+    public function availableAddonGroups(Request $request)
+    {
+        $user = $request->user();
+        $restaurant = $user->restaurant;
+
+        if (! $restaurant) {
+            return response()->json([
+                'success' => false,
+                'message' => 'לא נמצאה מסעדה למשתמש',
+            ], 404);
+        }
+
+        $groups = \App\Models\RestaurantAddonGroup::where('restaurant_id', $restaurant->id)
+            ->where(function ($q) {
+                $q->where('source_type', 'manual')->orWhereNull('source_type');
+            })
+            ->orderBy('name')
+            ->get(['id', 'name', 'source_type']);
+
+        return response()->json([
+            'success' => true,
+            'addon_groups' => $groups,
+        ]);
+    }
+
+    /**
+     * סנכרון קבוצות-תוספות שיוסתרו במדפסת — מסנן רק קבוצות שאינן מקושרות לקטגוריה
+     * וששייכות למסעדה הנוכחית (אבטחה מפני tampering).
+     */
+    private function syncAddonGroupsForPrinter(Printer $printer, array $ids): void
+    {
+        $ids = array_values(array_unique(array_map('intval', $ids)));
+        if (empty($ids)) {
+            $printer->addonGroups()->sync([]);
+
+            return;
+        }
+
+        $allowedIds = \App\Models\RestaurantAddonGroup::where('restaurant_id', $printer->restaurant_id)
+            ->where(function ($q) {
+                $q->where('source_type', 'manual')->orWhereNull('source_type');
+            })
+            ->whereIn('id', $ids)
+            ->pluck('id')
+            ->all();
+
+        $printer->addonGroups()->sync($allowedIds);
     }
 }

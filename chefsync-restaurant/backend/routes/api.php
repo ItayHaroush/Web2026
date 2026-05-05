@@ -434,6 +434,7 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'tenant'])->group(function (
 
         // ניהול מדפסות מטבח
         Route::get('/printers/receipt-example', [PrinterController::class, 'receiptExample'])->name('admin.printers.receipt-example');
+        Route::get('/printers/available-addon-groups', [PrinterController::class, 'availableAddonGroups'])->name('admin.printers.available-addon-groups');
         Route::patch('/printers/template', [PrinterController::class, 'updateTemplate'])->name('admin.printers.template');
         Route::get('/printers', [PrinterController::class, 'index'])->name('admin.printers.index');
         Route::post('/printers', [PrinterController::class, 'store'])->name('admin.printers.store');

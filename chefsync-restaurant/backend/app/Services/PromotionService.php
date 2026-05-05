@@ -471,10 +471,11 @@ class PromotionService
             if ($avail <= 0) {
                 continue;
             }
-            $qLine = max(1, (int) ($line['quantity'] ?? 1));
-            $lineSub = $this->lineSubtotal($line);
+            // מחיר קבוע מחליף רק את מחיר הבסיס (+ וריאציה); תוספות בתשלום מתווספות על גביו ולא נכללות בהקצאת החבילה
+            $addonsPerUnit = (float) ($line['addons_total'] ?? 0);
+            $baseUnitPrice = max(0.0, (float) ($line['price_at_order'] ?? 0) - $addonsPerUnit);
             $take = min($remaining, $avail);
-            $sum += ($lineSub / $qLine) * $take;
+            $sum += $baseUnitPrice * $take;
             $remainingByIndex[$idx] = $avail - $take;
             $remaining -= $take;
         }

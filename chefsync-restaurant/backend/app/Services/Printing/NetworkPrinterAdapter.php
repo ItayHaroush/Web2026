@@ -115,6 +115,12 @@ class NetworkPrinterAdapter implements PrinterAdapter
                 }
             }
 
+            // Bitmap-only path: suffix already contains ESC @ + raster + feeds + cut — send as-is
+            if (trim($payload) === '' && $qrBinary !== '') {
+                fwrite($socket, $qrBinary);
+                return true;
+            }
+
             fwrite($socket, "\x1B\x40");
             fwrite($socket, "\x1B\x74" . chr(self::ESC_POS_CODE_PAGE_HEBREW));
             fwrite($socket, "\x1B\x20\x00");

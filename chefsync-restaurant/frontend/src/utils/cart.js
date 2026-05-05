@@ -104,20 +104,30 @@ export const sumFullCatalogAddons = (addons = []) => {
     return Number(sum.toFixed(2));
 };
 
-/** סיכום לפי סדר השורות בתוך קבוצה אחת: יחידת מחיר ראשונה עם delta חיובי פטורה פעם אחת */
+/** סיכום לפי סדר השורות בתוך קבוצה אחת: תוספת מלאה אחת חינם — 1 תוספת שלמה או 2 חצאים. */
 export const sumAddonsBilledWithFirstUnitFree = (addons = []) => {
     if (!Array.isArray(addons) || addons.length === 0) {
         return 0;
     }
-    let freeUsed = false;
+    let freeCredit = 0;
+    let freeInitialized = false;
     let sum = 0;
     for (const addon of addons) {
         const delta = getAddonEffectiveDelta(addon);
         const addonQty = Math.max(1, sanitizeNumber(addon?.quantity ?? 1, 1));
+
+        // אתחול קרדיט: תוספת מלאה = delta; חצי = 2×delta (כי delta כבר עברה חצייה)
+        if (!freeInitialized && delta > 0) {
+            const isHalf = isHalfPlacement(addon?.placement) || Boolean(addon?.is_half);
+            freeCredit = isHalf ? delta * 2 : delta;
+            freeInitialized = true;
+        }
+
         let line = delta * addonQty;
-        if (!freeUsed && delta > 0) {
-            line = Math.max(0, line - delta);
-            freeUsed = true;
+        if (freeCredit > 0 && delta > 0) {
+            const discount = Math.min(freeCredit, line);
+            line = Math.max(0, line - discount);
+            freeCredit = Math.max(0, freeCredit - discount);
         }
         sum += line;
     }
@@ -164,6 +174,7 @@ export const sumAddonsBilledWithGroupRules = (addons = []) => {
         }
         b.lines.push({
             price_delta: getAddonEffectiveDelta(addon),
+            is_half: isHalfPlacement(addon?.placement),
             quantity: Math.max(1, sanitizeNumber(addon?.quantity ?? 1, 1)),
         });
     }

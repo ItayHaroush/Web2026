@@ -332,6 +332,17 @@ class OrderController extends Controller
                     ])
                     ->findOrFail($itemData['menu_item_id']);
 
+                // ✅ אכיפת חלון זמינות שעות/ימים — לא ניתן להזמין פריט שאינו זמין כעת
+                $availability = $menuItem->checkCurrentAvailability();
+                if (!$availability['available']) {
+                    throw ValidationException::withMessages([
+                        "items.$index.menu_item_id" => [
+                            'הפריט "' . $menuItem->name . '" אינו זמין כרגע' .
+                                ($availability['reason'] ? ' — ' . $availability['reason'] : ''),
+                        ],
+                    ]);
+                }
+
                 $quantity = $itemData['qty'] ?? $itemData['quantity'] ?? null;
                 if ($quantity === null) {
                     throw ValidationException::withMessages([
@@ -483,10 +494,12 @@ class OrderController extends Controller
                         continue;
                     }
 
+                    $halfPlacements = ['right', 'left', 'right_half', 'left_half'];
                     $lines = $selectedForGroup->map(fn($sel) => [
-                        'unit_delta' => in_array($sel['placement'] ?? 'whole', ['right', 'left', 'right_half', 'left_half'])
+                        'unit_delta' => in_array($sel['placement'] ?? 'whole', $halfPlacements, true)
                             ? (float) ceil((float) $sel['addon']->price_delta / 2)
                             : (float) $sel['addon']->price_delta,
+                        'is_half' => in_array($sel['placement'] ?? 'whole', $halfPlacements, true),
                         'quantity' => (int) ($sel['quantity'] ?? 1),
                     ])->values()->all();
 

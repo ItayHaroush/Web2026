@@ -193,11 +193,11 @@ class BitmapReceiptRenderer
     private function renderToImage(array $lines): \GdImage
     {
         // גדלי גופן (בנקודות)
-        $fontNormal  = 18;
-        $fontBig     = 25;
-        $fontHeading = 32;
+        $fontNormal  = 22;
+        $fontBig     = 30;
+        $fontHeading = 38;
 
-        $lineSpacing   = 5;  // px בין שורות
+        $lineSpacing   = 8;  // px בין שורות
         $padX          = 12; // padding אופקי
         $dividerHeight = 3;  // עובי קו מפריד
         $dividerGap    = 5;  // רווח מעל/מתחת למפריד
@@ -267,7 +267,11 @@ class BitmapReceiptRenderer
             };
             $x = max($padX, $x);
 
-            // ציור טקסט
+            // ציור טקסט (bold simulation: ציור כפול עם offset אופקי של פיקסל)
+            // big נחשב גם bold בbitmap — פריטי הזמנה ({{BIG}}) יודפסו מודגשים
+            if ($l['bold'] || $l['big'] || $l['heading']) {
+                imagettftext($img, $fs, 0, $x + 1, $y + $fs, $black, $this->fontPath, $text);
+            }
             imagettftext($img, $fs, 0, $x, $y + $fs, $black, $this->fontPath, $text);
 
             $y += $fs + $lineSpacing;

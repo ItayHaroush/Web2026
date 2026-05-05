@@ -12,7 +12,7 @@ const ROLE_COLORS = {
     general: { selected: 'bg-emerald-50 border-emerald-400 text-emerald-700', icon: 'text-emerald-500' },
 };
 
-export default function PrinterFormModal({ form, setForm, editPrinter, categories, onSubmit, onClose }) {
+export default function PrinterFormModal({ form, setForm, editPrinter, categories, addonGroups = [], onSubmit, onClose }) {
     const toggleCategory = (catId) => {
         const current = form.category_ids || [];
         const updated = current.includes(catId)
@@ -21,7 +21,16 @@ export default function PrinterFormModal({ form, setForm, editPrinter, categorie
         setForm({ ...form, category_ids: updated });
     };
 
+    const toggleAddonGroup = (groupId) => {
+        const current = form.addon_group_ids || [];
+        const updated = current.includes(groupId)
+            ? current.filter(id => id !== groupId)
+            : [...current, groupId];
+        setForm({ ...form, addon_group_ids: updated });
+    };
+
     const showCategories = form.role === 'kitchen' || form.role === 'general';
+    const showAddonGroups = form.role === 'kitchen' || form.role === 'general';
 
     return (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -201,6 +210,41 @@ export default function PrinterFormModal({ form, setForm, editPrinter, categorie
                                                 }`}
                                             >
                                                 {cat.icon || ''} {cat.name}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {showAddonGroups && (
+                        <div>
+                            <label className="block text-sm font-black text-gray-700 mb-2">סינון קבוצות תוספות</label>
+                            <p className="text-xs text-gray-400 font-medium mb-3">
+                                קבוצות תוספות בבחירה ידנית שתבחרו כאן <span className="font-black text-rose-500">לא יודפסו</span> במדפסת זו.
+                                ללא בחירה - כל התוספות מודפסות. קבוצות המקושרות לקטגוריה מסוננות אוטומטית לפי בחירת הקטגוריות שמעל.
+                            </p>
+                            {addonGroups.length === 0 ? (
+                                <div className="bg-gray-50 rounded-2xl p-4 text-center">
+                                    <p className="text-sm text-gray-400 font-bold">אין קבוצות תוספות ידניות להגדרה</p>
+                                </div>
+                            ) : (
+                                <div className="flex flex-wrap gap-2">
+                                    {addonGroups.map(group => {
+                                        const isSelected = (form.addon_group_ids || []).includes(group.id);
+                                        return (
+                                            <button
+                                                key={group.id}
+                                                type="button"
+                                                onClick={() => toggleAddonGroup(group.id)}
+                                                className={`px-4 py-2.5 rounded-xl text-sm font-black transition-all border-2 ${isSelected
+                                                    ? 'bg-rose-50 border-rose-400 text-rose-700 line-through'
+                                                    : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'
+                                                }`}
+                                                title={isSelected ? 'מוסתר במדפסת זו' : 'מודפס במדפסת זו'}
+                                            >
+                                                {isSelected ? '🚫 ' : ''}{group.name}
                                             </button>
                                         );
                                     })}
