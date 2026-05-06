@@ -302,8 +302,8 @@ function TabDetailModal({ tab: initialTab, headers, posToken, onClose, onUpdated
         try {
             const res = await posApi.chargeOrderCredit(tab.order_id, headers, posToken);
             if (res.data.success) {
-                try { await posApi.closeTab(tab.id, headers, posToken); } catch {}
-                try { await posApi.printReceipt(tab.order_id, headers, posToken); } catch {}
+                try { await posApi.closeTab(tab.id, headers, posToken); } catch { }
+                try { await posApi.printReceipt(tab.order_id, headers, posToken); } catch { }
                 setPayResult({ type: 'success', message: 'תשלום אשראי אושר' });
                 setPayStep('result');
             }
