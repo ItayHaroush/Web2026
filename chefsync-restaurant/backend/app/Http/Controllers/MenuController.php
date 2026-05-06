@@ -196,6 +196,7 @@ class MenuController extends Controller
 
                             return [
                                 'id' => $item->id,
+                                'category_id' => $item->category_id,
                                 'name' => $item->name,
                                 'description' => $item->description,
                                 'price' => (float) $item->price,
