@@ -817,8 +817,8 @@ export default function MenuPage({ isPreviewMode = false }) {
             <div className="relative -mx-4 sm:-mx-6 lg:-mx-8 -mt-8 mb-8">
                 <div
                     className={`relative min-h-[13rem] h-auto sm:h-72 sm:min-h-0 overflow-hidden ${restaurant?.menu_hero_background_url
-                            ? ''
-                            : 'bg-gradient-to-br from-brand-dark via-brand-primary to-brand-secondary'
+                        ? ''
+                        : 'bg-gradient-to-br from-brand-dark via-brand-primary to-brand-secondary'
                         }`}
                 >
                     {restaurant?.menu_hero_background_url && (
@@ -1701,63 +1701,63 @@ export default function MenuPage({ isPreviewMode = false }) {
 
                 // מצב רגיל — כרטיסיות עם header ו-footer
                 return (
-                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setShowPromoPopup(false)}>
-                    <div className="bg-white dark:bg-brand-dark-card rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-fade-in" onClick={e => e.stopPropagation()}>
-                        {/* Header */}
-                        <div className="bg-gradient-to-l from-amber-500 to-orange-500 p-4 flex items-center justify-between">
-                            <div className="flex items-center gap-2 text-white">
-                                <FaTag className="text-xl" />
-                                <h3 className="font-black text-lg">מבצעים פעילים</h3>
+                    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setShowPromoPopup(false)}>
+                        <div className="bg-white dark:bg-brand-dark-card rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-fade-in" onClick={e => e.stopPropagation()}>
+                            {/* Header */}
+                            <div className="bg-gradient-to-l from-amber-500 to-orange-500 p-4 flex items-center justify-between">
+                                <div className="flex items-center gap-2 text-white">
+                                    <FaTag className="text-xl" />
+                                    <h3 className="font-black text-lg">מבצעים פעילים</h3>
+                                </div>
+                                <button onClick={() => setShowPromoPopup(false)} className="text-white/80 hover:text-white p-1">
+                                    <FaTimes size={20} />
+                                </button>
                             </div>
-                            <button onClick={() => setShowPromoPopup(false)} className="text-white/80 hover:text-white p-1">
-                                <FaTimes size={20} />
-                            </button>
-                        </div>
 
-                        {/* Promotions list */}
-                        <div className="max-h-[60vh] overflow-y-auto p-4 space-y-4">
-                            {popupPromotions.map((promo) => {
-                                const rewardText = promo.rewards?.map(r => {
-                                    if (r.reward_type === 'free_item' && r.reward_menu_item_name) return `${r.reward_menu_item_name} במתנה`;
-                                    if (r.reward_type === 'free_item' && r.reward_category_name) return `${r.reward_category_name} במתנה`;
-                                    if (r.reward_type === 'discount_percent') return `${r.reward_value}% הנחה${r.discount_scope === 'selected_items' ? ' (פריטים נבחרים)' : ''}`;
-                                    if (r.reward_type === 'discount_fixed') return `₪${r.reward_value} הנחה${r.discount_scope === 'selected_items' ? ' ליחידה (נבחרים)' : ''}`;
-                                    if (r.reward_type === 'fixed_price') return `במחיר מיוחד ₪${r.reward_value}`;
-                                    return 'הטבה מיוחדת';
-                                }).join(' + ') || 'הטבה מיוחדת';
+                            {/* Promotions list */}
+                            <div className="max-h-[60vh] overflow-y-auto p-4 space-y-4">
+                                {popupPromotions.map((promo) => {
+                                    const rewardText = promo.rewards?.map(r => {
+                                        if (r.reward_type === 'free_item' && r.reward_menu_item_name) return `${r.reward_menu_item_name} במתנה`;
+                                        if (r.reward_type === 'free_item' && r.reward_category_name) return `${r.reward_category_name} במתנה`;
+                                        if (r.reward_type === 'discount_percent') return `${r.reward_value}% הנחה${r.discount_scope === 'selected_items' ? ' (פריטים נבחרים)' : ''}`;
+                                        if (r.reward_type === 'discount_fixed') return `₪${r.reward_value} הנחה${r.discount_scope === 'selected_items' ? ' ליחידה (נבחרים)' : ''}`;
+                                        if (r.reward_type === 'fixed_price') return `במחיר מיוחד ₪${r.reward_value}`;
+                                        return 'הטבה מיוחדת';
+                                    }).join(' + ') || 'הטבה מיוחדת';
 
-                                return (
-                                    <div key={promo.id} className="rounded-2xl border border-orange-100 dark:border-brand-dark-border overflow-hidden">
-                                        {promo.image_url && (
-                                            <img
-                                                src={resolveAssetUrl(promo.image_url)}
-                                                alt={promo.name}
-                                                className="w-full h-44 object-cover"
-                                            />
-                                        )}
-                                        <div className="p-4">
-                                            <h4 className="font-black text-base text-gray-800 dark:text-white">{promo.name}</h4>
-                                            <p className="text-sm text-orange-600 dark:text-orange-400 font-bold mt-1">{rewardText}</p>
-                                            {promo.description && (
-                                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">{promo.description}</p>
+                                    return (
+                                        <div key={promo.id} className="rounded-2xl border border-orange-100 dark:border-brand-dark-border overflow-hidden">
+                                            {promo.image_url && (
+                                                <img
+                                                    src={resolveAssetUrl(promo.image_url)}
+                                                    alt={promo.name}
+                                                    className="w-full h-44 object-cover"
+                                                />
                                             )}
+                                            <div className="p-4">
+                                                <h4 className="font-black text-base text-gray-800 dark:text-white">{promo.name}</h4>
+                                                <p className="text-sm text-orange-600 dark:text-orange-400 font-bold mt-1">{rewardText}</p>
+                                                {promo.description && (
+                                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">{promo.description}</p>
+                                                )}
+                                            </div>
                                         </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
+                                    );
+                                })}
+                            </div>
 
-                        {/* Footer */}
-                        <div className="p-4 border-t border-gray-100 dark:border-brand-dark-border">
-                            <button
-                                onClick={() => setShowPromoPopup(false)}
-                                className="w-full bg-gradient-to-r from-brand-primary to-orange-600 text-white font-black py-3 rounded-xl shadow-lg hover:shadow-xl active:scale-95 transition-all text-base"
-                            >
-                                לצפייה בתפריט
-                            </button>
+                            {/* Footer */}
+                            <div className="p-4 border-t border-gray-100 dark:border-brand-dark-border">
+                                <button
+                                    onClick={() => setShowPromoPopup(false)}
+                                    className="w-full bg-gradient-to-r from-brand-primary to-orange-600 text-white font-black py-3 rounded-xl shadow-lg hover:shadow-xl active:scale-95 transition-all text-base"
+                                >
+                                    לצפייה בתפריט
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
                 );
             })()}
 

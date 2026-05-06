@@ -577,451 +577,451 @@ export default function AdminCoupons() {
                         <div className="p-4 sm:p-6 space-y-6 flex-1 overflow-y-auto min-h-0">
                             {/* Part 1: Basic Details */}
                             {(editingPromo || promoWizardStep === 1) && (
-                            <div className="space-y-4">
-                                <h3 className="font-bold text-gray-800 border-b border-gray-100 pb-2">פרטים בסיסיים</h3>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">שם המבצע *</label>
-                                    <input
-                                        type="text"
-                                        value={form.name}
-                                        onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                                        className={`w-full min-w-0 border rounded-xl px-4 py-3 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none text-base ${fieldError('name') ? 'border-red-300' : 'border-gray-200'}`}
-                                        placeholder="למשל: קנה 2 פיצות וקבל קינוח"
-                                    />
-                                    {fieldError('name') && (
-                                        <p className="text-xs text-red-600 mt-1 font-medium">{fieldError('name')}</p>
-                                    )}
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">תיאור</label>
-                                    <textarea
-                                        value={form.description}
-                                        onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-                                        className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none"
-                                        rows={2}
-                                        placeholder="תיאור קצר שיופיע ללקוח"
-                                    />
-                                </div>
+                                <div className="space-y-4">
+                                    <h3 className="font-bold text-gray-800 border-b border-gray-100 pb-2">פרטים בסיסיים</h3>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">שם המבצע *</label>
+                                        <input
+                                            type="text"
+                                            value={form.name}
+                                            onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                                            className={`w-full min-w-0 border rounded-xl px-4 py-3 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none text-base ${fieldError('name') ? 'border-red-300' : 'border-gray-200'}`}
+                                            placeholder="למשל: קנה 2 פיצות וקבל קינוח"
+                                        />
+                                        {fieldError('name') && (
+                                            <p className="text-xs text-red-600 mt-1 font-medium">{fieldError('name')}</p>
+                                        )}
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">תיאור</label>
+                                        <textarea
+                                            value={form.description}
+                                            onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+                                            className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none"
+                                            rows={2}
+                                            placeholder="תיאור קצר שיופיע ללקוח"
+                                        />
+                                    </div>
 
-                                {/* תמונת מבצע */}
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">תמונת מבצע</label>
-                                    <p className="text-xs text-gray-500 mb-2">תמונות גדולות נדחסות אוטומטית לפני השליחה כדי למנוע שגיאת העלאה.</p>
-                                    {!form.removeImage && (form.imagePreview || editingPromo?.image_url) && (
-                                        <div className="relative inline-block mb-2">
-                                            <img
-                                                src={form.imagePreview || resolveAssetUrl(editingPromo?.image_url)}
-                                                alt="תמונת מבצע"
-                                                className="w-32 h-20 object-cover rounded-xl border border-gray-200 bg-gray-100"
-                                            />
-                                            <button
-                                                type="button"
-                                                onClick={() => setForm(f => ({ ...f, image: null, imagePreview: null, removeImage: true }))}
-                                                className="absolute -top-2 -right-2 bg-red-500 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs"
-                                            >
-                                                <FaTimes size={8} />
-                                            </button>
-                                        </div>
-                                    )}
-                                    <input
-                                        type="file"
-                                        accept="image/jpeg,image/png,image/webp,image/gif"
-                                        onChange={async (e) => {
-                                            const file = e.target.files?.[0];
-                                            if (!file) return;
-                                            const maxBytes = 12 * 1024 * 1024;
-                                            if (file.size > maxBytes) {
-                                                alert('הקובץ גדול מדי (מקסימום 12MB לפני דחיסה)');
-                                                e.target.value = '';
-                                                return;
-                                            }
-                                            if (!file.type.startsWith('image/')) {
-                                                alert('יש לבחור קובץ תמונה');
-                                                e.target.value = '';
-                                                return;
-                                            }
-                                            try {
-                                                const processed = await compressPromotionImage(file);
-                                                setForm((f) => {
-                                                    if (f.imagePreview?.startsWith?.('blob:')) {
-                                                        try {
-                                                            URL.revokeObjectURL(f.imagePreview);
-                                                        } catch { /* ignore */ }
-                                                    }
-                                                    return {
-                                                        ...f,
-                                                        image: processed,
-                                                        imagePreview: URL.createObjectURL(processed),
-                                                        removeImage: false,
-                                                    };
-                                                });
-                                            } catch (err) {
-                                                console.error(err);
-                                                alert('לא ניתן לעבד את התמונה. נסה קובץ אחר.');
-                                                e.target.value = '';
-                                            }
-                                        }}
-                                        className="w-full min-w-0 text-sm text-gray-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-bold file:bg-brand-primary/10 file:text-brand-primary hover:file:bg-brand-primary/20"
-                                    />
-                                </div>
+                                    {/* תמונת מבצע */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">תמונת מבצע</label>
+                                        <p className="text-xs text-gray-500 mb-2">תמונות גדולות נדחסות אוטומטית לפני השליחה כדי למנוע שגיאת העלאה.</p>
+                                        {!form.removeImage && (form.imagePreview || editingPromo?.image_url) && (
+                                            <div className="relative inline-block mb-2">
+                                                <img
+                                                    src={form.imagePreview || resolveAssetUrl(editingPromo?.image_url)}
+                                                    alt="תמונת מבצע"
+                                                    className="w-32 h-20 object-cover rounded-xl border border-gray-200 bg-gray-100"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setForm(f => ({ ...f, image: null, imagePreview: null, removeImage: true }))}
+                                                    className="absolute -top-2 -right-2 bg-red-500 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs"
+                                                >
+                                                    <FaTimes size={8} />
+                                                </button>
+                                            </div>
+                                        )}
+                                        <input
+                                            type="file"
+                                            accept="image/jpeg,image/png,image/webp,image/gif"
+                                            onChange={async (e) => {
+                                                const file = e.target.files?.[0];
+                                                if (!file) return;
+                                                const maxBytes = 12 * 1024 * 1024;
+                                                if (file.size > maxBytes) {
+                                                    alert('הקובץ גדול מדי (מקסימום 12MB לפני דחיסה)');
+                                                    e.target.value = '';
+                                                    return;
+                                                }
+                                                if (!file.type.startsWith('image/')) {
+                                                    alert('יש לבחור קובץ תמונה');
+                                                    e.target.value = '';
+                                                    return;
+                                                }
+                                                try {
+                                                    const processed = await compressPromotionImage(file);
+                                                    setForm((f) => {
+                                                        if (f.imagePreview?.startsWith?.('blob:')) {
+                                                            try {
+                                                                URL.revokeObjectURL(f.imagePreview);
+                                                            } catch { /* ignore */ }
+                                                        }
+                                                        return {
+                                                            ...f,
+                                                            image: processed,
+                                                            imagePreview: URL.createObjectURL(processed),
+                                                            removeImage: false,
+                                                        };
+                                                    });
+                                                } catch (err) {
+                                                    console.error(err);
+                                                    alert('לא ניתן לעבד את התמונה. נסה קובץ אחר.');
+                                                    e.target.value = '';
+                                                }
+                                            }}
+                                            className="w-full min-w-0 text-sm text-gray-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-bold file:bg-brand-primary/10 file:text-brand-primary hover:file:bg-brand-primary/20"
+                                        />
+                                    </div>
 
-                                {/* תקופת המבצע */}
-                                <div className="bg-gray-50 rounded-xl p-4 space-y-3">
-                                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">תקופת המבצע</p>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        <div className="min-w-0">
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">מתאריך</label>
-                                            <input type="datetime-local" dir="ltr" value={form.start_at} onChange={e => setForm(f => ({ ...f, start_at: e.target.value }))}
-                                                className="w-full min-w-0 max-w-full box-border border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none text-base bg-white" />
-                                        </div>
-                                        <div className="min-w-0">
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">עד תאריך</label>
-                                            <input type="datetime-local" dir="ltr" value={form.end_at} onChange={e => setForm(f => ({ ...f, end_at: e.target.value }))}
-                                                className="w-full min-w-0 max-w-full box-border border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none text-base bg-white" />
+                                    {/* תקופת המבצע */}
+                                    <div className="bg-gray-50 rounded-xl p-4 space-y-3">
+                                        <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">תקופת המבצע</p>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <div className="min-w-0">
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">מתאריך</label>
+                                                <input type="datetime-local" dir="ltr" value={form.start_at} onChange={e => setForm(f => ({ ...f, start_at: e.target.value }))}
+                                                    className="w-full min-w-0 max-w-full box-border border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none text-base bg-white" />
+                                            </div>
+                                            <div className="min-w-0">
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">עד תאריך</label>
+                                                <input type="datetime-local" dir="ltr" value={form.end_at} onChange={e => setForm(f => ({ ...f, end_at: e.target.value }))}
+                                                    className="w-full min-w-0 max-w-full box-border border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none text-base bg-white" />
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
 
-                                {/* שעות פעילות יומיות */}
-                                <div className="bg-blue-50 rounded-xl p-4 space-y-3">
-                                    <p className="text-xs font-bold text-blue-600 uppercase tracking-wide">שעות פעילות יומיות</p>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        <div className="min-w-0">
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">משעה</label>
-                                            <input type="time" dir="ltr" value={form.active_hours_start} onChange={e => setForm(f => ({ ...f, active_hours_start: e.target.value }))}
-                                                className="w-full min-w-0 border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none text-base bg-white" />
-                                        </div>
-                                        <div className="min-w-0">
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">עד שעה</label>
-                                            <input type="time" dir="ltr" value={form.active_hours_end} onChange={e => setForm(f => ({ ...f, active_hours_end: e.target.value }))}
-                                                className="w-full min-w-0 border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none text-base bg-white" />
+                                    {/* שעות פעילות יומיות */}
+                                    <div className="bg-blue-50 rounded-xl p-4 space-y-3">
+                                        <p className="text-xs font-bold text-blue-600 uppercase tracking-wide">שעות פעילות יומיות</p>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <div className="min-w-0">
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">משעה</label>
+                                                <input type="time" dir="ltr" value={form.active_hours_start} onChange={e => setForm(f => ({ ...f, active_hours_start: e.target.value }))}
+                                                    className="w-full min-w-0 border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none text-base bg-white" />
+                                            </div>
+                                            <div className="min-w-0">
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">עד שעה</label>
+                                                <input type="time" dir="ltr" value={form.active_hours_end} onChange={e => setForm(f => ({ ...f, active_hours_end: e.target.value }))}
+                                                    className="w-full min-w-0 border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none text-base bg-white" />
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
 
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">ימים פעילים</label>
-                                    <div className="flex flex-wrap gap-2">
-                                        {DAY_NAMES.map((name, i) => (
-                                            <button
-                                                key={i}
-                                                type="button"
-                                                onClick={() => toggleDay(i)}
-                                                className={`w-10 h-10 rounded-xl text-sm font-bold transition-colors ${(normalizeActiveDays(form.active_days) ?? []).includes(i)
-                                                    ? 'bg-brand-primary text-white'
-                                                    : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                                                    }`}
-                                            >
-                                                {name}
-                                            </button>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">ימים פעילים</label>
+                                        <div className="flex flex-wrap gap-2">
+                                            {DAY_NAMES.map((name, i) => (
+                                                <button
+                                                    key={i}
+                                                    type="button"
+                                                    onClick={() => toggleDay(i)}
+                                                    className={`w-10 h-10 rounded-xl text-sm font-bold transition-colors ${(normalizeActiveDays(form.active_days) ?? []).includes(i)
+                                                        ? 'bg-brand-primary text-white'
+                                                        : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                                                        }`}
+                                                >
+                                                    {name}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        <p className="text-xs text-gray-400 mt-1">השאר ריק = כל הימים</p>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">עדיפות</label>
+                                            <input type="number" value={form.priority} onChange={e => setForm(f => ({ ...f, priority: parseInt(e.target.value) || 0 }))}
+                                                className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none"
+                                                min={0} />
+                                        </div>
+                                    </div>
+
+                                    <div className="flex flex-wrap gap-6">
+                                        {[
+                                            { key: 'is_active', label: 'פעיל' },
+                                            { key: 'auto_apply', label: 'הפעלה אוטומטית' },
+                                            { key: 'gift_required', label: 'בחירת מתנה חובה' },
+                                            { key: 'stackable', label: 'ניתן לשילוב' },
+                                        ].map(({ key, label }) => (
+                                            <label key={key} className="flex items-center gap-2 cursor-pointer select-none">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={form[key]}
+                                                    onChange={e => setForm(f => ({ ...f, [key]: e.target.checked }))}
+                                                    className="w-5 h-5 rounded-lg border-gray-300 text-brand-primary focus:ring-brand-primary/20"
+                                                />
+                                                <span className="text-sm font-medium text-gray-700">{label}</span>
+                                            </label>
                                         ))}
                                     </div>
-                                    <p className="text-xs text-gray-400 mt-1">השאר ריק = כל הימים</p>
-                                </div>
 
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">עדיפות</label>
-                                        <input type="number" value={form.priority} onChange={e => setForm(f => ({ ...f, priority: parseInt(e.target.value) || 0 }))}
-                                            className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none"
-                                            min={0} />
-                                    </div>
-                                </div>
-
-                                <div className="flex flex-wrap gap-6">
-                                    {[
-                                        { key: 'is_active', label: 'פעיל' },
-                                        { key: 'auto_apply', label: 'הפעלה אוטומטית' },
-                                        { key: 'gift_required', label: 'בחירת מתנה חובה' },
-                                        { key: 'stackable', label: 'ניתן לשילוב' },
-                                    ].map(({ key, label }) => (
-                                        <label key={key} className="flex items-center gap-2 cursor-pointer select-none">
+                                    <div className="rounded-xl border border-orange-100 bg-orange-50/50 p-4 space-y-3">
+                                        <p className="text-xs font-bold text-orange-800 uppercase tracking-wide">תצוגה בתפריט לקוח</p>
+                                        <label className="flex items-center gap-2 cursor-pointer select-none">
                                             <input
                                                 type="checkbox"
-                                                checked={form[key]}
-                                                onChange={e => setForm(f => ({ ...f, [key]: e.target.checked }))}
+                                                checked={form.show_menu_banner}
+                                                onChange={e => setForm(f => ({ ...f, show_menu_banner: e.target.checked }))}
                                                 className="w-5 h-5 rounded-lg border-gray-300 text-brand-primary focus:ring-brand-primary/20"
                                             />
-                                            <span className="text-sm font-medium text-gray-700">{label}</span>
+                                            <span className="text-sm font-medium text-gray-800">הצג באנר מבצעים מעל התפריט</span>
                                         </label>
-                                    ))}
-                                </div>
+                                        <label className="flex items-center gap-2 cursor-pointer select-none">
+                                            <input
+                                                type="checkbox"
+                                                checked={form.show_entry_popup}
+                                                onChange={e => setForm(f => ({ ...f, show_entry_popup: e.target.checked }))}
+                                                className="w-5 h-5 rounded-lg border-gray-300 text-brand-primary focus:ring-brand-primary/20"
+                                            />
+                                            <span className="text-sm font-medium text-gray-800">הצג חלון כניסה עם מבצעים (פעם אחת לדפדפן)</span>
+                                        </label>
 
-                                <div className="rounded-xl border border-orange-100 bg-orange-50/50 p-4 space-y-3">
-                                    <p className="text-xs font-bold text-orange-800 uppercase tracking-wide">תצוגה בתפריט לקוח</p>
-                                    <label className="flex items-center gap-2 cursor-pointer select-none">
-                                        <input
-                                            type="checkbox"
-                                            checked={form.show_menu_banner}
-                                            onChange={e => setForm(f => ({ ...f, show_menu_banner: e.target.checked }))}
-                                            className="w-5 h-5 rounded-lg border-gray-300 text-brand-primary focus:ring-brand-primary/20"
-                                        />
-                                        <span className="text-sm font-medium text-gray-800">הצג באנר מבצעים מעל התפריט</span>
-                                    </label>
-                                    <label className="flex items-center gap-2 cursor-pointer select-none">
-                                        <input
-                                            type="checkbox"
-                                            checked={form.show_entry_popup}
-                                            onChange={e => setForm(f => ({ ...f, show_entry_popup: e.target.checked }))}
-                                            className="w-5 h-5 rounded-lg border-gray-300 text-brand-primary focus:ring-brand-primary/20"
-                                        />
-                                        <span className="text-sm font-medium text-gray-800">הצג חלון כניסה עם מבצעים (פעם אחת לדפדפן)</span>
-                                    </label>
-
-                                    {/* תצוגת תמונה בחלון כניסה */}
-                                    {form.show_entry_popup && (
-                                        <div className="mr-7 border-r-2 border-orange-200 pr-3 space-y-2">
-                                            <p className="text-xs font-bold text-orange-700">תצוגת תמונה בחלון כניסה:</p>
-                                            <label className="flex items-center gap-2 cursor-pointer select-none">
-                                                <input
-                                                    type="radio"
-                                                    name="image_display_mode"
-                                                    checked={!form.image_display_full}
-                                                    onChange={() => setForm(f => ({ ...f, image_display_full: false }))}
-                                                    className="w-4 h-4 border-gray-300 text-brand-primary focus:ring-brand-primary/20"
-                                                />
-                                                <span className="text-sm text-gray-700">בתוך כרטיסיית מבצע (שם + הטבה + תמונה)</span>
-                                            </label>
-                                            <label className="flex items-center gap-2 cursor-pointer select-none">
-                                                <input
-                                                    type="radio"
-                                                    name="image_display_mode"
-                                                    checked={!!form.image_display_full}
-                                                    onChange={() => setForm(f => ({ ...f, image_display_full: true }))}
-                                                    className="w-4 h-4 border-gray-300 text-brand-primary focus:ring-brand-primary/20"
-                                                />
-                                                <span className="text-sm text-gray-700">תמונה בלבד (ללא כרטיסייה או טקסט)</span>
-                                            </label>
-                                        </div>
-                                    )}
+                                        {/* תצוגת תמונה בחלון כניסה */}
+                                        {form.show_entry_popup && (
+                                            <div className="mr-7 border-r-2 border-orange-200 pr-3 space-y-2">
+                                                <p className="text-xs font-bold text-orange-700">תצוגת תמונה בחלון כניסה:</p>
+                                                <label className="flex items-center gap-2 cursor-pointer select-none">
+                                                    <input
+                                                        type="radio"
+                                                        name="image_display_mode"
+                                                        checked={!form.image_display_full}
+                                                        onChange={() => setForm(f => ({ ...f, image_display_full: false }))}
+                                                        className="w-4 h-4 border-gray-300 text-brand-primary focus:ring-brand-primary/20"
+                                                    />
+                                                    <span className="text-sm text-gray-700">בתוך כרטיסיית מבצע (שם + הטבה + תמונה)</span>
+                                                </label>
+                                                <label className="flex items-center gap-2 cursor-pointer select-none">
+                                                    <input
+                                                        type="radio"
+                                                        name="image_display_mode"
+                                                        checked={!!form.image_display_full}
+                                                        onChange={() => setForm(f => ({ ...f, image_display_full: true }))}
+                                                        className="w-4 h-4 border-gray-300 text-brand-primary focus:ring-brand-primary/20"
+                                                    />
+                                                    <span className="text-sm text-gray-700">תמונה בלבד (ללא כרטיסייה או טקסט)</span>
+                                                </label>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
                             )}
 
                             {(editingPromo || promoWizardStep === 2) && (
-                            <div className="space-y-4">
-                                <h3 className="font-bold text-gray-800 border-b border-gray-100 pb-2">תנאים (AND)</h3>
-                                {categories.length === 0 && (
-                                    <p className="text-sm text-amber-800 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2 font-medium">
-                                        אין קטגוריות במסעדה. יש להוסיף קטגוריות בניהול תפריט לפני הגדרת תנאי מבצע.
-                                    </p>
-                                )}
-                                {(fieldError('rules_global') || serverErrorText('rules')) && (
-                                    <p className="text-sm text-red-600 font-medium">{fieldError('rules_global') || serverErrorText('rules')}</p>
-                                )}
-                                {form.rules.map((rule, i) => (
-                                    <div key={i} className="flex flex-col sm:flex-row sm:items-center gap-3 bg-gray-50 rounded-xl p-3 min-w-0">
-                                        <input
-                                            type="number"
-                                            value={rule.min_quantity}
-                                            onChange={e => updateRule(i, 'min_quantity', parseInt(e.target.value, 10) || 1)}
-                                            className={`w-20 border rounded-lg px-3 py-2 text-center focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none ${fieldError(`rules.${i}.min_quantity`) ? 'border-red-300' : 'border-gray-200'}`}
-                                            min={1}
-                                        />
-                                        <span className="text-sm text-gray-500 font-medium">פריטים מ-</span>
-                                        <select
-                                            value={rule.required_category_id === '' ? '' : String(rule.required_category_id)}
-                                            onChange={e => updateRule(i, 'required_category_id', e.target.value === '' ? '' : parseInt(e.target.value, 10))}
-                                            className={`flex-1 min-w-0 border rounded-lg px-3 py-2 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none text-base ${fieldError(`rules.${i}.required_category_id`) ? 'border-red-300' : 'border-gray-200'}`}
-                                        >
-                                            <option value="">בחר קטגוריה</option>
-                                            {categories.map(cat => (
-                                                <option key={cat.id} value={cat.id}>{cat.name}</option>
-                                            ))}
-                                        </select>
-                                        {form.rules.length > 1 && (
-                                            <button type="button" onClick={() => removeRule(i)} className="p-2 text-red-400 hover:text-red-600 self-end sm:self-auto">
-                                                <FaTimes size={14} />
-                                            </button>
-                                        )}
-                                        {(fieldError(`rules.${i}.required_category_id`) || fieldError(`rules.${i}.min_quantity`)) && (
-                                            <p className="text-xs text-red-600 sm:col-span-full w-full">
-                                                {fieldError(`rules.${i}.required_category_id`) || fieldError(`rules.${i}.min_quantity`)}
-                                            </p>
-                                        )}
-                                    </div>
-                                ))}
-                                <button onClick={addRule} className="text-sm text-brand-primary font-bold hover:underline">
-                                    + הוסף תנאי
-                                </button>
-                            </div>
-                            )}
-
-                            {(editingPromo || promoWizardStep === 3) && (
-                            <div className="space-y-4">
-                                <h3 className="font-bold text-gray-800 border-b border-gray-100 pb-2">פרסים</h3>
-                                {form.rewards.map((reward, i) => (
-                                    <div key={i} className="bg-gray-50 rounded-xl p-4 space-y-3">
-                                        <div className="flex items-center gap-3">
+                                <div className="space-y-4">
+                                    <h3 className="font-bold text-gray-800 border-b border-gray-100 pb-2">תנאים (AND)</h3>
+                                    {categories.length === 0 && (
+                                        <p className="text-sm text-amber-800 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2 font-medium">
+                                            אין קטגוריות במסעדה. יש להוסיף קטגוריות בניהול תפריט לפני הגדרת תנאי מבצע.
+                                        </p>
+                                    )}
+                                    {(fieldError('rules_global') || serverErrorText('rules')) && (
+                                        <p className="text-sm text-red-600 font-medium">{fieldError('rules_global') || serverErrorText('rules')}</p>
+                                    )}
+                                    {form.rules.map((rule, i) => (
+                                        <div key={i} className="flex flex-col sm:flex-row sm:items-center gap-3 bg-gray-50 rounded-xl p-3 min-w-0">
+                                            <input
+                                                type="number"
+                                                value={rule.min_quantity}
+                                                onChange={e => updateRule(i, 'min_quantity', parseInt(e.target.value, 10) || 1)}
+                                                className={`w-20 border rounded-lg px-3 py-2 text-center focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none ${fieldError(`rules.${i}.min_quantity`) ? 'border-red-300' : 'border-gray-200'}`}
+                                                min={1}
+                                            />
+                                            <span className="text-sm text-gray-500 font-medium">פריטים מ-</span>
                                             <select
-                                                value={reward.reward_type}
-                                                onChange={e => setRewardTypeAt(i, e.target.value)}
-                                                className="border border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none"
+                                                value={rule.required_category_id === '' ? '' : String(rule.required_category_id)}
+                                                onChange={e => updateRule(i, 'required_category_id', e.target.value === '' ? '' : parseInt(e.target.value, 10))}
+                                                className={`flex-1 min-w-0 border rounded-lg px-3 py-2 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none text-base ${fieldError(`rules.${i}.required_category_id`) ? 'border-red-300' : 'border-gray-200'}`}
                                             >
-                                                {Object.entries(REWARD_TYPE_LABELS).map(([val, label]) => (
-                                                    <option key={val} value={val}>{label}</option>
+                                                <option value="">בחר קטגוריה</option>
+                                                {categories.map(cat => (
+                                                    <option key={cat.id} value={cat.id}>{cat.name}</option>
                                                 ))}
                                             </select>
-                                            {form.rewards.length > 1 && (
-                                                <button onClick={() => removeReward(i)} className="p-2 text-red-400 hover:text-red-600 mr-auto">
+                                            {form.rules.length > 1 && (
+                                                <button type="button" onClick={() => removeRule(i)} className="p-2 text-red-400 hover:text-red-600 self-end sm:self-auto">
                                                     <FaTimes size={14} />
                                                 </button>
                                             )}
+                                            {(fieldError(`rules.${i}.required_category_id`) || fieldError(`rules.${i}.min_quantity`)) && (
+                                                <p className="text-xs text-red-600 sm:col-span-full w-full">
+                                                    {fieldError(`rules.${i}.required_category_id`) || fieldError(`rules.${i}.min_quantity`)}
+                                                </p>
+                                            )}
                                         </div>
+                                    ))}
+                                    <button onClick={addRule} className="text-sm text-brand-primary font-bold hover:underline">
+                                        + הוסף תנאי
+                                    </button>
+                                </div>
+                            )}
 
-                                        {reward.reward_type === 'free_item' && (
-                                            <div className="space-y-3">
-                                                {/* בחירת סוג: מוצר ספציפי או קטגוריה */}
-                                                <div className="flex gap-2">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => { updateReward(i, '_mode', 'specific'); updateReward(i, 'reward_category_id', ''); }}
-                                                        className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-colors ${reward._mode === 'specific' ? 'bg-brand-primary text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-                                                    >
-                                                        מוצר ספציפי
+                            {(editingPromo || promoWizardStep === 3) && (
+                                <div className="space-y-4">
+                                    <h3 className="font-bold text-gray-800 border-b border-gray-100 pb-2">פרסים</h3>
+                                    {form.rewards.map((reward, i) => (
+                                        <div key={i} className="bg-gray-50 rounded-xl p-4 space-y-3">
+                                            <div className="flex items-center gap-3">
+                                                <select
+                                                    value={reward.reward_type}
+                                                    onChange={e => setRewardTypeAt(i, e.target.value)}
+                                                    className="border border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none"
+                                                >
+                                                    {Object.entries(REWARD_TYPE_LABELS).map(([val, label]) => (
+                                                        <option key={val} value={val}>{label}</option>
+                                                    ))}
+                                                </select>
+                                                {form.rewards.length > 1 && (
+                                                    <button onClick={() => removeReward(i)} className="p-2 text-red-400 hover:text-red-600 mr-auto">
+                                                        <FaTimes size={14} />
                                                     </button>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => { updateReward(i, '_mode', 'category'); updateReward(i, 'reward_menu_item_id', ''); }}
-                                                        className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-colors ${reward._mode === 'category' ? 'bg-brand-primary text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-                                                    >
-                                                        בחירה מקטגוריה
-                                                    </button>
-                                                </div>
-
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 min-w-0">
-                                                    {reward._mode === 'specific' ? (
-                                                        <div>
-                                                            <label className="block text-xs text-gray-500 mb-1">בחר מוצר</label>
-                                                            <select
-                                                                value={reward.reward_menu_item_id}
-                                                                onChange={e => {
-                                                                    updateReward(i, 'reward_menu_item_id', parseInt(e.target.value) || '');
-                                                                    updateReward(i, 'reward_category_id', '');
-                                                                }}
-                                                                className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none"
-                                                            >
-                                                                <option value="">בחר מוצר</option>
-                                                                {menuItems.map(item => (
-                                                                    <option key={item.id} value={item.id}>
-                                                                        {item.name} ({item.category_name})
-                                                                    </option>
-                                                                ))}
-                                                            </select>
-                                                        </div>
-                                                    ) : (
-                                                        <div>
-                                                            <label className="block text-xs text-gray-500 mb-1">קטגוריית הפרס</label>
-                                                            <select
-                                                                value={reward.reward_category_id}
-                                                                onChange={e => updateReward(i, 'reward_category_id', parseInt(e.target.value) || '')}
-                                                                className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none"
-                                                            >
-                                                                <option value="">בחר קטגוריה</option>
-                                                                {categories.map(cat => (
-                                                                    <option key={cat.id} value={cat.id}>{cat.name}</option>
-                                                                ))}
-                                                            </select>
-                                                        </div>
-                                                    )}
-                                                    <div>
-                                                        <label className="block text-xs text-gray-500 mb-1">כמות</label>
-                                                        <input
-                                                            type="number"
-                                                            value={reward.max_selectable}
-                                                            onChange={e => updateReward(i, 'max_selectable', parseInt(e.target.value) || 1)}
-                                                            className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none"
-                                                            min={1}
-                                                        />
-                                                    </div>
-                                                </div>
+                                                )}
                                             </div>
-                                        )}
 
-                                        {(reward.reward_type === 'discount_percent' || reward.reward_type === 'discount_fixed' || reward.reward_type === 'fixed_price') && (
-                                            <div className="space-y-3">
-                                                {(reward.reward_type === 'discount_percent' || reward.reward_type === 'discount_fixed') && (
-                                                    <div>
-                                                        <p className="text-xs font-bold text-gray-600 mb-2">היקף ההנחה</p>
-                                                        <div className="flex flex-wrap gap-2">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => {
-                                                                    setForm((f) => {
-                                                                        const rewards = [...f.rewards];
-                                                                        rewards[i] = {
-                                                                            ...rewards[i],
-                                                                            discount_scope: 'whole_cart',
-                                                                            discount_menu_item_ids: [],
-                                                                        };
-                                                                        return { ...f, rewards };
-                                                                    });
-                                                                }}
-                                                                className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-colors ${(reward.discount_scope || 'whole_cart') === 'whole_cart' ? 'bg-brand-primary text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-                                                            >
-                                                                כל הסל
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => updateReward(i, 'discount_scope', 'selected_items')}
-                                                                className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-colors ${reward.discount_scope === 'selected_items' ? 'bg-brand-primary text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-                                                            >
-                                                                מוצרים נבחרים
-                                                            </button>
-                                                        </div>
-                                                        {reward.discount_scope === 'selected_items' && (
-                                                            <div className="mt-2">
-                                                                <label className="block text-xs text-gray-500 mb-1">בחר מוצרים (Ctrl/Cmd לבחירה מרובה)</label>
+                                            {reward.reward_type === 'free_item' && (
+                                                <div className="space-y-3">
+                                                    {/* בחירת סוג: מוצר ספציפי או קטגוריה */}
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => { updateReward(i, '_mode', 'specific'); updateReward(i, 'reward_category_id', ''); }}
+                                                            className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-colors ${reward._mode === 'specific' ? 'bg-brand-primary text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                                                        >
+                                                            מוצר ספציפי
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => { updateReward(i, '_mode', 'category'); updateReward(i, 'reward_menu_item_id', ''); }}
+                                                            className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-colors ${reward._mode === 'category' ? 'bg-brand-primary text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                                                        >
+                                                            בחירה מקטגוריה
+                                                        </button>
+                                                    </div>
+
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 min-w-0">
+                                                        {reward._mode === 'specific' ? (
+                                                            <div>
+                                                                <label className="block text-xs text-gray-500 mb-1">בחר מוצר</label>
                                                                 <select
-                                                                    multiple
-                                                                    size={Math.min(8, Math.max(4, menuItems.length))}
-                                                                    value={(reward.discount_menu_item_ids || []).map(String)}
-                                                                    onChange={(e) => {
-                                                                        const selected = Array.from(e.target.selectedOptions, (opt) => parseInt(opt.value, 10));
-                                                                        updateReward(i, 'discount_menu_item_ids', selected);
+                                                                    value={reward.reward_menu_item_id}
+                                                                    onChange={e => {
+                                                                        updateReward(i, 'reward_menu_item_id', parseInt(e.target.value) || '');
+                                                                        updateReward(i, 'reward_category_id', '');
                                                                     }}
-                                                                    className={`w-full border rounded-lg px-2 py-1 text-sm focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none ${fieldError(`rewards.${i}.discount_menu_item_ids`) ? 'border-red-300' : 'border-gray-200'}`}
+                                                                    className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none"
                                                                 >
-                                                                    {menuItems.map((item) => (
+                                                                    <option value="">בחר מוצר</option>
+                                                                    {menuItems.map(item => (
                                                                         <option key={item.id} value={item.id}>
                                                                             {item.name} ({item.category_name})
                                                                         </option>
                                                                     ))}
                                                                 </select>
-                                                                {fieldError(`rewards.${i}.discount_menu_item_ids`) && (
-                                                                    <p className="text-xs text-red-600 mt-1">{fieldError(`rewards.${i}.discount_menu_item_ids`)}</p>
-                                                                )}
+                                                            </div>
+                                                        ) : (
+                                                            <div>
+                                                                <label className="block text-xs text-gray-500 mb-1">קטגוריית הפרס</label>
+                                                                <select
+                                                                    value={reward.reward_category_id}
+                                                                    onChange={e => updateReward(i, 'reward_category_id', parseInt(e.target.value) || '')}
+                                                                    className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none"
+                                                                >
+                                                                    <option value="">בחר קטגוריה</option>
+                                                                    {categories.map(cat => (
+                                                                        <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                                                    ))}
+                                                                </select>
                                                             </div>
                                                         )}
+                                                        <div>
+                                                            <label className="block text-xs text-gray-500 mb-1">כמות</label>
+                                                            <input
+                                                                type="number"
+                                                                value={reward.max_selectable}
+                                                                onChange={e => updateReward(i, 'max_selectable', parseInt(e.target.value) || 1)}
+                                                                className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none"
+                                                                min={1}
+                                                            />
+                                                        </div>
                                                     </div>
-                                                )}
-                                                <div>
-                                                    <label className="block text-xs text-gray-500 mb-1">
-                                                        {reward.reward_type === 'discount_percent' ? 'אחוז הנחה' : reward.reward_type === 'discount_fixed' ? 'סכום הנחה ליחידה (ש"ח)' : 'מחיר קבוע (ש"ח)'}
-                                                    </label>
-                                                    <input
-                                                        type="number"
-                                                        value={reward.reward_value}
-                                                        onChange={e => updateReward(i, 'reward_value', e.target.value)}
-                                                        className={`w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none ${fieldError(`rewards.${i}.reward_value`) ? 'border-red-300' : 'border-gray-200'}`}
-                                                        min={0}
-                                                        step={reward.reward_type === 'discount_percent' ? 1 : 0.01}
-                                                    />
-                                                    {fieldError(`rewards.${i}.reward_value`) && (
-                                                        <p className="text-xs text-red-600 mt-1">{fieldError(`rewards.${i}.reward_value`)}</p>
-                                                    )}
                                                 </div>
-                                            </div>
-                                        )}
-                                        {reward.reward_type === 'free_item' && (fieldError(`rewards.${i}.free`) || serverErrorText(`rewards.${i}.reward_menu_item_id`) || serverErrorText(`rewards.${i}.reward_category_id`)) && (
-                                            <p className="text-xs text-red-600">{fieldError(`rewards.${i}.free`) || serverErrorText(`rewards.${i}.reward_menu_item_id`) || serverErrorText(`rewards.${i}.reward_category_id`)}</p>
-                                        )}
-                                    </div>
-                                ))}
-                                <button onClick={addReward} className="text-sm text-brand-primary font-bold hover:underline">
-                                    + הוסף פרס
-                                </button>
-                            </div>
+                                            )}
+
+                                            {(reward.reward_type === 'discount_percent' || reward.reward_type === 'discount_fixed' || reward.reward_type === 'fixed_price') && (
+                                                <div className="space-y-3">
+                                                    {(reward.reward_type === 'discount_percent' || reward.reward_type === 'discount_fixed') && (
+                                                        <div>
+                                                            <p className="text-xs font-bold text-gray-600 mb-2">היקף ההנחה</p>
+                                                            <div className="flex flex-wrap gap-2">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        setForm((f) => {
+                                                                            const rewards = [...f.rewards];
+                                                                            rewards[i] = {
+                                                                                ...rewards[i],
+                                                                                discount_scope: 'whole_cart',
+                                                                                discount_menu_item_ids: [],
+                                                                            };
+                                                                            return { ...f, rewards };
+                                                                        });
+                                                                    }}
+                                                                    className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-colors ${(reward.discount_scope || 'whole_cart') === 'whole_cart' ? 'bg-brand-primary text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                                                                >
+                                                                    כל הסל
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => updateReward(i, 'discount_scope', 'selected_items')}
+                                                                    className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-colors ${reward.discount_scope === 'selected_items' ? 'bg-brand-primary text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                                                                >
+                                                                    מוצרים נבחרים
+                                                                </button>
+                                                            </div>
+                                                            {reward.discount_scope === 'selected_items' && (
+                                                                <div className="mt-2">
+                                                                    <label className="block text-xs text-gray-500 mb-1">בחר מוצרים (Ctrl/Cmd לבחירה מרובה)</label>
+                                                                    <select
+                                                                        multiple
+                                                                        size={Math.min(8, Math.max(4, menuItems.length))}
+                                                                        value={(reward.discount_menu_item_ids || []).map(String)}
+                                                                        onChange={(e) => {
+                                                                            const selected = Array.from(e.target.selectedOptions, (opt) => parseInt(opt.value, 10));
+                                                                            updateReward(i, 'discount_menu_item_ids', selected);
+                                                                        }}
+                                                                        className={`w-full border rounded-lg px-2 py-1 text-sm focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none ${fieldError(`rewards.${i}.discount_menu_item_ids`) ? 'border-red-300' : 'border-gray-200'}`}
+                                                                    >
+                                                                        {menuItems.map((item) => (
+                                                                            <option key={item.id} value={item.id}>
+                                                                                {item.name} ({item.category_name})
+                                                                            </option>
+                                                                        ))}
+                                                                    </select>
+                                                                    {fieldError(`rewards.${i}.discount_menu_item_ids`) && (
+                                                                        <p className="text-xs text-red-600 mt-1">{fieldError(`rewards.${i}.discount_menu_item_ids`)}</p>
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                    <div>
+                                                        <label className="block text-xs text-gray-500 mb-1">
+                                                            {reward.reward_type === 'discount_percent' ? 'אחוז הנחה' : reward.reward_type === 'discount_fixed' ? 'סכום הנחה ליחידה (ש"ח)' : 'מחיר קבוע (ש"ח)'}
+                                                        </label>
+                                                        <input
+                                                            type="number"
+                                                            value={reward.reward_value}
+                                                            onChange={e => updateReward(i, 'reward_value', e.target.value)}
+                                                            className={`w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none ${fieldError(`rewards.${i}.reward_value`) ? 'border-red-300' : 'border-gray-200'}`}
+                                                            min={0}
+                                                            step={reward.reward_type === 'discount_percent' ? 1 : 0.01}
+                                                        />
+                                                        {fieldError(`rewards.${i}.reward_value`) && (
+                                                            <p className="text-xs text-red-600 mt-1">{fieldError(`rewards.${i}.reward_value`)}</p>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            )}
+                                            {reward.reward_type === 'free_item' && (fieldError(`rewards.${i}.free`) || serverErrorText(`rewards.${i}.reward_menu_item_id`) || serverErrorText(`rewards.${i}.reward_category_id`)) && (
+                                                <p className="text-xs text-red-600">{fieldError(`rewards.${i}.free`) || serverErrorText(`rewards.${i}.reward_menu_item_id`) || serverErrorText(`rewards.${i}.reward_category_id`)}</p>
+                                            )}
+                                        </div>
+                                    ))}
+                                    <button onClick={addReward} className="text-sm text-brand-primary font-bold hover:underline">
+                                        + הוסף פרס
+                                    </button>
+                                </div>
                             )}
                         </div>
 
