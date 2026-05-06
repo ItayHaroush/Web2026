@@ -69,8 +69,8 @@ class PromotionController extends Controller
             if ($request->hasFile('image')) {
                 $file = $request->file('image');
                 $filename = Str::uuid() . '.' . $file->getClientOriginalExtension();
-                $file->storeAs('public/promotions', $filename);
-                $imageUrl = Storage::url('public/promotions/' . $filename);
+                $file->storeAs('promotions', $filename, 'public');
+                $imageUrl = Storage::disk('public')->url('promotions/' . $filename);
             }
 
             $promotion = DB::transaction(function () use ($validated, $tenantId, $restaurant, $imageUrl) {
@@ -96,9 +96,11 @@ class PromotionController extends Controller
                 ]);
 
                 foreach ($validated['rules'] as $rule) {
+                    Log::info('PromotionController::store rule incoming', ['rule' => $rule, 'raw_request_rules' => $request->input('rules')]);
                     PromotionRule::create([
                         'promotion_id' => $promotion->id,
                         'required_category_id' => $rule['required_category_id'],
+                        'required_menu_item_ids' => $this->normalizeRequiredMenuItemIds($rule['required_menu_item_ids'] ?? null),
                         'min_quantity' => $rule['min_quantity'],
                     ]);
                 }
@@ -177,17 +179,17 @@ class PromotionController extends Controller
             if ($request->hasFile('image')) {
                 // Delete old image
                 if ($promotion->image_url) {
-                    $oldPath = str_replace('/storage/', 'public/', $promotion->image_url);
-                    Storage::delete($oldPath);
+                    $oldPath = ltrim(str_replace('/storage/', '', $promotion->image_url), '/');
+                    Storage::disk('public')->delete($oldPath);
                 }
                 $file = $request->file('image');
                 $filename = Str::uuid() . '.' . $file->getClientOriginalExtension();
-                $file->storeAs('public/promotions', $filename);
-                $imageUrl = Storage::url('public/promotions/' . $filename);
+                $file->storeAs('promotions', $filename, 'public');
+                $imageUrl = Storage::disk('public')->url('promotions/' . $filename);
             } elseif ($this->shouldRemoveImage($request)) {
                 if ($promotion->image_url) {
-                    $oldPath = str_replace('/storage/', 'public/', $promotion->image_url);
-                    Storage::delete($oldPath);
+                    $oldPath = ltrim(str_replace('/storage/', '', $promotion->image_url), '/');
+                    Storage::disk('public')->delete($oldPath);
                 }
                 $imageUrl = null;
             }
@@ -219,9 +221,11 @@ class PromotionController extends Controller
                 // Sync rules
                 $promotion->rules()->delete();
                 foreach ($validated['rules'] as $rule) {
+                    Log::info('PromotionController::update rule incoming', ['rule' => $rule, 'raw_request_rules' => request()->input('rules')]);
                     PromotionRule::create([
                         'promotion_id' => $promotion->id,
                         'required_category_id' => $rule['required_category_id'],
+                        'required_menu_item_ids' => $this->normalizeRequiredMenuItemIds($rule['required_menu_item_ids'] ?? null),
                         'min_quantity' => $rule['min_quantity'],
                     ]);
                 }
@@ -335,6 +339,7 @@ class PromotionController extends Controller
                             'required_category_id' => $rule->required_category_id,
                             'category_name' => $rule->category?->name ?? '',
                             'min_quantity' => $rule->min_quantity,
+                            'required_menu_item_ids' => $rule->required_menu_item_ids ?? [],
                         ];
                     }),
                     'rewards' => $promotion->rewards->map(function ($reward) {
@@ -428,6 +433,8 @@ class PromotionController extends Controller
             'rules' => 'required|array|min:1',
             'rules.*.required_category_id' => ['required', 'integer', Rule::exists('categories', 'id')->where('tenant_id', $tenantId)],
             'rules.*.min_quantity' => 'required|integer|min:1',
+            'rules.*.required_menu_item_ids' => 'nullable|array',
+            'rules.*.required_menu_item_ids.*' => ['integer', Rule::exists('menu_items', 'id')->where('tenant_id', $tenantId)],
             'rewards' => 'required|array|min:1',
             'rewards.*.reward_type' => 'required|in:free_item,discount_percent,discount_fixed,fixed_price',
             'rewards.*.reward_category_id' => ['nullable', 'integer', Rule::exists('categories', 'id')->where('tenant_id', $tenantId)],
@@ -558,6 +565,30 @@ class PromotionController extends Controller
             'discount_scope' => $discountScope,
             'discount_menu_item_ids' => $discountMenuItemIds,
         ];
+    }
+
+    /**
+     * נרמול רשימת מוצרים נדרשים לכלל המבצע: ייחודיים, מספרים שלמים חיוביים.
+     * הסדר נשמר; הראשון משמש כעוגן מחיר.
+     *
+     * @param  mixed  $raw
+     */
+    private function normalizeRequiredMenuItemIds($raw): ?array
+    {
+        if (!is_array($raw) || count($raw) === 0) {
+            return null;
+        }
+        $ids = [];
+        foreach ($raw as $v) {
+            if ($v === '' || $v === null) {
+                continue;
+            }
+            $id = (int) $v;
+            if ($id > 0 && !in_array($id, $ids, true)) {
+                $ids[] = $id;
+            }
+        }
+        return $ids === [] ? null : $ids;
     }
 
     /**

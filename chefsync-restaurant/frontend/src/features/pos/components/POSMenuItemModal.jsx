@@ -5,18 +5,21 @@ import { calculateUnitPrice, buildCartKey, formatAddonLabel } from '../../../uti
 /**
  * בחירת וריאציה ותוספות לפריט POS — התאמה לזרימת קיוסק/אתר.
  */
-export default function POSMenuItemModal({ item, onAdd, onClose }) {
+export default function POSMenuItemModal({ item, onAdd, onClose, orderType = 'takeaway', enableDineInPricing = false }) {
     const [selectedVariant, setSelectedVariant] = useState(null);
     const [selectedAddons, setSelectedAddons] = useState([]);
     const [addonPlacement, setAddonPlacement] = useState({});
     const [qty, setQty] = useState(1);
+
+    const dineInActive = orderType === 'dine_in' && enableDineInPricing;
+    const dineInDelta = dineInActive ? Number(item.dine_in_adjustment || 0) : 0;
 
     const selectedAddonsWithPlacement = selectedAddons.map(a => ({
         ...a,
         placement: addonPlacement[a.id] || 'whole',
     }));
 
-    const unitPrice = calculateUnitPrice(item.price, selectedVariant, selectedAddonsWithPlacement, 0);
+    const unitPrice = calculateUnitPrice(item.price, selectedVariant, selectedAddonsWithPlacement, 0) + dineInDelta;
     const totalPrice = Number((unitPrice * qty).toFixed(2));
 
     const toggleAddon = (group, addon) => {
@@ -59,6 +62,7 @@ export default function POSMenuItemModal({ item, onAdd, onClose }) {
             menu_item_id: item.id,
             name: item.name,
             price: calculateUnitPrice(item.price, selectedVariant, [], 0),
+            dine_in_adjustment: Number(item.dine_in_adjustment || 0),
             quantity: qty,
             variant_name: selectedVariant?.name ?? null,
             addons: addonsPayload,
@@ -95,7 +99,10 @@ export default function POSMenuItemModal({ item, onAdd, onClose }) {
                         {item.description && (
                             <p className="text-slate-400 text-sm mt-1">{item.description}</p>
                         )}
-                        <p className="text-orange-400 font-black text-lg mt-2">₪{Number(item.price).toFixed(2)}</p>
+                        <p className="text-orange-400 font-black text-lg mt-2">₪{(Number(item.price) + dineInDelta).toFixed(2)}</p>
+                        {dineInActive && dineInDelta !== 0 && (
+                            <p className="text-amber-400 text-xs font-bold mt-0.5">+₪{dineInDelta.toFixed(2)} ישיבה במקום</p>
+                        )}
                     </div>
 
                     {item.variants && item.variants.length > 0 && (

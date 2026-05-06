@@ -67,16 +67,8 @@ object PrinterBridge {
             val out: OutputStream = socket.getOutputStream()
 
             // ── Bitmap-only path (template=bitmap) ──────────────────────────────────
-            // When text is empty and binarySuffix is present the suffix already contains
-            // ESC @ (init) + GS v 0 raster + feeds + GS V 0 (cut). Send it as-is.
-            if (payload.isBlank() && binarySuffix != null && binarySuffix.isNotEmpty()) {
-                out.write(binarySuffix)
-                out.flush()
-                socket.close()
-                Log.i(TAG, "Bitmap print successful to $ip:$port")
-                return PrintResult(success = true)
-            }
-
+            // Suffix contains only the raster bytes. We still emit ESC @ init + feeds + cut
+            // through the normal text path below (with empty text), so the receipt is cut once.
             // ── Text path (classic / enhanced templates) ─────────────────────────────
             val charset = charsetForCodepage(codepageId)
             val hasMarkers = ALL_MARKERS.any { payload.contains(it) }

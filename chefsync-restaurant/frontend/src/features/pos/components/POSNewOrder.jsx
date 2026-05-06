@@ -36,6 +36,7 @@ function POSNewOrderInner({ headers, posToken, onOrderCreated }) {
     const [search, setSearch] = useState('');
     const [loading, setLoading] = useState(true);
     const [showPayment, setShowPayment] = useState(false);
+    const [enableDineInPricing, setEnableDineInPricing] = useState(false);
     /** @type {'dine_in' | 'takeaway'} */
     const [posOrderType, setPosOrderType] = useState('takeaway');
     const [paymentMethod, setPaymentMethod] = useState(null); // 'cash' | 'credit' | 'hold' | 'split'
@@ -61,6 +62,7 @@ function POSNewOrderInner({ headers, posToken, onOrderCreated }) {
                 const rawCategories = res.data.data || [];
                 const cats = rawCategories.map(c => ({ id: c.id, name: c.name, icon: c.icon }));
                 setCategories(cats);
+                setEnableDineInPricing(Boolean(res.data.enable_dine_in_pricing));
 
                 const flatItems = rawCategories.flatMap(cat =>
                     (cat.items || []).map(item => ({
@@ -83,6 +85,11 @@ function POSNewOrderInner({ headers, posToken, onOrderCreated }) {
         return activeCategory ? item.category?.id === activeCategory : true;
     });
 
+    // תוספת ישיבה במקום פעילה רק כשמסומן 'ישיבה' וההגדרה במסעדה דולקת
+    const dineInActive = posOrderType === 'dine_in' && enableDineInPricing;
+    const rowDineInDelta = (row) => (dineInActive ? Number(row.dine_in_adjustment || 0) : 0);
+    const itemDisplayPrice = (item) => Number(item.price) + (dineInActive ? Number(item.dine_in_adjustment || 0) : 0);
+
     const lineUnitTotal = (row) => {
         const addonsBill = row.addons?.length ? sumAddonsBilledWithGroupRules(
             row.addons.map(a => ({
@@ -93,7 +100,7 @@ function POSNewOrderInner({ headers, posToken, onOrderCreated }) {
                 placement: a.placement,
             })),
         ) : 0;
-        return (row.price + addonsBill) * row.quantity;
+        return (row.price + rowDineInDelta(row) + addonsBill) * row.quantity;
     };
 
     const mergeCartLine = (line) => {
@@ -116,6 +123,7 @@ function POSNewOrderInner({ headers, posToken, onOrderCreated }) {
             menu_item_id: item.id,
             name: item.name,
             price: parseFloat(item.price),
+            dine_in_adjustment: Number(item.dine_in_adjustment || 0),
             quantity: 1,
             variant_name: null,
             addons: [],
@@ -149,7 +157,7 @@ function POSNewOrderInner({ headers, posToken, onOrderCreated }) {
                 })),
             )
             : 0;
-        return sum + (item.price + addonsBill) * item.quantity;
+        return sum + (item.price + rowDineInDelta(item) + addonsBill) * item.quantity;
     }, 0);
 
     const discVal = parseFloat(discountValue) || 0;
@@ -269,7 +277,12 @@ function POSNewOrderInner({ headers, posToken, onOrderCreated }) {
                                     </div>
                                 )}
                                 <p className="text-white font-black text-sm leading-tight truncate">{item.name}</p>
-                                <p className="text-orange-400 font-black text-lg mt-1">₪{item.price}</p>
+                                <p className="text-orange-400 font-black text-lg mt-1">₪{itemDisplayPrice(item).toFixed(2)}</p>
+                                {dineInActive && Number(item.dine_in_adjustment || 0) !== 0 && (
+                                    <p className="text-amber-400 text-[10px] font-bold mt-0.5">
+                                        +₪{Number(item.dine_in_adjustment).toFixed(2)} ישיבה
+                                    </p>
+                                )}
                             </button>
                         ))}
                         {filteredItems.length === 0 && (
@@ -477,6 +490,8 @@ function POSNewOrderInner({ headers, posToken, onOrderCreated }) {
             {configureItem && (
                 <POSMenuItemModal
                     item={configureItem}
+                    orderType={posOrderType}
+                    enableDineInPricing={enableDineInPricing}
                     onClose={() => setConfigureItem(null)}
                     onAdd={line => mergeCartLine(line)}
                 />

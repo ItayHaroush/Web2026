@@ -202,6 +202,7 @@ class MenuController extends Controller
                                 'image_url' => $item->image_url,
                                 'variants' => $variants,
                                 'addon_groups' => $addonGroups,
+                                'dine_in_adjustment' => (float) $item->getEffectiveDineInAdjustment(),
                                 'availability_start_time' => $item->availability_start_time
                                     ? substr((string) $item->availability_start_time, 0, 5) : null,
                                 'availability_end_time' => $item->availability_end_time
@@ -218,6 +219,7 @@ class MenuController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $categories,
+                'enable_dine_in_pricing' => (bool) ($restaurant->enable_dine_in_pricing ?? false),
             ]);
         } catch (\Exception $e) {
             return response()->json([

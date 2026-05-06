@@ -593,6 +593,9 @@ function AddItemsModal({ tab, headers, posToken, onClose, onAdded }) {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [configureItem, setConfigureItem] = useState(null);
+    const [enableDineInPricing, setEnableDineInPricing] = useState(false);
+    // שולחן = ישיבה במקום תמיד
+    const dineInActive = enableDineInPricing;
 
     useEffect(() => {
         (async () => {
@@ -602,6 +605,7 @@ function AddItemsModal({ tab, headers, posToken, onClose, onAdded }) {
                     const rawCategories = res.data.data || [];
                     const cats = rawCategories.map(c => ({ id: c.id, name: c.name }));
                     setCategories(cats);
+                    setEnableDineInPricing(Boolean(res.data.enable_dine_in_pricing));
                     setItems(rawCategories.flatMap(cat =>
                         (cat.items || []).map(item => ({ ...item, category: { id: cat.id, name: cat.name } }))
                     ));
@@ -639,6 +643,7 @@ function AddItemsModal({ tab, headers, posToken, onClose, onAdded }) {
             menu_item_id: item.id,
             name: item.name,
             price: parseFloat(item.price),
+            dine_in_adjustment: Number(item.dine_in_adjustment || 0),
             quantity: 1,
             variant_name: null,
             addons: [],
@@ -666,7 +671,8 @@ function AddItemsModal({ tab, headers, posToken, onClose, onAdded }) {
                 })),
             )
             : 0;
-        return (row.price + addonsBill) * row.quantity;
+        const dineInDelta = dineInActive ? Number(row.dine_in_adjustment || 0) : 0;
+        return (row.price + dineInDelta + addonsBill) * row.quantity;
     };
 
     const cartTotal = cart.reduce((sum, item) => sum + lineUnitTotal(item), 0);
@@ -725,7 +731,10 @@ function AddItemsModal({ tab, headers, posToken, onClose, onAdded }) {
                                         <button key={item.id} onClick={() => handlePickMenuItem(item)}
                                             className="bg-slate-900 border border-slate-700 rounded-xl p-3 text-right hover:border-orange-500/50 transition-all active:scale-95">
                                             <p className="text-white font-bold text-sm truncate">{item.name}</p>
-                                            <p className="text-orange-400 font-black text-base mt-1">₪{item.price}</p>
+                                            <p className="text-orange-400 font-black text-base mt-1">₪{(Number(item.price) + (dineInActive ? Number(item.dine_in_adjustment || 0) : 0)).toFixed(2)}</p>
+                                            {dineInActive && Number(item.dine_in_adjustment || 0) !== 0 && (
+                                                <p className="text-amber-400 text-[10px] font-bold mt-0.5">+₪{Number(item.dine_in_adjustment).toFixed(2)} ישיבה</p>
+                                            )}
                                         </button>
                                     ))}
                                 </div>
@@ -776,6 +785,8 @@ function AddItemsModal({ tab, headers, posToken, onClose, onAdded }) {
             {configureItem && (
                 <POSMenuItemModal
                     item={configureItem}
+                    orderType="dine_in"
+                    enableDineInPricing={enableDineInPricing}
                     onClose={() => setConfigureItem(null)}
                     onAdd={line => mergeCartLine(line)}
                 />

@@ -68,8 +68,9 @@ class BitmapReceiptRenderer
             imagedestroy($image); // @phpstan-ignore-line
         }
 
-        // ESC @ (init) + raster bytes + 4 LF + GS V 0 (full cut)
-        return "\x1b\x40" . $raster . "\x0a\x0a\x0a\x0a" . "\x1d\x56\x00";
+        // Return raster only — caller (NetworkPrinterAdapter / PrinterBridge) handles
+        // ESC @ (init), feeds and GS V cut. Avoids double-cut artifacts.
+        return $raster;
     }
 
     // ─── Payload Parser ───────────────────────────────────────────────────────

@@ -76,12 +76,16 @@ class PromotionService
             return [];
         }
 
-        // resolve missing category_id from menu_items table
+        // resolve missing category_id and unit price from menu_items table
         $missingCategoryItemIds = [];
+        $cartMenuItemIds = [];
         foreach ($cartItems as $i => $item) {
             $catId = (int) ($item['category_id'] ?? 0);
             if ($catId <= 0 && !empty($item['menu_item_id'])) {
                 $missingCategoryItemIds[(int) $item['menu_item_id']] = $i;
+            }
+            if (!empty($item['menu_item_id'])) {
+                $cartMenuItemIds[] = (int) $item['menu_item_id'];
             }
         }
         if (!empty($missingCategoryItemIds)) {
@@ -94,13 +98,30 @@ class PromotionService
             }
         }
 
+        // מחירי בסיס למוצרים — לחישוב תוספת שדרוג (price diff)
+        $menuItemPriceMap = [];
+        if (!empty($cartMenuItemIds)) {
+            $menuItemPriceMap = MenuItem::whereIn('id', array_unique($cartMenuItemIds))
+                ->where('tenant_id', $tenantId)
+                ->pluck('price', 'id')
+                ->map(fn($p) => (float) $p)
+                ->toArray();
+        }
+
         // מיפוי כמויות לפי קטגוריה
         $categoryQuantities = [];
+        // מיפוי כמויות לפי קטגוריה+מוצר (לחישוב תוספת שדרוג)
+        $categoryItemQuantities = []; // [catId][menuItemId] => qty
         foreach ($cartItems as $item) {
             $categoryId = (int) ($item['category_id'] ?? 0);
             if ($categoryId > 0) {
                 $qty = (int) ($item['qty'] ?? $item['quantity'] ?? 1);
                 $categoryQuantities[$categoryId] = ($categoryQuantities[$categoryId] ?? 0) + $qty;
+                $mid = (int) ($item['menu_item_id'] ?? 0);
+                if ($mid > 0) {
+                    $categoryItemQuantities[$categoryId][$mid] =
+                        ($categoryItemQuantities[$categoryId][$mid] ?? 0) + $qty;
+                }
             }
         }
 
@@ -130,6 +151,7 @@ class PromotionService
                     'category_name' => $rule->category?->name ?? '',
                     'required' => $required,
                     'current' => $current,
+                    'required_menu_item_ids' => $rule->required_menu_item_ids ?? [],
                 ];
             }
 
@@ -160,6 +182,27 @@ class PromotionService
                 'stackable' => $promotion->stackable,
                 'priority' => $promotion->priority,
                 'rewards' => $rewards,
+                // תוספת שדרוג מחושבת תמיד כאשר יש פריטי-עוגן בכלל,
+                // גם עבור "מחיר קבוע" — המחיר הקבוע יחול רק על העוגן,
+                // ופריטים אחרים מהקטגוריה ישלמו את ההפרש מעוגן המחיר.
+                'upgrade_surcharge' => $allMet && !$this->promotionHasFixedPriceReward($promotion)
+                    ? $this->computeUpgradeSurchargeForRules(
+                        $rules,
+                        $categoryItemQuantities,
+                        $menuItemPriceMap,
+                        $timesQualified
+                    )
+                    : 0.0,
+                // עבור מבצעי "מחיר קבוע" — bundle_savings כבר מחשב נטו
+                // (allocated − target − non_anchor_surcharge) כדי לכלול את ההפרש בעוגן.
+                'bundle_savings' => $allMet && $this->promotionHasFixedPriceReward($promotion)
+                    ? $this->computeBundleSavingsForEligibility(
+                        $promotion,
+                        $categoryItemQuantities,
+                        $menuItemPriceMap,
+                        $timesQualified
+                    )
+                    : 0.0,
                 'progress' => [
                     'met' => $allMet,
                     'times_qualified' => $allMet ? $timesQualified : 0,
@@ -186,15 +229,27 @@ class PromotionService
 
         // מיפוי כמויות לפי קטגוריה מתוך line items
         $categoryQuantities = [];
+        $categoryItemQuantities = []; // [catId][menuItemId] => qty
+        $menuItemPriceMap = []; // [menuItemId] => unit base price (price_at_order - addons_total)
         foreach ($lineItems as $item) {
             $categoryId = (int) ($item['category_id'] ?? 0);
             if ($categoryId > 0) {
                 $qty = (int) ($item['quantity'] ?? 1);
                 $categoryQuantities[$categoryId] = ($categoryQuantities[$categoryId] ?? 0) + $qty;
+                $mid = (int) ($item['menu_item_id'] ?? 0);
+                if ($mid > 0) {
+                    $categoryItemQuantities[$categoryId][$mid] =
+                        ($categoryItemQuantities[$categoryId][$mid] ?? 0) + $qty;
+                    if (!isset($menuItemPriceMap[$mid])) {
+                        $addons = (float) ($item['addons_total'] ?? 0);
+                        $menuItemPriceMap[$mid] = max(0.0, (float) ($item['price_at_order'] ?? 0) - $addons);
+                    }
+                }
             }
         }
 
         $totalDiscount = 0;
+        $totalUpgradeSurcharge = 0.0;
         $giftItems = [];
         $appliedNonStackable = false;
 
@@ -233,6 +288,17 @@ class PromotionService
             if ($promotion->rules->isEmpty()) {
                 $timesQualified = 1;
             }
+
+            // תוספת שדרוג — כשתנאי מעוגן למוצרים ספציפיים, מוצרים אחרים מהקטגוריה
+            // משלמים הפרש מעוגן המחיר. רלוונטי גם ל-"מחיר קבוע":
+            // המחיר הקבוע ניתן רק על מוצר העוגן, ולפריטים אחרים מהקטגוריה מתווסף ההפרש.
+            $promotionUpgrade = $this->computeUpgradeSurchargeForRules(
+                $promotion->rules,
+                $categoryItemQuantities,
+                $menuItemPriceMap,
+                $timesQualified
+            );
+            $totalUpgradeSurcharge += $promotionUpgrade;
 
             // עיבוד פרסים — כפל לפי מספר הפעמים שעומד בתנאים
             foreach ($promotion->rewards as $reward) {
@@ -344,12 +410,18 @@ class PromotionService
 
         Log::info('PromotionService::validateAndApply result', [
             'promotion_discount' => round($totalDiscount, 2),
+            'upgrade_surcharge' => round($totalUpgradeSurcharge, 2),
             'gift_items_count' => count($giftItems),
             'applied_promotions_count' => count($appliedPromotions),
         ]);
 
+        // תוספת השדרוג מקטינה את ההנחה הנטו (ללא ירידה מתחת ל-0)
+        $netDiscount = max(0.0, round($totalDiscount - $totalUpgradeSurcharge, 2));
+
         return [
-            'promotion_discount' => round($totalDiscount, 2),
+            'promotion_discount' => $netDiscount,
+            'upgrade_surcharge' => round($totalUpgradeSurcharge, 2),
+            'gross_discount' => round($totalDiscount, 2),
             'gift_items' => $giftItems,
         ];
     }
@@ -481,6 +553,180 @@ class PromotionService
         }
 
         return round($sum, 2);
+    }
+
+    /**
+     * האם המבצע כולל פרס מסוג "מחיר קבוע" — אם כן, לא צריך תוספת שדרוג
+     * כיוון שהמחיר הקבוע כבר מתמחר את החבילה כולה.
+     */
+    private function promotionHasFixedPriceReward($promotion): bool
+    {
+        $rewards = $promotion->rewards ?? collect();
+        foreach ($rewards as $r) {
+            if (($r->reward_type ?? '') === 'fixed_price') {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * חישוב חיסכון מבצע "מחיר חבילה" עבור תצוגת זכאות.
+     * חיסכון = סכום מחירי בסיס (DB) של היחידות שמוקצות לתנאי − סך המחיר הקבוע × times.
+     *
+     * @param  array<int, array<int, int>>  $categoryItemQuantities  [catId][menuItemId] => qty
+     * @param  array<int, float>  $menuItemPriceMap  [menuItemId] => base price
+     */
+    private function computeBundleSavingsForEligibility(
+        Promotion $promotion,
+        array $categoryItemQuantities,
+        array $menuItemPriceMap,
+        int $timesQualified
+    ): float {
+        if ($timesQualified < 1 || $promotion->rules->isEmpty()) {
+            return 0.0;
+        }
+
+        // עותק כמויות לכל קטגוריה כדי לעקוב אחרי ההקצאה
+        $remaining = [];
+        foreach ($categoryItemQuantities as $catId => $items) {
+            $remaining[$catId] = $items;
+        }
+
+        $allocated = 0.0;
+        foreach ($promotion->rules as $rule) {
+            $catId = (int) $rule->required_category_id;
+            $need = (int) $rule->min_quantity * $timesQualified;
+            if ($need <= 0 || empty($remaining[$catId])) {
+                continue;
+            }
+            // הקצה את הזולים תחילה — תואם לחישוב הצרכן (פחות אגרסיבי)
+            $items = $remaining[$catId];
+            $sortable = [];
+            foreach ($items as $mid => $qty) {
+                if ($qty > 0) {
+                    $sortable[] = ['mid' => (int) $mid, 'qty' => (int) $qty, 'price' => (float) ($menuItemPriceMap[$mid] ?? 0)];
+                }
+            }
+            usort($sortable, fn($a, $b) => $a['price'] <=> $b['price']);
+            $left = $need;
+            foreach ($sortable as $row) {
+                if ($left <= 0) break;
+                $take = min($left, $row['qty']);
+                $allocated += $row['price'] * $take;
+                $remaining[$catId][$row['mid']] = $row['qty'] - $take;
+                $left -= $take;
+            }
+        }
+
+        $target = 0.0;
+        foreach ($promotion->rewards as $reward) {
+            if (($reward->reward_type ?? '') === 'fixed_price') {
+                $target += (float) $reward->reward_value * $timesQualified;
+            }
+        }
+
+        // המחיר הקבוע ניתן רק על מוצר העוגן; פריטים אחרים מהקטגוריה משלמים את ההפרש
+        // מעוגן המחיר על גבי המחיר הקבוע. נחסיר זאת מהחיסכון המוצג.
+        $nonAnchorSurcharge = $this->computeUpgradeSurchargeForRules(
+            $promotion->rules,
+            $categoryItemQuantities,
+            $menuItemPriceMap,
+            $timesQualified
+        );
+
+        return max(0.0, round($allocated - $target - $nonAnchorSurcharge, 2));
+    }
+
+    /**
+     * חישוב תוספת שדרוג: כאשר התנאי מציין מוצרים ספציפיים ועוגן מחיר,
+     * מוצרים אחרים מאותה קטגוריה שמוקצים לתנאי משלמים את ההפרש מעוגן המחיר.
+     *
+     * אסטרטגיית הקצאה: קודם פריטי-עוגן הספציפיים (ללא הפרש), ואחר כך פריטים אחרים
+     * מהקטגוריה (חיוב = max(0, מחיר_פריט - מחיר_עוגן) ליחידה).
+     *
+     * @param  iterable  $rules  PromotionRule collection
+     * @param  array<int, array<int, int>>  $categoryItemQuantities  [catId][menuItemId] => qty
+     * @param  array<int, float>  $menuItemPriceMap  [menuItemId] => unit base price
+     */
+    private function computeUpgradeSurchargeForRules(
+        iterable $rules,
+        array $categoryItemQuantities,
+        array $menuItemPriceMap,
+        int $timesQualified
+    ): float {
+        if ($timesQualified < 1) {
+            return 0.0;
+        }
+        $totalSurcharge = 0.0;
+
+        foreach ($rules as $rule) {
+            $required = $rule->required_menu_item_ids ?? [];
+            if (!is_array($required) || count($required) === 0) {
+                continue;
+            }
+            $catId = (int) $rule->required_category_id;
+            $unitsNeeded = (int) $rule->min_quantity * $timesQualified;
+            if ($unitsNeeded <= 0) {
+                continue;
+            }
+
+            $itemQtys = $categoryItemQuantities[$catId] ?? [];
+            if (empty($itemQtys)) {
+                continue;
+            }
+
+            $anchorId = (int) $required[0];
+            $anchorPrice = (float) ($menuItemPriceMap[$anchorId] ?? 0);
+            $requiredSet = array_flip(array_map('intval', $required));
+
+            $remaining = $unitsNeeded;
+
+            // שלב 1: ספיגה ע"י פריטי-עוגן/דרישה (ללא הפרש)
+            foreach ($requiredSet as $rid => $_) {
+                if ($remaining <= 0) {
+                    break 1;
+                }
+                $avail = (int) ($itemQtys[$rid] ?? 0);
+                if ($avail <= 0) {
+                    continue;
+                }
+                $take = min($avail, $remaining);
+                $itemQtys[$rid] = $avail - $take;
+                $remaining -= $take;
+            }
+
+            if ($remaining <= 0) {
+                continue;
+            }
+
+            // שלב 2: שאר היחידות מגיעות מפריטים אחרים בקטגוריה — חיוב הפרש (אם יש).
+            // נמיין מהזול ליקר כדי לא "להעניש" את הלקוח יותר מהנדרש.
+            $others = [];
+            foreach ($itemQtys as $mid => $qty) {
+                if ($qty <= 0 || isset($requiredSet[(int) $mid])) {
+                    continue;
+                }
+                $others[] = [
+                    'menu_item_id' => (int) $mid,
+                    'qty' => (int) $qty,
+                    'price' => (float) ($menuItemPriceMap[(int) $mid] ?? $anchorPrice),
+                ];
+            }
+            usort($others, fn($a, $b) => $a['price'] <=> $b['price']);
+
+            foreach ($others as $row) {
+                if ($remaining <= 0) {
+                    break;
+                }
+                $take = min($row['qty'], $remaining);
+                $diff = max(0.0, $row['price'] - $anchorPrice);
+                $totalSurcharge += $diff * $take;
+                $remaining -= $take;
+            }
+        }
+
+        return round($totalSurcharge, 2);
     }
 
     /**

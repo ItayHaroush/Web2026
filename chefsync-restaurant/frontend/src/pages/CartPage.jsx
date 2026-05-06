@@ -641,7 +641,14 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
     const metPromotions = eligiblePromotions.filter(p => p.progress?.met);
 
     // חישוב הנחת מבצעים בצד הלקוח (לתצוגה — הבקאנד מחשב סופית)
-    const promotionDiscount = computeClientPromotionDiscount(total, cartItems, metPromotions, menuCategories);
+    const grossPromotionDiscount = computeClientPromotionDiscount(total, cartItems, metPromotions, menuCategories);
+    // תוספת שדרוג: כשהתנאי מציין מוצרים ספציפיים והלקוח בחר אחר מאותה קטגוריה
+    const upgradeSurcharge = metPromotions.reduce(
+        (sum, p) => sum + (Number(p.upgrade_surcharge) || 0),
+        0,
+    );
+    // ההנחה נטו (מקסימום 0) — תואם לחישוב הבקאנד
+    const promotionDiscount = Math.max(0, grossPromotionDiscount - upgradeSurcharge);
     const totalWithDelivery = total + deliveryFee - promotionDiscount;
     const isBelowMinimum = customerInfo.delivery_method === 'delivery' && deliveryMinimum > 0 && total < deliveryMinimum;
     // בניית רשימת מתנות נבחרות (עם שמות) מ-selectedGifts
@@ -1063,28 +1070,71 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                                 )}
 
                                 {metPromotions.map((promo) => {
-                                    const discountText = (promo.rewards || []).map(r => {
-                                        if (r.reward_type === 'discount_percent') return `${r.reward_value}% הנחה`;
-                                        if (r.reward_type === 'discount_fixed') return `₪${r.reward_value} הנחה`;
-                                        if (r.reward_type === 'free_item') return 'מתנה';
-                                        return 'הטבה';
-                                    }).join(' + ');
+                                    const rewards = promo.rewards || [];
+                                    const fixedReward = rewards.find(r => r.reward_type === 'fixed_price');
+                                    const times = promo.progress?.times_qualified || 1;
+                                    const promoSurcharge = Number(promo.upgrade_surcharge) || 0;
+
+                                    // עבור "מחיר קבוע" — נסמך על חישוב השרת (bundle_savings).
+                                    // לשאר סוגי הפרסים — חישוב בצד לקוח להצגה.
+                                    let promoBenefit;
+                                    if (fixedReward) {
+                                        promoBenefit = Number(promo.bundle_savings) || 0;
+                                    } else {
+                                        const promoGross = computeClientPromotionDiscount(total, cartItems, [promo], menuCategories);
+                                        promoBenefit = Math.max(0, promoGross - promoSurcharge);
+                                    }
+
+                                    let rewardLabel = '';
+                                    if (fixedReward) {
+                                        rewardLabel = `מחיר חבילה: ₪${(parseFloat(fixedReward.reward_value) * times).toFixed(2)}`;
+                                    } else {
+                                        rewardLabel = rewards.map(r => {
+                                            if (r.reward_type === 'discount_percent') return `${r.reward_value}% הנחה`;
+                                            if (r.reward_type === 'discount_fixed') return `₪${r.reward_value} הנחה`;
+                                            if (r.reward_type === 'free_item') return 'מתנה';
+                                            return 'הטבה';
+                                        }).join(' + ');
+                                    }
+
                                     return (
-                                        <div key={promo.promotion_id} className="flex justify-between items-center text-base">
-                                            <span className="font-medium text-brand-primary dark:text-orange-400 flex items-center gap-1">
-                                                <FaGift size={14} /> {promo.name}
-                                            </span>
-                                            <span className="font-bold text-brand-primary dark:text-orange-400 text-sm">
-                                                {discountText}
-                                            </span>
+                                        <div key={promo.promotion_id} className="bg-white/60 dark:bg-brand-dark-surface/60 border border-brand-primary/20 rounded-xl p-3 space-y-1">
+                                            <div className="flex justify-between items-center">
+                                                <span className="font-bold text-brand-primary dark:text-orange-400 flex items-center gap-1.5">
+                                                    <FaGift size={14} /> {promo.name}
+                                                </span>
+                                                <span className="text-xs text-gray-600 dark:text-gray-300">{rewardLabel}</span>
+                                            </div>
+                                            {promoBenefit > 0 && (
+                                                <div className="flex justify-between items-center text-sm text-green-700 dark:text-green-400">
+                                                    <span>חיסכון</span>
+                                                    <span className="font-bold">−₪{promoBenefit.toFixed(2)}</span>
+                                                </div>
+                                            )}
+                                            {promoSurcharge > 0 && (
+                                                <div className="flex justify-between items-center text-xs text-amber-700 dark:text-amber-400">
+                                                    <span>תוספת שדרוג מוצר (החלפת פריט עוגן)</span>
+                                                    <span className="font-bold">+₪{promoSurcharge.toFixed(2)}</span>
+                                                </div>
+                                            )}
                                         </div>
                                     );
                                 })}
 
-                                {promotionDiscount > 0 && (
-                                    <div className="flex justify-between items-center text-lg text-green-600 dark:text-green-400">
-                                        <span className="font-medium flex items-center gap-1"><FaGift size={14} /> הטבת מבצע</span>
-                                        <span className="font-bold">-₪{promotionDiscount.toFixed(2)}</span>
+                                {(promotionDiscount > 0 || upgradeSurcharge > 0) && (
+                                    <div className="border-t border-gray-200 dark:border-brand-dark-border pt-2 space-y-1">
+                                        {promotionDiscount > 0 && (
+                                            <div className="flex justify-between items-center text-base text-green-700 dark:text-green-400">
+                                                <span className="font-medium">סה"כ חיסכון ממבצעים</span>
+                                                <span className="font-bold">−₪{promotionDiscount.toFixed(2)}</span>
+                                            </div>
+                                        )}
+                                        {upgradeSurcharge > 0 && (
+                                            <div className="flex justify-between items-center text-sm text-amber-700 dark:text-amber-400">
+                                                <span className="font-medium">סה"כ תוספות שדרוג</span>
+                                                <span className="font-bold">+₪{upgradeSurcharge.toFixed(2)}</span>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
 

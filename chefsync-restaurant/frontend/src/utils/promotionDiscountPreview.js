@@ -114,7 +114,13 @@ export function computeClientPromotionDiscount(cartTotal, cartItems, metPromotio
                 }
             }
         }
-        sum += computeFixedPriceBundleDiscount(items, promo);
+        // עבור "מחיר קבוע" — אם הבקאנד החזיר bundle_savings, נשתמש בו (מדויק יותר).
+        const hasFixedPrice = (promo.rewards || []).some(r => r.reward_type === 'fixed_price');
+        if (hasFixedPrice) {
+            sum += Number(promo.bundle_savings) || 0;
+        } else {
+            sum += computeFixedPriceBundleDiscount(items, promo);
+        }
     }
     return Math.round(sum * 100) / 100;
 }

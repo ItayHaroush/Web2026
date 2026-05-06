@@ -50,6 +50,13 @@ class PromotionService {
         validRules.forEach((r, i) => {
             fd.append(`rules[${i}][required_category_id]`, r.required_category_id);
             fd.append(`rules[${i}][min_quantity]`, r.min_quantity);
+            if (Array.isArray(r.required_menu_item_ids)) {
+                r.required_menu_item_ids.forEach((id, j) => {
+                    if (id !== '' && id != null && Number(id) > 0) {
+                        fd.append(`rules[${i}][required_menu_item_ids][${j}]`, Number(id));
+                    }
+                });
+            }
         });
         (rewards || []).forEach((r, i) => {
             fd.append(`rewards[${i}][reward_type]`, r.reward_type);

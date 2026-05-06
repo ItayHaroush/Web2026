@@ -13,11 +13,13 @@ class PromotionRule extends Model
     protected $fillable = [
         'promotion_id',
         'required_category_id',
+        'required_menu_item_ids',
         'min_quantity',
     ];
 
     protected $casts = [
         'min_quantity' => 'integer',
+        'required_menu_item_ids' => 'array',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];

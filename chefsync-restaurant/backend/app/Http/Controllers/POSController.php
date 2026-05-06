@@ -9,6 +9,7 @@ use App\Models\EmployeeTimeLog;
 use App\Models\FcmToken;
 use App\Models\MonitoringAlert;
 use App\Models\NotificationLog;
+use App\Models\MenuItem;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Models\PosSession;
@@ -526,11 +527,30 @@ class POSController extends Controller
         $restaurant = Restaurant::find($restaurantId);
         $tenantId = $restaurant?->tenant_id;
 
+        $orderType = $request->input('order_type', 'takeaway');
+
+        // חישוב מחירים אוטוריטטיבי בצד שרת — תוספת ישיבה מתווספת על המחיר הבסיסי
+        $resolvedItems = [];
         $totalAmount = 0;
         foreach ($request->items as $item) {
-            $qty = $item['quantity'] ?? 1;
-            $totalAmount += $item['price'] * $qty;
-            $totalAmount += AddonPricingService::sumFromPosAddonPayload($item['addons'] ?? null) * $qty;
+            $qty = (int) ($item['quantity'] ?? 1);
+            $basePrice = (float) ($item['price'] ?? 0);
+            $dineInAdjustment = $this->resolveDineInAdjustment(
+                (int) $item['menu_item_id'],
+                $orderType,
+                $restaurant
+            );
+            $unitPrice = round($basePrice + $dineInAdjustment, 2);
+            $addonTotal = AddonPricingService::sumFromPosAddonPayload($item['addons'] ?? null);
+
+            $totalAmount += $unitPrice * $qty;
+            $totalAmount += $addonTotal * $qty;
+
+            $resolvedItems[] = [
+                'raw' => $item,
+                'unit_price' => $unitPrice,
+                'addon_total' => $addonTotal,
+            ];
         }
 
         // הנחה
@@ -547,7 +567,6 @@ class POSController extends Controller
         $isHold = $request->payment_method === 'hold';
         $paymentMethod = $isHold ? 'cash' : ($request->payment_method === 'credit' ? 'credit_card' : 'cash');
         $paymentStatus = $isHold ? 'pending' : ($request->payment_method === 'cash' ? 'paid' : 'pending');
-        $orderType = $request->input('order_type', 'takeaway');
         $cashPaidNow = $request->payment_method === 'cash' && ! $isHold;
         $initialStatus = $cashPaidNow ? Order::STATUS_PREPARING : Order::STATUS_RECEIVED;
 
@@ -571,7 +590,8 @@ class POSController extends Controller
             'promotion_discount' => $discountAmount,
         ]);
 
-        foreach ($request->items as $item) {
+        foreach ($resolvedItems as $resolved) {
+            $item = $resolved['raw'];
             $addonsArray = [];
             if (! empty($item['addons'])) {
                 foreach ($item['addons'] as $a) {
@@ -588,14 +608,13 @@ class POSController extends Controller
                     $addonsArray[] = $addonEntry;
                 }
             }
-            $addonTotal = AddonPricingService::sumFromPosAddonPayload($item['addons'] ?? null);
             $order->items()->create([
                 'menu_item_id' => $item['menu_item_id'],
                 'quantity' => $item['quantity'],
-                'price_at_order' => $item['price'],
+                'price_at_order' => $resolved['unit_price'],
                 'variant_name' => $item['variant_name'] ?? null,
                 'addons' => ! empty($addonsArray) ? $addonsArray : null,
-                'addons_total' => $addonTotal,
+                'addons_total' => $resolved['addon_total'],
             ]);
         }
 
@@ -1430,31 +1449,45 @@ class POSController extends Controller
         }
 
         // פתיחה עם פריטים בבקשה אחת (API): יוצרים הזמנה + בון מטבח לפריטים אלו בלבד
+        // טאב = ישיבה במקום, לכן מתווספת תוספת ישיבה (אם המסעדה מאפשרת זאת)
         $totalAmount = 0;
+        $resolvedItems = [];
         foreach ($items as $item) {
-            $qty = $item['quantity'] ?? 1;
-            $totalAmount += $item['price'] * $qty;
-            $totalAmount += AddonPricingService::sumFromPosAddonPayload($item['addons'] ?? null) * $qty;
+            $qty = (int) ($item['quantity'] ?? 1);
+            $basePrice = (float) ($item['price'] ?? 0);
+            $dineInAdjustment = $this->resolveDineInAdjustment(
+                (int) $item['menu_item_id'],
+                'dine_in',
+                $restaurant
+            );
+            $unitPrice = round($basePrice + $dineInAdjustment, 2);
+            $addonTotal = AddonPricingService::sumFromPosAddonPayload($item['addons'] ?? null);
+            $totalAmount += ($unitPrice + $addonTotal) * $qty;
+            $resolvedItems[] = [
+                'raw' => $item,
+                'unit_price' => $unitPrice,
+                'addon_total' => $addonTotal,
+            ];
         }
 
         $order = $this->createDineInTabOrder($restaurantId, $tenantId, $request->table_number, $totalAmount);
 
         $newLineItems = collect();
-        foreach ($items as $item) {
+        foreach ($resolvedItems as $resolved) {
+            $item = $resolved['raw'];
             $addonsArray = [];
             if (! empty($item['addons'])) {
                 foreach ($item['addons'] as $a) {
                     $addonsArray[] = ['name' => $a['name'] ?? '', 'price' => $a['price'] ?? 0];
                 }
             }
-            $addonTotal = AddonPricingService::sumFromPosAddonPayload($item['addons'] ?? null);
             $newLineItems->push($order->items()->create([
                 'menu_item_id' => $item['menu_item_id'],
                 'quantity' => $item['quantity'],
-                'price_at_order' => $item['price'],
+                'price_at_order' => $resolved['unit_price'],
                 'variant_name' => $item['variant_name'] ?? null,
                 'addons' => ! empty($addonsArray) ? $addonsArray : null,
-                'addons_total' => $addonTotal,
+                'addons_total' => $resolved['addon_total'],
             ]));
         }
 
@@ -1547,14 +1580,20 @@ class POSController extends Controller
                 }
             }
 
+            $dineInAdjustment = $this->resolveDineInAdjustment(
+                (int) $item['menu_item_id'],
+                'dine_in',
+                $restaurant
+            );
+            $unitPrice = round((float) $item['price'] + $dineInAdjustment, 2);
             $addonTotal = AddonPricingService::sumFromPosAddonPayload($item['addons'] ?? null);
-            $itemTotal = ($item['price'] + $addonTotal) * $item['quantity'];
+            $itemTotal = ($unitPrice + $addonTotal) * $item['quantity'];
             $addedAmount += $itemTotal;
 
             $newLineItems->push($order->items()->create([
                 'menu_item_id' => $item['menu_item_id'],
                 'quantity' => $item['quantity'],
-                'price_at_order' => $item['price'],
+                'price_at_order' => $unitPrice,
                 'variant_name' => $item['variant_name'] ?? null,
                 'addons' => ! empty($addonsArray) ? $addonsArray : null,
                 'addons_total' => $addonTotal,
@@ -1976,6 +2015,25 @@ class POSController extends Controller
                 'addons' => $i->addons ?? [],
             ])->toArray(),
         ];
+    }
+
+    /**
+     * החזרת תוספת מחיר ישיבה במקום (dine-in) עבור פריט.
+     * מוחזר 0 אם הסוג אינו 'dine_in' או שהמסעדה אינה מאפשרת תמחור ישיבה.
+     */
+    private function resolveDineInAdjustment(int $menuItemId, string $orderType, ?Restaurant $restaurant): float
+    {
+        if ($orderType !== 'dine_in') {
+            return 0.0;
+        }
+        if (! $restaurant || ! $restaurant->enable_dine_in_pricing) {
+            return 0.0;
+        }
+        $menuItem = MenuItem::find($menuItemId);
+        if (! $menuItem) {
+            return 0.0;
+        }
+        return round((float) $menuItem->getEffectiveDineInAdjustment(), 2);
     }
 
     private function formatTab(TableTab $tab): array
