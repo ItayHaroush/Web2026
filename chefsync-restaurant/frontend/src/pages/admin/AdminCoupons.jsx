@@ -45,7 +45,7 @@ const emptyForm = () => ({
     show_menu_banner: true,
     show_entry_popup: true,
     image_display_full: false,
-    rules: [{ required_category_id: '', min_quantity: 1 }],
+    rules: [{ required_category_id: '', min_quantity: 1, required_menu_item_ids: [] }],
     rewards: [{
         reward_type: 'free_item',
         reward_category_id: '',
@@ -177,8 +177,12 @@ export default function AdminCoupons() {
             setCategories(catsRes.data?.categories || catsRes.data?.data || []);
             // שליפת פריטי תפריט מכל הקטגוריות
             const cats = menuRes.data?.data || [];
-            const allItems = (Array.isArray(cats) ? cats : []).flatMap(cat =>
-                (cat.items || []).map(item => ({ ...item, category_name: cat.name }))
+            const allItems = (Array.isArray(cats) ? cats : []).flatMap((cat) =>
+                (cat.items || []).map((item) => ({
+                    ...item,
+                    category_name: cat.name,
+                    category_id: item.category_id ?? cat.id,
+                }))
             );
             setMenuItems(allItems);
         } catch (err) {
@@ -201,12 +205,15 @@ export default function AdminCoupons() {
 
     const openEdit = (promo) => {
         setEditingPromo(promo);
-        let rules = (promo.rules || []).map(r => ({
+        let rules = (promo.rules || []).map((r) => ({
             required_category_id: r.required_category_id || '',
             min_quantity: r.min_quantity || 1,
+            required_menu_item_ids: Array.isArray(r.required_menu_item_ids)
+                ? r.required_menu_item_ids.map((id) => Number(id)).filter((n) => n > 0)
+                : [],
         }));
         if (rules.length === 0) {
-            rules = [{ required_category_id: '', min_quantity: 1 }];
+            rules = [{ required_category_id: '', min_quantity: 1, required_menu_item_ids: [] }];
         }
         let rewards = (promo.rewards || []).map(r => ({
             reward_type: r.reward_type || 'free_item',
@@ -358,8 +365,29 @@ export default function AdminCoupons() {
         });
     };
 
+    /** בחירת פריטי עוגן — מתאים למובייל (לא מסתמך על select multiple) */
+    const toggleRuleAnchorItem = (ruleIndex, menuItemId, itemsInCategory) => {
+        const mid = Number(menuItemId);
+        setForm((f) => {
+            const rules = [...f.rules];
+            const prev = rules[ruleIndex].required_menu_item_ids || [];
+            const cur = new Set(prev.map(Number));
+            if (cur.has(mid)) {
+                cur.delete(mid);
+            } else {
+                cur.add(mid);
+            }
+            const ordered = itemsInCategory.map((it) => Number(it.id)).filter((id) => cur.has(id));
+            rules[ruleIndex] = { ...rules[ruleIndex], required_menu_item_ids: ordered };
+            return { ...f, rules };
+        });
+    };
+
     const addRule = () => {
-        setForm(f => ({ ...f, rules: [...f.rules, { required_category_id: '', min_quantity: 1 }] }));
+        setForm((f) => ({
+            ...f,
+            rules: [...f.rules, { required_category_id: '', min_quantity: 1, required_menu_item_ids: [] }],
+        }));
     };
 
     const removeRule = (index) => {
@@ -809,8 +837,14 @@ export default function AdminCoupons() {
                                     {(fieldError('rules_global') || serverErrorText('rules')) && (
                                         <p className="text-sm text-red-600 font-medium">{fieldError('rules_global') || serverErrorText('rules')}</p>
                                     )}
-                                    {form.rules.map((rule, i) => (
-                                        <div key={i} className="flex flex-col sm:flex-row sm:items-center gap-3 bg-gray-50 rounded-xl p-3 min-w-0">
+                                    {form.rules.map((rule, i) => {
+                                        const catId = Number(rule.required_category_id);
+                                        const itemsInCategory = menuItems.filter(
+                                            (it) => Number(it.category_id) === catId && catId > 0
+                                        );
+                                        return (
+                                        <div key={i} className="flex flex-col gap-3 bg-gray-50 rounded-xl p-3 min-w-0">
+                                            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                                             <input
                                                 type="number"
                                                 value={rule.min_quantity}
@@ -821,7 +855,18 @@ export default function AdminCoupons() {
                                             <span className="text-sm text-gray-500 font-medium">פריטים מ-</span>
                                             <select
                                                 value={rule.required_category_id === '' ? '' : String(rule.required_category_id)}
-                                                onChange={e => updateRule(i, 'required_category_id', e.target.value === '' ? '' : parseInt(e.target.value, 10))}
+                                                onChange={(e) => {
+                                                    const v = e.target.value === '' ? '' : parseInt(e.target.value, 10);
+                                                    setForm((f) => {
+                                                        const rulesNext = [...f.rules];
+                                                        rulesNext[i] = {
+                                                            ...rulesNext[i],
+                                                            required_category_id: v,
+                                                            required_menu_item_ids: [],
+                                                        };
+                                                        return { ...f, rules: rulesNext };
+                                                    });
+                                                }}
                                                 className={`flex-1 min-w-0 border rounded-lg px-3 py-2 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none text-base ${fieldError(`rules.${i}.required_category_id`) ? 'border-red-300' : 'border-gray-200'}`}
                                             >
                                                 <option value="">בחר קטגוריה</option>
@@ -834,13 +879,69 @@ export default function AdminCoupons() {
                                                     <FaTimes size={14} />
                                                 </button>
                                             )}
+                                            </div>
+                                            {catId > 0 && (
+                                                <div className="w-full border-t border-gray-200 pt-3 space-y-1">
+                                                    <label className="block text-xs font-bold text-gray-600">
+                                                        פריטי עוגן מחיר מהקטגוריה (אופציונלי)
+                                                    </label>
+                                                    <p className="text-xs text-gray-500 mb-2">
+                                                        סמנו פריטים: השם והמחיר לכל שורה. העוגן הוא הראשון <strong>לפי סדר התפריט</strong> בין הנבחרים — מוצג בתווית &quot;עוגן מחיר&quot;.
+                                                    </p>
+                                                    {itemsInCategory.length === 0 ? (
+                                                        <p className="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-2 py-2">
+                                                            אין מוצרים בקטגוריה זו בתפריט הציבורי — הוסיפו מוצרים בניהול התפריט.
+                                                        </p>
+                                                    ) : (
+                                                        <div className="max-h-56 sm:max-h-64 overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-sm divide-y divide-gray-100 touch-manipulation">
+                                                            {itemsInCategory.map((item) => {
+                                                                const id = Number(item.id);
+                                                                const checked = (rule.required_menu_item_ids || []).includes(id);
+                                                                const anchorId = (rule.required_menu_item_ids || [])[0];
+                                                                const isAnchor = checked && id === anchorId;
+                                                                const rawPrice = Number(item.price);
+                                                                const priceLabel = Number.isFinite(rawPrice)
+                                                                    ? (rawPrice % 1 === 0 ? `₪${rawPrice}` : `₪${rawPrice.toFixed(2)}`)
+                                                                    : '—';
+                                                                return (
+                                                                    <label
+                                                                        key={item.id}
+                                                                        className="flex items-center gap-3 px-3 py-2.5 min-h-[3rem] cursor-pointer hover:bg-gray-50 active:bg-gray-100"
+                                                                    >
+                                                                        <input
+                                                                            type="checkbox"
+                                                                            checked={checked}
+                                                                            onChange={() => toggleRuleAnchorItem(i, id, itemsInCategory)}
+                                                                            className="w-5 h-5 shrink-0 rounded border-gray-300 text-brand-primary focus:ring-brand-primary/30"
+                                                                        />
+                                                                        <span className="flex-1 min-w-0 text-sm font-medium text-gray-900 leading-snug break-words">
+                                                                            {item.name}
+                                                                        </span>
+                                                                        <span className="flex flex-col items-end gap-0.5 shrink-0">
+                                                                            <span className="text-sm tabular-nums font-semibold text-gray-800">
+                                                                                {priceLabel}
+                                                                            </span>
+                                                                            {isAnchor && (
+                                                                                <span className="text-[10px] font-bold uppercase tracking-wide text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">
+                                                                                    עוגן מחיר
+                                                                                </span>
+                                                                            )}
+                                                                        </span>
+                                                                    </label>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
                                             {(fieldError(`rules.${i}.required_category_id`) || fieldError(`rules.${i}.min_quantity`)) && (
-                                                <p className="text-xs text-red-600 sm:col-span-full w-full">
+                                                <p className="text-xs text-red-600 w-full">
                                                     {fieldError(`rules.${i}.required_category_id`) || fieldError(`rules.${i}.min_quantity`)}
                                                 </p>
                                             )}
                                         </div>
-                                    ))}
+                                        );
+                                    })}
                                     <button onClick={addRule} className="text-sm text-brand-primary font-bold hover:underline">
                                         + הוסף תנאי
                                     </button>
