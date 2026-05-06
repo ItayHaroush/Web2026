@@ -577,7 +577,7 @@ class PrintService
             return 'שירות: משלוח';
         }
         if ($order->order_type === 'takeaway') {
-            return 'שירות: טייקאווי';
+            return 'שירות: TA | לקחת';
         }
         if ($order->order_type === 'dine_in') {
             return 'שירות: ישיבה במקום';

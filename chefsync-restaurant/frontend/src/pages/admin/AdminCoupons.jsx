@@ -44,6 +44,7 @@ const emptyForm = () => ({
     stackable: false,
     show_menu_banner: true,
     show_entry_popup: true,
+    image_display_full: false,
     rules: [{ required_category_id: '', min_quantity: 1 }],
     rewards: [{
         reward_type: 'free_item',
@@ -247,6 +248,7 @@ export default function AdminCoupons() {
             stackable: promo.stackable ?? false,
             show_menu_banner: promo.show_menu_banner !== false,
             show_entry_popup: promo.show_entry_popup !== false,
+            image_display_full: promo.image_display_full === true,
             rules,
             rewards,
         });
@@ -765,6 +767,33 @@ export default function AdminCoupons() {
                                         />
                                         <span className="text-sm font-medium text-gray-800">הצג חלון כניסה עם מבצעים (פעם אחת לדפדפן)</span>
                                     </label>
+
+                                    {/* תצוגת תמונה בחלון כניסה */}
+                                    {form.show_entry_popup && (
+                                        <div className="mr-7 border-r-2 border-orange-200 pr-3 space-y-2">
+                                            <p className="text-xs font-bold text-orange-700">תצוגת תמונה בחלון כניסה:</p>
+                                            <label className="flex items-center gap-2 cursor-pointer select-none">
+                                                <input
+                                                    type="radio"
+                                                    name="image_display_mode"
+                                                    checked={!form.image_display_full}
+                                                    onChange={() => setForm(f => ({ ...f, image_display_full: false }))}
+                                                    className="w-4 h-4 border-gray-300 text-brand-primary focus:ring-brand-primary/20"
+                                                />
+                                                <span className="text-sm text-gray-700">בתוך כרטיסיית מבצע (שם + הטבה + תמונה)</span>
+                                            </label>
+                                            <label className="flex items-center gap-2 cursor-pointer select-none">
+                                                <input
+                                                    type="radio"
+                                                    name="image_display_mode"
+                                                    checked={!!form.image_display_full}
+                                                    onChange={() => setForm(f => ({ ...f, image_display_full: true }))}
+                                                    className="w-4 h-4 border-gray-300 text-brand-primary focus:ring-brand-primary/20"
+                                                />
+                                                <span className="text-sm text-gray-700">תמונה בלבד (ללא כרטיסייה או טקסט)</span>
+                                            </label>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                             )}

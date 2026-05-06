@@ -29,6 +29,7 @@ class Promotion extends Model
         'stackable',
         'show_menu_banner',
         'show_entry_popup',
+        'image_display_full',
     ];
 
     protected $casts = [
@@ -38,6 +39,7 @@ class Promotion extends Model
         'stackable' => 'boolean',
         'show_menu_banner' => 'boolean',
         'show_entry_popup' => 'boolean',
+        'image_display_full' => 'boolean',
         'active_days' => 'array',
         'start_at' => 'datetime',
         'end_at' => 'datetime',

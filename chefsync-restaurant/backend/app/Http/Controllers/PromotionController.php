@@ -92,6 +92,7 @@ class PromotionController extends Controller
                     'stackable' => $validated['stackable'] ?? false,
                     'show_menu_banner' => $validated['show_menu_banner'] ?? true,
                     'show_entry_popup' => $validated['show_entry_popup'] ?? true,
+                    'image_display_full' => $validated['image_display_full'] ?? false,
                 ]);
 
                 foreach ($validated['rules'] as $rule) {
@@ -207,6 +208,7 @@ class PromotionController extends Controller
                     'stackable' => $validated['stackable'] ?? false,
                     'show_menu_banner' => $validated['show_menu_banner'] ?? true,
                     'show_entry_popup' => $validated['show_entry_popup'] ?? true,
+                    'image_display_full' => $validated['image_display_full'] ?? false,
                 ];
                 // FormData ללא active_days כש"כל הימים" — לא לדרוס ערך שמור ב-DB
                 if (array_key_exists('active_days', $validated)) {
@@ -327,6 +329,7 @@ class PromotionController extends Controller
                     'auto_apply' => $promotion->auto_apply,
                     'show_menu_banner' => $promotion->show_menu_banner ?? true,
                     'show_entry_popup' => $promotion->show_entry_popup ?? true,
+                    'image_display_full' => $promotion->image_display_full ?? false,
                     'rules' => $promotion->rules->map(function ($rule) {
                         return [
                             'required_category_id' => $rule->required_category_id,
@@ -420,6 +423,7 @@ class PromotionController extends Controller
             'stackable' => 'boolean',
             'show_menu_banner' => 'sometimes|boolean',
             'show_entry_popup' => 'sometimes|boolean',
+            'image_display_full' => 'sometimes|boolean',
             'active_days_reset' => 'sometimes|boolean',
             'rules' => 'required|array|min:1',
             'rules.*.required_category_id' => ['required', 'integer', Rule::exists('categories', 'id')->where('tenant_id', $tenantId)],

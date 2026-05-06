@@ -1672,7 +1672,35 @@ export default function MenuPage({ isPreviewMode = false }) {
             )}
 
             {/* פופאפ מבצע בכניסה לתפריט */}
-            {showPromoPopup && popupPromotions.length > 0 && (
+            {showPromoPopup && popupPromotions.length > 0 && (() => {
+                const allFullImage = popupPromotions.every(p => p.image_display_full && p.image_url);
+
+                if (allFullImage) {
+                    // מצב תמונה בלבד — ללא מסגרת, header או footer
+                    return (
+                        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={() => setShowPromoPopup(false)}>
+                            <div className="relative w-full max-w-md" onClick={e => e.stopPropagation()}>
+                                {popupPromotions.map((promo) => (
+                                    <img
+                                        key={promo.id}
+                                        src={resolveAssetUrl(promo.image_url)}
+                                        alt={promo.name}
+                                        className="w-full rounded-2xl shadow-2xl"
+                                    />
+                                ))}
+                                <button
+                                    onClick={() => setShowPromoPopup(false)}
+                                    className="absolute top-3 right-3 bg-black/50 hover:bg-black/70 text-white w-9 h-9 rounded-full flex items-center justify-center transition-colors shadow-lg"
+                                >
+                                    <FaTimes size={14} />
+                                </button>
+                            </div>
+                        </div>
+                    );
+                }
+
+                // מצב רגיל — כרטיסיות עם header ו-footer
+                return (
                 <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setShowPromoPopup(false)}>
                     <div className="bg-white dark:bg-brand-dark-card rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-fade-in" onClick={e => e.stopPropagation()}>
                         {/* Header */}
@@ -1730,7 +1758,8 @@ export default function MenuPage({ isPreviewMode = false }) {
                         </div>
                     </div>
                 </div>
-            )}
+                );
+            })()}
 
             {/* דיאלוג הזמנה חוזרת כשיש פריטים בסל */}
             {reorderDialog && (
