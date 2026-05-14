@@ -33,9 +33,9 @@ class PrintAgentService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val prefs = getSharedPreferences("agent_config", Context.MODE_PRIVATE)
-        val serverUrl = prefs.getString("server_url", null)
-        val deviceToken = prefs.getString("device_token", null)
+        val prefs = AgentConfigStore.prefs(this)
+        val serverUrl = prefs.getString(AgentConfigStore.KEY_SERVER_URL, null)
+        val deviceToken = prefs.getString(AgentConfigStore.KEY_DEVICE_TOKEN, null)
 
         if (serverUrl == null || deviceToken == null) {
             Log.e(TAG, "Missing configuration, stopping service")

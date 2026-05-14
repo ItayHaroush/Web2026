@@ -1,8 +1,6 @@
 package com.chefsync.printagent
 
-import android.content.Context
 import android.content.Intent
-import android.os.Build
 import android.os.Bundle
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
@@ -14,9 +12,9 @@ class SetupActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val prefs = getSharedPreferences("agent_config", Context.MODE_PRIVATE)
-        val existingToken = prefs.getString("device_token", null)
-        val existingUrl = prefs.getString("server_url", null)
+        val prefs = AgentConfigStore.prefs(this)
+        val existingToken = prefs.getString(AgentConfigStore.KEY_DEVICE_TOKEN, null)
+        val existingUrl = prefs.getString(AgentConfigStore.KEY_SERVER_URL, null)
 
         if (existingToken != null && existingUrl != null) {
             startAgentService()
@@ -27,7 +25,7 @@ class SetupActivity : AppCompatActivity() {
         showSetupView(prefs)
     }
 
-    private fun showSetupView(prefs: android.content.SharedPreferences) {
+    private fun showSetupView(prefs: android.content.SharedPreferences = AgentConfigStore.prefs(this)) {
         val layout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(64, 128, 64, 64)
@@ -42,7 +40,7 @@ class SetupActivity : AppCompatActivity() {
         val urlLabel = TextView(this).apply { text = "Server URL:" }
         val urlInput = EditText(this).apply {
             hint = "https://api.chefsync.co.il"
-            setText(prefs.getString("server_url", ""))
+            setText(prefs.getString(AgentConfigStore.KEY_SERVER_URL, ""))
         }
 
         val tokenLabel = TextView(this).apply {
@@ -82,8 +80,8 @@ class SetupActivity : AppCompatActivity() {
 
                     if (response.isSuccessful) {
                         prefs.edit()
-                            .putString("server_url", url)
-                            .putString("device_token", token)
+                            .putString(AgentConfigStore.KEY_SERVER_URL, url)
+                            .putString(AgentConfigStore.KEY_DEVICE_TOKEN, token)
                             .apply()
 
                         statusText.text = "Connected! Starting agent..."
@@ -142,9 +140,8 @@ class SetupActivity : AppCompatActivity() {
 
         disconnectBtn.setOnClickListener {
             stopService(Intent(this@SetupActivity, PrintAgentService::class.java))
-            getSharedPreferences("agent_config", Context.MODE_PRIVATE)
-                .edit().clear().apply()
-            showSetupView(getSharedPreferences("agent_config", Context.MODE_PRIVATE))
+            AgentConfigStore.clear(this@SetupActivity)
+            showSetupView(AgentConfigStore.prefs(this@SetupActivity))
         }
 
         layout.addView(title)
@@ -156,12 +153,7 @@ class SetupActivity : AppCompatActivity() {
     }
 
     private fun startAgentService() {
-        val intent = Intent(this, PrintAgentService::class.java)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(intent)
-        } else {
-            startService(intent)
-        }
+        PrintAgentLauncher.startIfConfigured(this)
     }
 
     override fun onDestroy() {
