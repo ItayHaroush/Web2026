@@ -16,6 +16,17 @@ object AgentConfigStore {
     const val KEY_SERVER_URL = "server_url"
     const val KEY_DEVICE_TOKEN = "device_token"
 
+    // ── Cached config from server (refreshed on each heartbeat) ──────────────
+    // נשמר מקומית כדי שגם בלי רשת נוכל להמשיך לסקור את המדפסת,
+    // ושאם השרת ישנה IP — נתעדכן אוטומטית.
+    const val KEY_PRINTER_IP = "printer_ip"
+    const val KEY_PRINTER_PORT = "printer_port"
+    const val KEY_CODEPAGE_ID = "codepage_id"
+    const val KEY_ROLE = "role"
+    const val KEY_RESTAURANT_ID = "restaurant_id"
+    const val KEY_HEARTBEAT_INTERVAL_SECONDS = "heartbeat_interval_seconds"
+    const val KEY_PROBE_TIMEOUT_MS = "probe_timeout_ms"
+
     fun prefs(context: Context): SharedPreferences {
         val app = context.applicationContext
         val encrypted = openEncrypted(app)

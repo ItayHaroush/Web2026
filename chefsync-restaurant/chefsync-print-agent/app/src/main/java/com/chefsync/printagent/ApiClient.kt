@@ -32,6 +32,38 @@ data class AckRequest(
     val error_message: String? = null
 )
 
+/**
+ * מצב הסוכן שנשלח עם כל heartbeat.
+ * השרת משתמש בזה כדי להחליט: 🟢 / ⚠️ / 🔴
+ */
+data class HeartbeatRequest(
+    val bridge_online: Boolean = true,
+    val printer_connected: Boolean? = null,
+    val printer_last_error: String? = null,
+    val agent_version: String? = null,
+)
+
+/**
+ * תצורה שהשרת מחזיר עם כל heartbeat — מאפשרת לסוכן להישאר מסונכרן
+ * גם אם המנהל שינה IP/פורט במסעדה.
+ */
+data class AgentConfigResponse(
+    val restaurant_id: Long?,
+    val role: String?,
+    val printer_ip: String?,
+    val printer_port: Int?,
+    val codepage_id: Int?,
+    val is_active: Boolean?,
+    val heartbeat_interval_seconds: Int?,
+    val printer_probe_timeout_ms: Int?,
+)
+
+data class HeartbeatResponse(
+    val success: Boolean,
+    val server_time: String? = null,
+    val config: AgentConfigResponse? = null,
+)
+
 data class SimpleResponse(
     val success: Boolean,
     val server_time: String? = null
@@ -49,7 +81,10 @@ interface AgentApi {
     ): Response<SimpleResponse>
 
     @POST("api/agent/heartbeat")
-    suspend fun heartbeat(@Header("Authorization") auth: String): Response<SimpleResponse>
+    suspend fun heartbeat(
+        @Header("Authorization") auth: String,
+        @Body body: HeartbeatRequest = HeartbeatRequest(),
+    ): Response<HeartbeatResponse>
 }
 
 object ApiClient {
@@ -60,7 +95,7 @@ object ApiClient {
         baseUrl = serverUrl.trimEnd('/')
 
         val logging = HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BODY
+            level = HttpLoggingInterceptor.Level.BASIC
         }
 
         val client = OkHttpClient.Builder()

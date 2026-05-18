@@ -5,6 +5,13 @@ import App from './App.jsx'
 import GlobalErrorBoundary from './GlobalErrorBoundary.jsx'
 import { getFirebaseMessagingSwUrl } from './utils/deployVersion.js'
 
+// #region agent log
+try {
+  const ua = typeof navigator !== 'undefined' ? String(navigator.userAgent || '').slice(0, 240) : ''
+  fetch('http://127.0.0.1:7917/ingest/8df4a825-2af7-44b5-b28d-f1fe14cba861',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'0d5f3e'},body:JSON.stringify({sessionId:'0d5f3e',location:'main.jsx:after-imports',runId:'preload',hypothesisId:'H-A',message:'main_bundle_executed',data:{fbUa:/FBAN|FBAV|Instagram/i.test(ua),uaSnippet:ua},timestamp:Date.now()})}).catch(()=>{});
+} catch (_) {}
+// #endregion agent log
+
 // ✅ Signal Init
 window.REACT_LOADED = true;
 

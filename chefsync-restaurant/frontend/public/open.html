@@ -4,31 +4,146 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TakeEat - מעבר לדפדפן</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <script>
+      // #region agent log
+      (function(){fetch('http://127.0.0.1:7917/ingest/8df4a825-2af7-44b5-b28d-f1fe14cba861',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'0d5f3e'},body:JSON.stringify({sessionId:'0d5f3e',location:'open.html:head-early',runId:'preload',hypothesisId:'H-B',message:'open_head_no_third_party_js',data:{pathname:typeof location.pathname==='string'?location.pathname:''},timestamp:Date.now()})}).catch(()=>{});})();
+      window.addEventListener('load',function(){fetch('http://127.0.0.1:7917/ingest/8df4a825-2af7-44b5-b28d-f1fe14cba861',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'0d5f3e'},body:JSON.stringify({sessionId:'0d5f3e',location:'open.html:window-load',runId:'preload',hypothesisId:'H-B',message:'open_after_load_evt',data:{},timestamp:Date.now()})}).catch(()=>{});});
+      // #endregion agent log
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: 'Rubik', sans-serif;
+            margin: 0;
+            font-family: 'Rubik', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             background-color: #f3f4f6;
-            background-image: 
-                radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), 
-                radial-gradient(at 50% 0%, hsla(225,39%,30%,1) 0, transparent 50%), 
+            background-image:
+                radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%),
+                radial-gradient(at 50% 0%, hsla(225,39%,30%,1) 0, transparent 50%),
                 radial-gradient(at 100% 0%, hsla(339,49%,30%,1) 0, transparent 50%);
             background-size: cover;
             background-repeat: no-repeat;
             background-attachment: fixed;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
         }
-        
-        .glass-card {
+
+        .te-decor {
+            position: fixed;
+            inset: 0;
+            overflow: hidden;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .te-blob {
+            position: absolute;
+            border-radius: 9999px;
+            filter: blur(48px);
+            opacity: 0.2;
+            mix-blend-mode: multiply;
+            width: min(42vw, 17rem);
+            height: min(42vw, 17rem);
+        }
+
+        .te-blob.a {
+            top: -8%;
+            inset-inline-start: -8%;
+            background: #a855f7;
+        }
+
+        .te-blob.b {
+            top: -8%;
+            inset-inline-end: -8%;
+            background: #f97316;
+        }
+
+        .te-blob.c {
+            bottom: -8%;
+            inset-inline-start: 15%;
+            background: #ec4899;
+        }
+
+        .te-card-wrap {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 28rem;
+            margin-inline: auto;
+        }
+
+        .te-card {
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
             border: 1px solid rgba(255, 255, 255, 0.5);
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            border-radius: 1.5rem;
+            padding: 2rem;
+            text-align: center;
+            overflow: hidden;
         }
 
-        .animate-breath {
+        .te-logo-wrap {
+            margin-bottom: 2rem;
+            position: relative;
+            z-index: 2;
+        }
+
+        .te-logo-ring {
+            width: 8rem;
+            height: 8rem;
+            margin-inline: auto;
+            background: #fff;
+            border-radius: 9999px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,.1);
+            margin-bottom: 0.5rem;
+            padding: 0.5rem;
+        }
+
+        .te-logo-ring img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
             animation: breath 3s ease-in-out infinite;
+        }
+
+        .te-chip {
+            margin-top: 1rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            background: #f3f4f6;
+            border-radius: 9999px;
+            padding: 0.375rem 1rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #4b5563;
+        }
+
+        .te-chip-dot {
+            width: 0.5rem;
+            height: 0.5rem;
+            border-radius: 9999px;
+            background: #22c55e;
+            animation: pulse-dot 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: .6; transform: scale(.9); }
         }
 
         @keyframes breath {
@@ -36,131 +151,277 @@
             50% { transform: scale(1.05); filter: drop-shadow(0 8px 12px rgba(0,0,0,0.2)); }
         }
 
+        .te-title {
+            font-size: 1.75rem;
+            font-weight: 800;
+            color: #111827;
+            margin: 0 0 0.75rem;
+            letter-spacing: -0.02em;
+        }
+
+        .te-lead {
+            color: #6b7280;
+            font-size: 1.125rem;
+            line-height: 1.625;
+            margin: 0 0 2rem;
+        }
+
+        .te-btn {
+            width: 100%;
+            border: none;
+            cursor: pointer;
+            font-family: inherit;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            font-weight: 700;
+            border-radius: 1rem;
+            padding: 1rem 2rem;
+            font-size: 1.0625rem;
+            text-decoration: none;
+            transition: box-shadow .2s ease, transform .15s ease, opacity .15s ease;
+            box-shadow: 0 20px 25px -5px rgba(249,115,22,.25);
+        }
+
+        .te-btn-primary {
+            margin-top: 0;
+            color: #fff;
+            background-image: linear-gradient(to left, #e11d48, #f97316);
+        }
+
+        .te-btn-primary:hover {
+            box-shadow: 0 24px 30px -6px rgba(225,29,72,.35);
+            transform: scale(1.01);
+        }
+
+        .te-btn-primary:active {
+            transform: scale(.98);
+        }
+
+        .te-btn-primary.te-muted {
+            background-image: none;
+            background: linear-gradient(to left, #374151, #111827);
+            box-shadow: 0 8px 12px rgba(0,0,0,.18);
+        }
+
+        .te-btn-secondary {
+            margin-top: 1rem;
+            background: #f3f4f6;
+            color: #374151;
+            font-weight: 600;
+            padding: 0.75rem 1.25rem;
+            font-size: 1rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,.08);
+            border-radius: 0.75rem;
+        }
+
+        .te-btn-secondary:hover {
+            background: #e5e7eb;
+            box-shadow: 0 6px 10px rgba(0,0,0,.12);
+        }
+
+        .te-btn-secondary:active {
+            transform: scale(.98);
+        }
+
+        .te-icon {
+            width: 1.5rem;
+            height: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        .te-icon-sm {
+            width: 1.25rem;
+            height: 1.25rem;
+        }
+
+        .te-helper {
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid #f3f4f6;
+        }
+
+        .te-helper-title {
+            font-size: 0.8125rem;
+            font-weight: 600;
+            color: #9ca3af;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            margin: 0 0 1rem;
+        }
+
+        .te-helper-rows {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            color: #4b5563;
+            background: #f9fafb;
+            border-radius: 0.75rem;
+            padding: 1rem;
+            text-align: right;
+            flex-wrap: wrap;
+        }
+
+        .te-helper-rows > div {
+            flex: 1 1 45%;
+            min-width: 8rem;
+        }
+
+        .te-divider-v {
+            width: 1px;
+            align-self: stretch;
+            background: #e5e7eb;
+        }
+
+        .te-foot {
+            margin-top: 1.5rem;
+            font-size: 0.75rem;
+            color: #9ca3af;
+            font-family: ui-monospace, monospace;
+        }
+
+        .te-strong {
+            font-weight: 800;
+            color: #111827;
+            display: block;
+            margin-bottom: 0.25rem;
+        }
+
+        .te-soft {
+            font-size: 0.75rem;
+            color: #6b7280;
+        }
+
+        .loader-wrap {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
         .loader {
             border: 3px solid #f3f3f3;
             border-radius: 50%;
-            border-top: 3px solid #ff6b6b;
+            border-top-color: #ff6b6b;
             width: 20px;
             height: 20px;
-            -webkit-animation: spin 1s linear infinite; /* Safari */
             animation: spin 1s linear infinite;
         }
 
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            to { transform: rotate(360deg); }
         }
     </style>
 </head>
-<body class="min-h-screen flex items-center justify-center p-4">
+<body>
 
     <!-- Decorative Elements -->
-    <div class="fixed top-0 left-0 w-full h-full overflow-hidden -z-10 pointer-events-none">
-        <div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
-        <div class="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-orange-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
-        <div class="absolute bottom-[-10%] left-[20%] w-[40%] h-[40%] bg-pink-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000"></div>
+    <div class="te-decor" aria-hidden="true">
+        <div class="te-blob a"></div>
+        <div class="te-blob b"></div>
+        <div class="te-blob c"></div>
     </div>
 
-    <div class="glass-card w-full max-w-md rounded-3xl p-8 relative overflow-hidden text-center mx-auto">
+    <div class="te-card-wrap">
+    <div class="te-card">
         <!-- Logo Section -->
-        <div class="mb-8 relative z-10">
-            <div class="w-32 h-32 mx-auto bg-white rounded-full flex items-center justify-center shadow-lg mb-2 p-2">
-                <img src="/icons/chefsync-logo-v2-512.png" alt="TakeEat Logo" class="w-full h-full object-contain animate-breath">
+        <div class="te-logo-wrap">
+            <div class="te-logo-ring">
+                <img src="/icons/chefsync-logo-v2-512.png" alt="TakeEat Logo">
             </div>
-            <div class="inline-flex items-center justify-center gap-2 bg-gray-100 rounded-full px-4 py-1.5 mt-4">
-                <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                <span class="text-xs font-semibold text-gray-600">Secure Redirect</span>
+            <div class="te-chip">
+                <span class="te-chip-dot" aria-hidden="true"></span>
+                <span>Secure Redirect</span>
             </div>
         </div>
 
         <!-- Text Content -->
-        <h1 class="text-3xl font-black text-gray-900 mb-3 tracking-tight">נפתח בחלון חדש</h1>
-        <p class="text-gray-500 text-lg leading-relaxed mb-8">
+        <h1 class="te-title">נפתח בחלון חדש</h1>
+        <p class="te-lead">
             לחווית הזמנה חלקה ומאובטחת,<br>אנחנו מעבירים אותך לדפדפן הראשי.
         </p>
 
         <!-- Primary Action -->
-        <a id="openBtn" href="https://www.takeeat.co.il" 
-           class="group relative w-full flex items-center justify-center gap-3 bg-gradient-to-r from-orange-500 to-rose-600 text-white font-bold text-lg py-4 px-8 rounded-2xl shadow-xl hover:shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 overflow-hidden cursor-pointer">
-            <span class="relative z-10 flex items-center gap-2">
+        <a id="openBtn" href="https://www.takeeat.co.il"
+           class="te-btn te-btn-primary">
+            <span style="display:inline-flex;align-items:center;gap:0.5rem;">
                 <span id="btnText">פתח ב-Browser</span>
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 00-2 2h10a2 2 0 00-2-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                <svg xmlns="http://www.w3.org/2000/svg" class="te-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                 </svg>
             </span>
-            <div class="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
         </a>
 
         <!-- Continue Anyway Button -->
-        <button id="continueBtn"
-           class="group relative w-full flex items-center justify-center gap-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold text-base py-3 px-6 rounded-xl shadow-md hover:shadow-lg active:scale-[0.98] transition-all duration-200 mt-4">
+        <button id="continueBtn" type="button" class="te-btn te-btn-secondary">
             <span>המשך בדפדפן הנוכחי</span>
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg xmlns="http://www.w3.org/2000/svg" class="te-icon-sm" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
             </svg>
         </button>
 
         <!-- Helper Instructions -->
-        <div class="mt-8 pt-8 border-t border-gray-100">
-            <p class="text-sm font-semibold text-gray-400 mb-4 tracking-wide uppercase">לא נפתח אוטומטית?</p>
-            <div class="flex justify-center gap-2 text-sm text-gray-600 bg-gray-50 rounded-xl p-4 text-right">
-                <div class="flex-1">
-                    <span class="font-bold text-gray-900 block mb-1">1. לחץ על ה-⋯ למעלה</span>
-                    <span class="text-xs text-gray-500">בפינה העליונה של המסך</span>
+        <div class="te-helper">
+            <p class="te-helper-title">לא נפתח אוטומטית?</p>
+            <div class="te-helper-rows">
+                <div>
+                    <span class="te-strong">1. לחץ על ה-⋯ למעלה</span>
+                    <span class="te-soft">בפינה העליונה של המסך</span>
                 </div>
-                <!-- Divider -->
-                <div class="w-px bg-gray-200"></div>
-                <div class="flex-1 pr-2">
-                    <span class="font-bold text-gray-900 block mb-1">2. בחר "Open in Browser"</span>
-                    <span class="text-xs text-gray-500">או "פתח בדפדפן"</span>
+                <div class="te-divider-v" aria-hidden="true"></div>
+                <div>
+                    <span class="te-strong">2. בחר "Open in Browser"</span>
+                    <span class="te-soft">או "פתח בדפדפן"</span>
                 </div>
             </div>
         </div>
-        
-        <div class="mt-6 text-xs text-gray-400 font-mono">
+
+        <div class="te-foot">
             Powered by TakeEat &copy; 2026
         </div>
+    </div>
     </div>
 
     <!-- JavaScript Logic (Preserved & Enhanced) -->
     <script>
+        // #region agent log
+        window.onerror = function(m, u, l) {
+          fetch('http://127.0.0.1:7917/ingest/8df4a825-2af7-44b5-b28d-f1fe14cba861',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'0d5f3e'},body:JSON.stringify({sessionId:'0d5f3e',location:'open.html:bottom-script-onerror',runId:'preload',hypothesisId:'H-B',message:String(m||''),timestamp:Date.now()})}).catch(function(){});
+        };
+        fetch('http://127.0.0.1:7917/ingest/8df4a825-2af7-44b5-b28d-f1fe14cba861',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'0d5f3e'},body:JSON.stringify({sessionId:'0d5f3e',location:'open.html:body-script-start',runId:'preload',hypothesisId:'H-B',message:'open_bottom_script_ran_after_dom',data:{},timestamp:Date.now()})}).catch(function(){});
+        // #endregion agent log
+
         // קריאת target מה-URL או fallback לדף הבית
         const params = new URLSearchParams(window.location.search);
         const targetUrl = decodeURIComponent(params.get('target') || '') || 'https://www.takeeat.co.il';
-        
+
         // OS Detection
         const ua = navigator.userAgent;
         const isIOS = /iPhone|iPad|iPod/i.test(ua);
         const isAndroid = /Android/i.test(ua);
-        
+
         const btn = document.getElementById('openBtn');
         const btnText = document.getElementById('btnText');
         const continueBtn = document.getElementById('continueBtn');
-        
+
         // Continue Button Handler
         if(continueBtn) {
             continueBtn.addEventListener('click', function() {
-                // סימן שהמשתמש ביקש להמשיך בדפדפן הפנימי
                 sessionStorage.setItem('fb-redirect-attempted', 'true');
-                
-                // בדיקה איזה fallback mode
-                const params = new URLSearchParams(window.location.search);
-                const fallbackMode = params.get('fallback');
-                const targetFromUrl = decodeURIComponent(params.get('target') || '');
-                
+
+                const params2 = new URLSearchParams(window.location.search);
+                const fallbackMode = params2.get('fallback');
+                const targetFromUrl = decodeURIComponent(params2.get('target') || '');
+
                 if (fallbackMode === 'same' && targetFromUrl) {
-                    // דף מסעדה - חזור לאותו דף
-                    console.log('[CONTINUE] Returning to restaurant page:', targetFromUrl);
                     window.location.href = targetFromUrl;
                 } else {
-                    // דפים אחרים - חזור לדף הבית
-                    console.log('[CONTINUE] Returning to home page');
                     window.location.href = window.location.origin + '/';
                 }
             });
         }
-        
-        // Initial Button Text Logic
+
         function updateButtonText() {
             if (isIOS) {
                 btnText.textContent = 'פתח ב-Safari';
@@ -170,57 +431,47 @@
                 btnText.textContent = 'מעבר לאתר';
             }
         }
-        
-        // Run initial update
+
         if(btnText) updateButtonText();
 
         // Click Handler
         if(btn) {
             btn.addEventListener('click', function(e) {
                 e.preventDefault();
-                
-                // Loading State
-                btnText.innerHTML = `
-                    <div class="loader inline-block align-middle ml-2"></div>
-                    <span>פותח...</span>
-                `;
+
+                btnText.innerHTML = '<span class="loader-wrap"><span class="loader"></span><span>פותח...</span></span>';
                 btn.style.pointerEvents = 'none';
-                btn.classList.add('opacity-90');
-                
+                btn.style.opacity = '0.92';
+
                 if (isIOS) {
-                    // iOS Scheme Logic - Try Chrome first
-                    const chromeUrl = 'googlechrome://' + targetUrl.replace('https://', '');
+                    var chromeUrl = 'googlechrome://' + targetUrl.replace(/^https?:\/\//, '');
                     window.location.href = chromeUrl;
-                    
-                    // Fallback to internal view + Set Flag to prevent loop
-                    setTimeout(() => {
+
+                    setTimeout(function() {
                         sessionStorage.setItem('fb-redirect-attempted', 'true');
                         window.location.href = targetUrl;
                     }, 2500);
-                    
+
                 } else if (isAndroid) {
-                    // Android Intent Logic
-                    const intent = 'intent://' + targetUrl.replace('https://', '') + 
+                    var intent = 'intent://' + targetUrl.replace(/^https?:\/\//, '') +
                                    '#Intent;scheme=https;package=com.android.chrome;end';
                     window.location.href = intent;
-                    
-                    setTimeout(() => {
+
+                    setTimeout(function() {
                         sessionStorage.setItem('fb-redirect-attempted', 'true');
                         window.location.href = targetUrl;
                     }, 2500);
-                    
+
                 } else {
-                    // Desktop / Fallback
                     sessionStorage.setItem('fb-redirect-attempted', 'true');
                     window.open(targetUrl, '_blank') || (window.location.href = targetUrl);
                 }
-                
-                // Timeout Feedback
-                setTimeout(() => {
+
+                setTimeout(function() {
                     btnText.textContent = '⚠️ השתמש בתפריט למעלה ↗';
-                    btn.classList.remove('from-orange-500', 'to-rose-600');
-                    btn.classList.add('from-gray-700', 'to-gray-900');
-                    btn.style.pointerEvents = 'auto'; // allow retry
+                    btn.classList.add('te-muted');
+                    btn.style.pointerEvents = 'auto';
+                    btn.style.opacity = '1';
                 }, 3500);
             });
         }

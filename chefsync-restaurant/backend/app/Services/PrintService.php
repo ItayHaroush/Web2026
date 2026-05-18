@@ -1850,15 +1850,60 @@ class PrintService
             return;
         }
 
-        $hasBridgeDevices = PrintDevice::withoutGlobalScopes()
+        $bridgeDevices = PrintDevice::withoutGlobalScopes()
             ->where('restaurant_id', $job->restaurant_id)
             ->where('is_active', true)
             ->where(function ($q) use ($role) {
                 $q->where('role', $role)->orWhere('role', 'general');
             })
-            ->exists();
+            ->get();
 
-        if ($hasBridgeDevices) {
+        if ($bridgeDevices->isNotEmpty()) {
+            // ─── בדיקת חיוּת הגשר ─────────────────────────────────────────────
+            // אם אף מכשיר לא שלח heartbeat לאחרונה — אין מי שיאסוף את העבודה,
+            // אז עדיף להיכשל מהר עם הודעה ברורה במקום שהעבודה תיתקע "pending_bridge".
+            // הסוכן ימשיך לאסוף עבודות חדשות אוטומטית כשהוא יחזור online.
+            $hasLiveBridge = $bridgeDevices->contains(fn ($device) => $device->is_connected);
+            $hasReachablePrinter = $bridgeDevices->contains(function ($device) {
+                $reachable = $device->is_printer_connected;
+                return $device->is_connected && $reachable !== false;
+            });
+
+            if (! $hasLiveBridge) {
+                $errorMsg = 'הגשר אופליין — לא נמצא סוכן הדפסה פעיל לתפקיד "' . $role . '". '
+                    . 'בדקו שהאפליקציה רצה ושיש חיבור אינטרנט.';
+                $job->update([
+                    'status' => 'failed',
+                    'error_message' => $errorMsg,
+                    'attempts' => $job->attempts + 1,
+                ]);
+                Log::warning('PrintService: Bridge offline — job rejected', [
+                    'job_id' => $job->id,
+                    'restaurant_id' => $job->restaurant_id,
+                    'role' => $role,
+                    'devices_total' => $bridgeDevices->count(),
+                ]);
+
+                return;
+            }
+
+            if (! $hasReachablePrinter) {
+                $errorMsg = 'המדפסת לא מגיבה — הגשר מקוון אבל אין חיבור TCP למדפסת. '
+                    . 'בדקו שהמדפסת מחוברת לחשמל ולרשת ושכתובת ה-IP נכונה.';
+                $job->update([
+                    'status' => 'failed',
+                    'error_message' => $errorMsg,
+                    'attempts' => $job->attempts + 1,
+                ]);
+                Log::warning('PrintService: Printer unreachable from bridge — job rejected', [
+                    'job_id' => $job->id,
+                    'restaurant_id' => $job->restaurant_id,
+                    'role' => $role,
+                ]);
+
+                return;
+            }
+
             $job->update([
                 'status' => 'pending_bridge',
                 'attempts' => $job->attempts + 1,

@@ -4,6 +4,10 @@
     <!-- 🚨 FACEBOOK/INSTAGRAM BROWSER REDIRECT 🚨 -->
     <script>
       (function() {
+        // #region agent log
+        fetch('http://127.0.0.1:7917/ingest/8df4a825-2af7-44b5-b28d-f1fe14cba861',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'0d5f3e'},body:JSON.stringify({sessionId:'0d5f3e',location:'index.html:fb-gate-entry',runId:'preload',hypothesisId:'H-C',message:'fb_gate_entry',data:{path:typeof location.pathname==='string'?location.pathname:'',hasFlag:(function(){try{return!!sessionStorage.getItem('fb-redirect-attempted')}catch(z){return'err'}})(),uaFb: !!(navigator.userAgent&&( /FBAN|FBAV|Instagram/i.test(navigator.userAgent))),host:typeof location.hostname==='string'?location.hostname:''},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion agent log
+
         // Prevent infinite loop if user came back from open.html
         try {
             if (sessionStorage.getItem('fb-redirect-attempted')) return;
@@ -14,6 +18,9 @@
         
         // If in FB/Insta app, redirect to open.html immediately
         if (isFacebookApp) {
+           // #region agent log
+           fetch('http://127.0.0.1:7917/ingest/8df4a825-2af7-44b5-b28d-f1fe14cba861',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'0d5f3e'},body:JSON.stringify({sessionId:'0d5f3e',location:'index.html:redirect-to-open',runId:'preload',hypothesisId:'H-C',message:'replace_open_html',data:{isLocal:isLocal},timestamp:Date.now()})}).catch(()=>{});
+           // #endregion agent log
            var currentUrl = encodeURIComponent(window.location.href);
            window.location.replace('/open.html?target=' + currentUrl);
         }
@@ -140,6 +147,12 @@
     <!-- 🔥 Global Error Handler for Mobile Debugging -->
     <script>
       window.onerror = function(msg, url, line, col, error) {
+        // #region agent log
+        if (!String(msg||'').includes('ResizeObserver') && !String(msg||'').includes('Script error')) {
+          fetch('http://127.0.0.1:7917/ingest/8df4a825-2af7-44b5-b28d-f1fe14cba861',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'0d5f3e'},body:JSON.stringify({sessionId:'0d5f3e',location:'index.html:window.onerror',runId:'preload',hypothesisId:'H-A',message:String(msg||''),data:{line:line,col:col,reactLoaded:!!window.REACT_LOADED,fbUa: !!(navigator.userAgent&&/FBAN|FBAV|Instagram/i.test(navigator.userAgent)),url:String(url||'').slice(-120)},timestamp:Date.now()})}).catch(()=>{});
+        }
+        // #endregion agent log
+
         if (msg.includes('ResizeObserver') || msg.includes('Script error')) return;
         
         // If React is loaded, let the ErrorBoundary handle UI.

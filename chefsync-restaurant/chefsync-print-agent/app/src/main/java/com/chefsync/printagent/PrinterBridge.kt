@@ -8,6 +8,29 @@ import java.nio.charset.Charset
 object PrinterBridge {
     private const val TAG = "PrinterBridge"
 
+    /**
+     * בודק אם המדפסת זמינה ב-TCP — פתיחת socket + סגירה מיידית.
+     * משמש את ה-heartbeat לדווח על "printer_connected" לשרת.
+     */
+    fun probe(ip: String?, port: Int?, timeoutMs: Int = 1500): ProbeResult {
+        if (ip.isNullOrBlank() || port == null || port <= 0) {
+            return ProbeResult(success = false, errorMessage = "No printer IP/port configured")
+        }
+        return try {
+            val socket = Socket()
+            socket.connect(java.net.InetSocketAddress(ip, port), timeoutMs)
+            socket.close()
+            ProbeResult(success = true)
+        } catch (e: Exception) {
+            ProbeResult(success = false, errorMessage = e.message ?: "Probe failed")
+        }
+    }
+
+    data class ProbeResult(
+        val success: Boolean,
+        val errorMessage: String? = null,
+    )
+
     private val ESC_INIT = byteArrayOf(0x1B, 0x40)
 
     /**

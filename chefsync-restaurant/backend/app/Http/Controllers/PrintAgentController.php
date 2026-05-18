@@ -104,11 +104,41 @@ class PrintAgentController extends Controller
     public function heartbeat(Request $request)
     {
         $device = $request->get('print_device');
-        $device->update(['last_seen_at' => now()]);
+
+        $request->validate([
+            'bridge_online' => 'sometimes|boolean',
+            'printer_connected' => 'sometimes|nullable|boolean',
+            'printer_last_error' => 'sometimes|nullable|string|max:500',
+            'agent_version' => 'sometimes|nullable|string|max:32',
+        ]);
+
+        $update = ['last_seen_at' => now()];
+
+        if ($request->has('printer_connected')) {
+            $update['printer_connected'] = $request->boolean('printer_connected');
+            $update['printer_last_check_at'] = now();
+            $update['printer_last_error'] = $request->input('printer_last_error');
+        }
+
+        if ($request->filled('agent_version')) {
+            $update['agent_version'] = $request->input('agent_version');
+        }
+
+        $device->update($update);
 
         return response()->json([
             'success' => true,
             'server_time' => now()->toIso8601String(),
+            'config' => [
+                'restaurant_id' => $device->restaurant_id,
+                'role' => $device->role,
+                'printer_ip' => $device->printer_ip,
+                'printer_port' => $device->printer_port,
+                'codepage_id' => $device->codepage_id ?? 10,
+                'is_active' => (bool) $device->is_active,
+                'heartbeat_interval_seconds' => 30,
+                'printer_probe_timeout_ms' => 1500,
+            ],
         ]);
     }
 
@@ -117,18 +147,43 @@ class PrintAgentController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
+
         $devices = PrintDevice::where('restaurant_id', $user->restaurant_id)
             ->orderBy('created_at', 'desc')
-            ->get()
-            ->map(function ($device) {
-                $device->is_connected = $device->is_connected;
+            ->get();
 
-                return $device;
-            });
+        // ספירת עבודות הדפסה תקועות לכל device — מאפשר לדשבורד להציג "X עבודות בהמתנה"
+        $pendingJobsByRole = PrintJob::withoutGlobalScopes()
+            ->where('restaurant_id', $user->restaurant_id)
+            ->whereIn('status', ['pending_bridge', 'printing'])
+            ->selectRaw('role, COUNT(*) as cnt')
+            ->groupBy('role')
+            ->pluck('cnt', 'role')
+            ->all();
+
+        $payload = $devices->map(function ($device) use ($pendingJobsByRole) {
+            $isConnected = $device->is_connected;
+            $printerConnected = $device->is_printer_connected;
+            $pendingForRole = $pendingJobsByRole[$device->role] ?? 0;
+            if ($device->role === 'general') {
+                $pendingForRole = array_sum($pendingJobsByRole);
+            }
+
+            $arr = $device->toArray();
+            $arr['is_connected'] = $isConnected;
+            $arr['printer_connected'] = $printerConnected;
+            $arr['connection_status'] = $device->connection_status;
+            $arr['pending_jobs_count'] = (int) $pendingForRole;
+            $arr['agent_version'] = $device->agent_version;
+            $arr['printer_last_check_at'] = $device->printer_last_check_at?->toIso8601String();
+            $arr['printer_last_error'] = $device->printer_last_error;
+
+            return $arr;
+        });
 
         return response()->json([
             'success' => true,
-            'devices' => $devices,
+            'devices' => $payload,
         ]);
     }
 

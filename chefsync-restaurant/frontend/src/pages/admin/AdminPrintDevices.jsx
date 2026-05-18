@@ -24,6 +24,38 @@ const ROLE_COLORS = {
     general: 'bg-gray-100 text-gray-700 border-gray-200',
 };
 
+// סטטוס חיבור — מסונכרן עם PrintDevice::connection_status בבקאנד
+const STATUS_META = {
+    online: {
+        label: 'מחובר',
+        dot: 'bg-green-500 animate-pulse',
+        text: 'text-green-600',
+        ring: 'ring-green-100',
+        emoji: '🟢',
+    },
+    bridge_offline: {
+        label: 'הגשר אופליין',
+        dot: 'bg-red-500',
+        text: 'text-red-600',
+        ring: 'ring-red-100',
+        emoji: '🔴',
+    },
+    printer_offline: {
+        label: 'מדפסת לא מגיבה',
+        dot: 'bg-amber-500 animate-pulse',
+        text: 'text-amber-600',
+        ring: 'ring-amber-100',
+        emoji: '⚠️',
+    },
+    disabled: {
+        label: 'כבוי',
+        dot: 'bg-gray-300',
+        text: 'text-gray-400',
+        ring: 'ring-gray-100',
+        emoji: '⚪',
+    },
+};
+
 const DEFAULT_FORM = {
     name: '',
     role: 'kitchen',
@@ -43,6 +75,9 @@ export default function AdminPrintDevices() {
 
     useEffect(() => {
         fetchDevices();
+        // ריענון אוטומטי כל 10 שניות — הסטטוס משתנה כשהגשר עולה/יורד
+        const id = setInterval(fetchDevices, 10000);
+        return () => clearInterval(id);
     }, []);
 
     const fetchDevices = async () => {
@@ -179,6 +214,30 @@ export default function AdminPrintDevices() {
                     )}
                 </div>
 
+                {/* Global health summary — מציג זריזות אם משהו לא בסדר */}
+                {devices.length > 0 && (() => {
+                    const active = devices.filter(d => d.is_active);
+                    const offline = active.filter(d => (d.connection_status || (d.is_connected ? 'online' : 'bridge_offline')) === 'bridge_offline');
+                    const warn = active.filter(d => (d.connection_status || '') === 'printer_offline');
+                    const ok = active.filter(d => (d.connection_status || (d.is_connected ? 'online' : '')) === 'online');
+                    if (offline.length === 0 && warn.length === 0) return null;
+                    return (
+                        <div className={`mx-4 p-5 rounded-[2rem] border flex items-start gap-4 ${offline.length > 0 ? 'bg-red-50 border-red-100' : 'bg-amber-50 border-amber-100'}`}>
+                            <FaExclamationTriangle className={`mt-1 flex-shrink-0 ${offline.length > 0 ? 'text-red-500' : 'text-amber-500'}`} size={20} />
+                            <div>
+                                <p className={`font-black ${offline.length > 0 ? 'text-red-700' : 'text-amber-700'}`}>
+                                    {offline.length > 0
+                                        ? `${offline.length} גשרי הדפסה אופליין — עבודות הדפסה חדשות יסומנו ככשלון`
+                                        : `${warn.length} מדפסות לא מגיבות`}
+                                </p>
+                                <p className={`text-xs mt-1 ${offline.length > 0 ? 'text-red-500' : 'text-amber-600'}`}>
+                                    סטטוס נוכחי: {ok.length} תקינים • {warn.length} מדפסת לא מגיבה • {offline.length} גשר אופליין
+                                </p>
+                            </div>
+                        </div>
+                    );
+                })()}
+
                 {/* Devices Grid */}
                 {devices.length === 0 ? (
                     <div className="bg-white rounded-[4rem] shadow-sm border-2 border-dashed border-gray-100 p-24 text-center flex flex-col items-center col-span-full max-w-xl mx-auto">
@@ -201,7 +260,13 @@ export default function AdminPrintDevices() {
                 ) : (
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 px-4">
                         {devices.map((device) => {
-                            const isConnected = device.is_connected;
+                            const status = device.connection_status
+                                || (device.is_active === false
+                                    ? 'disabled'
+                                    : (device.is_connected ? 'online' : 'bridge_offline'));
+                            const meta = STATUS_META[status] || STATUS_META.bridge_offline;
+                            const printerKnown = device.printer_connected;
+                            const pendingJobs = device.pending_jobs_count || 0;
                             return (
                                 <div key={device.id} className="bg-white rounded-[2rem] shadow-sm border border-gray-100 p-8 hover:shadow-md transition-all">
                                     {/* Header */}
@@ -212,14 +277,17 @@ export default function AdminPrintDevices() {
                                             </div>
                                             <div>
                                                 <h3 className="text-xl font-black text-gray-900">{device.name}</h3>
-                                                <div className="flex items-center gap-2 mt-1">
+                                                <div className="flex flex-wrap items-center gap-2 mt-1">
                                                     <span className={`px-3 py-0.5 rounded-full text-xs font-bold border ${ROLE_COLORS[device.role] || ROLE_COLORS.general}`}>
                                                         {ROLE_LABELS[device.role] || device.role}
                                                     </span>
-                                                    <span className={`flex items-center gap-1 text-xs font-semibold ${isConnected ? 'text-green-600' : 'text-gray-400'}`}>
-                                                        <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-gray-300'}`}></span>
-                                                        {isConnected ? 'מחובר' : 'מנותק'}
+                                                    <span className={`flex items-center gap-1 text-xs font-bold ${meta.text}`}>
+                                                        <span className={`w-2 h-2 rounded-full ${meta.dot}`}></span>
+                                                        {meta.label}
                                                     </span>
+                                                    {device.agent_version && (
+                                                        <span className="text-[10px] font-mono text-gray-400" dir="ltr">v{device.agent_version}</span>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
@@ -230,17 +298,54 @@ export default function AdminPrintDevices() {
                                         )}
                                     </div>
 
+                                    {/* Status banners — bridge / printer state */}
+                                    {status === 'bridge_offline' && device.is_active && (
+                                        <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-100 flex items-start gap-2">
+                                            <FaExclamationTriangle className="text-red-500 mt-0.5 flex-shrink-0" size={14} />
+                                            <div className="text-xs">
+                                                <p className="text-red-700 font-bold">הגשר לא שולח heartbeat</p>
+                                                <p className="text-red-500 mt-0.5">בדקו שהאפליקציה רצה במכשיר ושיש חיבור אינטרנט. עבודות הדפסה חדשות ייכשלו עד שהגשר יחזור.</p>
+                                            </div>
+                                        </div>
+                                    )}
+                                    {status === 'printer_offline' && (
+                                        <div className="mb-4 p-3 rounded-xl bg-amber-50 border border-amber-100 flex items-start gap-2">
+                                            <FaExclamationTriangle className="text-amber-500 mt-0.5 flex-shrink-0" size={14} />
+                                            <div className="text-xs">
+                                                <p className="text-amber-700 font-bold">המדפסת לא מגיבה</p>
+                                                <p className="text-amber-600 mt-0.5">{device.printer_last_error || 'הגשר לא הצליח לפתוח חיבור TCP. בדקו חשמל / רשת / IP.'}</p>
+                                            </div>
+                                        </div>
+                                    )}
+                                    {pendingJobs > 0 && (
+                                        <div className="mb-4 p-3 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-between">
+                                            <span className="text-xs font-bold text-indigo-700">{pendingJobs} עבודות הדפסה ממתינות</span>
+                                            <span className="text-[10px] text-indigo-400">יודפסו אוטומטית כשהגשר יחזור</span>
+                                        </div>
+                                    )}
+
                                     {/* Details */}
                                     <div className="space-y-2 text-sm text-gray-600 mb-6">
                                         {device.printer_ip && (
                                             <div className="flex items-center justify-between">
                                                 <span className="font-medium">מדפסת:</span>
-                                                <span className="font-mono text-gray-800">{device.printer_ip}:{device.printer_port || 9100}</span>
+                                                <span className="font-mono text-gray-800" dir="ltr">{device.printer_ip}:{device.printer_port || 9100}</span>
+                                            </div>
+                                        )}
+                                        {printerKnown !== null && printerKnown !== undefined && (
+                                            <div className="flex items-center justify-between">
+                                                <span className="font-medium">בדיקת TCP:</span>
+                                                <span className={`font-bold ${printerKnown ? 'text-green-600' : 'text-amber-600'}`}>
+                                                    {printerKnown ? '✓ נגישה' : '✗ לא מגיבה'}
+                                                    {device.printer_last_check_at && (
+                                                        <span className="text-gray-400 font-normal mr-2">({timeAgo(device.printer_last_check_at)})</span>
+                                                    )}
+                                                </span>
                                             </div>
                                         )}
                                         {device.last_seen_at && (
                                             <div className="flex items-center justify-between">
-                                                <span className="font-medium">נראה לאחרונה:</span>
+                                                <span className="font-medium">heartbeat אחרון:</span>
                                                 <span>{timeAgo(device.last_seen_at)}</span>
                                             </div>
                                         )}
