@@ -123,10 +123,13 @@ export default function usePosSession() {
         throw new Error(res.data.message);
     }, []);
 
+    const posTokenRef = useRef(posToken);
+    posTokenRef.current = posToken;
+
     const unlock = useCallback(async (pin) => {
-        const res = await posApi.unlockSession(pin, headersRef.current);
+        const res = await posApi.unlockSession(pin, headersRef.current, posTokenRef.current);
         if (res.data.success) {
-            // השרת עשוי להחזיר טוקן חדש אם הסשן הקודם הוחלף ממכשיר אחר
+            // השרת מחזיר את הטוקן של הסשן (הקיים או חדש אם פג תוקף)
             if (res.data.token) {
                 setPosToken(res.data.token);
                 if (res.data.expires_at) setExpiresAt(res.data.expires_at);
@@ -154,17 +157,15 @@ export default function usePosSession() {
     useEffect(() => {
         const onLost = (event) => {
             const detail = event?.detail || {};
-            // הצגת הודעה ברורה במקום ניתוק שקט — מבדיל בין החלפה ממכשיר אחר
-            // לבין פג תוקף / נעילה / טוקן שאבד.
+            // הודעה ברורה לפי הסיבה — בלי "נכבש ממכשיר אחר" (כניסות מקבילות מותרות).
             const message = (() => {
                 switch (detail.code) {
-                    case 'pos_session_replaced':
-                        return 'הקופה נכבשה — המשתמש נכנס לקופה ממכשיר אחר';
                     case 'pos_session_expired':
                         return 'הסשן פג תוקף — יש להתחבר מחדש';
                     case 'pos_session_locked':
                         return 'הקופה נעולה — נדרש PIN לפתיחה';
                     case 'pos_session_revoked':
+                    case 'pos_session_replaced':
                         return detail.message || 'הסשן בוטל — יש להתחבר מחדש';
                     default:
                         return null;

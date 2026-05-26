@@ -43,8 +43,8 @@ export const posApi = {
         api.get('/admin/payment-terminals', { headers }),
     lockSession: (headers, token) =>
         api.post('/admin/pos/lock', {}, { headers: posHeaders(headers, token) }),
-    unlockSession: (pin, headers) =>
-        api.post('/admin/pos/unlock', { pin }, { headers }),
+    unlockSession: (pin, headers, token) =>
+        api.post('/admin/pos/unlock', { pin }, { headers: posHeaders(headers, token) }),
     getSession: (headers, token) =>
         api.get('/admin/pos/session', { headers: posHeaders(headers, token) }),
 
