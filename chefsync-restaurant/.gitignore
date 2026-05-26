@@ -4,3 +4,5 @@ backend/.env
 backend/.envt
 .env
 .env*
+
+.weasy-libs/

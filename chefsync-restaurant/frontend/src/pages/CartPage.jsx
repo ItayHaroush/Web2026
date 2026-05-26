@@ -647,8 +647,8 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
         (sum, p) => sum + (Number(p.upgrade_surcharge) || 0),
         0,
     );
-    // ההנחה נטו (מקסימום 0) — תואם לחישוב הבקאנד
-    const promotionDiscount = Math.max(0, grossPromotionDiscount - upgradeSurcharge);
+    // ההנחה נטו — מוגבלת לסכום הפריטים (מונע מחיר סופי שלילי)
+    const promotionDiscount = Math.min(Math.max(0, grossPromotionDiscount - upgradeSurcharge), total);
     const totalWithDelivery = total + deliveryFee - promotionDiscount;
     const isBelowMinimum = customerInfo.delivery_method === 'delivery' && deliveryMinimum > 0 && total < deliveryMinimum;
     // בניית רשימת מתנות נבחרות (עם שמות) מ-selectedGifts

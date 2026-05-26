@@ -122,5 +122,6 @@ export function computeClientPromotionDiscount(cartTotal, cartItems, metPromotio
             sum += computeFixedPriceBundleDiscount(items, promo);
         }
     }
-    return Math.round(sum * 100) / 100;
+    // הגנה: ההנחה לעולם לא תעלה על סכום הסל (מונע מחיר סופי שלילי)
+    return Math.min(Math.round(sum * 100) / 100, cartTotal);
 }

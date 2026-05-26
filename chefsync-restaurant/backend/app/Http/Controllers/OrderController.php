@@ -558,6 +558,9 @@ class OrderController extends Controller
                 $giftLineItems = $result['gift_items'];
             }
 
+            // הגנה: ההנחה לעולם לא תעלה על סכום הפריטים (מונע מחיר סופי שלילי)
+            $promotionDiscount = min($promotionDiscount, $totalAmount);
+
             // לוג חישוב הזמנה
             $finalTotal = $totalAmount + $deliveryFee - $promotionDiscount;
             Log::info('Order total calculation', [

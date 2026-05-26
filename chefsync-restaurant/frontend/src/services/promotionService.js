@@ -73,6 +73,12 @@ class PromotionService {
                     });
                 }
             }
+            if (r.reward_type === 'fixed_price' && Array.isArray(r.discount_menu_item_ids) && r.discount_menu_item_ids.length > 0) {
+                fd.append(`rewards[${i}][discount_scope]`, 'selected_items');
+                r.discount_menu_item_ids.forEach((id, j) => {
+                    if (id !== '' && id != null) fd.append(`rewards[${i}][discount_menu_item_ids][${j}]`, id);
+                });
+            }
         });
         return fd;
     }

@@ -73,7 +73,7 @@ class PromotionController extends Controller
                 $imageUrl = Storage::disk('public')->url('promotions/' . $filename);
             }
 
-            $promotion = DB::transaction(function () use ($validated, $tenantId, $restaurant, $imageUrl) {
+            $promotion = DB::transaction(function () use ($validated, $tenantId, $restaurant, $imageUrl, $request) {
                 $promotion = Promotion::create([
                     'tenant_id' => $tenantId,
                     'restaurant_id' => $restaurant->id,
@@ -439,7 +439,7 @@ class PromotionController extends Controller
             'rewards.*.reward_type' => 'required|in:free_item,discount_percent,discount_fixed,fixed_price',
             'rewards.*.reward_category_id' => ['nullable', 'integer', Rule::exists('categories', 'id')->where('tenant_id', $tenantId)],
             'rewards.*.reward_menu_item_id' => ['nullable', 'integer', Rule::exists('menu_items', 'id')->where('tenant_id', $tenantId)],
-            'rewards.*.reward_value' => 'nullable|numeric|min:0',
+            'rewards.*.reward_value' => 'nullable|numeric|min:0.01',
             'rewards.*.max_selectable' => 'nullable|integer|min:1',
             'rewards.*.discount_scope' => 'nullable|in:whole_cart,selected_items',
             'rewards.*.discount_menu_item_ids' => 'nullable|array',
@@ -540,7 +540,7 @@ class PromotionController extends Controller
         $type = $reward['reward_type'];
         $discountScope = 'whole_cart';
         $discountMenuItemIds = null;
-        if (in_array($type, ['discount_percent', 'discount_fixed'], true)) {
+        if (in_array($type, ['discount_percent', 'discount_fixed', 'fixed_price'], true)) {
             $scope = $reward['discount_scope'] ?? 'whole_cart';
             $rawIds = $reward['discount_menu_item_ids'] ?? [];
             if ($scope === 'selected_items' && is_array($rawIds) && count($rawIds) > 0) {

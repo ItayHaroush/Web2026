@@ -418,6 +418,16 @@ class PromotionService
         // תוספת השדרוג מקטינה את ההנחה הנטו (ללא ירידה מתחת ל-0)
         $netDiscount = max(0.0, round($totalDiscount - $totalUpgradeSurcharge, 2));
 
+        // הגנה: ההנחה לעולם לא תעלה על סכום הפריטים בסל (מונע מחיר סופי שלילי)
+        $cartTotal = round(array_sum(array_map(fn($li) => $this->lineSubtotal($li), $lineItems)), 2);
+        if ($netDiscount > $cartTotal) {
+            Log::warning('Promotion discount capped to cart total', [
+                'raw_discount' => $netDiscount,
+                'cart_total' => $cartTotal,
+            ]);
+            $netDiscount = $cartTotal;
+        }
+
         return [
             'promotion_discount' => $netDiscount,
             'upgrade_surcharge' => round($totalUpgradeSurcharge, 2),

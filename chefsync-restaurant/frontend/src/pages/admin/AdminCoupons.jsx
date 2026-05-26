@@ -127,8 +127,8 @@ export default function AdminCoupons() {
         (form.rewards || []).forEach((reward, i) => {
             if (reward.reward_type === 'discount_percent' || reward.reward_type === 'discount_fixed') {
                 const v = reward.reward_value;
-                if (v === '' || v === null || v === undefined || Number(v) < 0) {
-                    err[`rewards.${i}.reward_value`] = 'נא למלא ערך הנחה תקין';
+                if (v === '' || v === null || v === undefined || Number(v) <= 0) {
+                    err[`rewards.${i}.reward_value`] = 'נא למלא ערך הנחה חיובי';
                 }
                 if (reward.discount_scope === 'selected_items' && (!reward.discount_menu_item_ids || reward.discount_menu_item_ids.length === 0)) {
                     err[`rewards.${i}.discount_menu_item_ids`] = 'נא לבחור לפחות מוצר אחד';
@@ -136,8 +136,8 @@ export default function AdminCoupons() {
             }
             if (reward.reward_type === 'fixed_price') {
                 const v = reward.reward_value;
-                if (v === '' || v === null || v === undefined || Number(v) < 0) {
-                    err[`rewards.${i}.reward_value`] = 'נא למלא מחיר תקין';
+                if (v === '' || v === null || v === undefined || Number(v) <= 0) {
+                    err[`rewards.${i}.reward_value`] = 'נא למלא מחיר חיובי';
                 }
             }
             if (reward.reward_type === 'free_item') {
@@ -222,7 +222,7 @@ export default function AdminCoupons() {
             reward_value: r.reward_value ?? '',
             max_selectable: r.max_selectable || 1,
             discount_scope: r.discount_scope || 'whole_cart',
-            discount_menu_item_ids: Array.isArray(r.discount_menu_item_ids) ? r.discount_menu_item_ids : [],
+            discount_menu_item_ids: Array.isArray(r.discount_menu_item_ids) ? r.discount_menu_item_ids.map(Number) : [],
             _mode: r.reward_menu_item_id ? 'specific' : (r.reward_category_id ? 'category' : 'specific'),
         }));
         if (rewards.length === 0) {
@@ -434,7 +434,7 @@ export default function AdminCoupons() {
         setForm((f) => {
             const rewards = [...f.rewards];
             const r = { ...rewards[index], reward_type };
-            if (reward_type !== 'discount_percent' && reward_type !== 'discount_fixed') {
+            if (reward_type !== 'discount_percent' && reward_type !== 'discount_fixed' && reward_type !== 'fixed_price') {
                 r.discount_scope = 'whole_cart';
                 r.discount_menu_item_ids = [];
             }
@@ -886,7 +886,7 @@ export default function AdminCoupons() {
                                                         פריטי עוגן מחיר מהקטגוריה (אופציונלי)
                                                     </label>
                                                     <p className="text-xs text-gray-500 mb-2">
-                                                        סמנו פריטים: השם והמחיר לכל שורה. העוגן הוא הראשון <strong>לפי סדר התפריט</strong> בין הנבחרים — מוצג בתווית &quot;עוגן מחיר&quot;.
+                                                        סמנו פריטים: הראשון לפי סדר התפריט משמש כעוגן מחיר. מי שבוחר מוצר יקר יותר — משלם הפרש.
                                                     </p>
                                                     {itemsInCategory.length === 0 ? (
                                                         <p className="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-2 py-2">
@@ -1096,6 +1096,56 @@ export default function AdminCoupons() {
                                                             )}
                                                         </div>
                                                     )}
+                                                    {reward.reward_type === 'fixed_price' && (
+                                                        <div>
+                                                            <p className="text-xs font-bold text-gray-600 mb-2">מוצרים הנכללים במחיר הקבוע</p>
+                                                            <p className="text-xs text-gray-500 mb-2">בחרו את המוצרים הספציפיים שיימכרו יחד במחיר הקבוע</p>
+                                                            <div className="max-h-56 sm:max-h-64 overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-sm divide-y divide-gray-100 touch-manipulation">
+                                                                {menuItems.map((item) => {
+                                                                    const id = Number(item.id);
+                                                                    const checked = (reward.discount_menu_item_ids || []).includes(id);
+                                                                    const rawPrice = Number(item.price);
+                                                                    const priceLabel = Number.isFinite(rawPrice)
+                                                                        ? (rawPrice % 1 === 0 ? `₪${rawPrice}` : `₪${rawPrice.toFixed(2)}`)
+                                                                        : '—';
+                                                                    return (
+                                                                        <label
+                                                                            key={item.id}
+                                                                            className="flex items-center gap-3 px-3 py-2.5 min-h-[3rem] cursor-pointer hover:bg-gray-50 active:bg-gray-100"
+                                                                        >
+                                                                            <input
+                                                                                type="checkbox"
+                                                                                checked={checked}
+                                                                                onChange={() => {
+                                                                                    const prev = reward.discount_menu_item_ids || [];
+                                                                                    const next = checked
+                                                                                        ? prev.filter((x) => x !== id)
+                                                                                        : [...prev, id];
+                                                                                    updateReward(i, 'discount_menu_item_ids', next);
+                                                                                }}
+                                                                                className="w-5 h-5 shrink-0 rounded border-gray-300 text-brand-primary focus:ring-brand-primary/30"
+                                                                            />
+                                                                            <span className="flex-1 min-w-0 text-sm font-medium text-gray-900 leading-snug break-words">
+                                                                                {item.name}
+                                                                                <span className="text-xs text-gray-400 mr-1">({item.category_name})</span>
+                                                                            </span>
+                                                                            <span className="text-sm tabular-nums font-semibold text-gray-800 shrink-0">
+                                                                                {priceLabel}
+                                                                            </span>
+                                                                        </label>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                            {(reward.discount_menu_item_ids || []).length > 0 && (
+                                                                <p className="text-xs text-emerald-700 mt-2 font-medium">
+                                                                    נבחרו {reward.discount_menu_item_ids.length} מוצרים
+                                                                </p>
+                                                            )}
+                                                            {fieldError(`rewards.${i}.discount_menu_item_ids`) && (
+                                                                <p className="text-xs text-red-600 mt-1">{fieldError(`rewards.${i}.discount_menu_item_ids`)}</p>
+                                                            )}
+                                                        </div>
+                                                    )}
                                                     <div>
                                                         <label className="block text-xs text-gray-500 mb-1">
                                                             {reward.reward_type === 'discount_percent' ? 'אחוז הנחה' : reward.reward_type === 'discount_fixed' ? 'סכום הנחה ליחידה (ש"ח)' : 'מחיר קבוע (ש"ח)'}
@@ -1105,7 +1155,7 @@ export default function AdminCoupons() {
                                                             value={reward.reward_value}
                                                             onChange={e => updateReward(i, 'reward_value', e.target.value)}
                                                             className={`w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none ${fieldError(`rewards.${i}.reward_value`) ? 'border-red-300' : 'border-gray-200'}`}
-                                                            min={0}
+                                                            min={1}
                                                             step={reward.reward_type === 'discount_percent' ? 1 : 0.01}
                                                         />
                                                         {fieldError(`rewards.${i}.reward_value`) && (
