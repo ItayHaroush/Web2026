@@ -4,12 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TakeEat - מעבר לדפדפן</title>
-    <script>
-      // #region agent log
-      (function(){fetch('http://127.0.0.1:7917/ingest/8df4a825-2af7-44b5-b28d-f1fe14cba861',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'0d5f3e'},body:JSON.stringify({sessionId:'0d5f3e',location:'open.html:head-early',runId:'preload',hypothesisId:'H-B',message:'open_head_no_third_party_js',data:{pathname:typeof location.pathname==='string'?location.pathname:''},timestamp:Date.now()})}).catch(()=>{});})();
-      window.addEventListener('load',function(){fetch('http://127.0.0.1:7917/ingest/8df4a825-2af7-44b5-b28d-f1fe14cba861',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'0d5f3e'},body:JSON.stringify({sessionId:'0d5f3e',location:'open.html:window-load',runId:'preload',hypothesisId:'H-B',message:'open_after_load_evt',data:{},timestamp:Date.now()})}).catch(()=>{});});
-      // #endregion agent log
-    </script>
     <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
         *,
@@ -385,13 +379,6 @@
 
     <!-- JavaScript Logic (Preserved & Enhanced) -->
     <script>
-        // #region agent log
-        window.onerror = function(m, u, l) {
-          fetch('http://127.0.0.1:7917/ingest/8df4a825-2af7-44b5-b28d-f1fe14cba861',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'0d5f3e'},body:JSON.stringify({sessionId:'0d5f3e',location:'open.html:bottom-script-onerror',runId:'preload',hypothesisId:'H-B',message:String(m||''),timestamp:Date.now()})}).catch(function(){});
-        };
-        fetch('http://127.0.0.1:7917/ingest/8df4a825-2af7-44b5-b28d-f1fe14cba861',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'0d5f3e'},body:JSON.stringify({sessionId:'0d5f3e',location:'open.html:body-script-start',runId:'preload',hypothesisId:'H-B',message:'open_bottom_script_ran_after_dom',data:{},timestamp:Date.now()})}).catch(function(){});
-        // #endregion agent log
-
         // קריאת target מה-URL או fallback לדף הבית
         const params = new URLSearchParams(window.location.search);
         const targetUrl = decodeURIComponent(params.get('target') || '') || 'https://www.takeeat.co.il';
