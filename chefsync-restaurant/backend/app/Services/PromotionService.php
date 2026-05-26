@@ -190,7 +190,8 @@ class PromotionService
                         $rules,
                         $categoryItemQuantities,
                         $menuItemPriceMap,
-                        $timesQualified
+                        $timesQualified,
+                        $this->getFixedPriceAllowedItemIds($promotion)
                     )
                     : 0.0,
                 // עבור מבצעי "מחיר קבוע" — bundle_savings כבר מחשב נטו
@@ -292,11 +293,14 @@ class PromotionService
             // תוספת שדרוג — כשתנאי מעוגן למוצרים ספציפיים, מוצרים אחרים מהקטגוריה
             // משלמים הפרש מעוגן המחיר. רלוונטי גם ל-"מחיר קבוע":
             // המחיר הקבוע ניתן רק על מוצר העוגן, ולפריטים אחרים מהקטגוריה מתווסף ההפרש.
+            // פריטים שמופיעים ברשימת "מוצרים ספציפיים" של פרס מחיר-קבוע
+            // (discount_menu_item_ids) נספגים כעוגן ולא נחשבים שדרוג.
             $promotionUpgrade = $this->computeUpgradeSurchargeForRules(
                 $promotion->rules,
                 $categoryItemQuantities,
                 $menuItemPriceMap,
-                $timesQualified
+                $timesQualified,
+                $this->getFixedPriceAllowedItemIds($promotion)
             );
             $totalUpgradeSurcharge += $promotionUpgrade;
 
@@ -638,32 +642,67 @@ class PromotionService
 
         // המחיר הקבוע ניתן רק על מוצר העוגן; פריטים אחרים מהקטגוריה משלמים את ההפרש
         // מעוגן המחיר על גבי המחיר הקבוע. נחסיר זאת מהחיסכון המוצג.
+        // פריטים שמסומנים ברשימת "מוצרים ספציפיים תואמים למבצע" (discount_menu_item_ids)
+        // של פרס מחיר-קבוע מקבלים אותו טיפול כמו עוגן (ללא תוספת שדרוג).
         $nonAnchorSurcharge = $this->computeUpgradeSurchargeForRules(
             $promotion->rules,
             $categoryItemQuantities,
             $menuItemPriceMap,
-            $timesQualified
+            $timesQualified,
+            $this->getFixedPriceAllowedItemIds($promotion)
         );
 
         return max(0.0, round($allocated - $target - $nonAnchorSurcharge, 2));
     }
 
     /**
+     * שליפת רשימת מוצרים ספציפיים שמסומנים בפרס "מחיר קבוע" (discount_menu_item_ids).
+     * פריטים אלה נחשבים תואמים למבצע, ולכן נספגים כעוגן וללא תוספת שדרוג.
+     *
+     * @return array<int, true>  מפת מזהי-פריט → true לחיפוש מהיר
+     */
+    private function getFixedPriceAllowedItemIds(Promotion $promotion): array
+    {
+        $allowed = [];
+        foreach ($promotion->rewards ?? [] as $reward) {
+            if (($reward->reward_type ?? '') !== 'fixed_price') {
+                continue;
+            }
+            $ids = $reward->discount_menu_item_ids ?? [];
+            if (!is_array($ids)) {
+                continue;
+            }
+            foreach ($ids as $id) {
+                $intId = (int) $id;
+                if ($intId > 0) {
+                    $allowed[$intId] = true;
+                }
+            }
+        }
+        return $allowed;
+    }
+
+    /**
      * חישוב תוספת שדרוג: כאשר התנאי מציין מוצרים ספציפיים ועוגן מחיר,
      * מוצרים אחרים מאותה קטגוריה שמוקצים לתנאי משלמים את ההפרש מעוגן המחיר.
      *
-     * אסטרטגיית הקצאה: קודם פריטי-עוגן הספציפיים (ללא הפרש), ואחר כך פריטים אחרים
-     * מהקטגוריה (חיוב = max(0, מחיר_פריט - מחיר_עוגן) ליחידה).
+     * אסטרטגיית הקצאה:
+     * 1. קודם פריטי-עוגן/דרישה (ללא הפרש)
+     * 2. אח"כ פריטים שמסומנים ברשימת "מוצרים ספציפיים תואמים" של פרס מחיר-קבוע
+     *    (discount_menu_item_ids) — גם אלה ללא הפרש, נחשבים תואמים למבצע
+     * 3. שאר היחידות מקטגוריה — חיוב הפרש (item - anchor) ליחידה
      *
      * @param  iterable  $rules  PromotionRule collection
      * @param  array<int, array<int, int>>  $categoryItemQuantities  [catId][menuItemId] => qty
      * @param  array<int, float>  $menuItemPriceMap  [menuItemId] => unit base price
+     * @param  array<int, true>  $allowedItemIds  פריטים נוספים שנספגים כעוגן ללא הפרש
      */
     private function computeUpgradeSurchargeForRules(
         iterable $rules,
         array $categoryItemQuantities,
         array $menuItemPriceMap,
-        int $timesQualified
+        int $timesQualified,
+        array $allowedItemIds = []
     ): float {
         if ($timesQualified < 1) {
             return 0.0;
@@ -672,7 +711,9 @@ class PromotionService
 
         foreach ($rules as $rule) {
             $required = $rule->required_menu_item_ids ?? [];
-            if (!is_array($required) || count($required) === 0) {
+            // אם אין עוגן כלל ואין רשימת מוצרים תואמים — אין תוספת שדרוג
+            $hasRequired = is_array($required) && count($required) > 0;
+            if (!$hasRequired && empty($allowedItemIds)) {
                 continue;
             }
             $catId = (int) $rule->required_category_id;
@@ -686,9 +727,27 @@ class PromotionService
                 continue;
             }
 
-            $anchorId = (int) $required[0];
-            $anchorPrice = (float) ($menuItemPriceMap[$anchorId] ?? 0);
-            $requiredSet = array_flip(array_map('intval', $required));
+            $requiredList = $hasRequired ? array_map('intval', $required) : [];
+            $requiredSet = array_flip($requiredList);
+            // ניהול מחיר העוגן: עדיף $required[0]; כשאין רשימת required — נשתמש
+            // במחיר הזול ביותר מ-discount_menu_item_ids שמופיע בסל (התנהגות שמרנית).
+            if ($hasRequired) {
+                $anchorId = (int) $requiredList[0];
+                $anchorPrice = (float) ($menuItemPriceMap[$anchorId] ?? 0);
+            } else {
+                $anchorPrice = PHP_FLOAT_MAX;
+                foreach ($allowedItemIds as $aid => $_) {
+                    if (isset($itemQtys[$aid]) && $itemQtys[$aid] > 0) {
+                        $p = (float) ($menuItemPriceMap[$aid] ?? 0);
+                        if ($p < $anchorPrice) {
+                            $anchorPrice = $p;
+                        }
+                    }
+                }
+                if ($anchorPrice === PHP_FLOAT_MAX) {
+                    $anchorPrice = 0.0;
+                }
+            }
 
             $remaining = $unitsNeeded;
 
@@ -710,17 +769,45 @@ class PromotionService
                 continue;
             }
 
-            // שלב 2: שאר היחידות מגיעות מפריטים אחרים בקטגוריה — חיוב הפרש (אם יש).
+            // שלב 2: פריטים שמסומנים ב-discount_menu_item_ids של פרס "מחיר קבוע"
+            // נחשבים תואמים למבצע ונספגים גם הם ללא הפרש.
+            if (!empty($allowedItemIds)) {
+                foreach ($allowedItemIds as $aid => $_) {
+                    if ($remaining <= 0) {
+                        break;
+                    }
+                    if (isset($requiredSet[$aid])) {
+                        continue; // already handled above
+                    }
+                    $avail = (int) ($itemQtys[$aid] ?? 0);
+                    if ($avail <= 0) {
+                        continue;
+                    }
+                    $take = min($avail, $remaining);
+                    $itemQtys[$aid] = $avail - $take;
+                    $remaining -= $take;
+                }
+            }
+
+            if ($remaining <= 0) {
+                continue;
+            }
+
+            // שלב 3: שאר היחידות מגיעות מפריטים אחרים בקטגוריה — חיוב הפרש (אם יש).
             // נמיין מהזול ליקר כדי לא "להעניש" את הלקוח יותר מהנדרש.
             $others = [];
             foreach ($itemQtys as $mid => $qty) {
-                if ($qty <= 0 || isset($requiredSet[(int) $mid])) {
+                if ($qty <= 0) {
+                    continue;
+                }
+                $intMid = (int) $mid;
+                if (isset($requiredSet[$intMid]) || isset($allowedItemIds[$intMid])) {
                     continue;
                 }
                 $others[] = [
-                    'menu_item_id' => (int) $mid,
+                    'menu_item_id' => $intMid,
                     'qty' => (int) $qty,
-                    'price' => (float) ($menuItemPriceMap[(int) $mid] ?? $anchorPrice),
+                    'price' => (float) ($menuItemPriceMap[$intMid] ?? $anchorPrice),
                 ];
             }
             usort($others, fn($a, $b) => $a['price'] <=> $b['price']);

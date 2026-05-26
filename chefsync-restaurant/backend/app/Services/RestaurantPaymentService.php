@@ -147,7 +147,8 @@ class RestaurantPaymentService
     }
 
     /**
-     * חיוב server-to-server עם Masof של המסעדה (לאימות מסוף)
+     * חיוב server-to-server עם Masof של המסעדה (לאימות מסוף).
+     * HYP דורש Referer מהדומיין הרשום של המסוף — בלעדיו תיתכן דחייה לא ברורה.
      */
     public function chargeSoft(Restaurant $restaurant, float $amount, string $token, string $tmonth, string $tyear, string $description = ''): array
     {
@@ -165,8 +166,12 @@ class RestaurantPaymentService
             'UTF8out' => 'True',
         ];
 
+        $referer = config('payment.hyp.referer_url', 'https://api.chefsync.co.il');
+
         try {
-            $response = Http::timeout(30)->get($this->baseUrl, $query);
+            $response = Http::timeout(30)
+                ->withHeaders(['Referer' => $referer])
+                ->get($this->baseUrl, $query);
             $result = $this->parseResponse($response->body());
 
             $ccode = (int) ($result['CCode'] ?? -1);
@@ -194,7 +199,11 @@ class RestaurantPaymentService
     }
 
     /**
-     * זיכוי/החזר עם Masof של המסעדה
+     * זיכוי/החזר עם Masof של המסעדה.
+     *
+     * HYP דורש Referer מהדומיין הרשום של המסוף; בלעדיו ה־endpoint של zikoyAPI
+     * מחזיר תגובה לא תקנית בלי CCode, מה שגורם לפרסור להחזיר -1 ומשתמש רואה
+     * "CCode: -1" בלי שום מידע אמיתי על הסיבה.
      */
     public function refundOrder(Restaurant $restaurant, string $transactionId, float $amount): array
     {
@@ -204,21 +213,45 @@ class RestaurantPaymentService
             'PassP'   => $restaurant->hyp_terminal_password,
             'TransId' => $transactionId,
             'Amount'  => number_format($amount, 2, '.', ''),
+            'UTF8'    => 'True',
+            'UTF8out' => 'True',
         ];
 
-        try {
-            $response = Http::timeout(30)->get($this->baseUrl, $query);
-            $result = $this->parseResponse($response->body());
+        $referer = config('payment.hyp.referer_url', 'https://api.chefsync.co.il');
 
+        try {
+            $response = Http::timeout(30)
+                ->withHeaders(['Referer' => $referer])
+                ->get($this->baseUrl, $query);
+
+            $responseBody = $response->body();
+            $result = $this->parseResponse($responseBody);
             $ccode = (int) ($result['CCode'] ?? -1);
+            $success = $ccode === 0 || $ccode === 33;
+
+            Log::info('RestaurantPaymentService refundOrder response', [
+                'restaurant_id' => $restaurant->id,
+                'trans_id'      => $transactionId,
+                'amount'        => $amount,
+                'http_status'   => $response->status(),
+                'ccode'         => $ccode,
+                'err_msg'       => $result['ErrMsg'] ?? null,
+                'success'       => $success,
+                'body_preview'  => substr($responseBody, 0, 500),
+            ]);
 
             return [
-                'success' => $ccode === 0 || $ccode === 33,
+                'success' => $success,
                 'ccode'   => $ccode,
-                'error'   => $ccode === 0 || $ccode === 33 ? null : ($result['ErrMsg'] ?? "CCode: {$ccode}"),
+                'error'   => $success ? null : ($result['ErrMsg'] ?? "CCode: {$ccode}"),
             ];
         } catch (\Exception $e) {
-            Log::error('RestaurantPaymentService refundOrder failed', ['error' => $e->getMessage()]);
+            Log::error('RestaurantPaymentService refundOrder failed', [
+                'restaurant_id' => $restaurant->id,
+                'trans_id'      => $transactionId,
+                'amount'        => $amount,
+                'error'         => $e->getMessage(),
+            ]);
             return ['success' => false, 'error' => $e->getMessage()];
         }
     }
