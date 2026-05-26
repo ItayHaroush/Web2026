@@ -21,7 +21,9 @@ class RestaurantPaymentService
 
     public function __construct()
     {
-        $this->baseUrl = rtrim(config('payment.hyp.base_url', 'https://pay.hyp.co.il/p/'), '/');
+        // HYP דורש slash סופי ב-path (אחרת Apache מחזיר 404 ל-zikoyAPI ו-soft).
+        // יישור להתנהגות של HypPaymentService.
+        $this->baseUrl = rtrim(config('payment.hyp.base_url', 'https://pay.hyp.co.il/p/'), '/') . '/';
     }
 
     /**

@@ -144,7 +144,16 @@ apiClient.interceptors.response.use(
                         !posNoSessionPath.some((p) => requestUrl.includes(p));
                     if (isPosSessionProtected) {
                         try {
-                            window.dispatchEvent(new CustomEvent('takeeat:pos-session-lost'));
+                            const data = error.response?.data || {};
+                            window.dispatchEvent(
+                                new CustomEvent('takeeat:pos-session-lost', {
+                                    detail: {
+                                        code: data.code || 'pos_session_invalid',
+                                        message: data.message || '',
+                                        reason: data.reason || null,
+                                    },
+                                })
+                            );
                         } catch {
                             /* ignore */
                         }

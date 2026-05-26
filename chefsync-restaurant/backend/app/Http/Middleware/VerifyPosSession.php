@@ -20,16 +20,41 @@ class VerifyPosSession
             ], 401);
         }
 
-        $session = PosSession::where('token', $token)
-            ->where('expires_at', '>', now())
-            ->whereNull('locked_at')
-            ->first();
+        $session = PosSession::where('token', $token)->first();
 
         if (!$session) {
             return response()->json([
                 'success' => false,
-                'message' => 'POS session expired or locked',
+                'message' => 'הסשן לא נמצא — יש להתחבר מחדש',
                 'code' => 'pos_session_invalid',
+            ], 401);
+        }
+
+        if ($session->revoked_at) {
+            $isReplaced = $session->revoked_reason === PosSession::REVOKED_REASON_REPLACED;
+            return response()->json([
+                'success' => false,
+                'message' => $isReplaced
+                    ? 'הוחלפת בקופה ממכשיר אחר — המשתמש נכנס לקופה במקום אחר'
+                    : 'הסשן בוטל — יש להתחבר מחדש',
+                'code' => $isReplaced ? 'pos_session_replaced' : 'pos_session_revoked',
+                'reason' => $session->revoked_reason,
+            ], 401);
+        }
+
+        if ($session->expires_at <= now()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'הסשן פג תוקף — יש להתחבר מחדש',
+                'code' => 'pos_session_expired',
+            ], 401);
+        }
+
+        if ($session->locked_at) {
+            return response()->json([
+                'success' => false,
+                'message' => 'הקופה נעולה — נדרש PIN לפתיחה',
+                'code' => 'pos_session_locked',
             ], 401);
         }
 

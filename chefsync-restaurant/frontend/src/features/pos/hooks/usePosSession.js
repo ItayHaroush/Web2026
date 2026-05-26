@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { toast } from 'react-hot-toast';
 import posApi from '../api/posApi';
 import { useAdminAuth } from '../../../context/AdminAuthContext';
 
@@ -125,6 +126,11 @@ export default function usePosSession() {
     const unlock = useCallback(async (pin) => {
         const res = await posApi.unlockSession(pin, headersRef.current);
         if (res.data.success) {
+            // השרת עשוי להחזיר טוקן חדש אם הסשן הקודם הוחלף ממכשיר אחר
+            if (res.data.token) {
+                setPosToken(res.data.token);
+                if (res.data.expires_at) setExpiresAt(res.data.expires_at);
+            }
             setIsLocked(false);
             resetInactivityTimer();
             return true;
@@ -146,7 +152,33 @@ export default function usePosSession() {
     }, [clearPosSessionState]);
 
     useEffect(() => {
-        const onLost = () => clearPosSessionState();
+        const onLost = (event) => {
+            const detail = event?.detail || {};
+            // הצגת הודעה ברורה במקום ניתוק שקט — מבדיל בין החלפה ממכשיר אחר
+            // לבין פג תוקף / נעילה / טוקן שאבד.
+            const message = (() => {
+                switch (detail.code) {
+                    case 'pos_session_replaced':
+                        return 'הקופה נכבשה — המשתמש נכנס לקופה ממכשיר אחר';
+                    case 'pos_session_expired':
+                        return 'הסשן פג תוקף — יש להתחבר מחדש';
+                    case 'pos_session_locked':
+                        return 'הקופה נעולה — נדרש PIN לפתיחה';
+                    case 'pos_session_revoked':
+                        return detail.message || 'הסשן בוטל — יש להתחבר מחדש';
+                    default:
+                        return null;
+                }
+            })();
+            if (message) {
+                try {
+                    toast.error(message, { id: 'pos-session-lost', duration: 6000 });
+                } catch {
+                    /* ignore */
+                }
+            }
+            clearPosSessionState();
+        };
         window.addEventListener('takeeat:pos-session-lost', onLost);
         return () => window.removeEventListener('takeeat:pos-session-lost', onLost);
     }, [clearPosSessionState]);

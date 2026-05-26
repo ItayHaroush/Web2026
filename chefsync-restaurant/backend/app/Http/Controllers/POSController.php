@@ -69,7 +69,14 @@ class POSController extends Controller
             return response()->json(['success' => false, 'message' => 'אין לך הרשאה לגשת לקופה'], 403);
         }
 
-        PosSession::where('user_id', $user->id)->delete();
+        // סימון סשנים פעילים של אותו משתמש כ"הוחלפו" במקום מחיקה,
+        // כדי שמכשיר ישן יקבל הודעה ברורה (ולא ניתוק שקט) בבקשה הבאה.
+        PosSession::where('user_id', $user->id)
+            ->whereNull('revoked_at')
+            ->update([
+                'revoked_at' => Carbon::now(),
+                'revoked_reason' => PosSession::REVOKED_REASON_REPLACED,
+            ]);
 
         $token = Str::random(64);
         $session = PosSession::create([
@@ -128,14 +135,35 @@ class POSController extends Controller
 
         $session = PosSession::where('user_id', $user->id)
             ->where('expires_at', '>', now())
+            ->whereNull('revoked_at')
             ->latest()
             ->first();
 
         if ($session) {
             $session->update(['locked_at' => null]);
+
+            return response()->json([
+                'success' => true,
+                'token' => $session->token,
+                'expires_at' => $session->expires_at->toISOString(),
+            ]);
         }
 
-        return response()->json(['success' => true]);
+        // אין סשן פעיל (הוחלף ממכשיר אחר / פג תוקף) — יוצרים סשן חדש
+        // כדי שהמשתמש לא ייתקע על "פתח קופה" עם PIN תקין אבל בלי טוקן.
+        $token = Str::random(64);
+        $newSession = PosSession::create([
+            'user_id' => $user->id,
+            'restaurant_id' => $user->restaurant_id,
+            'token' => $token,
+            'expires_at' => Carbon::now()->addHours(8),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'token' => $token,
+            'expires_at' => $newSession->expires_at->toISOString(),
+        ]);
     }
 
     public function getSession(Request $request)
