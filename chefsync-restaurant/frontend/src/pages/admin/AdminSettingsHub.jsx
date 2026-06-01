@@ -55,12 +55,26 @@ export default function AdminSettingsHub() {
     const navigate = useNavigate();
     const { canInstall, isStandalone, promptInstall } = useInstallPrompt();
 
+    const ANDROID_APP_APK_URL =
+        import.meta.env.VITE_ANDROID_APP_APK_URL ||
+        'https://api.chefsync.co.il/downloads/chefsync-restaurant.apk';
+
+    const isAndroidDevice =
+        typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent || '');
+
     const handleQuickPwaInstall = async () => {
         if (canInstall) {
             await promptInstall();
-        } else {
-            navigate({ pathname: '/admin/guide', hash: 'install' });
+            return;
         }
+
+        // Fallback on Android when browser doesn't expose beforeinstallprompt.
+        if (isAndroidDevice) {
+            window.open(ANDROID_APP_APK_URL, '_blank', 'noopener,noreferrer');
+            return;
+        }
+
+        navigate({ pathname: '/admin/guide', hash: 'install' });
     };
 
     const settings = [
@@ -194,11 +208,13 @@ export default function AdminSettingsHub() {
                                     title={
                                         canInstall
                                             ? 'התקנת הניהול כאפליקציה מהמסך הראשי'
-                                            : 'עמוד הדרכה והתקנה'
+                                            : isAndroidDevice
+                                                ? 'לא זוהתה התקנת PWA. מתבצעת הורדת APK לאנדרואיד.'
+                                                : 'עמוד הדרכה והתקנה'
                                     }
                                 >
                                     <FaDownload size={14} />
-                                    התקנה מהירה
+                                    {canInstall ? 'התקנה מהירה' : (isAndroidDevice ? 'הורדת אפליקציה' : 'התקנה מהירה')}
                                 </button>
                             )}
                         </div>
