@@ -1,21 +1,5 @@
 import axios from 'axios';
-import { TENANT_HEADER } from '../constants/api';
-
-// Base URLs: prefer local, fall back to production on network errors
-// ⚠️ Safe access to import.meta.env with fallbacks
-const getEnv = (key, fallback) => {
-    try {
-        return import.meta?.env?.[key] || fallback;
-    } catch {
-        return fallback;
-    }
-};
-
-const LOCAL_API = (getEnv('VITE_API_URL_LOCAL', 'http://localhost:8000/api')).trim();
-const PROD_API = (getEnv('VITE_API_URL_PRODUCTION', 'https://api.chefsync.co.il/api')).trim();
-
-// In production (Vercel), default straight to production API to avoid a first request to localhost.
-const DEFAULT_API = getEnv('PROD', false) ? PROD_API : LOCAL_API;
+import { API_BASE_URL, LOCAL_API, PROD_API, TENANT_HEADER } from '../constants/api';
 
 /**
  * אתחול כלי HTTP עם תמיכה מלאה ב-Multi-Tenant
@@ -49,7 +33,7 @@ export function getPublicTenantId() {
 
 // יצירת instance של axios עם ברירות מחדל
 export const apiClient = axios.create({
-    baseURL: DEFAULT_API,
+    baseURL: API_BASE_URL,
     headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
@@ -72,7 +56,7 @@ export const apiClient = axios.create({
 
 // Save chosen base URL for other parts (e.g., asset URL resolution)
 try {
-    localStorage.setItem('api_base_url', DEFAULT_API);
+    localStorage.setItem('api_base_url', API_BASE_URL);
 } catch { }
 
 // Interceptor לשמירת Tenant ID בכל בקשה

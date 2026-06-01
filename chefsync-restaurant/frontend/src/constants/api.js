@@ -1,21 +1,47 @@
 // מידע API ועירובים
 
-const resolveApiBaseUrl = () => {
+const getEnv = (key, fallback = '') => {
     try {
-        const envValue = import.meta?.env?.VITE_API_URL?.trim();
+        return import.meta?.env?.[key] ?? fallback;
+    } catch {
+        return fallback;
+    }
+};
 
-        if (envValue) return envValue;
+const isLocalhostUrl = (value) => /:\/\/(localhost|127\.0\.0\.1)(?::\d+)?\b/i.test(value);
 
-        if (import.meta?.env?.DEV) {
-            console.warn('VITE_API_URL missing; using dev fallback http://localhost:8000/api');
-            return 'http://localhost:8000/api';
-        }
-    } catch (e) {
-        console.error('Error accessing import.meta.env:', e);
+const detectNativeRuntime = () => {
+    try {
+        if (window?.Capacitor?.isNativePlatform?.()) return true;
+        const platform = window?.Capacitor?.getPlatform?.();
+        return !!platform && platform !== 'web';
+    } catch {
+        return false;
+    }
+};
+
+export const LOCAL_API = String(getEnv('VITE_API_URL_LOCAL', 'http://localhost:8000/api')).trim();
+export const PROD_API = String(getEnv('VITE_API_URL_PRODUCTION', 'https://api.chefsync.co.il/api')).trim();
+export const IS_NATIVE_APP = detectNativeRuntime();
+
+const resolveApiBaseUrl = () => {
+    const explicitApi = String(getEnv('VITE_API_URL', '')).trim();
+    const isDev = !!getEnv('DEV', false);
+    const isProd = !!getEnv('PROD', false);
+
+    if (explicitApi && (!isLocalhostUrl(explicitApi) || isDev)) {
+        return explicitApi;
     }
 
-    // Fallback for environments where import.meta is not available
-    return 'https://api.chefsync.co.il/api';
+    if (IS_NATIVE_APP || isProd) {
+        return PROD_API;
+    }
+
+    if (isDev) {
+        return LOCAL_API;
+    }
+
+    return PROD_API;
 };
 
 export const API_BASE_URL = resolveApiBaseUrl();
