@@ -32,7 +32,11 @@ class HypSubscriptionCallbackController extends Controller
         $params = $this->hypService->parseRedirectParams($request);
         $restaurantId = $this->extractRestaurantId($params);
         $transactionId = $params['transaction_id'];
-        $sourceApp = $this->resolveSourceApp($params['source_app'] ?? null, $this->detectSourceFromRequest($request));
+        $sourceFromOrder = $this->detectSourceFromOrder($params['order'] ?? '');
+        $sourceApp = $this->resolveSourceApp(
+            $params['source_app'] ?? null,
+            $this->resolveSourceApp($sourceFromOrder, $this->detectSourceFromRequest($request))
+        );
 
         Log::info('[HYP-SUB] Step 1/7: Success redirect received', [
             'restaurant_id'  => $restaurantId,
@@ -225,7 +229,11 @@ class HypSubscriptionCallbackController extends Controller
     {
         $params = $this->hypService->parseRedirectParams($request);
         $restaurantId = $this->extractRestaurantId($params);
-        $sourceApp = $this->resolveSourceApp($params['source_app'] ?? null, $this->detectSourceFromRequest($request));
+        $sourceFromOrder = $this->detectSourceFromOrder($params['order'] ?? '');
+        $sourceApp = $this->resolveSourceApp(
+            $params['source_app'] ?? null,
+            $this->resolveSourceApp($sourceFromOrder, $this->detectSourceFromRequest($request))
+        );
 
         if ($restaurantId) {
             $sessionData = Cache::get("hyp_session:{$restaurantId}");
@@ -382,17 +390,17 @@ class HypSubscriptionCallbackController extends Controller
      */
     private function extractRestaurantId(array $params): ?string
     {
-        $order = $params['order'] ?? '';
-        if (str_starts_with($order, 'sub_')) {
-            return substr($order, 4);
+        $order = (string) ($params['order'] ?? '');
+        if ($order !== '' && preg_match('/sub[_-]?(\d+)/i', $order, $m) === 1) {
+            return $m[1];
         }
 
-        if (!empty($params['fild1']) && is_numeric($params['fild1'])) {
-            return $params['fild1'];
+        if (!empty($params['fild1']) && preg_match('/(\d+)/', (string) $params['fild1'], $m) === 1) {
+            return $m[1];
         }
 
-        if (!empty($params['rid']) && is_numeric($params['rid'])) {
-            return $params['rid'];
+        if (!empty($params['rid']) && preg_match('/(\d+)/', (string) $params['rid'], $m) === 1) {
+            return $m[1];
         }
 
         return null;
@@ -463,5 +471,27 @@ class HypSubscriptionCallbackController extends Controller
         }
 
         return 'takeeat';
+    }
+
+    private function detectSourceFromOrder(string $order): ?string
+    {
+        $value = strtolower(trim($order));
+        if ($value === '') {
+            return null;
+        }
+
+        if (str_contains($value, 'buildix')) {
+            return 'buildix';
+        }
+
+        if (str_contains($value, 'appointix') || str_contains($value, 'appointed')) {
+            return 'appointix';
+        }
+
+        if (str_contains($value, 'takeeat') || str_contains($value, 'chefsync')) {
+            return 'takeeat';
+        }
+
+        return null;
     }
 }

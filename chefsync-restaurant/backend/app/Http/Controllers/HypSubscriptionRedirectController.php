@@ -76,7 +76,7 @@ class HypSubscriptionRedirectController extends Controller
         $payParams = [
             'Masof'      => $this->hypService->getMasof(),
             'Amount'     => number_format($amount, 2, '.', ''),
-            'Order'      => "sub_{$restaurantId}",
+            'Order'      => "sub_{$restaurantId}_{$sourceApp}",
             'Info'       => $info,
             'Coin'       => $this->hypService->getCoin(),
             'Tash'       => '1',
