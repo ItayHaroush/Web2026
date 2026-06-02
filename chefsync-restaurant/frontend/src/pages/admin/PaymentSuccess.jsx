@@ -15,6 +15,7 @@ export default function PaymentSuccess() {
     const [verified, setVerified] = useState(false);
     const [verifying, setVerifying] = useState(true);
     const [subData, setSubData] = useState(null);
+    const hasAdminToken = !!(localStorage.getItem('authToken') || localStorage.getItem('admin_token'));
 
     useEffect(() => {
         // HYP מפנה ישירות לפרונט במקום לבקאנד — מעבירים את הפרמטרים לבקאנד לעיבוד
@@ -33,7 +34,6 @@ export default function PaymentSuccess() {
             return;
         }
 
-        const hasAdminToken = !!(localStorage.getItem('authToken') || localStorage.getItem('admin_token'));
         if (!hasAdminToken) {
             setVerifying(false);
             setVerified(false);
@@ -124,10 +124,10 @@ export default function PaymentSuccess() {
                     )}
 
                     <button
-                        onClick={() => { window.location.href = '/admin/dashboard'; }}
+                        onClick={() => { window.location.href = hasAdminToken ? '/admin/dashboard' : '/'; }}
                         className="w-full bg-gradient-to-r from-brand-primary to-brand-secondary text-white py-4 rounded-xl font-black text-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all flex items-center justify-center gap-3"
                     >
-                        כניסה לפאנל
+                        {hasAdminToken ? 'כניסה לפאנל' : 'חזרה לעמוד הראשי'}
                         <FaArrowLeft />
                     </button>
                 </div>

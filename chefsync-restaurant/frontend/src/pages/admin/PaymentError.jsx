@@ -15,7 +15,24 @@ export default function PaymentError() {
     const navigate = useNavigate();
     const location = useLocation();
     const [searchParams] = useSearchParams();
+    const hasAdminToken = !!(localStorage.getItem('authToken') || localStorage.getItem('admin_token'));
     const reason = searchParams.get('reason') || 'payment_declined';
+
+    const goRetry = () => {
+        if (hasAdminToken) {
+            navigate('/admin/paywall');
+            return;
+        }
+        window.location.href = '/';
+    };
+
+    const goHome = () => {
+        if (hasAdminToken) {
+            navigate('/admin/dashboard');
+            return;
+        }
+        window.location.href = '/';
+    };
 
     useEffect(() => {
         // HYP מפנה ישירות לפרונט במקום לבקאנד — מעבירים את הפרמטרים לבקאנד (לתיעוד)
@@ -59,7 +76,7 @@ export default function PaymentError() {
 
                     <div className="space-y-3">
                         <button
-                            onClick={() => navigate('/admin/paywall')}
+                            onClick={goRetry}
                             className="w-full bg-gradient-to-r from-brand-primary to-brand-secondary text-white py-4 rounded-xl font-black text-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all flex items-center justify-center gap-3"
                         >
                             נסה שוב
@@ -67,10 +84,10 @@ export default function PaymentError() {
                         </button>
 
                         <button
-                            onClick={() => navigate('/admin/dashboard')}
+                            onClick={goHome}
                             className="w-full text-gray-500 hover:text-gray-900 font-medium transition-colors inline-flex items-center justify-center gap-2 py-2"
                         >
-                            <FaArrowRight className="text-sm" /> חזור לפאנל
+                            <FaArrowRight className="text-sm" /> {hasAdminToken ? 'חזור לפאנל' : 'חזור לעמוד הראשי'}
                         </button>
                     </div>
                 </div>

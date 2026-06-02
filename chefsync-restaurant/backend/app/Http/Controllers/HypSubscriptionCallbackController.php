@@ -32,7 +32,7 @@ class HypSubscriptionCallbackController extends Controller
         $params = $this->hypService->parseRedirectParams($request);
         $restaurantId = $this->extractRestaurantId($params);
         $transactionId = $params['transaction_id'];
-        $sourceApp = $this->resolveSourceApp($params['source_app'] ?? null);
+        $sourceApp = $this->resolveSourceApp($params['source_app'] ?? null, $this->detectSourceFromRequest($request));
 
         Log::info('[HYP-SUB] Step 1/7: Success redirect received', [
             'restaurant_id'  => $restaurantId,
@@ -225,7 +225,7 @@ class HypSubscriptionCallbackController extends Controller
     {
         $params = $this->hypService->parseRedirectParams($request);
         $restaurantId = $this->extractRestaurantId($params);
-        $sourceApp = $this->resolveSourceApp($params['source_app'] ?? null);
+        $sourceApp = $this->resolveSourceApp($params['source_app'] ?? null, $this->detectSourceFromRequest($request));
 
         if ($restaurantId) {
             $sessionData = Cache::get("hyp_session:{$restaurantId}");
@@ -448,5 +448,20 @@ class HypSubscriptionCallbackController extends Controller
         $sourceUrl = trim((string) ($urls[$sourceApp] ?? ''));
 
         return $sourceUrl !== '' ? rtrim($sourceUrl, '/') : $fallback;
+    }
+
+    private function detectSourceFromRequest(Request $request): string
+    {
+        $host = strtolower((string) $request->getHost());
+
+        if (str_contains($host, 'buildix')) {
+            return 'buildix';
+        }
+
+        if (str_contains($host, 'appointix') || str_contains($host, 'appointed')) {
+            return 'appointix';
+        }
+
+        return 'takeeat';
     }
 }
