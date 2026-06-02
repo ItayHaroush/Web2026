@@ -20,7 +20,14 @@ export default function PaymentError() {
     useEffect(() => {
         // HYP מפנה ישירות לפרונט במקום לבקאנד — מעבירים את הפרמטרים לבקאנד (לתיעוד)
         const params = new URLSearchParams(location.search);
-        const hasHypParams = params.has('Id') || params.has('CCode') || (params.has('Order') && params.get('Order')?.startsWith('sub_')) || params.has('rid');
+        const hasHypParams =
+            params.has('Id') ||
+            params.has('transactionId') ||
+            params.has('paymentId') ||
+            params.has('lowProfileId') ||
+            params.has('CCode') ||
+            (params.has('Order') && params.get('Order')?.startsWith('sub_')) ||
+            params.has('rid');
         if (hasHypParams) {
             window.location.href = `${API}/payments/hyp/subscription/error${location.search}`;
         }
@@ -31,6 +38,7 @@ export default function PaymentError() {
         payment_not_approved: 'העסקה לא אושרה.',
         verification_failed: 'אימות העסקה נכשל.',
         restaurant_not_found: 'המסעדה לא נמצאה במערכת.',
+        missing_transaction_identifier: 'לא התקבל מזהה עסקה מהסולק.',
     };
 
     return (

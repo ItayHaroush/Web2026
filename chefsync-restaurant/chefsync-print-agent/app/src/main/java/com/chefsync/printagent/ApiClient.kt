@@ -29,7 +29,12 @@ data class PrintJobData(
 
 data class AckRequest(
     val status: String,
-    val error_message: String? = null
+    val error_message: String? = null,
+    /** true = המדפסת החזירה סטטוס ESC/POS אחרי ההדפסה */
+    val printer_status_verified: Boolean? = null,
+    /** ok | paper_out | paper_low | offline | error | unknown */
+    val printer_status: String? = null,
+    val printer_status_detail: String? = null,
 )
 
 /**

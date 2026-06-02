@@ -198,11 +198,16 @@ class PrintAgentService : Service() {
                 PrinterBridge.print(ip, port, job.text, suffix, job.double_height ?: true, codepageId = job.codepage_id ?: 15)
             }
 
+            val ackStatus = if (result.success) "done" else "failed"
+            val ackMessage = buildAckMessage(result)
             ackJob(
                 authHeader,
                 job.id,
-                if (result.success) "done" else "failed",
-                result.errorMessage
+                ackStatus,
+                ackMessage,
+                result.statusVerified,
+                result.statusCode,
+                result.statusDetail,
             )
 
             if (result.success) {
@@ -216,9 +221,38 @@ class PrintAgentService : Service() {
         }
     }
 
-    private suspend fun ackJob(authHeader: String, jobId: Long, status: String, errorMsg: String?) {
+    private fun buildAckMessage(result: PrinterBridge.PrintResult): String? {
+        if (!result.success) return result.errorMessage
+        if (result.statusCode == "paper_low") {
+            return "הודפס — אזהרה: נייר עומד להיגמר"
+        }
+        if (!result.statusVerified) {
+            return "הודפס — לא אומת סטטוס מדפסת (ייתכן שהמדפסת לא תומכת בבדיקה)"
+        }
+        return null
+    }
+
+    private suspend fun ackJob(
+        authHeader: String,
+        jobId: Long,
+        status: String,
+        errorMsg: String?,
+        statusVerified: Boolean = false,
+        statusCode: String? = null,
+        statusDetail: String? = null,
+    ) {
         try {
-            ApiClient.get().ackJob(authHeader, jobId, AckRequest(status, errorMsg))
+            ApiClient.get().ackJob(
+                authHeader,
+                jobId,
+                AckRequest(
+                    status = status,
+                    error_message = errorMsg,
+                    printer_status_verified = statusVerified,
+                    printer_status = statusCode,
+                    printer_status_detail = statusDetail,
+                ),
+            )
         } catch (e: Exception) {
             Log.e(TAG, "ACK failed for job $jobId: ${e.message}")
         }

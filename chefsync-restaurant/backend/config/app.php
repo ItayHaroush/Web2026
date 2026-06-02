@@ -36,6 +36,23 @@ return [
 
     'frontend_url' => env('FRONTEND_URL', 'https://www.takeeat.co.il'),
 
+    'frontend_urls' => [
+        'takeeat' => env('FRONTEND_URL_TAKEEAT', env('FRONTEND_URL', 'https://www.takeeat.co.il')),
+        'buildix' => env('FRONTEND_URL_BUILDIX', ''),
+        'appointix' => env('FRONTEND_URL_APPOINTIX', ''),
+    ],
+
+    'hyp_callback_urls' => [
+        'buildix' => [
+            'success' => env('HYP_CALLBACK_SUCCESS_BUILDIX', 'https://app.buildix.site/api/payments/hyp/subscription/success'),
+            'error' => env('HYP_CALLBACK_ERROR_BUILDIX', 'https://app.buildix.site/api/payments/hyp/subscription/error'),
+        ],
+        'appointix' => [
+            'success' => env('HYP_CALLBACK_SUCCESS_APPOINTED', 'https://appointed.cloud/api/payments/hyp/subscription/success'),
+            'error' => env('HYP_CALLBACK_ERROR_APPOINTED', 'https://appointed.cloud/api/payments/hyp/subscription/error'),
+        ],
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Application Timezone

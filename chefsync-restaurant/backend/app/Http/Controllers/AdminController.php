@@ -3179,6 +3179,7 @@ class AdminController extends Controller
         $validated = $request->validate([
             'plan_type' => 'required|in:monthly,yearly',
             'tier' => 'required|in:basic,pro,enterprise',
+            'source' => 'nullable|string|max:50',
         ]);
 
         $restaurant = $request->user()->restaurant;
@@ -3219,6 +3220,7 @@ class AdminController extends Controller
 
         $totalAmount = $planAmount;
         $owner = $request->user();
+        $sourceApp = $this->resolvePaymentSourceApp($request, $validated['source'] ?? null);
 
         \Illuminate\Support\Facades\Cache::put(
             "hyp_session:{$restaurant->id}",
@@ -3231,6 +3233,7 @@ class AdminController extends Controller
                 'has_negotiated_rate' => $resolved['has_negotiated_rate'],
                 'includes_setup_fee' => $includesSetupFee,
                 'setup_fee_amount' => $setupFee,
+                'source_app' => $sourceApp,
                 'client_name' => $owner->name ?? '',
                 'email' => $owner->email ?? '',
                 'phone' => $restaurant->phone ?? '',
@@ -3251,7 +3254,54 @@ class AdminController extends Controller
             'setup_fee' => $setupFee,
             'includes_setup_fee' => $includesSetupFee,
             'total_amount' => $totalAmount,
+            'source_app' => $sourceApp,
         ]);
+    }
+
+    private function resolvePaymentSourceApp(Request $request, ?string $source): string
+    {
+        $normalized = $this->normalizePaymentSourceApp($source);
+        if ($normalized !== null) {
+            return $normalized;
+        }
+
+        $origin = strtolower((string) $request->headers->get('origin', ''));
+        $referer = strtolower((string) $request->headers->get('referer', ''));
+        $host = strtolower((string) parse_url($origin, PHP_URL_HOST));
+
+        if ($host === '' && $referer !== '') {
+            $host = strtolower((string) parse_url($referer, PHP_URL_HOST));
+        }
+
+        if ($host === '') {
+            $host = strtolower((string) $request->getHost());
+        }
+
+        if (str_contains($host, 'buildix')) {
+            return 'buildix';
+        }
+
+        if (str_contains($host, 'appointix') || str_contains($host, 'appointed')) {
+            return 'appointix';
+        }
+
+        return 'takeeat';
+    }
+
+    private function normalizePaymentSourceApp(?string $source): ?string
+    {
+        $value = strtolower(trim((string) $source));
+
+        if ($value === '') {
+            return null;
+        }
+
+        return match ($value) {
+            'takeeat', 'chefsync' => 'takeeat',
+            'buildix' => 'buildix',
+            'appointix', 'appointed' => 'appointix',
+            default => null,
+        };
     }
 
     /**

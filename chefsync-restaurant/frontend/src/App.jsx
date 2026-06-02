@@ -358,22 +358,10 @@ function AppRoutes() {
               </AdminRoute>
             }
           />
-          <Route
-            path="/admin/payment/success"
-            element={
-              <AdminRoute>
-                <PaymentSuccess />
-              </AdminRoute>
-            }
-          />
-          <Route
-            path="/admin/payment/error"
-            element={
-              <AdminRoute>
-                <PaymentError />
-              </AdminRoute>
-            }
-          />
+          <Route path="/admin/payment/success" element={<PaymentSuccess />} />
+          <Route path="/admin/payment/error" element={<PaymentError />} />
+          <Route path="/administration/payment/success" element={<PaymentSuccess />} />
+          <Route path="/administration/payment/error" element={<PaymentError />} />
           <Route path="/admin/billing" element={<Navigate to="/admin/payment-settings" replace />} />
           <Route
             path="/admin/terminal"

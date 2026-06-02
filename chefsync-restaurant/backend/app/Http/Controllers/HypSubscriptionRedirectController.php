@@ -51,6 +51,7 @@ class HypSubscriptionRedirectController extends Controller
         $tier = $sessionData['tier'] ?? 'basic';
         $planType = $sessionData['plan_type'] ?? 'monthly';
         $amount = $sessionData['amount'] ?? 0;
+        $sourceApp = strtolower((string) ($sessionData['source_app'] ?? 'takeeat'));
 
         if ($amount <= 0) {
             Log::error('HYP subscription redirect: invalid amount', ['restaurant_id' => $restaurantId, 'amount' => $amount]);
@@ -66,6 +67,11 @@ class HypSubscriptionRedirectController extends Controller
         if ($includesSetupFee && $setupFeeAmount > 0) {
             $info .= " + Setup {$setupFeeAmount}";
         }
+
+        $successUrl = $this->resolveCallbackUrl($sourceApp, 'success', "{$backendUrl}/api/payments/hyp/subscription/success");
+        $errorUrl = $this->resolveCallbackUrl($sourceApp, 'error', "{$backendUrl}/api/payments/hyp/subscription/error");
+        $successUrl = $this->appendQuery($successUrl, ['rid' => $restaurantId, 'src' => $sourceApp]);
+        $errorUrl = $this->appendQuery($errorUrl, ['rid' => $restaurantId, 'src' => $sourceApp]);
 
         $payParams = [
             'Masof'      => $this->hypService->getMasof(),
@@ -84,8 +90,8 @@ class HypSubscriptionRedirectController extends Controller
             'Fild1'      => (string) $restaurantId,
             'Fild2'      => $tier,
             'Fild3'      => $planType,
-            'SuccessUrl' => "{$backendUrl}/api/payments/hyp/subscription/success?rid={$restaurantId}",
-            'ErrorUrl'   => "{$backendUrl}/api/payments/hyp/subscription/error?rid={$restaurantId}",
+            'SuccessUrl' => $successUrl,
+            'ErrorUrl'   => $errorUrl,
         ];
 
         if (!empty($sessionData['client_name'])) {
@@ -120,5 +126,19 @@ class HypSubscriptionRedirectController extends Controller
         return response()->view('hyp.order_redirect', [
             'paymentUrl' => $payUrl,
         ]);
+    }
+
+    private function resolveCallbackUrl(string $sourceApp, string $status, string $fallback): string
+    {
+        $callbacks = config('app.hyp_callback_urls', []);
+        $url = (string) ($callbacks[$sourceApp][$status] ?? '');
+
+        return $url !== '' ? $url : $fallback;
+    }
+
+    private function appendQuery(string $url, array $query): string
+    {
+        $separator = str_contains($url, '?') ? '&' : '?';
+        return $url . $separator . http_build_query($query);
     }
 }

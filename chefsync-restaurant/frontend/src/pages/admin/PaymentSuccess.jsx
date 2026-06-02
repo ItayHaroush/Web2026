@@ -19,10 +19,24 @@ export default function PaymentSuccess() {
     useEffect(() => {
         // HYP מפנה ישירות לפרונט במקום לבקאנד — מעבירים את הפרמטרים לבקאנד לעיבוד
         const params = new URLSearchParams(location.search);
-        const hasHypParams = params.has('Id') || params.has('CCode') || (params.has('Order') && params.get('Order')?.startsWith('sub_')) || params.has('rid');
+        const hasHypParams =
+            params.has('Id') ||
+            params.has('transactionId') ||
+            params.has('paymentId') ||
+            params.has('lowProfileId') ||
+            params.has('CCode') ||
+            (params.has('Order') && params.get('Order')?.startsWith('sub_')) ||
+            params.has('rid');
         if (hasHypParams) {
             const endpoint = `${API}/payments/hyp/subscription/success`;
             window.location.href = `${endpoint}${location.search}`;
+            return;
+        }
+
+        const hasAdminToken = !!(localStorage.getItem('authToken') || localStorage.getItem('admin_token'));
+        if (!hasAdminToken) {
+            setVerifying(false);
+            setVerified(false);
             return;
         }
 

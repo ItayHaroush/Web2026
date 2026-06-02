@@ -1,6 +1,7 @@
 package com.chefsync.printagent
 
 import android.util.Log
+import java.io.InputStream
 import java.io.OutputStream
 import java.net.Socket
 import java.nio.charset.Charset
@@ -79,7 +80,141 @@ object PrinterBridge {
     data class PrintResult(
         val success: Boolean,
         val errorMessage: String? = null,
+        val statusVerified: Boolean = false,
+        /** ok | paper_out | paper_low | offline | error | unknown */
+        val statusCode: String? = null,
+        val statusDetail: String? = null,
     )
+
+    private const val DLE = 0x10.toByte()
+    private const val EOT = 0x04.toByte()
+
+    /**
+     * בקשת סטטוס בזמן אמת (DLE EOT n) — תואם Epson / רוב מדפסות ESC/POS.
+     * n=1 מצב מדפסת, 2 offline, 3 שגיאה, 4 חיישן נייר.
+     */
+    private fun readRealtimeStatusByte(input: InputStream, output: OutputStream, n: Int, readTimeoutMs: Int): Int? {
+        return try {
+            output.write(byteArrayOf(DLE, EOT, n.toByte()))
+            output.flush()
+            val deadline = System.currentTimeMillis() + readTimeoutMs
+            while (System.currentTimeMillis() < deadline) {
+                if (input.available() > 0) {
+                    val b = input.read()
+                    if (b >= 0) return b
+                }
+                Thread.sleep(20)
+            }
+            null
+        } catch (e: Exception) {
+            Log.w(TAG, "Status read failed for EOT $n: ${e.message}")
+            null
+        }
+    }
+
+    /**
+     * אחרי שליחת הבון — קורא סטטוס מהמדפסת. אם אין תשובה: success נשאר true אך statusVerified=false.
+     */
+    private fun verifyPostPrintStatus(socket: Socket, waitAfterPrintMs: Long = 250, readTimeoutMs: Int = 1200): PrintResult {
+        Thread.sleep(waitAfterPrintMs)
+        val input = socket.getInputStream()
+        val output = socket.getOutputStream()
+        val parts = mutableListOf<String>()
+        var anyResponse = false
+
+        readRealtimeStatusByte(input, output, 1, readTimeoutMs)?.let { b ->
+            anyResponse = true
+            parts.add("p1=0x${b.toString(16)}")
+            if (b and 0x08 != 0) {
+                return PrintResult(
+                    success = false,
+                    errorMessage = "המדפסת במצב לא מקוון (offline)",
+                    statusVerified = true,
+                    statusCode = "offline",
+                    statusDetail = parts.joinToString(),
+                )
+            }
+        }
+
+        readRealtimeStatusByte(input, output, 2, readTimeoutMs)?.let { b ->
+            anyResponse = true
+            parts.add("p2=0x${b.toString(16)}")
+            if (b and 0x08 != 0) {
+                return PrintResult(
+                    success = false,
+                    errorMessage = "המדפסת מדווחת offline",
+                    statusVerified = true,
+                    statusCode = "offline",
+                    statusDetail = parts.joinToString(),
+                )
+            }
+        }
+
+        readRealtimeStatusByte(input, output, 3, readTimeoutMs)?.let { b ->
+            anyResponse = true
+            parts.add("err=0x${b.toString(16)}")
+            if (b and 0x08 != 0) {
+                return PrintResult(
+                    success = false,
+                    errorMessage = "שגיאה במדפסת (לא ניתן להדפיס)",
+                    statusVerified = true,
+                    statusCode = "error",
+                    statusDetail = parts.joinToString(),
+                )
+            }
+            if (b and 0x04 != 0) {
+                return PrintResult(
+                    success = false,
+                    errorMessage = "שגיאה במדפסת (recoverable)",
+                    statusVerified = true,
+                    statusCode = "error",
+                    statusDetail = parts.joinToString(),
+                )
+            }
+        }
+
+        readRealtimeStatusByte(input, output, 4, readTimeoutMs)?.let { b ->
+            anyResponse = true
+            parts.add("paper=0x${b.toString(16)}")
+            // Paper-end sensor (bits 5,6 ON) — אין נייר
+            if (b and 0x60) == 0x60) {
+                return PrintResult(
+                    success = false,
+                    errorMessage = "אין נייר במדפסת",
+                    statusVerified = true,
+                    statusCode = "paper_out",
+                    statusDetail = parts.joinToString(),
+                )
+            }
+            // Near-end (bits 2,3) — אזהרה בלבד
+            if (b and 0x0C) == 0x0C) {
+                return PrintResult(
+                    success = true,
+                    errorMessage = null,
+                    statusVerified = true,
+                    statusCode = "paper_low",
+                    statusDetail = parts.joinToString(),
+                )
+            }
+        }
+
+        if (!anyResponse) {
+            Log.w(TAG, "Post-print status: no response from printer (ESC/POS DLE EOT)")
+            return PrintResult(
+                success = true,
+                statusVerified = false,
+                statusCode = "unknown",
+                statusDetail = "no_status_response",
+            )
+        }
+
+        return PrintResult(
+            success = true,
+            statusVerified = true,
+            statusCode = "ok",
+            statusDetail = parts.joinToString(),
+        )
+    }
 
     fun print(ip: String, port: Int, payload: String, binarySuffix: ByteArray? = null, doubleHeight: Boolean = true, lineWidth: Int = 42, timeoutMs: Int = 5000, codepageId: Int = 15): PrintResult {
         return try {
@@ -123,9 +258,21 @@ object PrinterBridge {
             out.write(ESC_CUT)
             out.flush()
 
+            val statusResult = verifyPostPrintStatus(socket)
             socket.close()
-            Log.i(TAG, "Print successful to $ip:$port")
-            PrintResult(success = true)
+
+            if (!statusResult.success) {
+                Log.w(TAG, "Print sent but printer status failed: ${statusResult.errorMessage}")
+                return statusResult
+            }
+
+            if (statusResult.statusVerified) {
+                Log.i(TAG, "Print OK + status verified (${statusResult.statusCode}) to $ip:$port")
+            } else {
+                Log.i(TAG, "Print sent to $ip:$port (status not verified by printer)")
+            }
+
+            return statusResult
         } catch (e: Exception) {
             val msg = "Print failed to $ip:$port — ${e.message}"
             Log.e(TAG, msg, e)

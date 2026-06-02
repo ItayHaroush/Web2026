@@ -32,6 +32,7 @@ class HypSubscriptionCallbackController extends Controller
         $params = $this->hypService->parseRedirectParams($request);
         $restaurantId = $this->extractRestaurantId($params);
         $transactionId = $params['transaction_id'];
+        $sourceApp = $this->resolveSourceApp($params['source_app'] ?? null);
 
         Log::info('[HYP-SUB] Step 1/7: Success redirect received', [
             'restaurant_id'  => $restaurantId,
@@ -39,12 +40,43 @@ class HypSubscriptionCallbackController extends Controller
             'ccode'          => $params['ccode'],
             'amount'         => $params['amount'],
             'order'          => $params['order'] ?? '',
+            'payment_id'     => $params['payment_id'] ?? '',
+            'low_profile_id' => $params['low_profile_id'] ?? '',
+            'source_app'     => $sourceApp,
             'all_params'     => array_keys($params),
         ]);
 
-        if (!$params['success']) {
+        if (empty($transactionId)) {
+            Log::warning('[HYP-SUB] Missing transaction identifier', [
+                'payment_id'     => $params['payment_id'] ?? '',
+                'low_profile_id' => $params['low_profile_id'] ?? '',
+                'ccode'          => $params['ccode'],
+            ]);
+            return $this->redirectToFrontend('error', 'missing_transaction_identifier', $sourceApp);
+        }
+
+        // אם CCode לא הגיע בכלל, ננסה אימות מול HYP לפי מזהה העסקה.
+        if (!$params['success'] && ((int) $params['ccode']) === -1) {
+            $fallbackVerification = $this->hypService->verifyTransaction([
+                'Id'     => $transactionId,
+                'CCode'  => '0',
+                'Amount' => $params['amount'],
+            ]);
+
+            if (!($fallbackVerification['success'] ?? false)) {
+                Log::warning('[HYP-SUB] Step 2/7: Missing CCode and fallback verification failed', [
+                    'transaction_id' => $transactionId,
+                    'verification'   => $fallbackVerification,
+                ]);
+                return $this->redirectToFrontend('error', 'payment_not_approved', $sourceApp);
+            }
+
+            Log::info('[HYP-SUB] Step 2/7: Missing CCode, fallback verification passed', [
+                'transaction_id' => $transactionId,
+            ]);
+        } elseif (!$params['success']) {
             Log::warning('[HYP-SUB] Step 2/7: CCode not 0 — payment not approved', $params);
-            return $this->redirectToFrontend('error', 'payment_not_approved');
+            return $this->redirectToFrontend('error', 'payment_not_approved', $sourceApp);
         }
         Log::info('[HYP-SUB] Step 2/7: CCode OK');
 
@@ -52,7 +84,7 @@ class HypSubscriptionCallbackController extends Controller
 
         if (!$restaurant) {
             Log::error('[HYP-SUB] Step 3/7: Restaurant not found', ['id' => $restaurantId]);
-            return $this->redirectToFrontend('error', 'restaurant_not_found');
+            return $this->redirectToFrontend('error', 'restaurant_not_found', $sourceApp);
         }
         Log::info('[HYP-SUB] Step 3/7: Restaurant found', [
             'restaurant_id'   => $restaurant->id,
@@ -71,7 +103,7 @@ class HypSubscriptionCallbackController extends Controller
                 'restaurant_id' => $restaurantId,
                 'transaction_id' => $transactionId,
             ]);
-            return $this->redirectToFrontend('success');
+            return $this->redirectToFrontend('success', '', $sourceApp);
         }
         Log::info('[HYP-SUB] Step 4/7: Not yet processed — continuing');
 
@@ -142,6 +174,7 @@ class HypSubscriptionCallbackController extends Controller
 
         // שליפת session data (tier, plan_type) מ-cache
         $sessionData = Cache::pull("hyp_session:{$restaurantId}");
+        $sourceApp = $this->resolveSourceApp($sessionData['source_app'] ?? null, $sourceApp);
         $tier = $sessionData['tier'] ?? ($restaurant->tier ?? 'basic');
         $planType = $sessionData['plan_type'] ?? 'monthly';
         $includesSetupFee = $sessionData['includes_setup_fee'] ?? false;
@@ -178,9 +211,10 @@ class HypSubscriptionCallbackController extends Controller
             'plan_type'      => $planType,
             'transaction_id' => $transactionId,
             'frontend_url'   => config('app.frontend_url'),
+            'source_app'     => $sourceApp,
         ]);
 
-        return $this->redirectToFrontend('success');
+        return $this->redirectToFrontend('success', '', $sourceApp);
     }
 
     /**
@@ -191,17 +225,24 @@ class HypSubscriptionCallbackController extends Controller
     {
         $params = $this->hypService->parseRedirectParams($request);
         $restaurantId = $this->extractRestaurantId($params);
+        $sourceApp = $this->resolveSourceApp($params['source_app'] ?? null);
+
+        if ($restaurantId) {
+            $sessionData = Cache::get("hyp_session:{$restaurantId}");
+            $sourceApp = $this->resolveSourceApp($sessionData['source_app'] ?? null, $sourceApp);
+        }
 
         Log::warning('HYP subscription payment error redirect', [
             'restaurant_id'  => $restaurantId,
             'order'          => $params['order'] ?? '',
             'ccode'          => $params['ccode'],
             'error'          => $params['errMsg'],
+            'source_app'     => $sourceApp,
         ]);
 
         $reason = $params['errMsg'] ?: 'payment_declined';
 
-        return $this->redirectToFrontend('error', $reason);
+        return $this->redirectToFrontend('error', $reason, $sourceApp);
     }
 
     /**
@@ -357,15 +398,55 @@ class HypSubscriptionCallbackController extends Controller
         return null;
     }
 
-    private function redirectToFrontend(string $status, string $reason = ''): \Illuminate\Http\RedirectResponse
+    private function redirectToFrontend(string $status, string $reason = '', string $sourceApp = 'takeeat'): \Illuminate\Http\RedirectResponse
     {
-        $frontendUrl = rtrim(config('app.frontend_url', 'https://www.takeeat.co.il'), '/');
-        $url = "{$frontendUrl}/admin/payment/{$status}";
+        $frontendUrl = $this->resolveFrontendUrlBySource($sourceApp);
+        $url = "{$frontendUrl}/administration/payment/{$status}";
 
         if ($reason) {
             $url .= '?reason=' . urlencode($reason);
         }
 
         return redirect()->away($url);
+    }
+
+    private function resolveSourceApp(?string $source, ?string $fallback = null): string
+    {
+        $normalized = $this->normalizeSourceApp($source);
+        if ($normalized !== null) {
+            return $normalized;
+        }
+
+        $fallbackNormalized = $this->normalizeSourceApp($fallback);
+        if ($fallbackNormalized !== null) {
+            return $fallbackNormalized;
+        }
+
+        return 'takeeat';
+    }
+
+    private function normalizeSourceApp(?string $source): ?string
+    {
+        $value = strtolower(trim((string) $source));
+
+        if ($value === '') {
+            return null;
+        }
+
+        return match ($value) {
+            'takeeat', 'chefsync' => 'takeeat',
+            'buildix' => 'buildix',
+            'appointix', 'appointed' => 'appointix',
+            default => null,
+        };
+    }
+
+    private function resolveFrontendUrlBySource(string $sourceApp): string
+    {
+        $urls = config('app.frontend_urls', []);
+        $fallback = rtrim(config('app.frontend_url', 'https://www.takeeat.co.il'), '/');
+        $sourceUrl = trim((string) ($urls[$sourceApp] ?? ''));
+
+        return $sourceUrl !== '' ? rtrim($sourceUrl, '/') : $fallback;
     }
 }

@@ -457,16 +457,43 @@ class HypPaymentService
      */
     public function parseRedirectParams(Request $request): array
     {
-        $ccode = (int) $request->query('CCode', -1);
+        $ccodeRaw = $request->query('CCode', $request->query('ccode', null));
+        $ccode = is_numeric($ccodeRaw) ? (int) $ccodeRaw : -1;
+
+        $transactionId = (string) (
+            $request->query('Id')
+            ?? $request->query('transactionId')
+            ?? $request->query('TransId')
+            ?? $request->query('paymentId')
+            ?? $request->query('PaymentId')
+            ?? $request->query('lowProfileId')
+            ?? $request->query('LowProfileId')
+            ?? ''
+        );
+
+        $paymentId = (string) (
+            $request->query('paymentId')
+            ?? $request->query('PaymentId')
+            ?? ''
+        );
+
+        $lowProfileId = (string) (
+            $request->query('lowProfileId')
+            ?? $request->query('LowProfileId')
+            ?? ''
+        );
 
         return [
             'success'        => $ccode === 0,
-            'transaction_id' => $request->query('Id', ''),
+            'transaction_id' => $transactionId,
+            'payment_id'     => $paymentId,
+            'low_profile_id' => $lowProfileId,
             'ccode'          => $ccode,
             'amount'         => $request->query('Amount', ''),
             'acode'          => $request->query('ACode', ''),
             'order'          => $request->query('Order', ''),
             'rid'            => $request->query('rid', ''),
+            'source_app'     => $request->query('src', $request->query('source', '')),
             'fild1'          => $request->query('Fild1', ''),
             'fild2'          => $request->query('Fild2', ''),
             'fild3'          => $request->query('Fild3', ''),

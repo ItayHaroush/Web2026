@@ -97,7 +97,7 @@ class RestaurantPaymentService
                 ];
             }
 
-            $ccode = (int) ($result['CCode'] ?? -1);
+            $ccode = (int)($result['CCode'] ?? -1);
             $masofValid = !in_array($ccode, [901, 902, 903]);
 
             return [
@@ -176,7 +176,7 @@ class RestaurantPaymentService
                 ->get($this->baseUrl, $query);
             $result = $this->parseResponse($response->body());
 
-            $ccode = (int) ($result['CCode'] ?? -1);
+            $ccode = (int)($result['CCode'] ?? -1);
 
             if ($ccode === 0) {
                 return [
@@ -228,7 +228,7 @@ class RestaurantPaymentService
 
             $responseBody = $response->body();
             $result = $this->parseResponse($responseBody);
-            $ccode = (int) ($result['CCode'] ?? -1);
+            $ccode = (int)($result['CCode'] ?? -1);
             $success = $ccode === 0 || $ccode === 33;
 
             Log::info('RestaurantPaymentService refundOrder response', [

@@ -6,6 +6,7 @@ use App\Models\PrintDevice;
 use App\Models\PrintJob;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class PrintAgentController extends Controller
 {
@@ -79,6 +80,9 @@ class PrintAgentController extends Controller
         $request->validate([
             'status' => 'required|in:done,failed',
             'error_message' => 'nullable|string|max:500',
+            'printer_status_verified' => 'nullable|boolean',
+            'printer_status' => 'nullable|string|max:32',
+            'printer_status_detail' => 'nullable|string|max:255',
         ]);
 
         $job = PrintJob::withoutGlobalScopes()
@@ -89,6 +93,11 @@ class PrintAgentController extends Controller
         $job->update([
             'status' => $request->input('status'),
             'error_message' => $request->input('error_message'),
+            'printer_status_verified' => $request->has('printer_status_verified')
+                ? $request->boolean('printer_status_verified')
+                : null,
+            'printer_status' => $request->input('printer_status'),
+            'printer_status_detail' => $request->input('printer_status_detail'),
         ]);
 
         if ($request->input('status') === 'failed') {
@@ -97,6 +106,14 @@ class PrintAgentController extends Controller
                 'last_error_at' => now(),
             ]);
         }
+
+        Log::info('Print job ACK', [
+            'job_id' => $job->id,
+            'order_id' => $job->order_id,
+            'status' => $request->input('status'),
+            'printer_status_verified' => $job->printer_status_verified,
+            'printer_status' => $job->printer_status,
+        ]);
 
         return response()->json(['success' => true]);
     }

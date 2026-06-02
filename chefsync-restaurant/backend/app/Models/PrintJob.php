@@ -19,11 +19,15 @@ class PrintJob extends Model
         'target_port',
         'payload',
         'error_message',
+        'printer_status_verified',
+        'printer_status',
+        'printer_status_detail',
         'attempts',
     ];
 
     protected $casts = [
         'payload' => 'array',
+        'printer_status_verified' => 'boolean',
         'attempts' => 'integer',
         'target_port' => 'integer',
         'created_at' => 'datetime',
