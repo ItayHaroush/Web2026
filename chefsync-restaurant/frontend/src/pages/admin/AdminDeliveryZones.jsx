@@ -58,7 +58,30 @@ export default function AdminDeliveryZones() {
         setForm(prev => ({
             ...prev,
             polygon: nextPolygon,
-            city_id: nextPolygon?.length >= 3 ? '' : prev.city_id // אפס עיר רק אם יש פוליגון
+        }));
+    }, []);
+
+    const clearLocationSelection = useCallback(() => {
+        setForm(prev => ({
+            ...prev,
+            polygon: [],
+            city_id: '',
+            city_radius: 5,
+        }));
+    }, []);
+
+    const handleCityChange = useCallback((value) => {
+        setForm(prev => ({
+            ...prev,
+            city_id: value,
+            polygon: [],
+        }));
+    }, []);
+
+    const handleStartMapDraw = useCallback(() => {
+        setForm(prev => ({
+            ...prev,
+            city_id: '',
         }));
     }, []);
 
@@ -172,7 +195,7 @@ export default function AdminDeliveryZones() {
         if (form.pricing_type === 'tiered') {
             try {
                 tieredFees = JSON.parse(form.tiered_fees || '[]');
-            } catch (err) {
+            } catch {
                 alert('מדרגות מחיר לא תקינות (JSON)');
                 return;
             }
@@ -478,13 +501,13 @@ export default function AdminDeliveryZones() {
                                                     <FaCity className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400" />
                                                     <select
                                                         value={form.city_id}
-                                                        onChange={(e) => setForm({ ...form, city_id: e.target.value })}
+                                                        onChange={(e) => handleCityChange(e.target.value)}
                                                         className="w-full pr-12 pl-5 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-brand-primary text-gray-900 font-bold cursor-pointer appearance-none"
                                                     >
                                                         <option value="">לפי מפה בלבד</option>
                                                         {cities.map(city => (
                                                             <option key={city.id} value={city.id}>
-                                                                {city.hebrew_name}
+                                                                {city.hebrew_name || city.name || `עיר #${city.id}`}
                                                             </option>
                                                         ))}
                                                     </select>
@@ -535,7 +558,7 @@ export default function AdminDeliveryZones() {
                                             </div>
                                             <button
                                                 type="button"
-                                                onClick={() => setForm(prev => ({ ...prev, polygon: [] }))}
+                                                onClick={clearLocationSelection}
                                                 className="text-[10px] font-black text-brand-primary hover:underline flex items-center gap-1"
                                             >
                                                 <FaUndo size={10} /> נקה מפה
@@ -551,13 +574,9 @@ export default function AdminDeliveryZones() {
                                                 cityRadius={form.city_radius}
                                                 onRadiusChange={(radius) => setForm({ ...form, city_radius: radius })}
                                                 onMapCaptured={(fn) => setCaptureMapFunction(() => fn)}
+                                                onStartMapDraw={handleStartMapDraw}
+                                                onClearSelection={clearLocationSelection}
                                             />
-
-                                            {/* Map hint for mobile */}
-                                            <div className="absolute top-4 left-4 right-4 bg-black/50 backdrop-blur-md p-2 rounded-xl border border-white/10 flex items-center gap-2 pointer-events-none">
-                                                <div className="w-2 h-2 rounded-full bg-brand-primary animate-pulse" />
-                                                <span className="text-[9px] text-white font-black">לחץ על המפה לסימון נקודות או הזז את הצירים</span>
-                                            </div>
                                         </div>
                                     </div>
                                 </div>

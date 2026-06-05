@@ -4,6 +4,7 @@ use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AnalyticsPageViewController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ChatController;
+use App\Http\Controllers\CityController;
 use App\Http\Controllers\CustomerAddressController;
 use App\Http\Controllers\CustomerAuthController;
 use App\Http\Controllers\CustomerController;
@@ -72,6 +73,7 @@ Route::post('/register-restaurant', [RegisterRestaurantController::class, 'store
 
 // ערים - ציבורי (לשימוש בטופס הרשמה ואזורי משלוח)
 Route::get('/cities', [SuperAdminController::class, 'getCities'])->name('cities.list');
+Route::get('/cities/search', [CityController::class, 'search'])->name('cities.search');
 
 // אנליטיקות כניסה — ציבורי (ללא tenant)
 Route::post('/analytics/page-view', [AnalyticsPageViewController::class, 'store'])
@@ -95,6 +97,11 @@ Route::prefix('super-admin')->middleware(['auth:sanctum', 'super_admin'])->group
     Route::post('/restaurants/{id}/approve', [SuperAdminController::class, 'approveRestaurant'])->name('super-admin.restaurants.approve');
     Route::post('/restaurants/{id}/revoke-approval', [SuperAdminController::class, 'revokeApproval'])->name('super-admin.restaurants.revoke');
     Route::patch('/restaurants/{id}/feature-overrides', [SuperAdminController::class, 'updateFeatureOverrides'])->name('super-admin.restaurants.feature-overrides');
+
+    // ערים בהמתנה לאישור
+    Route::get('/cities/pending', [SuperAdminController::class, 'pendingCities'])->name('super-admin.cities.pending');
+    Route::patch('/cities/{id}/approve', [SuperAdminController::class, 'approveCity'])->name('super-admin.cities.approve');
+    Route::patch('/cities/{id}/reject', [SuperAdminController::class, 'rejectCity'])->name('super-admin.cities.reject');
 
     // סטטיסטיקות מסעדה
     Route::get('/restaurants/{id}/stats', [SuperAdminController::class, 'getRestaurantStats'])->name('super-admin.restaurants.stats');
@@ -706,6 +713,7 @@ Route::get('/orders/{id}/invoice', [InvoiceController::class, 'show'])->name('or
 Route::prefix('agent')->middleware('device_token')->group(function () {
     Route::get('/jobs', [PrintAgentController::class, 'getJobs'])->name('agent.jobs');
     Route::post('/jobs/{id}/ack', [PrintAgentController::class, 'ackJob'])->name('agent.jobs.ack');
+    Route::match(['get', 'post'], '/status', [PrintAgentController::class, 'status'])->name('agent.status');
     Route::post('/heartbeat', [PrintAgentController::class, 'heartbeat'])->name('agent.heartbeat');
 });
 

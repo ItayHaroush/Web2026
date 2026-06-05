@@ -61,6 +61,35 @@ export const getCities = async () => {
 };
 
 /**
+ * חיפוש ערים עם DB-first + OSM fallback (Phase B)
+ */
+export const searchCities = async (query) => {
+    const q = String(query || '').trim();
+    if (q.length < 2) return [];
+
+    try {
+        const response = await apiClient.get('/cities/search', {
+            params: { q },
+        });
+
+        const rows = Array.isArray(response.data) ? response.data : [];
+
+        return rows
+            .filter((row) => row && row.id)
+            .map((row) => ({
+                id: row.id,
+                name: row.name,
+                hebrew_name: row.name,
+                latitude: row.lat,
+                longitude: row.lng,
+            }));
+    } catch (error) {
+        console.error('Error searching cities:', error);
+        return [];
+    }
+};
+
+/**
  * נרמול לצורך השוואת שם עיר (מסעדה ↔ טבלת cities)
  */
 const normalizeForCityMatch = (s) => {

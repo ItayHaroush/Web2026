@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../services/apiClient';
-import { getCities } from '../services/restaurantService';
+import { getCities, searchCities } from '../services/restaurantService';
 import { requestPhoneCode } from '../services/phoneAuthService';
 import { toast } from 'react-hot-toast';
 import { isValidIsraeliMobile } from '../utils/phone';
@@ -52,6 +52,7 @@ export default function RegisterRestaurant() {
         phone: '',
         address: '',
         city: '',
+        city_id: '',
         owner_name: '',
         owner_email: '',
         owner_phone: '',
@@ -66,6 +67,10 @@ export default function RegisterRestaurant() {
     const [logoFile, setLogoFile] = useState(null);
     const [logoPreview, setLogoPreview] = useState(null);
     const [agreedTerms, setAgreedTerms] = useState(false);
+    const [citySuggestions, setCitySuggestions] = useState([]);
+    const [citySearchLoading, setCitySearchLoading] = useState(false);
+    const [showCitySuggestions, setShowCitySuggestions] = useState(false);
+    const citiesRef = useRef([]);
 
     // Wizard state
     const [currentStep, setCurrentStep] = useState(1);
@@ -85,7 +90,7 @@ export default function RegisterRestaurant() {
         if (savedDraft) {
             try {
                 const draft = JSON.parse(savedDraft);
-                setForm(draft.form || form);
+                setForm((prev) => ({ ...prev, ...(draft.form || {}) }));
                 setSelectedTier(draft.selectedTier || 'pro');
                 setCurrentStep(draft.currentStep || 1);
                 setAgreedTerms(draft.agreedTerms || false);
@@ -127,6 +132,52 @@ export default function RegisterRestaurant() {
     useEffect(() => {
         void loadCities();
     }, [loadCities]);
+
+    useEffect(() => {
+        citiesRef.current = Array.isArray(cities) ? cities : [];
+    }, [cities]);
+
+    useEffect(() => {
+        const query = String(form.city || '').trim();
+        if (query.length < 2) {
+            setCitySuggestions([]);
+            setCitySearchLoading(false);
+            return;
+        }
+
+        let cancelled = false;
+        const timer = setTimeout(async () => {
+            setCitySearchLoading(true);
+            const remoteResults = await searchCities(query);
+            const localResults = (citiesRef.current || [])
+                .filter((city) => {
+                    const text = `${city?.hebrew_name || ''} ${city?.name || ''}`.toLowerCase();
+                    return text.includes(query.toLowerCase());
+                })
+                .slice(0, 10)
+                .map((city) => ({
+                    id: city.id,
+                    name: city.name,
+                    hebrew_name: city.hebrew_name || city.name,
+                    latitude: city.latitude,
+                    longitude: city.longitude,
+                }));
+
+            const merged = [...remoteResults, ...localResults].filter(
+                (city, index, arr) => city?.id && arr.findIndex((x) => String(x.id) === String(city.id)) === index
+            );
+
+            if (!cancelled) {
+                setCitySuggestions(merged);
+                setCitySearchLoading(false);
+            }
+        }, 250);
+
+        return () => {
+            cancelled = true;
+            clearTimeout(timer);
+        };
+    }, [form.city]);
 
     useEffect(() => {
         const loadPricing = async () => {
@@ -181,7 +232,7 @@ export default function RegisterRestaurant() {
         else if (form.tenant_id.length < 3) errors.tenant_id = 'מינימום 3 תווים';
         else if (!/^[a-z0-9-]+$/.test(form.tenant_id)) errors.tenant_id = 'אותיות קטנות באנגלית, מספרים ומקף בלבד';
         if (!form.phone.trim()) errors.phone = 'טלפון חובה';
-        if (!form.city) errors.city = 'יש לבחור עיר';
+        if (!form.city_id && !form.city.trim()) errors.city = 'יש לבחור עיר מהרשימה או להקליד עיר חדשה';
         setStepErrors(errors);
         return Object.keys(errors).length === 0;
     };
@@ -262,8 +313,14 @@ export default function RegisterRestaurant() {
         setLoading(true);
         try {
             const formData = new FormData();
-            const requiredFields = ['name', 'tenant_id', 'phone', 'city', 'owner_name', 'owner_email', 'owner_phone', 'password', 'password_confirmation', 'plan_type', 'verification_code'];
+            const requiredFields = ['name', 'tenant_id', 'phone', 'owner_name', 'owner_email', 'owner_phone', 'password', 'password_confirmation', 'plan_type', 'verification_code'];
             requiredFields.forEach((field) => formData.append(field, form[field]));
+            if (form.city_id) {
+                formData.append('city_id', form.city_id);
+            }
+            if (form.city) {
+                formData.append('city', form.city);
+            }
             formData.append('tier', selectedTier);
             formData.append('restaurant_type', form.restaurant_type);
             if (form.address) formData.append('address', form.address);
@@ -280,7 +337,11 @@ export default function RegisterRestaurant() {
             localStorage.removeItem(STORAGE_KEY);
             navigate('/admin/login');
         } catch (error) {
-            const message = error.response?.data?.message || 'שגיאה בהרשמה';
+            const validationErrors = error.response?.data?.errors;
+            const firstValidationMessage = validationErrors
+                ? Object.values(validationErrors).flat().find(Boolean)
+                : null;
+            const message = firstValidationMessage || error.response?.data?.message || 'שגיאה בהרשמה';
             toast.error(message);
         } finally {
             setLoading(false);
@@ -292,6 +353,47 @@ export default function RegisterRestaurant() {
         if (!file) return;
         setLogoFile(file);
         setLogoPreview(URL.createObjectURL(file));
+    };
+
+    const handleCityInputChange = (value) => {
+        setForm((prev) => ({
+            ...prev,
+            city: value,
+            city_id: '',
+        }));
+        setShowCitySuggestions(true);
+        if (stepErrors.city) {
+            setStepErrors((prev) => {
+                const next = { ...prev };
+                delete next.city;
+                return next;
+            });
+        }
+    };
+
+    const handleCitySelect = (city) => {
+        if (!city) return;
+
+        setForm((prev) => ({
+            ...prev,
+            city: city.hebrew_name || city.name,
+            city_id: String(city.id),
+            latitude: city.latitude != null ? String(city.latitude) : prev.latitude,
+            longitude: city.longitude != null ? String(city.longitude) : prev.longitude,
+        }));
+        setShowCitySuggestions(false);
+    };
+
+    const handleUseTypedCity = () => {
+        const typedCity = String(form.city || '').trim();
+        if (!typedCity) return;
+
+        setForm((prev) => ({
+            ...prev,
+            city: typedCity,
+            city_id: '',
+        }));
+        setShowCitySuggestions(false);
     };
 
     const handleSendCode = async () => {
@@ -399,7 +501,14 @@ export default function RegisterRestaurant() {
                                 <StepRestaurantDetails
                                     form={form}
                                     handleChange={handleChange}
-                                    cities={cities}
+                                    citySuggestions={citySuggestions}
+                                    citySearchLoading={citySearchLoading}
+                                    showCitySuggestions={showCitySuggestions}
+                                    onCityInputChange={handleCityInputChange}
+                                    onCitySelect={handleCitySelect}
+                                    onUseTypedCity={handleUseTypedCity}
+                                    onCityFocus={() => setShowCitySuggestions(true)}
+                                    onCityBlur={() => setTimeout(() => setShowCitySuggestions(false), 120)}
                                     logoPreview={logoPreview}
                                     handleLogoChange={handleLogoChange}
                                     stepErrors={stepErrors}
@@ -733,7 +842,23 @@ function StepPlan({ selectedTier, setSelectedTier, pricing, configuredTrialDays,
 /* ========================================
    Step 2: Restaurant Details
 ======================================== */
-function StepRestaurantDetails({ form, handleChange, cities, logoPreview, handleLogoChange, stepErrors, onNext, onBack }) {
+function StepRestaurantDetails({
+    form,
+    handleChange,
+    citySuggestions,
+    citySearchLoading,
+    showCitySuggestions,
+    onCityInputChange,
+    onCitySelect,
+    onUseTypedCity,
+    onCityFocus,
+    onCityBlur,
+    logoPreview,
+    handleLogoChange,
+    stepErrors,
+    onNext,
+    onBack,
+}) {
     const [showTooltip, setShowTooltip] = useState(false);
 
     return (
@@ -796,16 +921,61 @@ function StepRestaurantDetails({ form, handleChange, cities, logoPreview, handle
                         </div>
 
                         <Input name="phone" label="טלפון המסעדה" value={form.phone} onChange={handleChange} required inputMode="tel" error={stepErrors.phone} />
-                        <Select
-                            name="city"
-                            label="עיר"
-                            value={form.city}
-                            onChange={handleChange}
-                            options={cities.map((city) => ({ value: city.name, label: city.hebrew_name || city.name }))}
-                            placeholder="בחר עיר"
-                            required
-                            error={stepErrors.city}
-                        />
+                        <div className="space-y-1 relative">
+                            <label className="block text-sm text-gray-700">
+                                <span className="block mb-1 font-medium">עיר</span>
+                                <input
+                                    name="city"
+                                    value={form.city}
+                                    onChange={(e) => onCityInputChange(e.target.value)}
+                                    onFocus={onCityFocus}
+                                    onBlur={onCityBlur}
+                                    required
+                                    placeholder="הקלד לחיפוש עיר"
+                                    className={`w-full px-4 py-2 border rounded-lg focus:outline-none transition-colors ${stepErrors.city ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-brand-primary'}`}
+                                    autoComplete="off"
+                                />
+                            </label>
+
+                            {showCitySuggestions && (form.city || '').trim().length >= 2 && (
+                                <div className="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-auto">
+                                    {citySearchLoading ? (
+                                        <div className="px-3 py-2 text-sm text-gray-500">מחפש ערים...</div>
+                                    ) : citySuggestions.length > 0 ? (
+                                        citySuggestions.map((city) => (
+                                            <button
+                                                key={city.id}
+                                                type="button"
+                                                onMouseDown={(e) => e.preventDefault()}
+                                                onClick={() => onCitySelect(city)}
+                                                className="w-full text-right px-3 py-2 hover:bg-gray-50 text-sm"
+                                            >
+                                                {city.hebrew_name || city.name}
+                                            </button>
+                                        ))
+                                    ) : (
+                                        <div className="px-2 py-2 space-y-1">
+                                            <div className="px-2 py-1 text-sm text-gray-500">לא נמצאו תוצאות</div>
+                                            <button
+                                                type="button"
+                                                onMouseDown={(e) => e.preventDefault()}
+                                                onClick={onUseTypedCity}
+                                                className="w-full text-right px-3 py-2 rounded-md bg-brand-primary/10 text-brand-primary text-sm hover:bg-brand-primary/15"
+                                            >
+                                                להשתמש ב-"{form.city}" כעיר חדשה
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {form.city_id ? (
+                                <span className="text-xs text-green-600 block">נבחרה עיר מזוהה (ID: {form.city_id})</span>
+                            ) : (
+                                <span className="text-xs text-gray-500 block">אפשר לבחור עיר מהרשימה או להמשיך עם עיר חדשה שהקלדת</span>
+                            )}
+                            {stepErrors.city && <span className="text-xs text-red-500 block">{stepErrors.city}</span>}
+                        </div>
                         <div className="space-y-2">
                             <span className="block text-sm text-gray-700 font-medium">לוגו (אופציונלי)</span>
                             {logoPreview && (
@@ -965,7 +1135,7 @@ function StepSummary({ form, cities, selectedTier, pricing, configuredTrialDays,
     const typeLabels = { pizza: 'פיצרייה', shawarma: 'שווארמה / פלאפל', burger: 'המבורגר', bistro: 'ביסטרו / שף', catering: 'קייטרינג', general: 'כללי' };
     const isEnterprise = selectedTier === 'enterprise';
     const cityLabel = (cities || []).find(
-        (x) => x.name === form.city || x.hebrew_name === form.city
+        (x) => String(x.id) === String(form.city_id)
     )?.hebrew_name || form.city;
 
     const ordersLimitEnabled = pricing?.orders_limit_enabled !== false;
@@ -1152,28 +1322,6 @@ function Input({ label, name, value, onChange, type = 'text', className = '', re
                 {...rest}
             />
             {helper && <span className="text-xs text-gray-500 mt-1 block">{helper}</span>}
-            {error && <span className="text-xs text-red-500 mt-1 block">{error}</span>}
-        </label>
-    );
-}
-
-function Select({ label, name, value, onChange, options = [], placeholder = '', className = '', required = false, error = '' }) {
-    return (
-        <label className={`block text-sm text-gray-700 ${className}`}>
-            <span className="block mb-1 font-medium">{label}</span>
-            <select
-                name={name}
-                value={value}
-                onChange={onChange}
-                required={required}
-                aria-label={label}
-                className={`relative z-10 w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary/25 bg-white text-right transition-colors ${error ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-brand-primary'}`}
-            >
-                <option value="" disabled>{placeholder || 'בחר'}</option>
-                {options.map((opt) => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-            </select>
             {error && <span className="text-xs text-red-500 mt-1 block">{error}</span>}
         </label>
     );

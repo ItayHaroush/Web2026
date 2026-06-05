@@ -45,6 +45,8 @@ const resolveApiBaseUrl = () => {
 };
 
 export const API_BASE_URL = resolveApiBaseUrl();
+
+console.log('DEV=', import.meta.env.DEV);console.log('PROD=', import.meta.env.PROD);console.log('VITE_API_URL=', import.meta.env.VITE_API_URL);console.log('API_BASE_URL=', API_BASE_URL);
 export const TENANT_HEADER = 'X-Tenant-ID';
 
 // נקודות סיום API

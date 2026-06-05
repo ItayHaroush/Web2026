@@ -371,7 +371,31 @@ class SuperAdminController extends Controller
             'owner_activity_started_at' => 'nullable|date',
             /** מגבלת הזמנות חודשית — override ספציפי למסעדה (null = ברירת מחדל מה-tier) */
             'orders_limit' => 'nullable|integer|min:0|max:100000',
+            'city' => 'nullable|string|max:255',
         ]);
+
+        if (array_key_exists('city', $validated) && $validated['city'] !== null) {
+            $cityValue = trim((string) $validated['city']);
+            $validated['city'] = $cityValue;
+
+            if ($cityValue !== '') {
+                $existingCity = City::where('name', $cityValue)
+                    ->orWhere('hebrew_name', $cityValue)
+                    ->first();
+
+                if (! $existingCity) {
+                    // TODO(phase-b): Route city creation through CitySearchService only,
+                    // with normalization/dedup logic. Super-admin update flow should not
+                    // create city rows directly once the service is in place.
+                    $isHebrew = preg_match('/[\x{0590}-\x{05FF}]/u', $cityValue) === 1;
+
+                    City::create([
+                        'name' => $cityValue,
+                        'hebrew_name' => $isHebrew ? $cityValue : null,
+                    ]);
+                }
+            }
+        }
 
         // אם השם משתנה, עדכן את ה-slug
         if (isset($validated['name'])) {
@@ -592,11 +616,97 @@ class SuperAdminController extends Controller
      */
     public function getCities()
     {
-        $cities = City::orderBy('list_order')->orderBy('hebrew_name')->get();
+        $cities = City::where('approval_status', 'approved')
+            ->orderBy('list_order')
+            ->orderBy('hebrew_name')
+            ->get();
 
         return response()->json([
             'success' => true,
             'data' => $cities,
+        ]);
+    }
+
+    public function pendingCities()
+    {
+        $cities = City::query()
+            ->where('approval_status', 'pending')
+            ->orderByDesc('created_at')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $cities,
+        ]);
+    }
+
+    public function approveCity(Request $request, int $id)
+    {
+        $validated = $request->validate([
+            'name' => 'nullable|string|max:255',
+            'hebrew_name' => 'nullable|string|max:255',
+            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
+            'review_note' => 'nullable|string|max:255',
+            'replace_with_city_id' => 'nullable|integer|exists:cities,id',
+        ]);
+
+        $city = City::findOrFail($id);
+
+        if (! empty($validated['replace_with_city_id'])) {
+            $target = City::findOrFail((int) $validated['replace_with_city_id']);
+
+            $city->update([
+                'approval_status' => 'rejected',
+                'reviewed_by_user_id' => optional($request->user())->id,
+                'reviewed_at' => now(),
+                'review_note' => $validated['review_note'] ?? 'Replaced with city_id=' . $target->id,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'העיר הוחלפה לעיר קיימת',
+                'city' => $target,
+            ]);
+        }
+
+        $city->update([
+            'name' => $validated['name'] ?? $city->name,
+            'hebrew_name' => $validated['hebrew_name'] ?? $city->hebrew_name,
+            'latitude' => array_key_exists('latitude', $validated) ? $validated['latitude'] : $city->latitude,
+            'longitude' => array_key_exists('longitude', $validated) ? $validated['longitude'] : $city->longitude,
+            'approval_status' => 'approved',
+            'reviewed_by_user_id' => optional($request->user())->id,
+            'reviewed_at' => now(),
+            'review_note' => $validated['review_note'] ?? null,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'העיר אושרה בהצלחה',
+            'city' => $city,
+        ]);
+    }
+
+    public function rejectCity(Request $request, int $id)
+    {
+        $validated = $request->validate([
+            'review_note' => 'nullable|string|max:255',
+        ]);
+
+        $city = City::findOrFail($id);
+
+        $city->update([
+            'approval_status' => 'rejected',
+            'reviewed_by_user_id' => optional($request->user())->id,
+            'reviewed_at' => now(),
+            'review_note' => $validated['review_note'] ?? null,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'העיר נדחתה',
+            'city' => $city,
         ]);
     }
 

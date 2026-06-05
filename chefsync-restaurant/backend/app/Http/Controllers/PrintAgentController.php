@@ -12,6 +12,15 @@ class PrintAgentController extends Controller
 {
     // ─── Agent API (device-token auth) ───
 
+    /**
+     * Backward-compatible status endpoint used by older agent builds.
+     * Reuses heartbeat flow so device last_seen/config stay in sync.
+     */
+    public function status(Request $request)
+    {
+        return $this->heartbeat($request);
+    }
+
     public function getJobs(Request $request)
     {
         $device = $request->get('print_device');

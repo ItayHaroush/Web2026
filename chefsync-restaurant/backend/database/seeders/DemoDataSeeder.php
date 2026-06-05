@@ -14,6 +14,7 @@ use App\Models\PromotionReward;
 use App\Models\RestaurantAddonGroup;
 use App\Models\RestaurantAddon;
 use Carbon\Carbon;
+use Illuminate\Support\Collection;
 
 /**
  * DemoDataSeeder — מייצר נתוני דמו מלאים לכל 5 המסעדות:
@@ -53,7 +54,7 @@ class DemoDataSeeder extends Seeder
     // =========================================================================
     //  Phase 1 — הגדרות מסעדה + שעות פעילות
     // =========================================================================
-    private function seedRestaurantSettings($restaurants): void
+    private function seedRestaurantSettings(Collection $restaurants): void
     {
         $this->command->info('  📋 מעדכן הגדרות מסעדה ושעות פעילות...');
 
@@ -202,7 +203,7 @@ class DemoDataSeeder extends Seeder
     // =========================================================================
     //  Phase 2 — אזורי משלוח
     // =========================================================================
-    private function seedDeliveryZones($restaurants): void
+    private function seedDeliveryZones(Collection $restaurants): void
     {
         $this->command->info('  🚚 יוצר אזורי משלוח...');
 
@@ -271,7 +272,7 @@ class DemoDataSeeder extends Seeder
     // =========================================================================
     //  Phase 3 — קבוצות תוספות
     // =========================================================================
-    private function seedAddonGroups($restaurants): void
+    private function seedAddonGroups(Collection $restaurants): void
     {
         $this->command->info('  🧩 יוצר קבוצות תוספות...');
 
@@ -584,7 +585,7 @@ class DemoDataSeeder extends Seeder
     /**
      * enable use_addons on all menu items of the 5 demo restaurants
      */
-    private function enableAddonsOnItems($restaurants): void
+    private function enableAddonsOnItems(Collection $restaurants): void
     {
         $restaurantIds = $restaurants->pluck('id')->all();
         MenuItem::withoutGlobalScopes()
@@ -607,7 +608,7 @@ class DemoDataSeeder extends Seeder
     // =========================================================================
     //  Phase 4 — מבצעים
     // =========================================================================
-    private function seedPromotions($restaurants): void
+    private function seedPromotions(Collection $restaurants): void
     {
         $this->command->info('  🎁 יוצר מבצעים...');
 

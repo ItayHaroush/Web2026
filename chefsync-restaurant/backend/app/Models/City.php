@@ -12,6 +12,19 @@ class City extends Model
         'region',
         'latitude',
         'longitude',
+        'source',
+        'osm_id',
+        'normalized_name',
+        'approval_status',
+        'reviewed_by_user_id',
+        'reviewed_at',
+        'review_note',
+        'last_verified_at',
         'list_order',
+    ];
+
+    protected $casts = [
+        'reviewed_at' => 'datetime',
+        'last_verified_at' => 'datetime',
     ];
 }

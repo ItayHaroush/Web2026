@@ -66,6 +66,10 @@ export default function SuperAdminDashboard() {
     const [demoFilter, setDemoFilter] = useState('all'); // all / demo / real
     const [showAddRestaurant, setShowAddRestaurant] = useState(false);
     const [selectedRestaurant, setSelectedRestaurant] = useState(null);
+    const [showPendingCitiesModal, setShowPendingCitiesModal] = useState(false);
+    const [pendingCities, setPendingCities] = useState([]);
+    const [pendingCitiesLoading, setPendingCitiesLoading] = useState(false);
+    const [approvedCities, setApprovedCities] = useState([]);
 
     // Push notifications state
     const [pushState, setPushState] = useState({ status: 'idle', message: '' });
@@ -185,6 +189,73 @@ export default function SuperAdminDashboard() {
         }
     };
 
+    const fetchPendingCities = async () => {
+        try {
+            setPendingCitiesLoading(true);
+            const response = await api.get('/super-admin/cities/pending', {
+                headers: getAuthHeaders(),
+            });
+            if (response.data?.success) {
+                setPendingCities(response.data.data || []);
+            }
+        } catch (error) {
+            console.error('Failed to fetch pending cities:', error);
+            toast.error('שגיאה בטעינת ערים ממתינות');
+        } finally {
+            setPendingCitiesLoading(false);
+        }
+    };
+
+    const fetchApprovedCities = async () => {
+        try {
+            const response = await api.get('/cities');
+            if (response.data?.success) {
+                setApprovedCities(response.data.data || []);
+            }
+        } catch (error) {
+            console.error('Failed to fetch approved cities:', error);
+        }
+    };
+
+    const openPendingCitiesModal = async () => {
+        setShowPendingCitiesModal(true);
+        await Promise.all([fetchPendingCities(), fetchApprovedCities()]);
+    };
+
+    const handleApprovePendingCity = async (cityId, payload = {}) => {
+        try {
+            const response = await api.patch(
+                `/super-admin/cities/${cityId}/approve`,
+                payload,
+                { headers: getAuthHeaders() }
+            );
+            if (response.data?.success) {
+                toast.success(response.data.message || 'העיר אושרה');
+                await Promise.all([fetchPendingCities(), fetchApprovedCities()]);
+            }
+        } catch (error) {
+            console.error('Approve city failed:', error);
+            toast.error(error.response?.data?.message || 'שגיאה באישור עיר');
+        }
+    };
+
+    const handleRejectPendingCity = async (cityId, reviewNote = '') => {
+        try {
+            const response = await api.patch(
+                `/super-admin/cities/${cityId}/reject`,
+                { review_note: reviewNote || null },
+                { headers: getAuthHeaders() }
+            );
+            if (response.data?.success) {
+                toast.success(response.data.message || 'העיר נדחתה');
+                await fetchPendingCities();
+            }
+        } catch (error) {
+            console.error('Reject city failed:', error);
+            toast.error(error.response?.data?.message || 'שגיאה בדחיית עיר');
+        }
+    };
+
     const enablePush = async () => {
         try {
             setPushState({ status: 'loading', message: 'מבקש הרשאה להתראות...' });
@@ -250,7 +321,7 @@ export default function SuperAdminDashboard() {
                 fetchRestaurants();
                 fetchDashboard();
             }
-        } catch (error) {
+        } catch {
             toast.error('שגיאה בעדכון סטטוס');
         }
     };
@@ -549,6 +620,19 @@ export default function SuperAdminDashboard() {
                             />
                         </div>
                         <div className="flex gap-2 shrink-0">
+                            <button
+                                type="button"
+                                onClick={openPendingCitiesModal}
+                                className="px-3 py-2.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-xl text-sm font-bold hover:bg-amber-100 transition-all flex items-center gap-2"
+                            >
+                                <FaMapMarkerAlt />
+                                ערים ממתינות
+                                {pendingCities.length > 0 && (
+                                    <span className="px-1.5 py-0.5 rounded-full bg-amber-600 text-white text-[10px]">
+                                        {pendingCities.length}
+                                    </span>
+                                )}
+                            </button>
                             <div className="relative">
                                 <FaFilter className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs" />
                                 <select
@@ -748,7 +832,6 @@ export default function SuperAdminDashboard() {
                         restaurant={selectedRestaurant}
                         onClose={() => setSelectedRestaurant(null)}
                         onImpersonate={handleImpersonate}
-                        navigate={navigate}
                     />
                 )}
 
@@ -762,6 +845,18 @@ export default function SuperAdminDashboard() {
                             fetchDashboard();
                         }}
                         getAuthHeaders={getAuthHeaders}
+                    />
+                )}
+
+                {showPendingCitiesModal && (
+                    <PendingCitiesModal
+                        pendingCities={pendingCities}
+                        approvedCities={approvedCities}
+                        loading={pendingCitiesLoading}
+                        onClose={() => setShowPendingCitiesModal(false)}
+                        onRefresh={fetchPendingCities}
+                        onApprove={handleApprovePendingCity}
+                        onReject={handleRejectPendingCity}
                     />
                 )}
 
@@ -1190,16 +1285,20 @@ function AddRestaurantModal({ onClose, onSuccess, getAuthHeaders }) {
 const STATUS_LABELS = { trial: 'תקופת ניסיון', active: 'פעיל', suspended: 'מושהה', expired: 'פג תוקף', cancelled: 'מבוטל' };
 const STATUS_COLORS = { trial: 'bg-blue-100 text-blue-700', active: 'bg-green-100 text-green-700', suspended: 'bg-red-100 text-red-700', expired: 'bg-gray-100 text-gray-600', cancelled: 'bg-gray-100 text-gray-600' };
 
-function RestaurantDetailModal({ restaurant: initialRestaurant, onClose, onImpersonate, navigate }) {
+function RestaurantDetailModal({ restaurant: initialRestaurant, onClose, onImpersonate }) {
     const { getAuthHeaders } = useAdminAuth();
     const [restaurant, setRestaurant] = useState(initialRestaurant);
     const [loading, setLoading] = useState(true);
+    const [cities, setCities] = useState([]);
+    const [cityInput, setCityInput] = useState('');
+    const [savingCity, setSavingCity] = useState(false);
     const [ownerActivityDate, setOwnerActivityDate] = useState('');
     const [savingOwnerActivity, setSavingOwnerActivity] = useState(false);
     const [ownerContactPhone, setOwnerContactPhone] = useState('');
     const [savingOwnerPhone, setSavingOwnerPhone] = useState(false);
     const [ordersLimit, setOrdersLimit] = useState('');
     const [savingOrdersLimit, setSavingOrdersLimit] = useState(false);
+    const [showCitySection, setShowCitySection] = useState(false);
     const [showPhoneSection, setShowPhoneSection] = useState(false);
     const [showActivitySection, setShowActivitySection] = useState(false);
 
@@ -1217,6 +1316,7 @@ function RestaurantDetailModal({ restaurant: initialRestaurant, onClose, onImper
                             ? String(r.owner_activity_started_at).slice(0, 10)
                             : ''
                     );
+                    setCityInput(r.city ?? '');
                     setOwnerContactPhone(r.owner_contact_phone ?? '');
                     setOrdersLimit(r.orders_limit != null ? String(r.orders_limit) : '');
                 }
@@ -1228,6 +1328,21 @@ function RestaurantDetailModal({ restaurant: initialRestaurant, onClose, onImper
         };
         fetchDetails();
     }, [initialRestaurant.id]);
+
+    useEffect(() => {
+        const fetchCities = async () => {
+            try {
+                const res = await api.get('/cities');
+                if (res.data?.success && Array.isArray(res.data.data)) {
+                    setCities(res.data.data);
+                }
+            } catch (err) {
+                console.error('Failed to fetch cities for super-admin modal:', err);
+            }
+        };
+
+        fetchCities();
+    }, []);
 
     const saveOwnerActivityDate = async (clear) => {
         const value = clear ? null : (ownerActivityDate || null);
@@ -1269,6 +1384,28 @@ function RestaurantDetailModal({ restaurant: initialRestaurant, onClose, onImper
             toast.error(err.response?.data?.message || 'שגיאה בשמירה');
         } finally {
             setSavingOwnerPhone(false);
+        }
+    };
+
+    const saveCity = async () => {
+        setSavingCity(true);
+        try {
+            const nextCity = cityInput.trim();
+            const res = await api.put(
+                `/super-admin/restaurants/${restaurant.id}`,
+                { city: nextCity || null },
+                { headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' } }
+            );
+            if (res.data.success) {
+                setRestaurant(res.data.restaurant);
+                setCityInput(res.data.restaurant.city ?? '');
+                toast.success('העיר נשמרה בהצלחה');
+            }
+        } catch (err) {
+            console.error(err);
+            toast.error(err.response?.data?.message || 'שגיאה בשמירת העיר');
+        } finally {
+            setSavingCity(false);
         }
     };
 
@@ -1386,6 +1523,46 @@ function RestaurantDetailModal({ restaurant: initialRestaurant, onClose, onImper
                                     <div className="col-span-2">
                                         <span className="text-xs text-gray-400 font-bold">כתובת</span>
                                         <p className="font-bold text-gray-700">{restaurant.address || '—'}</p>
+                                    </div>
+                                    <div className="col-span-2 rounded-xl border border-sky-100 bg-sky-50/60 p-3">
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowCitySection(!showCitySection)}
+                                            className="w-full flex items-center justify-between text-xs text-sky-800 font-bold"
+                                        >
+                                            <span>עריכת עיר</span>
+                                            <FaChevronDown className={`text-sky-600 transition-transform ${showCitySection ? 'rotate-180' : ''}`} size={10} />
+                                        </button>
+                                        {showCitySection && (
+                                            <>
+                                                <p className="text-[11px] text-sky-900/80 mb-2 mt-2 leading-snug">
+                                                    ניתן לבחור עיר קיימת או להזין עיר חדשה. בשמירה, שם העיר יתעדכן במסעדה.
+                                                </p>
+                                                <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
+                                                    <input
+                                                        type="text"
+                                                        list="super-admin-city-options"
+                                                        value={cityInput}
+                                                        onChange={(e) => setCityInput(e.target.value)}
+                                                        placeholder="לדוגמה: קריית עקרון"
+                                                        className="flex-1 min-w-0 px-3 py-2 rounded-xl border border-sky-200 bg-white text-sm font-bold text-gray-800"
+                                                    />
+                                                    <datalist id="super-admin-city-options">
+                                                        {cities.map((city) => (
+                                                            <option key={city.id || `${city.name}-${city.hebrew_name || ''}`} value={city.hebrew_name || city.name} />
+                                                        ))}
+                                                    </datalist>
+                                                    <button
+                                                        type="button"
+                                                        disabled={savingCity}
+                                                        onClick={saveCity}
+                                                        className="px-4 py-2 bg-sky-600 text-white rounded-xl text-sm font-bold hover:bg-sky-700 disabled:opacity-50 shrink-0"
+                                                    >
+                                                        {savingCity ? 'שומר…' : 'שמור'}
+                                                    </button>
+                                                </div>
+                                            </>
+                                        )}
                                     </div>
                                     <div className="col-span-2 rounded-xl border border-emerald-100 bg-emerald-50/60 p-3">
                                         <button
@@ -1674,6 +1851,160 @@ function RestaurantDetailModal({ restaurant: initialRestaurant, onClose, onImper
                                 </button>
                             </div>
                         </>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function PendingCitiesModal({
+    pendingCities,
+    approvedCities,
+    loading,
+    onClose,
+    onRefresh,
+    onApprove,
+    onReject,
+}) {
+    const [replaceMap, setReplaceMap] = useState({});
+    const [savingId, setSavingId] = useState(null);
+
+    const setReplaceCity = (pendingId, cityId) => {
+        setReplaceMap((prev) => ({
+            ...prev,
+            [pendingId]: cityId,
+        }));
+    };
+
+    const handleApprove = async (city) => {
+        setSavingId(city.id);
+        await onApprove(city.id, {
+            name: city.name,
+            hebrew_name: city.hebrew_name || city.name,
+            latitude: city.latitude,
+            longitude: city.longitude,
+            review_note: 'Approved by super-admin',
+        });
+        setSavingId(null);
+    };
+
+    const handleReplace = async (city) => {
+        const replaceWithCityId = replaceMap[city.id];
+        if (!replaceWithCityId) {
+            toast.error('יש לבחור עיר קיימת להחלפה');
+            return;
+        }
+
+        setSavingId(city.id);
+        await onApprove(city.id, {
+            replace_with_city_id: Number(replaceWithCityId),
+            review_note: 'Replaced with approved city',
+        });
+        setSavingId(null);
+    };
+
+    const handleReject = async (city) => {
+        setSavingId(city.id);
+        await onReject(city.id, 'Rejected by super-admin');
+        setSavingId(null);
+    };
+
+    return (
+        <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-3xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col border border-white/20">
+                <div className="bg-white px-6 py-5 border-b border-gray-100 flex justify-between items-center shrink-0">
+                    <div>
+                        <h2 className="text-xl font-black text-gray-900">ערים ממתינות לאישור</h2>
+                        <p className="text-xs text-gray-500 font-bold mt-0.5 uppercase tracking-wider">
+                            אישור / דחייה / החלפה לעיר קיימת
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={onRefresh}
+                            className="px-3 py-2 text-xs font-bold rounded-lg border border-gray-200 hover:bg-gray-50"
+                        >
+                            רענון
+                        </button>
+                        <button
+                            onClick={onClose}
+                            className="p-2 hover:bg-gray-100 rounded-xl text-gray-400 hover:text-gray-600 transition-all"
+                        >
+                            <FaTimes size={20} />
+                        </button>
+                    </div>
+                </div>
+
+                <div className="p-6 overflow-y-auto space-y-4 custom-scrollbar">
+                    {loading ? (
+                        <div className="text-center py-10 text-gray-500 font-bold">טוען ערים ממתינות...</div>
+                    ) : pendingCities.length === 0 ? (
+                        <div className="text-center py-10 text-gray-500 font-bold">אין ערים ממתינות כרגע</div>
+                    ) : (
+                        pendingCities.map((city) => {
+                            const isSaving = savingId === city.id;
+                            return (
+                                <div key={city.id} className="rounded-2xl border border-amber-200 bg-amber-50/40 p-4">
+                                    <div className="flex flex-col lg:flex-row lg:items-center gap-4 justify-between">
+                                        <div className="space-y-1">
+                                            <div className="text-lg font-black text-gray-900">
+                                                {city.hebrew_name || city.name || `עיר #${city.id}`}
+                                            </div>
+                                            <div className="text-xs text-gray-600 font-medium">ID: {city.id}</div>
+                                            <div className="text-xs text-gray-600 font-medium">מקור: {city.source || '-'}</div>
+                                            <div className="text-xs text-gray-600 font-medium">
+                                                מיקום: {city.latitude != null && city.longitude != null ? `${city.latitude}, ${city.longitude}` : 'ללא קואורדינטות'}
+                                            </div>
+                                        </div>
+
+                                        <div className="flex-1 max-w-xl">
+                                            <label className="text-xs font-bold text-gray-500 block mb-1">החלפה לעיר קיימת (אופציונלי)</label>
+                                            <select
+                                                value={replaceMap[city.id] || ''}
+                                                onChange={(e) => setReplaceCity(city.id, e.target.value)}
+                                                className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-white text-sm"
+                                            >
+                                                <option value="">בחר עיר קיימת...</option>
+                                                {approvedCities.map((approved) => (
+                                                    <option key={approved.id} value={approved.id}>
+                                                        {approved.hebrew_name || approved.name}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+
+                                        <div className="flex gap-2 items-center">
+                                            <button
+                                                type="button"
+                                                disabled={isSaving}
+                                                onClick={() => handleApprove(city)}
+                                                className="px-3 py-2 rounded-xl bg-green-600 text-white text-xs font-bold hover:bg-green-700 disabled:opacity-60"
+                                            >
+                                                {isSaving ? 'שומר...' : 'אשר'}
+                                            </button>
+                                            <button
+                                                type="button"
+                                                disabled={isSaving}
+                                                onClick={() => handleReplace(city)}
+                                                className="px-3 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 disabled:opacity-60"
+                                            >
+                                                החלף
+                                            </button>
+                                            <button
+                                                type="button"
+                                                disabled={isSaving}
+                                                onClick={() => handleReject(city)}
+                                                className="px-3 py-2 rounded-xl bg-red-600 text-white text-xs font-bold hover:bg-red-700 disabled:opacity-60"
+                                            >
+                                                דחה
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })
                     )}
                 </div>
             </div>

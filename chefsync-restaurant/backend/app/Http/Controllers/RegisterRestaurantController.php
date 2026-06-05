@@ -10,6 +10,7 @@ use App\Models\RestaurantPayment;
 use App\Models\RestaurantSubscription;
 use App\Models\User;
 use App\Services\PhoneValidationService;
+use App\Services\CitySearchService;
 use App\Services\SystemErrorReporter;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -28,7 +29,8 @@ class RegisterRestaurantController extends Controller
             'tenant_id' => 'required|string|max:255|unique:restaurants,tenant_id|regex:/^[a-z0-9-]+$/',
             'phone' => 'required|string|max:20',
             'address' => 'nullable|string',
-            'city' => 'required|string|exists:cities,name',
+            'city_id' => 'nullable|integer|exists:cities,id|required_without:city',
+            'city' => 'nullable|string|max:255|required_without:city_id',
             'logo' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
             'logo_url' => 'nullable|url',
             'owner_name' => 'required|string|max:255',
@@ -124,6 +126,45 @@ class RegisterRestaurantController extends Controller
                 $slugValue = Str::slug($tenantId) ?: $tenantId;
             }
 
+            // Resolve city identity (prefer city_id, keep backward compatibility with city name)
+            $cityModel = null;
+            if (! empty($validated['city_id'])) {
+                $cityModel = City::where('id', $validated['city_id'])
+                    ->where('approval_status', 'approved')
+                    ->first();
+            } elseif (! empty($validated['city'])) {
+                $inputCity = trim((string) $validated['city']);
+
+                $cityModel = City::where('name', $inputCity)
+                    ->orWhere('hebrew_name', $inputCity)
+                    ->where('approval_status', 'approved')
+                    ->first();
+
+                // If no approved city exists, create a pending suggestion for super-admin approval.
+                if (! $cityModel && $inputCity !== '') {
+                    // Try to queue OSM-based pending suggestion with coordinates for super-admin review.
+                    app(CitySearchService::class)->search($inputCity, 5);
+
+                    $normalized = Str::lower($inputCity);
+
+                    $pending = City::where('normalized_name', $normalized)
+                        ->whereIn('approval_status', ['pending', 'approved'])
+                        ->first();
+
+                    if (! $pending) {
+                        City::create([
+                            'name' => $inputCity,
+                            'hebrew_name' => $inputCity,
+                            'normalized_name' => $normalized,
+                            'source' => 'manual',
+                            'approval_status' => 'pending',
+                        ]);
+                    }
+                }
+            }
+
+            $resolvedCityName = $cityModel?->hebrew_name ?: $cityModel?->name ?: ($validated['city'] ?? null);
+
             // קביעת קואורדינטות - עדיפות לערכים ידניים אם סופקו
             $latitude = null;
             $longitude = null;
@@ -132,13 +173,8 @@ class RegisterRestaurantController extends Controller
                 $latitude = $validated['latitude'];
                 $longitude = $validated['longitude'];
             } else {
-                // חיפוש אוטומטי לפי עיר (Fallback) — ההרשמה שולחת name באנגלית (exists:cities,name)
-                $cityData = City::where(function ($q) use ($validated) {
-                    $q->where('name', $validated['city'])
-                        ->orWhere('hebrew_name', $validated['city']);
-                })->first();
-                $latitude = $cityData?->latitude;
-                $longitude = $cityData?->longitude;
+                $latitude = $cityModel?->latitude;
+                $longitude = $cityModel?->longitude;
             }
 
             $restaurant = Restaurant::create([
@@ -148,7 +184,7 @@ class RegisterRestaurantController extends Controller
 
                 'phone' => $this->formatPhoneForDisplay($validated['phone']),
                 'address' => $validated['address'] ?? null,
-                'city' => $validated['city'],
+                'city' => $resolvedCityName,
                 'latitude' => $latitude,
                 'longitude' => $longitude,
                 'description' => null,

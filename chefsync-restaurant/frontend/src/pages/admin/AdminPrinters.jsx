@@ -65,6 +65,18 @@ const ROLE_COLORS = {
     bar: 'bg-purple-100 text-purple-700 border-purple-200',
     general: 'bg-gray-100 text-gray-700 border-gray-200',
 };
+const CONNECTION_STATUS_LABELS = {
+    online: 'מחובר למדפסת',
+    bridge_offline: 'גשר מנותק',
+    printer_offline: 'מדפסת לא זמינה',
+    disabled: 'מכשיר כבוי',
+};
+const CONNECTION_STATUS_CLASSES = {
+    online: 'text-green-600',
+    bridge_offline: 'text-gray-400',
+    printer_offline: 'text-amber-600',
+    disabled: 'text-red-600',
+};
 
 const DEFAULT_FORM = {
     name: '',
@@ -520,7 +532,10 @@ export default function AdminPrinters({ embedded = false }) {
                     ) : (
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                             {devices.map((device) => {
-                                const isConnected = device.is_connected;
+                                const connectionStatus = device.connection_status || (device.is_active ? (device.is_connected ? 'online' : 'bridge_offline') : 'disabled');
+                                const statusLabel = CONNECTION_STATUS_LABELS[connectionStatus] || 'לא ידוע';
+                                const statusClass = CONNECTION_STATUS_CLASSES[connectionStatus] || 'text-gray-400';
+                                const isConnected = connectionStatus === 'online';
                                 return (
                                     <div key={device.id} className="bg-white rounded-[2rem] shadow-sm border border-gray-100 p-8 hover:shadow-md transition-all">
                                         <div className="flex items-start justify-between mb-6">
@@ -534,9 +549,9 @@ export default function AdminPrinters({ embedded = false }) {
                                                         <span className={`px-3 py-0.5 rounded-full text-xs font-bold border ${ROLE_COLORS[device.role] || ROLE_COLORS.general}`}>
                                                             {ROLE_LABELS[device.role] || device.role}
                                                         </span>
-                                                        <span className={`flex items-center gap-1 text-xs font-semibold ${isConnected ? 'text-green-600' : 'text-gray-400'}`}>
-                                                            <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-gray-300'}`}></span>
-                                                            {isConnected ? 'מחובר' : 'מנותק'}
+                                                        <span className={`flex items-center gap-1 text-xs font-semibold ${statusClass}`}>
+                                                            <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : connectionStatus === 'printer_offline' ? 'bg-amber-500' : 'bg-gray-300'}`}></span>
+                                                            {statusLabel}
                                                         </span>
                                                     </div>
                                                 </div>
@@ -558,12 +573,32 @@ export default function AdminPrinters({ embedded = false }) {
                                                     <span>{timeAgo(device.last_seen_at)}</span>
                                                 </div>
                                             )}
+                                            {device.printer_last_check_at && (
+                                                <div className="flex items-center justify-between">
+                                                    <span className="font-medium">בדיקת מדפסת:</span>
+                                                    <span>{timeAgo(device.printer_last_check_at)}</span>
+                                                </div>
+                                            )}
+                                            {device.agent_version && (
+                                                <div className="flex items-center justify-between">
+                                                    <span className="font-medium">גרסת Agent:</span>
+                                                    <span className="font-mono text-gray-800">{device.agent_version}</span>
+                                                </div>
+                                            )}
                                             {device.last_error_message && (
                                                 <div className="mt-3 p-3 rounded-xl bg-red-50 border border-red-100 flex items-start gap-2">
                                                     <FaExclamationTriangle className="text-red-500 mt-0.5 flex-shrink-0" size={14} />
                                                     <div>
                                                         <p className="text-red-700 text-xs font-bold">{device.last_error_message}</p>
                                                         {device.last_error_at && <p className="text-red-400 text-xs mt-0.5">{timeAgo(device.last_error_at)}</p>}
+                                                    </div>
+                                                </div>
+                                            )}
+                                            {device.printer_last_error && !device.last_error_message && (
+                                                <div className="mt-3 p-3 rounded-xl bg-amber-50 border border-amber-100 flex items-start gap-2">
+                                                    <FaExclamationTriangle className="text-amber-500 mt-0.5 flex-shrink-0" size={14} />
+                                                    <div>
+                                                        <p className="text-amber-700 text-xs font-bold">{device.printer_last_error}</p>
                                                     </div>
                                                 </div>
                                             )}
