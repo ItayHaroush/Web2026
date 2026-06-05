@@ -232,11 +232,11 @@ export default function DeliveryZoneMap({ center, polygon, onPolygonChange, sele
             const layer = L.polygon(
                 polygon.map((point) => [point.lat, point.lng]),
                 {
-                color: '#3b82f6',
-                fillColor: '#3b82f6',
-                fillOpacity: 0.3,
-                weight: 2,
-                renderer: canvasRendererRef.current
+                    color: '#3b82f6',
+                    fillColor: '#3b82f6',
+                    fillOpacity: 0.3,
+                    weight: 2,
+                    renderer: canvasRendererRef.current
                 }
             );
             group.addLayer(layer);
@@ -568,94 +568,94 @@ export default function DeliveryZoneMap({ center, polygon, onPolygonChange, sele
             className={isFullscreen ? 'flex-1 w-full rounded-xl overflow-hidden' : 'h-64 sm:h-72 w-full rounded-xl overflow-hidden'}
             scrollWheelZoom
         >
-                <MapController onMapReady={handleMapReady} />
-                <TileLayer
-                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                />
-                <div className="leaflet-top leaflet-left">
-                    <div className="leaflet-control flex flex-col gap-1.5 sm:gap-2 bg-white/90 p-1.5 sm:p-2 rounded-lg shadow">
+            <MapController onMapReady={handleMapReady} />
+            <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+            <div className="leaflet-top leaflet-left">
+                <div className="leaflet-control flex flex-col gap-1.5 sm:gap-2 bg-white/90 p-1.5 sm:p-2 rounded-lg shadow">
+                    <button
+                        type="button"
+                        onClick={startRectangle}
+                        className={`px-2 sm:px-3 py-1 text-xs sm:text-sm rounded whitespace-nowrap ${drawMode === 'rectangle' ? 'bg-brand-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                    >
+                        מלבן
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => startDraw('circle')}
+                        className={`px-2 sm:px-3 py-1 text-xs sm:text-sm rounded whitespace-nowrap ${drawMode === 'circle' ? 'bg-brand-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                    >
+                        עיגול
+                    </button>
+                    <button
+                        type="button"
+                        onClick={startPolygon}
+                        className={`px-2 sm:px-3 py-1 text-xs sm:text-sm rounded whitespace-nowrap ${drawMode === 'polygon' ? 'bg-brand-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                    >
+                        אזור מותאם
+                    </button>
+                    {drawMode === 'polygon' && (
                         <button
                             type="button"
-                            onClick={startRectangle}
-                            className={`px-2 sm:px-3 py-1 text-xs sm:text-sm rounded whitespace-nowrap ${drawMode === 'rectangle' ? 'bg-brand-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                            onClick={finishDrawing}
+                            className="px-2 sm:px-3 py-1 text-xs sm:text-sm rounded whitespace-nowrap bg-green-600 text-white hover:bg-green-700"
                         >
-                            מלבן
+                            סיום ציור
                         </button>
-                        <button
-                            type="button"
-                            onClick={() => startDraw('circle')}
-                            className={`px-2 sm:px-3 py-1 text-xs sm:text-sm rounded whitespace-nowrap ${drawMode === 'circle' ? 'bg-brand-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-                        >
-                            עיגול
-                        </button>
-                        <button
-                            type="button"
-                            onClick={startPolygon}
-                            className={`px-2 sm:px-3 py-1 text-xs sm:text-sm rounded whitespace-nowrap ${drawMode === 'polygon' ? 'bg-brand-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-                        >
-                            אזור מותאם
-                        </button>
-                        {drawMode === 'polygon' && (
-                            <button
-                                type="button"
-                                onClick={finishDrawing}
-                                className="px-2 sm:px-3 py-1 text-xs sm:text-sm rounded whitespace-nowrap bg-green-600 text-white hover:bg-green-700"
-                            >
-                                סיום ציור
-                            </button>
-                        )}
-                        {drawMode === 'rectangle' && (
-                            <div className="px-2 py-1 text-[11px] sm:text-xs text-gray-700 bg-yellow-50 rounded whitespace-nowrap text-center">
-                                לחץ שתי פינות נגדיות
+                    )}
+                    {drawMode === 'rectangle' && (
+                        <div className="px-2 py-1 text-[11px] sm:text-xs text-gray-700 bg-yellow-50 rounded whitespace-nowrap text-center">
+                            לחץ שתי פינות נגדיות
+                        </div>
+                    )}
+                    {drawMode === 'polygon' && (
+                        <div className="px-2 py-1 text-[11px] sm:text-xs text-gray-700 bg-yellow-50 rounded whitespace-nowrap text-center">
+                            לחץ נקודות, סגור על הנקודה הירוקה
+                        </div>
+                    )}
+                    <button
+                        type="button"
+                        onClick={handleClear}
+                        className="px-2 sm:px-3 py-1 text-xs sm:text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
+                    >
+                        נקה
+                    </button>
+                    {selectedCity && (
+                        <div className="mt-2 px-2 py-2 bg-white rounded text-xs">
+                            <label className="block text-gray-700 font-medium mb-1">רדיוס מעגל (ק״מ)</label>
+                            <input
+                                type="range"
+                                min="1"
+                                max="20"
+                                step="0.5"
+                                value={localRadius}
+                                onChange={(e) => handleRadiusChange(Number(e.target.value))}
+                                className="w-full"
+                            />
+                            <div className="text-center font-bold text-brand-primary mt-1">
+                                {localRadius} ק״מ
                             </div>
-                        )}
-                        {drawMode === 'polygon' && (
-                            <div className="px-2 py-1 text-[11px] sm:text-xs text-gray-700 bg-yellow-50 rounded whitespace-nowrap text-center">
-                                לחץ נקודות, סגור על הנקודה הירוקה
+                            <div className="text-xs text-gray-500 text-center mt-1">
+                                רדיוס מדויק: {(localRadius * 1000).toFixed(0)} מטר
                             </div>
-                        )}
-                        <button
-                            type="button"
-                            onClick={handleClear}
-                            className="px-2 sm:px-3 py-1 text-xs sm:text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
-                        >
-                            נקה
-                        </button>
-                        {selectedCity && (
-                            <div className="mt-2 px-2 py-2 bg-white rounded text-xs">
-                                <label className="block text-gray-700 font-medium mb-1">רדיוס מעגל (ק״מ)</label>
-                                <input
-                                    type="range"
-                                    min="1"
-                                    max="20"
-                                    step="0.5"
-                                    value={localRadius}
-                                    onChange={(e) => handleRadiusChange(Number(e.target.value))}
-                                    className="w-full"
-                                />
-                                <div className="text-center font-bold text-brand-primary mt-1">
-                                    {localRadius} ק״מ
-                                </div>
-                                <div className="text-xs text-gray-500 text-center mt-1">
-                                    רדיוס מדויק: {(localRadius * 1000).toFixed(0)} מטר
-                                </div>
-                            </div>
-                        )}
-                    </div>
+                        </div>
+                    )}
                 </div>
-                <div className="leaflet-top leaflet-right">
-                    <div className="leaflet-control">
-                        <button
-                            type="button"
-                            onClick={toggleFullscreen}
-                            className="px-2 sm:px-3 py-1.5 text-xs sm:text-sm rounded-lg whitespace-nowrap bg-white/90 text-gray-700 hover:bg-white shadow font-medium"
-                        >
-                            {isFullscreen ? '✕ סגור מסך מלא' : '⛶ מסך מלא'}
-                        </button>
-                    </div>
+            </div>
+            <div className="leaflet-top leaflet-right">
+                <div className="leaflet-control">
+                    <button
+                        type="button"
+                        onClick={toggleFullscreen}
+                        className="px-2 sm:px-3 py-1.5 text-xs sm:text-sm rounded-lg whitespace-nowrap bg-white/90 text-gray-700 hover:bg-white shadow font-medium"
+                    >
+                        {isFullscreen ? '✕ סגור מסך מלא' : '⛶ מסך מלא'}
+                    </button>
                 </div>
-            </MapContainer>
+            </div>
+        </MapContainer>
     );
 
     if (isFullscreen) {

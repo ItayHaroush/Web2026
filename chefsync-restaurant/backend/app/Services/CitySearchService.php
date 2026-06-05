@@ -122,8 +122,8 @@ class CitySearchService
                     'normalized_name' => $normalizedName,
                 ];
             })
-                ->filter(fn ($row) => $row !== null && $row['latitude'] !== null && $row['longitude'] !== null && $row['normalized_name'] !== '')
-            ->unique(fn ($row) => $row['osm_id'] ?: $row['normalized_name'])
+            ->filter(fn($row) => $row !== null && $row['latitude'] !== null && $row['longitude'] !== null && $row['normalized_name'] !== '')
+            ->unique(fn($row) => $row['osm_id'] ?: $row['normalized_name'])
             ->values();
     }
 
@@ -168,7 +168,7 @@ class CitySearchService
 
     private function bestEffortEnrichMissingCoordinates(Collection $cities, string $query): void
     {
-        $missing = $cities->first(fn ($city) => $city->latitude === null || $city->longitude === null);
+        $missing = $cities->first(fn($city) => $city->latitude === null || $city->longitude === null);
         if (! $missing) {
             return;
         }
