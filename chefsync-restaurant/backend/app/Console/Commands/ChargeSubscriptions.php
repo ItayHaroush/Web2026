@@ -19,13 +19,17 @@ use Illuminate\Support\Facades\Mail;
 
 class ChargeSubscriptions extends Command
 {
-    protected $signature = 'billing:charge-subscriptions {--dry-run : הצגת מה יחויב ללא חיוב בפועל}';
+    protected $signature = 'billing:charge-subscriptions
+        {--dry-run : הצגת מה יחויב ללא חיוב בפועל}
+        {--restaurant-id= : חיוב למסעדה ספציפית בלבד לפי ID}
+    ';
 
     protected $description = 'חיוב אוטומטי של מנויים פעילים שהגיע מועד החיוב שלהם';
 
     public function handle(HypPaymentService $hypService): int
     {
         $isDryRun = $this->option('dry-run');
+        $restaurantId = $this->option('restaurant-id');
 
         // Feature flag: ניתן לכבות חיוב מנויים לחלוטין דרך קונפיג/ENV
         if (!config('payment.subscription_billing_enabled')) {
@@ -35,18 +39,29 @@ class ChargeSubscriptions extends Command
         }
 
         if (!$hypService->isConfigured()) {
-            $this->warn('HYP לא מוגדר – דילוג על חיוב אוטומטי.');
-            Log::warning('billing:charge-subscriptions: HYP not configured, skipping.');
-            return 0;
+            if (! $isDryRun) {
+                $this->warn('HYP לא מוגדר – דילוג על חיוב אוטומטי.');
+                Log::warning('billing:charge-subscriptions: HYP not configured, skipping.');
+                return 0;
+            }
+
+            $this->warn('HYP לא מוגדר, ממשיכים במצב DRY RUN בלבד.');
+            Log::info('billing:charge-subscriptions dry-run without HYP config');
         }
 
         // שלב 1: חיוב מסעדות שהגיע מועד next_charge_at
-        $subscriptions = RestaurantSubscription::with('restaurant')
+        $subscriptionsQuery = RestaurantSubscription::with('restaurant')
             ->where('status', 'active')
-            ->where('next_charge_at', '<=', now())
-            ->get();
+            ->where('next_charge_at', '<=', now());
 
-        $this->info("נמצאו {$subscriptions->count()} מנויים לחיוב.");
+        if (! empty($restaurantId)) {
+            $subscriptionsQuery->where('restaurant_id', (int) $restaurantId);
+        }
+
+        $subscriptions = $subscriptionsQuery->get();
+
+        $scopeText = ! empty($restaurantId) ? " למסעדה #{$restaurantId}" : '';
+        $this->info("נמצאו {$subscriptions->count()} מנויים לחיוב{$scopeText}.");
         $charged = 0;
         $failed = 0;
         $skipped = 0;

@@ -23,6 +23,7 @@ use App\Models\RestaurantSubscription;
 use App\Models\RestaurantVariant;
 use App\Models\User;
 use App\Services\BasePriceService;
+use App\Services\CitySearchService;
 use App\Services\CustomerOrderPushService;
 use App\Services\HypPaymentService;
 use App\Services\OrderEventService;
@@ -2423,10 +2424,48 @@ class AdminController extends Controller
 
         // אם נשלחה עיר, נרמול לשם העברי לפי טבלת הערים
         if (! empty($updateData['city'])) {
-            $inputCity = $updateData['city'];
+            $inputCity = trim((string) $updateData['city']);
+
+            // קריאה לשירות החיפוש: מעשירה קואורדינטות לעיר מאושרת קיימת שחסרה מיקום,
+            // או יוצרת הצעה ממתינה (עם קואורדינטות מ-OSM) אם העיר לא קיימת כלל.
+            if ($inputCity !== '') {
+                try {
+                    app(CitySearchService::class)->search($inputCity, 5);
+                } catch (\Throwable $e) {
+                    Log::warning('City enrichment failed during restaurant update', [
+                        'city' => $inputCity,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+
+            // מחפשים עיר מאושרת אחרי ההעשרה
             $cityModel = City::where('hebrew_name', $inputCity)
                 ->orWhere('name', $inputCity)
+                ->where('approval_status', 'approved')
                 ->first();
+
+            // אם אין עיר מאושרת — מוודאים שקיימת לפחות הצעה ממתינה לאישור סופר-אדמין
+            if (! $cityModel && $inputCity !== '') {
+                $normalized = Str::lower($inputCity);
+
+                $pending = City::where('normalized_name', $normalized)
+                    ->orWhere('hebrew_name', $inputCity)
+                    ->orWhere('name', $inputCity)
+                    ->whereIn('approval_status', ['pending', 'approved'])
+                    ->first();
+
+                if (! $pending) {
+                    City::create([
+                        'name' => $inputCity,
+                        'hebrew_name' => $inputCity,
+                        'normalized_name' => $normalized,
+                        'source' => 'manual',
+                        'approval_status' => 'pending',
+                    ]);
+                }
+            }
+
             if ($cityModel) {
                 $updateData['city'] = $cityModel->hebrew_name ?: $inputCity;
             }

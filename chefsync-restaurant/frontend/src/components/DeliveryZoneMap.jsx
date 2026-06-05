@@ -503,30 +503,47 @@ export default function DeliveryZoneMap({ center, polygon, onPolygonChange, sele
 
     // Capture map as image
     const captureMapImage = useCallback(() => {
-        if (!mapRef.current) return null;
-
         const map = mapRef.current;
+        // אם המפה לא קיימת או נהרסה (אין panes) — לא לוכדים תמונה במקום לקרוס
+        if (!map || !map._panes || !map._panes.overlayPane) {
+            return Promise.resolve(null);
+        }
 
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve) => {
             // המתן קצת כדי שכל השכבות יעובדו ויצוירו
             setTimeout(() => {
+                // ודא שהמפה עדיין תקפה אחרי ההמתנה
+                if (!mapRef.current || !mapRef.current._panes || !mapRef.current._panes.overlayPane) {
+                    resolve(null);
+                    return;
+                }
+                const liveMap = mapRef.current;
                 // כפה רענון של המפה
-                map.invalidateSize();
+                liveMap.invalidateSize();
 
                 // המתן עוד רגע קצר לאחר הרענון
                 setTimeout(() => {
-                    leafletImage(map, (err, canvas) => {
-                        if (err) {
-                            console.error('Map capture error:', err);
-                            reject(err);
-                            return;
-                        }
+                    if (!mapRef.current || !mapRef.current._panes || !mapRef.current._panes.overlayPane) {
+                        resolve(null);
+                        return;
+                    }
+                    try {
+                        leafletImage(mapRef.current, (err, canvas) => {
+                            if (err) {
+                                console.error('Map capture error:', err);
+                                resolve(null);
+                                return;
+                            }
 
-                        // Convert to base64
-                        const base64Image = canvas.toDataURL('image/jpeg', 0.8);
-                        console.log('✅ Map captured successfully with all layers');
-                        resolve(base64Image);
-                    });
+                            // Convert to base64
+                            const base64Image = canvas.toDataURL('image/jpeg', 0.8);
+                            console.log('✅ Map captured successfully with all layers');
+                            resolve(base64Image);
+                        });
+                    } catch (e) {
+                        console.error('Map capture threw:', e);
+                        resolve(null);
+                    }
                 }, 100);
             }, 100);
         });
