@@ -1039,7 +1039,7 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                         <button
                             type="button"
                             onClick={() => goCheckoutStep(2)}
-                            className="w-full mt-4 py-4 rounded-xl font-black text-base sm:text-lg bg-gradient-to-r from-brand-primary to-orange-600 text-white shadow-lg hover:shadow-xl hover:from-orange-600 hover:to-orange-700 transition-all"
+                            className="w-full mt-4 py-4 rounded-[1.25rem] font-black text-lg sm:text-xl bg-gradient-to-r from-brand-primary to-orange-600 text-white shadow-[0_4px_16px_rgba(249,115,22,0.3)] hover:shadow-[0_8px_24px_rgba(249,115,22,0.4)] active:scale-[0.98] transition-all tracking-wide"
                         >
                             המשך לפרטים ומשלוח
                         </button>
@@ -1465,7 +1465,7 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                                 <button
                                     type="button"
                                     onClick={() => goCheckoutStep(3)}
-                                    className="flex-1 bg-gradient-to-r from-brand-primary to-orange-600 text-white font-black py-3.5 sm:py-4 rounded-xl hover:from-orange-600 hover:to-orange-700 transition-all shadow-lg"
+                                    className="flex-1 bg-gradient-to-r from-brand-primary to-orange-600 text-white font-black py-4 sm:py-5 text-lg rounded-[1.25rem] hover:opacity-90 transition-all shadow-[0_4px_16px_rgba(249,115,22,0.3)] hover:shadow-[0_8px_24px_rgba(249,115,22,0.4)] active:scale-[0.98] tracking-wide"
                                 >
                                     המשך לסיום והזמנה
                                 </button>
@@ -1573,7 +1573,7 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                                 <button
                                     type="submit"
                                     disabled={submitting}
-                                    className="flex-1 bg-gradient-to-r from-brand-primary to-orange-600 text-white font-black py-4 rounded-xl hover:from-orange-600 hover:to-orange-700 transition-all shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed"
+                                    className="flex-1 bg-gradient-to-r from-brand-primary to-orange-600 text-white font-black text-lg py-4 rounded-[1.25rem] hover:opacity-90 transition-all shadow-[0_4px_16px_rgba(249,115,22,0.3)] hover:shadow-[0_8px_24px_rgba(249,115,22,0.4)] active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100 disabled:cursor-not-allowed tracking-wide"
                                 >
                                     {effectivePaymentMethod === 'credit_card' ? 'שלם באשראי' : 'המשך לאישור'}
                                 </button>
@@ -1882,7 +1882,7 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                             <div className="p-4 border-t border-gray-100 dark:border-brand-dark-border shrink-0">
                                 <button
                                     onClick={() => setPromoCategoryModal(null)}
-                                    className="w-full bg-gradient-to-r from-brand-primary to-orange-600 text-white font-black py-3.5 rounded-xl shadow-lg hover:shadow-xl active:scale-95 transition-all text-lg"
+                                    className="w-full bg-gradient-to-r from-brand-primary to-orange-600 text-white font-black py-4 rounded-[1.25rem] shadow-[0_4px_16px_rgba(249,115,22,0.3)] hover:shadow-[0_8px_24px_rgba(249,115,22,0.4)] active:scale-[0.98] transition-all duration-300 text-xl tracking-wide"
                                 >
                                     סיימתי
                                 </button>

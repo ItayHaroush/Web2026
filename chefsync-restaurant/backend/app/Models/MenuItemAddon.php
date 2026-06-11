@@ -11,6 +11,7 @@ class MenuItemAddon extends Model
         'addon_group_id',
         'menu_item_id',
         'tenant_id',
+        'wolt_option_id',
         'name',
         'price_delta',
         'is_default',
@@ -23,6 +24,7 @@ class MenuItemAddon extends Model
         'is_default' => 'boolean',
         'is_active' => 'boolean',
         'sort_order' => 'integer',
+        'wolt_option_id' => 'string',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];

@@ -248,6 +248,8 @@ class HypPaymentService
             'UTF8'       => 'True',
             'UTF8out'    => 'True',
             'UserId'     => $userId,
+            // חלק מהמסופים ב-Enterprise דורשים id (personalId) בנוסף/במקום UserId
+            'id'         => $userId,
         ];
 
         if (!empty($clientInfo['name'])) {
@@ -505,6 +507,8 @@ class HypPaymentService
             'errMsg'         => $request->query('ErrMsg', ''),
             /** תעודת זהות שנשלחה/אושרה בעסקה — חשוב לחיובי Soft חוזרים כשהמסוף דורש UserId */
             'hyp_user_id'    => $request->query('UserId', ''),
+            /** לפי דוקומנטציית Enterprise: personalId מה-redirect משמש כ-id בחיובים חוזרים */
+            'personal_id'    => $request->query('personalId', $request->query('id', '')),
         ];
     }
 

@@ -132,8 +132,39 @@ export default function CountdownTimer({ startTime, etaMinutes, etaNote, deliver
         );
     }
 
-    // אם אין זמן משוער - הצג מצב המתנה
+    // אם אין זמן משוער — מצב לפי סטטוס: התקבלה במטבח (ואילך) או עדיין ממתינים
     if (!etaMinutes) {
+        const statusTexts = {
+            received: { title: 'ההזמנה התקבלה במטבח!', sub: 'המסעדה אישרה — זמן הכנה משוער יעודכן בקרוב' },
+            preparing: { title: 'ההזמנה בהכנה', sub: 'המטבח עובד על ההזמנה שלכם' },
+            ready: { title: deliveryMethod === 'pickup' ? 'ההזמנה מוכנה לאיסוף!' : 'ההזמנה מוכנה!', sub: deliveryMethod === 'pickup' ? 'אפשר להגיע לאסוף' : 'ממתינה לשליח' },
+            delivering: { title: 'ההזמנה בדרך אליכם!', sub: 'השליח יצא עם ההזמנה' },
+        };
+        const accepted = statusTexts[orderStatus];
+
+        if (accepted) {
+            return (
+                <div className="bg-gradient-to-br from-brand-light to-orange-50 dark:from-brand-success/10 dark:to-brand-dark-bg rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-lg border-2 border-brand-success/40 dark:border-brand-success/30">
+                    <div className="flex flex-col items-center gap-3 sm:gap-4">
+                        <div className="relative w-20 h-20 sm:w-24 sm:h-24">
+                            <div className="absolute inset-0 rounded-full bg-brand-success/20 animate-ping" />
+                            <div className="relative w-full h-full rounded-full bg-gradient-to-br from-brand-success to-emerald-600 flex items-center justify-center shadow-xl">
+                                <FaCheckCircle className="text-3xl sm:text-4xl text-white" />
+                            </div>
+                        </div>
+                        <div className="text-center">
+                            <p className="text-lg sm:text-xl font-black text-gray-900 dark:text-brand-dark-text">
+                                {accepted.title}
+                            </p>
+                            <p className="text-sm sm:text-base text-gray-600 dark:text-brand-dark-muted mt-2 font-medium">
+                                {accepted.sub}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
         return (
             <div className="bg-gradient-to-br from-brand-light to-orange-50 dark:from-orange-900/20 dark:to-orange-950/20 rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-lg border-2 border-brand-primary/30">
                 <div className="flex flex-col items-center gap-3 sm:gap-4">

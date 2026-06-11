@@ -64,6 +64,7 @@ const OrderStatusPage = lazyWithRetry(() => import('./pages/OrderStatusPage'));
 const CustomerOrderHistory = lazyWithRetry(() => import('./pages/CustomerOrderHistory'));
 const NotFoundPage = lazyWithRetry(() => import('./pages/NotFoundPage'));
 const RegisterRestaurant = lazyWithRetry(() => import('./pages/RegisterRestaurant'));
+const WoltImportPage = lazyWithRetry(() => import('./pages/WoltImportPage'));
 const LandingPage = lazyWithRetry(() => import('./pages/LandingPage'));
 const RestaurantsListPage = lazyWithRetry(() => import('./pages/RestaurantsListPage'));
 const NewRestaurantsPage = lazyWithRetry(() => import('./pages/NewRestaurantsPage'));
@@ -133,6 +134,7 @@ const SuperAdminCustomerDetail = lazyWithRetry(() => import('./pages/super-admin
 const SuperAdminNotificationCenter = lazyWithRetry(() => import('./pages/super-admin/SuperAdminNotificationCenter'));
 const SuperAdminEmailManagement = lazyWithRetry(() => import('./pages/super-admin/SuperAdminEmailManagement'));
 const SuperAdminAnnouncements = lazyWithRetry(() => import('./pages/super-admin/SuperAdminAnnouncements'));
+const SuperAdminFeedback = lazyWithRetry(() => import('./pages/super-admin/SuperAdminFeedback'));
 const SuperAdminHolidays = lazyWithRetry(() => import('./pages/super-admin/SuperAdminHolidays'));
 
 import { Toaster } from 'react-hot-toast';
@@ -223,6 +225,7 @@ function AppRoutes() {
           <Route path="/" element={<HomePage />} />
           <Route path="/landing" element={<LandingPage />} />
           <Route path="/register-restaurant" element={<RegisterRestaurant />} />
+          <Route path="/wolt-import" element={<WoltImportPage />} />
 
           {/* SEO Hub pages — חשוב: ה-routes האלה חייבים להגיע ל-React בצד-לקוח.
             ב-Vercel יש rewrites שמעבירים visits ראשונים ל-Laravel (שמזריק JSON-LD + meta),
@@ -627,6 +630,14 @@ function AppRoutes() {
             element={
               <SuperAdminRoute>
                 <SuperAdminAnnouncements />
+              </SuperAdminRoute>
+            }
+          />
+          <Route
+            path="/super-admin/feedback"
+            element={
+              <SuperAdminRoute>
+                <SuperAdminFeedback />
               </SuperAdminRoute>
             }
           />

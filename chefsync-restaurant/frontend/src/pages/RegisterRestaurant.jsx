@@ -21,21 +21,27 @@ const DEFAULT_PRICING = {
 
 const STEPS = [
     { number: 1, label: 'תכנית' },
-    { number: 2, label: 'מסעדה' },
-    { number: 3, label: 'בעלים' },
-    { number: 4, label: 'סיכום' },
+    { number: 2, label: 'תפריט' },
+    { number: 3, label: 'מסעדה' },
+    { number: 4, label: 'בעלים' },
+    { number: 5, label: 'סיכום' },
 ];
 
+const TOTAL_STEPS = STEPS.length;
+
 const TRANSITION_MESSAGES = {
-    '1→2': { text: 'מכינים את המסעדה שלכם...', sub: 'בואו נבנה משהו מדהים' },
-    '2→3': { text: 'המסעדה מקבלת צורה!', sub: 'עוד קצת פרטים ומתחילים' },
-    '3→4': { text: 'כמעט שם!', sub: 'בדקו שהכל מושלם' },
+    '1→2': { text: 'איך נטען את התפריט?', sub: 'ייבוא מוולט או הזנה ידנית' },
+    '2→3': { text: 'מכינים את המסעדה שלכם...', sub: 'בואו נבנה משהו מדהים' },
+    '3→4': { text: 'המסעדה מקבלת צורה!', sub: 'עוד קצת פרטים ומתחילים' },
+    '4→5': { text: 'כמעט שם!', sub: 'בדקו שהכל מושלם' },
     '2→1': { text: 'חוזרים לבחירת תכנית', sub: '' },
-    '3→2': { text: 'חוזרים לפרטי המסעדה', sub: '' },
-    '4→3': { text: 'חוזרים לפרטי בעלים', sub: '' },
+    '3→2': { text: 'חוזרים לבחירת תפריט', sub: '' },
+    '4→3': { text: 'חוזרים לפרטי המסעדה', sub: '' },
+    '5→4': { text: 'חוזרים לפרטי בעלים', sub: '' },
 };
 
 const STORAGE_KEY = 'chefsync_registration_draft';
+const WOLT_SELECTION_KEY = 'chefsync_wolt_import_selection';
 
 export default function RegisterRestaurant() {
     const navigate = useNavigate();
@@ -48,6 +54,7 @@ export default function RegisterRestaurant() {
     const [form, setForm] = useState({
         name: '',
         tenant_id: '',
+        wolt_url: '',
         restaurant_type: 'general',
         phone: '',
         address: '',
@@ -72,6 +79,82 @@ export default function RegisterRestaurant() {
     const [showCitySuggestions, setShowCitySuggestions] = useState(false);
     const citiesRef = useRef([]);
 
+    // מסלול הקמה: 'wolt' — ייבוא מוולט (ממלא פרטים אוטומטית) | 'manual' — הזנה ידנית
+    const [importChoice, setImportChoice] = useState(null);
+
+    // בחירת מוצרים מוולט (נשמרת בדף /wolt-import)
+    const [woltSelection, setWoltSelection] = useState(null);
+
+    useEffect(() => {
+        try {
+            const saved = JSON.parse(localStorage.getItem(WOLT_SELECTION_KEY) || 'null');
+            if (saved && Array.isArray(saved.categories)) {
+                setWoltSelection(saved);
+                // חזרה מדף בחירת המוצרים — ודא שהמסלול מסומן כייבוא והלינק מסונכרן
+                setImportChoice((prev) => prev || 'wolt');
+                if (saved.wolt_url) {
+                    setForm((prev) => (prev.wolt_url === saved.wolt_url ? prev : { ...prev, wolt_url: saved.wolt_url }));
+                }
+            }
+        } catch {
+            setWoltSelection(null);
+        }
+    }, []);
+
+    // הבחירה רלוונטית רק אם היא תואמת ללינק הוולט הנוכחי בטופס
+    const woltSelectionValid = Boolean(
+        woltSelection?.wolt_url && woltSelection.wolt_url === String(form.wolt_url || '').trim()
+    );
+
+    // מילוי אוטומטי של פרטי המסעדה מנתוני וולט — רק שדות ריקים (לא דורסים מה שהוקלד)
+    useEffect(() => {
+        if (!woltSelectionValid) return;
+        const meta = woltSelection?.restaurant_meta || {};
+        const slugTenantId = String(woltSelection?.slug || '')
+            .toLowerCase()
+            .replace(/[^a-z0-9\s-]/g, '')
+            .trim()
+            .replace(/\s+/g, '-')
+            .replace(/-+/g, '-');
+
+        setForm((prev) => {
+            const next = { ...prev };
+            let changed = false;
+            const fill = (field, value) => {
+                if (!String(prev[field] || '').trim() && value) {
+                    next[field] = String(value);
+                    changed = true;
+                }
+            };
+            fill('name', meta.name);
+            fill('tenant_id', slugTenantId);
+            fill('phone', meta.phone);
+            fill('address', meta.address);
+            if (!String(prev.city || '').trim() && meta.city) {
+                next.city = String(meta.city);
+                next.city_id = '';
+                changed = true;
+            }
+            return changed ? next : prev;
+        });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [woltSelectionValid]);
+
+    const handleChooseWoltProducts = () => {
+        const url = String(form.wolt_url || '').trim();
+        if (!url) {
+            toast.error('הדביקו קודם קישור מסעדה מוולט');
+            return;
+        }
+        navigate(`/wolt-import?url=${encodeURIComponent(url)}`);
+    };
+
+    const handleClearWoltSelection = () => {
+        localStorage.removeItem(WOLT_SELECTION_KEY);
+        setWoltSelection(null);
+        toast.success('הבחירה הוסרה — טענו את התפריט מחדש או עברו להזנה ידנית');
+    };
+
     // Wizard state
     const [currentStep, setCurrentStep] = useState(1);
     const [direction, setDirection] = useState('forward');
@@ -84,6 +167,9 @@ export default function RegisterRestaurant() {
     const [transitionClosing, setTransitionClosing] = useState(false);
     const [transitionMsg, setTransitionMsg] = useState({ text: '', sub: '' });
 
+    // נטען רק לאחר שהטיוטה נקראה — מונע מהשמירה האוטומטית לדרוס את הטיוטה במצב ההתחלתי (StrictMode מריץ אפקטים פעמיים)
+    const [draftLoaded, setDraftLoaded] = useState(false);
+
     // Load saved draft on mount
     useEffect(() => {
         const savedDraft = localStorage.getItem(STORAGE_KEY);
@@ -92,8 +178,11 @@ export default function RegisterRestaurant() {
                 const draft = JSON.parse(savedDraft);
                 setForm((prev) => ({ ...prev, ...(draft.form || {}) }));
                 setSelectedTier(draft.selectedTier || 'pro');
-                setCurrentStep(draft.currentStep || 1);
+                setCurrentStep(Math.min(draft.currentStep || 1, TOTAL_STEPS));
                 setAgreedTerms(draft.agreedTerms || false);
+                if (draft.importChoice) {
+                    setImportChoice(draft.importChoice);
+                }
                 if (draft.logoPreview) {
                     setLogoPreview(draft.logoPreview);
                 }
@@ -101,20 +190,23 @@ export default function RegisterRestaurant() {
                 console.error('שגיאה בטעינת הטיוטה השמורה', err);
             }
         }
+        setDraftLoaded(true);
     }, []);
 
     // Auto-save draft whenever form data changes (silent)
     useEffect(() => {
+        if (!draftLoaded) return;
         const draft = {
             form,
             selectedTier,
             currentStep,
             agreedTerms,
             logoPreview,
+            importChoice,
             timestamp: Date.now(),
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(draft));
-    }, [form, selectedTier, currentStep, agreedTerms, logoPreview]);
+    }, [draftLoaded, form, selectedTier, currentStep, agreedTerms, logoPreview, importChoice]);
 
     const loadCities = useCallback(async () => {
         setCitiesReady(false);
@@ -225,6 +317,17 @@ export default function RegisterRestaurant() {
         return Object.keys(errors).length === 0;
     };
 
+    const validateImportStep = () => {
+        const errors = {};
+        if (!importChoice) {
+            errors.importChoice = 'בחרו איך להקים את התפריט — ייבוא מוולט או הזנה ידנית';
+        } else if (importChoice === 'wolt' && !woltSelectionValid) {
+            errors.importChoice = 'טענו את התפריט מוולט ואשרו את בחירת המוצרים, או עברו להזנה ידנית';
+        }
+        setStepErrors(errors);
+        return Object.keys(errors).length === 0;
+    };
+
     const validateStep2 = () => {
         const errors = {};
         if (!form.name.trim()) errors.name = 'שם המסעדה חובה';
@@ -288,11 +391,12 @@ export default function RegisterRestaurant() {
         if (isAnimating) return;
         let valid = false;
         if (currentStep === 1) valid = validateStep1();
-        else if (currentStep === 2) valid = validateStep2();
-        else if (currentStep === 3) valid = validateStep3();
+        else if (currentStep === 2) valid = validateImportStep();
+        else if (currentStep === 3) valid = validateStep2();
+        else if (currentStep === 4) valid = validateStep3();
         if (!valid) return;
 
-        animateTransition(currentStep, Math.min(currentStep + 1, 4), 'forward');
+        animateTransition(currentStep, Math.min(currentStep + 1, TOTAL_STEPS), 'forward');
     };
 
     const goBack = () => {
@@ -324,17 +428,48 @@ export default function RegisterRestaurant() {
             formData.append('tier', selectedTier);
             formData.append('restaurant_type', form.restaurant_type);
             if (form.address) formData.append('address', form.address);
+            if (importChoice === 'wolt' && form.wolt_url) {
+                formData.append('wolt_url', form.wolt_url);
+                // בחירת מוצרים מדף הייבוא — נשלחת כבקשת ייבוא לאישור סופר-אדמין
+                if (woltSelectionValid) {
+                    formData.append('wolt_selection', JSON.stringify({
+                        mode: woltSelection.mode,
+                        slug: woltSelection.slug,
+                        summary: woltSelection.summary,
+                        categories: woltSelection.categories,
+                        restaurant_meta: woltSelection.restaurant_meta,
+                    }));
+                }
+            }
             if (form.latitude) formData.append('latitude', form.latitude);
             if (form.longitude) formData.append('longitude', form.longitude);
             formData.append('paid_upfront', '0');
             if (logoFile) formData.append('logo', logoFile);
 
-            await api.post('/register-restaurant', formData, {
+            const response = await api.post('/register-restaurant', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' },
             });
-            toast.success('ההרשמה בוצעה בהצלחה!');
+
+            const importRequest = response?.data?.wolt_import_request;
+            const importError = response?.data?.wolt_import_error;
+
+            if (importRequest) {
+                const itemsCount = importRequest.summary?.items_count;
+                toast.success(
+                    itemsCount
+                        ? `ההרשמה בוצעה! ${itemsCount} מוצרים מוולט נשלחו לאישור מנהל המערכת.`
+                        : 'ההרשמה בוצעה! התפריט מוולט נשלח לאישור מנהל המערכת.',
+                    { duration: 6000 }
+                );
+            } else if (importError) {
+                toast.success('ההרשמה בוצעה בהצלחה!');
+                toast.error(importError);
+            } else {
+                toast.success('ההרשמה בוצעה בהצלחה!');
+            }
             // Clear the saved draft after successful registration
             localStorage.removeItem(STORAGE_KEY);
+            localStorage.removeItem(WOLT_SELECTION_KEY);
             navigate('/admin/login');
         } catch (error) {
             const validationErrors = error.response?.data?.errors;
@@ -481,6 +616,21 @@ export default function RegisterRestaurant() {
                         )}
 
                         {currentStep === 2 && (
+                            <StepImportChoice
+                                importChoice={importChoice}
+                                setImportChoice={setImportChoice}
+                                form={form}
+                                handleChange={handleChange}
+                                woltSelection={woltSelectionValid ? woltSelection : null}
+                                onChooseWoltProducts={handleChooseWoltProducts}
+                                onClearWoltSelection={handleClearWoltSelection}
+                                stepErrors={stepErrors}
+                                onNext={goNext}
+                                onBack={goBack}
+                            />
+                        )}
+
+                        {currentStep === 3 && (
                             !citiesReady ? (
                                 <div className="flex flex-col items-center justify-center py-24 px-6">
                                     <div className="animate-spin rounded-full h-12 w-12 border-2 border-brand-primary border-t-transparent mb-4" />
@@ -512,13 +662,15 @@ export default function RegisterRestaurant() {
                                     logoPreview={logoPreview}
                                     handleLogoChange={handleLogoChange}
                                     stepErrors={stepErrors}
+                                    importMode={importChoice === 'wolt' && woltSelectionValid}
+                                    woltMeta={woltSelectionValid ? (woltSelection?.restaurant_meta || {}) : {}}
                                     onNext={goNext}
                                     onBack={goBack}
                                 />
                             )
                         )}
 
-                        {currentStep === 3 && (
+                        {currentStep === 4 && (
                             <StepOwnerDetails
                                 form={form}
                                 handleChange={handleChange}
@@ -530,7 +682,7 @@ export default function RegisterRestaurant() {
                             />
                         )}
 
-                        {currentStep === 4 && (
+                        {currentStep === 5 && (
                             <StepSummary
                                 form={form}
                                 cities={cities}
@@ -544,6 +696,8 @@ export default function RegisterRestaurant() {
                                 agreedTerms={agreedTerms}
                                 setAgreedTerms={setAgreedTerms}
                                 handleSubmit={handleSubmit}
+                                woltSelection={woltSelectionValid ? woltSelection : null}
+                                importChoice={importChoice}
                                 onBack={goBack}
                                 goToStep={goToStep}
                             />
@@ -692,7 +846,7 @@ function ProgressStepper({ currentStep }) {
                     {/* Connecting line */}
                     {i < STEPS.length - 1 && (
                         <div
-                            className={`w-12 md:w-20 h-1 mx-1.5 rounded-full transition-all duration-500 ${currentStep > step.number ? 'bg-green-500' : 'bg-gray-200'
+                            className={`w-7 sm:w-12 md:w-16 h-1 mx-1 sm:mx-1.5 rounded-full transition-all duration-500 ${currentStep > step.number ? 'bg-green-500' : 'bg-gray-200'
                                 }`}
                         />
                     )}
@@ -840,7 +994,155 @@ function StepPlan({ selectedTier, setSelectedTier, pricing, configuredTrialDays,
 }
 
 /* ========================================
-   Step 2: Restaurant Details
+   Step 2: Import Choice (Wolt / Manual)
+======================================== */
+function StepImportChoice({
+    importChoice,
+    setImportChoice,
+    form,
+    handleChange,
+    woltSelection,
+    onChooseWoltProducts,
+    onClearWoltSelection,
+    stepErrors,
+    onNext,
+    onBack,
+}) {
+    return (
+        <div className="p-6 md:p-10">
+            <div className="text-center mb-8">
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">איך תרצו להקים את התפריט?</h2>
+                <p className="text-gray-500 max-w-xl mx-auto">
+                    יש לכם עמוד בוולט? נייבא את התפריט, התמונות ופרטי המסעדה — ותמלאו הרבה פחות פרטים בהמשך.
+                </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 max-w-3xl mx-auto">
+                {/* ייבוא מוולט */}
+                <button
+                    type="button"
+                    onClick={() => setImportChoice('wolt')}
+                    className={`relative text-right border-2 rounded-2xl p-6 transition-all hover:border-brand-primary ${importChoice === 'wolt' ? 'border-brand-primary bg-brand-primary/5 shadow-lg' : 'border-gray-200'}`}
+                >
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-xs font-bold text-white bg-brand-primary">
+                        מומלץ — חוסך זמן
+                    </div>
+                    <div className="flex items-center gap-3 mb-3">
+                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl ${importChoice === 'wolt' ? 'bg-brand-primary text-white' : 'bg-gray-100 text-gray-600'}`}>
+                            <FaStore />
+                        </div>
+                        <h3 className="text-lg font-bold text-gray-900">ייבוא מוולט</h3>
+                    </div>
+                    <ul className="space-y-1.5 text-sm text-gray-600">
+                        <li className="flex items-start gap-2"><FaCheckCircle className="mt-0.5 shrink-0 text-brand-primary" />תפריט מלא: קטגוריות, מוצרים, מחירים ותוספות</li>
+                        <li className="flex items-start gap-2"><FaCheckCircle className="mt-0.5 shrink-0 text-brand-primary" />תמונות המוצרים ותמונת המסעדה</li>
+                        <li className="flex items-start gap-2"><FaCheckCircle className="mt-0.5 shrink-0 text-brand-primary" />שם, טלפון, עיר וכתובת ימולאו אוטומטית</li>
+                    </ul>
+                </button>
+
+                {/* הזנה ידנית */}
+                <button
+                    type="button"
+                    onClick={() => setImportChoice('manual')}
+                    className={`text-right border-2 rounded-2xl p-6 transition-all hover:border-brand-primary ${importChoice === 'manual' ? 'border-brand-primary bg-brand-primary/5 shadow-lg' : 'border-gray-200'}`}
+                >
+                    <div className="flex items-center gap-3 mb-3">
+                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl ${importChoice === 'manual' ? 'bg-brand-primary text-white' : 'bg-gray-100 text-gray-600'}`}>
+                            <FaPen />
+                        </div>
+                        <h3 className="text-lg font-bold text-gray-900">הזנה ידנית</h3>
+                    </div>
+                    <ul className="space-y-1.5 text-sm text-gray-600">
+                        <li className="flex items-start gap-2"><FaCheckCircle className="mt-0.5 shrink-0 text-gray-400" />ממלאים את פרטי המסעדה בטופס</li>
+                        <li className="flex items-start gap-2"><FaCheckCircle className="mt-0.5 shrink-0 text-gray-400" />בונים את התפריט בעצמכם אחרי ההרשמה</li>
+                        <li className="flex items-start gap-2"><FaCheckCircle className="mt-0.5 shrink-0 text-gray-400" />מתאים גם למסעדה שאינה בוולט</li>
+                    </ul>
+                </button>
+            </div>
+
+            {/* בלוק וולט — קישור ובחירת מוצרים */}
+            {importChoice === 'wolt' && (
+                <div className="max-w-3xl mx-auto mb-6 p-4 rounded-xl border border-orange-200 bg-orange-50/60">
+                    <h4 className="text-sm font-bold text-orange-900 mb-1">קישור המסעדה בוולט</h4>
+                    <p className="text-xs text-orange-800 mb-3">
+                        הדביקו את הקישור, טענו את התפריט ובחרו אילו מוצרים לייבא. הייבוא יתבצע לאחר אישור מנהל המערכת.
+                    </p>
+                    <Input
+                        name="wolt_url"
+                        label="קישור מסעדה בוולט"
+                        value={form.wolt_url}
+                        onChange={handleChange}
+                        placeholder="https://wolt.com/he/isr/afula/restaurant/xxxxx"
+                    />
+
+                    {woltSelection ? (
+                        <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3">
+                            <FaCheckCircle className="shrink-0 text-emerald-500" aria-hidden />
+                            <p className="flex-1 min-w-[10rem] text-xs font-bold text-emerald-800">
+                                {woltSelection.mode === 'all'
+                                    ? `כל התפריט נבחר לייבוא (${woltSelection.summary?.items_count || 0} מוצרים)`
+                                    : `נבחרו ${woltSelection.summary?.items_count || 0} מתוך ${woltSelection.summary?.source_items_count || 0} מוצרים לייבוא`}
+                            </p>
+                            <div className="flex gap-2">
+                                <button
+                                    type="button"
+                                    onClick={onChooseWoltProducts}
+                                    className="rounded-lg border border-emerald-300 px-3 py-1.5 text-xs font-bold text-emerald-700 transition hover:bg-emerald-100"
+                                >
+                                    עריכת בחירה
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={onClearWoltSelection}
+                                    className="rounded-lg px-3 py-1.5 text-xs font-bold text-gray-500 transition hover:bg-gray-100"
+                                >
+                                    הסרה
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <button
+                            type="button"
+                            onClick={onChooseWoltProducts}
+                            disabled={!String(form.wolt_url || '').trim()}
+                            className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-primary to-brand-secondary px-4 py-2.5 text-sm font-bold text-white shadow-md transition hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+                        >
+                            <FaUtensils aria-hidden />
+                            טעינת התפריט ובחירת מוצרים
+                        </button>
+                    )}
+                </div>
+            )}
+
+            {stepErrors.importChoice && (
+                <p className="text-red-500 text-sm text-center mb-4">{stepErrors.importChoice}</p>
+            )}
+
+            {/* Navigation */}
+            <div className="flex items-center justify-between mt-10">
+                <button
+                    type="button"
+                    onClick={onBack}
+                    className="inline-flex items-center gap-2 px-6 py-3 border-2 border-gray-200 rounded-xl font-semibold text-gray-600 hover:border-gray-300 hover:bg-gray-50 transition-all"
+                >
+                    <FaArrowRight />
+                    <span>חזרה</span>
+                </button>
+                <button
+                    type="button"
+                    onClick={onNext}
+                    className="inline-flex items-center gap-2 px-10 py-3 bg-gradient-to-r from-brand-primary to-brand-secondary text-white rounded-xl font-bold text-lg hover:shadow-lg hover:scale-105 transition-all"
+                >
+                    <span>המשך לפרטי מסעדה</span>
+                    <FaArrowLeft />
+                </button>
+            </div>
+        </div>
+    );
+}
+
+/* ========================================
+   Step 3: Restaurant Details
 ======================================== */
 function StepRestaurantDetails({
     form,
@@ -856,17 +1158,34 @@ function StepRestaurantDetails({
     logoPreview,
     handleLogoChange,
     stepErrors,
+    importMode,
+    woltMeta,
     onNext,
     onBack,
 }) {
     const [showTooltip, setShowTooltip] = useState(false);
+    const hasImportedImage = Boolean(woltMeta?.hero_image_url || woltMeta?.logo_url);
 
     return (
         <div className="p-6 md:p-10">
             <div className="text-center mb-8">
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">ספרו לנו על המסעדה שלכם</h2>
-                <p className="text-gray-500">מלאו את הפרטים הבאים כדי שנוכל להקים את המסעדה שלכם במערכת</p>
+                <p className="text-gray-500">
+                    {importMode
+                        ? 'רוב הפרטים מולאו אוטומטית מוולט — בדקו אותם והשלימו רק את החסר'
+                        : 'מלאו את הפרטים הבאים כדי שנוכל להקים את המסעדה שלכם במערכת'}
+                </p>
             </div>
+
+            {importMode && (
+                <div className="mb-6 flex items-start gap-3 rounded-xl border border-gray-200 bg-transparent p-4">
+                    <FaCheckCircle className="mt-0.5 shrink-0 text-gray-400" aria-hidden />
+                    <p className="text-sm text-gray-600">
+                        פרטי המסעדה (שם, טלפון, עיר, כתובת) נטענו מוולט וניתנים לעריכה.
+                        התפריט, התמונות ושאר הפרטים ייקלטו אוטומטית לאחר אישור הייבוא.
+                    </p>
+                </div>
+            )}
 
             <div className="space-y-8">
                 <Section title="פרטי המסעדה">
@@ -970,19 +1289,36 @@ function StepRestaurantDetails({
                             )}
 
                             {form.city_id ? (
-                                <span className="text-xs text-green-600 block">נבחרה עיר מזוהה (ID: {form.city_id})</span>
+                                <span className="text-xs text-green-600 block">העיר נבחרה בהצלחה מהרשימה</span>
                             ) : (
                                 <span className="text-xs text-gray-500 block">אפשר לבחור עיר מהרשימה או להמשיך עם עיר חדשה שהקלדת</span>
                             )}
                             {stepErrors.city && <span className="text-xs text-red-500 block">{stepErrors.city}</span>}
                         </div>
-                        <div className="space-y-2">
-                            <span className="block text-sm text-gray-700 font-medium">לוגו (אופציונלי)</span>
-                            {logoPreview && (
-                                <img src={logoPreview} alt="תצוגה מקדימה" className="h-20 w-20 object-contain bg-gray-50 border rounded-xl p-2" />
+                        <div className="space-y-3">
+                            {importMode && hasImportedImage && (
+                                <div className="space-y-2">
+                                    <span className="block text-sm text-gray-700 font-medium">תמונת המסעדה</span>
+                                    <div className="flex items-center gap-3 rounded-xl border border-gray-200 bg-transparent p-3">
+                                        <img
+                                            src={woltMeta.hero_image_url || woltMeta.logo_url}
+                                            alt="תמונת המסעדה מוולט"
+                                            className="h-16 w-24 rounded-lg object-cover border border-gray-200"
+                                        />
+                                        <p className="text-xs text-gray-600">
+                                            תמונת המסעדה תיקלט אוטומטית מוולט. אפשר להחליף אותה בכל רגע מהגדרות המסעדה.
+                                        </p>
+                                    </div>
+                                </div>
                             )}
-                            <input type="file" accept="image/*" onChange={handleLogoChange} className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-brand-primary text-sm" />
-                            <p className="text-xs text-gray-500">עד 2MB, פורמטים: jpeg, png, webp</p>
+                            <div className="space-y-2">
+                                <span className="block text-sm text-gray-700 font-medium">לוגו (אופציונלי)</span>
+                                {logoPreview && (
+                                    <img src={logoPreview} alt="תצוגה מקדימה" className="h-20 w-20 object-contain bg-gray-50 border rounded-xl p-2" />
+                                )}
+                                <input type="file" accept="image/*" onChange={handleLogoChange} className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-brand-primary text-sm" />
+                                <p className="text-xs text-gray-500">עד 2MB, פורמטים: jpeg, png, webp</p>
+                            </div>
                         </div>
                         <Input name="address" label="כתובת (אופציונלי)" value={form.address} onChange={handleChange} />
                     </div>
@@ -1130,7 +1466,7 @@ function StepOwnerDetails({ form, handleChange, handleSendCode, codeSending, ste
 /* ========================================
    Step 4: Summary & Submit
 ======================================== */
-function StepSummary({ form, cities, selectedTier, pricing, configuredTrialDays, currentPrice, logoPreview, loading, stepErrors, agreedTerms, setAgreedTerms, handleSubmit, onBack, goToStep }) {
+function StepSummary({ form, cities, selectedTier, pricing, configuredTrialDays, currentPrice, logoPreview, loading, stepErrors, agreedTerms, setAgreedTerms, handleSubmit, woltSelection, importChoice, onBack, goToStep }) {
     const tierLabels = { basic: 'אתר הזמנות', pro: 'ניהול חכם', enterprise: 'מסעדה מלאה' };
     const typeLabels = { pizza: 'פיצרייה', shawarma: 'שווארמה / פלאפל', burger: 'המבורגר', bistro: 'ביסטרו / שף', catering: 'קייטרינג', general: 'כללי' };
     const isEnterprise = selectedTier === 'enterprise';
@@ -1165,8 +1501,26 @@ function StepSummary({ form, cities, selectedTier, pricing, configuredTrialDays,
                     <SummaryRow label="מחיר" value={currentPrice ? `₪${currentPrice?.toLocaleString()}` : 'מותאם אישית'} />
                 </SummarySection>
 
+                {/* Menu source summary */}
+                <SummarySection title="מקור התפריט" onEdit={() => goToStep(2)}>
+                    <SummaryRow
+                        label="הקמת תפריט"
+                        value={importChoice === 'wolt' ? 'ייבוא מוולט' : 'הזנה ידנית לאחר ההרשמה'}
+                    />
+                    {importChoice === 'wolt' && form.wolt_url && (
+                        <SummaryRow
+                            label="ייבוא מוולט"
+                            value={woltSelection
+                                ? (woltSelection.mode === 'all'
+                                    ? `כל התפריט (${woltSelection.summary?.items_count || 0} מוצרים) — לאישור מנהל המערכת`
+                                    : `${woltSelection.summary?.items_count || 0} מוצרים נבחרו — לאישור מנהל המערכת`)
+                                : 'כל התפריט — לאישור מנהל המערכת'}
+                        />
+                    )}
+                </SummarySection>
+
                 {/* Restaurant summary */}
-                <SummarySection title="פרטי מסעדה" onEdit={() => goToStep(2)}>
+                <SummarySection title="פרטי מסעדה" onEdit={() => goToStep(3)}>
                     <SummaryRow label="שם המסעדה" value={form.name} />
                     <div className="flex justify-between items-center">
                         <span className="text-sm text-gray-500">כתובת באתר</span>
@@ -1185,7 +1539,7 @@ function StepSummary({ form, cities, selectedTier, pricing, configuredTrialDays,
                 </SummarySection>
 
                 {/* Owner summary */}
-                <SummarySection title="פרטי בעלים" onEdit={() => goToStep(3)}>
+                <SummarySection title="פרטי בעלים" onEdit={() => goToStep(4)}>
                     <SummaryRow label="שם" value={form.owner_name} />
                     <SummaryRow label="דוא״ל" value={form.owner_email} />
                     <SummaryRow label="טלפון" value={form.owner_phone} />

@@ -53,6 +53,9 @@ class Restaurant extends Model
         'is_override_status',
         'delivery_minimum',
         'allow_future_orders',
+        /** הצגת ממוצע דירוג ביקורות ללקוחות — נשלט ע"י סופר־אדמין */
+        'show_rating_on_home',
+        'show_rating_on_menu',
         'description',
         'logo_url',
         'menu_hero_background_url',
@@ -150,6 +153,8 @@ class Restaurant extends Model
         'enable_dine_in_pricing' => 'boolean',
         'allow_future_orders' => 'boolean',
         'delivery_minimum' => 'decimal:2',
+        'show_rating_on_home' => 'boolean',
+        'show_rating_on_menu' => 'boolean',
         'hyp_terminal_verified' => 'boolean',
         'hyp_terminal_verified_at' => 'datetime',
         'hyp_terminal_password' => 'encrypted',
@@ -181,6 +186,11 @@ class Restaurant extends Model
     public function menuItems(): HasMany
     {
         return $this->hasMany(MenuItem::class, 'restaurant_id');
+    }
+
+    public function woltImportRequests(): HasMany
+    {
+        return $this->hasMany(WoltImportRequest::class, 'restaurant_id');
     }
 
     public function variants(): HasMany
@@ -694,6 +704,28 @@ class Restaurant extends Model
             'response_label' => $response ? ($statusLabels[$response->status] ?? $response->status) : 'לא הוגבה',
             'open_time' => $response?->open_time,
             'close_time' => $response?->close_time,
+        ];
+    }
+
+    /**
+     * ממוצע דירוג + מספר ביקורות מהזמנות (לא כולל הזמנות בדיקה).
+     *
+     * @return array{avg_rating: float|null, reviews_count: int}
+     */
+    public function getRatingStats(): array
+    {
+        $row = Order::withoutGlobalScope('tenant')
+            ->where('restaurant_id', $this->id)
+            ->whereNotNull('rating')
+            ->where('is_test', false)
+            ->selectRaw('AVG(rating) as avg_rating, COUNT(*) as reviews_count')
+            ->first();
+
+        $count = (int) ($row->reviews_count ?? 0);
+
+        return [
+            'avg_rating' => $count > 0 ? round((float) $row->avg_rating, 1) : null,
+            'reviews_count' => $count,
         ];
     }
 

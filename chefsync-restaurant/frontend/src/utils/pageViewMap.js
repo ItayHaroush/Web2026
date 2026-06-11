@@ -98,6 +98,7 @@ const SUPER_RULES = [
     [/^\/super-admin\/customers\/[^/]+\/?$/, 'super_admin_customer_detail'],
     [/^\/super-admin\/customers\/?$/, 'super_admin_customers'],
     [/^\/super-admin\/email-management\/?$/, 'super_admin_email_management'],
+    [/^\/super-admin\/feedback\/?$/, 'super_admin_feedback'],
     [/^\/super-admin\/analytics\/?$/, 'super_admin_analytics'],
     [/^\/super-admin\/profile\/?$/, 'super_admin_profile'],
 ];

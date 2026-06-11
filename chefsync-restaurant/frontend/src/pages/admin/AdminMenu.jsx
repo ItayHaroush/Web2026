@@ -62,6 +62,7 @@ export default function AdminMenu({ embedded = false }) {
     const [form, setForm] = useState({
         name: '',
         description: '',
+        tag: '',
         price: '',
         category_id: '',
         image: null,
@@ -213,6 +214,7 @@ export default function AdminMenu({ embedded = false }) {
         const formData = new FormData();
         formData.append('name', form.name);
         formData.append('description', form.description || '');
+        formData.append('tag', form.tag || '');
         formData.append('price', form.price);
         formData.append('category_id', form.category_id);
         if (form.image) formData.append('image', form.image);
@@ -365,6 +367,7 @@ export default function AdminMenu({ embedded = false }) {
         setForm({
             name: item.name,
             description: item.description || '',
+            tag: item.tag || '',
             price: item.price,
             category_id: item.category_id,
             image: null,
@@ -400,6 +403,7 @@ export default function AdminMenu({ embedded = false }) {
         setForm({
             name: '',
             description: '',
+            tag: '',
             price: '',
             category_id: categories[0]?.id || '',
             image: null,
@@ -433,6 +437,7 @@ export default function AdminMenu({ embedded = false }) {
         setForm({
             name: '',
             description: '',
+            tag: '',
             price: '',
             category_id: categories[0]?.id || '',
             image: null,
@@ -968,6 +973,19 @@ export default function AdminMenu({ embedded = false }) {
                                                 }}
                                             />
                                         </div>
+                                    </div>
+
+                                    <div className="space-y-1.5">
+                                        <label className="text-[11px] font-black text-gray-500 uppercase tracking-tight mr-1">תגית (אופציונלי)</label>
+                                        <input
+                                            type="text"
+                                            value={form.tag}
+                                            maxLength={50}
+                                            onChange={(e) => setForm({ ...form, tag: e.target.value })}
+                                            className="w-full min-w-0 bg-slate-50 border-none rounded-2xl px-5 py-4 text-base font-black focus:ring-2 focus:ring-brand-primary transition-all"
+                                            placeholder="למשל: חדש, מומלץ, חריף"
+                                        />
+                                        <p className="text-[10px] text-gray-400 mr-1">התגית תוצג ללקוח ליד המחיר במסך המנה</p>
                                     </div>
 
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

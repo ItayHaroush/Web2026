@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Restaurant;
 use App\Models\City;
 use App\Models\MenuItem;
+use App\Models\Order;
 use App\Models\IsraeliHoliday;
 use App\Models\RestaurantHolidayHour;
 use Illuminate\Http\Request;
@@ -38,6 +39,17 @@ class RestaurantController extends Controller
                 $latitude = $latitude ?? $cityData->latitude;
                 $longitude = $longitude ?? $cityData->longitude;
             }
+        }
+
+        $showRatingOnHome = (bool) ($restaurant->show_rating_on_home ?? false);
+        $showRatingOnMenu = (bool) ($restaurant->show_rating_on_menu ?? false);
+        $avgRating = null;
+        $reviewsCount = null;
+
+        if ($showRatingOnHome || $showRatingOnMenu) {
+            $stats = $this->getPublicRatingStats($restaurant->id);
+            $avgRating = $stats['avg_rating'];
+            $reviewsCount = $stats['reviews_count'];
         }
 
         return [
@@ -81,7 +93,38 @@ class RestaurantController extends Controller
             'delivery_minimum' => $restaurant->delivery_minimum ?? 0,
             'allow_future_orders' => (bool) ($restaurant->allow_future_orders ?? false),
             'holiday_closures' => $this->getHolidayClosures($restaurant),
+            'show_rating_on_home' => $showRatingOnHome,
+            'show_rating_on_menu' => $showRatingOnMenu,
+            'avg_rating' => $avgRating,
+            'reviews_count' => $reviewsCount,
             'created_at' => $restaurant->created_at?->toIso8601String(),
+        ];
+    }
+
+    /**
+     * ממוצע דירוג ציבורי — שאילתה מקובצת אחת לכל הבקשה (מניעת N+1 ברשימת מסעדות).
+     *
+     * @return array{avg_rating: float|null, reviews_count: int}
+     */
+    private function getPublicRatingStats(int $restaurantId): array
+    {
+        static $ratingMap = null;
+
+        if ($ratingMap === null) {
+            $ratingMap = Order::withoutGlobalScope('tenant')
+                ->whereNotNull('rating')
+                ->where('is_test', false)
+                ->selectRaw('restaurant_id, AVG(rating) as avg_rating, COUNT(*) as reviews_count')
+                ->groupBy('restaurant_id')
+                ->get()
+                ->keyBy('restaurant_id');
+        }
+
+        $stats = $ratingMap->get($restaurantId);
+
+        return [
+            'avg_rating' => $stats ? round((float) $stats->avg_rating, 1) : null,
+            'reviews_count' => $stats ? (int) $stats->reviews_count : 0,
         ];
     }
 
@@ -301,7 +344,7 @@ class RestaurantController extends Controller
                     $query->where('name', 'LIKE', "%{$q}%")
                           ->orWhere('description', 'LIKE', "%{$q}%");
                 })
-                ->with('restaurant:id,name,tenant_id,logo_url,city,is_open,is_override_status,is_demo,operating_hours')
+                ->with('restaurant:id,name,tenant_id,logo_url,menu_hero_background_url,city,is_open,is_override_status,is_demo,operating_hours')
                 ->select('id', 'restaurant_id', 'name', 'description', 'price', 'image_url')
                 ->limit(30)
                 ->get();
@@ -316,7 +359,7 @@ class RestaurantController extends Controller
                     'image_url' => $item->image_url,
                     'restaurant_name' => $item->restaurant?->name,
                     'restaurant_tenant_id' => $item->restaurant?->tenant_id,
-                    'restaurant_logo' => $item->restaurant?->logo_url,
+                    'restaurant_logo' => $item->restaurant?->logo_url ?: $item->restaurant?->menu_hero_background_url,
                     'is_open_now' => (bool) ($item->restaurant?->is_open_now ?? false),
                     'is_demo' => (bool) ($item->restaurant?->is_demo ?? false),
                 ]),
@@ -367,14 +410,15 @@ class RestaurantController extends Controller
             ->where('is_approved', true)
             ->where('is_demo', false)
             ->orderBy('name')
-            ->get(['id', 'tenant_id', 'slug', 'name', 'logo_url']);
+            ->get(['id', 'tenant_id', 'slug', 'name', 'logo_url', 'menu_hero_background_url']);
 
         $payload = $rows->map(fn (Restaurant $r) => [
             'id' => $r->id,
             'tenant_id' => $r->tenant_id,
             'slug' => $r->slug,
             'name' => $r->name,
-            'logo_url' => $r->logo_url,
+            // פאלבק לתמונת ההירו כשאין לוגו (למשל ייבוא מוולט)
+            'logo_url' => $r->logo_url ?: $r->menu_hero_background_url,
         ])->values();
 
         return response()->json([

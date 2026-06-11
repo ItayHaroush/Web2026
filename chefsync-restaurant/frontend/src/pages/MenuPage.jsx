@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { FaWhatsapp, FaPhoneAlt, FaShoppingBag, FaTruck, FaClock, FaShieldAlt, FaExclamationTriangle, FaInfoCircle, FaCreditCard, FaMoneyBillWave, FaGift, FaTimes, FaPlus, FaArrowLeft, FaChevronLeft, FaTag, FaCheckCircle, FaHistory, FaMapMarkerAlt, FaMask } from 'react-icons/fa';
+import { FaWhatsapp, FaPhoneAlt, FaShoppingBag, FaTruck, FaClock, FaShieldAlt, FaExclamationTriangle, FaInfoCircle, FaCreditCard, FaMoneyBillWave, FaGift, FaTimes, FaPlus, FaArrowLeft, FaChevronLeft, FaTag, FaCheckCircle, FaHistory, FaMapMarkerAlt, FaMask, FaSearch } from 'react-icons/fa';
 import { SiWaze } from 'react-icons/si';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
@@ -15,6 +15,7 @@ import { resolveAssetUrl } from '../utils/assets';
 import { API_BASE_URL, TENANT_HEADER } from '../constants/api';
 import MenuItemModal from '../components/MenuItemModal';
 import FutureOrderModal from '../components/FutureOrderModal';
+import LocationPickerModal from '../components/LocationPickerModal';
 import TopDismissibleBanner from '../components/TopDismissibleBanner';
 import { getSuggestions } from '../components/SuggestionCards';
 import { sumAddonsBilledWithGroupRules } from '../utils/cart';
@@ -145,6 +146,78 @@ export default function MenuPage({ isPreviewMode = false }) {
     const [suggestionAddonPicker, setSuggestionAddonPicker] = useState(null);
     const [suggestionSelectedAddons, setSuggestionSelectedAddons] = useState({});
     const [showPromoPopup, setShowPromoPopup] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    /** תגית מיקום המשתמש בהירו — לחיצה פותחת מודל שינוי מיקום */
+    const [showLocationModal, setShowLocationModal] = useState(false);
+    const [userDeliveryLocation, setUserDeliveryLocation] = useState(() => {
+        try {
+            return JSON.parse(localStorage.getItem('user_delivery_location') || 'null');
+        } catch {
+            return null;
+        }
+    });
+    const userLocationLabel = userDeliveryLocation?.fullAddress
+        || (userDeliveryLocation?.street && userDeliveryLocation?.cityName
+            ? `${userDeliveryLocation.street}, ${userDeliveryLocation.cityName}`
+            : userDeliveryLocation?.cityName)
+        || '';
+
+    // סנכרון תגית המיקום — מכל מקום שבו המשתמש שינה מיקום (מודל בנאבבר / בסל וכו')
+    useEffect(() => {
+        const onLocationChanged = (e) => {
+            const location = e.detail;
+            if (!location) return;
+            setUserDeliveryLocation(location);
+            if (location.fullAddress) {
+                setCustomerInfo((prev) => ({ ...prev, delivery_address: location.fullAddress }));
+            }
+        };
+        window.addEventListener('user-location-changed', onLocationChanged);
+        return () => window.removeEventListener('user-location-changed', onLocationChanged);
+    }, [setCustomerInfo]);
+
+    // אם המשתמש כבר אישר הרשאת מיקום ואין מיקום שמור — משתמשים במיקום הנוכחי אוטומטית (בלי לפתוח בקשה)
+    useEffect(() => {
+        if (userDeliveryLocation?.lat || isPreviewMode) return;
+        if (!navigator.geolocation || !navigator.permissions?.query) return;
+
+        let cancelled = false;
+        navigator.permissions.query({ name: 'geolocation' }).then((status) => {
+            if (cancelled || status.state !== 'granted') return;
+            navigator.geolocation.getCurrentPosition(async (pos) => {
+                if (cancelled) return;
+                const { latitude: lat, longitude: lng } = pos.coords;
+                let city = '';
+                let road = '';
+                let houseNumber = '';
+                try {
+                    const res = await fetch(
+                        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=he&addressdetails=1&zoom=18`
+                    );
+                    const data = await res.json();
+                    city = data.address?.city || data.address?.town || data.address?.village || '';
+                    road = data.address?.road || '';
+                    houseNumber = data.address?.house_number || '';
+                } catch { /* נשמור נ.צ. גם בלי כתובת */ }
+                if (cancelled) return;
+                const fullAddress = [road ? `${road} ${houseNumber}`.trim() : '', city].filter(Boolean).join(', ');
+                const locationData = {
+                    lat,
+                    lng,
+                    cityName: city,
+                    street: road,
+                    house_number: houseNumber,
+                    fullAddress,
+                    needsCompletion: !road || !city || !houseNumber,
+                };
+                try { localStorage.setItem('user_delivery_location', JSON.stringify(locationData)); } catch { /* ignore */ }
+                setUserDeliveryLocation(locationData);
+            }, () => { /* המשתמש יבחר ידנית */ }, { timeout: 8000, maximumAge: 300000 });
+        }).catch(() => { /* permissions API לא נתמך */ });
+
+        return () => { cancelled = true; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
     const bannerPromotions = useMemo(
         () => activePromotions.filter((p) => p.show_menu_banner !== false),
         [activePromotions]
@@ -165,6 +238,8 @@ export default function MenuPage({ isPreviewMode = false }) {
     const [showDemoDisclaimerModal, setShowDemoDisclaimerModal] = useState(false);
     const categoryRefs = useRef({});
     const tabRefs = useRef({});
+    const searchBarRef = useRef(null);
+    const searchInputRef = useRef(null);
 
     const loadReorderItems = useCallback((items, shouldClear) => {
         if (shouldClear) clearCart();
@@ -462,6 +537,45 @@ export default function MenuPage({ isPreviewMode = false }) {
     const wazeLink = getWazeLink();
     const phoneHref = getPhoneHref();
     const totalCartItems = getItemCount();
+    const cartTotalPrice = useMemo(
+        () => cartItems.reduce((sum, item) => sum + (Number(item.totalPrice) || 0), 0),
+        [cartItems]
+    );
+
+    // תוצאות חיפוש — מוצגות בפאנל נפתח מתחת לשורת החיפוש, בלי להעלים את התפריט
+    const searchResults = useMemo(() => {
+        const q = searchQuery.trim().toLowerCase();
+        if (!q) return [];
+        const results = [];
+        for (const category of menu) {
+            for (const item of category.items || []) {
+                if (
+                    (item.name || '').toLowerCase().includes(q) ||
+                    (item.description || '').toLowerCase().includes(q)
+                ) {
+                    results.push({ ...item, category_name: category.name });
+                }
+            }
+        }
+        return results;
+    }, [menu, searchQuery]);
+
+    /** גלילה חזרה לשורת החיפוש של המסעדה + פוקוס על השדה */
+    const focusMenuSearch = () => {
+        const el = searchBarRef.current;
+        if (!el) return;
+        const top = el.getBoundingClientRect().top + window.scrollY - 80;
+        window.scrollTo({ top: Math.max(top, 0), behavior: 'smooth' });
+        setTimeout(() => searchInputRef.current?.focus({ preventScroll: true }), 350);
+    };
+
+    // פתיחת שורת החיפוש מאייקון החיפוש בנאבבר הראשי
+    useEffect(() => {
+        const onOpenSearch = () => focusMenuSearch();
+        window.addEventListener('open-menu-search', onOpenSearch);
+        return () => window.removeEventListener('open-menu-search', onOpenSearch);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const allergensList = useMemo(() => {
         const raw = restaurant?.common_allergens;
@@ -816,9 +930,9 @@ export default function MenuPage({ isPreviewMode = false }) {
             {/* Hero Section - סגנון Wolt (מובייל: גובה דינמי — בלי חיתוך לוגו/תגית) */}
             <div className="relative -mx-4 sm:-mx-6 lg:-mx-8 -mt-8 mb-8">
                 <div
-                    className={`relative min-h-[13rem] h-auto sm:h-72 sm:min-h-0 overflow-hidden ${restaurant?.menu_hero_background_url
-                        ? ''
-                        : 'bg-gradient-to-br from-brand-dark via-brand-primary to-brand-secondary'
+                    className={`relative h-auto overflow-hidden ${restaurant?.menu_hero_background_url
+                        ? 'min-h-[17rem] sm:h-96 sm:min-h-0'
+                        : 'min-h-[13rem] sm:h-72 sm:min-h-0 bg-gradient-to-br from-brand-dark via-brand-primary to-brand-secondary'
                         }`}
                 >
                     {restaurant?.menu_hero_background_url && (
@@ -829,8 +943,31 @@ export default function MenuPage({ isPreviewMode = false }) {
                                     backgroundImage: `url(${resolveAssetUrl(restaurant.menu_hero_background_url)})`,
                                 }}
                             />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/45 to-black/30" aria-hidden />
+                            {/* גרדיאנט עדין — רק כדי שהטקסט יהיה קריא, בלי להסתיר את התמונה */}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/25 to-black/5" aria-hidden />
+                            {restaurant?.logo_url && (
+                                <div className="absolute bottom-3 left-3 z-20 h-14 w-14 rounded-2xl bg-white/50 p-1.5 backdrop-blur-sm border border-white/40 shadow-xl sm:bottom-6 sm:left-6 sm:h-20 sm:w-20 sm:p-2 lg:bottom-12">
+                                    <img
+                                        src={resolveAssetUrl(restaurant.logo_url)}
+                                        alt={restaurant?.name}
+                                        className="h-full w-full object-contain"
+                                    />
+                                </div>
+                            )}
                         </>
+                    )}
+
+                    {/* תגית מיקום המשתמש — למעלה מימין, שקופה; לחיצה פותחת מודל שינוי מיקום */}
+                    {!isPreviewMode && (
+                        <button
+                            type="button"
+                            onClick={() => setShowLocationModal(true)}
+                            className="absolute top-12 right-3 z-20 inline-flex max-w-[70vw] items-center gap-1.5 rounded-full border border-white/30 bg-white/15 px-3 py-1.5 text-[11px] font-bold text-white shadow-lg backdrop-blur-md transition hover:bg-white/25 sm:top-12 sm:right-4 sm:max-w-sm sm:px-3.5 sm:text-xs"
+                            aria-label="שינוי מיקום למשלוח"
+                        >
+                            <FaMapMarkerAlt className="h-3 w-3 shrink-0 text-white/90" aria-hidden />
+                            <span className="truncate">{userLocationLabel || 'בחירת מיקום למשלוח'}</span>
+                        </button>
                     )}
 
                     {/* לוגואים מעומעמים ברקע — רק כשאין תמונת רקע מותאמת */}
@@ -865,9 +1002,10 @@ export default function MenuPage({ isPreviewMode = false }) {
                     )}
 
                     {/* תוכן ה-Hero — מובייל: בלוק יחסי + ריווח אנכי | sm+: ממורכז באבסולוט */}
-                    <div className="relative z-10 flex min-h-[13rem] flex-col items-center justify-center px-4 pt-10 pb-6 text-center text-white sm:absolute sm:inset-0 sm:min-h-0 sm:py-8 sm:pt-14 sm:pb-8">
+                    <div className={`relative z-10 flex flex-col items-center justify-center px-4 pt-10 pb-6 text-center text-white sm:absolute sm:inset-0 sm:min-h-0 sm:py-8 sm:pt-14 sm:pb-8 ${restaurant?.menu_hero_background_url ? 'min-h-[17rem]' : 'min-h-[13rem]'}`}>
                         <div className="flex w-full max-w-lg flex-col items-center">
-                            {restaurant?.logo_url && (
+                            {/* לוגו ממורכז — רק כשאין תמונת הירו (כשיש הירו הלוגו מוצג כתג בפינה) */}
+                            {restaurant?.logo_url && !restaurant?.menu_hero_background_url && (
                                 <div className="mb-4 flex justify-center sm:mb-5">
                                     <div className="rounded-2xl bg-white p-2.5 shadow-2xl sm:p-3">
                                         <img
@@ -965,6 +1103,77 @@ export default function MenuPage({ isPreviewMode = false }) {
                 )}
             </div>
 
+            {/* שורת חיפוש בתפריט — סגנון Wolt, תוצאות בפאנל נפתח בלי להעלים את התפריט */}
+            {menu.length > 0 && (
+                <div ref={searchBarRef} className="relative z-[45] mb-6">
+                    <div className="relative">
+                        <FaSearch className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-brand-dark-muted" aria-hidden />
+                        <input
+                            ref={searchInputRef}
+                            type="search"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder={`חיפוש ב- ${restaurant?.name || 'תפריט'}`}
+                            aria-label="חיפוש בתפריט"
+                            className="w-full rounded-full bg-gray-100 dark:bg-brand-dark-surface border border-transparent dark:border-brand-dark-border py-3 pr-11 pl-10 text-sm font-medium text-gray-800 dark:text-brand-dark-text placeholder:text-gray-400 dark:placeholder:text-brand-dark-muted outline-none transition focus:border-brand-primary/40 focus:bg-white dark:focus:bg-brand-dark-bg focus:ring-2 focus:ring-brand-primary/20"
+                        />
+                        {searchQuery && (
+                            <button
+                                type="button"
+                                onClick={() => setSearchQuery('')}
+                                className="absolute left-3 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition"
+                                aria-label="נקה חיפוש"
+                            >
+                                <FaTimes size={14} />
+                            </button>
+                        )}
+                    </div>
+
+                    {/* פאנל תוצאות חיפוש — צף מעל התפריט */}
+                    {searchQuery.trim() && (
+                        <div className="absolute top-full right-0 left-0 mt-2 max-h-[60vh] overflow-y-auto rounded-2xl bg-white dark:bg-brand-dark-surface border border-gray-100 dark:border-brand-dark-border shadow-2xl">
+                            {searchResults.length === 0 ? (
+                                <div className="p-6 text-center">
+                                    <FaSearch className="mx-auto mb-2 text-2xl text-gray-300 dark:text-brand-dark-muted" aria-hidden />
+                                    <p className="text-sm font-bold text-gray-500 dark:text-brand-dark-muted">לא נמצאו תוצאות עבור ״{searchQuery}״</p>
+                                </div>
+                            ) : (
+                                <ul className="divide-y divide-gray-100 dark:divide-brand-dark-border">
+                                    {searchResults.map((item) => {
+                                        const itemAvailableNow = item.is_available_now !== false;
+                                        return (
+                                            <li key={`search-${item.id}`}>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        handleOpenItemModal(item);
+                                                        setSearchQuery('');
+                                                    }}
+                                                    className={`flex w-full items-center gap-3 p-3 text-right transition hover:bg-gray-50 dark:hover:bg-brand-dark-bg ${!itemAvailableNow ? 'opacity-60' : ''}`}
+                                                >
+                                                    <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-gray-100 dark:bg-brand-dark-border">
+                                                        {item.image_url ? (
+                                                            <img src={resolveAssetUrl(item.image_url)} alt="" loading="lazy" className="h-full w-full object-cover" />
+                                                        ) : restaurant?.logo_url ? (
+                                                            <img src={resolveAssetUrl(restaurant.logo_url)} alt="" className="h-full w-full object-contain p-1.5 opacity-30" />
+                                                        ) : null}
+                                                    </div>
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className="truncate text-sm font-bold text-brand-dark dark:text-brand-dark-text">{item.name}</p>
+                                                        <p className="truncate text-xs text-gray-500 dark:text-brand-dark-muted">{item.category_name}</p>
+                                                    </div>
+                                                    <span className="shrink-0 text-sm font-bold text-brand-primary">₪{item.price}</span>
+                                                </button>
+                                            </li>
+                                        );
+                                    })}
+                                </ul>
+                            )}
+                        </div>
+                    )}
+                </div>
+            )}
+
             {/* באנר מבצעים פעילים — שורה אחת, קוביות + גלילה אופקית */}
             {bannerPromotions.length > 0 && (
                 <div className="mb-6 -mx-1 px-1">
@@ -1023,11 +1232,12 @@ export default function MenuPage({ isPreviewMode = false }) {
                 </div>
             )}
 
-            {/* ניווט קטגוריות - למטה במובייל, למעלה בדסקטופ */}
+            {/* ניווט קטגוריות - דבוק למעלה בסגנון Wolt */}
             {menu.length > 0 && (
-                <div className="fixed md:sticky bottom-0 md:top-16 left-0 right-0 z-40 bg-white/95 dark:bg-brand-dark-bg/95 backdrop-blur-md border-t md:border-t-0 md:border-b border-gray-200 dark:border-brand-dark-border shadow-lg pb-safe md:-mx-4 lg:-mx-8 md:mb-6">
-                    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
-                        <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+                <div className="sticky top-16 z-40 bg-white/95 dark:bg-brand-dark-bg/95 backdrop-blur-md border-b border-gray-200 dark:border-brand-dark-border -mx-4 sm:-mx-6 lg:-mx-8 mb-6">
+                    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5">
+                        <div className="flex items-center gap-2">
+                            <div className="flex flex-1 gap-2 overflow-x-auto scrollbar-hide">
                             {menu.map((category) => (
                                 <button
                                     key={category.id}
@@ -1055,13 +1265,14 @@ export default function MenuPage({ isPreviewMode = false }) {
                                     <span className="text-xs opacity-70">({category.items?.length || 0})</span>
                                 </button>
                             ))}
+                            </div>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* תוכן התפריט — ריווח תחתון מינימלי מול שורת קטגוריות קבועה (מובייל) */}
-            <div className="space-y-6 md:space-y-10 max-md:pb-[calc(3.35rem+env(safe-area-inset-bottom,0px))] md:pb-0">
+            {/* תוכן התפריט — ריווח תחתון מול בר הסל הצף */}
+            <div className="space-y-8 md:space-y-10 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))]">
                 {menu.length === 0 ? (
                     <div className="bg-white dark:bg-brand-dark-surface rounded-2xl shadow-sm p-12 text-center">
                         {restaurant?.logo_url && (
@@ -1096,88 +1307,92 @@ export default function MenuPage({ isPreviewMode = false }) {
                                 <div className="hidden sm:block h-px flex-1 bg-gradient-to-l from-transparent via-gray-200 dark:via-brand-dark-border to-transparent"></div>
                             </div>
 
-                            {/* Grid של מנות - סגנון Wolt */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                            {/* רשימת מנות - שורות בסגנון Wolt */}
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
                                 {category.items.length === 0 ? (
                                     <p className="text-gray-400 italic col-span-full text-center py-8">אין פריטים זמינים</p>
                                 ) : (
                                     category.items.map((item) => {
                                         const itemAvailableNow = item.is_available_now !== false;
                                         const itemUnavailableReason = item.unavailable_reason || 'הפריט אינו זמין כרגע';
+                                        const isDrinkCategory = category.name?.includes('שתיי') || category.name?.includes('שתיה') || category.name?.includes('משק');
                                         return (
                                             <div
                                                 key={item.id}
                                                 onClick={() => {
-                                                    handleOpenItemModal(item);
+                                                    handleOpenItemModal({ ...item, category_name: category.name });
                                                 }}
-                                                className={`bg-white dark:bg-brand-dark-surface rounded-xl sm:rounded-2xl shadow-sm transition-all duration-300 overflow-hidden group border border-gray-100 dark:border-brand-dark-border relative ${!itemAvailableNow ? 'cursor-not-allowed opacity-70' : (canOrder || canPreOrder) ? 'cursor-pointer hover:shadow-xl hover:border-brand-primary/30' : 'cursor-not-allowed opacity-80'}`}
+                                                className={`group relative flex items-stretch justify-between gap-3 bg-white dark:bg-brand-dark-surface rounded-2xl border border-gray-100 dark:border-brand-dark-border p-3 shadow-[0_2px_10px_rgba(0,0,0,0.04)] transition-all duration-300 ${!itemAvailableNow ? 'cursor-not-allowed opacity-70' : (canOrder || canPreOrder) ? 'cursor-pointer hover:shadow-[0_8px_24px_rgba(0,0,0,0.08)] hover:border-brand-primary/25' : 'cursor-not-allowed opacity-80'}`}
                                             >
-                                                {/* תמונה / לוגו placeholder — קומפקטי במובייל */}
-                                                <div className="relative h-32 sm:h-44 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-brand-dark-border/50 dark:to-brand-dark-bg overflow-hidden">
-                                                    {item.image_url ? (
-                                                        <img
-                                                            src={resolveAssetUrl(item.image_url)}
-                                                            alt={item.name}
-                                                            className={`w-full h-full object-cover transition-transform duration-500 ${itemAvailableNow ? 'group-hover:scale-110' : 'grayscale'}`}
-                                                        />
-                                                    ) : restaurant?.logo_url ? (
-                                                        <div className="absolute inset-0 flex items-center justify-center p-6">
-                                                            <img
-                                                                src={resolveAssetUrl(restaurant.logo_url)}
-                                                                alt=""
-                                                                className="w-full h-full object-contain opacity-20"
-                                                            />
-                                                        </div>
-                                                    ) : null}
-
-                                                    {/* תווית "אינו זמין כרגע" */}
-                                                    {!itemAvailableNow && (
-                                                        <div className="absolute inset-0 bg-slate-900/55 backdrop-blur-[1px] flex flex-col items-center justify-center text-white text-center px-3">
-                                                            <FaClock className="text-2xl mb-1.5 drop-shadow" />
-                                                            <p className="text-xs sm:text-sm font-black leading-tight drop-shadow">
-                                                                {itemUnavailableReason}
-                                                            </p>
-                                                        </div>
-                                                    )}
-
-                                                    {/* כפתור הוספה מהיר */}
-                                                    {itemAvailableNow && (
-                                                        <div className="absolute bottom-2 left-2 right-2 sm:bottom-3 sm:left-3 sm:right-3">
-                                                            <button
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleOpenItemModal(item);
-                                                                }}
-                                                                disabled={!canOrder && !canPreOrder}
-                                                                className={`w-full text-white py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-sm sm:text-base font-bold shadow-lg transform translate-y-2 opacity-0 transition-all duration-300 flex items-center justify-center gap-1.5 sm:gap-2 ${(canOrder || canPreOrder) ? 'bg-brand-primary hover:bg-brand-secondary group-hover:translate-y-0 group-hover:opacity-100' : 'bg-gray-400 cursor-not-allowed'}`}
-                                                            >
-                                                                <span>הוסף</span>
-                                                                <span className="bg-white/20 px-1.5 sm:px-2 py-0.5 rounded-lg text-xs sm:text-sm">₪{item.price}</span>
-                                                            </button>
-                                                        </div>
-                                                    )}
-                                                </div>
-
-                                                {/* פרטי המנה */}
-                                                <div className="p-3 sm:p-4">
-                                                    <div className="flex justify-between items-start gap-2 mb-1 sm:mb-2">
-                                                        <h3 className={`text-sm sm:text-base font-bold transition-colors line-clamp-2 sm:line-clamp-1 ${itemAvailableNow ? 'text-brand-dark dark:text-brand-dark-text group-hover:text-brand-primary' : 'text-gray-500 dark:text-brand-dark-muted'}`}>
-                                                            {item.name}
-                                                        </h3>
-                                                        <span className={`font-bold whitespace-nowrap text-sm sm:text-base shrink-0 ${itemAvailableNow ? 'text-brand-primary' : 'text-gray-400 line-through'}`}>
-                                                            ₪{item.price}
-                                                        </span>
-                                                    </div>
+                                                {/* פרטי המנה — צד ימין */}
+                                                <div className="flex min-w-0 flex-1 flex-col py-0.5">
+                                                    <h3 className={`text-sm sm:text-base font-bold leading-snug line-clamp-2 transition-colors ${itemAvailableNow ? 'text-brand-dark dark:text-brand-dark-text group-hover:text-brand-primary' : 'text-gray-500 dark:text-brand-dark-muted'}`}>
+                                                        {item.name}
+                                                    </h3>
                                                     {item.description && (
-                                                        <p className="text-gray-500 dark:text-brand-dark-muted text-xs sm:text-sm line-clamp-2 leading-snug sm:leading-relaxed">
+                                                        <p className="mt-1 text-xs sm:text-sm text-gray-500 dark:text-brand-dark-muted line-clamp-2 leading-snug">
                                                             {item.description}
                                                         </p>
                                                     )}
-                                                    {!itemAvailableNow && (
-                                                        <p className="mt-2 text-[11px] font-black text-rose-600 flex items-center gap-1">
-                                                            <FaClock size={10} />
-                                                            {itemUnavailableReason}
-                                                        </p>
+                                                    <div className="mt-auto pt-2 flex flex-wrap items-center gap-2">
+                                                        <span className={`text-sm sm:text-base font-bold whitespace-nowrap ${itemAvailableNow ? 'text-brand-dark dark:text-brand-dark-text' : 'text-gray-400 line-through'}`}>
+                                                            ₪{item.price}
+                                                        </span>
+                                                        {item.tag && itemAvailableNow && (
+                                                            <span className="inline-flex items-center rounded-full bg-brand-cream dark:bg-brand-primary/20 px-2 py-0.5 text-[10px] font-black text-brand-muted dark:text-orange-300">
+                                                                {item.tag}
+                                                            </span>
+                                                        )}
+                                                        {!itemAvailableNow && (
+                                                            <span className="inline-flex items-center gap-1 text-[11px] font-black text-rose-600">
+                                                                <FaClock size={10} />
+                                                                {itemUnavailableReason}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                {/* תמונה — צד שמאל, עם כפתור + בפינה */}
+                                                <div className="relative h-24 w-24 sm:h-28 sm:w-28 shrink-0 self-center">
+                                                    <div className="h-full w-full overflow-hidden rounded-xl bg-gradient-to-br from-gray-50 to-gray-100 dark:from-brand-dark-border/50 dark:to-brand-dark-bg">
+                                                        {item.image_url ? (
+                                                            <img
+                                                                src={resolveAssetUrl(item.image_url)}
+                                                                alt={item.name}
+                                                                loading="lazy"
+                                                                className={`h-full w-full ${isDrinkCategory ? 'object-contain scale-110 bg-white dark:bg-brand-dark-surface' : 'object-cover'} transition-transform duration-500 ${itemAvailableNow ? (isDrinkCategory ? 'group-hover:scale-[1.18]' : 'group-hover:scale-105') : 'grayscale'}`}
+                                                            />
+                                                        ) : restaurant?.logo_url ? (
+                                                            <div className="flex h-full w-full items-center justify-center p-4">
+                                                                <img
+                                                                    src={resolveAssetUrl(restaurant.logo_url)}
+                                                                    alt=""
+                                                                    className="h-full w-full object-contain opacity-20"
+                                                                />
+                                                            </div>
+                                                        ) : null}
+
+                                                        {/* שכבת "אינו זמין" */}
+                                                        {!itemAvailableNow && (
+                                                            <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-slate-900/50 backdrop-blur-[1px]">
+                                                                <FaClock className="text-xl text-white drop-shadow" aria-hidden />
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    {/* כפתור + בפינת התמונה — סגנון Wolt */}
+                                                    {itemAvailableNow && (
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleOpenItemModal({ ...item, category_name: category.name });
+                                                            }}
+                                                            disabled={!canOrder && !canPreOrder}
+                                                            aria-label={`הוספת ${item.name} לסל`}
+                                                            className={`absolute top-0 left-0 z-20 flex h-8 w-8 items-center justify-center rounded-tl-xl rounded-br-xl text-white shadow-md transition-all ${(canOrder || canPreOrder) ? 'bg-brand-primary hover:bg-brand-secondary active:scale-95' : 'bg-gray-400 cursor-not-allowed'}`}
+                                                        >
+                                                            <FaPlus size={12} aria-hidden />
+                                                        </button>
                                                     )}
                                                 </div>
                                             </div>
@@ -1189,6 +1404,13 @@ export default function MenuPage({ isPreviewMode = false }) {
                     ))
                 )}
             </div>
+
+            {/* מודל שינוי מיקום למשלוח — נפתח מתגית המיקום בהירו (העדכון מגיע דרך אירוע user-location-changed) */}
+            <LocationPickerModal
+                open={showLocationModal}
+                onClose={() => setShowLocationModal(false)}
+                onLocationSelected={() => setShowLocationModal(false)}
+            />
 
             <MenuItemModal
                 item={selectedMenuItem}
@@ -1502,18 +1724,26 @@ export default function MenuPage({ isPreviewMode = false }) {
                 </div>
             )}
 
+            {/* בר סל תחתון — סגנון Wolt */}
             {totalCartItems > 0 && (
-                <button
-                    onClick={handleCartClick}
-                    className="fixed bottom-20 md:bottom-6 left-4 md:left-6 z-[60] bg-brand-primary text-white p-4 rounded-full shadow-xl hover:bg-brand-secondary transition-transform active:scale-95"
-                    aria-label="מעבר לסל הקניות"
-                >
-
-                    <FaShoppingBag className="text-2xl" />
-                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold h-6 w-6 flex items-center justify-center rounded-full border-2 border-white">
-                        {totalCartItems}
-                    </span>
-                </button>
+                <div className="pointer-events-none fixed bottom-0 left-0 right-0 z-[60] px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))]">
+                    <button
+                        onClick={handleCartClick}
+                        aria-label="מעבר לסל הקניות"
+                        className="pointer-events-auto mx-auto flex w-full max-w-xl items-center justify-between gap-3 rounded-2xl bg-brand-primary px-4 py-3.5 text-white shadow-[0_8px_30px_rgba(0,0,0,0.25)] transition-all hover:bg-brand-secondary active:scale-[0.99]"
+                    >
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/25 text-sm font-black">
+                            {totalCartItems}
+                        </span>
+                        <span className="flex items-center gap-2 text-sm sm:text-base font-bold">
+                            <FaShoppingBag aria-hidden />
+                            הצגת פריטים
+                        </span>
+                        <span className="text-sm sm:text-base font-black whitespace-nowrap" dir="ltr">
+                            ₪ {cartTotalPrice.toFixed(2)}
+                        </span>
+                    </button>
+                </div>
             )}
 
             {/* Suggestion Modal - before going to cart */}
@@ -1553,7 +1783,7 @@ export default function MenuPage({ isPreviewMode = false }) {
                                                 return (
                                                     <div
                                                         key={item.id}
-                                                        className="flex-shrink-0 w-24 sm:w-28 bg-white dark:bg-brand-dark-surface rounded-xl border border-gray-100 dark:border-brand-dark-border overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer relative"
+                                                        className="flex-shrink-0 w-24 sm:w-28 bg-white dark:bg-brand-dark-surface rounded-2xl border-none overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.04)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.08)] transition-all duration-300 cursor-pointer relative"
                                                         onClick={() => handleSuggestionQuickAdd(item)}
                                                     >
                                                         {itemQty > 0 && (

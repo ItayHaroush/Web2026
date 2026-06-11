@@ -77,7 +77,7 @@ export default function LocationPickerModal({ open, onClose, onLocationSelected 
             if (!numFromGeo) {
                 try {
                     const photonResponse = await fetch(
-                        `https://photon.komoot.io/reverse?lon=${lng}&lat=${lat}&lang=he`
+                        `https://photon.komoot.io/reverse?lon=${lng}&lat=${lat}&lang=default`
                     );
                     const photonData = await photonResponse.json();
 
@@ -160,7 +160,7 @@ export default function LocationPickerModal({ open, onClose, onLocationSelected 
                 // ניסיון 3: Photon (גיבוי וחיפוש נוסף)
                 try {
                     const photonResponse = await fetch(
-                        `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&lang=he&limit=15`
+                        `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&lang=default&limit=15`
                     );
                     const photonData = await photonResponse.json();
 
@@ -314,6 +314,9 @@ export default function LocationPickerModal({ open, onClose, onLocationSelected 
 
         // Save to localStorage
         localStorage.setItem('user_delivery_location', JSON.stringify(locationData));
+
+        // עדכון גלובלי — תגית המיקום בהירו / רכיבים אחרים מאזינים לאירוע
+        window.dispatchEvent(new CustomEvent('user-location-changed', { detail: locationData }));
 
         // Callback to parent
         if (onLocationSelected) {

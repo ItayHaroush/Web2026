@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import api from '../services/apiClient';
-import { getAdminFcmTokenIfPermitted } from '../services/fcm';
+import { getAdminFcmTokenIfPermitted, isNativePushPlatform } from '../services/fcm';
 
 const isDev = import.meta.env.DEV;
 
@@ -29,7 +29,7 @@ function laravelApiErrorMessage(data, fallback) {
  */
 async function syncAdminFcmWithBackend(user, bearerToken) {
     if (!user || !bearerToken) return;
-    if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+    if (!isNativePushPlatform() && (typeof Notification === 'undefined' || Notification.permission !== 'granted')) return;
     try {
         const fcmToken = await getAdminFcmTokenIfPermitted();
         if (!fcmToken) return;

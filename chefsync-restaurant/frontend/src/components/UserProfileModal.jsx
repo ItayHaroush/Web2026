@@ -10,6 +10,7 @@ import {
     requestCustomerFcmToken,
     getCustomerFcmTokenIfPermitted,
     clearStoredCustomerFcmToken,
+    isNativePushPlatform,
 } from '../services/fcm';
 import { FaTimes, FaSignOutAlt, FaEdit, FaRedo, FaPhone, FaArrowRight, FaClock, FaStore, FaCheck, FaMapMarkerAlt, FaPlus, FaTrash, FaStar, FaEnvelope, FaExclamationTriangle, FaLock, FaBell, FaHome, FaCog, FaShoppingBag, FaLightbulb, FaVolumeUp, FaVolumeMute } from 'react-icons/fa';
 import LocationPickerModal from './LocationPickerModal';
@@ -249,7 +250,9 @@ export default function UserProfileModal({ isOpen, onClose }) {
         try {
             if (nextOn) {
                 let token = getStoredCustomerFcmToken();
-                if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+                if (isNativePushPlatform()) {
+                    token = token || (await requestCustomerFcmToken());
+                } else if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
                     token = await requestCustomerFcmToken();
                 } else if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
                     token = token || (await getCustomerFcmTokenIfPermitted());

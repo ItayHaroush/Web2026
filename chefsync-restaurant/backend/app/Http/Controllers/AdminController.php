@@ -556,6 +556,7 @@ class AdminController extends Controller
             'category_id' => 'required|exists:categories,id',
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
+            'tag' => 'nullable|string|max:50',
             'price' => 'required|numeric|min:0',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
             'use_variants' => 'sometimes|boolean',
@@ -604,6 +605,7 @@ class AdminController extends Controller
             'category_id' => $request->category_id,
             'name' => $request->name,
             'description' => $request->description,
+            'tag' => $request->filled('tag') ? $request->input('tag') : null,
             'price' => $request->price,
             'image_url' => $imageUrl,
             'sort_order' => $maxOrder + 1,
@@ -636,6 +638,7 @@ class AdminController extends Controller
             'category_id' => 'sometimes|exists:categories,id',
             'name' => 'sometimes|string|max:255',
             'description' => 'nullable|string',
+            'tag' => 'nullable|string|max:50',
             'price' => 'sometimes|numeric|min:0',
             'is_available' => 'sometimes|boolean',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
@@ -659,6 +662,11 @@ class AdminController extends Controller
         }
 
         $payload = $request->only(['category_id', 'name', 'description', 'price', 'is_available', 'sort_order']);
+
+        if ($request->has('tag')) {
+            $tagValue = $request->input('tag');
+            $payload['tag'] = ($tagValue === '' || $tagValue === null) ? null : $tagValue;
+        }
 
         if ($request->has('use_variants')) {
             $payload['use_variants'] = $request->boolean('use_variants');

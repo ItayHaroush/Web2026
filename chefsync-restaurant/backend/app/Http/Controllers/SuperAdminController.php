@@ -150,7 +150,14 @@ class SuperAdminController extends Controller
      */
     public function listRestaurants(Request $request)
     {
-        $query = Restaurant::withCount(['orders', 'categories', 'menuItems']);
+        $query = Restaurant::withCount([
+            'orders',
+            'categories',
+            'menuItems',
+            'woltImportRequests as pending_wolt_import_requests_count' => function ($q) {
+                $q->where('status', 'pending');
+            },
+        ]);
 
         // סינון לפי סטטוס (active = מאומתות + מנוי פעיל)
         if ($request->has('status')) {
@@ -177,10 +184,24 @@ class SuperAdminController extends Controller
 
         $restaurants = $query->orderBy('created_at', 'desc')->paginate(20);
 
+        // ממוצע דירוג + מספר ביקורות — שאילתה אחת מקובצת לכל העמוד
+        $ratingStats = Order::withoutGlobalScope('tenant')
+            ->whereIn('restaurant_id', $restaurants->getCollection()->pluck('id'))
+            ->whereNotNull('rating')
+            ->where('is_test', false)
+            ->selectRaw('restaurant_id, AVG(rating) as avg_rating, COUNT(*) as reviews_count')
+            ->groupBy('restaurant_id')
+            ->get()
+            ->keyBy('restaurant_id');
+
         // הוספת נתוני הכנסות לכל מסעדה
-        $restaurants->getCollection()->transform(function ($restaurant) {
+        $restaurants->getCollection()->transform(function ($restaurant) use ($ratingStats) {
             $restaurant->total_revenue = (clone $this->orderQuerySuperAdminRestaurant($restaurant->id))->sum('total_amount');
             $restaurant->orders_count = (clone $this->orderQuerySuperAdminRestaurant($restaurant->id))->count();
+
+            $stats = $ratingStats->get($restaurant->id);
+            $restaurant->avg_rating = $stats ? round((float) $stats->avg_rating, 1) : null;
+            $restaurant->reviews_count = $stats ? (int) $stats->reviews_count : 0;
 
             return $restaurant;
         });
@@ -213,6 +234,10 @@ class SuperAdminController extends Controller
 
         $restaurant->total_revenue = (clone $this->orderQuerySuperAdminRestaurant($restaurant->id))->sum('total_amount');
 
+        $ratingStats = $restaurant->getRatingStats();
+        $restaurant->avg_rating = $ratingStats['avg_rating'];
+        $restaurant->reviews_count = $ratingStats['reviews_count'];
+
         $restaurant->users = User::where('restaurant_id', $restaurant->id)
             ->select('id', 'name', 'email', 'phone', 'role', 'is_active')
             ->get();
@@ -225,6 +250,12 @@ class SuperAdminController extends Controller
             'email' => $owner->email,
             'phone' => $owner->phone,
         ] : null;
+
+        // בקשת ייבוא מוולט הממתינה לאישור (האחרונה, אם קיימת)
+        $restaurant->pending_wolt_import_request = \App\Models\WoltImportRequest::where('restaurant_id', $restaurant->id)
+            ->where('status', 'pending')
+            ->orderByDesc('id')
+            ->first();
 
         return response()->json([
             'success' => true,
@@ -372,6 +403,9 @@ class SuperAdminController extends Controller
             /** מגבלת הזמנות חודשית — override ספציפי למסעדה (null = ברירת מחדל מה-tier) */
             'orders_limit' => 'nullable|integer|min:0|max:100000',
             'city' => 'nullable|string|max:255',
+            /** הצגת ממוצע דירוג ביקורות ללקוחות */
+            'show_rating_on_home' => 'sometimes|boolean',
+            'show_rating_on_menu' => 'sometimes|boolean',
         ]);
 
         if (array_key_exists('city', $validated) && $validated['city'] !== null) {
@@ -653,9 +687,30 @@ class SuperAdminController extends Controller
 
         $city = City::findOrFail($id);
 
+        // השמות שמסעדות עשויות להחזיק כרגע בשדה city — לפני שינוי/אישור
+        $oldNames = array_values(array_unique(array_filter([$city->name, $city->hebrew_name])));
+
+        $target = null;
         if (! empty($validated['replace_with_city_id'])) {
             $target = City::findOrFail((int) $validated['replace_with_city_id']);
+        } else {
+            // שינוי שם לעיר מאושרת שכבר קיימת ⇒ מתנהג כהחלפה (מונע כפילות + הפרת unique)
+            $requestedNames = array_values(array_unique(array_filter([
+                isset($validated['name']) ? trim($validated['name']) : null,
+                isset($validated['hebrew_name']) ? trim($validated['hebrew_name']) : null,
+            ])));
 
+            if (! empty($requestedNames)) {
+                $target = City::where('id', '!=', $city->id)
+                    ->where('approval_status', 'approved')
+                    ->where(function ($q) use ($requestedNames) {
+                        $q->whereIn('name', $requestedNames)->orWhereIn('hebrew_name', $requestedNames);
+                    })
+                    ->first();
+            }
+        }
+
+        if ($target) {
             $city->update([
                 'approval_status' => 'rejected',
                 'reviewed_by_user_id' => optional($request->user())->id,
@@ -663,16 +718,22 @@ class SuperAdminController extends Controller
                 'review_note' => $validated['review_note'] ?? 'Replaced with city_id=' . $target->id,
             ]);
 
+            $updatedRestaurants = $this->syncRestaurantsToCity($oldNames, $target);
+
             return response()->json([
                 'success' => true,
-                'message' => 'העיר הוחלפה לעיר קיימת',
+                'message' => 'העיר הוחלפה לעיר קיימת' . ($updatedRestaurants > 0 ? " ({$updatedRestaurants} מסעדות עודכנו)" : ''),
                 'city' => $target,
+                'updated_restaurants' => $updatedRestaurants,
             ]);
         }
+
+        $newName = trim((string) ($validated['hebrew_name'] ?? $validated['name'] ?? '')) ?: ($city->hebrew_name ?: $city->name);
 
         $city->update([
             'name' => $validated['name'] ?? $city->name,
             'hebrew_name' => $validated['hebrew_name'] ?? $city->hebrew_name,
+            'normalized_name' => Str::lower($newName),
             'latitude' => array_key_exists('latitude', $validated) ? $validated['latitude'] : $city->latitude,
             'longitude' => array_key_exists('longitude', $validated) ? $validated['longitude'] : $city->longitude,
             'approval_status' => 'approved',
@@ -681,11 +742,49 @@ class SuperAdminController extends Controller
             'review_note' => $validated['review_note'] ?? null,
         ]);
 
+        $updatedRestaurants = $this->syncRestaurantsToCity($oldNames, $city->fresh());
+
         return response()->json([
             'success' => true,
-            'message' => 'העיר אושרה בהצלחה',
+            'message' => 'העיר אושרה בהצלחה' . ($updatedRestaurants > 0 ? " ({$updatedRestaurants} מסעדות עודכנו)" : ''),
             'city' => $city,
+            'updated_restaurants' => $updatedRestaurants,
         ]);
+    }
+
+    /**
+     * עדכון מסעדות שמחזיקות את שם העיר הישן: שם קנוני חדש + קואורדינטות אם חסרות.
+     */
+    private function syncRestaurantsToCity(array $oldNames, City $target): int
+    {
+        if (empty($oldNames)) {
+            return 0;
+        }
+
+        $canonical = $target->hebrew_name ?: $target->name;
+        $updated = 0;
+
+        $restaurants = Restaurant::withoutGlobalScopes()->whereIn('city', $oldNames)->get();
+        foreach ($restaurants as $restaurant) {
+            $updates = [];
+
+            if ($restaurant->city !== $canonical) {
+                $updates['city'] = $canonical;
+            }
+
+            if (($restaurant->latitude === null || $restaurant->longitude === null)
+                && $target->latitude !== null && $target->longitude !== null) {
+                $updates['latitude'] = $target->latitude;
+                $updates['longitude'] = $target->longitude;
+            }
+
+            if (! empty($updates)) {
+                $restaurant->update($updates);
+                $updated++;
+            }
+        }
+
+        return $updated;
     }
 
     public function rejectCity(Request $request, int $id)

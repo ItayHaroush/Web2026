@@ -1,17 +1,18 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import { useCart } from '../context/CartContext';
 import { useCustomer } from '../context/CustomerContext';
-import logo from '../images/ChefSyncLogoIcon.png';
 import { COMPANY_LEGAL_NAME, PRODUCT_NAME, PRODUCT_TAGLINE_HE } from '../constants/brand';
 import ThemeToggle from '../components/ThemeToggle';
 import UserProfileModal from '../components/UserProfileModal';
 import ActiveOrdersModal from '../components/ActiveOrdersModal';
 import OrderHistoryModal from '../components/OrderHistoryModal';
+import FeedbackWidget from '../components/FeedbackWidget';
 import orderService from '../services/orderService';
-import { FaUser, FaShoppingBag, FaBars, FaTimes } from 'react-icons/fa';
+import { FaUser, FaShoppingBag, FaBars, FaTimes, FaMapMarkerAlt, FaSearch } from 'react-icons/fa';
+import LocationPickerModal from '../components/LocationPickerModal';
 import { ACTIVE_ORDERS_STORAGE_CHANGED } from '../utils/activeOrdersStorage';
 
 /**
@@ -30,6 +31,9 @@ export function CustomerLayout({ children }) {
     const [showOrdersModal, setShowOrdersModal] = useState(false);
     const [ordersModalData, setOrdersModalData] = useState([]);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    /** אייקון מיקום בנאבבר — מופיע רק אחרי גלילה מטה, לחיצה פותחת מודל שינוי מיקום */
+    const [isScrolled, setIsScrolled] = useState(false);
+    const [showLocationPicker, setShowLocationPicker] = useState(false);
     /** ספירה שמתעדכנת כש-localStorage של הזמנות פעילות משתנה (גם מעמוד סטטוס בלי ניווט) */
     const [activeOrdersStorageRev, setActiveOrdersStorageRev] = useState(0);
     const modalOrderIdsRef = useRef([]);
@@ -38,6 +42,14 @@ export function CustomerLayout({ children }) {
         const bump = () => setActiveOrdersStorageRev((n) => n + 1);
         window.addEventListener(ACTIVE_ORDERS_STORAGE_CHANGED, bump);
         return () => window.removeEventListener(ACTIVE_ORDERS_STORAGE_CHANGED, bump);
+    }, []);
+
+    // מעקב גלילה — מציג את אייקון המיקום בנאבבר רק אחרי גלילה מטה
+    useEffect(() => {
+        const onScroll = () => setIsScrolled(window.scrollY > 120);
+        onScroll();
+        window.addEventListener('scroll', onScroll, { passive: true });
+        return () => window.removeEventListener('scroll', onScroll);
     }, []);
 
     // חישוב מספר הזמנות מ-localStorage
@@ -154,6 +166,15 @@ export function CustomerLayout({ children }) {
     const menuPath = tenantId ? `/${tenantId}/menu` : '/';
     const cartPath = tenantId ? `/${tenantId}/cart` : '/';
 
+    /** אייקון חיפוש בנאבבר — רק בעמוד התפריט, אחרי גלילה; לחיצה פותחת את שורת החיפוש של התפריט */
+    const location = useLocation();
+    const isMenuPage = /\/menu\/?$/.test(location.pathname);
+    const showNavbarSearch = isMenuPage && isScrolled;
+    const openMenuSearch = () => {
+        setMobileMenuOpen(false);
+        window.dispatchEvent(new Event('open-menu-search'));
+    };
+
     /** קישור ניהול — רק כשמנהל/צוות מחוברים ל-Admin (לא ללקוחות אורחים) */
     const showAdminEntryInMenu = !adminAuthLoading && !!adminUser;
     const adminDashboardPath = adminUser?.is_super_admin ? '/super-admin/dashboard' : '/admin/dashboard';
@@ -164,21 +185,46 @@ export function CustomerLayout({ children }) {
             <header className="fixed top-0 inset-x-0 z-50 bg-brand-dark shadow-md border-b border-gray-700 overflow-visible pt-[env(safe-area-inset-top,0px)]">
                 <div className="max-w-6xl mx-auto px-3 py-2 sm:px-6 sm:py-4">
                     <div className="flex items-center justify-between gap-2 min-h-[2.75rem] sm:min-h-0">
-                        <Link
-                            to="/"
-                            className="flex min-w-0 shrink items-center max-w-[52%] sm:max-w-none"
-                            onClick={() => setMobileMenuOpen(false)}
-                        >
-                            <img
-                                src={logo}
-                                alt={PRODUCT_NAME}
-                                className="h-8 w-auto max-h-9 max-w-[min(160px,42vw)] object-contain object-right drop-shadow-md brightness-0 invert sm:h-12 sm:max-h-none sm:max-w-none sm:origin-center sm:scale-125"
-                            />
-                        </Link>
+                        <div className="flex min-w-0 shrink items-center gap-2 max-w-[58%] sm:max-w-none">
+                            <Link
+                                to="/"
+                                className="flex min-w-0 shrink items-center"
+                                onClick={() => setMobileMenuOpen(false)}
+                                aria-label={PRODUCT_NAME}
+                            >
+                                {/* לוגו TakeEat — לבן + כתום, חד וברור על הרקע הכהה */}
+                                <span dir="ltr" className="select-none whitespace-nowrap text-[1.6rem] sm:text-[2rem] font-black leading-none tracking-tight drop-shadow-md">
+                                    <span className="text-white">Take</span><span className="text-brand-primary">Eat</span>
+                                </span>
+                            </Link>
+
+                            {/* אייקון מיקום — מופיע בנאבבר בגלילה מטה, פותח מודל שינוי מיקום */}
+                            <button
+                                type="button"
+                                onClick={() => setShowLocationPicker(true)}
+                                aria-label="שינוי מיקום למשלוח"
+                                className={`shrink-0 rounded-full p-2 text-white/85 transition-opacity duration-300 hover:bg-white/10 hover:text-brand-primary ${isScrolled ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
+                            >
+                                <FaMapMarkerAlt size={16} />
+                            </button>
+                        </div>
 
                         {/* דסקטופ / טאבלט — כל הניווט בשורה */}
                         <nav className="hidden md:flex gap-4 lg:gap-6 items-center shrink-0">
                             <ThemeToggle />
+                            {/* אייקון חיפוש — מופיע בגלילה בעמוד התפריט, פותח את שורת החיפוש */}
+                            {isMenuPage && (
+                                <button
+                                    type="button"
+                                    onClick={openMenuSearch}
+                                    aria-label="חיפוש בתפריט"
+                                    tabIndex={showNavbarSearch ? 0 : -1}
+                                    aria-hidden={!showNavbarSearch}
+                                    className={`rounded-full p-2 text-white/85 transition-opacity duration-300 hover:bg-white/10 hover:text-brand-primary ${showNavbarSearch ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
+                                >
+                                    <FaSearch size={15} />
+                                </button>
+                            )}
                             <button
                                 type="button"
                                 onClick={openUserModal}
@@ -186,11 +232,11 @@ export function CustomerLayout({ children }) {
                                 aria-label="פרופיל משתמש"
                             >
                                 {isRecognized ? (
-                                    <div className="w-8 h-8 rounded-full bg-brand-primary flex items-center justify-center text-white font-bold text-sm shadow-md group-hover:ring-2 group-hover:ring-brand-primary/50 transition">
+                                    <div className="w-8 h-8 rounded-full bg-brand-primary flex items-center justify-center text-white font-bold text-sm shadow-md ring-2 ring-transparent group-hover:ring-brand-primary/50 transition duration-200">
                                         {customer?.name?.charAt(0)?.toUpperCase() || <FaUser size={14} />}
                                     </div>
                                 ) : (
-                                    <div className="w-8 h-8 rounded-full border-2 border-white/60 flex items-center justify-center text-white/60 group-hover:border-brand-primary group-hover:text-brand-primary transition">
+                                    <div className="w-8 h-8 rounded-full border-2 border-white/60 flex items-center justify-center text-white/60 group-hover:border-brand-primary group-hover:text-brand-primary transition-colors duration-200">
                                         <FaUser size={14} />
                                     </div>
                                 )}
@@ -199,7 +245,7 @@ export function CustomerLayout({ children }) {
                                 <button
                                     type="button"
                                     onClick={handleOrdersClick}
-                                    className="relative text-white/80 hover:text-brand-primary transition"
+                                    className="relative text-white/80 hover:text-brand-primary transition-colors duration-200"
                                     aria-label="הזמנות פעילות"
                                 >
                                     <FaShoppingBag size={18} />
@@ -241,6 +287,19 @@ export function CustomerLayout({ children }) {
 
                         {/* מובייל — אייקונים צפופים + המבורגר (בורר עיצוב בתוך המודל) */}
                         <div className="flex md:hidden items-center gap-1.5 shrink-0">
+                            {/* אייקון חיפוש — מופיע בגלילה בעמוד התפריט, פותח את שורת החיפוש */}
+                            {isMenuPage && (
+                                <button
+                                    type="button"
+                                    onClick={openMenuSearch}
+                                    aria-label="חיפוש בתפריט"
+                                    tabIndex={showNavbarSearch ? 0 : -1}
+                                    aria-hidden={!showNavbarSearch}
+                                    className={`rounded-full p-2 text-white/85 transition-opacity duration-300 hover:bg-white/10 hover:text-brand-primary ${showNavbarSearch ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
+                                >
+                                    <FaSearch size={15} />
+                                </button>
+                            )}
                             <button
                                 type="button"
                                 onClick={openUserModal}
@@ -365,11 +424,9 @@ export function CustomerLayout({ children }) {
                                     )}
                                 </nav>
                                 <div className="flex justify-center pt-2">
-                                    <img
-                                        src={logo}
-                                        alt=""
-                                        className="h-10 w-auto max-w-[200px] object-contain opacity-50 brightness-0 invert"
-                                    />
+                                    <span dir="ltr" className="select-none text-2xl font-black leading-none tracking-tight opacity-60">
+                                        <span className="text-white">Take</span><span className="text-brand-primary">Eat</span>
+                                    </span>
                                 </div>
                             </div>
                         </div>
@@ -398,11 +455,21 @@ export function CustomerLayout({ children }) {
                 </div>
             </footer>
 
+            {/* מודל שינוי מיקום — נפתח מאייקון המיקום בנאבבר */}
+            <LocationPickerModal
+                open={showLocationPicker}
+                onClose={() => setShowLocationPicker(false)}
+                onLocationSelected={() => setShowLocationPicker(false)}
+            />
+
             {/* User Profile Modal */}
             <UserProfileModal isOpen={isUserModalOpen} onClose={handleModalClose} />
 
             {/* Order History Modal */}
             <OrderHistoryModal isOpen={isOrderHistoryOpen} onClose={closeOrderHistory} />
+
+            {/* ווידג'ט משוב צף — לקוחות רשומים עם הזמנה שנמסרה */}
+            <FeedbackWidget />
 
             {/* Active Orders Modal */}
             <ActiveOrdersModal

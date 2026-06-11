@@ -19,6 +19,7 @@ import {
     FaShoppingCart,
     FaCoins,
     FaChartBar,
+    FaCommentDots,
 } from 'react-icons/fa';
 import { resolveSuperAdminPageKey } from '../utils/pageViewMap';
 import { sendSuperAdminPageView } from '../services/analyticsBeacon';
@@ -98,6 +99,11 @@ export default function SuperAdminLayout({ children }) {
             label: 'הודעות כלליות',
             path: '/super-admin/announcements',
             icon: <FaBullhorn />,
+        },
+        {
+            label: 'משוב משתמשים',
+            path: '/super-admin/feedback',
+            icon: <FaCommentDots />,
         },
         {
             label: 'חגים ומועדים',

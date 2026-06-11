@@ -35,7 +35,7 @@ class CustomerController extends Controller
         $restaurantIds = $orders->pluck('restaurant_id')->unique();
         $restaurants = Restaurant::withoutGlobalScope('tenant')
             ->whereIn('id', $restaurantIds)
-            ->get(['id', 'name', 'tenant_id', 'logo_url'])
+            ->get(['id', 'name', 'tenant_id', 'logo_url', 'menu_hero_background_url'])
             ->keyBy('id');
 
         $items = $orders->getCollection()->map(function ($order) use ($restaurants) {
@@ -44,7 +44,7 @@ class CustomerController extends Controller
                 'id' => $order->id,
                 'restaurant_name' => $restaurant?->name,
                 'restaurant_tenant_id' => $restaurant?->tenant_id,
-                'restaurant_logo_url' => $restaurant?->logo_url,
+                'restaurant_logo_url' => $restaurant?->logo_url ?: $restaurant?->menu_hero_background_url,
                 'status' => $order->status,
                 'cancellation_reason' => $order->cancellation_reason,
                 'total_amount' => $order->total_amount,

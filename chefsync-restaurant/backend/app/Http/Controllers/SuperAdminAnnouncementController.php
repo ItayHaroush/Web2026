@@ -33,12 +33,12 @@ class SuperAdminAnnouncementController extends Controller
         $validated = $request->validate([
             'title' => 'required|string|max:150',
             'body' => 'nullable|string|max:1000',
-            'image' => 'nullable|image|max:2048',
+            'image' => 'required_if:position,hero_carousel|nullable|image|max:4096',
             'link_url' => 'nullable|url|max:500',
             'start_at' => 'required|date',
             'end_at' => 'required|date|after:start_at',
             'is_active' => 'boolean',
-            'position' => 'in:top_banner,popup,hero_overlay',
+            'position' => 'in:top_banner,popup,hero_overlay,hero_carousel',
             'priority' => 'integer|min:0|max:100',
         ]);
 
@@ -80,13 +80,13 @@ class SuperAdminAnnouncementController extends Controller
         $validated = $request->validate([
             'title' => 'sometimes|string|max:150',
             'body' => 'nullable|string|max:1000',
-            'image' => 'nullable|image|max:2048',
+            'image' => 'nullable|image|max:4096',
             'remove_image' => 'boolean',
             'link_url' => 'nullable|url|max:500',
             'start_at' => 'sometimes|date',
             'end_at' => 'sometimes|date|after:start_at',
             'is_active' => 'boolean',
-            'position' => 'in:top_banner,popup,hero_overlay',
+            'position' => 'in:top_banner,popup,hero_overlay,hero_carousel',
             'priority' => 'integer|min:0|max:100',
         ]);
 

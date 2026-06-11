@@ -33,7 +33,8 @@ import {
     FaUserPlus,
     FaBell,
     FaTimes,
-    FaMask
+    FaMask,
+    FaStar
 } from 'react-icons/fa';
 import { HiGlobeAlt, HiLocationMarker } from 'react-icons/hi';
 
@@ -68,6 +69,9 @@ export default function HomePage() {
 
     // Feature Carousel Logic
     const [activeFeature, setActiveFeature] = useState(0);
+
+    // קרוסלת פרסומות בהירו (מנוהל בסופר-אדמין)
+    const [heroAdIndex, setHeroAdIndex] = useState(0);
 
     // חיפוש מנות
     const doMenuSearch = useCallback(async (q) => {
@@ -157,6 +161,18 @@ export default function HomePage() {
             .catch(err => console.warn('Failed to load announcements', err));
     }, []);
 
+    // תמונות פרסומת להירו (position=hero_carousel) — עם פולבק להירו הקיים
+    const heroAds = announcements.filter(a => a.position === 'hero_carousel' && a.image_url);
+    const activeHeroAdIndex = heroAds.length > 0 ? heroAdIndex % heroAds.length : 0;
+
+    useEffect(() => {
+        if (heroAds.length < 2) return undefined;
+        const interval = setInterval(() => {
+            setHeroAdIndex(prev => (prev + 1) % heroAds.length);
+        }, 5000);
+        return () => clearInterval(interval);
+    }, [heroAds.length]);
+
     // טען מיקום שמור למשלוח
     useEffect(() => {
         try {
@@ -224,6 +240,12 @@ export default function HomePage() {
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         return R * c;
     };
+
+    // תווית עברית לעיר הנבחרת (value של ה-select הוא name באנגלית)
+    const selectedCityRow = cities.find(
+        (c) => c && typeof c !== 'string' && c.name === selectedCity
+    );
+    const selectedCityLabel = selectedCityRow?.hebrew_name || selectedCity;
 
     const loadData = async () => {
         try {
@@ -347,7 +369,7 @@ export default function HomePage() {
                         <div className="p-6">
                             <h3 className="font-black text-xl text-gray-900 mb-2">{popupAnnouncement.title}</h3>
                             {popupAnnouncement.body && <p className="text-gray-500 text-sm leading-relaxed mb-5">{popupAnnouncement.body}</p>}
-                            <button onClick={() => setDismissedPopup(true)} className="w-full bg-brand-primary text-white font-bold py-3 rounded-xl hover:opacity-90 transition-opacity cursor-pointer">הבנתי</button>
+                            <button onClick={() => setDismissedPopup(true)} className="w-full bg-brand-primary text-white font-bold text-lg py-3 rounded-[1.25rem] shadow-sm hover:shadow-md active:scale-95 transition-all duration-200 cursor-pointer tracking-wide">הבנתי</button>
                         </div>
                     </div>
                 </div>
@@ -384,13 +406,57 @@ export default function HomePage() {
             {/* Hero — צמוד לנב; בדסקטופ נמשך מאחורי הנאבבר */}
             <div className="relative -mx-4 sm:-mx-6 lg:-mx-8 mt-0 sm:-mt-[5.75rem] mb-6">
                 <div className="relative min-h-[16rem] h-auto sm:h-[calc(460px+5.75rem)] sm:min-h-0 bg-gradient-to-br from-brand-dark via-brand-primary to-brand-secondary overflow-hidden rounded-b-2xl sm:rounded-none">
-                    {/* אפקט עומק וגרדיאנט מודרני (Mesh Gradient Style) */}
-                    <div className="absolute inset-0 opacity-30">
-                        <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[80%] bg-white/20 rounded-full blur-[120px] animate-pulse"></div>
-                        <div className="absolute bottom-[-10%] left-[-5%] w-[40%] h-[70%] bg-brand-accent/20 rounded-full blur-[100px]"></div>
-                        {/* תבנית נקודות עדינה לרקע */}
-                        <div className="absolute inset-0 opacity-[0.1]" style={{ backgroundImage: 'radial-gradient(#fff 1px, transparent 1px)', backgroundSize: '30px 30px' }}></div>
-                    </div>
+                    {heroAds.length > 0 ? (
+                        <>
+                            {/* קרוסלת פרסומות — תמונות מהסופר-אדמין */}
+                            {heroAds.map((ad, i) => {
+                                const img = (
+                                    <img
+                                        src={ad.image_url}
+                                        alt={ad.title || ''}
+                                        className="w-full h-full object-cover"
+                                        loading={i === 0 ? 'eager' : 'lazy'}
+                                    />
+                                );
+                                return (
+                                    <div
+                                        key={ad.id}
+                                        className={`absolute inset-0 transition-opacity duration-700 ${i === activeHeroAdIndex ? 'opacity-100 z-0' : 'opacity-0 pointer-events-none'}`}
+                                    >
+                                        {ad.link_url ? (
+                                            <a href={ad.link_url} target="_blank" rel="noopener noreferrer" className="block w-full h-full">
+                                                {img}
+                                            </a>
+                                        ) : img}
+                                    </div>
+                                );
+                            })}
+                            {/* הצללה עדינה למעלה לקריאות הכפתורים */}
+                            <div className="pointer-events-none absolute inset-x-0 top-0 h-24 sm:h-36 bg-gradient-to-b from-black/40 to-transparent z-10"></div>
+                            {/* נקודות ניווט */}
+                            {heroAds.length > 1 && (
+                                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5">
+                                    {heroAds.map((ad, i) => (
+                                        <button
+                                            key={ad.id}
+                                            type="button"
+                                            aria-label={`פרסומת ${i + 1}`}
+                                            onClick={() => setHeroAdIndex(i)}
+                                            className={`h-1.5 rounded-full transition-all cursor-pointer ${i === activeHeroAdIndex ? 'w-5 bg-white' : 'w-1.5 bg-white/50 hover:bg-white/80'}`}
+                                        />
+                                    ))}
+                                </div>
+                            )}
+                        </>
+                    ) : (
+                        /* אפקט עומק וגרדיאנט מודרני (Mesh Gradient Style) */
+                        <div className="absolute inset-0 opacity-30">
+                            <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[80%] bg-white/20 rounded-full blur-[120px] animate-pulse"></div>
+                            <div className="absolute bottom-[-10%] left-[-5%] w-[40%] h-[70%] bg-brand-accent/20 rounded-full blur-[100px]"></div>
+                            {/* תבנית נקודות עדינה לרקע */}
+                            <div className="absolute inset-0 opacity-[0.1]" style={{ backgroundImage: 'radial-gradient(#fff 1px, transparent 1px)', backgroundSize: '30px 30px' }}></div>
+                        </div>
+                    )}
 
                     {/* שורה עליונה: אדמין (ימין ב-RTL) + מיקום קומפקטי (שמאל ב-RTL) — בלי flex-1 על המיקום */}
                     <div className="relative z-30 flex w-full flex-nowrap items-center justify-between gap-2 px-4 pb-1 pt-1 sm:absolute sm:inset-x-0 sm:top-0 sm:gap-3 sm:p-6 sm:pb-0 sm:pt-[calc(5.75rem+1.5rem)]">
@@ -398,9 +464,9 @@ export default function HomePage() {
                             type="button"
                             onClick={handleAdminLogin}
                             aria-label="כניסת מנהלים"
-                            className="shrink-0 bg-white/95 backdrop-blur-md text-brand-dark p-2 sm:px-4 sm:py-2.5 rounded-xl shadow-lg border border-white/80 hover:shadow-xl transition-all flex items-center gap-1.5 text-sm font-semibold cursor-pointer"
+                            className="shrink-0 inline-flex items-center gap-1.5 rounded-full border border-white/30 bg-white/15 text-white p-2 sm:px-4 sm:py-2.5 text-sm font-bold shadow-lg backdrop-blur-md transition hover:bg-white/25 cursor-pointer"
                         >
-                            <FaUserShield className="text-brand-primary shrink-0 text-base sm:text-base" />
+                            <FaUserShield className="text-white shrink-0 text-base sm:text-base" />
                             <span className="hidden sm:inline">כניסת מנהלים</span>
                         </button>
 
@@ -408,9 +474,9 @@ export default function HomePage() {
                             <button
                                 type="button"
                                 onClick={() => setShowLocationModal(true)}
-                                className="shrink min-w-0 max-w-[11rem] sm:max-w-[13rem] inline-flex items-center gap-1 sm:gap-1.5 backdrop-blur-md bg-white/90 text-brand-dark px-2 py-1.5 sm:px-3 sm:py-2 rounded-full text-xs sm:text-sm hover:bg-white shadow-md font-semibold transition-all cursor-pointer group"
+                                className="shrink min-w-0 max-w-[11rem] sm:max-w-[13rem] inline-flex items-center gap-1 sm:gap-1.5 rounded-full border border-white/30 bg-white/15 text-white px-2 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm font-bold shadow-lg backdrop-blur-md transition hover:bg-white/25 cursor-pointer group"
                             >
-                                <HiLocationMarker className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-brand-primary group-hover:animate-bounce shrink-0" />
+                                <HiLocationMarker className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-white group-hover:animate-bounce shrink-0" />
                                 <span className="truncate min-w-0 text-right">
                                     {deliveryLocation?.fullAddress ||
                                         (deliveryLocation?.street && deliveryLocation?.cityName
@@ -421,7 +487,8 @@ export default function HomePage() {
                         )}
                     </div>
 
-                    {/* תוכן מרכזי — מובייל: זרימה יחסית; sm+: ממורכז אבסולוט */}
+                    {/* תוכן מרכזי (פולבק כשאין פרסומות) — מובייל: זרימה יחסית; sm+: ממורכז אבסולוט */}
+                    {heroAds.length === 0 && (
                     <div className="relative z-10 flex flex-col items-center justify-center px-4 pb-6 pt-2 sm:absolute sm:inset-0 sm:pb-0 sm:pt-0 sm:flex sm:items-center sm:justify-center">
                         <div className="text-center w-full max-w-4xl flex flex-col items-center sm:px-6">
 
@@ -443,20 +510,20 @@ export default function HomePage() {
                             {/* קרוסלת לוגואים */}
                             {restaurants.filter(r => r.logo_url).length > 0 && (
                                 <div className="w-full max-w-5xl overflow-hidden relative group/ticker pb-1 sm:pb-2">
-                                    <p className="text-[9px] sm:text-xs font-black text-white uppercase tracking-[0.25em] sm:tracking-[0.4em] mb-2 sm:mb-4 drop-shadow-sm opacity-80">
-                                        הנבחרת של TakeEat
+                                    <p className="text-[9px] sm:text-xs font-black text-white tracking-[0.25em] sm:tracking-[0.4em] mb-2 sm:mb-4 drop-shadow-sm opacity-80">
+                                        מסעדות בסביבה שלך
                                     </p>
                                     <div className="animate-ticker flex gap-6 sm:gap-16 items-center py-1 sm:py-2">
                                         {[...restaurants.filter(r => r.logo_url), ...restaurants.filter(r => r.logo_url), ...restaurants.filter(r => r.logo_url)].map((r, i) => (
                                             <div
                                                 key={`${r.id}-${i}`}
-                                                className="flex-shrink-0 transition-all duration-300 hover:scale-110 cursor-pointer group/logo bg-white/95 backdrop-blur-sm p-1 sm:p-2.5 rounded-xl sm:rounded-2xl shadow-lg border border-white/20"
+                                                className="flex-shrink-0 w-10 h-10 sm:w-16 sm:h-16 flex items-center justify-center overflow-hidden transition-all duration-300 hover:scale-110 cursor-pointer group/logo bg-white/95 backdrop-blur-sm p-1 sm:p-2 rounded-full shadow-[0_4px_16px_rgba(0,0,0,0.06)] border-none"
                                                 onClick={() => handleRestaurantClick(r)}
                                             >
                                                 <img
                                                     src={resolveAssetUrl(r.logo_url)}
                                                     alt={r.name}
-                                                    className="h-7 sm:h-12 w-auto object-contain opacity-100 transition-transform"
+                                                    className="max-h-full max-w-full object-contain rounded-full transition-transform"
                                                 />
                                             </div>
                                         ))}
@@ -465,6 +532,7 @@ export default function HomePage() {
                             )}
                         </div>
                     </div>
+                    )}
                 </div>
 
                 {/* חיפוש/סינון צף */}
@@ -611,7 +679,7 @@ export default function HomePage() {
                 {/* כותרת רשימת מסעדות */}
                 <div className="flex items-center justify-between gap-2">
                     <h2 className="text-lg sm:text-3xl font-black text-brand-dark dark:text-brand-dark-text tracking-tight">
-                        {selectedCity ? `מסעדות ב${selectedCity}` : 'כל המסעדות'}
+                        {selectedCity ? `מסעדות ב${selectedCityLabel}` : 'כל המסעדות'}
                     </h2>
                     {userLocation && (
                         <div className="flex items-center gap-1.5 text-xs font-bold text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-brand-dark-border px-3 py-1.5 rounded-full uppercase tracking-wider">
@@ -636,12 +704,32 @@ export default function HomePage() {
                             <div
                                 key={restaurant.id ?? restaurant.tenant_id ?? `restaurant-${index}`}
                                 onClick={() => handleRestaurantClick(restaurant)}
-                                className="bg-white dark:bg-brand-dark-surface rounded-xl sm:rounded-2xl shadow-sm hover:shadow-2xl transition-all duration-300 cursor-pointer group overflow-hidden border border-gray-100 dark:border-brand-dark-border hover:border-brand-primary/30"
+                                className="bg-white dark:bg-brand-dark-surface rounded-[1.25rem] shadow-[0_2px_12px_rgba(0,0,0,0.04)] sm:shadow-[0_8px_24px_rgba(0,0,0,0.06)] hover:shadow-[0_12px_32px_rgba(0,0,0,0.08)] hover:-translate-y-1 transition-all duration-300 cursor-pointer group overflow-hidden border-none"
                                 style={{ animationDelay: `${index * 50}ms` }}
                             >
-                                {/* תמונה/לוגו — קומפקטי במובייל כמו MenuPage */}
+                                {/* תמונה — הירו כתמונה ראשית כשקיים, לוגו כתג שקוף בפינה; אחרת לוגו ממורכז */}
                                 <div className="relative h-32 sm:h-44 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-brand-dark-border/50 dark:to-brand-dark-bg overflow-hidden">
-                                    {restaurant.logo_url ? (
+                                    {restaurant.menu_hero_background_url ? (
+                                        <>
+                                            <img
+                                                src={resolveAssetUrl(restaurant.menu_hero_background_url)}
+                                                alt={restaurant.name}
+                                                loading="lazy"
+                                                className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                            />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent" />
+                                            {restaurant.logo_url && (
+                                                <div className="absolute bottom-3 left-3 sm:bottom-4 sm:left-4 w-10 h-10 sm:w-14 sm:h-14 rounded-xl bg-white/50 backdrop-blur-sm border border-white/40 shadow-lg p-1 sm:p-1.5">
+                                                    <img
+                                                        src={resolveAssetUrl(restaurant.logo_url)}
+                                                        alt=""
+                                                        loading="lazy"
+                                                        className="w-full h-full object-contain"
+                                                    />
+                                                </div>
+                                            )}
+                                        </>
+                                    ) : restaurant.logo_url ? (
                                         <>
                                             <div
                                                 className="absolute inset-0 opacity-20"
@@ -699,6 +787,15 @@ export default function HomePage() {
                                             {restaurant.name}
                                         </h3>
                                         <div className="flex shrink-0 flex-col items-end gap-1">
+                                            {restaurant.show_rating_on_home && restaurant.avg_rating != null && (
+                                                <span className="flex items-center gap-1 rounded-md bg-amber-50 dark:bg-amber-500/10 border border-amber-200/60 dark:border-amber-500/20 px-1.5 py-0.5 text-[10px] sm:text-xs font-black text-amber-600 dark:text-amber-400">
+                                                    <FaStar className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                                                    {Number(restaurant.avg_rating).toFixed(1)}
+                                                    {restaurant.reviews_count > 0 && (
+                                                        <span className="font-bold text-amber-500/70">({restaurant.reviews_count})</span>
+                                                    )}
+                                                </span>
+                                            )}
                                             {restaurant.is_approved === false && (
                                                 <span className="rounded-md bg-amber-500 px-1.5 py-0.5 text-[8px] sm:text-[9px] font-black uppercase tracking-wide text-white">
                                                     ממתין לאישור

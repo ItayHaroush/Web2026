@@ -152,8 +152,9 @@ class HypSubscriptionCallbackController extends Controller
             }
         }
 
-        // ת״ז מ-HYP UserId בחזרה מוצלחת — חובה לחלק מהמסופים בחיוב Soft (הודעת שגוייה "cvv2/id" לעיתים = ת״ז)
-        $rawUserId = $params['hyp_user_id'] ?? '';
+        // ת"ז מה-redirect: ב-Enterprise מומלץ לשמור personalId (fallback ל-UserId)
+        // חובה לחלק מהמסופים בחיוב Soft (שגיאה נפוצה: "cvv2/id שגוי").
+        $rawUserId = $params['personal_id'] ?: ($params['hyp_user_id'] ?? '');
         $normalizedNationalId = Restaurant::normalizeHypSoftNationalId($rawUserId);
 
         Log::info('[HYP-SUB] hyp_user_id from redirect', [
@@ -170,7 +171,7 @@ class HypSubscriptionCallbackController extends Controller
         } else {
             // אזהרה חמורה: אין ת״ז ב-redirect — חיובי Soft עתידיים עלולים להיכשל ב-CCode=6
             // (הfallback ב-chargeSoft יטפל, אך עדיף לתקן את המסוף ב-HYP לכפות UserId אמיתי)
-            Log::warning('[HYP-SUB] No usable UserId in redirect — hyp_soft_national_id NOT saved. Future Soft charges will rely on CCode=6 fallback.', [
+            Log::warning('[HYP-SUB] No usable personalId/UserId in redirect — hyp_soft_national_id NOT saved. Future Soft charges may fail with CCode=6.', [
                 'restaurant_id' => $restaurant->id,
                 'raw_user_id'   => $rawUserId,
             ]);

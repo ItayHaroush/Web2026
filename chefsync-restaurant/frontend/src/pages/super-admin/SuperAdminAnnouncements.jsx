@@ -7,6 +7,7 @@ const POSITION_LABELS = {
     top_banner: 'באנר עליון',
     popup: 'פופאפ בכניסה',
     hero_overlay: 'הירו — שכבה עליונה',
+    hero_carousel: 'הירו — קרוסלת פרסומות',
 };
 
 const EMPTY_FORM = {
@@ -285,7 +286,13 @@ export default function SuperAdminAnnouncements() {
                                         <option value="top_banner">באנר עליון</option>
                                         <option value="popup">פופאפ בכניסה</option>
                                         <option value="hero_overlay">הירו — שכבה</option>
+                                        <option value="hero_carousel">הירו — קרוסלת פרסומות</option>
                                     </select>
+                                    {form.position === 'hero_carousel' && (
+                                        <p className="text-[11px] text-gray-400 mt-1 leading-snug">
+                                            התמונה תוצג כקרוסלה במקום ההירו בדף הבית (חובה להעלות תמונה, מומלץ רוחבית ~1600×600)
+                                        </p>
+                                    )}
                                 </div>
                                 <div>
                                     <label className="block text-sm font-bold text-gray-700 mb-1">עדיפות</label>

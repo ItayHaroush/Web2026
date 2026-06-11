@@ -47,7 +47,7 @@ export default {
           accent: '#FBBF24',
           /** טקסט מודגש על רקע שמנת/כתום בהיר (תואם למיתוג) */
           muted: '#78350F',
-          light: '#FFF7ED',
+          light: '#F8FAFC',
           cream: '#FEF3C7',
           surface: '#FFFFFF',
           success: '#04AA6D',

@@ -210,6 +210,7 @@ export default function RestaurantsListPage() {
 function RestaurantCard({ restaurant }) {
     const slug = restaurant.slug || restaurant.tenant_id;
     const href = `/r/${slug}`;
+    const hero = resolveAssetUrl(restaurant.menu_hero_background_url);
     const logo = resolveAssetUrl(restaurant.logo_url);
 
     return (
@@ -223,12 +224,26 @@ function RestaurantCard({ restaurant }) {
                         ממתין לאישור
                     </span>
                 )}
-                {logo ? (
+                {hero ? (
+                    <>
+                        <img
+                            src={hero}
+                            alt={restaurant.name}
+                            loading="lazy"
+                            className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                        {logo && (
+                            <span className="absolute bottom-2 left-2 z-10 flex h-12 w-12 items-center justify-center rounded-xl bg-white/50 backdrop-blur-sm border border-white/40 shadow-md p-1">
+                                <img src={logo} alt="" loading="lazy" className="max-h-full max-w-full object-contain" />
+                            </span>
+                        )}
+                    </>
+                ) : logo ? (
                     <img
                         src={logo}
                         alt={restaurant.name}
                         loading="lazy"
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        className="max-h-[70%] max-w-[70%] object-contain group-hover:scale-105 transition-transform duration-300"
                     />
                 ) : (
                     <FaUtensils className="text-5xl text-gray-300" />

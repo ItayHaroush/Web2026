@@ -11,6 +11,7 @@ class MenuItemAddonGroup extends Model
     protected $fillable = [
         'menu_item_id',
         'tenant_id',
+        'wolt_option_group_id',
         'name',
         'selection_type',
         'min_selections',
@@ -30,6 +31,7 @@ class MenuItemAddonGroup extends Model
         'sort_order' => 'integer',
         'first_addon_unit_free' => 'boolean',
         'allow_half_placement' => 'boolean',
+        'wolt_option_group_id' => 'string',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];

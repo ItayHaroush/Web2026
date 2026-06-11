@@ -96,6 +96,7 @@ export default function NewRestaurantsPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                         {restaurants.map(r => {
                             const slug = r.slug || r.tenant_id;
+                            const hero = resolveAssetUrl(r.menu_hero_background_url);
                             const logo = resolveAssetUrl(r.logo_url);
                             return (
                                 <Link
@@ -113,13 +114,27 @@ export default function NewRestaurantsPage() {
                                             חדש
                                         </span>
                                     </div>
-                                    <div className="aspect-[16/10] bg-gray-100 dark:bg-brand-dark-bg flex items-center justify-center overflow-hidden">
-                                        {logo ? (
+                                    <div className="relative aspect-[16/10] bg-gray-100 dark:bg-brand-dark-bg flex items-center justify-center overflow-hidden">
+                                        {hero ? (
+                                            <>
+                                                <img
+                                                    src={hero}
+                                                    alt={r.name}
+                                                    loading="lazy"
+                                                    className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                                />
+                                                {logo && (
+                                                    <span className="absolute bottom-2 left-2 z-10 flex h-12 w-12 items-center justify-center rounded-xl bg-white/50 backdrop-blur-sm border border-white/40 shadow-md p-1">
+                                                        <img src={logo} alt="" loading="lazy" className="max-h-full max-w-full object-contain" />
+                                                    </span>
+                                                )}
+                                            </>
+                                        ) : logo ? (
                                             <img
                                                 src={logo}
                                                 alt={r.name}
                                                 loading="lazy"
-                                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                                className="max-h-[70%] max-w-[70%] object-contain group-hover:scale-105 transition-transform duration-300"
                                             />
                                         ) : (
                                             <FaUtensils className="text-5xl text-gray-300" />

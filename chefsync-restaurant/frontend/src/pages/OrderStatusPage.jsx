@@ -12,6 +12,7 @@ import api from '../services/apiClient';
 import CountdownTimer from '../components/CountdownTimer';
 import { getOrderDisplayPaymentMethod } from '../utils/orderPaymentLabels';
 import { notifyActiveOrdersStorageChanged } from '../utils/activeOrdersStorage';
+import { resolveAssetUrl } from '../utils/assets';
 import SoundManager from '../services/SoundManager';
 
 /**
@@ -437,8 +438,9 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
             { value: ORDER_STATUS.DELIVERED, label: 'נמסר' },
         ];
 
+    // ‎-1 = ההזמנה עוד לא התקבלה (pending/awaiting_payment) — שום שלב לא דולק עד שהמסעדה מאשרת
     const currentStepIndex = statusSteps.findIndex((s) => s.value === order.status);
-    const safeStepIndex = currentStepIndex < 0 ? 0 : currentStepIndex;
+    const safeStepIndex = currentStepIndex;
     const isCancelled = order.status === 'cancelled';
     const isFutureOrder = !!order.scheduled_for;
     const isPendingPayment = order.payment_status === 'pending' && order.payment_method === 'credit_card';
@@ -491,6 +493,18 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
                 <h1 className="text-2xl sm:text-3xl font-bold text-brand-primary mb-2">
                     {isFutureOrder ? 'הזמנה עתידית' : 'סטטוס הזמנה'}
                 </h1>
+                {restaurant?.name && (
+                    <div className="mb-1 flex items-center justify-center gap-2">
+                        {restaurant.logo_url && (
+                            <img
+                                src={resolveAssetUrl(restaurant.logo_url)}
+                                alt={restaurant.name}
+                                className="h-7 w-7 rounded-full object-contain bg-white border border-gray-200 dark:border-brand-dark-border shadow-sm"
+                            />
+                        )}
+                        <p className="text-base sm:text-lg font-black text-gray-900 dark:text-brand-dark-text">{restaurant.name}</p>
+                    </div>
+                )}
                 <p className="text-sm sm:text-base text-gray-600 dark:text-brand-dark-muted">הזמנה #{order.id}</p>
             </div>
 
@@ -819,7 +833,7 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
                                     <div
                                         className="absolute top-5 right-5 h-1 bg-gradient-to-l from-brand-secondary to-brand-primary rounded-full transition-all duration-500"
                                         style={{
-                                            width: `calc(${(safeStepIndex / (statusSteps.length - 1)) * 100}% - 2.5rem)`,
+                                            width: `calc(${(Math.max(safeStepIndex, 0) / (statusSteps.length - 1)) * 100}% - 2.5rem)`,
                                             zIndex: 1
                                         }}
                                     ></div>
@@ -827,26 +841,32 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
                                     {statusSteps.map((step, index) => (
                                         <div key={step.value} className="flex flex-col items-center flex-1 relative" style={{ zIndex: 2 }}>
                                             <div
-                                                className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm mb-2 border-2 transition-all ${index <= safeStepIndex
+                                                className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm mb-2 border-2 transition-all duration-500 ${index <= safeStepIndex
                                                     ? 'bg-gradient-to-br from-brand-primary to-brand-secondary text-white border-transparent shadow-lg'
                                                     : 'bg-white dark:bg-brand-dark-bg text-gray-400 dark:text-gray-500 border-gray-300 dark:border-gray-600'
-                                                    }`}
+                                                    } ${index === safeStepIndex ? 'ring-4 ring-brand-primary/25 animate-pulse' : ''}`}
                                             >
                                                 {index < safeStepIndex ? <FaCheckCircle /> : index + 1}
                                             </div>
-                                            <p className={`text-xs text-center font-medium ${index <= safeStepIndex ? 'text-gray-900 dark:text-brand-dark-text' : 'text-gray-500 dark:text-brand-dark-muted'
+                                            <p className={`text-xs text-center font-bold ${index === safeStepIndex
+                                                ? 'text-brand-primary'
+                                                : index < safeStepIndex
+                                                    ? 'text-gray-900 dark:text-brand-dark-text'
+                                                    : 'text-gray-500 dark:text-brand-dark-muted font-medium'
                                                 }`}>{step.label}</p>
                                         </div>
                                     ))}
                                 </div>
                             </div>
 
-                            {/* סטטוס נוכחי */}
-                            <div className={`mt-6 p-5 rounded-xl text-center ${statusColor} border-2`}>
-                                <p className="text-xl sm:text-2xl font-black">
-                                    {statusLabel}
-                                </p>
-                            </div>
+                            {/* סטטוס נוכחי — רק לסטטוסים שלא מיוצגים בסרגל ההתקדמות (ממתין/ממתין לתשלום/עתידית) */}
+                            {currentStepIndex < 0 && (
+                                <div className={`mt-6 p-5 rounded-xl text-center ${statusColor} border-2`}>
+                                    <p className="text-xl sm:text-2xl font-black">
+                                        {statusLabel}
+                                    </p>
+                                </div>
+                            )}
                         </>
                     )}
 

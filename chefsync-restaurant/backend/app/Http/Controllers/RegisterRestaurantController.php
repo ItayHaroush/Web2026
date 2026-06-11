@@ -9,9 +9,11 @@ use App\Models\Restaurant;
 use App\Models\RestaurantPayment;
 use App\Models\RestaurantSubscription;
 use App\Models\User;
+use App\Models\WoltImportRequest;
 use App\Services\PhoneValidationService;
 use App\Services\CitySearchService;
 use App\Services\SystemErrorReporter;
+use App\Services\WoltMenuImportService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -44,6 +46,9 @@ class RegisterRestaurantController extends Controller
             'verification_code' => 'required|string',
             'latitude' => 'nullable|numeric|between:-90,90',
             'longitude' => 'nullable|numeric|between:-180,180',
+            'wolt_url' => 'nullable|string|max:500',
+            // JSON שנבנה בדף בחירת המוצרים: { mode, slug, summary, categories, restaurant_meta }
+            'wolt_selection' => 'nullable|string',
         ]);
 
         // אימות קוד טלפון לבעלים
@@ -208,6 +213,28 @@ class RegisterRestaurantController extends Controller
                 'yearly_price' => $yearlyPrice,
             ]);
 
+            // ייבוא מוולט לא מתבצע ישירות בהרשמה — נוצרת בקשת ייבוא הממתינה לאישור סופר-אדמין.
+            $woltImportRequest = null;
+            $importWarning = null;
+            if (! empty($validated['wolt_url'])) {
+                try {
+                    $woltImportRequest = $this->createWoltImportRequest(
+                        $restaurant,
+                        $validated['wolt_url'],
+                        $validated['wolt_selection'] ?? null
+                    );
+                } catch (\Throwable $importException) {
+                    Log::warning('Wolt import request creation failed during registration', [
+                        'restaurant_id' => $restaurant->id,
+                        'tenant_id' => $restaurant->tenant_id,
+                        'wolt_url' => $validated['wolt_url'],
+                        'error' => $importException->getMessage(),
+                    ]);
+
+                    $importWarning = 'ההרשמה הושלמה, אך לא הצלחנו לשמור את בקשת הייבוא מוולט. אפשר לפנות לתמיכה או להזין תפריט ידנית.';
+                }
+            }
+
             $owner = User::create([
                 'restaurant_id' => $restaurant->id,
                 'name' => $validated['owner_name'],
@@ -301,6 +328,13 @@ class RegisterRestaurantController extends Controller
                 'owner' => $owner,
                 'subscription' => $subscription,
                 'payment' => $payment,
+                'wolt_import_request' => $woltImportRequest ? [
+                    'id' => $woltImportRequest->id,
+                    'status' => $woltImportRequest->status,
+                    'selection_mode' => $woltImportRequest->selection_mode,
+                    'summary' => $woltImportRequest->summary,
+                ] : null,
+                'wolt_import_error' => $importWarning,
             ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -320,6 +354,63 @@ class RegisterRestaurantController extends Controller
                 'message' => 'שגיאה בהרשמה: ' . $e->getMessage(),
             ], 500);
         }
+    }
+
+    /**
+     * יצירת בקשת ייבוא מוולט הממתינה לאישור סופר-אדמין.
+     * $rawSelection — JSON מדף בחירת המוצרים (או null אם המשתמש דילג).
+     */
+    private function createWoltImportRequest(Restaurant $restaurant, string $woltUrl, ?string $rawSelection): WoltImportRequest
+    {
+        $service = app(WoltMenuImportService::class);
+
+        $selection = null;
+        if (! empty($rawSelection)) {
+            $decoded = json_decode($rawSelection, true);
+            if (is_array($decoded)) {
+                $selection = $decoded;
+            }
+        }
+
+        $slug = null;
+        try {
+            $slug = $service->extractSlug($woltUrl);
+        } catch (\Throwable $e) {
+            $slug = is_string($selection['slug'] ?? null) ? $selection['slug'] : null;
+        }
+
+        $normalizedCategories = null;
+        $normalizedMeta = [];
+        if (is_array($selection['categories'] ?? null) && ! empty($selection['categories'])) {
+            $normalized = $service->normalizeDraft(
+                $selection['categories'],
+                is_array($selection['restaurant_meta'] ?? null) ? $selection['restaurant_meta'] : []
+            );
+            $normalizedCategories = ! empty($normalized['categories']) ? $normalized['categories'] : null;
+            $normalizedMeta = $normalized['restaurant_meta'];
+        }
+
+        $selectionMode = ($selection['mode'] ?? null) === 'selected' && $normalizedCategories ? 'selected' : 'all';
+
+        $summary = is_array($selection['summary'] ?? null) ? $selection['summary'] : null;
+        if (! $summary && $normalizedCategories) {
+            $summary = [
+                'categories_count' => count($normalizedCategories),
+                'items_count' => collect($normalizedCategories)->sum(fn ($cat) => count($cat['items'] ?? [])),
+            ];
+        }
+
+        return WoltImportRequest::create([
+            'restaurant_id' => $restaurant->id,
+            'tenant_id' => $restaurant->tenant_id,
+            'wolt_url' => $woltUrl,
+            'slug' => $slug,
+            'selection_mode' => $selectionMode,
+            'categories' => $normalizedCategories,
+            'restaurant_meta' => ! empty($normalizedMeta) ? $normalizedMeta : null,
+            'summary' => $summary,
+            'status' => 'pending',
+        ]);
     }
 
     private function formatPhoneForDisplay(string $raw): string

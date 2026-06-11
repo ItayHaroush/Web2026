@@ -20,6 +20,7 @@ use App\Http\Controllers\MenuController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\OrderEventController;
 use App\Http\Controllers\PaymentSettingsController;
+use App\Http\Controllers\PlatformFeedbackController;
 use App\Http\Controllers\PaymentTerminalController;
 use App\Http\Controllers\PrintAgentController;
 use App\Http\Controllers\PrinterController;
@@ -38,6 +39,7 @@ use App\Http\Controllers\SuperAdminAnnouncementController;
 use App\Http\Controllers\SuperAdminHolidayController;
 use App\Http\Controllers\SuperAdminNotificationController;
 use App\Http\Controllers\SuperAdminSettingsController;
+use App\Http\Controllers\SuperAdminWoltImportController;
 use App\Http\Controllers\HolidayScheduleController;
 use Illuminate\Support\Facades\Route;
 
@@ -71,6 +73,11 @@ Route::prefix('auth')->group(function () {
 // הרשמת מסעדה חדשה (ציבורי)
 Route::post('/register-restaurant', [RegisterRestaurantController::class, 'store'])->name('register.restaurant');
 
+// תצוגה מקדימה של תפריט וולט — לדף בחירת מוצרים בתהליך ההרשמה (ציבורי, מוגבל קצב)
+Route::post('/wolt-import/preview', [\App\Http\Controllers\PublicWoltImportController::class, 'preview'])
+    ->middleware('throttle:15,1')
+    ->name('wolt-import.preview');
+
 // ערים - ציבורי (לשימוש בטופס הרשמה ואזורי משלוח)
 Route::get('/cities', [SuperAdminController::class, 'getCities'])->name('cities.list');
 Route::get('/cities/search', [CityController::class, 'search'])->name('cities.search');
@@ -97,6 +104,9 @@ Route::prefix('super-admin')->middleware(['auth:sanctum', 'super_admin'])->group
     Route::post('/restaurants/{id}/approve', [SuperAdminController::class, 'approveRestaurant'])->name('super-admin.restaurants.approve');
     Route::post('/restaurants/{id}/revoke-approval', [SuperAdminController::class, 'revokeApproval'])->name('super-admin.restaurants.revoke');
     Route::patch('/restaurants/{id}/feature-overrides', [SuperAdminController::class, 'updateFeatureOverrides'])->name('super-admin.restaurants.feature-overrides');
+    Route::post('/restaurants/{id}/wolt-import/preview', [SuperAdminWoltImportController::class, 'preview'])->name('super-admin.restaurants.wolt-import.preview');
+    Route::post('/restaurants/{id}/wolt-import/apply', [SuperAdminWoltImportController::class, 'apply'])->name('super-admin.restaurants.wolt-import.apply');
+    Route::post('/wolt-import-requests/{id}/reject', [SuperAdminWoltImportController::class, 'rejectRequest'])->name('super-admin.wolt-import-requests.reject');
 
     // ערים בהמתנה לאישור
     Route::get('/cities/pending', [SuperAdminController::class, 'pendingCities'])->name('super-admin.cities.pending');
@@ -255,6 +265,11 @@ Route::prefix('super-admin')->middleware(['auth:sanctum', 'super_admin'])->group
     Route::put('/announcements/{id}', [SuperAdminAnnouncementController::class, 'update'])->name('super-admin.announcements.update');
     Route::delete('/announcements/{id}', [SuperAdminAnnouncementController::class, 'destroy'])->name('super-admin.announcements.destroy');
     Route::patch('/announcements/{id}/toggle', [SuperAdminAnnouncementController::class, 'toggle'])->name('super-admin.announcements.toggle');
+
+    // משוב משתמשי קצה (פלטפורמה)
+    Route::get('/feedback', [PlatformFeedbackController::class, 'index'])->name('super-admin.feedback.index');
+    Route::patch('/feedback/{id}', [PlatformFeedbackController::class, 'update'])->name('super-admin.feedback.update');
+    Route::delete('/feedback/{id}', [PlatformFeedbackController::class, 'destroy'])->name('super-admin.feedback.destroy');
 
     // ============================================
     // חגים ומועדים (Israeli Holidays)
@@ -638,6 +653,12 @@ Route::prefix('customer')->group(function () {
 
         Route::get('/notification-restaurants', [CustomerNotificationPreferenceController::class, 'index'])->name('customer.notification-restaurants.index');
         Route::put('/notification-restaurants', [CustomerNotificationPreferenceController::class, 'update'])->name('customer.notification-restaurants.update');
+
+        // משוב פלטפורמה — לקוחות רשומים עם לפחות הזמנה אחת שנמסרה
+        Route::get('/feedback/eligibility', [PlatformFeedbackController::class, 'eligibility'])->name('customer.feedback.eligibility');
+        Route::post('/feedback', [PlatformFeedbackController::class, 'store'])
+            ->middleware('throttle:10,1')
+            ->name('customer.feedback.store');
     });
 });
 

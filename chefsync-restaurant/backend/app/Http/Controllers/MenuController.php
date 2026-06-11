@@ -199,6 +199,7 @@ class MenuController extends Controller
                                 'category_id' => $item->category_id ?? ($category->id ?? null),
                                 'name' => $item->name,
                                 'description' => $item->description,
+                                'tag' => $item->tag,
                                 'price' => (float) $item->price,
                                 'image_url' => $item->image_url,
                                 'variants' => $variants,

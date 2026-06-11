@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import SuperAdminLayout from '../../layouts/SuperAdminLayout';
@@ -41,6 +41,7 @@ import {
     FaTabletAlt,
     FaQrcode,
     FaCrown,
+    FaCloudDownloadAlt,
     FaClipboardList,
     FaPrint,
     FaWhatsapp,
@@ -51,7 +52,8 @@ import {
     FaToggleOn,
     FaToggleOff,
     FaSpinner,
-    FaChevronDown
+    FaChevronDown,
+    FaStar
 } from 'react-icons/fa';
 import { TIER_LABELS } from '../../utils/tierUtils';
 
@@ -732,6 +734,11 @@ export default function SuperAdminDashboard() {
                                                             <FaMask size={10} /> דמו
                                                         </span>
                                                     )}
+                                                    {Number(restaurant.pending_wolt_import_requests_count || 0) > 0 && (
+                                                        <span className="px-2 py-0.5 rounded-md text-[10px] font-black bg-cyan-100 text-cyan-700 border border-cyan-200 flex items-center gap-1">
+                                                            <FaCloudDownloadAlt size={10} /> בקשת ייבוא וולט
+                                                        </span>
+                                                    )}
                                                 </div>
                                                 <p className="text-sm font-bold text-gray-400 mb-3 flex items-center gap-1">
                                                     @{restaurant.tenant_id}
@@ -771,6 +778,13 @@ export default function SuperAdminDashboard() {
                                                 <p className="text-xs font-bold text-gray-500 mt-0.5">
                                                     {restaurant.orders_count} הזמנות שבוצעו
                                                 </p>
+                                                {restaurant.avg_rating != null && (
+                                                    <p className="text-xs font-bold text-amber-500 mt-0.5 flex items-center gap-1 lg:justify-end">
+                                                        <FaStar size={11} />
+                                                        {Number(restaurant.avg_rating).toFixed(1)}
+                                                        <span className="text-gray-400">({restaurant.reviews_count} ביקורות)</span>
+                                                    </p>
+                                                )}
                                             </div>
 
                                             <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
@@ -1298,36 +1312,53 @@ function RestaurantDetailModal({ restaurant: initialRestaurant, onClose, onImper
     const [savingOwnerPhone, setSavingOwnerPhone] = useState(false);
     const [ordersLimit, setOrdersLimit] = useState('');
     const [savingOrdersLimit, setSavingOrdersLimit] = useState(false);
+    const [savingRatingToggle, setSavingRatingToggle] = useState(null);
     const [showCitySection, setShowCitySection] = useState(false);
     const [showPhoneSection, setShowPhoneSection] = useState(false);
     const [showActivitySection, setShowActivitySection] = useState(false);
+    const [woltUrl, setWoltUrl] = useState('');
+    const [woltPreviewLoading, setWoltPreviewLoading] = useState(false);
+    const [woltApplyLoading, setWoltApplyLoading] = useState(false);
+    const [woltImportDraft, setWoltImportDraft] = useState(null);
+    const [showWoltSection, setShowWoltSection] = useState(false);
+    // בקשת ייבוא מוולט שממתינה לאישור (נוצרה בהרשמה) — מזהה הבקשה שטעונה לעריכה
+    const [woltRequestId, setWoltRequestId] = useState(null);
+    const [woltRejectLoading, setWoltRejectLoading] = useState(false);
+
+    const pendingWoltRequest = restaurant?.pending_wolt_import_request || null;
+
+    // פתיחה אוטומטית של אזור הוולט כשיש בקשה ממתינה
+    useEffect(() => {
+        if (pendingWoltRequest) setShowWoltSection(true);
+    }, [pendingWoltRequest]);
+
+    const fetchDetails = useCallback(async () => {
+        try {
+            const res = await api.get(`/super-admin/restaurants/${initialRestaurant.id}`, {
+                headers: getAuthHeaders(),
+            });
+            if (res.data.success) {
+                const r = res.data.restaurant;
+                setRestaurant(r);
+                setOwnerActivityDate(
+                    r.owner_activity_started_at
+                        ? String(r.owner_activity_started_at).slice(0, 10)
+                        : ''
+                );
+                setCityInput(r.city ?? '');
+                setOwnerContactPhone(r.owner_contact_phone ?? '');
+                setOrdersLimit(r.orders_limit != null ? String(r.orders_limit) : '');
+            }
+        } catch (err) {
+            console.error('Failed to fetch restaurant details:', err);
+        } finally {
+            setLoading(false);
+        }
+    }, [initialRestaurant.id, getAuthHeaders]);
 
     useEffect(() => {
-        const fetchDetails = async () => {
-            try {
-                const res = await api.get(`/super-admin/restaurants/${initialRestaurant.id}`, {
-                    headers: getAuthHeaders(),
-                });
-                if (res.data.success) {
-                    const r = res.data.restaurant;
-                    setRestaurant(r);
-                    setOwnerActivityDate(
-                        r.owner_activity_started_at
-                            ? String(r.owner_activity_started_at).slice(0, 10)
-                            : ''
-                    );
-                    setCityInput(r.city ?? '');
-                    setOwnerContactPhone(r.owner_contact_phone ?? '');
-                    setOrdersLimit(r.orders_limit != null ? String(r.orders_limit) : '');
-                }
-            } catch (err) {
-                console.error('Failed to fetch restaurant details:', err);
-            } finally {
-                setLoading(false);
-            }
-        };
         fetchDetails();
-    }, [initialRestaurant.id]);
+    }, [fetchDetails]);
 
     useEffect(() => {
         const fetchCities = async () => {
@@ -1409,6 +1440,26 @@ function RestaurantDetailModal({ restaurant: initialRestaurant, onClose, onImper
         }
     };
 
+    const toggleRatingDisplay = async (field) => {
+        setSavingRatingToggle(field);
+        try {
+            const res = await api.put(
+                `/super-admin/restaurants/${restaurant.id}`,
+                { [field]: !restaurant[field] },
+                { headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' } }
+            );
+            if (res.data.success) {
+                setRestaurant(prev => ({ ...prev, ...res.data.restaurant }));
+                toast.success('הגדרת תצוגת הדירוג נשמרה');
+            }
+        } catch (err) {
+            console.error(err);
+            toast.error(err.response?.data?.message || 'שגיאה בשמירה');
+        } finally {
+            setSavingRatingToggle(null);
+        }
+    };
+
     const saveOrdersLimit = async (clear) => {
         setSavingOrdersLimit(true);
         try {
@@ -1428,6 +1479,237 @@ function RestaurantDetailModal({ restaurant: initialRestaurant, onClose, onImper
             toast.error(err.response?.data?.message || 'שגיאה בשמירה');
         } finally {
             setSavingOrdersLimit(false);
+        }
+    };
+
+    const mapCategoriesToDraft = (categories) => (categories || []).map((cat) => ({
+        name: cat.name || '',
+        items: (cat.items || []).map((item) => ({
+            wolt_external_id: item.wolt_external_id || '',
+            name: item.name || '',
+            description: item.description || '',
+            price: String(item.price ?? ''),
+            image_url: item.image_url || '',
+            option_groups: (item.option_groups || []).map((group) => ({
+                wolt_option_group_id: group.wolt_option_group_id || '',
+                name: group.name || '',
+                selection_type: group.selection_type || 'multiple',
+                min_selections: Number(group.min_selections ?? 0),
+                max_selections: group.max_selections == null ? null : Number(group.max_selections),
+                is_required: Boolean(group.is_required),
+                sort_order: Number(group.sort_order ?? 0),
+                addons: (group.addons || []).map((addon) => ({
+                    wolt_option_id: addon.wolt_option_id || '',
+                    name: addon.name || '',
+                    price_delta: Number(addon.price_delta ?? 0),
+                    is_default: Boolean(addon.is_default),
+                    sort_order: Number(addon.sort_order ?? 0),
+                })),
+            })),
+        })),
+    }));
+
+    const handlePreviewWolt = async (urlOverride = null, requestId = null) => {
+        const value = (urlOverride ?? woltUrl).trim();
+        if (!value) {
+            toast.error('יש להזין לינק מסעדה מ-Wolt');
+            return;
+        }
+
+        setWoltPreviewLoading(true);
+        try {
+            const res = await api.post(
+                `/super-admin/restaurants/${restaurant.id}/wolt-import/preview`,
+                { wolt_url: value },
+                { headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' } }
+            );
+
+            if (res.data?.success) {
+                setWoltImportDraft({
+                    slug: res.data?.data?.slug || '',
+                    summary: res.data?.data?.summary || null,
+                    restaurant_meta: res.data?.data?.restaurant_meta || {},
+                    categories: mapCategoriesToDraft(res.data?.data?.categories),
+                });
+                setWoltRequestId(requestId);
+                toast.success('התפריט נטען בהצלחה. אפשר לערוך ואז לייבא.');
+            }
+        } catch (err) {
+            console.error(err);
+            setWoltImportDraft(null);
+            toast.error(err.response?.data?.message || 'שגיאה בטעינת תפריט מ-Wolt');
+        } finally {
+            setWoltPreviewLoading(false);
+        }
+    };
+
+    /** טעינת בקשת ייבוא שממתינה לאישור — מהבחירה ששמר בעל המסעדה, או מהלינק אם אין בחירה */
+    const handleLoadWoltRequest = () => {
+        if (!pendingWoltRequest) return;
+
+        setWoltUrl(pendingWoltRequest.wolt_url || '');
+
+        if (Array.isArray(pendingWoltRequest.categories) && pendingWoltRequest.categories.length > 0) {
+            setWoltImportDraft({
+                slug: pendingWoltRequest.slug || '',
+                summary: pendingWoltRequest.summary || null,
+                restaurant_meta: pendingWoltRequest.restaurant_meta || {},
+                categories: mapCategoriesToDraft(pendingWoltRequest.categories),
+            });
+            setWoltRequestId(pendingWoltRequest.id);
+            toast.success('הבקשה נטענה עם המוצרים שבחר בעל המסעדה. אפשר לערוך ואז לייבא.');
+            return;
+        }
+
+        // אין בחירה שמורה (ייבוא מלא) — מושכים את התפריט מהלינק
+        handlePreviewWolt(pendingWoltRequest.wolt_url || '', pendingWoltRequest.id);
+    };
+
+    const handleRejectWoltRequest = async () => {
+        if (!pendingWoltRequest) return;
+        if (!window.confirm('לדחות את בקשת הייבוא מוולט? התפריט לא ייובא.')) return;
+
+        setWoltRejectLoading(true);
+        try {
+            const res = await api.post(
+                `/super-admin/wolt-import-requests/${pendingWoltRequest.id}/reject`,
+                {},
+                { headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' } }
+            );
+            if (res.data?.success) {
+                toast.success('בקשת הייבוא נדחתה');
+                setWoltRequestId(null);
+                setWoltImportDraft(null);
+                await fetchDetails();
+            }
+        } catch (err) {
+            console.error(err);
+            toast.error(err.response?.data?.message || 'שגיאה בדחיית הבקשה');
+        } finally {
+            setWoltRejectLoading(false);
+        }
+    };
+
+    const updateCategoryName = (categoryIndex, value) => {
+        setWoltImportDraft((prev) => {
+            if (!prev) return prev;
+            const categories = [...prev.categories];
+            categories[categoryIndex] = { ...categories[categoryIndex], name: value };
+            return { ...prev, categories };
+        });
+    };
+
+    const updateItemField = (categoryIndex, itemIndex, field, value) => {
+        setWoltImportDraft((prev) => {
+            if (!prev) return prev;
+            const categories = [...prev.categories];
+            const items = [...(categories[categoryIndex]?.items || [])];
+            items[itemIndex] = { ...items[itemIndex], [field]: value };
+            categories[categoryIndex] = { ...categories[categoryIndex], items };
+            return { ...prev, categories };
+        });
+    };
+
+    const removeCategory = (categoryIndex) => {
+        setWoltImportDraft((prev) => {
+            if (!prev) return prev;
+            const categories = prev.categories.filter((_, idx) => idx !== categoryIndex);
+            return { ...prev, categories };
+        });
+    };
+
+    const addCategory = () => {
+        setWoltImportDraft((prev) => {
+            if (!prev) return prev;
+            return {
+                ...prev,
+                categories: [...prev.categories, { name: '', items: [] }],
+            };
+        });
+    };
+
+    const addItem = (categoryIndex) => {
+        setWoltImportDraft((prev) => {
+            if (!prev) return prev;
+            const categories = [...prev.categories];
+            const items = [...(categories[categoryIndex]?.items || [])];
+            items.push({ name: '', description: '', price: '', image_url: '' });
+            categories[categoryIndex] = { ...categories[categoryIndex], items };
+            return { ...prev, categories };
+        });
+    };
+
+    const removeItem = (categoryIndex, itemIndex) => {
+        setWoltImportDraft((prev) => {
+            if (!prev) return prev;
+            const categories = [...prev.categories];
+            const items = (categories[categoryIndex]?.items || []).filter((_, idx) => idx !== itemIndex);
+            categories[categoryIndex] = { ...categories[categoryIndex], items };
+            return { ...prev, categories };
+        });
+    };
+
+    const handleApplyWoltImport = async () => {
+        if (!woltImportDraft || !Array.isArray(woltImportDraft.categories) || woltImportDraft.categories.length === 0) {
+            toast.error('אין נתונים לייבוא');
+            return;
+        }
+
+        setWoltApplyLoading(true);
+        try {
+            const payloadCategories = woltImportDraft.categories.map((cat) => ({
+                name: String(cat.name || '').trim(),
+                items: (cat.items || []).map((item) => ({
+                    wolt_external_id: String(item.wolt_external_id || '').trim() || null,
+                    name: String(item.name || '').trim(),
+                    description: String(item.description || '').trim() || null,
+                    price: Number(item.price),
+                    image_url: String(item.image_url || '').trim() || null,
+                    option_groups: (item.option_groups || []).map((group) => ({
+                        wolt_option_group_id: String(group.wolt_option_group_id || '').trim() || null,
+                        name: String(group.name || '').trim(),
+                        selection_type: group.selection_type === 'single' ? 'single' : 'multiple',
+                        min_selections: Number(group.min_selections ?? 0),
+                        max_selections: group.max_selections == null || group.max_selections === '' ? null : Number(group.max_selections),
+                        is_required: Boolean(group.is_required),
+                        sort_order: Number(group.sort_order ?? 0),
+                        addons: (group.addons || []).map((addon) => ({
+                            wolt_option_id: String(addon.wolt_option_id || '').trim() || null,
+                            name: String(addon.name || '').trim(),
+                            price_delta: Number(addon.price_delta ?? 0),
+                            is_default: Boolean(addon.is_default),
+                            sort_order: Number(addon.sort_order ?? 0),
+                        })),
+                    })),
+                })),
+            }));
+
+            const res = await api.post(
+                `/super-admin/restaurants/${restaurant.id}/wolt-import/apply`,
+                {
+                    wolt_url: woltUrl.trim() || null,
+                    request_id: woltRequestId,
+                    restaurant_meta: woltImportDraft.restaurant_meta || {},
+                    categories: payloadCategories,
+                },
+                { headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' } }
+            );
+
+            if (res.data?.success) {
+                const summary = res.data?.data?.import_result;
+                toast.success(`ייבוא נשמר: ${summary?.categories_created || 0} קטגוריות חדשות, ${summary?.categories_updated || 0} קטגוריות עודכנו, ${summary?.items_created || 0} מוצרים חדשים, ${summary?.items_updated || 0} מוצרים עודכנו, ${summary?.addon_groups_created || 0} קבוצות תוספות, ${summary?.addons_created || 0} תוספות`);
+                if (woltRequestId) {
+                    toast.success('בקשת הייבוא של בעל המסעדה אושרה');
+                }
+                setWoltImportDraft(null);
+                setWoltRequestId(null);
+                await fetchDetails();
+            }
+        } catch (err) {
+            console.error(err);
+            toast.error(err.response?.data?.message || 'שגיאה בייבוא התפריט');
+        } finally {
+            setWoltApplyLoading(false);
         }
     };
 
@@ -1738,6 +2020,51 @@ function RestaurantDetailModal({ restaurant: initialRestaurant, onClose, onImper
                                 </div>
                             </div>
 
+                            {/* דירוג וביקורות — ממוצע + שליטה בתצוגה ללקוחות */}
+                            <div className="bg-amber-50/80 rounded-2xl p-5 border border-amber-100">
+                                <h3 className="text-sm font-black text-gray-900 mb-3 flex items-center gap-2">
+                                    <FaStar className="text-amber-500" size={14} />
+                                    דירוג וביקורות
+                                </h3>
+                                <div className="flex items-center gap-3 mb-4">
+                                    {restaurant.avg_rating != null ? (
+                                        <>
+                                            <div className="flex items-center gap-1.5 bg-white rounded-xl px-3 py-2 border border-amber-200">
+                                                <FaStar className="text-amber-400" size={16} />
+                                                <span className="text-xl font-black text-gray-900 tabular-nums">{Number(restaurant.avg_rating).toFixed(1)}</span>
+                                                <span className="text-xs font-bold text-gray-400">/ 5</span>
+                                            </div>
+                                            <p className="text-xs font-bold text-gray-500">
+                                                מבוסס על {restaurant.reviews_count} ביקורות לקוחות
+                                            </p>
+                                        </>
+                                    ) : (
+                                        <p className="text-xs font-bold text-gray-400">אין עדיין ביקורות למסעדה זו</p>
+                                    )}
+                                </div>
+                                <div className="space-y-2">
+                                    {[
+                                        { field: 'show_rating_on_home', label: 'הצג דירוג בדף הבית' },
+                                        { field: 'show_rating_on_menu', label: 'הצג דירוג בתפריט המסעדה' },
+                                    ].map(({ field, label }) => (
+                                        <div key={field} className="flex items-center justify-between bg-white rounded-xl px-3 py-2.5 border border-amber-100">
+                                            <span className="text-xs font-bold text-gray-700">{label}</span>
+                                            <button
+                                                type="button"
+                                                disabled={savingRatingToggle !== null}
+                                                onClick={() => toggleRatingDisplay(field)}
+                                                className={`transition-colors disabled:opacity-50 ${restaurant[field] ? 'text-green-500' : 'text-gray-300'}`}
+                                                title={restaurant[field] ? 'כבה תצוגה' : 'הפעל תצוגה'}
+                                            >
+                                                {savingRatingToggle === field
+                                                    ? <FaSpinner className="animate-spin text-amber-500" size={22} />
+                                                    : restaurant[field] ? <FaToggleOn size={26} /> : <FaToggleOff size={26} />}
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
                             {/* תאריך תחילת פעילות — תצוגת מסעדן מאפס */}
                             <div className="bg-amber-50/80 rounded-2xl p-5 border border-amber-100">
                                 <button
@@ -1831,6 +2158,221 @@ function RestaurantDetailModal({ restaurant: initialRestaurant, onClose, onImper
                                 />
                             )}
 
+                            {/* ייבוא מ-Wolt עם preview ועריכה לפני שמירה */}
+                            <div className="bg-cyan-50/80 rounded-2xl p-5 border border-cyan-100">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowWoltSection(!showWoltSection)}
+                                    className="w-full flex items-center justify-between"
+                                >
+                                    <h3 className="text-sm font-black text-gray-900 flex items-center gap-2">
+                                        <FaFolderOpen className="text-cyan-600" size={14} />
+                                        בדיקת לינק Wolt + עריכת מוצרים לפני ייבוא
+                                        {pendingWoltRequest && (
+                                            <span className="px-2 py-0.5 rounded-md text-[10px] font-black bg-amber-100 text-amber-700 border border-amber-200">
+                                                בקשה ממתינה
+                                            </span>
+                                        )}
+                                    </h3>
+                                    <FaChevronDown className={`text-cyan-600 transition-transform ${showWoltSection ? 'rotate-180' : ''}`} size={12} />
+                                </button>
+
+                                {showWoltSection && (
+                                    <div className="mt-3 space-y-3">
+                                        {/* בקשת ייבוא שממתינה לאישור — נוצרה בהרשמת המסעדה */}
+                                        {pendingWoltRequest && (
+                                            <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 space-y-2">
+                                                <p className="text-xs font-black text-amber-800 flex items-center gap-1.5">
+                                                    <FaCloudDownloadAlt size={12} />
+                                                    בעל המסעדה ביקש ייבוא תפריט מוולט בהרשמה
+                                                </p>
+                                                <p className="text-[11px] font-bold text-amber-700 leading-5">
+                                                    {pendingWoltRequest.selection_mode === 'selected'
+                                                        ? `נבחרו ${pendingWoltRequest.summary?.items_count || 0} מוצרים ב-${pendingWoltRequest.summary?.categories_count || 0} קטגוריות`
+                                                        : 'התבקש ייבוא של כל התפריט'}
+                                                    {' · '}
+                                                    <a href={pendingWoltRequest.wolt_url} target="_blank" rel="noreferrer" className="underline" dir="ltr">לינק וולט</a>
+                                                    {' · '}
+                                                    {pendingWoltRequest.created_at ? new Date(pendingWoltRequest.created_at).toLocaleDateString('he-IL') : ''}
+                                                </p>
+                                                <div className="flex flex-wrap gap-2">
+                                                    <button
+                                                        type="button"
+                                                        disabled={woltPreviewLoading}
+                                                        onClick={handleLoadWoltRequest}
+                                                        className="px-4 py-2 bg-amber-600 text-white rounded-xl text-xs font-bold hover:bg-amber-700 disabled:opacity-50"
+                                                    >
+                                                        {woltPreviewLoading ? 'טוען…' : 'טען בקשה לעריכה וייבוא'}
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        disabled={woltRejectLoading}
+                                                        onClick={handleRejectWoltRequest}
+                                                        className="px-4 py-2 border border-red-200 text-red-600 rounded-xl text-xs font-bold hover:bg-red-50 disabled:opacity-50"
+                                                    >
+                                                        {woltRejectLoading ? 'דוחה…' : 'דחה בקשה'}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        <p className="text-xs text-cyan-900/80 font-medium leading-relaxed">
+                                            מזינים לינק מסעדה מ-Wolt, רואים מה התקבל, עורכים קטגוריות ומוצרים, ואז מייבאים למסעדה.
+                                        </p>
+
+                                        <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-end">
+                                            <div className="flex-1 min-w-0">
+                                                <label className="text-xs font-bold text-gray-500 block mb-1">קישור Wolt</label>
+                                                <input
+                                                    type="text"
+                                                    value={woltUrl}
+                                                    onChange={(e) => setWoltUrl(e.target.value)}
+                                                    placeholder="https://wolt.com/he/isr/.../restaurant/..."
+                                                    className="w-full px-3 py-2 rounded-xl border border-cyan-200 bg-white text-sm font-bold text-gray-800"
+                                                />
+                                            </div>
+                                            <button
+                                                type="button"
+                                                disabled={woltPreviewLoading}
+                                                onClick={() => handlePreviewWolt()}
+                                                className="px-4 py-2 bg-cyan-600 text-white rounded-xl text-sm font-bold hover:bg-cyan-700 disabled:opacity-50"
+                                            >
+                                                {woltPreviewLoading ? 'טוען…' : 'בדוק לינק'}
+                                            </button>
+                                        </div>
+
+                                        {woltImportDraft && (
+                                            <div className="space-y-3">
+                                                <div className="text-xs text-cyan-900 font-bold bg-white border border-cyan-100 rounded-xl px-3 py-2">
+                                                    slug: {woltImportDraft.slug || '—'} | קטגוריות: {woltImportDraft.summary?.categories_count || woltImportDraft.categories.length} | מוצרים: {woltImportDraft.summary?.items_count || 0} | קבוצות תוספות: {woltImportDraft.summary?.addon_groups_count || 0}
+                                                </div>
+
+                                                <div className="text-[11px] text-cyan-900 bg-white border border-cyan-100 rounded-xl px-3 py-2 leading-5">
+                                                    תמונת הירו: {woltImportDraft.restaurant_meta?.hero_image_url ? 'נמצאה' : 'לא נמצאה'} | לוגו: {woltImportDraft.restaurant_meta?.logo_url ? 'נמצא' : 'לא נמצא'} | טלפון: {woltImportDraft.restaurant_meta?.phone || '—'} | כתובת: {woltImportDraft.restaurant_meta?.address || '—'}
+                                                    <br />
+                                                    שעות/ימי פעילות: {(woltImportDraft.restaurant_meta?.operating_days && Object.keys(woltImportDraft.restaurant_meta.operating_days).length > 0) || (woltImportDraft.restaurant_meta?.operating_hours && Object.keys(woltImportDraft.restaurant_meta.operating_hours).length > 0) ? 'נמצא' : 'לא נמצא'} | אזורי משלוח: {Array.isArray(woltImportDraft.restaurant_meta?.delivery_zones) ? woltImportDraft.restaurant_meta.delivery_zones.length : 0}
+                                                </div>
+
+                                                <div className="space-y-3 max-h-[340px] overflow-y-auto pr-1">
+                                                    {woltImportDraft.categories.map((category, categoryIndex) => (
+                                                        <div key={`wolt-cat-${categoryIndex}`} className="bg-white rounded-xl border border-cyan-100 p-3 space-y-2">
+                                                            <div className="flex items-center gap-2">
+                                                                <input
+                                                                    type="text"
+                                                                    value={category.name}
+                                                                    onChange={(e) => updateCategoryName(categoryIndex, e.target.value)}
+                                                                    placeholder="שם קטגוריה"
+                                                                    className="flex-1 min-w-0 px-3 py-2 rounded-lg border border-gray-200 text-sm font-bold"
+                                                                />
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => removeCategory(categoryIndex)}
+                                                                    className="px-2.5 py-2 rounded-lg border border-red-200 text-red-600 text-xs font-bold hover:bg-red-50"
+                                                                >
+                                                                    מחק קטגוריה
+                                                                </button>
+                                                            </div>
+
+                                                            <div className="space-y-2">
+                                                                {category.items.map((item, itemIndex) => (
+                                                                    <div key={`wolt-item-${categoryIndex}-${itemIndex}`} className="border border-gray-100 rounded-lg p-2">
+                                                                        <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+                                                                            <input
+                                                                                type="text"
+                                                                                value={item.name}
+                                                                                onChange={(e) => updateItemField(categoryIndex, itemIndex, 'name', e.target.value)}
+                                                                                placeholder="שם מוצר"
+                                                                                className="px-2 py-1.5 rounded border border-gray-200 text-xs font-bold"
+                                                                            />
+                                                                            <input
+                                                                                type="number"
+                                                                                min="0"
+                                                                                step="0.01"
+                                                                                value={item.price}
+                                                                                onChange={(e) => updateItemField(categoryIndex, itemIndex, 'price', e.target.value)}
+                                                                                placeholder="מחיר"
+                                                                                className="px-2 py-1.5 rounded border border-gray-200 text-xs font-bold"
+                                                                            />
+                                                                            <input
+                                                                                type="text"
+                                                                                value={item.description}
+                                                                                onChange={(e) => updateItemField(categoryIndex, itemIndex, 'description', e.target.value)}
+                                                                                placeholder="תיאור"
+                                                                                className="px-2 py-1.5 rounded border border-gray-200 text-xs"
+                                                                            />
+                                                                            <div className="flex gap-2">
+                                                                                <input
+                                                                                    type="text"
+                                                                                    value={item.image_url}
+                                                                                    onChange={(e) => updateItemField(categoryIndex, itemIndex, 'image_url', e.target.value)}
+                                                                                    placeholder="Image URL"
+                                                                                    className="flex-1 min-w-0 px-2 py-1.5 rounded border border-gray-200 text-xs"
+                                                                                />
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() => removeItem(categoryIndex, itemIndex)}
+                                                                                    className="px-2 rounded border border-red-200 text-red-600 text-xs font-bold hover:bg-red-50"
+                                                                                >
+                                                                                    מחק
+                                                                                </button>
+                                                                            </div>
+                                                                        </div>
+
+                                                                        {Array.isArray(item.option_groups) && item.option_groups.length > 0 && (
+                                                                            <div className="mt-2 rounded-md border border-cyan-100 bg-cyan-50/40 px-2 py-1.5">
+                                                                                <div className="text-[11px] font-bold text-cyan-900">
+                                                                                    קבוצות תוספות: {item.option_groups.length}
+                                                                                </div>
+                                                                                <div className="text-[11px] text-cyan-800 mt-1 space-y-0.5">
+                                                                                    {item.option_groups.slice(0, 3).map((group, groupIndex) => (
+                                                                                        <div key={`wolt-og-${categoryIndex}-${itemIndex}-${groupIndex}`}>
+                                                                                            {group.name} ({Array.isArray(group.addons) ? group.addons.length : 0} תוספות)
+                                                                                        </div>
+                                                                                    ))}
+                                                                                    {item.option_groups.length > 3 && (
+                                                                                        <div>ועוד {item.option_groups.length - 3} קבוצות…</div>
+                                                                                    )}
+                                                                                </div>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => addItem(categoryIndex)}
+                                                                className="px-3 py-1.5 rounded-lg border border-cyan-200 text-cyan-700 text-xs font-bold hover:bg-cyan-50"
+                                                            >
+                                                                + הוסף מוצר
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                </div>
+
+                                                <div className="flex flex-col sm:flex-row gap-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={addCategory}
+                                                        className="px-3 py-2 rounded-xl border border-cyan-200 text-cyan-700 text-sm font-bold hover:bg-cyan-50"
+                                                    >
+                                                        + הוסף קטגוריה
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        disabled={woltApplyLoading}
+                                                        onClick={handleApplyWoltImport}
+                                                        className="px-4 py-2 bg-cyan-700 text-white rounded-xl text-sm font-bold hover:bg-cyan-800 disabled:opacity-50"
+                                                    >
+                                                        {woltApplyLoading ? 'מייבא…' : 'ייבא למסעדה'}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+
                             {/* הפניות מהירות */}
                             <div className="flex flex-col sm:flex-row flex-wrap gap-2">
                                 <button
@@ -1868,6 +2410,7 @@ function PendingCitiesModal({
     onReject,
 }) {
     const [replaceMap, setReplaceMap] = useState({});
+    const [nameMap, setNameMap] = useState({});
     const [savingId, setSavingId] = useState(null);
 
     const setReplaceCity = (pendingId, cityId) => {
@@ -1877,11 +2420,31 @@ function PendingCitiesModal({
         }));
     };
 
+    const setEditedName = (pendingId, name) => {
+        setNameMap((prev) => ({
+            ...prev,
+            [pendingId]: name,
+        }));
+    };
+
     const handleApprove = async (city) => {
         setSavingId(city.id);
+
+        // אם נבחרה עיר קיימת להחלפה — "אשר" מתנהג כהחלפה (מונע אישור בטעות של השם הישן)
+        const replaceWithCityId = replaceMap[city.id];
+        if (replaceWithCityId) {
+            await onApprove(city.id, {
+                replace_with_city_id: Number(replaceWithCityId),
+                review_note: 'Replaced with approved city',
+            });
+            setSavingId(null);
+            return;
+        }
+
+        const editedName = (nameMap[city.id] ?? (city.hebrew_name || city.name) ?? '').trim();
         await onApprove(city.id, {
-            name: city.name,
-            hebrew_name: city.hebrew_name || city.name,
+            name: editedName || city.name,
+            hebrew_name: editedName || city.hebrew_name || city.name,
             latitude: city.latitude,
             longitude: city.longitude,
             review_note: 'Approved by super-admin',
@@ -1957,6 +2520,19 @@ function PendingCitiesModal({
                                             <div className="text-xs text-gray-600 font-medium">
                                                 מיקום: {city.latitude != null && city.longitude != null ? `${city.latitude}, ${city.longitude}` : 'ללא קואורדינטות'}
                                             </div>
+                                        </div>
+
+                                        <div className="flex-1 max-w-xs">
+                                            <label className="text-xs font-bold text-gray-500 block mb-1">שם העיר לאישור (ניתן לעריכה)</label>
+                                            <input
+                                                type="text"
+                                                value={nameMap[city.id] ?? (city.hebrew_name || city.name || '')}
+                                                onChange={(e) => setEditedName(city.id, e.target.value)}
+                                                className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-white text-sm"
+                                            />
+                                            <p className="mt-1 text-[10px] text-gray-400 leading-snug">
+                                                שם שכבר קיים כעיר מאושרת — יתבצע איחוד אליה אוטומטית.
+                                            </p>
                                         </div>
 
                                         <div className="flex-1 max-w-xl">

@@ -17,8 +17,10 @@ class MenuItem extends Model
         'restaurant_id',
         'category_id',
         'tenant_id',
+        'wolt_external_id',
         'name',
         'description',
+        'tag',                  // תגית תצוגה (למשל: חדש, מומלץ, חריף)
         'allergen_tags',        // אלרגנים במנה
         'price',
         'image_url',
@@ -46,6 +48,7 @@ class MenuItem extends Model
         'dine_in_adjustment' => 'decimal:2',
         'addon_selection_weight' => 'integer',
         'availability_days' => 'array',
+        'wolt_external_id' => 'string',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];

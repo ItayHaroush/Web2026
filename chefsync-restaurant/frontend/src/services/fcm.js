@@ -1,6 +1,13 @@
 import { initializeApp } from 'firebase/app';
 import { deleteToken, getMessaging, getToken, onMessage } from 'firebase/messaging';
 import { getFirebaseMessagingSwUrl } from '../utils/deployVersion.js';
+import {
+    disableNativePush,
+    getNativePushTokenIfPermitted,
+    isNativePushPlatform,
+    listenNativeForegroundMessages,
+    requestNativePushToken,
+} from './nativePush';
 
 // ⚠️ CRITICAL: Detect Facebook/Instagram browsers that don't support Firebase
 const isFacebookBrowser = () => {
@@ -61,6 +68,8 @@ export function getStoredCustomerFcmToken() {
     }
 }
 
+export { isNativePushPlatform };
+
 export function clearStoredCustomerFcmToken() {
     try {
         localStorage.removeItem(CUSTOMER_LS_KEY);
@@ -73,6 +82,18 @@ export function clearStoredCustomerFcmToken() {
  * רישום FCM עבור לקוח PWA (שומר מפתח נפרד מפאנל המסעדה).
  */
 export async function requestCustomerFcmToken() {
+    if (isNativePushPlatform()) {
+        const token = await requestNativePushToken();
+        try {
+            if (token) {
+                localStorage.setItem(CUSTOMER_LS_KEY, token);
+            }
+        } catch {
+            // ignore
+        }
+        return token;
+    }
+
     if (isFacebookBrowser()) {
         return null;
     }
@@ -114,6 +135,18 @@ export async function requestCustomerFcmToken() {
  * כשהרשאת התראות כבר granted — מביא טוקן בלי לפתוח דיאלוג חדש.
  */
 export async function getCustomerFcmTokenIfPermitted() {
+    if (isNativePushPlatform()) {
+        const token = await getNativePushTokenIfPermitted();
+        try {
+            if (token) {
+                localStorage.setItem(CUSTOMER_LS_KEY, token);
+            }
+        } catch {
+            // ignore
+        }
+        return token;
+    }
+
     if (isFacebookBrowser()) {
         return null;
     }
@@ -153,6 +186,12 @@ export async function getCustomerFcmTokenIfPermitted() {
  * לשימוש אחרי התחברות מחדש כשהרשאת הדפדפן כבר granted.
  */
 export async function getAdminFcmTokenIfPermitted() {
+    if (isNativePushPlatform()) {
+        const token = await getNativePushTokenIfPermitted();
+        if (token) setStoredFcmToken(token);
+        return token;
+    }
+
     if (isFacebookBrowser()) {
         return null;
     }
@@ -182,6 +221,12 @@ export async function getAdminFcmTokenIfPermitted() {
 }
 
 export async function requestFcmToken() {
+    if (isNativePushPlatform()) {
+        const token = await requestNativePushToken();
+        if (token) setStoredFcmToken(token);
+        return token;
+    }
+
     // ⚠️ Block Firebase operations in Facebook/Instagram browsers
     if (isFacebookBrowser()) {
         return null;
@@ -215,6 +260,15 @@ export async function requestFcmToken() {
 }
 
 export async function disableFcm() {
+    if (isNativePushPlatform()) {
+        try {
+            await disableNativePush();
+        } finally {
+            clearStoredFcmToken();
+        }
+        return true;
+    }
+
     try {
         // This removes the FCM token from the browser (permission remains granted).
         const ok = await deleteToken(messaging);
@@ -228,5 +282,9 @@ export async function disableFcm() {
 }
 
 export function listenForegroundMessages(handler) {
+    if (isNativePushPlatform()) {
+        return listenNativeForegroundMessages(handler);
+    }
+
     return onMessage(messaging, handler);
 }

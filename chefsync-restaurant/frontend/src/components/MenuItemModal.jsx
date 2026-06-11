@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { FaBoxOpen } from 'react-icons/fa';
+import { FaBoxOpen, FaCheck } from 'react-icons/fa';
 import { calculateUnitPrice, normalizeVariant, normalizeAddon } from '../utils/cart';
 import { resolveAssetUrl } from '../utils/assets';
 
@@ -50,6 +50,16 @@ export default function MenuItemModal({
         setQty(1);
     }, [defaultVariantId, defaultAddonState, item?.id]);
 
+    // נעילת גלילת העמוד ברקע כשהמודל פתוח
+    useEffect(() => {
+        if (!isOpen) return undefined;
+        const prevOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        return () => {
+            document.body.style.overflow = prevOverflow;
+        };
+    }, [isOpen]);
+
     if (!isOpen || !item) {
         return null;
     }
@@ -91,13 +101,46 @@ export default function MenuItemModal({
         if (normalizedName.includes('רוטב')) {
             return 'בחרו רטבים';
         }
+        if (normalizedName.includes('לחם') || normalizedName.includes('פיתה')) {
+            return 'בחרו לחם';
+        }
         if (normalizedName.includes('שתייה') || normalizedName.includes('משקה')) {
             return 'בחרו שתייה';
+        }
+        if (normalizedName.includes('לחם') && normalizedName.includes('סלטים')) {
+            return 'בחרו לחם וסלטים';
+        }
+        if (normalizedName.includes('שיפוד') || normalizedName.includes('בשר')) {
+            return 'בחרו ממגוון הבשרים';
         }
         if (normalizedName.includes('תוספת') || normalizedName.includes('תוספות')) {
             return 'בחרו תוספות';
         }
         return normalizedName;
+    };
+
+    const getGroupHintLabel = (group) => {
+        const selected = getGroupSelection(group.id);
+        const weightedCount = selected.reduce((sum, addonId) => {
+            const addon = group.addons?.find(a => a.id === addonId);
+            const weight = addon?.selection_weight || 1;
+            const addonQty = addonQuantities[addonId] || 1;
+            return sum + (weight * addonQty);
+        }, 0);
+
+        const minRequired = group.min_select ?? (group.is_required ? 1 : 0);
+        const maxAllowed = group.max_select || (group.selection_type === 'single' ? 1 : null);
+
+        if (minRequired && weightedCount < minRequired) {
+            const missing = minRequired - weightedCount;
+            return missing === 1 ? 'יש לבחור פריט אחד לפחות' : `יש לבחור לפחות ${missing} פריטים`;
+        }
+        if (maxAllowed) {
+            const remaining = maxAllowed - weightedCount;
+            if (remaining <= 0) return 'נבחר המקסימום';
+            return remaining === 1 ? 'אפשר לבחור עוד פריט אחד' : `אפשר לבחור עד ${remaining} פריטים נוספים`;
+        }
+        return 'בחירה חופשית';
     };
 
     const getGroupSelectionLabel = (group, selectionCount) => {
@@ -166,9 +209,14 @@ export default function MenuItemModal({
                 const addonWeight = addonToAdd?.selection_weight || 1;
 
                 if (maxAllowed && (currentWeightedCount + addonWeight) > maxAllowed) {
-                    nextSelection = maxAllowed === 1 ? [addonId] : current;
+                    // בקבוצת בחירה יחידה (או מקסימום 1) — לחיצה על אופציה אחרת מחליפה את הבחירה
+                    if (group.selection_type === 'single' || maxAllowed === 1) {
+                        nextSelection = [addonId];
+                    } else {
+                        nextSelection = current;
+                    }
                 } else {
-                    nextSelection = [...current, addonId];
+                    nextSelection = group.selection_type === 'single' ? [addonId] : [...current, addonId];
                 }
             }
 
@@ -187,6 +235,10 @@ export default function MenuItemModal({
         }
         const maxAllowed = group.max_select || (group.selection_type === 'single' ? 1 : null);
         if (!maxAllowed) {
+            return false;
+        }
+        // בחירה יחידה / מקסימום 1 — תמיד אפשר להחליף בחירה, לא נועלים את שאר האופציות
+        if (group.selection_type === 'single' || maxAllowed === 1) {
             return false;
         }
 
@@ -234,7 +286,7 @@ export default function MenuItemModal({
 
     return (
         <div
-            className="fixed inset-0 z-50 flex items-start md:items-center justify-center bg-black/40 px-4 py-6 overflow-y-auto"
+            className="fixed inset-0 z-50 flex items-start md:items-center justify-center bg-black/50 backdrop-blur-md px-4 py-6 overflow-hidden"
             onClick={onClose}
         >
             <div
@@ -242,14 +294,30 @@ export default function MenuItemModal({
                 onClick={(e) => e.stopPropagation()}
             >
                 {item.image_url && (
-                    <div className="relative h-56 bg-gray-100 dark:bg-brand-dark-bg flex-shrink-0">
-                        <img
-                            src={resolveAssetUrl(item.image_url)}
-                            alt={item.name}
-                            className="w-full h-full object-cover"
-                        />
+                    <div className="relative h-56 sm:h-64 bg-gray-50/50 dark:bg-brand-dark-bg flex-shrink-0 w-full overflow-hidden flex items-center justify-center">
+                        {(item?.category_name?.includes('שתיי') || item?.category_name?.includes('שתיה') || item?.category_name?.includes('משק')) ? (
+                            <>
+                                {/* תמונת רקע מטושטשת במיוחד לקטגוריית "שתייה" */}
+                                <div 
+                                    className="absolute inset-0 bg-cover bg-center blur-xl opacity-40 dark:opacity-20 scale-110"
+                                    style={{ backgroundImage: `url(${resolveAssetUrl(item.image_url)})` }}
+                                />
+                                <img
+                                    src={resolveAssetUrl(item.image_url)}
+                                    alt={item.name}
+                                    className="relative z-10 w-full h-full object-contain drop-shadow-sm px-3 sm:px-4"
+                                />
+                            </>
+                        ) : (
+                            /* התצוגה המקורית של הפריט (לא שתייה) - חתוכה על כל המודל בצורה חלקה */
+                            <img
+                                src={resolveAssetUrl(item.image_url)}
+                                alt={item.name}
+                                className="w-full h-full object-cover"
+                            />
+                        )}
                         <button
-                            className="absolute top-3 right-3 bg-black/70 text-white w-10 h-10 rounded-full"
+                            className="absolute top-3 right-3 z-20 bg-black/70 dark:bg-black/60 backdrop-blur-md text-white w-10 h-10 rounded-full flex items-center justify-center shadow-sm hover:scale-105 transition-transform"
                             onClick={onClose}
                             aria-label="סגור"
                         >
@@ -263,25 +331,33 @@ export default function MenuItemModal({
                     </div>
                 )}
 
-                <div className="flex-1 overflow-y-auto px-6 pb-6 space-y-6">
+                <div className="flex-1 overflow-y-auto overscroll-contain px-6 pb-6 space-y-4">
                     <div>
-                        <h2 className="text-2xl font-bold text-brand-dark dark:text-brand-dark-text mb-2">{item.name}</h2>
+                        <h2 className="text-2xl font-bold text-brand-dark dark:text-brand-dark-text mb-1.5">{item.name}</h2>
+                        <div className="flex items-center gap-2.5 mb-2">
+                            <span className="text-xl font-black text-brand-primary">₪{Number(basePrice).toFixed(2)}</span>
+                            {item.tag && (
+                                <span className="bg-brand-primary/10 text-brand-primary text-xs font-bold px-2.5 py-1 rounded-full">
+                                    {item.tag}
+                                </span>
+                            )}
+                        </div>
                         {item.description && (
                             <p className="text-gray-600 dark:text-brand-dark-muted leading-relaxed">{item.description}</p>
                         )}
                     </div>
 
                     {variants.length > 0 && (
-                        <div className="space-y-3">
+                        <div className="space-y-2">
                             <div className="flex items-center justify-between">
                                 <h3 className="text-lg font-semibold text-brand-dark dark:text-brand-dark-text">בחרו צורת הגשה</h3>
                                 <span className="text-sm text-gray-500">חובה לבחור אפשרות אחת</span>
                             </div>
-                            <div className="space-y-2">
+                            <div className="space-y-0.5">
                                 {variants.map((variant) => (
                                     <label
                                         key={variant.id}
-                                        className={`flex items-center justify-between border rounded-2xl px-4 py-3 cursor-pointer transition ${selectedVariantId === variant.id ? 'border-brand-primary bg-brand-primary/5 dark:bg-brand-primary/10' : 'border-gray-200 dark:border-brand-dark-border hover:border-brand-primary/40'}`}
+                                        className="flex items-center justify-between rounded-lg px-2 py-2 cursor-pointer transition"
                                     >
                                         <div className="flex items-center gap-3">
                                             <input
@@ -289,17 +365,21 @@ export default function MenuItemModal({
                                                 name="variant"
                                                 checked={selectedVariantId === variant.id}
                                                 onChange={() => setSelectedVariantId(variant.id)}
+                                                className="sr-only"
                                             />
-                                            <div>
-                                                <p className="font-semibold text-brand-dark dark:text-brand-dark-text">{variant.name}</p>
-                                                {variant.price_delta !== 0 && (
-                                                    <p className="text-sm text-gray-500">{variant.price_delta > 0 ? `+₪${variant.price_delta}` : `₪${variant.price_delta}`}</p>
-                                                )}
-                                            </div>
+                                            <span className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 transition-colors ${selectedVariantId === variant.id ? 'bg-brand-primary' : 'bg-gray-100 dark:bg-brand-dark-border'}`}>
+                                                {selectedVariantId === variant.id && <FaCheck className="text-white text-[10px]" />}
+                                            </span>
+                                            <p className="font-semibold text-brand-dark dark:text-brand-dark-text">{variant.name}</p>
                                         </div>
-                                        {selectedVariantId === variant.id && (
-                                            <span className="text-brand-primary text-sm font-bold">נבחר</span>
-                                        )}
+                                        <div className="flex items-center gap-2 shrink-0">
+                                            {selectedVariantId === variant.id && (
+                                                <span className="text-brand-primary text-sm font-bold">נבחר</span>
+                                            )}
+                                            {variant.price_delta !== 0 && (
+                                                <span className="text-sm font-semibold text-gray-500">{variant.price_delta > 0 ? `+₪${variant.price_delta}` : `₪${variant.price_delta}`}</span>
+                                            )}
+                                        </div>
                                     </label>
                                 ))}
                             </div>
@@ -307,29 +387,23 @@ export default function MenuItemModal({
                     )}
 
                     {addonGroups.length > 0 && (
-                        <div className="space-y-6">
+                        <div className="space-y-4">
                             {addonGroups.map((group) => {
-                                const groupError = computeGroupError(group);
                                 const selection = getGroupSelection(group.id);
                                 return (
-                                    <div key={group.id} className="border border-gray-200 dark:border-brand-dark-border rounded-2xl p-4">
-                                        <div className="flex items-center justify-between mb-3">
+                                    <div key={group.id}>
+                                        <div className="flex items-center justify-between mb-2">
                                             <div>
                                                 <h4 className="text-lg font-semibold text-brand-dark dark:text-brand-dark-text">{getGroupDisplayTitle(group)}</h4>
-                                                <p className="text-xs text-gray-500 mt-1">
-                                                    {group.min_select ? `מינימום ${group.min_select}` : ''}
-                                                    {group.min_select && group.max_select ? ' · ' : ''}
-                                                    {group.max_select ? `מקסימום ${group.max_select}` : ''}
-                                                    {!group.min_select && !group.max_select && group.is_required ? 'חובה לבחור אחת' : ''}
-                                                </p>
+                                                <p className="text-xs text-gray-500 mt-1">{getGroupHintLabel(group)}</p>
                                             </div>
                                             <span className="text-xs text-gray-500">{getGroupSelectionLabel(group, selection.length)}</span>
                                         </div>
-                                        <div className="space-y-2">
+                                        <div className="space-y-0.5">
                                             {(group.addons || []).map((addon) => (
                                                 <div key={addon.id} className="space-y-1">
                                                     <label
-                                                        className={`flex items-center justify-between border rounded-xl px-3 py-2 cursor-pointer transition ${selection.includes(addon.id) ? 'border-brand-primary bg-brand-primary/5 dark:bg-brand-primary/10' : 'border-gray-200 dark:border-brand-dark-border hover:border-brand-primary/40'}`}
+                                                        className={`flex items-center justify-between rounded-lg px-2 py-1.5 transition ${isAddonDisabled(group, addon.id) ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}
                                                     >
                                                         <div className="flex items-center gap-3">
                                                             <input
@@ -338,20 +412,19 @@ export default function MenuItemModal({
                                                                 checked={selection.includes(addon.id)}
                                                                 onChange={() => toggleAddon(group, addon.id)}
                                                                 disabled={isAddonDisabled(group, addon.id)}
+                                                                className="sr-only"
                                                             />
-                                                            <div>
-                                                                <p className="font-medium text-brand-dark dark:text-brand-dark-text">{addon.name}</p>
-                                                                {addon.price_delta !== 0 && (
-                                                                    <p className="text-sm text-gray-500">
-                                                                        {addon.price_delta > 0 ? `+₪${addon.price_delta}` : `₪${addon.price_delta}`}
-                                                                        {(addonQuantities[addon.id] || 1) > 1 && ` × ${addonQuantities[addon.id]}`}
-                                                                    </p>
-                                                                )}
-                                                            </div>
+                                                            <span className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 transition-colors ${selection.includes(addon.id) ? 'bg-brand-primary' : 'bg-gray-100 dark:bg-brand-dark-border'}`}>
+                                                                {selection.includes(addon.id) && <FaCheck className="text-white text-[10px]" />}
+                                                            </span>
+                                                            <p className="font-medium text-brand-dark dark:text-brand-dark-text">{addon.name}</p>
                                                         </div>
-                                                        <div className="flex items-center gap-2">
-                                                            {isAddonDisabled(group, addon.id) && !selection.includes(addon.id) && (
-                                                                <span className="text-xs text-gray-400">מקסימום הושג</span>
+                                                        <div className="flex items-center gap-2 shrink-0">
+                                                            {addon.price_delta !== 0 && (
+                                                                <span className="text-sm font-semibold text-gray-500">
+                                                                    {addon.price_delta > 0 ? `+₪${addon.price_delta}` : `₪${addon.price_delta}`}
+                                                                    {(addonQuantities[addon.id] || 1) > 1 && ` × ${addonQuantities[addon.id]}`}
+                                                                </span>
                                                             )}
                                                         </div>
                                                     </label>
@@ -359,7 +432,7 @@ export default function MenuItemModal({
                                                     {(addon.max_quantity || 1) > 1 && selection.includes(addon.id) && (
                                                         <div className="flex items-center gap-2 px-4 py-1.5 mr-8" onClick={(e) => e.stopPropagation()}>
                                                             <span className="text-sm text-gray-500 font-medium">כמות:</span>
-                                                            <div className="flex items-center border dark:border-brand-dark-border rounded-full overflow-hidden">
+                                                            <div className="flex items-center bg-gray-100 dark:bg-brand-dark-border rounded-full overflow-hidden">
                                                                 <button
                                                                     type="button"
                                                                     className="px-3 py-1 text-sm hover:bg-gray-100 dark:hover:bg-brand-dark-border transition"
@@ -439,9 +512,9 @@ export default function MenuItemModal({
                                                                         e.stopPropagation();
                                                                         setAddonPlacement(prev => ({ ...prev, [addon.id]: p }));
                                                                     }}
-                                                                    className={`text-xs px-2 py-1 rounded-full border transition-all ${(addonPlacement[addon.id] || 'whole') === p
-                                                                            ? 'bg-orange-500 text-white border-orange-500'
-                                                                            : 'bg-white text-gray-600 border-gray-300 hover:border-orange-400'
+                                                                    className={`text-xs px-2 py-1 rounded-full transition-all ${(addonPlacement[addon.id] || 'whole') === p
+                                                                        ? 'bg-orange-500 text-white'
+                                                                        : 'bg-gray-100 text-gray-600 hover:bg-orange-100'
                                                                         }`}
                                                                 >
                                                                     {label}
@@ -452,57 +525,49 @@ export default function MenuItemModal({
                                                 </div>
                                             ))}
                                         </div>
-                                        {groupError && (
-                                            <p className="text-xs text-red-600 mt-2">{groupError}</p>
-                                        )}
                                     </div>
                                 );
                             })}
                         </div>
                     )}
 
-                    <div className="flex flex-wrap items-center justify-between gap-4">
-                        <div className="flex items-center gap-3">
-                            <span className="text-sm text-gray-500">כמות</span>
-                            <div className="flex items-center border dark:border-brand-dark-border rounded-full overflow-hidden">
-                                <button
-                                    type="button"
-                                    className="px-4 py-2 text-lg"
-                                    onClick={() => setQty((prev) => clampQty(prev - 1))}
-                                    disabled={qty <= 1}
-                                >
-                                    −
-                                </button>
-                                <span className="px-5 font-semibold text-brand-dark dark:text-brand-dark-text">{qty}</span>
-                                <button
-                                    type="button"
-                                    className="px-4 py-2 text-lg"
-                                    onClick={() => setQty((prev) => clampQty(prev + 1))}
-                                >
-                                    +
-                                </button>
-                            </div>
-                        </div>
-                        <div className="text-right">
-                            <p className="text-sm text-gray-500">מחיר ליחידה</p>
-                            <p className="text-2xl font-bold text-brand-primary">₪{unitPrice.toFixed(2)}</p>
-                        </div>
-                    </div>
+                </div>
 
+                {/* כמות + הוסף לסל — קבועים בתחתית המודל */}
+                <div className="flex-shrink-0 px-4 sm:px-6 py-3 sm:py-4 bg-white dark:bg-brand-dark-surface shadow-[0_-6px_20px_rgba(0,0,0,0.07)] space-y-3">
                     {!isOrderingEnabled && (
-                        <div className="bg-yellow-50 dark:bg-yellow-500/10 border border-yellow-200 dark:border-yellow-500/30 text-yellow-900 dark:text-yellow-300 px-4 py-3 rounded-2xl text-sm">
+                        <div className="bg-yellow-50 dark:bg-yellow-500/10 text-yellow-900 dark:text-yellow-300 px-4 py-2.5 rounded-2xl text-sm">
                             המסעדה סגורה כרגע. ניתן לעיין במנה אך לא ניתן להזמין.
                         </div>
                     )}
-
-                    <button
-                        type="button"
-                        onClick={handleAdd}
-                        disabled={!canSubmit}
-                        className={`w-full py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 ${canSubmit ? 'bg-brand-primary text-white hover:bg-brand-secondary transition' : 'bg-gray-200 dark:bg-brand-dark-border text-gray-500 dark:text-gray-400 cursor-not-allowed'}`}
-                    >
-                        הוסף לסל · ₪{(unitPrice * qty).toFixed(2)}
-                    </button>
+                    <div className="flex items-center gap-3">
+                        <div className="flex items-center bg-gray-100 dark:bg-brand-dark-border rounded-full overflow-hidden shrink-0">
+                            <button
+                                type="button"
+                                className="px-4 py-2.5 text-xl hover:bg-gray-200 dark:hover:bg-brand-dark-bg transition-colors active:bg-gray-300 disabled:opacity-30 disabled:cursor-not-allowed"
+                                onClick={() => setQty((prev) => clampQty(prev - 1))}
+                                disabled={qty <= 1}
+                            >
+                                −
+                            </button>
+                            <span className="px-2 font-bold text-lg text-brand-dark dark:text-brand-dark-text min-w-[2.25rem] text-center">{qty}</span>
+                            <button
+                                type="button"
+                                className="px-4 py-2.5 text-xl hover:bg-gray-200 dark:hover:bg-brand-dark-bg transition-colors active:bg-gray-300"
+                                onClick={() => setQty((prev) => clampQty(prev + 1))}
+                            >
+                                +
+                            </button>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={handleAdd}
+                            disabled={!canSubmit}
+                            className={`flex-1 py-3.5 rounded-[1.25rem] font-bold text-[1.05rem] tracking-wide flex items-center justify-center gap-2 transition-all duration-300 ${canSubmit ? 'bg-brand-primary text-white hover:bg-brand-secondary shadow-md hover:shadow-lg active:scale-[0.98]' : 'bg-gray-200 dark:bg-brand-dark-border text-gray-500 dark:text-gray-400 cursor-not-allowed'}`}
+                        >
+                            הוסף לסל · ₪{(unitPrice * qty).toFixed(2)}
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
