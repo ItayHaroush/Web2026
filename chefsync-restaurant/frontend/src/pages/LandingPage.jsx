@@ -4,6 +4,9 @@ import { CustomerLayout } from '../layouts/CustomerLayout';
 import { LandingSeo } from '../components/seo/RestaurantSeo';
 import { apiClient } from '../services/apiClient';
 import { resolveAssetUrl } from '../utils/assets';
+import heroRestaurantImg from '../images/6C6B449F-6155-4B6F-B791-8321549DE5C5.webp';
+import deliveryZonesImg1 from '../images/אזורי משלוח.webp';
+import deliveryZonesImg2 from '../images/אזורי משלוח2.webp';
 import {
     FaGift,
     FaMapLocationDot,
@@ -33,86 +36,19 @@ import {
     FaQuoteRight,
     FaArrowDown,
 } from "react-icons/fa6";
-
-/* ── Ad Images ── */
-import heroImg from '../images/1B79A85A-6A5D-4D7D-A141-60235DEEFA66_1_105_c.webp';
-import painImg from '../images/8F8A15F0-53EF-4626-AF09-EFFA70457EE7_1_105_c.webp';
-import devicesImg from '../images/9CDBB5FE-05AF-4CE4-930F-0050C76B60B6_1_105_c.webp';
-import trustImg from '../images/4827AC75-8939-44F7-89DF-34040D056B9B_1_105_c.webp';
-import paymentsImg from '../images/2E91DC8B-7B9A-4CF2-A74A-E7ACBC38F3F9_1_105_c.webp';
-/* Gallery ticker images */
-import gal1 from '../images/045B77D3-82F9-4CD3-8C34-B3C7A954EB3C_1_105_c.webp';
-import gal2 from '../images/0F5FA582-E0EB-48B9-A992-B6A5F7289615_1_105_c.webp';
-import gal3 from '../images/170D8E44-8F82-4596-9BFE-EC4082B68D89_1_105_c.webp';
-import gal4 from '../images/4446E5A1-40C3-4953-A986-1A3F1924DC4A_1_105_c.webp';
-import gal5 from '../images/4EB03043-5588-42C7-B2C4-2E0CC8E32F86_1_105_c.webp';
-import gal6 from '../images/57864105-22D4-48F5-8157-D5D5A46A776C_1_105_c.webp';
-import gal7 from '../images/6A14C8FD-C183-47CF-AF93-74C6A3F981F2_1_105_c.webp';
-import gal8 from '../images/71E7E248-9947-4927-BB21-E33580CA4EA5_1_105_c.webp';
-import gal9 from '../images/AB3E8679-96A9-4F85-9B02-D5D12AA980EF_1_105_c.webp';
-import gal10 from '../images/93EACC1A-D80A-498C-A9CC-195816C2EADE_1_105_c.webp';
-import gal11 from '../images/9AA78287-E7C0-454F-87BC-6ACC384321E2_1_105_c.webp';
-import gal12 from '../images/9DF73A11-49FB-4E41-B41E-85DB3B0BC295_1_105_c.webp';
-import gal13 from '../images/B02A96C4-33EA-4DE3-A4BA-C20C6FB3F6A1_1_105_c.webp';
-import gal14 from '../images/C3168BBD-8933-4A2D-92FD-ED08086A0DB8_1_105_c.webp';
-import gal15 from '../images/DE8208A7-EED9-4170-9316-EB93823EDF8D_1_105_c.webp';
-import gal16 from '../images/F8C99C72-89A7-4A95-A979-E359FC10A867_1_105_c.webp';
-import gal17 from '../images/2EA70A9C-BDC7-4DDF-848B-2F0F1F79E6E0_1_105_c.webp';
-import gal18 from '../images/5BF5CCD6-9117-4146-8A5B-58BC54DCEE42_1_105_c.webp';
-import gal19 from '../images/37520C88-B1C0-4258-87DE-547414F61BE5_1_105_c.webp';
-import gal20 from '../images/8F61689B-8CA4-4E7F-B078-54BBDBFF96F6_1_105_c.webp';
-import gal21 from '../images/9E5B5B79-1D06-4B32-AB8A-32849FD87AC7_1_105_c.webp';
-import gal22 from '../images/A00D6DC9-8902-4245-B93A-A395CD3E2B3F_1_105_c.webp';
-import gal23 from '../images/B2A2BF46-1A2E-4770-99CD-6FF37EDE1492_1_105_c.webp';
-import gal24 from '../images/B2C827F1-45FF-4A69-AC56-78E3518278B5_1_105_c.webp';
-import gal25 from '../images/B48AD050-2320-4CBC-94A4-21FC1D28ABC9_1_105_c.webp';
-import gal26 from '../images/C065DAE4-E37E-4929-B71D-74E9BFEE9F99_1_105_c.webp';
-import gal27 from '../images/C2712E0C-953E-4406-9E2A-B9B2920B6198_1_105_c.webp';
-import gal28 from '../images/C2A9E241-C1B4-4685-917F-2D8D97FC9DFD_1_105_c.webp';
-import gal29 from '../images/DE4E3437-BB0F-455F-B446-4542AD3FF16B_1_105_c.webp';
-import gal30 from '../images/F51F66F0-DB1C-4EBF-BFAA-290E4D0E7F74_1_105_c.webp';
-
-const galleryImages = [gal1, gal2, gal3, gal4, gal5, gal6, gal7, gal8, gal9, gal10, gal11, gal12, gal13, gal14, gal15, gal16, gal17, gal18, gal19, gal20, gal21, gal22, gal23, gal24, gal25, gal26, gal27, gal28, gal29, gal30];
-
-/* Simple image carousel for features with multiple screenshots */
-function FeatureImageCarousel({ images }) {
-    const [current, setCurrent] = useState(0);
-    useEffect(() => {
-        if (images.length <= 1) return;
-        const timer = setInterval(() => setCurrent((c) => (c + 1) % images.length), 3500);
-        return () => clearInterval(timer);
-    }, [images.length]);
-
-    return (
-        <div className="relative w-full aspect-[16/10] bg-gray-100 dark:bg-brand-dark-bg overflow-hidden">
-            {images.map((src, idx) => (
-                <img
-                    key={idx}
-                    src={src}
-                    alt=""
-                    className={`absolute inset-0 w-full h-full object-contain transition-opacity duration-700 ${idx === current ? 'opacity-100' : 'opacity-0'}`}
-                    loading="lazy"
-                />
-            ))}
-            {images.length > 1 && (
-                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2 z-10">
-                    {images.map((_, idx) => (
-                        <button
-                            key={idx}
-                            onClick={() => setCurrent(idx)}
-                            className={`w-2.5 h-2.5 rounded-full transition-all ${idx === current ? 'bg-brand-primary scale-125' : 'bg-gray-300 dark:bg-gray-600'}`}
-                        />
-                    ))}
-                </div>
-            )}
-        </div>
-    );
-}
+import { SiApplepay, SiGooglepay } from 'react-icons/si';
 
 const LANDING_CAROUSEL_FALLBACK = [
     { name: 'TakeEat', tenant_id: null, logo_url: '/icons/chefsync-logo-v2-512.png' },
     { name: 'חלבוד', tenant_id: null, logo_url: '/logos/halabud.png' },
 ];
+
+const landingShowcaseImages = Object.entries(
+    import.meta.glob('../images/*.{webp,png,jpg,jpeg}', { eager: true, import: 'default' })
+)
+    .filter(([path]) => !path.includes('ChefSyncLogoIcon') && !path.includes('TakeEatIcon'))
+    .sort(([a], [b]) => a.localeCompare(b, 'he'))
+    .map(([, src]) => src);
 
 function landingPartnerLogoSrc(logoUrl) {
     if (!logoUrl) return '';
@@ -123,6 +59,7 @@ function landingPartnerLogoSrc(logoUrl) {
 
 export default function LandingPage() {
     const [activeDevice, setActiveDevice] = useState('mobile');
+    const [deliveryImagesSwapped, setDeliveryImagesSwapped] = useState(false);
     const [landingPartners, setLandingPartners] = useState(undefined);
     const mockupRef = useRef(null);
 
@@ -145,11 +82,50 @@ export default function LandingPage() {
         };
     }, []);
 
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setDeliveryImagesSwapped((prev) => !prev);
+        }, 3200);
+        return () => clearInterval(timer);
+    }, []);
+
     const partnersForLogoCarousel = useMemo(() => {
         if (landingPartners === undefined || landingPartners.length === 0) {
             return LANDING_CAROUSEL_FALLBACK;
         }
         return landingPartners;
+    }, [landingPartners]);
+
+    const liveRestaurantsForDemo = useMemo(() => {
+        if (!Array.isArray(landingPartners) || landingPartners.length === 0) {
+            return [];
+        }
+
+        const live = landingPartners
+            .filter((restaurant) => {
+                const notDemo = !Boolean(restaurant?.is_demo);
+                const notDisabled = restaurant?.is_active !== false;
+                const approved = restaurant?.is_approved !== false;
+                const hasMenuSlug = Boolean(restaurant?.tenant_id || restaurant?.slug);
+                return notDemo && notDisabled && approved && hasMenuSlug;
+            })
+            .slice(0, 6)
+            .map((restaurant, idx) => {
+                const slug = restaurant.tenant_id || restaurant.slug;
+                return {
+                    name: restaurant.name || `מסעדה ${idx + 1}`,
+                    sub: restaurant.city ? `מסעדה פעילה • ${restaurant.city}` : 'מסעדה פעילה במערכת',
+                    to: `/${slug}/menu`,
+                    color: [
+                        'hover:border-red-500 hover:bg-red-50 dark:hover:bg-red-900/10',
+                        'hover:border-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/10',
+                        'hover:border-cyan-500 hover:bg-cyan-50 dark:hover:bg-cyan-900/10',
+                        'hover:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/10',
+                    ][idx % 4],
+                };
+            });
+
+        return live;
     }, [landingPartners]);
 
     const switchDevice = (key) => {
@@ -214,8 +190,14 @@ export default function LandingPage() {
         {
             title: 'תשלומים ישירים',
             desc: '0% עמלה. הכסף הולך ישר אליך. תשלום חודשי קבוע בלבד – בלי הפתעות.',
-            image: paymentsImg,
+            video: '/videos/pos-terminal.mp4',
             icon: <FaCreditCard className="w-7 h-7" />,
+            paymentMethods: [
+                { key: 'cash', label: 'מזומן', icon: <FaCashRegister className="w-4 h-4" /> },
+                { key: 'card', label: 'אשראי', icon: <FaCreditCard className="w-4 h-4" /> },
+                { key: 'apple', label: 'Apple Pay', icon: <SiApplepay className="w-4 h-4" /> },
+                { key: 'google', label: 'Google Pay', icon: <SiGooglepay className="w-4 h-4" /> },
+            ],
             color: 'text-green-500',
             bg: 'bg-green-50 dark:bg-green-900/20',
             borderColor: 'border-green-200 dark:border-green-800',
@@ -223,7 +205,7 @@ export default function LandingPage() {
         {
             title: 'משלוחים בשליטה שלך',
             desc: 'הגדר אזורי חלוקה, מחירי משלוח, זמני אספקה ומינימום הזמנה. שליטה מלאה על כל משלוח.',
-            images: ['/screenshots/delivery-zones-1.webp', '/screenshots/delivery-zones-2.webp'],
+            images: [deliveryZonesImg1, deliveryZonesImg2],
             icon: <FaTruck className="w-7 h-7" />,
             color: 'text-emerald-500',
             bg: 'bg-emerald-50 dark:bg-emerald-900/20',
@@ -232,7 +214,7 @@ export default function LandingPage() {
         {
             title: 'שליטה מלאה בעסק',
             desc: 'תפריט, הזמנות, דוחות, מבצעים, POS, מסך מטבח – הכל במקום אחד. המותג שלך, הלקוחות שלך.',
-            staticImage: devicesImg,
+            video: '/videos/reports.mp4',
             icon: <FaSliders className="w-7 h-7" />,
             color: 'text-purple-500',
             bg: 'bg-purple-50 dark:bg-purple-900/20',
@@ -292,6 +274,37 @@ export default function LandingPage() {
         },
     ];
 
+    const menuImportSteps = [
+        {
+            title: 'שלב 1: חיבור מקור התפריט',
+            desc: 'מזינים קישור/מקור קיים (למשל Wolt), והמערכת שולפת את מבנה הקטגוריות והפריטים.',
+            icon: <FaWandMagicSparkles className="w-5 h-5" />,
+            color: 'text-indigo-500',
+            bg: 'bg-indigo-50 dark:bg-indigo-900/20',
+        },
+        {
+            title: 'שלב 2: זיהוי ומיפוי חכם',
+            desc: 'TakeEat מזהה שמות, מחירים, וריאנטים ותוספות, וממפה אותם לשדות הנכונים במערכת.',
+            icon: <FaListCheck className="w-5 h-5" />,
+            color: 'text-cyan-500',
+            bg: 'bg-cyan-50 dark:bg-cyan-900/20',
+        },
+        {
+            title: 'שלב 3: סקירה ותיקונים',
+            desc: 'עוברים על תצוגה מקדימה, מתקנים נקודתית מה שצריך, ומחליטים מה יפורסם.',
+            icon: <FaSliders className="w-5 h-5" />,
+            color: 'text-amber-500',
+            bg: 'bg-amber-50 dark:bg-amber-900/20',
+        },
+        {
+            title: 'שלב 4: פרסום בלחיצה',
+            desc: 'מאשרים, והתפריט עולה לאוויר כולל קטגוריות, פריטים ותוספות – מוכן להזמנות מיידית.',
+            icon: <FaCircleCheck className="w-5 h-5" />,
+            color: 'text-emerald-500',
+            bg: 'bg-emerald-50 dark:bg-emerald-900/20',
+        },
+    ];
+
     return (
         <CustomerLayout>
             <LandingSeo />
@@ -346,9 +359,10 @@ export default function LandingPage() {
                             {/* Hero Image – left side */}
                             <div className="hidden lg:flex justify-center">
                                 <img
-                                    src={heroImg}
-                                    alt="מערכת הזמנות למסעדות"
+                                    src={heroRestaurantImg}
+                                    alt="יש לך מסעדה"
                                     className="w-full max-w-lg rounded-3xl shadow-2xl border-2 border-white/10 object-cover"
+                                    loading="lazy"
                                 />
                             </div>
                         </div>
@@ -400,13 +414,16 @@ export default function LandingPage() {
                             </div>
                         </div>
 
-                        {/* Pain Image */}
+                        {/* Pain Video */}
                         <div className="flex justify-center">
-                            <img
-                                src={painImg}
-                                alt="הזמנות אוכל בלי בלגן"
-                                className="w-full max-w-md rounded-3xl shadow-xl"
-                                loading="lazy"
+                            <video
+                                className="w-full max-w-md rounded-3xl shadow-xl bg-black/5 object-cover"
+                                src="/videos/promotions.mp4"
+                                autoPlay
+                                loop
+                                muted
+                                playsInline
+                                preload="metadata"
                             />
                         </div>
                     </div>
@@ -445,8 +462,25 @@ export default function LandingPage() {
                                                 takeeat.co.il/admin
                                             </div>
                                         </div>
-                                        {feature.video ? (
-                                            <div className="w-full aspect-[16/10] overflow-hidden bg-gray-100 dark:bg-brand-dark-bg">
+                                        <div className="w-full aspect-[16/10] overflow-hidden bg-gray-100 dark:bg-brand-dark-bg">
+                                            {feature.images ? (
+                                                <div className="relative h-full p-2">
+                                                    <div className="absolute top-3 right-3 z-10 px-2.5 py-1 rounded-full bg-black/70 text-white text-[11px] font-bold">
+                                                        מתחלף אוטומטית
+                                                    </div>
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 h-full">
+                                                        {(deliveryImagesSwapped ? [...feature.images].reverse() : feature.images).map((src, idx) => (
+                                                        <img
+                                                            key={`${feature.title}-${idx}`}
+                                                            src={src}
+                                                            alt={`${feature.title} ${idx + 1}`}
+                                                            className={`w-full h-full rounded-xl object-cover border border-white/70 shadow-sm transition-all duration-700 ${deliveryImagesSwapped ? 'sm:translate-x-0' : 'sm:translate-x-0'}`}
+                                                            loading="lazy"
+                                                        />
+                                                    ))}
+                                                    </div>
+                                                </div>
+                                            ) : (
                                                 <video
                                                     className="w-full h-full object-contain"
                                                     src={feature.video}
@@ -456,18 +490,8 @@ export default function LandingPage() {
                                                     playsInline
                                                     preload="metadata"
                                                 />
-                                            </div>
-                                        ) : feature.images ? (
-                                            <FeatureImageCarousel images={feature.images} />
-                                        ) : feature.image ? (
-                                            <div className="w-full aspect-[16/10] overflow-hidden bg-gray-100 dark:bg-brand-dark-bg">
-                                                <img src={feature.image} alt={feature.title} className="w-full h-full object-cover" loading="lazy" />
-                                            </div>
-                                        ) : feature.staticImage ? (
-                                            <div className="w-full aspect-[16/10] overflow-hidden bg-gray-100 dark:bg-brand-dark-bg flex items-center justify-center p-4">
-                                                <img src={feature.staticImage} alt={feature.title} className="w-full h-full object-contain" loading="lazy" />
-                                            </div>
-                                        ) : null}
+                                            )}
+                                        </div>
                                     </div>
                                     <div className={`absolute -inset-4 ${feature.bg} rounded-3xl blur-2xl opacity-0 group-hover:opacity-40 transition-opacity duration-500 -z-10`} />
                                 </div>
@@ -484,6 +508,19 @@ export default function LandingPage() {
                                     <p className="text-gray-600 dark:text-brand-dark-muted leading-relaxed text-lg">
                                         {feature.desc}
                                     </p>
+                                    {feature.paymentMethods && (
+                                        <div className="flex flex-wrap items-center gap-2 pt-1">
+                                            {feature.paymentMethods.map((method) => (
+                                                <span
+                                                    key={method.key}
+                                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white dark:bg-brand-dark-bg border border-gray-200 dark:border-brand-dark-border text-xs font-bold text-gray-700 dark:text-brand-dark-muted"
+                                                >
+                                                    {method.icon}
+                                                    {method.label}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         ))}
@@ -514,7 +551,7 @@ export default function LandingPage() {
                 </section>
 
                 {/* ═══════════════════════════════════════════
-                    5. AD GALLERY – Scrolling image ticker
+                    5. SHOWCASE GALLERY – Scrolling image ticker
                 ═══════════════════════════════════════════ */}
                 <section ref={addRevealRef} className="scroll-reveal mt-24 overflow-hidden">
                     <div className="text-center mb-8">
@@ -531,9 +568,9 @@ export default function LandingPage() {
                         <div className="flex gap-4 animate-ticker mb-4">
                             {[1, 2].map((round) => (
                                 <React.Fragment key={round}>
-                                    {galleryImages.slice(0, 15).map((img, idx) => (
+                                    {landingShowcaseImages.map((src, idx) => (
                                         <div key={`${round}-${idx}`} className="flex-shrink-0 w-64 h-64 rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-shadow">
-                                            <img src={img} alt="" className="w-full h-full object-cover" loading="lazy" />
+                                            <img src={src} alt="TakeEat showcase" className="w-full h-full object-cover" loading="lazy" />
                                         </div>
                                     ))}
                                 </React.Fragment>
@@ -544,9 +581,9 @@ export default function LandingPage() {
                         <div className="flex gap-4 animate-ticker-reverse">
                             {[1, 2].map((round) => (
                                 <React.Fragment key={round}>
-                                    {galleryImages.slice(15).map((img, idx) => (
+                                    {[...landingShowcaseImages].reverse().map((src, idx) => (
                                         <div key={`${round}-${idx}`} className="flex-shrink-0 w-64 h-64 rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-shadow">
-                                            <img src={img} alt="" className="w-full h-full object-cover" loading="lazy" />
+                                            <img src={src} alt="TakeEat showcase" className="w-full h-full object-cover" loading="lazy" />
                                         </div>
                                     ))}
                                 </React.Fragment>
@@ -577,8 +614,9 @@ export default function LandingPage() {
                                 <div className="flex items-center gap-4 pt-4 border-t border-gray-100 dark:border-brand-dark-border">
                                     <img
                                         src="/logos/halabud.png"
-                                        alt="סילביס"
+                                        alt="לוגו המסעדה של בעל העסק"
                                         className="w-12 h-12 rounded-full object-cover shadow-md border-2 border-brand-primary/20"
+                                        loading="lazy"
                                     />
                                     <div>
                                         <p className="font-bold text-gray-900 dark:text-brand-dark-text">פנחס סבג</p>
@@ -588,13 +626,16 @@ export default function LandingPage() {
                             </div>
                         </div>
 
-                        {/* Trust Image */}
+                        {/* Trust Video */}
                         <div className="flex justify-center">
-                            <img
-                                src={trustImg}
-                                alt="מסעדה עובדת עם TakeEat"
-                                className="w-full max-w-md rounded-3xl shadow-xl"
-                                loading="lazy"
+                            <video
+                                className="w-full max-w-md rounded-3xl shadow-xl bg-black/5 object-cover"
+                                src="/videos/display-screen.mp4"
+                                autoPlay
+                                loop
+                                muted
+                                playsInline
+                                preload="metadata"
                             />
                         </div>
                     </div>
@@ -771,28 +812,29 @@ export default function LandingPage() {
                                 </div>
 
                                 <div className="space-y-4">
-                                    {[
-                                        { name: 'Pizza Palace', sub: 'פיצה איטלקית', url: 'https://chefsync.vercel.app/pizza-palace/menu', color: 'hover:border-red-500 hover:bg-red-50 dark:hover:bg-red-900/10' },
-                                        { name: 'Burger Central', sub: 'המבורגר פרימיום', url: 'https://chefsync.vercel.app/burger-central/menu', color: 'hover:border-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/10' }
-                                    ].map((store) => (
-                                        <a
-                                            key={store.name}
-                                            href={store.url}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className={`block p-5 border border-gray-200 dark:border-brand-dark-border rounded-2xl bg-white dark:bg-brand-dark-bg transition-all duration-300 group ${store.color}`}
-                                        >
-                                            <div className="flex items-center justify-between">
-                                                <div>
-                                                    <p className="font-bold text-lg text-gray-900 dark:text-brand-dark-text">{store.name}</p>
-                                                    <p className="text-sm text-gray-500 dark:text-brand-dark-muted">{store.sub}</p>
+                                    {liveRestaurantsForDemo.length > 0 ? (
+                                        liveRestaurantsForDemo.map((store) => (
+                                            <Link
+                                                key={store.to}
+                                                to={store.to}
+                                                className={`block p-5 border border-gray-200 dark:border-brand-dark-border rounded-2xl bg-white dark:bg-brand-dark-bg transition-all duration-300 group ${store.color}`}
+                                            >
+                                                <div className="flex items-center justify-between">
+                                                    <div>
+                                                        <p className="font-bold text-lg text-gray-900 dark:text-brand-dark-text">{store.name}</p>
+                                                        <p className="text-sm text-gray-500 dark:text-brand-dark-muted">{store.sub}</p>
+                                                    </div>
+                                                    <div className="w-10 h-10 rounded-full bg-gray-50 dark:bg-brand-dark-border flex items-center justify-center group-hover:bg-white dark:group-hover:bg-brand-dark-surface transition-colors">
+                                                        <FaArrowLeft className="text-gray-400 group-hover:text-gray-900 dark:group-hover:text-brand-dark-text transition-colors" />
+                                                    </div>
                                                 </div>
-                                                <div className="w-10 h-10 rounded-full bg-gray-50 dark:bg-brand-dark-border flex items-center justify-center group-hover:bg-white dark:group-hover:bg-brand-dark-surface transition-colors">
-                                                    <FaArrowLeft className="text-gray-400 group-hover:text-gray-900 dark:group-hover:text-brand-dark-text transition-colors" />
-                                                </div>
-                                            </div>
-                                        </a>
-                                    ))}
+                                            </Link>
+                                        ))
+                                    ) : (
+                                        <div className="rounded-2xl border border-dashed border-gray-300 dark:border-brand-dark-border p-5 text-sm text-gray-500 dark:text-brand-dark-muted" style={{ direction: 'rtl' }}>
+                                            לא נמצאו כרגע מסעדות פעילות לא-דמו להצגה.
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="bg-orange-50/50 dark:bg-orange-900/10 border border-orange-200 dark:border-brand-primary/20 p-5 rounded-2xl flex gap-4">
@@ -850,6 +892,79 @@ export default function LandingPage() {
                                     </div>
                                     <p className="text-sm text-gray-600 dark:text-brand-dark-muted">{feature.desc}</p>
                                 </div>
+                            </div>
+                        ))}
+                    </div>
+                </section>
+
+                {/* ═══════════════════════════════════════════
+                    8.5. MENU IMPORT – New feature explainer
+                ═══════════════════════════════════════════ */}
+                <section ref={addRevealRef} className="scroll-reveal max-w-7xl mx-auto px-4 sm:px-6 mt-24">
+                    <div className="text-center mb-12" style={{ direction: 'rtl' }}>
+                        <span className="text-brand-primary font-bold tracking-wider text-sm uppercase">פיצ'ר חדש</span>
+                        <h2 className="text-3xl sm:text-4xl font-bold mt-3 mb-4 text-gray-900 dark:text-brand-dark-text">
+                            ייבוא תפריט מסעדה אוטומטי
+                        </h2>
+                        <p className="text-base sm:text-lg text-gray-600 dark:text-brand-dark-muted max-w-3xl mx-auto leading-relaxed">
+                            במקום להקליד תפריט ידנית, אפשר לייבא תפריט קיים, לבצע מעבר מהיר על הנתונים, ולעלות לאוויר תוך דקות.
+                        </p>
+                    </div>
+
+                    <div className="grid sm:grid-cols-2 gap-4 lg:gap-6 mb-10">
+                        <div className="rounded-3xl overflow-hidden border border-gray-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-surface shadow-lg">
+                            <div className="px-4 py-3 border-b border-gray-100 dark:border-brand-dark-border bg-gray-50 dark:bg-brand-dark-bg text-sm font-bold text-gray-700 dark:text-brand-dark-muted flex items-center justify-between" style={{ direction: 'rtl' }}>
+                                <span>תצוגת ייבוא ומיפוי תפריט</span>
+                                <span className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-amber-500 text-white text-[11px] font-black tracking-wide">BETA</span>
+                            </div>
+                            <div className="aspect-video bg-black/5">
+                                <video
+                                    className="w-full h-full object-contain"
+                                    src="/videos/menu-management.mp4"
+                                    autoPlay
+                                    loop
+                                    muted
+                                    playsInline
+                                    preload="metadata"
+                                />
+                            </div>
+                        </div>
+                        <div className="rounded-3xl overflow-hidden border border-gray-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-surface shadow-lg">
+                            <div className="px-4 py-3 border-b border-gray-100 dark:border-brand-dark-border bg-gray-50 dark:bg-brand-dark-bg text-sm font-bold text-gray-700 dark:text-brand-dark-muted flex items-center justify-between" style={{ direction: 'rtl' }}>
+                                <span>תוספות ווריאציות אחרי ייבוא</span>
+                                <span className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-sky-500 text-white text-[11px] font-black tracking-wide">BETA</span>
+                            </div>
+                            <div className="aspect-video bg-black/5">
+                                <video
+                                    className="w-full h-full object-contain"
+                                    src="/videos/addon-groups.mp4"
+                                    autoPlay
+                                    loop
+                                    muted
+                                    playsInline
+                                    preload="metadata"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-5">
+                        {menuImportSteps.map((step, idx) => (
+                            <div
+                                key={step.title}
+                                className="relative rounded-2xl border border-gray-200 dark:border-brand-dark-border bg-white dark:bg-brand-dark-surface p-5 shadow-sm hover:shadow-md transition-shadow"
+                                style={{ direction: 'rtl' }}
+                            >
+                                <div className={`inline-flex items-center justify-center w-10 h-10 rounded-xl ${step.bg} ${step.color} mb-4`}>
+                                    {step.icon}
+                                </div>
+                                <h3 className="text-base font-bold text-gray-900 dark:text-brand-dark-text mb-2">
+                                    {step.title}
+                                </h3>
+                                <p className="text-sm leading-relaxed text-gray-600 dark:text-brand-dark-muted">
+                                    {step.desc}
+                                </p>
+                                <div className="absolute top-4 left-4 text-xs font-black text-gray-300 dark:text-brand-dark-border">0{idx + 1}</div>
                             </div>
                         ))}
                     </div>

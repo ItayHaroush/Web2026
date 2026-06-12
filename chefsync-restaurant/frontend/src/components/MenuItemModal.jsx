@@ -286,7 +286,7 @@ export default function MenuItemModal({
 
     return (
         <div
-            className="fixed inset-0 z-50 flex items-start md:items-center justify-center bg-black/50 backdrop-blur-md px-4 py-6 overflow-hidden"
+            className="fixed inset-0 z-[90] flex items-start md:items-center justify-center bg-black/50 backdrop-blur-md px-4 py-6 overflow-hidden"
             onClick={onClose}
         >
             <div

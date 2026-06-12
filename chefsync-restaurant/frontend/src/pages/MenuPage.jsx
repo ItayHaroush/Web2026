@@ -1725,7 +1725,7 @@ export default function MenuPage({ isPreviewMode = false }) {
             )}
 
             {/* בר סל תחתון — סגנון Wolt */}
-            {totalCartItems > 0 && (
+            {totalCartItems > 0 && !selectedMenuItem && (
                 <div className="pointer-events-none fixed bottom-0 left-0 right-0 z-[60] px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))]">
                     <button
                         onClick={handleCartClick}
