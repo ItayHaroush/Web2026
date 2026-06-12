@@ -1238,33 +1238,33 @@ export default function MenuPage({ isPreviewMode = false }) {
                     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5">
                         <div className="flex items-center gap-2">
                             <div className="flex flex-1 gap-2 overflow-x-auto scrollbar-hide">
-                            {menu.map((category) => (
-                                <button
-                                    key={category.id}
-                                    ref={el => tabRefs.current[category.id] = el}
-                                    onClick={() => scrollToCategory(category.id)}
-                                    className={`
+                                {menu.map((category) => (
+                                    <button
+                                        key={category.id}
+                                        ref={el => tabRefs.current[category.id] = el}
+                                        onClick={() => scrollToCategory(category.id)}
+                                        className={`
                                         flex items-center gap-2 px-3 py-2 rounded-full whitespace-nowrap text-sm font-medium transition-all duration-300
                                         ${activeCategory === category.id
-                                            ? 'bg-brand-primary text-white shadow-md'
-                                            : 'bg-gray-100 dark:bg-brand-dark-border text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-500'
-                                        }
+                                                ? 'bg-brand-primary text-white shadow-md'
+                                                : 'bg-gray-100 dark:bg-brand-dark-border text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-500'
+                                            }
                                         ${isPWA ? 'pwa:px-5 pwa:py-3.5 pwa:text-base pwa:font-bold pwa:shadow-lg' : ''}
                                         ${isPWA && activeCategory === category.id ? 'pwa:bg-orange-600' : ''}
                                     `}
-                                    style={isPWA ? {
-                                        padding: activeCategory === category.id ? '0.875rem 1.25rem' : '0.75rem 1.25rem',
-                                        fontSize: '1rem',
-                                        fontWeight: '700'
-                                    } : {}}
-                                >
-                                    {restaurant?.logo_url && activeCategory === category.id && (
-                                        <img src={resolveAssetUrl(restaurant.logo_url)} alt="" className="h-4 w-4 object-contain opacity-90" />
-                                    )}
-                                    <span>{category.name}</span>
-                                    <span className="text-xs opacity-70">({category.items?.length || 0})</span>
-                                </button>
-                            ))}
+                                        style={isPWA ? {
+                                            padding: activeCategory === category.id ? '0.875rem 1.25rem' : '0.75rem 1.25rem',
+                                            fontSize: '1rem',
+                                            fontWeight: '700'
+                                        } : {}}
+                                    >
+                                        {restaurant?.logo_url && activeCategory === category.id && (
+                                            <img src={resolveAssetUrl(restaurant.logo_url)} alt="" className="h-4 w-4 object-contain opacity-90" />
+                                        )}
+                                        <span>{category.name}</span>
+                                        <span className="text-xs opacity-70">({category.items?.length || 0})</span>
+                                    </button>
+                                ))}
                             </div>
                         </div>
                     </div>

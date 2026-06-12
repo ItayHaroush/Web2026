@@ -298,7 +298,7 @@ export default function MenuItemModal({
                         {(item?.category_name?.includes('שתיי') || item?.category_name?.includes('שתיה') || item?.category_name?.includes('משק')) ? (
                             <>
                                 {/* תמונת רקע מטושטשת במיוחד לקטגוריית "שתייה" */}
-                                <div 
+                                <div
                                     className="absolute inset-0 bg-cover bg-center blur-xl opacity-40 dark:opacity-20 scale-110"
                                     style={{ backgroundImage: `url(${resolveAssetUrl(item.image_url)})` }}
                                 />

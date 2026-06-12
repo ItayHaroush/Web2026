@@ -470,14 +470,14 @@ export default function LandingPage() {
                                                     </div>
                                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 h-full">
                                                         {(deliveryImagesSwapped ? [...feature.images].reverse() : feature.images).map((src, idx) => (
-                                                        <img
-                                                            key={`${feature.title}-${idx}`}
-                                                            src={src}
-                                                            alt={`${feature.title} ${idx + 1}`}
-                                                            className={`w-full h-full rounded-xl object-cover border border-white/70 shadow-sm transition-all duration-700 ${deliveryImagesSwapped ? 'sm:translate-x-0' : 'sm:translate-x-0'}`}
-                                                            loading="lazy"
-                                                        />
-                                                    ))}
+                                                            <img
+                                                                key={`${feature.title}-${idx}`}
+                                                                src={src}
+                                                                alt={`${feature.title} ${idx + 1}`}
+                                                                className={`w-full h-full rounded-xl object-cover border border-white/70 shadow-sm transition-all duration-700 ${deliveryImagesSwapped ? 'sm:translate-x-0' : 'sm:translate-x-0'}`}
+                                                                loading="lazy"
+                                                            />
+                                                        ))}
                                                     </div>
                                                 </div>
                                             ) : (
