@@ -1,96 +1,143 @@
 import { useEffect, useState } from 'react';
-import { FaExternalLinkAlt, FaTimes } from 'react-icons/fa';
+import { FaExternalLinkAlt, FaTimes, FaEllipsisH } from 'react-icons/fa';
 
 /**
- * קומפוננטה שמציגה הודעה למשתמשים שפתחו את האתר בתוך אפליקציות סושיאל (פייסבוק/אינסטגרם)
- * מנחה אותם לפתוח בדפדפן חיצוני לחוויה מלאה
+ * באנר עדין בתחתית המסך למשתמשים שפתחו את האתר בתוך אפליקציות סושיאל
+ * (פייסבוק / אינסטגרם / מסנג'ר). מציע לפתוח בדפדפן חיצוני לחוויה מלאה,
+ * אך לא חוסם את השימוש באתר.
  */
+
+const IN_APP_RE = /FBAN|FBAV|FB_IAB|FB4A|Instagram|Messenger/i;
+
+function isInAppBrowser() {
+    try {
+        return IN_APP_RE.test(navigator.userAgent || '');
+    } catch {
+        return false;
+    }
+}
+
 export default function FacebookInAppWarning() {
-    const [showWarning, setShowWarning] = useState(false);
-    const [dismissed, setDismissed] = useState(false);
+    const [show, setShow] = useState(false);
+    const [opening, setOpening] = useState(false);
+    const [showHint, setShowHint] = useState(false);
 
     useEffect(() => {
-        // בדיקה אם המשתמש בתוך אפליקציית פייסבוק או אינסטגרם
-        const isFacebookInApp = /FBAN|FBAV|Instagram/i.test(navigator.userAgent);
-
-        let wasDissmissed = false;
+        let wasDismissed = false;
         try {
-            // בדיקה אם המשתמש כבר סגר את ההודעה בעבר (שמור ב-sessionStorage)
-            wasDissmissed = sessionStorage.getItem('fb-warning-dismissed');
-        } catch (e) {
-            // SessionStorage לא זמין - המשך רגיל
+            wasDismissed = !!sessionStorage.getItem('fb-warning-dismissed');
+        } catch {
+            /* sessionStorage לא זמין — נמשיך כרגיל */
         }
-
-        if (isFacebookInApp && !wasDissmissed) {
-            setShowWarning(true);
+        if (isInAppBrowser() && !wasDismissed) {
+            setShow(true);
         }
     }, []);
 
     const handleDismiss = () => {
-        setDismissed(true);
-        setShowWarning(false);
+        setShow(false);
         try {
             sessionStorage.setItem('fb-warning-dismissed', 'true');
-        } catch (e) {
-            // שמירה נכשלה - המשך רגיל
+        } catch {
+            /* שמירה נכשלה — נמשיך כרגיל */
         }
     };
 
     const handleOpenInBrowser = () => {
-        // הנחיה לפתוח בדפדפן חיצוני
-        // בפייסבוק אין דרך ישירה לפתוח בדפדפן, אז נציג הוראות
-        alert('לחץ על שלוש הנקודות בפינה (⋮) ובחר "פתח בדפדפן" או "Open in Browser"');
+        const url = window.location.href;
+        const ua = navigator.userAgent || '';
+        const isIOS = /iPhone|iPad|iPod/i.test(ua);
+        const isAndroid = /Android/i.test(ua);
+
+        setOpening(true);
+        setShowHint(false);
+
+        try {
+            if (isAndroid) {
+                // פתיחה ב-Chrome דרך Android Intent, עם נפילה חזרה לכתובת המקורית.
+                const noScheme = url.replace(/^https?:\/\//, '');
+                window.location.href =
+                    `intent://${noScheme}#Intent;scheme=https;package=com.android.chrome;` +
+                    `S.browser_fallback_url=${encodeURIComponent(url)};end`;
+            } else if (isIOS) {
+                // ב-iOS אין דרך ציבורית לכפות את Safari; מנסים לפתוח ב-Chrome אם מותקן.
+                window.location.href = 'googlechrome://' + url.replace(/^https?:\/\//, '');
+            } else {
+                window.open(url, '_blank', 'noopener');
+            }
+        } catch {
+            /* אם הניווט נכשל — ההוראות הידניות ייחשפו למטה */
+        }
+
+        // אם נשארנו כאן אחרי רגע, סימן שהדפדפן החיצוני לא נפתח — נציג הנחיה ידנית עדינה.
+        window.setTimeout(() => {
+            setOpening(false);
+            setShowHint(true);
+        }, 1600);
     };
 
-    if (!showWarning || dismissed) {
+    if (!show) {
         return null;
     }
 
     return (
-        <div className="fixed top-0 left-0 right-0 z-[9999] bg-gradient-to-r from-red-600 to-rose-700 text-white shadow-2xl animate-in slide-in-from-top-5 duration-500">
-            <div className="max-w-4xl mx-auto px-4 py-4">
-                <div className="flex items-start gap-4">
+        <div
+            dir="rtl"
+            role="dialog"
+            aria-live="polite"
+            aria-label="פתיחה בדפדפן חיצוני"
+            className="fixed inset-x-0 bottom-0 z-[9999] p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pointer-events-none"
+        >
+            <div className="pointer-events-auto mx-auto w-full max-w-md overflow-hidden rounded-2xl bg-white text-brand-dark shadow-2xl ring-1 ring-black/5 animate-bottom-dismissible-in dark:bg-brand-dark-surface dark:text-brand-dark-text dark:ring-white/10">
+                <div className="flex items-center gap-3 p-3">
                     {/* אייקון */}
-                    <div className="flex-shrink-0 w-10 h-10 bg-white/20 rounded-full flex items-center justify-center mt-0.5">
-                        <FaExternalLinkAlt size={18} />
+                    <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-brand-primary/10 text-brand-primary">
+                        <FaExternalLinkAlt size={15} />
                     </div>
 
                     {/* תוכן */}
-                    <div className="flex-1 min-w-0">
-                        <h3 className="font-black text-base mb-1 tracking-tight">
-                            לחוויה מיטבית - פתח בדפדפן
-                        </h3>
-                        <p className="text-sm text-red-50 leading-relaxed font-medium">
-                            נראה שפתחת את האתר בתוך אפליקציית פייסבוק/אינסטגרם. לחוויית הזמנה מלאה וחלקה, מומלץ לפתוח את האתר בדפדפן Chrome, Safari או Firefox.
+                    <div className="min-w-0 flex-1">
+                        <p className="text-sm font-bold leading-tight">
+                            פתחו בדפדפן לחוויה מלאה
                         </p>
-
-                        {/* כפתורי פעולה */}
-                        <div className="flex flex-wrap gap-2 mt-3">
-                            <button
-                                onClick={handleOpenInBrowser}
-                                className="px-4 py-2 bg-white text-red-600 rounded-xl font-black text-xs uppercase tracking-wider hover:bg-red-50 transition-all active:scale-95 flex items-center gap-2 shadow-md"
-                            >
-                                <FaExternalLinkAlt size={12} />
-                                איך לפתוח בדפדפן?
-                            </button>
-                            <button
-                                onClick={handleDismiss}
-                                className="px-4 py-2 bg-white/10 text-white rounded-xl font-black text-xs uppercase tracking-wider hover:bg-white/20 transition-all active:scale-95 border border-white/30"
-                            >
-                                המשך בכל זאת
-                            </button>
-                        </div>
+                        <p className="mt-0.5 truncate text-xs leading-tight text-gray-500 dark:text-brand-dark-muted">
+                            פתחתם דרך פייסבוק / אינסטגרם
+                        </p>
                     </div>
 
-                    {/* כפתור סגירה */}
+                    {/* פעולה ראשית — פתיחה בדפדפן חיצוני */}
                     <button
-                        onClick={handleDismiss}
-                        className="flex-shrink-0 w-8 h-8 rounded-full hover:bg-white/20 transition-all flex items-center justify-center text-white/80 hover:text-white"
-                        aria-label="סגור"
+                        type="button"
+                        onClick={handleOpenInBrowser}
+                        disabled={opening}
+                        className="inline-flex flex-shrink-0 items-center gap-1.5 rounded-xl bg-brand-primary px-3.5 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-brand-secondary active:scale-95 disabled:opacity-70"
                     >
-                        <FaTimes size={16} />
+                        {opening ? 'פותח…' : 'פתח בדפדפן'}
+                    </button>
+
+                    {/* סגירה / המשך כאן */}
+                    <button
+                        type="button"
+                        onClick={handleDismiss}
+                        aria-label="המשך בדפדפן הנוכחי"
+                        className="-mr-1 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-gray-400 transition hover:bg-black/5 hover:text-gray-600 dark:hover:bg-white/10 dark:hover:text-white"
+                    >
+                        <FaTimes size={14} />
                     </button>
                 </div>
+
+                {/* הנחיה ידנית — מופיעה רק אם הפתיחה האוטומטית לא עבדה */}
+                {showHint && (
+                    <div className="px-3 pb-3">
+                        <div className="flex items-center gap-2 rounded-xl bg-gray-50 px-3 py-2 text-xs text-gray-600 dark:bg-white/5 dark:text-brand-dark-muted">
+                            <FaEllipsisH size={14} className="flex-shrink-0 text-brand-primary" />
+                            <span>
+                                לא נפתח? הקישו על <strong>⋯</strong> בפינה ובחרו{' '}
+                                <strong>"פתח בדפדפן"</strong>
+                            </span>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

@@ -26,6 +26,11 @@ export default {
           '0%': { opacity: '0', transform: 'translateY(-0.5rem)' },
           '100%': { opacity: '1', transform: 'translateY(0)' },
         },
+        /** פופ־אפ תחתון (bottom sheet) — החלקה עדינה מלמטה */
+        bottomDismissibleIn: {
+          '0%': { opacity: '0', transform: 'translateY(0.75rem)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
         /** הדרכה — קו מתמלא בסטריק כתום */
         guideFlowStripe: {
           '0%': { transformOrigin: '100% 50%', transform: 'scaleX(0)' },
@@ -37,6 +42,7 @@ export default {
       animation: {
         'menu-orders-hint-in': 'menuOrdersHintIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards',
         'top-dismissible-in': 'topDismissibleIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+        'bottom-dismissible-in': 'bottomDismissibleIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards',
         'guide-flow-stripe': 'guideFlowStripe 3.8s cubic-bezier(0.22, 1, 0.36, 1) infinite',
       },
       colors: {
