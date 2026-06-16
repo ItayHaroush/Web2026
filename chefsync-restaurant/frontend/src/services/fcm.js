@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { deleteToken, getMessaging, getToken, onMessage } from 'firebase/messaging';
+import { deleteToken, getMessaging, getToken, isSupported, onMessage } from 'firebase/messaging';
 import { getFirebaseMessagingSwUrl } from '../utils/deployVersion.js';
 import {
     disableNativePush,
@@ -28,9 +28,53 @@ const firebaseConfig = {
     appId: '1:269892843693:web:24054f3b046a2c40f16e24',
 };
 
-const app = initializeApp(firebaseConfig);
-const messaging = getMessaging(app);
 const VAPID_KEY = 'BGbVAlRKn9V7VrOB9aN8-lAoZ9_q55ox6-pgJ0p7dN9uGPQl6t60ZiJwCzmZj_P2BHmGuMTSMjChxMOJAccvG-o';
+
+// ⚠️ CRITICAL: Firebase Messaging MUST be initialized lazily.
+// getMessaging() synchronously runs `navigator.serviceWorker.addEventListener(...)`.
+// In the Facebook/Instagram in-app browser (especially iOS WKWebView) and other
+// restricted WebViews, `navigator.serviceWorker` is `undefined`, so calling it at
+// module load time throws a TypeError and crashes the entire app at boot (white screen).
+// We therefore defer initialization and only create the Messaging instance once we have
+// confirmed the browser actually supports web push.
+let firebaseApp;
+let messagingPromise;
+
+function getFirebaseApp() {
+    if (!firebaseApp) {
+        firebaseApp = initializeApp(firebaseConfig);
+    }
+    return firebaseApp;
+}
+
+/**
+ * מחזיר instance של Firebase Messaging, או null כשהדפדפן לא תומך ב-web push
+ * (פייסבוק/אינסטגרם in-app, WebView ישן, מצב פרטי וכו') — כדי שהקריאה לא תקרוס.
+ * הבדיקה רצה פעם אחת בלבד וממומשת (memoized).
+ */
+async function getMessagingSafe() {
+    if (messagingPromise === undefined) {
+        messagingPromise = (async () => {
+            try {
+                if (typeof window === 'undefined' || typeof navigator === 'undefined') return null;
+                if (isNativePushPlatform()) return null;
+                if (isFacebookBrowser()) return null;
+                // Required Web Push primitives — absent in FB/IG IAB & older WebViews.
+                if (!('serviceWorker' in navigator)) return null;
+                if (!('Notification' in window)) return null;
+                if (!('PushManager' in window)) return null;
+                // Firebase's own async capability probe (IndexedDB openable, etc.).
+                const supported = await isSupported().catch(() => false);
+                if (!supported) return null;
+                return getMessaging(getFirebaseApp());
+            } catch (err) {
+                console.warn('[FCM] Messaging unavailable in this browser:', err?.message || err);
+                return null;
+            }
+        })();
+    }
+    return messagingPromise;
+}
 
 const LS_KEY = 'fcmToken';
 /** FCM ללקוחות קצה — נפרד מטוקן אדמין/טאבלט */
@@ -94,11 +138,8 @@ export async function requestCustomerFcmToken() {
         return token;
     }
 
-    if (isFacebookBrowser()) {
-        return null;
-    }
-
-    if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+    const messaging = await getMessagingSafe();
+    if (!messaging) {
         return null;
     }
 
@@ -147,10 +188,8 @@ export async function getCustomerFcmTokenIfPermitted() {
         return token;
     }
 
-    if (isFacebookBrowser()) {
-        return null;
-    }
-    if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+    const messaging = await getMessagingSafe();
+    if (!messaging) {
         return null;
     }
     if (Notification.permission !== 'granted') {
@@ -192,10 +231,8 @@ export async function getAdminFcmTokenIfPermitted() {
         return token;
     }
 
-    if (isFacebookBrowser()) {
-        return null;
-    }
-    if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+    const messaging = await getMessagingSafe();
+    if (!messaging) {
         return null;
     }
     if (Notification.permission !== 'granted') {
@@ -227,13 +264,9 @@ export async function requestFcmToken() {
         return token;
     }
 
-    // ⚠️ Block Firebase operations in Facebook/Instagram browsers
-    if (isFacebookBrowser()) {
-        return null;
-    }
-
-    // Check if notifications are supported
-    if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+    // Returns null in Facebook/Instagram browsers and anywhere web push is unsupported.
+    const messaging = await getMessagingSafe();
+    if (!messaging) {
         return null;
     }
 
@@ -269,6 +302,12 @@ export async function disableFcm() {
         return true;
     }
 
+    const messaging = await getMessagingSafe();
+    if (!messaging) {
+        clearStoredFcmToken();
+        return true;
+    }
+
     try {
         // This removes the FCM token from the browser (permission remains granted).
         const ok = await deleteToken(messaging);
@@ -286,5 +325,26 @@ export function listenForegroundMessages(handler) {
         return listenNativeForegroundMessages(handler);
     }
 
-    return onMessage(messaging, handler);
+    // Messaging may be unsupported (FB/IG in-app, older WebViews) — degrade to a no-op
+    // unsubscribe while still resolving lazily so we never crash the caller's effect.
+    let unsubscribe = () => { };
+    let cancelled = false;
+
+    getMessagingSafe().then((messaging) => {
+        if (cancelled || !messaging) return;
+        try {
+            unsubscribe = onMessage(messaging, handler);
+        } catch (err) {
+            console.warn('[FCM] onMessage subscription failed:', err?.message || err);
+        }
+    });
+
+    return () => {
+        cancelled = true;
+        try {
+            unsubscribe();
+        } catch {
+            // ignore
+        }
+    };
 }

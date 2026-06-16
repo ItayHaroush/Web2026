@@ -1,23 +1,13 @@
 <!doctype html>
 <html lang="he" dir="rtl">
   <head>
-    <!-- 🚨 FACEBOOK/INSTAGRAM BROWSER REDIRECT 🚨 -->
-    <script>
-      (function() {
-        // Prevent infinite loop if user came back from open.html
-        try {
-            if (sessionStorage.getItem('fb-redirect-attempted')) return;
-        } catch(e) {}
-
-        var isFacebookApp = /FBAN|FBAV|Instagram/i.test(navigator.userAgent);
-
-        // If in FB/Insta app, redirect to open.html immediately
-        if (isFacebookApp) {
-           var currentUrl = encodeURIComponent(window.location.href);
-           window.location.replace('/open.html?target=' + currentUrl);
-        }
-      })();
-    </script>
+    <!--
+      NOTE: We intentionally DO NOT auto-redirect Facebook/Instagram in-app browsers.
+      The app must render inline inside the in-app browser (like competing ordering
+      systems do). A dismissible "open in browser" hint is offered via the in-app
+      <FacebookInAppWarning /> banner, and a static helper page remains at /open.html
+      for users who explicitly choose to switch browsers — but it is never forced.
+    -->
 
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-LDRG3SC1VE"></script>
@@ -163,15 +153,25 @@
     
     <script>
       (function() {
-         // Auto-show warning if React doesn't load within 3 seconds in FB browser
+         // Safety net ONLY: if the JS bundle genuinely fails to boot inside an in-app
+         // browser, surface a hint. The bundle can be slow to download on mobile data,
+         // so we wait generously and keep re-checking, then auto-hide once React mounts.
          const isFB = /FBAN|FBAV|Instagram/i.test(navigator.userAgent);
-         if (isFB) {
-            setTimeout(() => {
-                if (!window.REACT_LOADED) {
-                    document.getElementById('fb-warning').style.display = 'block';
-                }
-            }, 3000);
-         }
+         if (!isFB) return;
+         var banner = function () { return document.getElementById('fb-warning'); };
+         var timer = setInterval(function () {
+            if (window.REACT_LOADED) {
+               var el = banner();
+               if (el) el.style.display = 'none';
+               clearInterval(timer);
+            }
+         }, 500);
+         setTimeout(function () {
+            if (!window.REACT_LOADED) {
+               var el = banner();
+               if (el) el.style.display = 'block';
+            }
+         }, 8000);
       })();
     </script>
     

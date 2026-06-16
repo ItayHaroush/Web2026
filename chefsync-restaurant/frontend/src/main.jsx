@@ -8,6 +8,14 @@ import { getFirebaseMessagingSwUrl } from './utils/deployVersion.js'
 // ✅ Signal Init
 window.REACT_LOADED = true;
 
+// Hide the index.html "failed to load" safety-net banner now that the app booted.
+try {
+  const fbWarning = document.getElementById('fb-warning');
+  if (fbWarning) fbWarning.style.display = 'none';
+} catch {
+  /* noop */
+}
+
 // Pre-register the Firebase messaging service worker on the frontend domain
 // ⚠️ CRITICAL: Skip Service Worker in Facebook/Instagram in-app browsers
 const isFacebookBrowser = () => {

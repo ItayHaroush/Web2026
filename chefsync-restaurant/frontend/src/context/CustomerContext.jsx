@@ -14,7 +14,13 @@ const CUSTOMER_TOKEN_KEY = 'customer_token';
 const CUSTOMER_DATA_KEY = 'customer_data';
 
 function persistCustomerData(data) {
-    localStorage.setItem(CUSTOMER_DATA_KEY, JSON.stringify(data));
+    // localStorage can throw in restricted/in-app browsers (Facebook/Instagram, private mode).
+    // Never let a storage failure break the customer flow.
+    try {
+        localStorage.setItem(CUSTOMER_DATA_KEY, JSON.stringify(data));
+    } catch {
+        /* ignore storage failures */
+    }
     window.dispatchEvent(new CustomEvent('customer_data_changed', { detail: data }));
 }
 
