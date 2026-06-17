@@ -476,7 +476,9 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'tenant'])->group(function (
 
         // תור הדפסה — עבודות שנכשלו + הדפסה חוזרת ידנית (אף הזמנה לא הולכת לאיבוד)
         Route::get('/print-jobs/failed', [PrintAgentController::class, 'failedJobs'])->name('admin.print-jobs.failed');
+        Route::delete('/print-jobs/failed', [PrintAgentController::class, 'clearFailedJobs'])->name('admin.print-jobs.clear');
         Route::post('/print-jobs/{id}/retry', [PrintAgentController::class, 'retryJob'])->name('admin.print-jobs.retry');
+        Route::delete('/print-jobs/{id}', [PrintAgentController::class, 'deleteJob'])->name('admin.print-jobs.delete');
 
         // POS Lite - קופה (set-pin, verify-pin, unlock מוגדרים למעלה מחוץ ל-CheckRestaurantAccess)
         Route::prefix('pos')->group(function () {

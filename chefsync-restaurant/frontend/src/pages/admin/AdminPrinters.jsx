@@ -28,6 +28,8 @@ import {
     togglePrintDevice,
     getFailedPrintJobs,
     retryPrintJob,
+    deletePrintJob,
+    clearFailedPrintJobs,
 } from '../../services/printDeviceService';
 import PrinterCard from '../../components/printer/admin/PrinterCard';
 import PrinterFormModal from '../../components/printer/admin/PrinterFormModal';
@@ -120,6 +122,8 @@ export default function AdminPrinters({ embedded = false }) {
     const [savingTemplate, setSavingTemplate] = useState(false);
     const [failedJobs, setFailedJobs] = useState([]);
     const [retryingJobId, setRetryingJobId] = useState(null);
+    const [deletingJobId, setDeletingJobId] = useState(null);
+    const [clearingJobs, setClearingJobs] = useState(false);
 
     const fetchData = async () => {
         try {
@@ -171,6 +175,33 @@ export default function AdminPrinters({ embedded = false }) {
             alert(error.response?.data?.message || 'שגיאה בהדפסה מחדש');
         } finally {
             setRetryingJobId(null);
+        }
+    };
+
+    const handleDeleteJob = async (jobId) => {
+        setDeletingJobId(jobId);
+        try {
+            await deletePrintJob(jobId);
+            setFailedJobs((prev) => prev.filter((j) => j.id !== jobId));
+        } catch (error) {
+            console.error('Failed to delete print job:', error);
+            alert(error.response?.data?.message || 'שגיאה במחיקה');
+        } finally {
+            setDeletingJobId(null);
+        }
+    };
+
+    const handleClearFailedJobs = async () => {
+        if (!confirm('למחוק את כל ההדפסות שנכשלו? פעולה זו אינה ניתנת לביטול.')) return;
+        setClearingJobs(true);
+        try {
+            await clearFailedPrintJobs();
+            setFailedJobs([]);
+        } catch (error) {
+            console.error('Failed to clear print jobs:', error);
+            alert(error.response?.data?.message || 'שגיאה במחיקה');
+        } finally {
+            setClearingJobs(false);
         }
     };
 
@@ -579,12 +610,22 @@ export default function AdminPrinters({ embedded = false }) {
                     {/* תור הדפסה שנכשל — הדפסה חוזרת ידנית (אף הזמנה לא הולכת לאיבוד) */}
                     {failedJobs.length > 0 && (
                         <div className="mb-8 bg-white rounded-[2rem] border-2 border-red-100 shadow-sm overflow-hidden">
-                            <div className="bg-red-50 px-6 py-4 flex items-center gap-3 border-b border-red-100">
-                                <FaExclamationTriangle className="text-red-500" size={18} />
-                                <div>
-                                    <h3 className="font-black text-red-700">הדפסות שנכשלו ({failedJobs.length})</h3>
-                                    <p className="text-xs text-red-500 mt-0.5">ההזמנות נשמרו ולא אבדו — ניתן להדפיס מחדש ידנית</p>
+                            <div className="bg-red-50 px-6 py-4 flex items-center justify-between gap-3 border-b border-red-100">
+                                <div className="flex items-center gap-3 min-w-0">
+                                    <FaExclamationTriangle className="text-red-500 flex-shrink-0" size={18} />
+                                    <div className="min-w-0">
+                                        <h3 className="font-black text-red-700">הדפסות שנכשלו ({failedJobs.length})</h3>
+                                        <p className="text-xs text-red-500 mt-0.5">ההזמנות נשמרו ולא אבדו — ניתן להדפיס מחדש ידנית</p>
+                                    </div>
                                 </div>
+                                <button
+                                    onClick={handleClearFailedJobs}
+                                    disabled={clearingJobs}
+                                    className="flex-shrink-0 px-4 py-2.5 rounded-xl font-bold text-sm bg-red-100 text-red-700 hover:bg-red-200 transition-all flex items-center gap-2 disabled:opacity-50"
+                                >
+                                    {clearingJobs ? <FaRedo className="animate-spin" size={12} /> : <FaTrash size={12} />}
+                                    נקה הכל
+                                </button>
                             </div>
                             <div className="divide-y divide-gray-50">
                                 {failedJobs.map((job) => (
@@ -608,14 +649,24 @@ export default function AdminPrinters({ embedded = false }) {
                                                 {job.printer_name ? `${job.printer_name} · ` : ''}{timeAgo(job.failed_at)}
                                             </p>
                                         </div>
-                                        <button
-                                            onClick={() => handleRetryJob(job.id)}
-                                            disabled={retryingJobId === job.id}
-                                            className="flex-shrink-0 px-5 py-2.5 rounded-xl font-bold text-sm bg-indigo-600 text-white hover:bg-indigo-500 transition-all flex items-center gap-2 disabled:opacity-50"
-                                        >
-                                            {retryingJobId === job.id ? <FaRedo className="animate-spin" size={12} /> : <FaPrint size={12} />}
-                                            הדפס מחדש
-                                        </button>
+                                        <div className="flex-shrink-0 flex items-center gap-2">
+                                            <button
+                                                onClick={() => handleRetryJob(job.id)}
+                                                disabled={retryingJobId === job.id}
+                                                className="px-5 py-2.5 rounded-xl font-bold text-sm bg-indigo-600 text-white hover:bg-indigo-500 transition-all flex items-center gap-2 disabled:opacity-50"
+                                            >
+                                                {retryingJobId === job.id ? <FaRedo className="animate-spin" size={12} /> : <FaPrint size={12} />}
+                                                הדפס מחדש
+                                            </button>
+                                            <button
+                                                onClick={() => handleDeleteJob(job.id)}
+                                                disabled={deletingJobId === job.id}
+                                                title="מחק התראה"
+                                                className="px-3 py-2.5 rounded-xl font-bold text-sm bg-red-50 text-red-600 hover:bg-red-100 transition-all flex items-center disabled:opacity-50"
+                                            >
+                                                {deletingJobId === job.id ? <FaRedo className="animate-spin" size={12} /> : <FaTrash size={12} />}
+                                            </button>
+                                        </div>
                                     </div>
                                 ))}
                             </div>

@@ -625,4 +625,71 @@ class PrintAgentController extends Controller
             'message' => 'ההזמנה נשלחה להדפסה מחדש',
         ]);
     }
+
+    /**
+     * Dismiss a single failed print job from the re-print list.
+     * Only failed jobs can be removed — pending/printing jobs are protected so
+     * an active order is never lost.
+     */
+    public function deleteJob(Request $request, $id)
+    {
+        $user = $request->user();
+
+        if (! $user->isManager() && ! $user->isEmployee()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'אין לך הרשאה למחוק עבודות הדפסה',
+            ], 403);
+        }
+
+        $job = PrintJob::withoutGlobalScopes()
+            ->where('restaurant_id', $user->restaurant_id)
+            ->where('status', 'failed')
+            ->findOrFail($id);
+
+        $job->delete();
+
+        Log::info('Failed print job dismissed', [
+            'job_id' => $job->id,
+            'order_id' => $job->order_id,
+            'user_id' => $user->id,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'ההתראה נמחקה',
+        ]);
+    }
+
+    /**
+     * Clear ALL failed print jobs for the current restaurant at once.
+     */
+    public function clearFailedJobs(Request $request)
+    {
+        $user = $request->user();
+
+        if (! $user->isManager() && ! $user->isEmployee()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'אין לך הרשאה למחוק עבודות הדפסה',
+            ], 403);
+        }
+
+        $deleted = PrintJob::withoutGlobalScopes()
+            ->where('restaurant_id', $user->restaurant_id)
+            ->where('status', 'failed')
+            ->delete();
+
+        Log::info('Failed print jobs cleared', [
+            'restaurant_id' => $user->restaurant_id,
+            'deleted' => $deleted,
+            'user_id' => $user->id,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'כל ההדפסות שנכשלו נמחקו',
+            'deleted' => $deleted,
+        ]);
+    }
 }

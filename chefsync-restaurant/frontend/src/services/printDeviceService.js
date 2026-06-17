@@ -34,3 +34,13 @@ export const retryPrintJob = async (id) => {
     const response = await apiClient.post(`/admin/print-jobs/${id}/retry`);
     return response.data;
 };
+
+export const deletePrintJob = async (id) => {
+    const response = await apiClient.delete(`/admin/print-jobs/${id}`);
+    return response.data;
+};
+
+export const clearFailedPrintJobs = async () => {
+    const response = await apiClient.delete('/admin/print-jobs/failed');
+    return response.data;
+};
