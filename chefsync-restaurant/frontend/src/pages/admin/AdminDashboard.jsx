@@ -4,7 +4,8 @@ import { useAdminAuth } from '../../context/AdminAuthContext';
 import AdminLayout from '../../layouts/AdminLayout';
 import api from '../../services/apiClient';
 import SoundManager from '../../services/SoundManager';
-import { clearStoredFcmToken, disableFcm, getPushPlatform, getStoredFcmToken, requestFcmToken } from '../../services/fcm';
+import { clearStoredFcmToken, disableFcm, getPushPlatform, getStoredFcmToken, isNativePushPlatform, requestFcmToken } from '../../services/fcm';
+import { getNativePushPermissionState } from '../../services/nativePush';
 import AiCreditsBadge from '../../components/AiCreditsBadge';
 import AiInsightsPanel from '../../components/AiInsightsPanel';
 import UpgradeBanner from '../../components/UpgradeBanner';
@@ -43,10 +44,24 @@ export default function AdminDashboard() {
     const [futureDetailOrder, setFutureDetailOrder] = useState(null);
     const [loading, setLoading] = useState(true);
     const [pushState, setPushState] = useState({ status: 'idle', message: '' });
+    const [nativePushPerm, setNativePushPerm] = useState(null);
 
-    const permission = typeof Notification !== 'undefined' ? Notification.permission : 'unsupported';
+    const isNativePush = isNativePushPlatform();
+    const webPermission = typeof Notification !== 'undefined' ? Notification.permission : 'unsupported';
+    // באפליקציית אנדרואיד הנייטיב, הרשאת Web Notification אף פעם לא 'granted' —
+    // המצב האמיתי מגיע מהרשאת ה-OS דרך תוסף ה-Push.
+    const permission = isNativePush ? (nativePushPerm ?? 'prompt') : webPermission;
     const storedToken = useMemo(() => getStoredFcmToken(), [pushState.status]);
     const isPushEnabled = permission === 'granted' && !!storedToken;
+
+    useEffect(() => {
+        if (!isNativePush) return undefined;
+        let alive = true;
+        getNativePushPermissionState()
+            .then((p) => { if (alive) setNativePushPerm(p); })
+            .catch(() => {});
+        return () => { alive = false; };
+    }, [isNativePush, pushState.status]);
     // רק בעלים ומנהלים רואים הכנסות
     const canViewRevenue = isOwner() || isManager();
     const canManualPaymentTools = isOwner() || isManager();
@@ -115,11 +130,15 @@ export default function AdminDashboard() {
             setPushState({ status: 'loading', message: 'מבקש הרשאה להתראות...' });
             const token = await requestFcmToken();
             if (!token) {
-                const perm = typeof Notification !== 'undefined' ? Notification.permission : 'unsupported';
+                const perm = isNativePush
+                    ? await getNativePushPermissionState()
+                    : (typeof Notification !== 'undefined' ? Notification.permission : 'unsupported');
                 setPushState({
                     status: 'error',
                     message: perm === 'denied'
-                        ? 'ההתראות חסומות בדפדפן. יש לאפשר דרך ההגדרות.'
+                        ? (isNativePush
+                            ? 'ההתראות חסומות במכשיר. פתחו הגדרות > האפליקציה > התראות ואשרו.'
+                            : 'ההתראות חסומות בדפדפן. יש לאפשר דרך ההגדרות.')
                         : 'הרשאה נדחתה. יש לאשר התראות.',
                 });
                 return;

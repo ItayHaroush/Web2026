@@ -57,7 +57,7 @@ export default function AdminSettingsHub() {
 
     const ANDROID_APP_APK_URL =
         import.meta.env.VITE_ANDROID_APP_APK_URL ||
-        'https://api.chefsync.co.il/downloads/chefsync-restaurant.apk';
+        'https://api.chefsync.co.il/downloads/takeeat-restaurant.apk';
 
     const isAndroidDevice =
         typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent || '');
