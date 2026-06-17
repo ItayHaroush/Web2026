@@ -2,21 +2,39 @@
 
 namespace App\Services;
 
+use App\Models\FcmToken;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class FcmService
 {
+    /** Channel id created on the Android client — must match nativePush.js ORDERS_CHANNEL_ID */
+    private const ANDROID_CHANNEL_ID = 'orders';
+
     /**
      * Send a notification to a single token.
+     *
+     * The payload is platform-aware:
+     *  - Native (android/ios): includes a `notification` block + high-priority `android`
+     *    channel config so the OS shows a tray notification even when the app is
+     *    backgrounded or fully terminated.
+     *  - Web / unknown: keeps the data-only + `webpush` envelope so the existing
+     *    service worker keeps full control of display + sound (unchanged behaviour).
+     *
+     * @param string|null $platform 'android'|'ios'|'web'|null. When null it is resolved
+     *                              from the fcm_tokens table by token.
      */
-    public function sendToToken(string $token, string $title, string $body, array $data = []): bool
+    public function sendToToken(string $token, string $title, string $body, array $data = [], ?string $platform = null): bool
     {
         $projectId = config('fcm.project_id');
         $accessToken = $this->getAccessToken();
 
-        // WebPush delivery is most reliable when using the explicit 'webpush' envelope.
-        // Also include title/body in data so the service worker can display notifications.
+        if ($platform === null) {
+            $platform = FcmToken::withoutGlobalScopes()->where('token', $token)->value('platform');
+        }
+        $isNative = in_array(strtolower((string) $platform), ['android', 'ios'], true);
+
+        // Keep title/body in data so the SW / foreground handler can always display + ring.
         $dataMap = ['title' => (string) $title, 'body' => (string) $body];
         foreach ($data as $key => $value) {
             $dataMap[(string) $key] = (string) $value; // FCM requires string key/value map
@@ -32,6 +50,24 @@ class FcmService
                 ],
             ],
         ];
+
+        if ($isNative) {
+            // A top-level notification block is required for background/terminated delivery
+            // on native devices; the android block routes it to the high-importance channel.
+            $message['notification'] = [
+                'title' => (string) $title,
+                'body' => (string) $body,
+            ];
+            $message['android'] = [
+                'priority' => 'HIGH',
+                'notification' => [
+                    'channel_id' => self::ANDROID_CHANNEL_ID,
+                    'sound' => 'default',
+                    'default_sound' => true,
+                    'notification_priority' => 'PRIORITY_HIGH',
+                ],
+            ];
+        }
 
         $payload = [
             'message' => $message,

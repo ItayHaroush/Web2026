@@ -1,8 +1,8 @@
 1<?xml version="1.0" encoding="utf-8"?>
 2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
 3    package="com.chefsync.printagent"
-4    android:versionCode="1"
-5    android:versionName="1.0.0" >
+4    android:versionCode="3"
+5    android:versionName="1.2.0" >
 6
 7    <uses-sdk
 8        android:minSdkVersion="26"
@@ -11,138 +11,163 @@
 11    <uses-permission android:name="android.permission.INTERNET" />
 11-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:4:5-67
 11-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:4:22-64
-12    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-12-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:5:5-77
-12-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:5:22-74
-13    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
-13-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:6:5-87
-13-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:6:22-84
-14    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+12    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+12-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:5:5-79
+12-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:5:22-76
+13    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+13-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:6:5-76
+13-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:6:22-73
+14    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 14-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:7:5-77
 14-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:7:22-74
-15    <uses-permission android:name="android.permission.WAKE_LOCK" />
-15-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:8:5-68
-15-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:8:22-65
-16
-17    <permission
-17-->[androidx.core:core:1.12.0] /Users/itaymac/.gradle/caches/8.9/transforms/ba37b34bdf3734abe81b412972f35aab/transformed/core-1.12.0/AndroidManifest.xml:22:5-24:47
-18        android:name="com.chefsync.printagent.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
-18-->[androidx.core:core:1.12.0] /Users/itaymac/.gradle/caches/8.9/transforms/ba37b34bdf3734abe81b412972f35aab/transformed/core-1.12.0/AndroidManifest.xml:23:9-81
-19        android:protectionLevel="signature" />
-19-->[androidx.core:core:1.12.0] /Users/itaymac/.gradle/caches/8.9/transforms/ba37b34bdf3734abe81b412972f35aab/transformed/core-1.12.0/AndroidManifest.xml:24:9-44
-20
-21    <uses-permission android:name="com.chefsync.printagent.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
-21-->[androidx.core:core:1.12.0] /Users/itaymac/.gradle/caches/8.9/transforms/ba37b34bdf3734abe81b412972f35aab/transformed/core-1.12.0/AndroidManifest.xml:26:5-97
-21-->[androidx.core:core:1.12.0] /Users/itaymac/.gradle/caches/8.9/transforms/ba37b34bdf3734abe81b412972f35aab/transformed/core-1.12.0/AndroidManifest.xml:26:22-94
-22
-23    <application
-23-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:10:5-31:19
-24        android:allowBackup="true"
-24-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:11:9-35
-25        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
-25-->[androidx.core:core:1.12.0] /Users/itaymac/.gradle/caches/8.9/transforms/ba37b34bdf3734abe81b412972f35aab/transformed/core-1.12.0/AndroidManifest.xml:28:18-86
-26        android:debuggable="true"
-27        android:extractNativeLibs="false"
-28        android:label="@string/app_name"
-28-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:12:9-41
-29        android:supportsRtl="true"
-29-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:13:9-35
-30        android:theme="@style/Theme.MaterialComponents.DayNight.DarkActionBar" >
-30-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:14:9-79
-31        <activity
-31-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:16:9-24:20
-32            android:name="com.chefsync.printagent.SetupActivity"
-32-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:17:13-42
-33            android:exported="true"
-33-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:18:13-36
-34            android:label="@string/app_name" >
-34-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:19:13-45
-35            <intent-filter>
-35-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:20:13-23:29
-36                <action android:name="android.intent.action.MAIN" />
-36-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:21:17-69
-36-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:21:25-66
-37
-38                <category android:name="android.intent.category.LAUNCHER" />
-38-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:22:17-77
-38-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:22:27-74
-39            </intent-filter>
-40        </activity>
-41
-42        <service
-42-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:26:9-29:40
-43            android:name="com.chefsync.printagent.PrintAgentService"
-43-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:27:13-46
-44            android:exported="false"
-44-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:29:13-37
-45            android:foregroundServiceType="dataSync" />
-45-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:28:13-53
-46
-47        <provider
-47-->[androidx.emoji2:emoji2:1.2.0] /Users/itaymac/.gradle/caches/8.9/transforms/99da45e9d6ef8ac7bfd6de70a04b591d/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:24:9-32:20
-48            android:name="androidx.startup.InitializationProvider"
-48-->[androidx.emoji2:emoji2:1.2.0] /Users/itaymac/.gradle/caches/8.9/transforms/99da45e9d6ef8ac7bfd6de70a04b591d/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:25:13-67
-49            android:authorities="com.chefsync.printagent.androidx-startup"
-49-->[androidx.emoji2:emoji2:1.2.0] /Users/itaymac/.gradle/caches/8.9/transforms/99da45e9d6ef8ac7bfd6de70a04b591d/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:26:13-68
-50            android:exported="false" >
-50-->[androidx.emoji2:emoji2:1.2.0] /Users/itaymac/.gradle/caches/8.9/transforms/99da45e9d6ef8ac7bfd6de70a04b591d/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:27:13-37
-51            <meta-data
-51-->[androidx.emoji2:emoji2:1.2.0] /Users/itaymac/.gradle/caches/8.9/transforms/99da45e9d6ef8ac7bfd6de70a04b591d/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:29:13-31:52
-52                android:name="androidx.emoji2.text.EmojiCompatInitializer"
-52-->[androidx.emoji2:emoji2:1.2.0] /Users/itaymac/.gradle/caches/8.9/transforms/99da45e9d6ef8ac7bfd6de70a04b591d/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:30:17-75
-53                android:value="androidx.startup" />
-53-->[androidx.emoji2:emoji2:1.2.0] /Users/itaymac/.gradle/caches/8.9/transforms/99da45e9d6ef8ac7bfd6de70a04b591d/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:31:17-49
-54            <meta-data
-54-->[androidx.lifecycle:lifecycle-process:2.7.0] /Users/itaymac/.gradle/caches/8.9/transforms/e42e94bea6d5865528f42ffff6996097/transformed/jetified-lifecycle-process-2.7.0/AndroidManifest.xml:29:13-31:52
-55                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
-55-->[androidx.lifecycle:lifecycle-process:2.7.0] /Users/itaymac/.gradle/caches/8.9/transforms/e42e94bea6d5865528f42ffff6996097/transformed/jetified-lifecycle-process-2.7.0/AndroidManifest.xml:30:17-78
-56                android:value="androidx.startup" />
-56-->[androidx.lifecycle:lifecycle-process:2.7.0] /Users/itaymac/.gradle/caches/8.9/transforms/e42e94bea6d5865528f42ffff6996097/transformed/jetified-lifecycle-process-2.7.0/AndroidManifest.xml:31:17-49
-57            <meta-data
-57-->[androidx.profileinstaller:profileinstaller:1.3.0] /Users/itaymac/.gradle/caches/8.9/transforms/797974957dd1e0d8cfd6559f70534863/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:29:13-31:52
-58                android:name="androidx.profileinstaller.ProfileInstallerInitializer"
-58-->[androidx.profileinstaller:profileinstaller:1.3.0] /Users/itaymac/.gradle/caches/8.9/transforms/797974957dd1e0d8cfd6559f70534863/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:30:17-85
-59                android:value="androidx.startup" />
-59-->[androidx.profileinstaller:profileinstaller:1.3.0] /Users/itaymac/.gradle/caches/8.9/transforms/797974957dd1e0d8cfd6559f70534863/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:31:17-49
-60        </provider>
-61
-62        <receiver
-62-->[androidx.profileinstaller:profileinstaller:1.3.0] /Users/itaymac/.gradle/caches/8.9/transforms/797974957dd1e0d8cfd6559f70534863/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:34:9-52:20
-63            android:name="androidx.profileinstaller.ProfileInstallReceiver"
-63-->[androidx.profileinstaller:profileinstaller:1.3.0] /Users/itaymac/.gradle/caches/8.9/transforms/797974957dd1e0d8cfd6559f70534863/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:35:13-76
-64            android:directBootAware="false"
-64-->[androidx.profileinstaller:profileinstaller:1.3.0] /Users/itaymac/.gradle/caches/8.9/transforms/797974957dd1e0d8cfd6559f70534863/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:36:13-44
-65            android:enabled="true"
-65-->[androidx.profileinstaller:profileinstaller:1.3.0] /Users/itaymac/.gradle/caches/8.9/transforms/797974957dd1e0d8cfd6559f70534863/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:37:13-35
-66            android:exported="true"
-66-->[androidx.profileinstaller:profileinstaller:1.3.0] /Users/itaymac/.gradle/caches/8.9/transforms/797974957dd1e0d8cfd6559f70534863/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:38:13-36
-67            android:permission="android.permission.DUMP" >
-67-->[androidx.profileinstaller:profileinstaller:1.3.0] /Users/itaymac/.gradle/caches/8.9/transforms/797974957dd1e0d8cfd6559f70534863/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:39:13-57
-68            <intent-filter>
-68-->[androidx.profileinstaller:profileinstaller:1.3.0] /Users/itaymac/.gradle/caches/8.9/transforms/797974957dd1e0d8cfd6559f70534863/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:40:13-42:29
-69                <action android:name="androidx.profileinstaller.action.INSTALL_PROFILE" />
-69-->[androidx.profileinstaller:profileinstaller:1.3.0] /Users/itaymac/.gradle/caches/8.9/transforms/797974957dd1e0d8cfd6559f70534863/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:41:17-91
-69-->[androidx.profileinstaller:profileinstaller:1.3.0] /Users/itaymac/.gradle/caches/8.9/transforms/797974957dd1e0d8cfd6559f70534863/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:41:25-88
-70            </intent-filter>
-71            <intent-filter>
-71-->[androidx.profileinstaller:profileinstaller:1.3.0] /Users/itaymac/.gradle/caches/8.9/transforms/797974957dd1e0d8cfd6559f70534863/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:43:13-45:29
-72                <action android:name="androidx.profileinstaller.action.SKIP_FILE" />
-72-->[androidx.profileinstaller:profileinstaller:1.3.0] /Users/itaymac/.gradle/caches/8.9/transforms/797974957dd1e0d8cfd6559f70534863/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:44:17-85
-72-->[androidx.profileinstaller:profileinstaller:1.3.0] /Users/itaymac/.gradle/caches/8.9/transforms/797974957dd1e0d8cfd6559f70534863/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:44:25-82
-73            </intent-filter>
-74            <intent-filter>
-74-->[androidx.profileinstaller:profileinstaller:1.3.0] /Users/itaymac/.gradle/caches/8.9/transforms/797974957dd1e0d8cfd6559f70534863/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:46:13-48:29
-75                <action android:name="androidx.profileinstaller.action.SAVE_PROFILE" />
-75-->[androidx.profileinstaller:profileinstaller:1.3.0] /Users/itaymac/.gradle/caches/8.9/transforms/797974957dd1e0d8cfd6559f70534863/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:47:17-88
-75-->[androidx.profileinstaller:profileinstaller:1.3.0] /Users/itaymac/.gradle/caches/8.9/transforms/797974957dd1e0d8cfd6559f70534863/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:47:25-85
-76            </intent-filter>
-77            <intent-filter>
-77-->[androidx.profileinstaller:profileinstaller:1.3.0] /Users/itaymac/.gradle/caches/8.9/transforms/797974957dd1e0d8cfd6559f70534863/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:49:13-51:29
-78                <action android:name="androidx.profileinstaller.action.BENCHMARK_OPERATION" />
-78-->[androidx.profileinstaller:profileinstaller:1.3.0] /Users/itaymac/.gradle/caches/8.9/transforms/797974957dd1e0d8cfd6559f70534863/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:50:17-95
-78-->[androidx.profileinstaller:profileinstaller:1.3.0] /Users/itaymac/.gradle/caches/8.9/transforms/797974957dd1e0d8cfd6559f70534863/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:50:25-92
-79            </intent-filter>
-80        </receiver>
-81    </application>
-82
-83</manifest>
+15    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+15-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:8:5-87
+15-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:8:22-84
+16    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+16-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:9:5-77
+16-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:9:22-74
+17    <uses-permission android:name="android.permission.WAKE_LOCK" />
+17-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:10:5-68
+17-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:10:22-65
+18    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+18-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:11:5-81
+18-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:11:22-78
+19
+20    <permission
+20-->[androidx.core:core:1.12.0] /Users/itaymac/.gradle/caches/8.9/transforms/ba37b34bdf3734abe81b412972f35aab/transformed/core-1.12.0/AndroidManifest.xml:22:5-24:47
+21        android:name="com.chefsync.printagent.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+21-->[androidx.core:core:1.12.0] /Users/itaymac/.gradle/caches/8.9/transforms/ba37b34bdf3734abe81b412972f35aab/transformed/core-1.12.0/AndroidManifest.xml:23:9-81
+22        android:protectionLevel="signature" />
+22-->[androidx.core:core:1.12.0] /Users/itaymac/.gradle/caches/8.9/transforms/ba37b34bdf3734abe81b412972f35aab/transformed/core-1.12.0/AndroidManifest.xml:24:9-44
+23
+24    <uses-permission android:name="com.chefsync.printagent.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
+24-->[androidx.core:core:1.12.0] /Users/itaymac/.gradle/caches/8.9/transforms/ba37b34bdf3734abe81b412972f35aab/transformed/core-1.12.0/AndroidManifest.xml:26:5-97
+24-->[androidx.core:core:1.12.0] /Users/itaymac/.gradle/caches/8.9/transforms/ba37b34bdf3734abe81b412972f35aab/transformed/core-1.12.0/AndroidManifest.xml:26:22-94
+25
+26    <application
+26-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:13:5-43:19
+27        android:allowBackup="true"
+27-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:14:9-35
+28        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
+28-->[androidx.core:core:1.12.0] /Users/itaymac/.gradle/caches/8.9/transforms/ba37b34bdf3734abe81b412972f35aab/transformed/core-1.12.0/AndroidManifest.xml:28:18-86
+29        android:debuggable="true"
+30        android:extractNativeLibs="false"
+31        android:label="@string/app_name"
+31-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:15:9-41
+32        android:supportsRtl="true"
+32-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:16:9-35
+33        android:theme="@style/Theme.MaterialComponents.DayNight.DarkActionBar" >
+33-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:17:9-79
+34        <activity
+34-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:19:9-27:20
+35            android:name="com.chefsync.printagent.SetupActivity"
+35-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:20:13-42
+36            android:exported="true"
+36-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:21:13-36
+37            android:label="@string/app_name" >
+37-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:22:13-45
+38            <intent-filter>
+38-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:23:13-26:29
+39                <action android:name="android.intent.action.MAIN" />
+39-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:24:17-69
+39-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:24:25-66
+40
+41                <category android:name="android.intent.category.LAUNCHER" />
+41-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:25:17-77
+41-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:25:27-74
+42            </intent-filter>
+43        </activity>
+44
+45        <service
+45-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:29:9-32:40
+46            android:name="com.chefsync.printagent.PrintAgentService"
+46-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:30:13-46
+47            android:exported="false"
+47-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:32:13-37
+48            android:foregroundServiceType="dataSync" />
+48-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:31:13-53
+49
+50        <receiver
+50-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:34:9-41:20
+51            android:name="com.chefsync.printagent.BootReceiver"
+51-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:35:13-41
+52            android:enabled="true"
+52-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:36:13-35
+53            android:exported="true" >
+53-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:37:13-36
+54            <intent-filter>
+54-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:38:13-40:29
+55                <action android:name="android.intent.action.BOOT_COMPLETED" />
+55-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:39:17-79
+55-->/Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:39:25-76
+56            </intent-filter>
+57        </receiver>
+58
+59        <provider
+59-->[androidx.emoji2:emoji2:1.2.0] /Users/itaymac/.gradle/caches/8.9/transforms/99da45e9d6ef8ac7bfd6de70a04b591d/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:24:9-32:20
+60            android:name="androidx.startup.InitializationProvider"
+60-->[androidx.emoji2:emoji2:1.2.0] /Users/itaymac/.gradle/caches/8.9/transforms/99da45e9d6ef8ac7bfd6de70a04b591d/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:25:13-67
+61            android:authorities="com.chefsync.printagent.androidx-startup"
+61-->[androidx.emoji2:emoji2:1.2.0] /Users/itaymac/.gradle/caches/8.9/transforms/99da45e9d6ef8ac7bfd6de70a04b591d/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:26:13-68
+62            android:exported="false" >
+62-->[androidx.emoji2:emoji2:1.2.0] /Users/itaymac/.gradle/caches/8.9/transforms/99da45e9d6ef8ac7bfd6de70a04b591d/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:27:13-37
+63            <meta-data
+63-->[androidx.emoji2:emoji2:1.2.0] /Users/itaymac/.gradle/caches/8.9/transforms/99da45e9d6ef8ac7bfd6de70a04b591d/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:29:13-31:52
+64                android:name="androidx.emoji2.text.EmojiCompatInitializer"
+64-->[androidx.emoji2:emoji2:1.2.0] /Users/itaymac/.gradle/caches/8.9/transforms/99da45e9d6ef8ac7bfd6de70a04b591d/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:30:17-75
+65                android:value="androidx.startup" />
+65-->[androidx.emoji2:emoji2:1.2.0] /Users/itaymac/.gradle/caches/8.9/transforms/99da45e9d6ef8ac7bfd6de70a04b591d/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:31:17-49
+66            <meta-data
+66-->[androidx.lifecycle:lifecycle-process:2.7.0] /Users/itaymac/.gradle/caches/8.9/transforms/e42e94bea6d5865528f42ffff6996097/transformed/jetified-lifecycle-process-2.7.0/AndroidManifest.xml:29:13-31:52
+67                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
+67-->[androidx.lifecycle:lifecycle-process:2.7.0] /Users/itaymac/.gradle/caches/8.9/transforms/e42e94bea6d5865528f42ffff6996097/transformed/jetified-lifecycle-process-2.7.0/AndroidManifest.xml:30:17-78
+68                android:value="androidx.startup" />
+68-->[androidx.lifecycle:lifecycle-process:2.7.0] /Users/itaymac/.gradle/caches/8.9/transforms/e42e94bea6d5865528f42ffff6996097/transformed/jetified-lifecycle-process-2.7.0/AndroidManifest.xml:31:17-49
+69            <meta-data
+69-->[androidx.profileinstaller:profileinstaller:1.3.0] /Users/itaymac/.gradle/caches/8.9/transforms/797974957dd1e0d8cfd6559f70534863/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:29:13-31:52
+70                android:name="androidx.profileinstaller.ProfileInstallerInitializer"
+70-->[androidx.profileinstaller:profileinstaller:1.3.0] /Users/itaymac/.gradle/caches/8.9/transforms/797974957dd1e0d8cfd6559f70534863/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:30:17-85
+71                android:value="androidx.startup" />
+71-->[androidx.profileinstaller:profileinstaller:1.3.0] /Users/itaymac/.gradle/caches/8.9/transforms/797974957dd1e0d8cfd6559f70534863/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:31:17-49
+72        </provider>
+73
+74        <receiver
+74-->[androidx.profileinstaller:profileinstaller:1.3.0] /Users/itaymac/.gradle/caches/8.9/transforms/797974957dd1e0d8cfd6559f70534863/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:34:9-52:20
+75            android:name="androidx.profileinstaller.ProfileInstallReceiver"
+75-->[androidx.profileinstaller:profileinstaller:1.3.0] /Users/itaymac/.gradle/caches/8.9/transforms/797974957dd1e0d8cfd6559f70534863/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:35:13-76
+76            android:directBootAware="false"
+76-->[androidx.profileinstaller:profileinstaller:1.3.0] /Users/itaymac/.gradle/caches/8.9/transforms/797974957dd1e0d8cfd6559f70534863/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:36:13-44
+77            android:enabled="true"
+77-->[androidx.profileinstaller:profileinstaller:1.3.0] /Users/itaymac/.gradle/caches/8.9/transforms/797974957dd1e0d8cfd6559f70534863/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:37:13-35
+78            android:exported="true"
+78-->[androidx.profileinstaller:profileinstaller:1.3.0] /Users/itaymac/.gradle/caches/8.9/transforms/797974957dd1e0d8cfd6559f70534863/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:38:13-36
+79            android:permission="android.permission.DUMP" >
+79-->[androidx.profileinstaller:profileinstaller:1.3.0] /Users/itaymac/.gradle/caches/8.9/transforms/797974957dd1e0d8cfd6559f70534863/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:39:13-57
+80            <intent-filter>
+80-->[androidx.profileinstaller:profileinstaller:1.3.0] /Users/itaymac/.gradle/caches/8.9/transforms/797974957dd1e0d8cfd6559f70534863/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:40:13-42:29
+81                <action android:name="androidx.profileinstaller.action.INSTALL_PROFILE" />
+81-->[androidx.profileinstaller:profileinstaller:1.3.0] /Users/itaymac/.gradle/caches/8.9/transforms/797974957dd1e0d8cfd6559f70534863/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:41:17-91
+81-->[androidx.profileinstaller:profileinstaller:1.3.0] /Users/itaymac/.gradle/caches/8.9/transforms/797974957dd1e0d8cfd6559f70534863/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:41:25-88
+82            </intent-filter>
+83            <intent-filter>
+83-->[androidx.profileinstaller:profileinstaller:1.3.0] /Users/itaymac/.gradle/caches/8.9/transforms/797974957dd1e0d8cfd6559f70534863/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:43:13-45:29
+84                <action android:name="androidx.profileinstaller.action.SKIP_FILE" />
+84-->[androidx.profileinstaller:profileinstaller:1.3.0] /Users/itaymac/.gradle/caches/8.9/transforms/797974957dd1e0d8cfd6559f70534863/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:44:17-85
+84-->[androidx.profileinstaller:profileinstaller:1.3.0] /Users/itaymac/.gradle/caches/8.9/transforms/797974957dd1e0d8cfd6559f70534863/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:44:25-82
+85            </intent-filter>
+86            <intent-filter>
+86-->[androidx.profileinstaller:profileinstaller:1.3.0] /Users/itaymac/.gradle/caches/8.9/transforms/797974957dd1e0d8cfd6559f70534863/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:46:13-48:29
+87                <action android:name="androidx.profileinstaller.action.SAVE_PROFILE" />
+87-->[androidx.profileinstaller:profileinstaller:1.3.0] /Users/itaymac/.gradle/caches/8.9/transforms/797974957dd1e0d8cfd6559f70534863/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:47:17-88
+87-->[androidx.profileinstaller:profileinstaller:1.3.0] /Users/itaymac/.gradle/caches/8.9/transforms/797974957dd1e0d8cfd6559f70534863/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:47:25-85
+88            </intent-filter>
+89            <intent-filter>
+89-->[androidx.profileinstaller:profileinstaller:1.3.0] /Users/itaymac/.gradle/caches/8.9/transforms/797974957dd1e0d8cfd6559f70534863/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:49:13-51:29
+90                <action android:name="androidx.profileinstaller.action.BENCHMARK_OPERATION" />
+90-->[androidx.profileinstaller:profileinstaller:1.3.0] /Users/itaymac/.gradle/caches/8.9/transforms/797974957dd1e0d8cfd6559f70534863/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:50:17-95
+90-->[androidx.profileinstaller:profileinstaller:1.3.0] /Users/itaymac/.gradle/caches/8.9/transforms/797974957dd1e0d8cfd6559f70534863/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:50:25-92
+91            </intent-filter>
+92        </receiver>
+93    </application>
+94
+95</manifest>

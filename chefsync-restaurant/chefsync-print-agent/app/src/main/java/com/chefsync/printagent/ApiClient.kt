@@ -35,6 +35,12 @@ data class AckRequest(
     /** ok | paper_out | paper_low | offline | error | unknown */
     val printer_status: String? = null,
     val printer_status_detail: String? = null,
+    /** מספר הניסיונות שבוצעו בפועל (1..5) */
+    val retry_count: Int? = null,
+    /** משך ההדפסה המכריעה במילישניות */
+    val print_duration_ms: Long? = null,
+    /** ה-IP שאליו הודפס בפועל */
+    val printer_ip: String? = null,
 )
 
 /**
@@ -74,6 +80,16 @@ data class SimpleResponse(
     val server_time: String? = null
 )
 
+/** בחירת/הצעת IP חדש למדפסת. source: discovery_manual | auto_recovery */
+data class PrinterIpRequest(
+    val printer_ip: String,
+    val source: String? = null,
+    /** כל המועמדים שנמצאו בסריקה (לצורך תיעוד / הצעת מעבר) */
+    val candidates: List<String>? = null,
+    /** true = להחיל מיד; false = רק להציע (auto-recovery) */
+    val apply: Boolean = true,
+)
+
 interface AgentApi {
     @GET("api/agent/jobs")
     suspend fun getJobs(@Header("Authorization") auth: String): Response<JobsResponse>
@@ -90,6 +106,12 @@ interface AgentApi {
         @Header("Authorization") auth: String,
         @Body body: HeartbeatRequest = HeartbeatRequest(),
     ): Response<HeartbeatResponse>
+
+    @POST("api/agent/printer-ip")
+    suspend fun setPrinterIp(
+        @Header("Authorization") auth: String,
+        @Body body: PrinterIpRequest,
+    ): Response<SimpleResponse>
 }
 
 object ApiClient {

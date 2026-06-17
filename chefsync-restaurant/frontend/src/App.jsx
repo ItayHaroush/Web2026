@@ -12,6 +12,9 @@ import { CustomerProvider } from './context/CustomerContext';
 import DevModeBanner from './components/DevModeBanner';
 import CookieConsent from './components/CookieConsent';
 import AnalyticsPublicTracker from './components/AnalyticsPublicTracker';
+import NativePushBridge from './components/NativePushBridge';
+import AppUpdateGate from './components/AppUpdateGate';
+import { IS_NATIVE_APP } from './constants/api';
 import FacebookInAppWarning from './components/FacebookInAppWarning';
 import PWAInstallBanner from './components/PWAInstallBanner';
 import { InstallPromptProvider } from './context/InstallPromptContext';
@@ -198,6 +201,24 @@ function SuperAdminRoute({ children }) {
   return children;
 }
 
+/**
+ * RootRoute — מסך הבית של "/".
+ * באפליקציה הנייטיב (TakeEat Restaurant) אין מסכי לקוח/ביניים:
+ *   מחובר → Dashboard, לא מחובר → Login. בדפדפן/PWA מציג את עמוד הבית הרגיל.
+ */
+function RootRoute() {
+  const { isAuthenticated, loading } = useAdminAuth();
+
+  if (IS_NATIVE_APP) {
+    if (loading) {
+      return <PageLoader />;
+    }
+    return <Navigate to={isAuthenticated ? '/admin/dashboard' : '/admin/login'} replace />;
+  }
+
+  return <HomePage />;
+}
+
 function AppRoutes() {
   const { tenantId, isLoading } = useAuth();
   const { isAuthenticated: isAdmin } = useAdminAuth();
@@ -211,6 +232,8 @@ function AppRoutes() {
   return (
     <>
       <AnalyticsPublicTracker />
+      <NativePushBridge />
+      <AppUpdateGate />
       <Suspense fallback={<PageLoader />}>
         <Routes>
           {/* Debug */}
@@ -222,7 +245,7 @@ function AppRoutes() {
           <Route path="/legal/privacy" element={<PrivacyPolicy />} />
 
           {/* לקוחות */}
-          <Route path="/" element={<HomePage />} />
+          <Route path="/" element={<RootRoute />} />
           <Route path="/landing" element={<LandingPage />} />
           <Route path="/register-restaurant" element={<RegisterRestaurant />} />
           <Route path="/wolt-import" element={<WoltImportPage />} />

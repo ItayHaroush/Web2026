@@ -6,7 +6,7 @@ import api from '../../services/apiClient';
 import SoundManager from '../../services/SoundManager';
 import { resolveAssetUrl } from '../../utils/assets';
 import { toast } from 'react-hot-toast';
-import { clearStoredFcmToken, disableFcm, getStoredFcmToken, listenForegroundMessages, requestFcmToken } from '../../services/fcm';
+import { clearStoredFcmToken, disableFcm, getPushPlatform, getStoredFcmToken, listenForegroundMessages, requestFcmToken } from '../../services/fcm';
 import {
     FaMask,
     FaStore,
@@ -273,7 +273,7 @@ export default function SuperAdminDashboard() {
                 return;
             }
 
-            await api.post('/super-admin/fcm/register', { token, device_label: 'super_admin' }, { headers: getAuthHeaders() });
+            await api.post('/super-admin/fcm/register', { token, device_label: 'super_admin', platform: getPushPlatform() }, { headers: getAuthHeaders() });
             setPushState({ status: 'success', message: 'התראות הופעלו למכשיר הזה.' });
         } catch (error) {
             console.error('Failed to enable push', error);

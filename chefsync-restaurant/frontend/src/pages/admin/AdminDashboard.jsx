@@ -4,7 +4,7 @@ import { useAdminAuth } from '../../context/AdminAuthContext';
 import AdminLayout from '../../layouts/AdminLayout';
 import api from '../../services/apiClient';
 import SoundManager from '../../services/SoundManager';
-import { clearStoredFcmToken, disableFcm, getStoredFcmToken, requestFcmToken } from '../../services/fcm';
+import { clearStoredFcmToken, disableFcm, getPushPlatform, getStoredFcmToken, requestFcmToken } from '../../services/fcm';
 import AiCreditsBadge from '../../components/AiCreditsBadge';
 import AiInsightsPanel from '../../components/AiInsightsPanel';
 import UpgradeBanner from '../../components/UpgradeBanner';
@@ -125,7 +125,7 @@ export default function AdminDashboard() {
                 return;
             }
 
-            await api.post('/fcm/register', { token, device_label: 'tablet' }, { headers: getAuthHeaders() });
+            await api.post('/fcm/register', { token, device_label: 'tablet', platform: getPushPlatform() }, { headers: getAuthHeaders() });
             setPushState({ status: 'success', message: 'התראות הופעלו לטאבלט הזה.' });
         } catch (error) {
             console.error('Failed to enable push', error);

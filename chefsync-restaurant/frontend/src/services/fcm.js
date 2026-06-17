@@ -4,6 +4,7 @@ import { getFirebaseMessagingSwUrl } from '../utils/deployVersion.js';
 import {
     disableNativePush,
     getNativePushTokenIfPermitted,
+    getPushPlatform,
     isNativePushPlatform,
     listenNativeForegroundMessages,
     requestNativePushToken,
@@ -112,7 +113,7 @@ export function getStoredCustomerFcmToken() {
     }
 }
 
-export { isNativePushPlatform };
+export { getPushPlatform, isNativePushPlatform };
 
 export function clearStoredCustomerFcmToken() {
     try {

@@ -11,6 +11,7 @@ class FcmToken extends Model
         'user_id',
         'token',
         'device_label',
+        'platform',
     ];
 
     protected static function booted(): void

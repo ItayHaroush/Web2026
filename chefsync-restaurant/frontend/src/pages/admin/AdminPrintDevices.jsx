@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import AdminLayout from '../../layouts/AdminLayout';
-import { FaNetworkWired, FaPlus, FaEdit, FaTrash, FaPowerOff, FaCopy, FaCheck, FaTimes, FaExclamationTriangle } from 'react-icons/fa';
+import { FaNetworkWired, FaPlus, FaEdit, FaTrash, FaPowerOff, FaCopy, FaCheck, FaTimes, FaExclamationTriangle, FaRedo, FaPrint } from 'react-icons/fa';
 import {
     getPrintDevices,
     registerPrintDevice,
     updatePrintDevice,
     deletePrintDevice,
     togglePrintDevice,
+    getFailedPrintJobs,
+    retryPrintJob,
 } from '../../services/printDeviceService';
 
 const ROLE_LABELS = {
@@ -72,11 +74,17 @@ export default function AdminPrintDevices() {
     const [form, setForm] = useState({ ...DEFAULT_FORM });
     const [newToken, setNewToken] = useState(null);
     const [copiedToken, setCopiedToken] = useState(false);
+    const [failedJobs, setFailedJobs] = useState([]);
+    const [retryingJobId, setRetryingJobId] = useState(null);
 
     useEffect(() => {
         fetchDevices();
+        fetchFailedJobs();
         // ריענון אוטומטי כל 10 שניות — הסטטוס משתנה כשהגשר עולה/יורד
-        const id = setInterval(fetchDevices, 10000);
+        const id = setInterval(() => {
+            fetchDevices();
+            fetchFailedJobs();
+        }, 10000);
         return () => clearInterval(id);
     }, []);
 
@@ -88,6 +96,29 @@ export default function AdminPrintDevices() {
             console.error('Failed to fetch print devices:', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchFailedJobs = async () => {
+        try {
+            const res = await getFailedPrintJobs();
+            if (res.success) setFailedJobs(res.jobs || []);
+        } catch (error) {
+            console.error('Failed to fetch failed print jobs:', error);
+        }
+    };
+
+    const handleRetryJob = async (jobId) => {
+        setRetryingJobId(jobId);
+        try {
+            await retryPrintJob(jobId);
+            setFailedJobs((prev) => prev.filter((j) => j.id !== jobId));
+            fetchDevices();
+        } catch (error) {
+            console.error('Failed to retry print job:', error);
+            alert(error.response?.data?.message || 'שגיאה בהדפסה מחדש');
+        } finally {
+            setRetryingJobId(null);
         }
     };
 
@@ -238,6 +269,52 @@ export default function AdminPrintDevices() {
                     );
                 })()}
 
+                {/* תור הדפסה שנכשל — הדפסה חוזרת ידנית (אף הזמנה לא הולכת לאיבוד) */}
+                {failedJobs.length > 0 && (
+                    <div className="mx-4 bg-white rounded-[2rem] border-2 border-red-100 shadow-sm overflow-hidden">
+                        <div className="bg-red-50 px-6 py-4 flex items-center gap-3 border-b border-red-100">
+                            <FaExclamationTriangle className="text-red-500" size={18} />
+                            <div>
+                                <h3 className="font-black text-red-700">הדפסות שנכשלו ({failedJobs.length})</h3>
+                                <p className="text-xs text-red-500 mt-0.5">ההזמנות נשמרו ולא אבדו — ניתן להדפיס מחדש ידנית</p>
+                            </div>
+                        </div>
+                        <div className="divide-y divide-gray-50">
+                            {failedJobs.map((job) => (
+                                <div key={job.id} className="px-6 py-4 flex items-center justify-between gap-4">
+                                    <div className="min-w-0">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            <span className="font-black text-gray-900">
+                                                {job.order_id ? `הזמנה #${job.order_id}` : `עבודה #${job.id}`}
+                                            </span>
+                                            <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold border ${ROLE_COLORS[job.role] || ROLE_COLORS.general}`}>
+                                                {ROLE_LABELS[job.role] || job.role || 'כללי'}
+                                            </span>
+                                            {job.retry_count > 0 && (
+                                                <span className="text-[11px] text-gray-400">{job.retry_count} ניסיונות</span>
+                                            )}
+                                        </div>
+                                        {job.error_message && (
+                                            <p className="text-xs text-red-500 mt-1 truncate">{job.error_message}</p>
+                                        )}
+                                        <p className="text-[11px] text-gray-400 mt-0.5">
+                                            {job.printer_name ? `${job.printer_name} · ` : ''}{timeAgo(job.failed_at)}
+                                        </p>
+                                    </div>
+                                    <button
+                                        onClick={() => handleRetryJob(job.id)}
+                                        disabled={retryingJobId === job.id}
+                                        className="flex-shrink-0 px-5 py-2.5 rounded-xl font-bold text-sm bg-indigo-600 text-white hover:bg-indigo-500 transition-all flex items-center gap-2 disabled:opacity-50"
+                                    >
+                                        {retryingJobId === job.id ? <FaRedo className="animate-spin" size={12} /> : <FaPrint size={12} />}
+                                        הדפס מחדש
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
                 {/* Devices Grid */}
                 {devices.length === 0 ? (
                     <div className="bg-white rounded-[4rem] shadow-sm border-2 border-dashed border-gray-100 p-24 text-center flex flex-col items-center col-span-full max-w-xl mx-auto">
@@ -347,6 +424,21 @@ export default function AdminPrintDevices() {
                                             <div className="flex items-center justify-between">
                                                 <span className="font-medium">heartbeat אחרון:</span>
                                                 <span>{timeAgo(device.last_seen_at)}</span>
+                                            </div>
+                                        )}
+                                        {device.last_successful_print_at && (
+                                            <div className="flex items-center justify-between">
+                                                <span className="font-medium">הדפסה אחרונה:</span>
+                                                <span className="text-green-600 font-bold">{timeAgo(device.last_successful_print_at)}</span>
+                                            </div>
+                                        )}
+                                        {device.consecutive_failures > 0 && (
+                                            <div className="flex items-center justify-between">
+                                                <span className="font-medium">כשלים רצופים:</span>
+                                                <span className="text-red-600 font-bold">
+                                                    {device.consecutive_failures}
+                                                    {device.last_retry_count ? ` · ${device.last_retry_count} ניסיונות אחרונים` : ''}
+                                                </span>
                                             </div>
                                         )}
                                         {device.last_error_message && (

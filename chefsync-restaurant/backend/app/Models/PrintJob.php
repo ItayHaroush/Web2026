@@ -23,13 +23,20 @@ class PrintJob extends Model
         'printer_status',
         'printer_status_detail',
         'attempts',
+        'retry_count',
+        'print_duration_ms',
+        'printer_name',
+        'failed_notified_at',
     ];
 
     protected $casts = [
         'payload' => 'array',
         'printer_status_verified' => 'boolean',
         'attempts' => 'integer',
+        'retry_count' => 'integer',
+        'print_duration_ms' => 'integer',
         'target_port' => 'integer',
+        'failed_notified_at' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];

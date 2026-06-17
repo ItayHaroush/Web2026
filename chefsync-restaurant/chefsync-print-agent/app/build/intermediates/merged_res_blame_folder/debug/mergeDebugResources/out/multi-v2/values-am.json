@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "com.chefsync.printagent.app-mergeDebugResources-31:/values-am/values-am.xml",
+            "outputFile": "com.chefsync.printagent.app-mergeDebugResources-32:/values-am/values-am.xml",
             "map": [
                 {
                     "source": "/Users/itaymac/.gradle/caches/8.9/transforms/e2d19018a7a8df4d5e6d8b38f8c96b24/transformed/appcompat-1.6.1/res/values-am/values-am.xml",

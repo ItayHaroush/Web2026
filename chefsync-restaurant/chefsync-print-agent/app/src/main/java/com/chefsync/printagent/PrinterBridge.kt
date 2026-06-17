@@ -177,7 +177,7 @@ object PrinterBridge {
             anyResponse = true
             parts.add("paper=0x${b.toString(16)}")
             // Paper-end sensor (bits 5,6 ON) — אין נייר
-            if (b and 0x60) == 0x60) {
+            if ((b and 0x60) == 0x60) {
                 return PrintResult(
                     success = false,
                     errorMessage = "אין נייר במדפסת",
@@ -187,7 +187,7 @@ object PrinterBridge {
                 )
             }
             // Near-end (bits 2,3) — אזהרה בלבד
-            if (b and 0x0C) == 0x0C) {
+            if ((b and 0x0C) == 0x0C) {
                 return PrintResult(
                     success = true,
                     errorMessage = null,
@@ -217,8 +217,10 @@ object PrinterBridge {
     }
 
     fun print(ip: String, port: Int, payload: String, binarySuffix: ByteArray? = null, doubleHeight: Boolean = true, lineWidth: Int = 42, timeoutMs: Int = 5000, codepageId: Int = 15): PrintResult {
+        // Socket lifecycle per job: Open → Print → Flush → Close. A socket is never reused.
+        var socket: Socket? = null
         return try {
-            val socket = Socket()
+            socket = Socket()
             socket.connect(java.net.InetSocketAddress(ip, port), timeoutMs)
             socket.soTimeout = timeoutMs
 
@@ -259,24 +261,23 @@ object PrinterBridge {
             out.flush()
 
             val statusResult = verifyPostPrintStatus(socket)
-            socket.close()
 
             if (!statusResult.success) {
                 Log.w(TAG, "Print sent but printer status failed: ${statusResult.errorMessage}")
-                return statusResult
-            }
-
-            if (statusResult.statusVerified) {
+            } else if (statusResult.statusVerified) {
                 Log.i(TAG, "Print OK + status verified (${statusResult.statusCode}) to $ip:$port")
             } else {
                 Log.i(TAG, "Print sent to $ip:$port (status not verified by printer)")
             }
 
-            return statusResult
+            statusResult
         } catch (e: Exception) {
             val msg = "Print failed to $ip:$port — ${e.message}"
             Log.e(TAG, msg, e)
             PrintResult(success = false, errorMessage = e.message ?: "Unknown error")
+        } finally {
+            // Always close — guarantees no half-open socket survives a success or failure.
+            try { socket?.close() } catch (_: Exception) { /* ignore */ }
         }
     }
 

@@ -1,9 +1,9 @@
 -- Merging decision tree log ---
 manifest
-ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:2:1-32:12
-INJECTED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:2:1-32:12
-INJECTED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:2:1-32:12
-INJECTED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:2:1-32:12
+ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:2:1-44:12
+INJECTED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:2:1-44:12
+INJECTED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:2:1-44:12
+INJECTED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:2:1-44:12
 MERGED from [com.google.android.material:material:1.11.0] /Users/itaymac/.gradle/caches/8.9/transforms/2f81f3101ecf69dd4faaf1bfe14234a3/transformed/material-1.11.0/AndroidManifest.xml:17:1-24:12
 MERGED from [androidx.appcompat:appcompat-resources:1.6.1] /Users/itaymac/.gradle/caches/8.9/transforms/c37e00d477c9af7ccf460078ca77e2b2/transformed/jetified-appcompat-resources-1.6.1/AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.constraintlayout:constraintlayout:2.0.1] /Users/itaymac/.gradle/caches/8.9/transforms/62c1b6c4dc8a3d0ff1eb331a1b6972a8/transformed/constraintlayout-2.0.1/AndroidManifest.xml:2:1-11:12
@@ -36,10 +36,11 @@ MERGED from [androidx.lifecycle:lifecycle-runtime-ktx:2.7.0] /Users/itaymac/.gra
 MERGED from [androidx.lifecycle:lifecycle-viewmodel-savedstate:2.7.0] /Users/itaymac/.gradle/caches/8.9/transforms/c24b0898b925d5f811a745b78f8ae991/transformed/jetified-lifecycle-viewmodel-savedstate-2.7.0/AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.core:core-ktx:1.12.0] /Users/itaymac/.gradle/caches/8.9/transforms/682d789d55e31f87acd3b946228ca271/transformed/jetified-core-ktx-1.12.0/AndroidManifest.xml:2:1-7:12
 MERGED from [androidx.annotation:annotation-experimental:1.3.0] /Users/itaymac/.gradle/caches/8.9/transforms/6c37f58664dc342a8bb97864bb88b0c4/transformed/jetified-annotation-experimental-1.3.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.security:security-crypto:1.1.0-alpha06] /Users/itaymac/.gradle/caches/8.9/transforms/8dd5f5cadbf71b7e1fe4a5d7e4424046/transformed/jetified-security-crypto-1.1.0-alpha06/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /Users/itaymac/.gradle/caches/8.9/transforms/d60ba54ad13e98cecf3bc2292d76df3f/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:17:1-27:12
 MERGED from [androidx.cursoradapter:cursoradapter:1.0.0] /Users/itaymac/.gradle/caches/8.9/transforms/fc341201bb53b39b8dbed23cde12c8bc/transformed/cursoradapter-1.0.0/AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.cardview:cardview:1.0.0] /Users/itaymac/.gradle/caches/8.9/transforms/1f976286163b31910b21d666050d750b/transformed/cardview-1.0.0/AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.interpolator:interpolator:1.0.0] /Users/itaymac/.gradle/caches/8.9/transforms/8c4ebb2160a9a1668b30adb8d3cbc205/transformed/interpolator-1.0.0/AndroidManifest.xml:17:1-22:12
-MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /Users/itaymac/.gradle/caches/8.9/transforms/d60ba54ad13e98cecf3bc2292d76df3f/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:17:1-27:12
 MERGED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/itaymac/.gradle/caches/8.9/transforms/797974957dd1e0d8cfd6559f70534863/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:17:1-55:12
 MERGED from [androidx.startup:startup-runtime:1.1.1] /Users/itaymac/.gradle/caches/8.9/transforms/aed03d86551214c4bad41e0223296d9f/transformed/jetified-startup-runtime-1.1.1/AndroidManifest.xml:17:1-33:12
 MERGED from [androidx.tracing:tracing:1.0.0] /Users/itaymac/.gradle/caches/8.9/transforms/8c66d1de9f3382ceb6fc542ffed238a3/transformed/jetified-tracing-1.0.0/AndroidManifest.xml:17:1-24:12
@@ -59,25 +60,37 @@ uses-permission#android.permission.INTERNET
 ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:4:5-67
 	android:name
 		ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:4:22-64
+uses-permission#android.permission.ACCESS_NETWORK_STATE
+ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:5:5-79
+	android:name
+		ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:5:22-76
+uses-permission#android.permission.ACCESS_WIFI_STATE
+ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:6:5-76
+	android:name
+		ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:6:22-73
 uses-permission#android.permission.FOREGROUND_SERVICE
-ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:5:5-77
-	android:name
-		ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:5:22-74
-uses-permission#android.permission.FOREGROUND_SERVICE_DATA_SYNC
-ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:6:5-87
-	android:name
-		ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:6:22-84
-uses-permission#android.permission.POST_NOTIFICATIONS
 ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:7:5-77
 	android:name
 		ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:7:22-74
-uses-permission#android.permission.WAKE_LOCK
-ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:8:5-68
+uses-permission#android.permission.FOREGROUND_SERVICE_DATA_SYNC
+ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:8:5-87
 	android:name
-		ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:8:22-65
+		ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:8:22-84
+uses-permission#android.permission.POST_NOTIFICATIONS
+ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:9:5-77
+	android:name
+		ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:9:22-74
+uses-permission#android.permission.WAKE_LOCK
+ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:10:5-68
+	android:name
+		ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:10:22-65
+uses-permission#android.permission.RECEIVE_BOOT_COMPLETED
+ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:11:5-81
+	android:name
+		ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:11:22-78
 application
-ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:10:5-31:19
-INJECTED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:10:5-31:19
+ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:13:5-43:19
+INJECTED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:13:5-43:19
 MERGED from [com.google.android.material:material:1.11.0] /Users/itaymac/.gradle/caches/8.9/transforms/2f81f3101ecf69dd4faaf1bfe14234a3/transformed/material-1.11.0/AndroidManifest.xml:22:5-20
 MERGED from [com.google.android.material:material:1.11.0] /Users/itaymac/.gradle/caches/8.9/transforms/2f81f3101ecf69dd4faaf1bfe14234a3/transformed/material-1.11.0/AndroidManifest.xml:22:5-20
 MERGED from [androidx.constraintlayout:constraintlayout:2.0.1] /Users/itaymac/.gradle/caches/8.9/transforms/62c1b6c4dc8a3d0ff1eb331a1b6972a8/transformed/constraintlayout-2.0.1/AndroidManifest.xml:9:5-20
@@ -99,39 +112,53 @@ MERGED from [androidx.startup:startup-runtime:1.1.1] /Users/itaymac/.gradle/cach
 	android:appComponentFactory
 		ADDED from [androidx.core:core:1.12.0] /Users/itaymac/.gradle/caches/8.9/transforms/ba37b34bdf3734abe81b412972f35aab/transformed/core-1.12.0/AndroidManifest.xml:28:18-86
 	android:supportsRtl
-		ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:13:9-35
+		ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:16:9-35
 	android:label
-		ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:12:9-41
+		ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:15:9-41
 	android:allowBackup
-		ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:11:9-35
+		ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:14:9-35
 	android:theme
-		ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:14:9-79
+		ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:17:9-79
 activity#com.chefsync.printagent.SetupActivity
-ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:16:9-24:20
+ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:19:9-27:20
 	android:label
-		ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:19:13-45
+		ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:22:13-45
 	android:exported
-		ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:18:13-36
+		ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:21:13-36
 	android:name
-		ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:17:13-42
+		ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:20:13-42
 intent-filter#action:name:android.intent.action.MAIN+category:name:android.intent.category.LAUNCHER
-ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:20:13-23:29
+ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:23:13-26:29
 action#android.intent.action.MAIN
-ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:21:17-69
+ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:24:17-69
 	android:name
-		ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:21:25-66
+		ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:24:25-66
 category#android.intent.category.LAUNCHER
-ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:22:17-77
+ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:25:17-77
 	android:name
-		ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:22:27-74
+		ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:25:27-74
 service#com.chefsync.printagent.PrintAgentService
-ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:26:9-29:40
+ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:29:9-32:40
 	android:exported
-		ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:29:13-37
+		ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:32:13-37
 	android:foregroundServiceType
-		ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:28:13-53
+		ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:31:13-53
 	android:name
-		ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:27:13-46
+		ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:30:13-46
+receiver#com.chefsync.printagent.BootReceiver
+ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:34:9-41:20
+	android:enabled
+		ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:36:13-35
+	android:exported
+		ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:37:13-36
+	android:name
+		ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:35:13-41
+intent-filter#action:name:android.intent.action.BOOT_COMPLETED
+ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:38:13-40:29
+action#android.intent.action.BOOT_COMPLETED
+ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:39:17-79
+	android:name
+		ADDED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml:39:25-76
 uses-sdk
 INJECTED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml reason: use-sdk injection requested
 INJECTED from /Users/itaymac/הנדסאי תוכנה המכללה למנהל/Web2026/chefsync-restaurant/chefsync-print-agent/app/src/main/AndroidManifest.xml
@@ -200,14 +227,16 @@ MERGED from [androidx.core:core-ktx:1.12.0] /Users/itaymac/.gradle/caches/8.9/tr
 MERGED from [androidx.core:core-ktx:1.12.0] /Users/itaymac/.gradle/caches/8.9/transforms/682d789d55e31f87acd3b946228ca271/transformed/jetified-core-ktx-1.12.0/AndroidManifest.xml:5:5-44
 MERGED from [androidx.annotation:annotation-experimental:1.3.0] /Users/itaymac/.gradle/caches/8.9/transforms/6c37f58664dc342a8bb97864bb88b0c4/transformed/jetified-annotation-experimental-1.3.0/AndroidManifest.xml:20:5-44
 MERGED from [androidx.annotation:annotation-experimental:1.3.0] /Users/itaymac/.gradle/caches/8.9/transforms/6c37f58664dc342a8bb97864bb88b0c4/transformed/jetified-annotation-experimental-1.3.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.security:security-crypto:1.1.0-alpha06] /Users/itaymac/.gradle/caches/8.9/transforms/8dd5f5cadbf71b7e1fe4a5d7e4424046/transformed/jetified-security-crypto-1.1.0-alpha06/AndroidManifest.xml:20:5-44
+MERGED from [androidx.security:security-crypto:1.1.0-alpha06] /Users/itaymac/.gradle/caches/8.9/transforms/8dd5f5cadbf71b7e1fe4a5d7e4424046/transformed/jetified-security-crypto-1.1.0-alpha06/AndroidManifest.xml:20:5-44
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /Users/itaymac/.gradle/caches/8.9/transforms/d60ba54ad13e98cecf3bc2292d76df3f/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /Users/itaymac/.gradle/caches/8.9/transforms/d60ba54ad13e98cecf3bc2292d76df3f/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:20:5-22:41
 MERGED from [androidx.cursoradapter:cursoradapter:1.0.0] /Users/itaymac/.gradle/caches/8.9/transforms/fc341201bb53b39b8dbed23cde12c8bc/transformed/cursoradapter-1.0.0/AndroidManifest.xml:20:5-44
 MERGED from [androidx.cursoradapter:cursoradapter:1.0.0] /Users/itaymac/.gradle/caches/8.9/transforms/fc341201bb53b39b8dbed23cde12c8bc/transformed/cursoradapter-1.0.0/AndroidManifest.xml:20:5-44
 MERGED from [androidx.cardview:cardview:1.0.0] /Users/itaymac/.gradle/caches/8.9/transforms/1f976286163b31910b21d666050d750b/transformed/cardview-1.0.0/AndroidManifest.xml:20:5-44
 MERGED from [androidx.cardview:cardview:1.0.0] /Users/itaymac/.gradle/caches/8.9/transforms/1f976286163b31910b21d666050d750b/transformed/cardview-1.0.0/AndroidManifest.xml:20:5-44
 MERGED from [androidx.interpolator:interpolator:1.0.0] /Users/itaymac/.gradle/caches/8.9/transforms/8c4ebb2160a9a1668b30adb8d3cbc205/transformed/interpolator-1.0.0/AndroidManifest.xml:20:5-44
 MERGED from [androidx.interpolator:interpolator:1.0.0] /Users/itaymac/.gradle/caches/8.9/transforms/8c4ebb2160a9a1668b30adb8d3cbc205/transformed/interpolator-1.0.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /Users/itaymac/.gradle/caches/8.9/transforms/d60ba54ad13e98cecf3bc2292d76df3f/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:20:5-22:41
-MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /Users/itaymac/.gradle/caches/8.9/transforms/d60ba54ad13e98cecf3bc2292d76df3f/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:20:5-22:41
 MERGED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/itaymac/.gradle/caches/8.9/transforms/797974957dd1e0d8cfd6559f70534863/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:21:5-44
 MERGED from [androidx.profileinstaller:profileinstaller:1.3.0] /Users/itaymac/.gradle/caches/8.9/transforms/797974957dd1e0d8cfd6559f70534863/transformed/jetified-profileinstaller-1.3.0/AndroidManifest.xml:21:5-44
 MERGED from [androidx.startup:startup-runtime:1.1.1] /Users/itaymac/.gradle/caches/8.9/transforms/aed03d86551214c4bad41e0223296d9f/transformed/jetified-startup-runtime-1.1.1/AndroidManifest.xml:21:5-23:41

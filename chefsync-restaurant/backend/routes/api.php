@@ -21,6 +21,7 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\OrderEventController;
 use App\Http\Controllers\PaymentSettingsController;
 use App\Http\Controllers\PlatformFeedbackController;
+use App\Http\Controllers\AppVersionController;
 use App\Http\Controllers\PaymentTerminalController;
 use App\Http\Controllers\PrintAgentController;
 use App\Http\Controllers\PrinterController;
@@ -473,6 +474,10 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'tenant'])->group(function (
         Route::delete('/print-devices/{id}', [PrintAgentController::class, 'destroy'])->name('admin.print-devices.delete');
         Route::patch('/print-devices/{id}/toggle', [PrintAgentController::class, 'toggle'])->name('admin.print-devices.toggle');
 
+        // תור הדפסה — עבודות שנכשלו + הדפסה חוזרת ידנית (אף הזמנה לא הולכת לאיבוד)
+        Route::get('/print-jobs/failed', [PrintAgentController::class, 'failedJobs'])->name('admin.print-jobs.failed');
+        Route::post('/print-jobs/{id}/retry', [PrintAgentController::class, 'retryJob'])->name('admin.print-jobs.retry');
+
         // POS Lite - קופה (set-pin, verify-pin, unlock מוגדרים למעלה מחוץ ל-CheckRestaurantAccess)
         Route::prefix('pos')->group(function () {
             Route::middleware('pos_session')->group(function () {
@@ -731,11 +736,17 @@ Route::get('/orders/{id}/invoice', [InvoiceController::class, 'show'])->name('or
 // ============================================
 // Print Agent API (device-token auth)
 // ============================================
+// ============================================
+// App Version — בדיקת עדכון לאפליקציות נייטיב (ציבורי)
+// ============================================
+Route::get('/app/version', [AppVersionController::class, 'show'])->name('app.version');
+
 Route::prefix('agent')->middleware('device_token')->group(function () {
     Route::get('/jobs', [PrintAgentController::class, 'getJobs'])->name('agent.jobs');
     Route::post('/jobs/{id}/ack', [PrintAgentController::class, 'ackJob'])->name('agent.jobs.ack');
     Route::match(['get', 'post'], '/status', [PrintAgentController::class, 'status'])->name('agent.status');
     Route::post('/heartbeat', [PrintAgentController::class, 'heartbeat'])->name('agent.heartbeat');
+    Route::post('/printer-ip', [PrintAgentController::class, 'setPrinterIp'])->name('agent.printer-ip');
 });
 
 // ============================================

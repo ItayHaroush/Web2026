@@ -17,10 +17,12 @@
   },
   "dependencies": {
     "@capacitor/android": "^8.3.4",
+    "@capacitor/app": "^8.1.0",
     "@capacitor/core": "^8.3.4",
     "@capacitor/push-notifications": "^8.1.0",
     "@github/copilot-sdk": "^0.1.16",
     "axios": "^1.13.2",
+    "capacitor-native-settings": "^8.1.0",
     "firebase": "^10.14.1",
     "jspdf": "^3.0.2",
     "leaflet": "^1.9.4",

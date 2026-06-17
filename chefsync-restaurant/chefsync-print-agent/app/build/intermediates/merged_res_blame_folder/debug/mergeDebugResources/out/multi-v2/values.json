@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "com.chefsync.printagent.app-mergeDebugResources-31:/values/values.xml",
+            "outputFile": "com.chefsync.printagent.app-mergeDebugResources-32:/values/values.xml",
             "map": [
                 {
                     "source": "/Users/itaymac/.gradle/caches/8.9/transforms/c93a0b8eaf5e66721bb4cf06825c08e6/transformed/transition-1.2.0/res/values/values.xml",

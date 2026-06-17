@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">TakeEat</string>
-    <string name="title_activity_main">TakeEat</string>
+    <string name="app_name">TakeEat Restaurant</string>
+    <string name="title_activity_main">TakeEat Restaurant</string>
     <string name="package_name">com.chefsync.restaurant</string>
     <string name="custom_url_scheme">com.chefsync.restaurant</string>
 </resources>

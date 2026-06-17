@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "com.chefsync.printagent.app-mergeDebugResources-31:/values-small-v4/values-small-v4.xml",
+            "outputFile": "com.chefsync.printagent.app-mergeDebugResources-32:/values-small-v4/values-small-v4.xml",
             "map": [
                 {
                     "source": "/Users/itaymac/.gradle/caches/8.9/transforms/2f81f3101ecf69dd4faaf1bfe14234a3/transformed/material-1.11.0/res/values-small-v4/values-small-v4.xml",

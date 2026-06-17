@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import api from '../services/apiClient';
-import { getAdminFcmTokenIfPermitted, isNativePushPlatform } from '../services/fcm';
+import { getAdminFcmTokenIfPermitted, getPushPlatform, isNativePushPlatform } from '../services/fcm';
 
 const isDev = import.meta.env.DEV;
 
@@ -34,16 +34,17 @@ async function syncAdminFcmWithBackend(user, bearerToken) {
         const fcmToken = await getAdminFcmTokenIfPermitted();
         if (!fcmToken) return;
         const headers = { Authorization: `Bearer ${bearerToken}` };
+        const platform = getPushPlatform();
         if (user.is_super_admin) {
             await api.post(
                 '/super-admin/fcm/register',
-                { token: fcmToken, device_label: 'super_admin' },
+                { token: fcmToken, device_label: 'super_admin', platform },
                 { headers }
             );
         } else {
             await api.post(
                 '/fcm/register',
-                { token: fcmToken, device_label: 'tablet' },
+                { token: fcmToken, device_label: 'tablet', platform },
                 { headers }
             );
         }

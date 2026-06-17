@@ -24,3 +24,13 @@ export const togglePrintDevice = async (id) => {
     const response = await apiClient.patch(`/admin/print-devices/${id}/toggle`);
     return response.data;
 };
+
+export const getFailedPrintJobs = async () => {
+    const response = await apiClient.get('/admin/print-jobs/failed');
+    return response.data;
+};
+
+export const retryPrintJob = async (id) => {
+    const response = await apiClient.post(`/admin/print-jobs/${id}/retry`);
+    return response.data;
+};

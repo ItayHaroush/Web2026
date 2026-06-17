@@ -41,6 +41,11 @@ class PrintDevice extends Model
         'printer_last_check_at',
         'printer_last_error',
         'agent_version',
+        'last_successful_print_at',
+        'consecutive_failures',
+        'last_retry_count',
+        'suggested_printer_ip',
+        'suggested_printer_at',
     ];
 
     protected $casts = [
@@ -51,6 +56,10 @@ class PrintDevice extends Model
         'last_error_at' => 'datetime',
         'printer_connected' => 'boolean',
         'printer_last_check_at' => 'datetime',
+        'last_successful_print_at' => 'datetime',
+        'consecutive_failures' => 'integer',
+        'last_retry_count' => 'integer',
+        'suggested_printer_at' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];

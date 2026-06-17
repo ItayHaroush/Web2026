@@ -5,6 +5,12 @@ use Illuminate\Support\Facades\Schedule;
 Schedule::command('monitor:stale-orders')->everyFiveMinutes();
 Schedule::command('orders:process-future')->everyMinute();
 Schedule::command('orders:retry-failed-prints')->everyTwoMinutes();
+
+// בטיחות תור הדפסה: עבודות שתקועות ב-"printing" (הסוכן קרס/אבד ACK) חוזרות לתור.
+// שומר על הכלל "אף הזמנה לא הולכת לאיבוד". סף 3 דק' > חלון הניסיונות החוזרים של הסוכן (~70ש').
+Schedule::call(function () {
+    app(\App\Services\PrintService::class)->retryStaleJobs(3);
+})->everyMinute()->name('retry-stale-print-jobs')->withoutOverlapping();
 Schedule::command('orders:notify-pending-customer')->everyFiveMinutes();
 Schedule::command('orders:expire-awaiting-payment')->everyTenMinutes();
 Schedule::command('monitor:daily-summary')->dailyAt('22:00');

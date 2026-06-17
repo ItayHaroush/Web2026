@@ -6,7 +6,7 @@ import AdminLayout from '../../layouts/AdminLayout';
 import FeatureGate from '../../components/FeatureGate';
 import UpgradeBanner from '../../components/UpgradeBanner';
 import MobileAddFab from '../../components/admin/MobileAddFab';
-import { FaPrint, FaPlus, FaNetworkWired, FaEdit, FaTrash, FaPowerOff, FaCopy, FaCheck, FaTimes, FaExclamationTriangle, FaAndroid, FaDownload } from 'react-icons/fa';
+import { FaPrint, FaPlus, FaNetworkWired, FaEdit, FaTrash, FaPowerOff, FaCopy, FaCheck, FaTimes, FaExclamationTriangle, FaAndroid, FaDownload, FaRedo } from 'react-icons/fa';
 import api from '../../services/apiClient';
 
 const APK_DOWNLOAD_URL = 'https://api.chefsync.co.il/downloads/chefsync-print-agent.apk';
@@ -26,6 +26,8 @@ import {
     updatePrintDevice,
     deletePrintDevice,
     togglePrintDevice,
+    getFailedPrintJobs,
+    retryPrintJob,
 } from '../../services/printDeviceService';
 import PrinterCard from '../../components/printer/admin/PrinterCard';
 import PrinterFormModal from '../../components/printer/admin/PrinterFormModal';
@@ -116,14 +118,17 @@ export default function AdminPrinters({ embedded = false }) {
     const [copiedToken, setCopiedToken] = useState(false);
     const [printTemplate, setPrintTemplate] = useState('classic');
     const [savingTemplate, setSavingTemplate] = useState(false);
+    const [failedJobs, setFailedJobs] = useState([]);
+    const [retryingJobId, setRetryingJobId] = useState(null);
 
     const fetchData = async () => {
         try {
-            const [printersRes, categoriesRes, devicesRes, addonGroupsRes] = await Promise.all([
+            const [printersRes, categoriesRes, devicesRes, addonGroupsRes, failedRes] = await Promise.all([
                 getPrinters(),
                 api.get('/admin/categories', { headers: getAuthHeaders() }),
                 getPrintDevices(),
                 getAvailableAddonGroups().catch(() => ({ success: false })),
+                getFailedPrintJobs().catch(() => ({ success: false })),
             ]);
             if (printersRes.success) {
                 setPrinters(printersRes.printers || []);
@@ -133,6 +138,7 @@ export default function AdminPrinters({ embedded = false }) {
             if (categoriesRes.data?.success) setCategories(categoriesRes.data.categories || []);
             if (devicesRes.success) setDevices(devicesRes.devices || []);
             if (addonGroupsRes?.success) setAddonGroups(addonGroupsRes.addon_groups || []);
+            if (failedRes?.success) setFailedJobs(failedRes.jobs || []);
         } catch (error) {
             console.error('Failed to fetch data:', error);
         } finally {
@@ -140,8 +146,38 @@ export default function AdminPrinters({ embedded = false }) {
         }
     };
 
+    // ריענון בריאות הגשרים והעבודות שנכשלו — סטטוס מתעדכן כשהגשר עולה/יורד
+    const refreshDeviceHealth = async () => {
+        try {
+            const [devicesRes, failedRes] = await Promise.all([
+                getPrintDevices(),
+                getFailedPrintJobs().catch(() => ({ success: false })),
+            ]);
+            if (devicesRes.success) setDevices(devicesRes.devices || []);
+            if (failedRes?.success) setFailedJobs(failedRes.jobs || []);
+        } catch (error) {
+            console.error('Failed to refresh device health:', error);
+        }
+    };
+
+    const handleRetryJob = async (jobId) => {
+        setRetryingJobId(jobId);
+        try {
+            await retryPrintJob(jobId);
+            setFailedJobs((prev) => prev.filter((j) => j.id !== jobId));
+            refreshDeviceHealth();
+        } catch (error) {
+            console.error('Failed to retry print job:', error);
+            alert(error.response?.data?.message || 'שגיאה בהדפסה מחדש');
+        } finally {
+            setRetryingJobId(null);
+        }
+    };
+
     useEffect(() => {
         fetchData();
+        const id = setInterval(refreshDeviceHealth, 12000);
+        return () => clearInterval(id);
     }, []);
 
     const isLocked = subscriptionInfo?.features?.printers !== 'full';
@@ -265,6 +301,18 @@ export default function AdminPrinters({ embedded = false }) {
             fetchData();
         } catch (error) {
             console.error('Failed to toggle device:', error);
+        }
+    };
+
+    const handleApplySuggestedIp = async (device) => {
+        if (!device.suggested_printer_ip) return;
+        if (!confirm(`להחליף את כתובת המדפסת ל-${device.suggested_printer_ip}?`)) return;
+        try {
+            await updatePrintDevice(device.id, { printer_ip: device.suggested_printer_ip });
+            refreshDeviceHealth();
+        } catch (error) {
+            console.error('Failed to apply suggested IP:', error);
+            alert(error.response?.data?.message || 'שגיאה בהחלפת הכתובת');
         }
     };
 
@@ -410,6 +458,30 @@ export default function AdminPrinters({ embedded = false }) {
                 </button>
             </div>
 
+            {/* Embedded desktop add button — בדסקטופ הכותרת מוסתרת, ה-FAB הוא mobile-only */}
+            {embedded && isManager() && (
+                <div className="hidden md:flex flex-col sm:flex-row items-stretch sm:items-center sm:justify-end gap-3 px-4">
+                    {activeTab === 'printers' && !canCreateMorePrinters && (
+                        <UpgradeBanner requiredTier="enterprise" context="printers" feature="printers" variant="inline" />
+                    )}
+                    <button
+                        type="button"
+                        onClick={activeTab === 'printers'
+                            ? (canCreateMorePrinters ? openNew : atLimitAction)
+                            : openDeviceNew}
+                        className={`inline-flex items-center justify-center gap-2 px-6 py-3 rounded-2xl font-black text-sm shadow-lg shrink-0 transition-all active:scale-95 group ${activeTab === 'printers' && !canCreateMorePrinters
+                            ? 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white shadow-purple-200'
+                            : 'bg-blue-600 text-white hover:bg-blue-500 shadow-blue-600/20'
+                            }`}
+                    >
+                        <FaPlus className="group-hover:rotate-90 transition-transform" />
+                        {activeTab === 'printers'
+                            ? (canCreateMorePrinters ? 'מדפסת חדשה' : atLimitLabel)
+                            : 'גשר הדפסה חדש'}
+                    </button>
+                </div>
+            )}
+
             {/* Print Template Selector */}
             {isManager() && (activeTab === 'printers' || !searchParams.get('tab')) && (
                 <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 mx-4">
@@ -504,6 +576,51 @@ export default function AdminPrinters({ embedded = false }) {
             {/* Content: גשרי הדפסה */}
             {activeTab === 'devices' && (
                 <div className="px-4">
+                    {/* תור הדפסה שנכשל — הדפסה חוזרת ידנית (אף הזמנה לא הולכת לאיבוד) */}
+                    {failedJobs.length > 0 && (
+                        <div className="mb-8 bg-white rounded-[2rem] border-2 border-red-100 shadow-sm overflow-hidden">
+                            <div className="bg-red-50 px-6 py-4 flex items-center gap-3 border-b border-red-100">
+                                <FaExclamationTriangle className="text-red-500" size={18} />
+                                <div>
+                                    <h3 className="font-black text-red-700">הדפסות שנכשלו ({failedJobs.length})</h3>
+                                    <p className="text-xs text-red-500 mt-0.5">ההזמנות נשמרו ולא אבדו — ניתן להדפיס מחדש ידנית</p>
+                                </div>
+                            </div>
+                            <div className="divide-y divide-gray-50">
+                                {failedJobs.map((job) => (
+                                    <div key={job.id} className="px-6 py-4 flex items-center justify-between gap-4">
+                                        <div className="min-w-0">
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                <span className="font-black text-gray-900">
+                                                    {job.order_id ? `הזמנה #${job.order_id}` : `עבודה #${job.id}`}
+                                                </span>
+                                                <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold border ${ROLE_COLORS[job.role] || ROLE_COLORS.general}`}>
+                                                    {ROLE_LABELS[job.role] || job.role || 'כללי'}
+                                                </span>
+                                                {job.retry_count > 0 && (
+                                                    <span className="text-[11px] text-gray-400">{job.retry_count} ניסיונות</span>
+                                                )}
+                                            </div>
+                                            {job.error_message && (
+                                                <p className="text-xs text-red-500 mt-1 truncate">{job.error_message}</p>
+                                            )}
+                                            <p className="text-[11px] text-gray-400 mt-0.5">
+                                                {job.printer_name ? `${job.printer_name} · ` : ''}{timeAgo(job.failed_at)}
+                                            </p>
+                                        </div>
+                                        <button
+                                            onClick={() => handleRetryJob(job.id)}
+                                            disabled={retryingJobId === job.id}
+                                            className="flex-shrink-0 px-5 py-2.5 rounded-xl font-bold text-sm bg-indigo-600 text-white hover:bg-indigo-500 transition-all flex items-center gap-2 disabled:opacity-50"
+                                        >
+                                            {retryingJobId === job.id ? <FaRedo className="animate-spin" size={12} /> : <FaPrint size={12} />}
+                                            הדפס מחדש
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                     {devices.length === 0 ? (
                         <div className="bg-white rounded-[4rem] shadow-sm border-2 border-dashed border-gray-100 p-24 text-center flex flex-col items-center col-span-full max-w-xl mx-auto">
                             <div className="w-28 h-28 bg-gray-50 rounded-[3rem] flex items-center justify-center text-6xl mb-8 grayscale opacity-50">
@@ -560,6 +677,29 @@ export default function AdminPrinters({ embedded = false }) {
                                                 <span className="px-3 py-1 rounded-full text-xs font-bold bg-red-50 text-red-600 border border-red-100">כבוי</span>
                                             )}
                                         </div>
+                                        {/* Auto Recovery — הצעת מעבר ל-IP חדש שזוהה אוטומטית */}
+                                        {device.suggested_printer_ip && device.suggested_printer_ip !== device.printer_ip && (
+                                            <div className="mb-4 p-4 rounded-xl bg-blue-50 border border-blue-100">
+                                                <div className="flex items-start gap-2">
+                                                    <FaNetworkWired className="text-blue-500 mt-0.5 flex-shrink-0" size={14} />
+                                                    <div className="flex-1">
+                                                        <p className="text-blue-700 text-sm font-bold">זוהתה כתובת מדפסת חדשה</p>
+                                                        <p className="text-blue-600 text-xs mt-0.5">
+                                                            המדפסת לא הגיבה בכתובת הנוכחית. נמצאה מדפסת בכתובת{' '}
+                                                            <span className="font-mono font-bold" dir="ltr">{device.suggested_printer_ip}</span>
+                                                        </p>
+                                                        {isManager() && (
+                                                            <button
+                                                                onClick={() => handleApplySuggestedIp(device)}
+                                                                className="mt-2 px-4 py-2 rounded-lg font-bold text-xs bg-blue-600 text-white hover:bg-blue-500 transition-all flex items-center gap-2"
+                                                            >
+                                                                <FaRedo size={11} /> החלף לכתובת החדשה
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
                                         <div className="space-y-2 text-sm text-gray-600 mb-6">
                                             {device.printer_ip && (
                                                 <div className="flex items-center justify-between">
@@ -573,10 +713,30 @@ export default function AdminPrinters({ embedded = false }) {
                                                     <span>{timeAgo(device.last_seen_at)}</span>
                                                 </div>
                                             )}
-                                            {device.printer_last_check_at && (
+                                            {(device.printer_connected !== null && device.printer_connected !== undefined) && (
                                                 <div className="flex items-center justify-between">
-                                                    <span className="font-medium">בדיקת מדפסת:</span>
-                                                    <span>{timeAgo(device.printer_last_check_at)}</span>
+                                                    <span className="font-medium">מדפסת מחוברת:</span>
+                                                    <span className={`font-bold ${device.printer_connected ? 'text-green-600' : 'text-amber-600'}`}>
+                                                        {device.printer_connected ? '✓ כן' : '✗ לא'}
+                                                        {device.printer_last_check_at && (
+                                                            <span className="text-gray-400 font-normal mr-2">({timeAgo(device.printer_last_check_at)})</span>
+                                                        )}
+                                                    </span>
+                                                </div>
+                                            )}
+                                            {device.last_successful_print_at && (
+                                                <div className="flex items-center justify-between">
+                                                    <span className="font-medium">הדפסה אחרונה מוצלחת:</span>
+                                                    <span className="text-green-600 font-bold">{timeAgo(device.last_successful_print_at)}</span>
+                                                </div>
+                                            )}
+                                            {device.consecutive_failures > 0 && (
+                                                <div className="flex items-center justify-between">
+                                                    <span className="font-medium">כשלים רצופים:</span>
+                                                    <span className="text-red-600 font-bold">
+                                                        {device.consecutive_failures}
+                                                        {device.last_retry_count ? ` · ${device.last_retry_count} ניסיונות אחרונים` : ''}
+                                                    </span>
                                                 </div>
                                             )}
                                             {device.agent_version && (

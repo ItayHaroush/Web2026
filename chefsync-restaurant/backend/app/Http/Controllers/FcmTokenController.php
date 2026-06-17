@@ -12,10 +12,12 @@ class FcmTokenController extends Controller
         $data = $request->validate([
             'token' => 'required|string',
             'device_label' => 'nullable|string|max:100',
+            'platform' => 'nullable|string|max:16',
         ]);
 
         $userId = $request->user()?->id;
         $deviceLabel = $data['device_label'] ?? 'tablet';
+        $platform = $data['platform'] ?? null;
         $tenantId = app('tenant_id');
 
         // Tokens can rotate. If the same device registers again, keep only the latest token
@@ -41,6 +43,7 @@ class FcmTokenController extends Controller
                 'tenant_id' => $tenantId,
                 'user_id' => $userId,
                 'device_label' => $deviceLabel,
+                'platform' => $platform,
             ]
         );
 
@@ -69,10 +72,12 @@ class FcmTokenController extends Controller
         $data = $request->validate([
             'token' => 'required|string',
             'device_label' => 'nullable|string|max:100',
+            'platform' => 'nullable|string|max:16',
         ]);
 
         $userId = $request->user()->id;
         $deviceLabel = $data['device_label'] ?? 'super_admin';
+        $platform = $data['platform'] ?? null;
 
         // מחיקת טוקנים ישנים מאותו מכשיר
         FcmToken::withoutGlobalScopes()
@@ -88,6 +93,7 @@ class FcmTokenController extends Controller
                 'tenant_id' => '__super_admin__',
                 'user_id' => $userId,
                 'device_label' => $deviceLabel,
+                'platform' => $platform,
             ]
         );
 
