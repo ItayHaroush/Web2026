@@ -10,7 +10,6 @@ import { ToastProvider } from './context/ToastContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { CustomerProvider } from './context/CustomerContext';
 import DevModeBanner from './components/DevModeBanner';
-import CookieConsent from './components/CookieConsent';
 import AnalyticsPublicTracker from './components/AnalyticsPublicTracker';
 import NativePushBridge from './components/NativePushBridge';
 import AppUpdateGate from './components/AppUpdateGate';
@@ -733,7 +732,6 @@ export default function App() {
                             <>
                               <FacebookInAppWarning />
                               <DevModeBanner />
-                              <CookieConsent />
                               <PWAInstallBanner />
                             </>
                           )}
