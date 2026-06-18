@@ -253,6 +253,7 @@ class PromotionService
         $totalUpgradeSurcharge = 0.0;
         $giftItems = [];
         $appliedNonStackable = false;
+        $hasPercentDiscount = false;
 
         foreach ($appliedPromotions as $applied) {
             $promotionId = (int) $applied['promotion_id'];
@@ -374,6 +375,7 @@ class PromotionService
                         }
                     }
                 } elseif ($reward->reward_type === 'discount_percent') {
+                    $hasPercentDiscount = true;
                     $itemsTotal = $this->discountableItemsSubtotal($lineItems, $reward);
                     $scope = $reward->discount_scope ?? 'whole_cart';
                     // whole_cart: אחוז הנחה פעם אחת על כל הסל (לא מוכפל)
@@ -437,6 +439,8 @@ class PromotionService
             'upgrade_surcharge' => round($totalUpgradeSurcharge, 2),
             'gross_discount' => round($totalDiscount, 2),
             'gift_items' => $giftItems,
+            // מבצע באחוזים מעורב — כדי לעגל את המחיר לתשלום לשקלים שלמים (ללא אגורות)
+            'has_percent_discount' => $hasPercentDiscount,
         ];
     }
 

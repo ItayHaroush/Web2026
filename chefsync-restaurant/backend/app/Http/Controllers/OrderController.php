@@ -551,15 +551,25 @@ class OrderController extends Controller
             $promotionDiscount = 0;
             $giftLineItems = [];
             $promotionService = null;
+            $roundPriceToWhole = false;
             if (! empty($validated['applied_promotions'])) {
                 $promotionService = app(PromotionService::class);
                 $result = $promotionService->validateAndApply($lineItems, $validated['applied_promotions'], $tenantId);
                 $promotionDiscount = $result['promotion_discount'];
                 $giftLineItems = $result['gift_items'];
+                $roundPriceToWhole = ! empty($result['has_percent_discount']);
             }
 
             // הגנה: ההנחה לעולם לא תעלה על סכום הפריטים (מונע מחיר סופי שלילי)
             $promotionDiscount = min($promotionDiscount, $totalAmount);
+
+            // מבצע באחוזים — עיגול המחיר לתשלום כלפי מטה לשקלים שלמים (ללא אגורות).
+            // הפרש העיגול נספג בתוך ההנחה כדי לשמור על: total = items + delivery − discount.
+            if ($roundPriceToWhole) {
+                $rawFinal = $totalAmount + $deliveryFee - $promotionDiscount;
+                $wholeFinal = max(0.0, floor($rawFinal + 1e-6));
+                $promotionDiscount = round($promotionDiscount + ($rawFinal - $wholeFinal), 2);
+            }
 
             // לוג חישוב הזמנה
             $finalTotal = $totalAmount + $deliveryFee - $promotionDiscount;
@@ -1072,8 +1082,11 @@ class OrderController extends Controller
             $tenantId = app('tenant_id');
             $order = Order::where('tenant_id', $tenantId)->findOrFail($id);
 
-            // הזמנה באשראי שממתינה לאישור תשלום — לא ניתן לעדכן סטטוס עד שאושרה
-            if ($order->payment_method === 'credit_card' && $order->payment_status === Order::PAYMENT_PENDING) {
+            // הזמנה באשראי שממתינה לאישור תשלום — לא ניתן לעדכן סטטוס עד שאושרה.
+            // יוצא מן הכלל: תמיד מאפשרים ביטול, כדי לבטל הזמנה שתקועה בתשלום אשראי שלא הושלם.
+            if ($order->payment_method === 'credit_card'
+                && $order->payment_status === Order::PAYMENT_PENDING
+                && $validated['status'] !== Order::STATUS_CANCELLED) {
                 return response()->json([
                     'success' => false,
                     'message' => 'ההזמנה ממתינה לאישור תשלום באשראי. ניתן לעדכן סטטוס רק לאחר אישור התשלום.',
@@ -1418,12 +1431,16 @@ class OrderController extends Controller
             ];
         }
 
-        // Calculate distance from restaurant
+        // חישוב המרחק מנקודת המוצא של המסעדה.
+        // עדיפות לנקודת הכתובת המדויקת (delivery_origin); נפילה למרכז העיר (latitude/longitude)
+        // רק כאשר לא הוגדרה נקודה מדויקת — כך per-km מחושב מהמסעדה ולא ממרכז העיר.
+        $originLat = $restaurant->delivery_origin_lat ?? $restaurant->latitude;
+        $originLng = $restaurant->delivery_origin_lng ?? $restaurant->longitude;
         $distanceKm = null;
-        if ($restaurant->latitude !== null && $restaurant->longitude !== null) {
+        if ($originLat !== null && $originLng !== null) {
             $distanceKm = $this->calculateDistanceKm(
-                (float) $restaurant->latitude,
-                (float) $restaurant->longitude,
+                (float) $originLat,
+                (float) $originLng,
                 $lat,
                 $lng
             );

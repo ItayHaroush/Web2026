@@ -2048,6 +2048,9 @@ class AdminController extends Controller
             'owner_contact_phone' => 'nullable|string|max:32',
             'address' => 'sometimes|string|max:255',
             'city' => 'sometimes|string|max:255',
+            // נקודת מוצא מדויקת של המסעדה לחישוב משלוח לפי ק"מ
+            'delivery_origin_lat' => 'sometimes|nullable|numeric|between:-90,90',
+            'delivery_origin_lng' => 'sometimes|nullable|numeric|between:-180,180',
             'restaurant_type' => 'nullable|string|in:pizza,shawarma,burger,bistro,catering,general',
             'share_incentive_text' => 'nullable|string|max:1000',
             'delivery_time_minutes' => 'nullable|integer|min:1|max:240',
@@ -2235,6 +2238,20 @@ class AdminController extends Controller
 
         if ($request->filled('city')) {
             $updateData['city'] = $validated['city'];
+        }
+
+        // נקודת מוצא מדויקת לחישוב משלוח לפי ק"מ — נשמרת רק כששני הערכים תקינים יחד.
+        // ערך ריק מאפס את הנקודה (חזרה לחישוב לפי מרכז העיר).
+        if ($request->has('delivery_origin_lat') || $request->has('delivery_origin_lng')) {
+            $lat = $request->input('delivery_origin_lat');
+            $lng = $request->input('delivery_origin_lng');
+            if ($lat === '' || $lat === null || $lng === '' || $lng === null) {
+                $updateData['delivery_origin_lat'] = null;
+                $updateData['delivery_origin_lng'] = null;
+            } else {
+                $updateData['delivery_origin_lat'] = (float) $lat;
+                $updateData['delivery_origin_lng'] = (float) $lng;
+            }
         }
 
         // ביטול כפייה מפורש: החזר למצב auto (גם אם לא נשלח is_open)

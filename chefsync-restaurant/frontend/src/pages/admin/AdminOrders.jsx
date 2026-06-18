@@ -279,6 +279,7 @@ export default function AdminOrders() {
         } catch (error) {
             console.error('Failed to update status:', error);
             console.error('Error details:', error.response?.data);
+            alert('שגיאה בעדכון סטטוס: ' + (error.response?.data?.message || 'נסו שוב.'));
         }
     };
 

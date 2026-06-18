@@ -47,7 +47,18 @@ function DraggableMarker({ position, onPositionChange, onDragEnd }) {
     );
 }
 
-export default function LocationPickerModal({ open, onClose, onLocationSelected }) {
+export default function LocationPickerModal({
+    open,
+    onClose,
+    onLocationSelected,
+    title = '📍 בחר מיקום למשלוח',
+    confirmLabel = '✓ אישור מיקום',
+    hint = 'גרור את הסמן למיקום המדויק שלך — הכתובת תזוהה אוטומטית',
+    // persist=false מונע שמירה ל-localStorage/אירוע גלובלי של מיקום הלקוח (לשימוש מנהל)
+    persist = true,
+    // נקודת התחלה {lat,lng} — לדריסת ברירת המחדל/מיקום הלקוח השמור
+    initialPosition = null,
+}) {
     const [position, setPosition] = useState([32.0853, 34.7818]); // Default: Tel Aviv
     const [cityName, setCityName] = useState('');
     const [street, setStreet] = useState('');
@@ -244,20 +255,26 @@ export default function LocationPickerModal({ open, onClose, onLocationSelected 
 
     useEffect(() => {
         if (open) {
-            // Try to load saved location
-            try {
-                const saved = localStorage.getItem('user_delivery_location');
-                if (saved) {
-                    const parsed = JSON.parse(saved);
-                    if (parsed.lat && parsed.lng) {
-                        setPosition([parsed.lat, parsed.lng]);
-                        setCityName(parsed.cityName || '');
-                        setStreet(parsed.street || '');
-                        setFullAddress(parsed.fullAddress || '');
+            // מצב מנהל: התחל מנקודה שסופקה (מיקום מסעדה קיים) ובצע reverse-geocode
+            if (initialPosition?.lat && initialPosition?.lng) {
+                setPosition([initialPosition.lat, initialPosition.lng]);
+                getAddressFromCoordinates(initialPosition.lat, initialPosition.lng);
+            } else {
+                // Try to load saved location (מצב לקוח)
+                try {
+                    const saved = localStorage.getItem('user_delivery_location');
+                    if (saved) {
+                        const parsed = JSON.parse(saved);
+                        if (parsed.lat && parsed.lng) {
+                            setPosition([parsed.lat, parsed.lng]);
+                            setCityName(parsed.cityName || '');
+                            setStreet(parsed.street || '');
+                            setFullAddress(parsed.fullAddress || '');
+                        }
                     }
+                } catch (e) {
+                    console.warn('Failed to parse saved location', e);
                 }
-            } catch (e) {
-                console.warn('Failed to parse saved location', e);
             }
         } else {
             // Reset search when modal closes
@@ -272,6 +289,7 @@ export default function LocationPickerModal({ open, onClose, onLocationSelected 
                 clearTimeout(searchTimeoutRef.current);
             }
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open]);
 
     const handleGetCurrentLocation = () => {
@@ -312,11 +330,13 @@ export default function LocationPickerModal({ open, onClose, onLocationSelected 
             needsCompletion: !street || !cityName || !hasHouseNumber, // דגל שמסמן שצריך להשלים פרטים
         };
 
-        // Save to localStorage
-        localStorage.setItem('user_delivery_location', JSON.stringify(locationData));
+        // שמירת מיקום הלקוח — רק במצב לקוח (persist), לא בבחירת מיקום מסעדה
+        if (persist) {
+            localStorage.setItem('user_delivery_location', JSON.stringify(locationData));
 
-        // עדכון גלובלי — תגית המיקום בהירו / רכיבים אחרים מאזינים לאירוע
-        window.dispatchEvent(new CustomEvent('user-location-changed', { detail: locationData }));
+            // עדכון גלובלי — תגית המיקום בהירו / רכיבים אחרים מאזינים לאירוע
+            window.dispatchEvent(new CustomEvent('user-location-changed', { detail: locationData }));
+        }
 
         // Callback to parent
         if (onLocationSelected) {
@@ -332,7 +352,7 @@ export default function LocationPickerModal({ open, onClose, onLocationSelected 
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
             <div className="bg-white dark:bg-brand-dark-surface rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
                 <div className="p-4 sm:p-6 border-b flex items-center justify-between sticky top-0 bg-white dark:bg-brand-dark-surface z-10">
-                    <h2 className="text-lg sm:text-xl font-bold dark:text-brand-dark-text">📍 בחר מיקום למשלוח</h2>
+                    <h2 className="text-lg sm:text-xl font-bold dark:text-brand-dark-text">{title}</h2>
                     <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">
                         ✕
                     </button>
@@ -506,7 +526,7 @@ export default function LocationPickerModal({ open, onClose, onLocationSelected 
                         </div>
 
                         <p className="text-xs text-gray-500 dark:text-brand-dark-muted text-center">
-                            גרור את הסמן למיקום המדויק שלך — הכתובת תזוהה אוטומטית
+                            {hint}
                         </p>
                     </div>
 
@@ -516,7 +536,7 @@ export default function LocationPickerModal({ open, onClose, onLocationSelected 
                             onClick={handleConfirm}
                             className="w-full sm:flex-1 bg-brand-primary text-white font-bold py-3 px-4 rounded-xl hover:bg-brand-dark transition"
                         >
-                            ✓ אישור מיקום
+                            {confirmLabel}
                         </button>
                         <button
                             type="button"

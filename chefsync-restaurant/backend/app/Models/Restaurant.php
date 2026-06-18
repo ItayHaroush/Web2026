@@ -45,6 +45,9 @@ class Restaurant extends Model
         'city',
         'latitude',
         'longitude',
+        // נקודת מוצא מדויקת לחישוב משלוח לפי ק"מ (נפרדת ממרכז העיר)
+        'delivery_origin_lat',
+        'delivery_origin_lng',
         'is_open',
         'is_approved',
         'is_demo',

@@ -648,8 +648,18 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
         0,
     );
     // ההנחה נטו — מוגבלת לסכום הפריטים (מונע מחיר סופי שלילי)
-    const promotionDiscount = Math.min(Math.max(0, grossPromotionDiscount - upgradeSurcharge), total);
-    const totalWithDelivery = total + deliveryFee - promotionDiscount;
+    let promotionDiscount = Math.min(Math.max(0, grossPromotionDiscount - upgradeSurcharge), total);
+    let totalWithDelivery = total + deliveryFee - promotionDiscount;
+    // מבצע באחוזים — עיגול המחיר לתשלום כלפי מטה לשקלים שלמים (ללא אגורות), תואם לבקאנד.
+    // הפרש העיגול נספג בתוך ההנחה כדי לשמור על: סכום = פריטים + משלוח − הנחה.
+    const hasPercentPromo = metPromotions.some(p =>
+        (p.rewards || []).some(r => r.reward_type === 'discount_percent'),
+    );
+    if (hasPercentPromo) {
+        const wholeFinal = Math.max(0, Math.floor(totalWithDelivery + 1e-6));
+        promotionDiscount = Math.round((promotionDiscount + (totalWithDelivery - wholeFinal)) * 100) / 100;
+        totalWithDelivery = wholeFinal;
+    }
     const isBelowMinimum = customerInfo.delivery_method === 'delivery' && deliveryMinimum > 0 && total < deliveryMinimum;
     // בניית רשימת מתנות נבחרות (עם שמות) מ-selectedGifts
     const selectedGiftItems = [];

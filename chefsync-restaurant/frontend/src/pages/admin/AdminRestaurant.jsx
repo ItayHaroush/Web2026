@@ -6,6 +6,7 @@ import AdminLayout from '../../layouts/AdminLayout';
 import api from '../../services/apiClient';
 import { resolveAssetUrl } from '../../utils/assets';
 import { QRCodeCanvas } from 'qrcode.react';
+import LocationPickerModal from '../../components/LocationPickerModal';
 import {
     FaStore,
     FaClock,
@@ -113,6 +114,8 @@ export default function AdminRestaurant() {
     const [resettingDineIn, setResettingDineIn] = useState(false);
     /** ספירת אזורי משלוח פעילים — להתראה כשהמשלוח מוצג ללקוח אך אין כיסוי גיאוגרפי */
     const [deliveryZonesCheck, setDeliveryZonesCheck] = useState({ status: 'idle', activeCount: 0 });
+    /** בוחר נקודת מוצא מדויקת של המסעדה לחישוב משלוח לפי ק"מ */
+    const [showOriginPicker, setShowOriginPicker] = useState(false);
     const normalizeOperatingHours = (oh) => {
         if (!oh) return {};
         if (oh.default || oh.special_days || oh.days) return oh;
@@ -383,6 +386,8 @@ export default function AdminRestaurant() {
                 'phone',
                 'owner_contact_phone',
                 'address',
+                'delivery_origin_lat',
+                'delivery_origin_lng',
                 'restaurant_type',
                 'cuisine_type',
                 'share_incentive_text',
@@ -751,6 +756,53 @@ export default function AdminRestaurant() {
                                         className="w-full px-5 py-4 bg-gray-100 border-none rounded-2xl text-gray-500 font-bold cursor-not-allowed"
                                     />
                                 </div>
+                            </div>
+
+                            {/* נקודת מוצא מדויקת לחישוב משלוח לפי ק"מ */}
+                            <div className="mt-6 pt-6 border-t border-gray-100">
+                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                    <div className="min-w-0">
+                                        <h4 className="text-base font-black text-gray-900">נקודת מוצא לחישוב משלוח (לפי ק״מ)</h4>
+                                        <p className="text-xs text-gray-500 font-medium mt-1 leading-relaxed">
+                                            המרחק ללקוח נמדד מהנקודה הזו. קבעו את <span className="font-bold">המיקום המדויק של המסעדה</span> כדי שדמי המשלוח לפי ק״מ יחושבו נכון.
+                                        </p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowOriginPicker(true)}
+                                        className="shrink-0 inline-flex items-center gap-2 bg-brand-primary text-white font-bold px-4 py-3 rounded-2xl hover:bg-brand-dark transition-colors whitespace-nowrap"
+                                    >
+                                        <FaMapMarkerAlt /> קבע מיקום על המפה
+                                    </button>
+                                </div>
+
+                                {restaurant.delivery_origin_lat && restaurant.delivery_origin_lng ? (
+                                    <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+                                        <div className="flex items-center gap-2 text-emerald-800 min-w-0">
+                                            <FaCheckCircle className="shrink-0" />
+                                            <span className="text-sm font-bold truncate">
+                                                מיקום מדויק הוגדר ({Number(restaurant.delivery_origin_lat).toFixed(5)}, {Number(restaurant.delivery_origin_lng).toFixed(5)})
+                                            </span>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                handleChange('delivery_origin_lat', '');
+                                                handleChange('delivery_origin_lng', '');
+                                            }}
+                                            className="shrink-0 text-xs font-bold text-emerald-700 hover:text-emerald-900 underline"
+                                        >
+                                            נקה
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="mt-3 flex items-center gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-800">
+                                        <FaExclamationTriangle className="shrink-0" />
+                                        <span className="text-sm font-bold">
+                                            לא הוגדר מיקום מדויק — המשלוח מחושב כרגע לפי מרכז העיר.
+                                        </span>
+                                    </div>
+                                )}
                             </div>
                         </section>
 
@@ -1472,6 +1524,27 @@ export default function AdminRestaurant() {
                     </div>
                 </div>
             </div>
+
+            <LocationPickerModal
+                open={showOriginPicker}
+                onClose={() => setShowOriginPicker(false)}
+                persist={false}
+                title="📍 מיקום מדויק של המסעדה"
+                confirmLabel="✓ קבע מיקום מסעדה"
+                hint="גרור את הסמן למיקום המדויק של המסעדה — ממנו יחושב המרחק ללקוח"
+                initialPosition={
+                    restaurant?.delivery_origin_lat && restaurant?.delivery_origin_lng
+                        ? { lat: Number(restaurant.delivery_origin_lat), lng: Number(restaurant.delivery_origin_lng) }
+                        : (restaurant?.latitude && restaurant?.longitude
+                            ? { lat: Number(restaurant.latitude), lng: Number(restaurant.longitude) }
+                            : null)
+                }
+                onLocationSelected={(loc) => {
+                    handleChange('delivery_origin_lat', loc.lat);
+                    handleChange('delivery_origin_lng', loc.lng);
+                    setShowOriginPicker(false);
+                }}
+            />
         </AdminLayout>
     );
 }
