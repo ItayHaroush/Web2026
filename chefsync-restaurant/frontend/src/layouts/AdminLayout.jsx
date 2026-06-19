@@ -5,6 +5,7 @@ import { useRestaurantStatus } from '../context/RestaurantStatusContext';
 import api from '../services/apiClient';
 import DashboardSidebar from '../components/admin/DashboardSidebar';
 import DashboardHeader from '../components/admin/DashboardHeader';
+import DashboardPushSoundControls from '../components/admin/DashboardPushSoundControls';
 import FloatingRestaurantAssistant from '../components/admin/FloatingRestaurantAssistant';
 import FloatingSystemAdminButtons from '../components/admin/FloatingSystemAdminButtons';
 import ImpersonationBanner from '../components/admin/ImpersonationBanner';
@@ -251,6 +252,10 @@ export default function AdminLayout({ children }) {
                     />
 
                     <main className={`flex-1 p-4 lg:p-8 overflow-x-hidden ${impersonating ? 'mt-[7.5rem]' : 'mt-20'}`}>
+                        <div className="mb-3 flex justify-end">
+                            <DashboardPushSoundControls mode="auto" />
+                        </div>
+
                         <AlertsPanel
                             restaurantStatus={restaurantStatus}
                             subscriptionData={subscriptionData}

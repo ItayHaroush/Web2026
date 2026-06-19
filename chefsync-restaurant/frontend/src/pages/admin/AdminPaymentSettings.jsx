@@ -4,8 +4,8 @@ import AdminLayout from '../../layouts/AdminLayout';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import paymentSettingsService from '../../services/paymentSettingsService';
 import ZCreditSettingsPanel from '../../components/admin/ZCreditSettingsPanel';
-import { getBillingInfo } from '../../services/subscriptionService';
-import { FaCreditCard, FaMoneyBillWave, FaCheckCircle, FaExclamationTriangle, FaExternalLinkAlt, FaShieldAlt, FaSpinner, FaInfoCircle, FaWrench, FaCrown, FaFileInvoiceDollar } from 'react-icons/fa';
+import { getBillingInfo, requestCancellation, withdrawCancellationRequest } from '../../services/subscriptionService';
+import { FaCreditCard, FaMoneyBillWave, FaCheckCircle, FaExclamationTriangle, FaExternalLinkAlt, FaShieldAlt, FaSpinner, FaInfoCircle, FaWrench, FaCrown, FaFileInvoiceDollar, FaSignOutAlt, FaTimes } from 'react-icons/fa';
 import { TIER_LABELS } from '../../utils/tierUtils';
 
 const STATUS_LABELS = { trial: 'תקופת ניסיון', active: 'פעיל', suspended: 'מושהה', expired: 'פג תוקף', cancelled: 'מבוטל' };
@@ -34,6 +34,11 @@ export default function AdminPaymentSettings() {
     const [setupFeeCharged, setSetupFeeCharged] = useState(false);
     const [agreedToFee, setAgreedToFee] = useState(false);
     const [billing, setBilling] = useState(null);
+    const [showCancelModal, setShowCancelModal] = useState(false);
+    const [cancelReason, setCancelReason] = useState('');
+    const [cancelNote, setCancelNote] = useState('');
+    const [cancelEffectiveDate, setCancelEffectiveDate] = useState('');
+    const [cancelSubmitting, setCancelSubmitting] = useState(false);
     const [ezcountEnabled, setEzcountEnabled] = useState(false);
     const [ezcountApiKey, setEzcountApiKey] = useState('');
     const [hasEzcountApiKey, setHasEzcountApiKey] = useState(false);
@@ -49,6 +54,48 @@ export default function AdminPaymentSettings() {
             setBilling(data?.data || {});
         } catch (e) {
             // non-fatal for payment settings
+        }
+    };
+
+    const handleSubmitCancellation = async () => {
+        if (!cancelReason) {
+            setMessage({ type: 'error', text: 'יש לבחור סיבה' });
+            return;
+        }
+        setCancelSubmitting(true);
+        setMessage(null);
+        try {
+            const payload = { reason: cancelReason, note: cancelNote || undefined };
+            if (cancelEffectiveDate) payload.effective_date = cancelEffectiveDate;
+            const { data } = await requestCancellation(payload);
+            if (data?.success) {
+                setMessage({ type: 'success', text: data.message });
+                setShowCancelModal(false);
+                setCancelReason('');
+                setCancelNote('');
+                setCancelEffectiveDate('');
+                await fetchBilling();
+            }
+        } catch (err) {
+            setMessage({ type: 'error', text: err.response?.data?.message || 'שגיאה בשליחת הבקשה' });
+        } finally {
+            setCancelSubmitting(false);
+        }
+    };
+
+    const handleWithdrawCancellation = async () => {
+        if (!window.confirm('לבטל את בקשת הסיום?')) return;
+        setCancelSubmitting(true);
+        try {
+            const { data } = await withdrawCancellationRequest();
+            if (data?.success) {
+                setMessage({ type: 'success', text: data.message });
+                await fetchBilling();
+            }
+        } catch (err) {
+            setMessage({ type: 'error', text: err.response?.data?.message || 'שגיאה' });
+        } finally {
+            setCancelSubmitting(false);
         }
     };
 
@@ -220,6 +267,16 @@ export default function AdminPaymentSettings() {
                                 נותרו {billing.days_left_in_trial} ימים בתקופת הניסיון
                             </div>
                         )}
+                        {billing.subscription_status === 'suspended' && (
+                            <div className="bg-red-50 rounded-xl p-4 border border-red-200 text-sm text-red-700 font-bold">
+                                המנוי הושהה עקב כשלון תשלום. יש לעדכן אמצעי תשלום.
+                            </div>
+                        )}
+                        {billing.subscription_status === 'cancelled' && (
+                            <div className="bg-gray-100 rounded-xl p-4 border border-gray-300 text-sm text-gray-700 font-bold">
+                                המנוי בוטל. לשאלות — צרו קשר עם התמיכה.
+                            </div>
+                        )}
                         {billing.has_card_on_file ? (
                             <div className="flex items-center gap-2 text-sm">
                                 <FaCreditCard className="text-gray-500" /> כרטיס: **** {billing.card_last4}
@@ -248,13 +305,130 @@ export default function AdminPaymentSettings() {
                                 </div>
                             </div>
                         )}
-                        <button
-                            onClick={() => navigate('/admin/paywall')}
-                            className="bg-gradient-to-r from-brand-primary to-brand-secondary text-white px-6 py-3 rounded-xl font-bold text-sm hover:shadow-lg transition-all flex items-center gap-2"
-                        >
-                            <FaCrown size={14} />
-                            {billing.subscription_status === 'trial' ? 'הפעל מנוי' : 'שנה תוכנית'}
-                        </button>
+                        {billing.subscription_status !== 'cancelled' && (
+                            <button
+                                onClick={() => navigate('/admin/paywall')}
+                                className="bg-gradient-to-r from-brand-primary to-brand-secondary text-white px-6 py-3 rounded-xl font-bold text-sm hover:shadow-lg transition-all flex items-center gap-2"
+                            >
+                                <FaCrown size={14} />
+                                {billing.subscription_status === 'trial' ? 'הפעל מנוי' : 'שנה תוכנית'}
+                            </button>
+                        )}
+
+                        {isOwner() && billing.subscription_status !== 'cancelled' && (
+                            <div className="pt-4 border-t border-gray-100">
+                                {billing.cancellation?.pending ? (
+                                    <div className="bg-amber-50 rounded-xl p-4 border border-amber-200 space-y-3">
+                                        <div className="flex items-start gap-2">
+                                            <FaExclamationTriangle className="text-amber-600 mt-0.5 shrink-0" />
+                                            <div>
+                                                <p className="font-black text-amber-900 text-sm">בקשת סיום נשלחה</p>
+                                                <p className="text-amber-800 text-xs mt-1">
+                                                    נציג יצור איתכם קשר בהקדם.
+                                                    {billing.cancellation.requested_at && (
+                                                        <> נשלח ב-{new Date(billing.cancellation.requested_at).toLocaleString('he-IL')}.</>
+                                                    )}
+                                                </p>
+                                                {billing.cancellation.reason_label && (
+                                                    <p className="text-amber-700 text-xs mt-1">
+                                                        סיבה: {billing.cancellation.reason_label}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={handleWithdrawCancellation}
+                                            disabled={cancelSubmitting}
+                                            className="text-xs font-bold text-amber-800 underline hover:no-underline disabled:opacity-50"
+                                        >
+                                            ביטול הבקשה
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowCancelModal(true)}
+                                        className="text-sm font-bold text-gray-400 hover:text-red-600 transition-colors flex items-center gap-2"
+                                    >
+                                        <FaSignOutAlt size={12} />
+                                        בקשה לסיום שירות
+                                    </button>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {showCancelModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" dir="rtl">
+                        <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4">
+                            <div className="flex items-center justify-between">
+                                <h3 className="text-lg font-black text-gray-900">בקשה לסיום שירות</h3>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowCancelModal(false)}
+                                    className="p-2 text-gray-400 hover:text-gray-600"
+                                >
+                                    <FaTimes />
+                                </button>
+                            </div>
+                            <p className="text-sm text-gray-500">
+                                הבקשה תועבר לצוות TakeEat. ניצור איתכם קשר לסיום מסודר — כולל ייצוא נתונים אם נדרש.
+                            </p>
+                            <div>
+                                <label className="block text-xs font-bold text-gray-600 mb-1">סיבה *</label>
+                                <select
+                                    value={cancelReason}
+                                    onChange={(e) => setCancelReason(e.target.value)}
+                                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm font-medium"
+                                >
+                                    <option value="">בחרו סיבה...</option>
+                                    {(billing?.cancellation?.reason_options || []).map((opt) => (
+                                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-gray-600 mb-1">תאריך מבוקש לסיום (אופציונלי)</label>
+                                <input
+                                    type="date"
+                                    value={cancelEffectiveDate}
+                                    onChange={(e) => setCancelEffectiveDate(e.target.value)}
+                                    min={new Date().toISOString().split('T')[0]}
+                                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-gray-600 mb-1">הערה (אופציונלי)</label>
+                                <textarea
+                                    value={cancelNote}
+                                    onChange={(e) => setCancelNote(e.target.value)}
+                                    rows={3}
+                                    maxLength={2000}
+                                    placeholder="פרטים נוספים שיעזרו לנו..."
+                                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm resize-none"
+                                />
+                            </div>
+                            <div className="flex gap-2 pt-2">
+                                <button
+                                    type="button"
+                                    onClick={handleSubmitCancellation}
+                                    disabled={cancelSubmitting || !cancelReason}
+                                    className="flex-1 bg-red-600 text-white py-2.5 rounded-xl font-black text-sm hover:bg-red-700 disabled:opacity-50 flex items-center justify-center gap-2"
+                                >
+                                    {cancelSubmitting ? <FaSpinner className="animate-spin" /> : null}
+                                    שליחת בקשה
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowCancelModal(false)}
+                                    className="px-4 py-2.5 rounded-xl bg-gray-100 text-gray-700 font-bold text-sm"
+                                >
+                                    ביטול
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 )}
 

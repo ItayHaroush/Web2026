@@ -29,6 +29,7 @@ use App\Services\HypPaymentService;
 use App\Services\OrderEventService;
 use App\Services\OrderRefundService;
 use App\Services\RestaurantPaymentService;
+use App\Services\ChurnRequestService;
 use App\Services\SubscriptionPricingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -1047,10 +1048,10 @@ class AdminController extends Controller
             'polygon' => 'nullable|array|min:3',
             'polygon.*.lat' => 'required_with:polygon|numeric|between:-90,90',
             'polygon.*.lng' => 'required_with:polygon|numeric|between:-180,180',
-            'pricing_type' => 'required|string|in:fixed,per_km,tiered',
+            'pricing_type' => 'required|string|in:fixed,per_km',
             'fixed_fee' => 'nullable|numeric|min:0|max:999.99',
             'per_km_fee' => 'nullable|numeric|min:0|max:999.99',
-            'tiered_fees' => 'nullable|array',
+            'per_km_base_fee' => 'nullable|numeric|min:0|max:999.99',
             'preview_image' => 'nullable|string',
             'is_active' => 'sometimes|boolean',
             'sort_order' => 'sometimes|integer|min:0',
@@ -1085,23 +1086,6 @@ class AdminController extends Controller
                 'message' => 'חובה להזין מחיר לק"מ',
             ], 422);
         }
-        if ($pricingType === 'tiered') {
-            $tiers = $request->input('tiered_fees', []);
-            if (! is_array($tiers) || empty($tiers)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'חובה להזין מדרגות מחיר',
-                ], 422);
-            }
-            foreach ($tiers as $tier) {
-                if (! is_array($tier) || ! isset($tier['upto_km'], $tier['fee'])) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'מדרגות מחיר לא תקינות',
-                    ], 422);
-                }
-            }
-        }
 
         $zone = DeliveryZone::create([
             'restaurant_id' => $restaurant->id,
@@ -1113,7 +1097,7 @@ class AdminController extends Controller
             'pricing_type' => $pricingType,
             'fixed_fee' => $request->input('fixed_fee', 0),
             'per_km_fee' => $request->input('per_km_fee'),
-            'tiered_fees' => $request->input('tiered_fees'),
+            'per_km_base_fee' => $request->input('per_km_base_fee', 0),
             'is_active' => $request->boolean('is_active', true),
             'sort_order' => (int) $request->input('sort_order', 0),
             'preview_image' => $request->input('preview_image'),
@@ -1144,10 +1128,10 @@ class AdminController extends Controller
             'polygon' => 'nullable|sometimes|array|min:3',
             'polygon.*.lat' => 'required_with:polygon|numeric|between:-90,90',
             'polygon.*.lng' => 'required_with:polygon|numeric|between:-180,180',
-            'pricing_type' => 'sometimes|string|in:fixed,per_km,tiered',
+            'pricing_type' => 'sometimes|string|in:fixed,per_km',
             'fixed_fee' => 'nullable|numeric|min:0|max:999.99',
             'per_km_fee' => 'nullable|numeric|min:0|max:999.99',
-            'tiered_fees' => 'nullable|array',
+            'per_km_base_fee' => 'nullable|numeric|min:0|max:999.99',
             'is_active' => 'sometimes|boolean',
             'sort_order' => 'sometimes|integer|min:0',
             'preview_image' => 'nullable|string',
@@ -1176,15 +1160,6 @@ class AdminController extends Controller
                 'message' => 'חובה להזין מחיר לק"מ',
             ], 422);
         }
-        if ($pricingType === 'tiered' && $request->has('tiered_fees')) {
-            $tiers = $request->input('tiered_fees', []);
-            if (! is_array($tiers) || empty($tiers)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'חובה להזין מדרגות מחיר',
-                ], 422);
-            }
-        }
 
         $payload = $request->only([
             'name',
@@ -1194,7 +1169,7 @@ class AdminController extends Controller
             'pricing_type',
             'fixed_fee',
             'per_km_fee',
-            'tiered_fees',
+            'per_km_base_fee',
             'is_active',
             'sort_order',
             'preview_image',
@@ -3416,7 +3391,99 @@ class AdminController extends Controller
                 'recent_payments' => $recentPayments,
                 'has_card_on_file' => ! empty($restaurant->hyp_card_token),
                 'card_last4' => $restaurant->hyp_card_last4,
+                'cancellation' => ChurnRequestService::cancellationPayload($restaurant),
             ],
+        ]);
+    }
+
+    /**
+     * בקשת סיום התקשרות — בעלים בלבד
+     */
+    public function requestCancellation(Request $request)
+    {
+        $user = $request->user();
+        if (! $user->isOwner() && ! $user->is_super_admin) {
+            return response()->json([
+                'success' => false,
+                'message' => 'רק בעל המסעדה רשאי לבקש סיום התקשרות',
+            ], 403);
+        }
+
+        $restaurant = $this->resolveRestaurant($request);
+        if (! $restaurant) {
+            return response()->json(['success' => false, 'message' => 'לא נמצאה מסעדה'], 404);
+        }
+
+        if ($restaurant->deletion_requested_at) {
+            return response()->json([
+                'success' => false,
+                'message' => 'כבר קיימת בקשת סיום פעילה. נציג יצור איתכם קשר בהקדם.',
+            ], 422);
+        }
+
+        if ($restaurant->subscription_status === 'cancelled') {
+            return response()->json([
+                'success' => false,
+                'message' => 'המנוי כבר מבוטל',
+            ], 422);
+        }
+
+        $validated = $request->validate([
+            'reason'          => 'required|string|in:' . implode(',', array_keys(ChurnRequestService::REASONS)),
+            'note'            => 'nullable|string|max:2000',
+            'effective_date'  => 'nullable|date|after_or_equal:today',
+        ]);
+
+        $restaurant->update([
+            'deletion_requested_at'             => now(),
+            'cancellation_reason'               => $validated['reason'],
+            'cancellation_note'                 => $validated['note'] ?? null,
+            'cancellation_effective_date'       => $validated['effective_date'] ?? null,
+            'cancellation_requested_by_user_id' => $user->id,
+        ]);
+
+        ChurnRequestService::notifySuperAdmins(
+            $restaurant->fresh(),
+            $user,
+            $validated['reason'],
+            $validated['note'] ?? null,
+            $validated['effective_date'] ?? null,
+        );
+
+        Log::info('Restaurant cancellation requested', [
+            'restaurant_id' => $restaurant->id,
+            'user_id'       => $user->id,
+            'reason'        => $validated['reason'],
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'בקשת הסיום התקבלה. נציג יצור איתכם קשר בהקדם.',
+            'data'    => ChurnRequestService::cancellationPayload($restaurant->fresh()),
+        ]);
+    }
+
+    /**
+     * ביטול בקשת סיום (לפני טיפול)
+     */
+    public function withdrawCancellationRequest(Request $request)
+    {
+        $user = $request->user();
+        if (! $user->isOwner() && ! $user->is_super_admin) {
+            return response()->json(['success' => false, 'message' => 'אין הרשאה'], 403);
+        }
+
+        $restaurant = $this->resolveRestaurant($request);
+        if (! $restaurant || ! $restaurant->deletion_requested_at) {
+            return response()->json(['success' => false, 'message' => 'אין בקשת סיום פעילה'], 404);
+        }
+
+        ChurnRequestService::clearRequestFields($restaurant);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'בקשת הסיום בוטלה',
+            'data'    => ChurnRequestService::cancellationPayload($restaurant->fresh()),
         ]);
     }
 

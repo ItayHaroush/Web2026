@@ -131,6 +131,7 @@ const DatabaseMaintenance = lazyWithRetry(() => import('./pages/super-admin/sett
 const DebugAuth = lazyWithRetry(() => import('./pages/super-admin/DebugAuth'));
 const SuperAdminAbandonedCarts = lazyWithRetry(() => import('./pages/super-admin/SuperAdminAbandonedCarts'));
 const SuperAdminAnalytics = lazyWithRetry(() => import('./pages/super-admin/SuperAdminAnalytics'));
+const SuperAdminFunnel = lazyWithRetry(() => import('./pages/super-admin/SuperAdminFunnel'));
 const SuperAdminCustomers = lazyWithRetry(() => import('./pages/super-admin/SuperAdminCustomers'));
 const SuperAdminCustomerDetail = lazyWithRetry(() => import('./pages/super-admin/SuperAdminCustomerDetail'));
 const SuperAdminNotificationCenter = lazyWithRetry(() => import('./pages/super-admin/SuperAdminNotificationCenter'));
@@ -531,6 +532,14 @@ function AppRoutes() {
             }
           />
           <Route
+            path="/super-admin/funnel"
+            element={
+              <SuperAdminRoute>
+                <SuperAdminFunnel />
+              </SuperAdminRoute>
+            }
+          />
+          <Route
             path="/super-admin/notification-center"
             element={
               <SuperAdminRoute>
@@ -663,6 +672,7 @@ function AppRoutes() {
               </SuperAdminRoute>
             }
           />
+          <Route path="/super-admin/churn-requests" element={<Navigate to="/super-admin/dashboard" replace />} />
           <Route
             path="/super-admin/holidays"
             element={

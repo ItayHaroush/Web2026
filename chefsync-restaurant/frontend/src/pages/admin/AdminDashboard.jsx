@@ -3,9 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import AdminLayout from '../../layouts/AdminLayout';
 import api from '../../services/apiClient';
-import SoundManager from '../../services/SoundManager';
-import { clearStoredFcmToken, disableFcm, getPushPlatform, getStoredFcmToken, isNativePushPlatform, requestFcmToken } from '../../services/fcm';
-import { getNativePushPermissionState } from '../../services/nativePush';
 import AiCreditsBadge from '../../components/AiCreditsBadge';
 import AiInsightsPanel from '../../components/AiInsightsPanel';
 import UpgradeBanner from '../../components/UpgradeBanner';
@@ -17,8 +14,6 @@ import {
     FaUtensils,
     FaFolder,
     FaUsers,
-    FaBell,
-    FaBellSlash,
     FaReceipt,
     FaMapMarkerAlt,
     FaArrowLeft,
@@ -26,8 +21,6 @@ import {
     FaExclamationTriangle,
     FaLink,
     FaHandPaper,
-    FaVolumeUp,
-    FaVolumeMute
 } from 'react-icons/fa';
 import OrderManualPaymentModal from '../../components/admin/OrderManualPaymentModal';
 import FutureOrderDetailModal from '../../components/admin/FutureOrderDetailModal';
@@ -43,38 +36,10 @@ export default function AdminDashboard() {
     const [manualPaymentModalOrder, setManualPaymentModalOrder] = useState(null);
     const [futureDetailOrder, setFutureDetailOrder] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [pushState, setPushState] = useState({ status: 'idle', message: '' });
-    const [nativePushPerm, setNativePushPerm] = useState(null);
 
-    const isNativePush = isNativePushPlatform();
-    const webPermission = typeof Notification !== 'undefined' ? Notification.permission : 'unsupported';
-    // באפליקציית אנדרואיד הנייטיב, הרשאת Web Notification אף פעם לא 'granted' —
-    // המצב האמיתי מגיע מהרשאת ה-OS דרך תוסף ה-Push.
-    const permission = isNativePush ? (nativePushPerm ?? 'prompt') : webPermission;
-    const storedToken = useMemo(() => getStoredFcmToken(), [pushState.status]);
-    const isPushEnabled = permission === 'granted' && !!storedToken;
-
-    useEffect(() => {
-        if (!isNativePush) return undefined;
-        let alive = true;
-        getNativePushPermissionState()
-            .then((p) => { if (alive) setNativePushPerm(p); })
-            .catch(() => {});
-        return () => { alive = false; };
-    }, [isNativePush, pushState.status]);
     // רק בעלים ומנהלים רואים הכנסות
     const canViewRevenue = isOwner() || isManager();
     const canManualPaymentTools = isOwner() || isManager();
-
-    // מצב צלצול הזמנות — נשמר ב-localStorage
-    const [soundEnabled, setSoundEnabled] = useState(() => SoundManager.isEnabled());
-    const handleSoundToggle = (next) => {
-        setSoundEnabled(next);
-        SoundManager.setEnabled(next);
-        if (next) {
-            SoundManager.playTest();
-        }
-    };
 
     /**
      * בנר כתום — רק כשאין manualPaymentOrders מהשרת (fallback מ-10 האחרונות).
@@ -122,63 +87,6 @@ export default function AdminDashboard() {
             console.error('Error details:', error.response?.data);
         } finally {
             setLoading(false);
-        }
-    };
-
-    const enablePush = async () => {
-        try {
-            setPushState({ status: 'loading', message: 'מבקש הרשאה להתראות...' });
-            const token = await requestFcmToken();
-            if (!token) {
-                const perm = isNativePush
-                    ? await getNativePushPermissionState()
-                    : (typeof Notification !== 'undefined' ? Notification.permission : 'unsupported');
-                setPushState({
-                    status: 'error',
-                    message: perm === 'denied'
-                        ? (isNativePush
-                            ? 'ההתראות חסומות במכשיר. פתחו הגדרות > האפליקציה > התראות ואשרו.'
-                            : 'ההתראות חסומות בדפדפן. יש לאפשר דרך ההגדרות.')
-                        : 'הרשאה נדחתה. יש לאשר התראות.',
-                });
-                return;
-            }
-
-            await api.post('/fcm/register', { token, device_label: 'tablet', platform: getPushPlatform() }, { headers: getAuthHeaders() });
-            setPushState({ status: 'success', message: 'התראות הופעלו לטאבלט הזה.' });
-        } catch (error) {
-            console.error('Failed to enable push', error);
-            setPushState({ status: 'error', message: 'שגיאה בהפעלת התראות. נסו שוב.' });
-        }
-    };
-
-    const disablePush = async () => {
-        try {
-            setPushState({ status: 'loading', message: 'מכבה התראות...' });
-
-            const token = getStoredFcmToken();
-            if (token) {
-                try {
-                    await api.post('/fcm/unregister', { token }, { headers: getAuthHeaders() });
-                } catch (e) {
-                    console.warn('[FCM] backend unregister failed', e);
-                }
-            }
-
-            try {
-                await disableFcm();
-            } catch (e) {
-                console.warn('[FCM] deleteToken failed', e);
-                clearStoredFcmToken();
-            }
-
-            setPushState({
-                status: 'success',
-                message: 'התראות כובו עבור המכשיר הזה. כדי לבטל הרשאה לחלוטין יש לחסום בהגדרות הדפדפן.',
-            });
-        } catch (error) {
-            console.error('Failed to disable push', error);
-            setPushState({ status: 'error', message: 'שגיאה בכיבוי התראות. נסו שוב.' });
         }
     };
 
@@ -248,70 +156,6 @@ export default function AdminDashboard() {
             {/* Upgrade Banner */}
             <div className="mb-4">
                 <UpgradeBanner variant="inline" context="ai" />
-            </div>
-
-            {/* באנר התראות מודרני */}
-            <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-4 sm:p-5 mb-6">
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                    <div className="flex items-start gap-4">
-                        <div className={`p-3 rounded-2xl ${isPushEnabled ? 'bg-green-50 text-green-600' : 'bg-brand-primary/5 text-brand-primary'}`}>
-                            {isPushEnabled ? <FaBell size={20} /> : <FaBellSlash size={20} />}
-                        </div>
-                        <div>
-                            <p className="text-base font-black text-gray-900 leading-tight">התראות זמן אמת לטאבלט</p>
-                            <p className="text-xs text-gray-500 font-bold mt-0.5">קבל צליל והתראה על כל הזמנה חדשה שמתקבלת</p>
-                            {pushState.message && (
-                                <p className={`text-[11px] mt-1 font-black uppercase ${pushState.status === 'success' ? 'text-green-600' : pushState.status === 'error' ? 'text-red-500' : 'text-gray-400'}`}>
-                                    • {pushState.message}
-                                </p>
-                            )}
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-3 shrink-0">
-                        <span className="text-xs font-black text-gray-500 whitespace-nowrap">התראות</span>
-                        <button
-                            type="button"
-                            role="switch"
-                            aria-checked={isPushEnabled}
-                            aria-busy={pushState.status === 'loading'}
-                            onClick={() => (isPushEnabled ? disablePush() : enablePush())}
-                            disabled={pushState.status === 'loading' || permission === 'denied'}
-                            className={`relative h-9 w-14 shrink-0 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus-visible:ring-offset-2 disabled:opacity-40 ${isPushEnabled ? 'bg-emerald-500' : 'bg-gray-200'
-                                }`}
-                        >
-                            <span
-                                className={`absolute top-1 h-7 w-7 rounded-full bg-white shadow-md transition-all duration-200 ${isPushEnabled ? 'end-1' : 'start-1'
-                                    }`}
-                            />
-                            {pushState.status === 'loading' && (
-                                <span className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                    <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                                </span>
-                            )}
-                        </button>
-                    </div>
-                </div>
-                {/* שורת צלצול הזמנות */}
-                <div className="pt-3 mt-1 border-t border-gray-100 flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-xl ${soundEnabled ? 'bg-orange-50 text-orange-500' : 'bg-gray-100 text-gray-400'}`}>
-                            {soundEnabled ? <FaVolumeUp size={16} /> : <FaVolumeMute size={16} />}
-                        </div>
-                        <div>
-                            <p className="text-sm font-black text-gray-900 leading-tight">צלצול הזמנות</p>
-                            <p className="text-xs text-gray-500">{soundEnabled ? 'צלצול הזמנות פעיל' : 'כבוי — לחץ להפעלה'}</p>
-                        </div>
-                    </div>
-                    <button
-                        type="button"
-                        role="switch"
-                        aria-checked={soundEnabled}
-                        onClick={() => handleSoundToggle(!soundEnabled)}
-                        className={`relative h-9 w-14 shrink-0 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 ${soundEnabled ? 'bg-orange-400' : 'bg-gray-200'}`}
-                    >
-                        <span className={`absolute top-1 h-7 w-7 rounded-full bg-white shadow-md transition-all duration-200 ${soundEnabled ? 'end-1' : 'start-1'}`} />
-                    </button>
-                </div>
             </div>
 
             {/* התראה על הזמנות לא שולמו — מספר הזמנה + סיבה; לחיצה פותחת את ההזמנה במסך ההזמנות כשיש אחת */}

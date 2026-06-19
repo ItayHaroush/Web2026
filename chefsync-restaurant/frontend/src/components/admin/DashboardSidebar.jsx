@@ -13,7 +13,8 @@ export default function DashboardSidebar({
     menuItems,
     title = 'TakeEat',
     onLogout,
-    impersonating = false
+    impersonating = false,
+    isSuperAdmin = false
 }) {
     const showCollapsed = isCollapsed && !isOpen;
     const navigate = useNavigate();
@@ -21,8 +22,8 @@ export default function DashboardSidebar({
     const { hasPosAccess } = useAdminAuth();
     const currentTier = subscriptionInfo?.tier || 'basic';
 
-    // Check if this is a super admin (system owner)
-    const isSuperAdminMode = impersonating;
+    // מנהל מערכת (Super Admin) — אין לו צורך ב"שדרג"/קופה
+    const isSuperAdminMode = impersonating || isSuperAdmin;
 
     return (
         <>
@@ -67,6 +68,21 @@ export default function DashboardSidebar({
                 {/* Navigation Items */}
                 <nav className="flex-1 overflow-y-auto overflow-x-visible py-6 px-3 space-y-1.5 custom-scrollbar">
                     {menuItems.map((item, index) => {
+                        // כותרת קבוצה (לא לחיצה) — תומך בתפריט מקובץ
+                        if (item.type === 'header') {
+                            if (showCollapsed) {
+                                return <div key={index} className="mx-auto my-2 h-px w-8 bg-gray-100" />;
+                            }
+                            return (
+                                <div key={index} className="px-3 pt-4 pb-1 select-none">
+                                    <p className="text-[10px] font-black uppercase tracking-wider text-gray-400 flex items-center gap-2">
+                                        {item.icon && <span className="text-gray-300 text-xs">{item.icon}</span>}
+                                        {item.label}
+                                    </p>
+                                </div>
+                            );
+                        }
+
                         const isLocked = !impersonating && item.requiredTier && !isTierSufficient(currentTier, item.requiredTier);
                         const tierBadge = item.requiredTier ? (item.requiredTier === 'enterprise' ? 'מסעדה מלאה' : 'Pro') : null;
 

@@ -10,7 +10,9 @@ use App\Models\Order;
 use App\Models\Restaurant;
 use App\Models\RestaurantPayment;
 use App\Models\RestaurantSubscription;
+use App\Models\User;
 use App\Services\PlatformCommissionService;
+use App\Services\ChurnRequestService;
 use App\Services\InvoicePdfService;
 use App\Mail\InvoiceMail;
 use Carbon\Carbon;
@@ -1321,6 +1323,84 @@ class SuperAdminBillingController extends Controller
                 'message' => 'שליחת החשבונית נכשלה: ' . $e->getMessage(),
             ], 500);
         }
+    }
+
+    /**
+     * בקשות סיום התקשרות ממסעדנים
+     */
+    public function cancellationRequests(Request $request)
+    {
+        $query = Restaurant::withoutGlobalScope('tenant')
+            ->whereNotNull('deletion_requested_at')
+            ->orderByDesc('deletion_requested_at');
+
+        $items = $query->get()->map(function (Restaurant $r) {
+            $owner = User::where('restaurant_id', $r->id)->where('role', 'owner')->first();
+
+            return [
+                'id'                    => $r->id,
+                'tenant_id'             => $r->tenant_id,
+                'name'                  => $r->name,
+                'subscription_status'   => $r->subscription_status,
+                'tier'                  => $r->tier,
+                'requested_at'          => $r->deletion_requested_at,
+                'reason'                => $r->cancellation_reason,
+                'reason_label'          => ChurnRequestService::reasonLabel($r->cancellation_reason),
+                'note'                  => $r->cancellation_note,
+                'effective_date'        => $r->cancellation_effective_date,
+                'owner_name'            => $owner?->name,
+                'owner_email'           => $owner?->email,
+                'owner_phone'           => $r->owner_contact_phone ?: $r->phone,
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'data'    => $items,
+            'count'   => $items->count(),
+        ]);
+    }
+
+    public function approveCancellationRequest(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'note' => 'nullable|string|max:500',
+        ]);
+
+        $restaurant = Restaurant::withoutGlobalScope('tenant')->findOrFail($id);
+
+        if (! $restaurant->deletion_requested_at) {
+            return response()->json(['success' => false, 'message' => 'אין בקשת סיום פעילה'], 404);
+        }
+
+        ChurnRequestService::approve($restaurant, $request->user(), $validated['note'] ?? null);
+
+        return response()->json([
+            'success'    => true,
+            'message'    => 'המנוי בוטל והבקשה נסגרה',
+            'restaurant' => $restaurant->fresh(),
+        ]);
+    }
+
+    public function dismissCancellationRequest(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'note' => 'nullable|string|max:500',
+        ]);
+
+        $restaurant = Restaurant::withoutGlobalScope('tenant')->findOrFail($id);
+
+        if (! $restaurant->deletion_requested_at) {
+            return response()->json(['success' => false, 'message' => 'אין בקשת סיום פעילה'], 404);
+        }
+
+        ChurnRequestService::dismiss($restaurant, $request->user(), $validated['note'] ?? null);
+
+        return response()->json([
+            'success'    => true,
+            'message'    => 'הבקשה נסגרה ללא ביטול מנוי',
+            'restaurant' => $restaurant->fresh(),
+        ]);
     }
 
     private function calculateNextChargeDate(RestaurantSubscription $subscription, Carbon $from): Carbon

@@ -83,6 +83,7 @@ const SUPER_RULES = [
     [/^\/super-admin\/dashboard\/?$/, 'super_admin_dashboard'],
     [/^\/super-admin\/notification-center\/?$/, 'super_admin_notification_center'],
     [/^\/super-admin\/reports\/?$/, 'super_admin_reports'],
+    [/^\/super-admin\/funnel\/?$/, 'super_admin_funnel'],
     [/^\/super-admin\/invoices\/?$/, 'super_admin_invoices'],
     [/^\/super-admin\/billing-manual\/?$/, 'super_admin_manual_billing'],
     [/^\/super-admin\/settings\/?$/, 'super_admin_settings'],

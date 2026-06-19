@@ -74,7 +74,7 @@ export default function AdminNotificationProvider({ children }) {
         // פולינג רק עבור משתמשי אדמין (לא לקוחות/ללא תפקיד)
         const role = user.role || '';
         const isSuperAdmin = user.is_super_admin === true;
-        if (!isSuperAdmin && !['owner', 'manager', 'employee'].includes(role)) return;
+        if (!isSuperAdmin && !['owner', 'manager', 'employee', 'delivery'].includes(role)) return;
         if (isSuperAdmin && !impersonating) return;
 
         let isFirstPoll = true;
@@ -126,7 +126,7 @@ export default function AdminNotificationProvider({ children }) {
         if (!user) return undefined;
         const role = user.role || '';
         const isSuperAdmin = user.is_super_admin === true;
-        if (!isSuperAdmin && !['owner', 'manager', 'employee'].includes(role)) return undefined;
+        if (!isSuperAdmin && !['owner', 'manager', 'employee', 'delivery'].includes(role)) return undefined;
         if (isSuperAdmin && !impersonating) return undefined;
 
         // האזנה ל-postMessage מ-Service Worker (כשהאפליקציה פתוחה)

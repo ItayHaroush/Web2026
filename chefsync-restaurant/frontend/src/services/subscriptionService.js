@@ -24,4 +24,10 @@ export const createPaymentSession = (planType = 'monthly', tier = 'pro') =>
 
 export const getBillingInfo = () => api.get('/admin/billing/info');
 
+export const requestCancellation = (payload) =>
+    api.post('/admin/billing/cancellation-request', payload);
+
+export const withdrawCancellationRequest = () =>
+    api.delete('/admin/billing/cancellation-request');
+
 export const checkPendingPayment = () => api.post('/admin/subscription/check-pending');

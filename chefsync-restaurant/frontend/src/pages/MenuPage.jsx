@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { trackStage, STAGE } from '../services/funnelTracker';
 import { FaWhatsapp, FaPhoneAlt, FaShoppingBag, FaTruck, FaClock, FaShieldAlt, FaExclamationTriangle, FaInfoCircle, FaCreditCard, FaMoneyBillWave, FaGift, FaTimes, FaPlus, FaArrowLeft, FaChevronLeft, FaTag, FaCheckCircle, FaHistory, FaMapMarkerAlt, FaMask, FaSearch } from 'react-icons/fa';
 import { SiWaze } from 'react-icons/si';
 import { useAuth } from '../context/AuthContext';
@@ -135,6 +136,7 @@ export default function MenuPage({ isPreviewMode = false }) {
     const [error, setError] = useState(null);
     const [activeCategory, setActiveCategory] = useState(null);
     const [selectedMenuItem, setSelectedMenuItem] = useState(null);
+    const menuViewTrackedRef = useRef(null);
     const [isPWA, setIsPWA] = useState(false);
     const [showFutureOrderModal, setShowFutureOrderModal] = useState(false);
     const [futureOrderApproved, setFutureOrderApproved] = useState(!!scheduledFor);
@@ -175,6 +177,14 @@ export default function MenuPage({ isPreviewMode = false }) {
         window.addEventListener('user-location-changed', onLocationChanged);
         return () => window.removeEventListener('user-location-changed', onLocationChanged);
     }, [setCustomerInfo]);
+
+    // Funnel — כניסה לתפריט (שלב 1). פעם אחת לכל מסעדה ב-session.
+    useEffect(() => {
+        if (isPreviewMode || !restaurant?.id) return;
+        if (menuViewTrackedRef.current === restaurant.id) return;
+        menuViewTrackedRef.current = restaurant.id;
+        trackStage('menu_view', STAGE.MENU_VIEW, { payload: { restaurant_id: restaurant.id } });
+    }, [restaurant?.id, isPreviewMode]);
 
     // אם המשתמש כבר אישר הרשאת מיקום ואין מיקום שמור — משתמשים במיקום הנוכחי אוטומטית (בלי לפתוח בקשה)
     useEffect(() => {

@@ -16,7 +16,7 @@ class DeliveryZone extends Model
         'pricing_type',
         'fixed_fee',
         'per_km_fee',
-        'tiered_fees',
+        'per_km_base_fee',
         'is_active',
         'sort_order',
         'city_radius',
@@ -25,9 +25,9 @@ class DeliveryZone extends Model
 
     protected $casts = [
         'polygon' => 'array',
-        'tiered_fees' => 'array',
         'fixed_fee' => 'decimal:2',
         'per_km_fee' => 'decimal:2',
+        'per_km_base_fee' => 'decimal:2',
         'is_active' => 'boolean',
         'sort_order' => 'integer',
         'city_radius' => 'decimal:2',

@@ -322,9 +322,11 @@ return [
         'http_method' => 'POST',
         'required_role' => 'manager',
         'params' => [
-            'name'         => ['type' => 'string', 'required' => true, 'label_he' => 'שם'],
-            'pricing_type' => ['type' => 'enum', 'values' => ['fixed', 'per_km', 'tiered'], 'required' => true, 'label_he' => 'סוג תמחור'],
-            'fixed_fee'    => ['type' => 'number', 'required' => false, 'label_he' => 'מחיר קבוע (₪)'],
+            'name'            => ['type' => 'string', 'required' => true, 'label_he' => 'שם'],
+            'pricing_type'    => ['type' => 'enum', 'values' => ['fixed', 'per_km'], 'required' => true, 'label_he' => 'סוג תמחור'],
+            'fixed_fee'       => ['type' => 'number', 'required' => false, 'label_he' => 'מחיר קבוע (₪)'],
+            'per_km_base_fee' => ['type' => 'number', 'required' => false, 'label_he' => 'מחיר בסיס למשלוח (₪)'],
+            'per_km_fee'      => ['type' => 'number', 'required' => false, 'label_he' => 'תוספת לכל ק"מ (₪)'],
         ],
     ],
 

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import SuperAdminLayout from '../../layouts/SuperAdminLayout';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import api from '../../services/apiClient';
@@ -43,12 +44,13 @@ const STATUS_COLORS = {
 
 export default function SuperAdminFeedback() {
     const { getAuthHeaders } = useAdminAuth();
+    const [searchParams] = useSearchParams();
     const [items, setItems] = useState([]);
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
     const [page, setPage] = useState(1);
     const [lastPage, setLastPage] = useState(1);
-    const [statusFilter, setStatusFilter] = useState('');
+    const [statusFilter, setStatusFilter] = useState(() => searchParams.get('status') || '');
     const [categoryFilter, setCategoryFilter] = useState('');
     const [search, setSearch] = useState('');
     const [searchInput, setSearchInput] = useState('');

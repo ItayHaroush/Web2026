@@ -21,6 +21,7 @@ class SuperAdminAnalyticsController extends Controller
         'super_admin_dashboard',
         'super_admin_notification_center',
         'super_admin_reports',
+        'super_admin_funnel',
         'super_admin_invoices',
         'super_admin_manual_billing',
         'super_admin_settings',

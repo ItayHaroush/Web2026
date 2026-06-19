@@ -4,9 +4,28 @@ import './index.css'
 import App from './App.jsx'
 import GlobalErrorBoundary from './GlobalErrorBoundary.jsx'
 import { getFirebaseMessagingSwUrl } from './utils/deployVersion.js'
+import { trackError } from './services/funnelTracker'
 
 // ✅ Signal Init
 window.REACT_LOADED = true;
+
+// Health Check — לכידת שגיאות JS גלובליות (רק בהקשר לקוח; הסינון בתוך trackError)
+try {
+  window.addEventListener('error', (event) => {
+    const msg = event?.error?.message || event?.message || '';
+    // דלג על "Script error." חוצה-מקור ללא פרטים, ועל שגיאות טעינת משאבים (img/script)
+    if (!msg || msg === 'Script error.' || (event?.target && event.target !== window)) return;
+    const where = event?.filename ? `${event.filename}:${event.lineno || 0}` : undefined;
+    trackError('js_error', msg, { payload: where ? { at: where } : undefined });
+  });
+  window.addEventListener('unhandledrejection', (event) => {
+    const reason = event?.reason;
+    const msg = reason?.message || (typeof reason === 'string' ? reason : '') || 'Unhandled promise rejection';
+    trackError('unhandled_rejection', msg);
+  });
+} catch {
+  /* noop */
+}
 
 // Hide the index.html "failed to load" safety-net banner now that the app booted.
 try {

@@ -15,7 +15,6 @@ import {
     FaCheckCircle,
     FaTimesCircle,
     FaInfoCircle,
-    FaLayerGroup,
     FaTimes,
     FaSave,
     FaUndo,
@@ -29,7 +28,7 @@ const emptyForm = {
     pricing_type: 'fixed',
     fixed_fee: '0',
     per_km_fee: '',
-    tiered_fees: '',
+    per_km_base_fee: '',
     polygon: [],
     is_active: true,
 };
@@ -151,7 +150,7 @@ export default function AdminDeliveryZones() {
             pricing_type: zone.pricing_type || 'fixed',
             fixed_fee: zone.fixed_fee ?? '0',
             per_km_fee: zone.per_km_fee ?? '',
-            tiered_fees: zone.tiered_fees ? JSON.stringify(zone.tiered_fees, null, 2) : '',
+            per_km_base_fee: zone.per_km_base_fee ?? '',
             polygon: Array.isArray(zone.polygon) ? zone.polygon : [],
             is_active: Boolean(zone.is_active),
         });
@@ -183,24 +182,9 @@ export default function AdminDeliveryZones() {
             return;
         }
 
-        let tieredFees = null;
-
         if (form.pricing_type === 'per_km') {
             if (!form.per_km_fee || Number(form.per_km_fee) <= 0) {
                 alert('יש להזין מחיר לק"מ גדול מ-0');
-                return;
-            }
-        }
-
-        if (form.pricing_type === 'tiered') {
-            try {
-                tieredFees = JSON.parse(form.tiered_fees || '[]');
-            } catch {
-                alert('מדרגות מחיר לא תקינות (JSON)');
-                return;
-            }
-            if (!Array.isArray(tieredFees) || tieredFees.length === 0) {
-                alert('יש להזין מדרגות מחיר');
                 return;
             }
         }
@@ -223,7 +207,7 @@ export default function AdminDeliveryZones() {
             // תמיד שולחים 0 ולא null כדי למנוע שגיאות SQL
             fixed_fee: form.pricing_type === 'fixed' ? Number(form.fixed_fee || 0) : 0,
             per_km_fee: form.pricing_type === 'per_km' ? Number(form.per_km_fee || 0) : 0,
-            tiered_fees: form.pricing_type === 'tiered' ? tieredFees : null,
+            per_km_base_fee: form.pricing_type === 'per_km' ? Number(form.per_km_base_fee || 0) : 0,
             polygon: polygon, // null או מערך עם לפחות נקודה אחת
             is_active: Boolean(form.is_active),
             preview_image: previewImage,
@@ -367,7 +351,7 @@ export default function AdminDeliveryZones() {
                                             <h3 className="text-xl font-black text-gray-900 group-hover:text-brand-primary transition-colors">{zone.name}</h3>
                                             <div className="flex items-center gap-2 mt-1">
                                                 <span className="px-2 py-0.5 bg-gray-100 text-gray-500 rounded-lg text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
-                                                    <FaRoute /> {zone.pricing_type === 'fixed' ? 'מחיר קבוע' : zone.pricing_type === 'per_km' ? 'לפי ק"מ' : 'מדרגות מחיר'}
+                                                    <FaRoute /> {zone.pricing_type === 'per_km' ? 'לפי ק"מ' : 'מחיר קבוע'}
                                                 </span>
                                             </div>
                                         </div>
@@ -381,8 +365,7 @@ export default function AdminDeliveryZones() {
                                             <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">עלות משלוח</p>
                                             <p className="text-lg font-black text-gray-900">
                                                 {zone.pricing_type === 'fixed' && `₪${Number(zone.fixed_fee || 0).toFixed(2)}`}
-                                                {zone.pricing_type === 'per_km' && `₪${Number(zone.per_km_fee || 0).toFixed(2)} / ק"מ`}
-                                                {zone.pricing_type === 'tiered' && `${Array.isArray(zone.tiered_fees) ? zone.tiered_fees.length : 0} מדרגות`}
+                                                {zone.pricing_type === 'per_km' && `₪${Number(zone.per_km_base_fee || 0).toFixed(2)} + ₪${Number(zone.per_km_fee || 0).toFixed(2)} / ק"מ`}
                                             </p>
                                         </div>
                                     </div>
@@ -460,7 +443,6 @@ export default function AdminDeliveryZones() {
                                                     >
                                                         <option value="fixed">💰 מחיר קבוע</option>
                                                         <option value="per_km">📏 לפי ק"מ</option>
-                                                        <option value="tiered">📊 מדרגות מחיר</option>
                                                     </select>
                                                 </div>
 
@@ -480,20 +462,40 @@ export default function AdminDeliveryZones() {
 
                                                 {form.pricing_type === 'per_km' && (
                                                     <div className="space-y-2">
-                                                        <label className="text-sm font-black text-gray-700 mr-1">₪ לק"מ</label>
+                                                        <label className="text-sm font-black text-gray-700 mr-1">מחיר בסיס למשלוח (₪)</label>
                                                         <input
                                                             type="number"
                                                             step="0.01"
-                                                            min="0.01"
-                                                            value={form.per_km_fee}
-                                                            onChange={(e) => setForm({ ...form, per_km_fee: e.target.value })}
+                                                            min="0"
+                                                            value={form.per_km_base_fee}
+                                                            onChange={(e) => setForm({ ...form, per_km_base_fee: e.target.value })}
                                                             className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-brand-primary text-gray-900 font-bold"
-                                                            placeholder="למשל: 3.50"
-                                                            required
+                                                            placeholder="למשל: 10"
                                                         />
                                                     </div>
                                                 )}
                                             </div>
+
+                                            {form.pricing_type === 'per_km' && (
+                                                <div className="space-y-2 p-4 bg-brand-primary/5 rounded-2xl border border-brand-primary/10">
+                                                    <label className="text-sm font-black text-brand-primary mr-1 flex items-center gap-2">
+                                                        <FaRoute /> תוספת לכל ק"מ (₪)
+                                                    </label>
+                                                    <input
+                                                        type="number"
+                                                        step="0.01"
+                                                        min="0.01"
+                                                        value={form.per_km_fee}
+                                                        onChange={(e) => setForm({ ...form, per_km_fee: e.target.value })}
+                                                        className="w-full px-5 py-4 bg-white border-2 border-transparent focus:border-brand-primary rounded-2xl text-gray-900 font-bold"
+                                                        placeholder="למשל: 3.50"
+                                                        required
+                                                    />
+                                                    <div className="bg-white/60 p-2 rounded-lg text-[10px] text-gray-500 font-bold leading-relaxed">
+                                                        המחיר הסופי = מחיר בסיס + (תוספת לק"מ × מרחק), מעוגל לשקל הקרוב.
+                                                    </div>
+                                                </div>
+                                            )}
 
                                             <div className="space-y-2">
                                                 <label className="text-sm font-black text-gray-700 mr-1">שיון לעיר (אופציונלי)</label>
@@ -516,24 +518,6 @@ export default function AdminDeliveryZones() {
                                                     אם מוגדרת עיר, המשלוח יתאפשר לכל כתובת בעיר. אם לא, יש לסמן ידנית במפה.
                                                 </p>
                                             </div>
-
-                                            {form.pricing_type === 'tiered' && (
-                                                <div className="space-y-2 p-4 bg-brand-primary/5 rounded-2xl border border-brand-primary/10">
-                                                    <label className="text-sm font-black text-brand-primary mr-1 flex items-center gap-2">
-                                                        <FaLayerGroup /> מדרגות מחיר (JSON)
-                                                    </label>
-                                                    <textarea
-                                                        rows={4}
-                                                        value={form.tiered_fees}
-                                                        onChange={(e) => setForm({ ...form, tiered_fees: e.target.value })}
-                                                        className="w-full px-4 py-3 bg-white border-2 border-transparent focus:border-brand-primary rounded-xl font-mono text-xs leading-loose"
-                                                        placeholder='[{"upto_km": 2, "fee": 10}, ...]'
-                                                    />
-                                                    <div className="bg-white/50 p-2 rounded-lg text-[9px] text-gray-500 font-bold">
-                                                        דוגמה: {"{\"upto_km\": 5, \"fee\": 15} = עד 5 ק\"מ ב-15 ש\"ח"}
-                                                    </div>
-                                                </div>
-                                            )}
 
                                             <label className="flex items-center gap-3 p-4 bg-gray-50 rounded-2xl cursor-pointer hover:bg-gray-100 transition-colors border border-transparent hover:border-gray-200 group w-fit">
                                                 <div className={`w-10 h-6 flex items-center rounded-full p-1 transition-colors ${form.is_active ? 'bg-brand-primary' : 'bg-gray-300'}`}>

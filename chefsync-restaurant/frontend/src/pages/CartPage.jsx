@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { track, trackStage, trackBlock, STAGE } from '../services/funnelTracker';
 import PhoneVerificationModal from '../components/PhoneVerificationModal';
 import LocationPickerModal from '../components/LocationPickerModal';
 import OrderConfirmationSheet from '../components/OrderConfirmationSheet';
@@ -90,6 +91,8 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
     const [checkoutStep, setCheckoutStep] = useState(1);
     /** שגיאת ולידציה לפופ-אפ בין שלבים */
     const [stepError, setStepError] = useState(null);
+    /** Funnel — דגלים למניעת שליחת אירוע כפול */
+    const cartViewTrackedRef = useRef(false);
 
     /** ולידציית פרטי לקוח לפני מעבר שלב 2 → 3 */
     const validateStep2 = () => {
@@ -110,16 +113,38 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
         return null;
     };
 
+    /** מיפוי הודעת ולידציית שלב 2 → קוד סיבת חסימה ל-Funnel */
+    const step2BlockReason = (msg) => {
+        if (!msg) return null;
+        if (msg.includes('שם')) return 'missing_contact';
+        if (msg.includes('תקין')) return 'invalid_phone';
+        if (msg.includes('טלפון')) return 'missing_contact';
+        if (msg.includes('אזורי המשלוח')) return 'outside_delivery_zone';
+        if (msg.includes('מיקום')) return 'missing_address';
+        if (msg.includes('כתובת')) return 'missing_address';
+        return 'other';
+    };
+
     const goCheckoutStep = (step) => {
         if (checkoutStep === 2 && step === 3) {
             const msg = validateStep2();
             if (msg) {
                 setStepError(msg);
+                if (!isPreviewMode) trackBlock(step2BlockReason(msg), { stage: STAGE.DETAILS_COMPLETE });
                 return;
             }
         }
         setStepError(null);
         setCheckoutStep(step);
+        if (!isPreviewMode) {
+            if (step === 2) {
+                trackStage('checkout_started', STAGE.CHECKOUT_STARTED);
+            } else if (step === 3) {
+                // מעבר 2→3 עבר ולידציה — פרטים+משלוח הושלמו, מגיעים לסקירה
+                trackStage('details_complete', STAGE.DETAILS_COMPLETE);
+                trackStage('review_reached', STAGE.REVIEW);
+            }
+        }
         if (typeof window !== 'undefined') {
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
@@ -128,6 +153,14 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
     useEffect(() => {
         setCheckoutStep(1);
     }, [tenantId]);
+
+    // Funnel — צפייה בסל (שלב 3). פעם אחת כשיש פריטים.
+    useEffect(() => {
+        if (isPreviewMode || cartViewTrackedRef.current) return;
+        if (!cartItems || cartItems.length === 0) return;
+        cartViewTrackedRef.current = true;
+        trackStage('cart_view', STAGE.CART_VIEW, { amount: getTotal() });
+    }, [cartItems, isPreviewMode, getTotal]);
 
     // אשראי לא זמין למסעדה — לא להשאיר payment_method על credit_card (למשל אחרי בחירת עתידית כאורח)
     useEffect(() => {
@@ -212,10 +245,12 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
             if (result.available) {
                 setDeliveryFee(result.fee || 0);
                 setDeliveryZoneAvailable(true);
+                if (!isPreviewMode) trackStage('delivery_zone_checked', STAGE.DELIVERY_RESOLVED, { payload: { available: true, fee: result.fee || 0 } });
             } else {
                 setDeliveryFee(0);
                 setDeliveryZoneAvailable(false);
                 setError(result.message || 'אזור לא מכוסה במשלוחים');
+                if (!isPreviewMode) trackBlock('outside_delivery_zone', { stage: STAGE.DELIVERY_RESOLVED });
             }
         } catch (err) {
             console.error('Error checking delivery zone:', err);
@@ -397,23 +432,27 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
         // בדוק שנתונים בסיסיים קיימים
         if (!customerInfo.name || !customerInfo.phone) {
             setError('אנא מלא שם וטלפון');
+            if (!isPreviewMode) trackBlock('missing_contact', { stage: STAGE.ORDER_SUBMIT });
             return;
         }
 
         // בדיקת מינימום הזמנה למשלוח
         if (isBelowMinimum) {
             setShowMinimumModal(true);
+            if (!isPreviewMode) trackBlock('below_minimum', { stage: STAGE.ORDER_SUBMIT, amount: total, payload: { minimum: deliveryMinimum } });
             return;
         }
 
         // כשמסעדה סגורה — חובה לבחור זמן להזמנה עתידית
         if (canFutureOrder && !restaurant?.is_open_now && !scheduledFor) {
             setError('המסעדה סגורה. יש לבחור תאריך ושעה להזמנה עתידית.');
+            if (!isPreviewMode) trackBlock('restaurant_closed', { stage: STAGE.ORDER_SUBMIT });
             return;
         }
 
         if (!isValidIsraeliMobile(customerInfo.phone)) {
             setError('מספר טלפון לא תקין (נייד ישראלי בלבד)');
+            if (!isPreviewMode) trackBlock('invalid_phone', { stage: STAGE.ORDER_SUBMIT });
             return;
         }
 
@@ -422,12 +461,14 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
             if (!deliveryLocation?.lat || !deliveryLocation?.lng) {
                 setShowLocationModal(true);
                 setError('נא לבחור מיקום למשלוח');
+                if (!isPreviewMode) trackBlock('missing_address', { stage: STAGE.ORDER_SUBMIT, payload: { missing: 'location' } });
                 return;
             }
 
             // בדיקה שהאזור זמין
             if (!deliveryZoneAvailable) {
                 setError('הכתובת מחוץ לאזורי המשלוח של המסעדה. אנא בחר מיקום אחר.');
+                if (!isPreviewMode) trackBlock('outside_delivery_zone', { stage: STAGE.ORDER_SUBMIT });
                 return;
             }
 
@@ -441,6 +482,7 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
             // בדיקה שיש רחוב + מספר בית + עיר (לא רק עיר או רחוב בלי מספר)
             if (!address || !hasStreet || !hasMultipleParts || !hasNumber) {
                 setError(null);
+                if (!isPreviewMode) trackBlock('missing_address', { stage: STAGE.ORDER_SUBMIT, payload: { missing: 'full_address' } });
                 if (isRegisteredCustomer && savedAddresses.length > 0) {
                     setShowSavedAddressChoiceModal(true);
                     return;
@@ -469,6 +511,7 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
     const handleConfirmOrder = async () => {
         try {
             setSubmitting(true);
+            if (!isPreviewMode) trackStage('order_submit_attempt', STAGE.ORDER_SUBMIT, { amount: getTotal() });
 
             const orderData = {
                 customer_name: customerInfo.name,
@@ -513,6 +556,17 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
             console.log('📦 Sending order data:', orderData);
             console.log('📞 Customer info for SMS:', customerInfo);
             const response = await orderService.createOrder(orderData);
+            if (!isPreviewMode) {
+                trackStage('order_created', STAGE.ORDER_CREATED, {
+                    orderId: response?.data?.id,
+                    amount: getTotal(),
+                    payload: {
+                        payment_method: effectivePaymentMethod,
+                        delivery_method: customerInfo.delivery_method || 'pickup',
+                        scheduled: !!scheduledFor,
+                    },
+                });
+            }
             const resolvedTenantSlug = tenantId || localStorage.getItem('tenantId');
             if (resolvedTenantSlug) {
                 // Multi-order: שומר מערך של הזמנות פעילות
@@ -549,6 +603,7 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
 
             // B2C: אם יש payment_url — redirect לדף תשלום HYP
             if (response.payment_url) {
+                if (!isPreviewMode) track('payment_redirect', { stage: STAGE.ORDER_CREATED, orderId: response?.data?.id });
                 window.location.href = response.payment_url;
                 return;
             }
@@ -562,6 +617,13 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
         } catch (err) {
             console.error('שגיאה בהגשת הזמנה:', err);
             setShowConfirmation(false);
+            if (!isPreviewMode) {
+                trackBlock('api_error', {
+                    stage: STAGE.ORDER_SUBMIT,
+                    errorMessage: err.response?.data?.message || err.message,
+                    payload: { status: err.response?.status ?? null, error: err.response?.data?.error ?? null },
+                });
+            }
             if (err.response?.status === 429 && err.response?.data?.error === 'orders_limit_reached') {
                 setError('המסעדה הגיעה למגבלת ההזמנות החודשית. אנא נסו שוב מאוחר יותר.');
             } else {
@@ -1261,7 +1323,10 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                                                     name="delivery_method"
                                                     value="pickup"
                                                     checked={customerInfo.delivery_method === 'pickup'}
-                                                    onChange={(e) => setCustomerInfo({ ...customerInfo, delivery_method: e.target.value })}
+                                                    onChange={(e) => {
+                                                        setCustomerInfo({ ...customerInfo, delivery_method: e.target.value });
+                                                        if (!isPreviewMode) trackStage('delivery_method_selected', STAGE.DELIVERY_RESOLVED, { payload: { method: 'pickup' } });
+                                                    }}
                                                     className="w-4 h-4"
                                                 />
                                                 <FaStore className={customerInfo.delivery_method === 'pickup' ? 'text-brand-primary' : 'text-gray-400'} />
@@ -1280,6 +1345,7 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                                                         if (e.target.value !== 'delivery') {
                                                             return;
                                                         }
+                                                        if (!isPreviewMode) track('delivery_method_selected', { payload: { method: 'delivery' } });
                                                         if (deliveryHasValidCoords) {
                                                             return;
                                                         }

@@ -83,11 +83,15 @@ class CheckRestaurantAccess
 
             $reason = $restaurant->subscription_status === 'suspended'
                 ? 'payment_failed'
-                : 'subscription_inactive';
+                : ($restaurant->subscription_status === 'cancelled'
+                    ? 'subscription_cancelled'
+                    : 'subscription_inactive');
 
-            $message = $reason === 'payment_failed'
-                ? 'המנוי הושהה עקב כשלון תשלום. יש לעדכן אמצעי תשלום כדי להמשיך.'
-                : 'פג תוקף תקופת הניסיון. יש להשלים תשלום כדי להמשיך להשתמש במערכת.';
+            $message = match ($reason) {
+                'payment_failed' => 'המנוי הושהה עקב כשלון תשלום. יש לעדכן אמצעי תשלום כדי להמשיך.',
+                'subscription_cancelled' => 'המנוי בוטל. לשאלות או חידוש השירות — צרו קשר עם התמיכה.',
+                default => 'פג תוקף תקופת הניסיון. יש להשלים תשלום כדי להמשיך להשתמש במערכת.',
+            };
 
             return response()->json([
                 'success' => false,

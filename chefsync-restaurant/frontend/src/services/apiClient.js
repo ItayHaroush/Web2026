@@ -174,6 +174,21 @@ apiClient.interceptors.response.use(
                 window.location.href = '/admin/paywall';
             }
         }
+
+        // Health Check — דיווח כשל API למשפך (הסינון להקשר לקוח נעשה בתוך trackError)
+        try {
+            const status = error.response?.status;
+            const url = error.config?.url || '';
+            const method = (error.config?.method || '').toUpperCase();
+            // אל תדווח על אירוע ה-funnel עצמו (מונע לולאה)
+            if (!url.includes('/analytics/')) {
+                const msg = error.response?.data?.message || error.message || 'API error';
+                import('./funnelTracker')
+                    .then((m) => m.trackError?.('api_error', msg, { payload: { url, status: status ?? null, method } }))
+                    .catch(() => { });
+            }
+        } catch { /* ignore */ }
+
         return Promise.reject(error);
     }
 );

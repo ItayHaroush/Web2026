@@ -3,6 +3,7 @@ import { useToast } from './ToastContext';
 import { normalizeCartItem, normalizeCartItems } from '../utils/cart';
 import ConfirmationModal from '../components/ConfirmationModal';
 import { apiClient } from '../services/apiClient';
+import { track, trackStage, STAGE, isFunnelContext } from '../services/funnelTracker';
 
 /**
  * Context להנהלת סל קניות
@@ -295,6 +296,18 @@ export function CartProvider({ children }) {
 
         const variantLabel = normalizedItem.variant?.name ? ` (${normalizedItem.variant.name})` : '';
         addToast(`${normalizedItem.name || 'פריט'}${variantLabel} נוסף לסל!`, 'success');
+
+        // Funnel — הוספה לסל (שלב 2)
+        if (isFunnelContext()) {
+            trackStage('add_to_cart', STAGE.ADD_TO_CART, {
+                amount: normalizedItem.totalPrice,
+                payload: {
+                    menu_item_id: normalizedItem.menuItemId,
+                    name: normalizedItem.name,
+                    qty: normalizedItem.qty,
+                },
+            });
+        }
     }, [commitCartItems, addToast]);
 
     const addToCart = useCallback((rawItem) => {
@@ -378,6 +391,9 @@ export function CartProvider({ children }) {
     };
 
     const removeFromCart = useCallback((identifier) => {
+        if (isFunnelContext()) {
+            track('remove_from_cart', { payload: { identifier: String(identifier) } });
+        }
         commitCartItems((prevItems) =>
             prevItems.filter((item) => {
                 const numericIdentifier = Number(identifier);
@@ -395,6 +411,10 @@ export function CartProvider({ children }) {
         if (!Number.isFinite(parsedQty) || parsedQty <= 0) {
             removeFromCart(identifier);
             return;
+        }
+
+        if (isFunnelContext()) {
+            track('update_qty', { payload: { identifier: String(identifier), qty: parsedQty } });
         }
 
         commitCartItems((prevItems) =>

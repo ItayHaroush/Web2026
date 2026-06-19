@@ -1542,29 +1542,11 @@ class OrderController extends Controller
         }
 
         if ($pricingType === 'per_km') {
-            $fee = (float) ($zone->per_km_fee ?? 0) * $distanceKm;
+            // מחיר בסיס למשלוח + תוספת לכל ק"מ. המחיר הסופי מעוגל לשקל הקרוב.
+            $baseFee = (float) ($zone->per_km_base_fee ?? 0);
+            $fee = $baseFee + (float) ($zone->per_km_fee ?? 0) * $distanceKm;
 
-            return round($fee, 2);
-        }
-
-        if ($pricingType === 'tiered') {
-            $tiers = $zone->tiered_fees ?? [];
-            if (! is_array($tiers) || empty($tiers)) {
-                return 0.0;
-            }
-
-            usort($tiers, fn($a, $b) => ($a['upto_km'] ?? 0) <=> ($b['upto_km'] ?? 0));
-            foreach ($tiers as $tier) {
-                $upto = (float) ($tier['upto_km'] ?? 0);
-                $fee = (float) ($tier['fee'] ?? 0);
-                if ($distanceKm <= $upto) {
-                    return round($fee, 2);
-                }
-            }
-
-            $last = end($tiers);
-
-            return round((float) ($last['fee'] ?? 0), 2);
+            return round($fee);
         }
 
         return 0.0;

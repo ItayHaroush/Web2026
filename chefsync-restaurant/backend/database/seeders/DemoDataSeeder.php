@@ -212,20 +212,16 @@ class DemoDataSeeder extends Seeder
         $zones = [
             'pizza-palace' => [
                 ['name' => 'מרכז תל אביב', 'city' => 'Tel Aviv', 'pricing_type' => 'fixed', 'fixed_fee' => 15, 'city_radius' => 3],
-                ['name' => 'גוש דן הרחב', 'city' => 'Tel Aviv', 'pricing_type' => 'per_km', 'per_km_fee' => 3, 'city_radius' => 8],
-                ['name' => 'הרצליה - רמת גן', 'city' => 'Tel Aviv', 'pricing_type' => 'tiered', 'tiered_fees' => [
-                    ['upto_km' => 3, 'fee' => 15],
-                    ['upto_km' => 6, 'fee' => 25],
-                    ['upto_km' => 10, 'fee' => 40],
-                ], 'city_radius' => 10],
+                ['name' => 'גוש דן הרחב', 'city' => 'Tel Aviv', 'pricing_type' => 'per_km', 'per_km_base_fee' => 12, 'per_km_fee' => 3, 'city_radius' => 8],
+                ['name' => 'הרצליה - רמת גן', 'city' => 'Tel Aviv', 'pricing_type' => 'per_km', 'per_km_base_fee' => 15, 'per_km_fee' => 4, 'city_radius' => 10],
             ],
             'burger-central' => [
                 ['name' => 'מרכז ירושלים', 'city' => 'Jerusalem', 'pricing_type' => 'fixed', 'fixed_fee' => 12, 'city_radius' => 2],
-                ['name' => 'שכונות ירושלים', 'city' => 'Jerusalem', 'pricing_type' => 'per_km', 'per_km_fee' => 4, 'city_radius' => 6],
+                ['name' => 'שכונות ירושלים', 'city' => 'Jerusalem', 'pricing_type' => 'per_km', 'per_km_base_fee' => 10, 'per_km_fee' => 4, 'city_radius' => 6],
             ],
             'sushi-bar' => [
                 ['name' => 'כרמל מרכז', 'city' => 'Haifa', 'pricing_type' => 'fixed', 'fixed_fee' => 18, 'city_radius' => 2.5],
-                ['name' => 'קריות והסביבה', 'city' => 'Haifa', 'pricing_type' => 'per_km', 'per_km_fee' => 3.5, 'city_radius' => 10],
+                ['name' => 'קריות והסביבה', 'city' => 'Haifa', 'pricing_type' => 'per_km', 'per_km_base_fee' => 14, 'per_km_fee' => 3.5, 'city_radius' => 10],
             ],
             'falafel-hadekel' => [
                 ['name' => 'מרכז באר שבע', 'city' => 'Beer Sheva', 'pricing_type' => 'fixed', 'fixed_fee' => 10, 'city_radius' => 4],
@@ -233,7 +229,7 @@ class DemoDataSeeder extends Seeder
             ],
             'pasta-preta' => [
                 ['name' => 'מרכז נתניה', 'city' => 'Netanya', 'pricing_type' => 'fixed', 'fixed_fee' => 14, 'city_radius' => 3],
-                ['name' => 'חוף נתניה והסביבה', 'city' => 'Netanya', 'pricing_type' => 'per_km', 'per_km_fee' => 3, 'city_radius' => 6],
+                ['name' => 'חוף נתניה והסביבה', 'city' => 'Netanya', 'pricing_type' => 'per_km', 'per_km_base_fee' => 10, 'per_km_fee' => 3, 'city_radius' => 6],
             ],
         ];
 
@@ -259,7 +255,7 @@ class DemoDataSeeder extends Seeder
                         'pricing_type' => $zone['pricing_type'],
                         'fixed_fee' => $zone['fixed_fee'] ?? 0,
                         'per_km_fee' => $zone['per_km_fee'] ?? null,
-                        'tiered_fees' => $zone['tiered_fees'] ?? null,
+                        'per_km_base_fee' => $zone['per_km_base_fee'] ?? 0,
                         'city_radius' => $zone['city_radius'] ?? null,
                         'is_active' => true,
                         'sort_order' => $i + 1,

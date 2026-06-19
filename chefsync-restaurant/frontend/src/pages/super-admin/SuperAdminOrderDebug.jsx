@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import SuperAdminLayout from '../../layouts/SuperAdminLayout';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import api from '../../services/apiClient';
@@ -31,6 +32,8 @@ const EVENT_COLORS = {
     order_cancelled: 'bg-red-600',
     manual_edit: 'bg-gray-500',
     retry_payment: 'bg-orange-500',
+    super_admin_owner_nudge: 'bg-indigo-500',
+    super_admin_owner_reminder: 'bg-amber-500',
 };
 
 const EVENT_LABELS = {
@@ -45,6 +48,8 @@ const EVENT_LABELS = {
     order_cancelled: 'הזמנה בוטלה',
     manual_edit: 'עריכה ידנית',
     retry_payment: 'ניסיון תשלום חוזר',
+    super_admin_owner_nudge: 'פוש למסעדן',
+    super_admin_owner_reminder: 'תזכורת לסיום',
 };
 
 const SEVERITY_STYLES = {
@@ -56,6 +61,7 @@ const SEVERITY_STYLES = {
 
 export default function SuperAdminOrderDebug() {
     const { getAuthHeaders } = useAdminAuth();
+    const [searchParams] = useSearchParams();
     const [activeTab, setActiveTab] = useState('events'); // events | errors
 
     // Search state
@@ -119,7 +125,7 @@ export default function SuperAdminOrderDebug() {
         }
     };
 
-    const loadTimeline = async (orderId) => {
+    const loadTimeline = useCallback(async (orderId) => {
         setLoadingTimeline(true);
         try {
             const res = await api.get(`/super-admin/order-events/${orderId}/timeline`, {
@@ -135,7 +141,16 @@ export default function SuperAdminOrderDebug() {
         } finally {
             setLoadingTimeline(false);
         }
-    };
+    }, [getAuthHeaders]);
+
+    useEffect(() => {
+        const orderIdParam = searchParams.get('order_id');
+        if (!orderIdParam || !/^\d+$/.test(orderIdParam)) return;
+
+        setActiveTab('events');
+        setSearchFields((prev) => ({ ...prev, order_id: orderIdParam }));
+        loadTimeline(Number(orderIdParam));
+    }, [searchParams, loadTimeline]);
 
     const loadErrors = async (page = 1, opts = {}) => {
         const showAllResolved = opts.includeResolved !== undefined ? opts.includeResolved : includeResolved;

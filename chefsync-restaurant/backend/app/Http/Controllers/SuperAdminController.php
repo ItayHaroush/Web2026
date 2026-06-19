@@ -5,7 +5,10 @@ namespace App\Http\Controllers;
 use App\Mail\RestaurantApprovedMail;
 use App\Models\City;
 use App\Models\Order;
+use App\Models\PageVisit;
+use App\Models\PlatformFeedback;
 use App\Models\Restaurant;
+use App\Models\FunnelEvent;
 use App\Models\RestaurantPayment;
 use App\Models\RestaurantSubscription;
 use App\Models\SystemError;
@@ -17,6 +20,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
+use Carbon\Carbon;
 
 /**
  * SuperAdminController - ניהול מערכת כללי
@@ -110,6 +114,24 @@ class SuperAdminController extends Controller
 
         $recentSystemErrors = SystemError::unresolved()->recent(24)->count();
 
+        $feedbackNew = PlatformFeedback::where('status', 'new')->count();
+
+        $todayStart = Carbon::today();
+        $analyticsToday = [
+            'total_visits' => PageVisit::where('created_at', '>=', $todayStart)->count(),
+            'unique_visitors' => (int) PageVisit::query()
+                ->where('created_at', '>=', $todayStart)
+                ->whereNotNull('visitor_uuid')
+                ->selectRaw('COUNT(DISTINCT visitor_uuid) as c')
+                ->value('c'),
+        ];
+
+        $funnelMonth = $this->funnelMonthTotals();
+
+        $pendingCancellationCount = Restaurant::withoutGlobalScope('tenant')
+            ->whereNotNull('deletion_requested_at')
+            ->count();
+
         // מסעדות לפי סטטוס (פעילות מאומתות = approved + trial/active)
         $restaurantsByStatus = [
             'active' => $activeVerifiedCount,
@@ -138,11 +160,48 @@ class SuperAdminController extends Controller
                     'suspended_restaurants' => $suspendedRestaurants,
                     'failed_payments_recent' => $failedPaymentsRecent,
                     'system_errors_unresolved' => $recentSystemErrors,
+                    'pending_cancellation_requests' => $pendingCancellationCount,
+                    'feedback_new' => $feedbackNew,
                 ],
+                'analytics_today' => $analyticsToday,
+                'funnel_month' => $funnelMonth,
                 'restaurants_by_status' => $restaurantsByStatus,
                 'orders_by_status' => $ordersByStatus,
             ],
         ]);
+    }
+
+    /**
+     * סיכום משפך — חודש נוכחי (לכרטיס דשבורד)
+     *
+     * @return array{sessions: int, orders: int, conversion_rate: float, abandon_rate: float}
+     */
+    private function funnelMonthTotals(): array
+    {
+        $since = Carbon::now()->startOfMonth();
+        $until = Carbon::now();
+
+        $sessionRows = FunnelEvent::query()
+            ->where('created_at', '>=', $since)
+            ->where('created_at', '<=', $until)
+            ->selectRaw('session_id, MAX(funnel_stage) as furthest')
+            ->groupBy('session_id')
+            ->get();
+
+        $totalSessions = $sessionRows->count();
+        $orders = 0;
+        foreach ($sessionRows as $row) {
+            if ((int) $row->furthest >= FunnelEvent::STAGE_ORDER_CREATED) {
+                $orders++;
+            }
+        }
+
+        return [
+            'sessions'         => $totalSessions,
+            'orders'           => $orders,
+            'conversion_rate'  => $totalSessions > 0 ? round($orders / $totalSessions * 100, 1) : 0.0,
+            'abandon_rate'     => $totalSessions > 0 ? round(($totalSessions - $orders) / $totalSessions * 100, 1) : 0.0,
+        ];
     }
 
     /**

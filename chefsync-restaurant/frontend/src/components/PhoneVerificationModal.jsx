@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { requestPhoneCode, verifyPhoneCode } from '../services/phoneAuthService';
 import { isValidIsraeliMobile } from '../utils/phone';
+import { track, trackBlock } from '../services/funnelTracker';
 
 export default function PhoneVerificationModal({ phone, onVerified, onClose, isPreviewMode = false }) {
     const [step, setStep] = useState('input'); // input | sent | verifying | verified
@@ -73,6 +74,7 @@ export default function PhoneVerificationModal({ phone, onVerified, onClose, isP
         }
         try {
             await requestPhoneCode(inputPhone);
+            if (!isPreviewMode) track('phone_verify_started');
             setStep('sent');
             setResendDisabled(true);
             setTimer(60);
@@ -98,13 +100,16 @@ export default function PhoneVerificationModal({ phone, onVerified, onClose, isP
         try {
             const res = await verifyPhoneCode(inputPhone, code);
             if (res.verified) {
+                if (!isPreviewMode) track('phone_verified');
                 setStep('verified');
                 onVerified(inputPhone);
             } else {
+                if (!isPreviewMode) trackBlock('otp_failed', { payload: { reason: 'wrong_code' } });
                 setError('קוד שגוי');
                 setStep('sent');
             }
         } catch (e) {
+            if (!isPreviewMode) trackBlock('otp_failed', { payload: { reason: 'verify_error' } });
             setError(e?.response?.data?.message || 'שגיאה באימות');
             setStep('sent');
         }

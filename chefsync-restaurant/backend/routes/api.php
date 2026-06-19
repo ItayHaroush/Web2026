@@ -12,6 +12,8 @@ use App\Http\Controllers\CustomerNotificationPreferenceController;
 use App\Http\Controllers\CustomerPwaController;
 use App\Http\Controllers\DisplayScreenController;
 use App\Http\Controllers\FcmTokenController;
+use App\Http\Controllers\FunnelAnalyticsController;
+use App\Http\Controllers\FunnelEventController;
 use App\Http\Controllers\HypOrderCallbackController;
 use App\Http\Controllers\HypSubscriptionCallbackController;
 use App\Http\Controllers\InvoiceController;
@@ -88,6 +90,11 @@ Route::post('/analytics/page-view', [AnalyticsPageViewController::class, 'store'
     ->middleware('throttle:120,1')
     ->name('analytics.page-view');
 
+// אירועי משפך (Funnel) — ציבורי, batch, מוגבל קצב (תופס גם מבקרים אנונימיים)
+Route::post('/analytics/events', [FunnelEventController::class, 'store'])
+    ->middleware('throttle:240,1')
+    ->name('analytics.events');
+
 // ============================================
 // פאנל Super Admin - ניהול כללי
 // ============================================
@@ -156,6 +163,9 @@ Route::prefix('super-admin')->middleware(['auth:sanctum', 'super_admin'])->group
     Route::post('/billing/restaurants/{id}/activate', [SuperAdminBillingController::class, 'manualActivateSubscription'])->name('super-admin.billing.activate');
     Route::post('/billing/restaurants/{id}/reset-trial', [SuperAdminBillingController::class, 'resetToTrial'])->name('super-admin.billing.reset-trial');
     Route::post('/billing/restaurants/{id}/grant-free-month', [SuperAdminBillingController::class, 'grantFreeMonth'])->name('super-admin.billing.grant-free-month');
+    Route::get('/billing/cancellation-requests', [SuperAdminBillingController::class, 'cancellationRequests'])->name('super-admin.billing.cancellation-requests');
+    Route::post('/billing/restaurants/{id}/cancellation/approve', [SuperAdminBillingController::class, 'approveCancellationRequest'])->name('super-admin.billing.cancellation.approve');
+    Route::post('/billing/restaurants/{id}/cancellation/dismiss', [SuperAdminBillingController::class, 'dismissCancellationRequest'])->name('super-admin.billing.cancellation.dismiss');
 
     // סטטוס סכימת בסיס נתונים ומיגרציות (אבחון)
     Route::get('/schema-status', [SuperAdminController::class, 'schemaStatus'])->name('super-admin.schema.status');
@@ -218,6 +228,8 @@ Route::prefix('super-admin')->middleware(['auth:sanctum', 'super_admin'])->group
     // לוגים של הזמנות ושגיאות מערכת (Order Events)
     // ============================================
     Route::get('/order-events/search', [OrderEventController::class, 'search'])->name('super-admin.order-events.search');
+    Route::get('/order-events/open-orders', [OrderEventController::class, 'openOrders'])->name('super-admin.order-events.open-orders');
+    Route::post('/order-events/{orderId}/nudge-owner', [OrderEventController::class, 'nudgeRestaurantOwner'])->name('super-admin.order-events.nudge-owner');
     Route::get('/order-events/{orderId}/timeline', [OrderEventController::class, 'timeline'])->name('super-admin.order-events.timeline');
     Route::get('/system-errors', [OrderEventController::class, 'getSystemErrors'])->name('super-admin.system-errors');
     Route::post('/system-errors/{id}/resolve', [OrderEventController::class, 'resolveError'])->name('super-admin.system-errors.resolve');
@@ -258,6 +270,10 @@ Route::prefix('super-admin')->middleware(['auth:sanctum', 'super_admin'])->group
     Route::get('/analytics/menu-insights', [SuperAdminAnalyticsController::class, 'menuInsights'])->name('super-admin.analytics.menu-insights');
     Route::get('/analytics/entity-suggestions', [SuperAdminAnalyticsController::class, 'entitySuggestions'])->name('super-admin.analytics.entity-suggestions');
 
+    // משפך המרה ונטישה (Funnel)
+    Route::get('/funnel/summary', [FunnelAnalyticsController::class, 'summary'])->name('super-admin.funnel.summary');
+    Route::get('/funnel/restaurants', [FunnelAnalyticsController::class, 'restaurants'])->name('super-admin.funnel.restaurants');
+
     // ============================================
     // הודעות כלליות לפלטפורמה (Platform Announcements)
     // ============================================
@@ -295,6 +311,8 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'tenant'])->group(function (
     Route::post('/subscription/create-payment-session', [AdminController::class, 'createPaymentSession'])->name('admin.subscription.payment-session');
     Route::post('/subscription/check-pending', [AdminController::class, 'checkPendingPayment'])->name('admin.subscription.check-pending');
     Route::get('/billing/info', [AdminController::class, 'billingInfo'])->name('admin.billing.info');
+    Route::post('/billing/cancellation-request', [AdminController::class, 'requestCancellation'])->name('admin.billing.cancellation-request');
+    Route::delete('/billing/cancellation-request', [AdminController::class, 'withdrawCancellationRequest'])->name('admin.billing.cancellation-withdraw');
 
     Route::post('/analytics/page-view', [AnalyticsPageViewController::class, 'storeRestaurantAdmin'])
         ->middleware('throttle:120,1')

@@ -1,12 +1,10 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import SuperAdminLayout from '../../layouts/SuperAdminLayout';
 import api from '../../services/apiClient';
-import SoundManager from '../../services/SoundManager';
 import { resolveAssetUrl } from '../../utils/assets';
 import { toast } from 'react-hot-toast';
-import { clearStoredFcmToken, disableFcm, getPushPlatform, getStoredFcmToken, listenForegroundMessages, requestFcmToken } from '../../services/fcm';
 import {
     FaMask,
     FaStore,
@@ -45,17 +43,39 @@ import {
     FaClipboardList,
     FaPrint,
     FaWhatsapp,
-    FaBell,
-    FaBellSlash,
-    FaVolumeUp,
-    FaVolumeMute,
     FaToggleOn,
     FaToggleOff,
     FaSpinner,
     FaChevronDown,
-    FaStar
+    FaStar,
+    FaUserTimes,
+    FaSignOutAlt,
+    FaCommentDots,
+    FaChartLine,
+    FaFunnelDollar,
+    FaCalendarDay,
+    FaSync,
+    FaPaperPlane,
 } from 'react-icons/fa';
 import { TIER_LABELS } from '../../utils/tierUtils';
+
+const OPEN_ORDER_STATUS_LABELS = {
+    awaiting_payment: 'ממתין לתשלום',
+    pending: 'ממתין',
+    received: 'התקבל',
+    preparing: 'בהכנה',
+    ready: 'מוכן',
+    delivering: 'במשלוח',
+};
+
+const OPEN_ORDER_STATUS_STYLES = {
+    awaiting_payment: 'bg-orange-50 text-orange-700 border-orange-200',
+    pending: 'bg-amber-50 text-amber-700 border-amber-200',
+    received: 'bg-amber-50 text-amber-700 border-amber-200',
+    preparing: 'bg-blue-50 text-blue-700 border-blue-200',
+    ready: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    delivering: 'bg-purple-50 text-purple-700 border-purple-200',
+};
 
 export default function SuperAdminDashboard() {
     const { getAuthHeaders, startImpersonation } = useAdminAuth();
@@ -64,93 +84,182 @@ export default function SuperAdminDashboard() {
     const [loading, setLoading] = useState(true);
     const [restaurants, setRestaurants] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
-    const [filterStatus, setFilterStatus] = useState('');
-    const [demoFilter, setDemoFilter] = useState('all'); // all / demo / real
+    const [filterStatus, setFilterStatus] = useState('active');
+    const [demoFilter, setDemoFilter] = useState('real'); // all / demo / real
     const [showAddRestaurant, setShowAddRestaurant] = useState(false);
     const [selectedRestaurant, setSelectedRestaurant] = useState(null);
     const [showPendingCitiesModal, setShowPendingCitiesModal] = useState(false);
     const [pendingCities, setPendingCities] = useState([]);
     const [pendingCitiesLoading, setPendingCitiesLoading] = useState(false);
     const [approvedCities, setApprovedCities] = useState([]);
+    const [churnRequests, setChurnRequests] = useState([]);
+    const [showChurnPanel, setShowChurnPanel] = useState(false);
+    const [churnActionId, setChurnActionId] = useState(null);
 
-    // Push notifications state
-    const [pushState, setPushState] = useState({ status: 'idle', message: '' });
-    const permission = typeof Notification !== 'undefined' ? Notification.permission : 'unsupported';
-    const storedToken = useMemo(() => getStoredFcmToken(), [pushState.status]);
-    const isPushEnabled = permission === 'granted' && !!storedToken;
-    const lastMessageIdsRef = useRef(new Set());
-    const notifCountRef = useRef(0);
-
-    // מצב צלצול הזמנות — נשמר ב-localStorage
-    const [soundEnabled, setSoundEnabled] = useState(() => SoundManager.isEnabled());
-    const handleSoundToggle = (next) => {
-        setSoundEnabled(next);
-        SoundManager.setEnabled(next);
-        if (next) {
-            SoundManager.playTest();
-        }
-    };
+    // Open orders (incomplete, last 7 days)
+    const [openOrders, setOpenOrders] = useState([]);
+    const [openOrdersMeta, setOpenOrdersMeta] = useState(null);
+    const [loadingOpenOrders, setLoadingOpenOrders] = useState(false);
+    const [nudgingOrderId, setNudgingOrderId] = useState(null);
+    const [showOpenOrdersPanel, setShowOpenOrdersPanel] = useState(false);
 
     useEffect(() => {
         fetchDashboard();
         fetchRestaurants();
+        fetchChurnRequests();
+        loadOpenOrders();
     }, [filterStatus, searchTerm]);
 
-    // Foreground FCM listener
-    useEffect(() => {
-        const unsubscribe = listenForegroundMessages((payload) => {
-            const msgId = payload?.messageId || payload?.data?.messageId || payload?.data?.google?.message_id;
-            if (msgId) {
-                if (lastMessageIdsRef.current.has(msgId)) return;
-                lastMessageIdsRef.current.add(msgId);
-                setTimeout(() => lastMessageIdsRef.current.delete(msgId), 30_000);
+    const loadOpenOrders = async () => {
+        setLoadingOpenOrders(true);
+        try {
+            const res = await api.get('/super-admin/order-events/open-orders', {
+                params: { days: 7 },
+                headers: getAuthHeaders(),
+            });
+            if (res.data?.success) {
+                setOpenOrders(res.data.data?.orders || []);
+                setOpenOrdersMeta(res.data.data || null);
             }
+        } catch (error) {
+            console.error('Failed to load open orders:', error);
+        } finally {
+            setLoadingOpenOrders(false);
+        }
+    };
 
-            const title = payload?.notification?.title || payload?.data?.title || 'TakeEat';
-            const body = payload?.notification?.body || payload?.data?.body || 'התראה חדשה';
-            const dataType = payload?.data?.type;
-
-            // צלצול מטבח רק להזמנה חדשה — לא לכל הודעת מערכת (מניעת רעש בכניסה לדשבורד / ריענון)
-            if (dataType === 'new_order') {
-                SoundManager.play();
-            }
-
-            if (Notification?.permission === 'granted') {
-                try {
-                    const n = new Notification(title, { body, icon: '/icon-192.png', silent: true });
-                    n.onclick = () => {
-                        n.close();
-                        window.focus();
-                        notifCountRef.current = Math.max(0, notifCountRef.current - 1);
-                        if (notifCountRef.current > 0) {
-                            if (navigator.setAppBadge) navigator.setAppBadge(notifCountRef.current).catch(() => { });
-                        } else {
-                            if (navigator.clearAppBadge) navigator.clearAppBadge().catch(() => { });
-                        }
-                    };
-                    notifCountRef.current += 1;
-                    if (navigator.setAppBadge) navigator.setAppBadge(notifCountRef.current).catch(() => { });
-                } catch (e) {
-                    console.warn('[FCM] Notification() failed', e);
-                }
-            }
+    const openOrdersByDate = useMemo(() => {
+        const groups = {};
+        openOrders.forEach((order) => {
+            const dateKey = new Date(order.created_at).toLocaleDateString('en-CA');
+            if (!groups[dateKey]) groups[dateKey] = [];
+            groups[dateKey].push(order);
         });
+        return Object.entries(groups).sort(([a], [b]) => b.localeCompare(a));
+    }, [openOrders]);
 
-        return () => { if (typeof unsubscribe === 'function') unsubscribe(); };
-    }, []);
+    const unhandledOpenCount = useMemo(
+        () => openOrders.filter((order) => !order.restaurant_handled).length,
+        [openOrders],
+    );
 
-    // Clear PWA badge on visibility
-    useEffect(() => {
-        const clearBadge = () => {
-            if (document.visibilityState === 'visible') {
-                notifCountRef.current = 0;
-                if (navigator.clearAppBadge) navigator.clearAppBadge().catch(() => { });
+    const openOrderTimeline = (orderId) => {
+        navigate(`/super-admin/order-debug?order_id=${orderId}`);
+    };
+
+    const getOpenOrderDateLabel = (dateKey) => {
+        const today = new Date();
+        const todayKey = today.toLocaleDateString('en-CA');
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayKey = yesterday.toLocaleDateString('en-CA');
+
+        if (dateKey === todayKey) return 'היום';
+        if (dateKey === yesterdayKey) return 'אתמול';
+
+        const [year, month, day] = dateKey.split('-');
+        return new Date(Number(year), Number(month) - 1, Number(day)).toLocaleDateString('he-IL', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long',
+        });
+    };
+
+    const handleNudgeOwner = async (order) => {
+        const confirmMsg = order.restaurant_handled
+            ? `לשלוח תזכורת לסיום טיפול בהזמנה #${order.id} למסעדה "${order.restaurant_name || order.tenant_id}"?`
+            : `לשלוח פוש למסעדן עם פרטי הזמנה #${order.id}?`;
+
+        if (!window.confirm(confirmMsg)) return;
+
+        setNudgingOrderId(order.id);
+        try {
+            const res = await api.post(
+                `/super-admin/order-events/${order.id}/nudge-owner`,
+                {},
+                { headers: getAuthHeaders() },
+            );
+            if (res.data?.success) {
+                toast.success(res.data.message || 'ההתראה נשלחה');
+                await loadOpenOrders();
             }
-        };
-        clearBadge();
-        document.addEventListener('visibilitychange', clearBadge);
-        return () => document.removeEventListener('visibilitychange', clearBadge);
-    }, []);
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'שגיאה בשליחת ההתראה');
+        } finally {
+            setNudgingOrderId(null);
+        }
+    };
+
+    const formatOpenOrderTime = (dateStr) => new Date(dateStr).toLocaleTimeString('he-IL', {
+        hour: '2-digit',
+        minute: '2-digit',
+    });
+
+    const formatOpenOrderDateTime = (dateStr) => new Date(dateStr).toLocaleString('he-IL', {
+        day: '2-digit',
+        month: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+    });
+
+    const fetchChurnRequests = async () => {
+        try {
+            const response = await api.get('/super-admin/billing/cancellation-requests', {
+                headers: getAuthHeaders(),
+            });
+            if (response.data?.success) {
+                setChurnRequests(response.data.data || []);
+            }
+        } catch (error) {
+            console.error('Failed to fetch churn requests:', error);
+        }
+    };
+
+    const handleApproveChurn = async (item, e) => {
+        e?.stopPropagation?.();
+        if (!window.confirm(`לאשר סיום התקשרות עבור "${item.name}"?\nהמנוי יבוטל, האישור יוסר והמסעדה תיסגר ללקוחות.`)) {
+            return;
+        }
+        setChurnActionId(item.id);
+        try {
+            const res = await api.post(
+                `/super-admin/billing/restaurants/${item.id}/cancellation/approve`,
+                {},
+                { headers: getAuthHeaders() },
+            );
+            if (res.data?.success) {
+                toast.success(res.data.message || 'המנוי בוטל');
+                await Promise.all([fetchChurnRequests(), fetchRestaurants(), fetchDashboard()]);
+            }
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'שגיאה באישור');
+        } finally {
+            setChurnActionId(null);
+        }
+    };
+
+    const handleDismissChurn = async (item, e) => {
+        e?.stopPropagation?.();
+        const note = window.prompt(`לסגור את הבקשה של "${item.name}" ללא ביטול מנוי?\nהערה (אופציונלי):`);
+        if (note === null) return;
+
+        setChurnActionId(item.id);
+        try {
+            const res = await api.post(
+                `/super-admin/billing/restaurants/${item.id}/cancellation/dismiss`,
+                { note: note || undefined },
+                { headers: getAuthHeaders() },
+            );
+            if (res.data?.success) {
+                toast.success(res.data.message || 'הבקשה נסגרה');
+                await Promise.all([fetchChurnRequests(), fetchDashboard()]);
+            }
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'שגיאה בסגירה');
+        } finally {
+            setChurnActionId(null);
+        }
+    };
 
     const fetchDashboard = async () => {
         try {
@@ -258,59 +367,6 @@ export default function SuperAdminDashboard() {
         }
     };
 
-    const enablePush = async () => {
-        try {
-            setPushState({ status: 'loading', message: 'מבקש הרשאה להתראות...' });
-            const token = await requestFcmToken();
-            if (!token) {
-                const perm = typeof Notification !== 'undefined' ? Notification.permission : 'unsupported';
-                setPushState({
-                    status: 'error',
-                    message: perm === 'denied'
-                        ? 'ההתראות חסומות בדפדפן. יש לאפשר דרך ההגדרות.'
-                        : 'הרשאה נדחתה. יש לאשר התראות.',
-                });
-                return;
-            }
-
-            await api.post('/super-admin/fcm/register', { token, device_label: 'super_admin', platform: getPushPlatform() }, { headers: getAuthHeaders() });
-            setPushState({ status: 'success', message: 'התראות הופעלו למכשיר הזה.' });
-        } catch (error) {
-            console.error('Failed to enable push', error);
-            setPushState({ status: 'error', message: 'שגיאה בהפעלת התראות. נסו שוב.' });
-        }
-    };
-
-    const disablePush = async () => {
-        try {
-            setPushState({ status: 'loading', message: 'מכבה התראות...' });
-
-            const token = getStoredFcmToken();
-            if (token) {
-                try {
-                    await api.post('/super-admin/fcm/unregister', { token }, { headers: getAuthHeaders() });
-                } catch (e) {
-                    console.warn('[FCM] backend unregister failed', e);
-                }
-            }
-
-            try {
-                await disableFcm();
-            } catch (e) {
-                console.warn('[FCM] deleteToken failed', e);
-                clearStoredFcmToken();
-            }
-
-            setPushState({
-                status: 'success',
-                message: 'התראות כובו עבור המכשיר הזה.',
-            });
-        } catch (error) {
-            console.error('Failed to disable push', error);
-            setPushState({ status: 'error', message: 'שגיאה בכיבוי התראות. נסו שוב.' });
-        }
-    };
-
     const toggleRestaurant = async (restaurantId) => {
         try {
             const response = await api.patch(
@@ -403,22 +459,34 @@ export default function SuperAdminDashboard() {
     };
 
 
-    const StatCard = ({ label, value, subtext, icon, color }) => {
+    const StatCard = ({ label, value, subtext, icon, color, alert, onClick }) => {
         const colorClasses = {
             blue: 'text-blue-600 bg-blue-50/50 border-blue-100',
             green: 'text-green-600 bg-green-50/50 border-green-100',
             purple: 'text-purple-600 bg-purple-50/50 border-purple-100',
             orange: 'text-orange-600 bg-orange-50/50 border-orange-100',
+            red: 'text-red-600 bg-red-50/50 border-red-100',
+            amber: 'text-amber-700 bg-amber-50/50 border-amber-200',
         };
         const iconClasses = {
             blue: 'text-blue-500 bg-blue-100',
             green: 'text-green-500 bg-green-100',
             purple: 'text-purple-500 bg-purple-100',
             orange: 'text-orange-500 bg-orange-100',
+            red: 'text-red-500 bg-red-100',
+            amber: 'text-amber-600 bg-amber-100',
         };
 
+        const Tag = onClick ? 'button' : 'div';
+
         return (
-            <div className={`p-3 sm:p-3.5 rounded-xl border ${colorClasses[color]} flex items-center justify-between gap-2 shadow-sm bg-white min-w-0`}>
+            <Tag
+                type={onClick ? 'button' : undefined}
+                onClick={onClick}
+                className={`p-3 sm:p-3.5 rounded-xl border text-right w-full transition-all ${colorClasses[color] || colorClasses.blue} flex items-center justify-between gap-2 shadow-sm bg-white min-w-0 ${
+                    alert ? 'animate-pulse ring-2 ring-offset-1 ring-red-400 border-red-300' : ''
+                } ${onClick ? 'cursor-pointer hover:shadow-md hover:scale-[1.01] active:scale-[0.99]' : ''}`}
+            >
                 <div className="min-w-0 flex-1">
                     <p className="text-[10px] sm:text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-0.5 leading-tight">{label}</p>
                     <div className="flex items-baseline gap-1 min-w-0">
@@ -426,10 +494,13 @@ export default function SuperAdminDashboard() {
                     </div>
                     {subtext && <p className="text-[9px] sm:text-[10px] text-gray-500 mt-1 line-clamp-2">{subtext}</p>}
                 </div>
-                <div className={`p-1.5 sm:p-2 rounded-lg shrink-0 ${iconClasses[color]}`}>
+                <div className={`p-1.5 sm:p-2 rounded-lg shrink-0 relative ${iconClasses[color] || iconClasses.blue}`}>
                     <span className="[&>svg]:w-4 [&>svg]:h-4 sm:[&>svg]:w-[18px] sm:[&>svg]:h-[18px]">{icon}</span>
+                    {alert && (
+                        <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-white" />
+                    )}
                 </div>
-            </div>
+            </Tag>
         );
     };
 
@@ -458,155 +529,372 @@ export default function SuperAdminDashboard() {
                     </button>
                 </div>
 
-                {/* באנר התראות מערכת */}
-                <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-4 sm:p-5 mb-6">
-                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                        <div className="flex items-start gap-4">
-                            <div className={`p-3 rounded-2xl ${isPushEnabled ? 'bg-green-50 text-green-600' : 'bg-brand-primary/5 text-brand-primary'}`}>
-                                {isPushEnabled ? <FaBell size={20} /> : <FaBellSlash size={20} />}
-                            </div>
-                            <div>
-                                <p className="text-base font-black text-gray-900 leading-tight">התראות מערכת למכשיר</p>
-                                <p className="text-xs text-gray-500 font-bold mt-0.5">קבל התראה על כל הזמנה חדשה בכל המסעדות</p>
-                                {pushState.message && (
-                                    <p className={`text-[11px] mt-1 font-black uppercase ${pushState.status === 'success' ? 'text-green-600' : pushState.status === 'error' ? 'text-red-500' : 'text-gray-400'}`}>
-                                        • {pushState.message}
-                                    </p>
-                                )}
-                            </div>
-                        </div>
-                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
-                            <button
-                                type="button"
-                                role="switch"
-                                aria-checked={isPushEnabled}
-                                disabled={
-                                    pushState.status === 'loading'
-                                    || permission === 'denied'
-                                    || permission === 'unsupported'
-                                }
-                                onClick={() => (isPushEnabled ? disablePush() : enablePush())}
-                                className={`
-                                    relative flex h-9 w-[3.25rem] shrink-0 items-center rounded-full p-1 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40 focus-visible:ring-offset-2
-                                    ${pushState.status === 'loading' ? 'cursor-wait bg-gray-400' : permission === 'denied' || permission === 'unsupported' ? 'cursor-not-allowed bg-gray-200 opacity-60' : 'cursor-pointer'}
-                                    ${pushState.status !== 'loading' && (isPushEnabled ? 'bg-green-500 justify-end' : 'bg-gray-300 justify-start')}
-                                `}
-                            >
-                                {pushState.status === 'loading' ? (
-                                    <span className="absolute inset-0 flex items-center justify-center" aria-hidden>
-                                        <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                                    </span>
-                                ) : (
-                                    <span
-                                        className="h-7 w-7 rounded-full bg-white shadow-md pointer-events-none"
-                                        aria-hidden
-                                    />
-                                )}
-                            </button>
-                            <span className="text-xs font-bold text-gray-500 whitespace-nowrap">
-                                {permission === 'denied' || permission === 'unsupported'
-                                    ? 'התראות לא זמינות בדפדפן זה'
-                                    : isPushEnabled
-                                        ? 'התראות פעילות'
-                                        : 'הפעל התראות'}
-                            </span>
-                        </div>
-                    </div>
-                    {/* שורת צלצול הזמנות */}
-                    <div className="pt-3 mt-1 border-t border-gray-100 flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-3">
-                            <div className={`p-2 rounded-xl ${soundEnabled ? 'bg-orange-50 text-orange-500' : 'bg-gray-100 text-gray-400'}`}>
-                                {soundEnabled ? <FaVolumeUp size={16} /> : <FaVolumeMute size={16} />}
-                            </div>
-                            <div>
-                                <p className="text-sm font-black text-gray-900 leading-tight">צלצול הזמנות</p>
-                                <p className="text-xs text-gray-500">{soundEnabled ? 'צלצול הזמנות פעיל' : 'כבוי — לחץ להפעלה'}</p>
-                            </div>
-                        </div>
+                {/* בקשות סיום התקשרות — באנר מהבהב + פאנל מתרחב */}
+                {churnRequests.length > 0 && (
+                    <div className="mb-6">
                         <button
                             type="button"
-                            role="switch"
-                            aria-checked={soundEnabled}
-                            onClick={() => handleSoundToggle(!soundEnabled)}
-                            className={`relative h-9 w-14 shrink-0 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 ${soundEnabled ? 'bg-orange-400' : 'bg-gray-200'}`}
+                            onClick={() => setShowChurnPanel((v) => !v)}
+                            className={`w-full text-right rounded-2xl border-2 transition-all overflow-hidden ${
+                                showChurnPanel
+                                    ? 'border-amber-400 bg-amber-50 shadow-lg shadow-amber-100'
+                                    : 'border-amber-300 bg-gradient-to-l from-amber-50 to-orange-50 hover:border-amber-400 animate-pulse'
+                            }`}
                         >
-                            <span className={`absolute top-1 h-7 w-7 rounded-full bg-white shadow-md transition-all duration-200 ${soundEnabled ? 'end-1' : 'start-1'}`} />
+                            <div className="flex items-center justify-between gap-3 px-4 sm:px-5 py-3.5">
+                                <div className="flex items-center gap-3 min-w-0">
+                                    <div className="relative shrink-0">
+                                        <div className="p-2.5 rounded-xl bg-amber-500 text-white">
+                                            <FaUserTimes size={18} />
+                                        </div>
+                                        <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[10px] font-black flex items-center justify-center ring-2 ring-white">
+                                            {churnRequests.length}
+                                        </span>
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="font-black text-amber-900 text-sm sm:text-base">
+                                            {churnRequests.length === 1
+                                                ? 'בקשת סיום התקשרות ממתינה'
+                                                : `${churnRequests.length} בקשות סיום התקשרות ממתינות`}
+                                        </p>
+                                        <p className="text-xs text-amber-700/80 font-bold mt-0.5">
+                                            {showChurnPanel ? 'לחץ לסגירה' : 'לחץ לצפייה וטיפול'}
+                                        </p>
+                                    </div>
+                                </div>
+                                <FaChevronDown
+                                    className={`text-amber-600 shrink-0 transition-transform ${showChurnPanel ? 'rotate-180' : ''}`}
+                                />
+                            </div>
                         </button>
+
+                        {showChurnPanel && (
+                            <div className="mt-3 space-y-3">
+                                {churnRequests.map((item) => (
+                                    <div
+                                        key={item.id}
+                                        className="bg-white rounded-2xl border border-amber-200 shadow-sm p-4 sm:p-5 space-y-3"
+                                    >
+                                        <div className="flex flex-wrap items-start justify-between gap-2">
+                                            <div>
+                                                <h3 className="font-black text-gray-900">{item.name}</h3>
+                                                <p className="text-xs text-gray-400 font-bold">
+                                                    @{item.tenant_id} · {TIER_LABELS[item.tier] || item.tier}
+                                                </p>
+                                            </div>
+                                            <span className="text-[10px] font-black bg-amber-100 text-amber-800 px-2 py-1 rounded-lg">
+                                                {item.requested_at
+                                                    ? new Date(item.requested_at).toLocaleString('he-IL')
+                                                    : '—'}
+                                            </span>
+                                        </div>
+                                        <div className="grid sm:grid-cols-2 gap-2 text-sm">
+                                            <div className="bg-gray-50 rounded-xl px-3 py-2">
+                                                <span className="text-gray-400 text-[10px] font-bold block">סיבה</span>
+                                                <span className="font-bold text-gray-800">{item.reason_label || '—'}</span>
+                                            </div>
+                                            <div className="bg-gray-50 rounded-xl px-3 py-2">
+                                                <span className="text-gray-400 text-[10px] font-bold block">תאריך מבוקש</span>
+                                                <span className="font-bold text-gray-800">
+                                                    {item.effective_date
+                                                        ? new Date(item.effective_date).toLocaleDateString('he-IL')
+                                                        : 'לא צוין'}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        {item.note && (
+                                            <p className="text-sm text-amber-900 bg-amber-50 rounded-xl px-3 py-2 border border-amber-100">
+                                                {item.note}
+                                            </p>
+                                        )}
+                                        <div className="flex flex-wrap gap-3 text-xs font-bold text-gray-600">
+                                            {item.owner_name && <span>{item.owner_name}</span>}
+                                            {item.owner_email && (
+                                                <a href={`mailto:${item.owner_email}`} className="text-brand-primary hover:underline flex items-center gap-1">
+                                                    <FaEnvelope size={10} /> {item.owner_email}
+                                                </a>
+                                            )}
+                                            {item.owner_phone && (
+                                                <a href={`tel:${item.owner_phone}`} className="text-brand-primary hover:underline flex items-center gap-1">
+                                                    <FaPhone size={10} /> {item.owner_phone}
+                                                </a>
+                                            )}
+                                        </div>
+                                        <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-100">
+                                            <button
+                                                type="button"
+                                                disabled={churnActionId === item.id}
+                                                onClick={(e) => handleApproveChurn(item, e)}
+                                                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-red-600 text-white text-xs font-black hover:bg-red-700 disabled:opacity-50"
+                                            >
+                                                {churnActionId === item.id ? <FaSpinner className="animate-spin" /> : <FaCheck />}
+                                                אשר ביטול מנוי
+                                            </button>
+                                            <button
+                                                type="button"
+                                                disabled={churnActionId === item.id}
+                                                onClick={(e) => handleDismissChurn(item, e)}
+                                                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gray-100 text-gray-700 text-xs font-black hover:bg-gray-200 disabled:opacity-50"
+                                            >
+                                                <FaTimes /> סגור ללא ביטול
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const r = restaurants.find((x) => x.id === item.id);
+                                                    if (r) setSelectedRestaurant(r);
+                                                }}
+                                                className="px-3 py-2 text-xs font-bold text-gray-500 hover:text-gray-900"
+                                            >
+                                                פרטי מסעדה
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
-                </div>
+                )}
+
                 {stats && (
-                    <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 mb-8">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
                         <StatCard
-                            label="סך הכל מסעדות"
-                            value={stats.stats.total_restaurants}
-                            subtext={stats.stats.total_restaurants > 0 ? "מסעדות רשומות" : "אין מסעדות"}
-                            icon={<FaStore size={18} />}
-                            color="blue"
-                        />
-                        <StatCard
-                            label="מסעדות פעילות מאומתות"
+                            label="מסעדות פעילות"
                             value={stats.restaurants_by_status.active}
-                            subtext="מאושרות ומנוי פעיל"
+                            subtext="מאושרות + מנוי פעיל"
                             icon={<FaCheckCircle size={18} />}
                             color="green"
                         />
                         <StatCard
-                            label="הזמנות כללי"
-                            value={stats.stats.total_orders.toLocaleString()}
-                            subtext="הזמנות שבוצעו"
+                            label="הזמנות היום"
+                            value={(stats.stats.orders_today || 0).toLocaleString()}
+                            subtext="הזמנות שבוצעו היום"
                             icon={<FaShoppingBag size={18} />}
                             color="purple"
                         />
                         <StatCard
-                            label="הכנסה - מסעדות דמו"
-                            value={`₪${Number(stats.stats.revenue_demo || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
-                            subtext="כסף מדומה"
-                            icon={<FaCoins size={18} />}
-                            color="orange"
-                        />
-                        <StatCard
-                            label="הכנסה - מסעדות פעילות"
-                            value={`₪${Number(stats.stats.revenue_real || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
-                            subtext="כסף אמיתי"
+                            label="הכנסה היום"
+                            value={`₪${Number(stats.stats.revenue_today_real || stats.stats.revenue_today || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
+                            subtext="מסעדות אמיתיות"
                             icon={<FaWallet size={18} />}
                             color="green"
+                        />
+                        <StatCard
+                            label="MRR"
+                            value={`₪${Number(stats.saas?.mrr || 0).toLocaleString()}`}
+                            subtext="הכנסה חודשית חוזרת"
+                            icon={<FaCreditCard size={18} />}
+                            color="blue"
+                        />
+                        <StatCard
+                            label="משוב משתמשים"
+                            value={stats.saas?.feedback_new || 0}
+                            subtext={(stats.saas?.feedback_new || 0) > 0 ? 'משובים חדשים — לחץ לטיפול' : 'אין משובים חדשים'}
+                            icon={<FaCommentDots size={18} />}
+                            color="amber"
+                            alert={(stats.saas?.feedback_new || 0) > 0}
+                            onClick={() => navigate('/super-admin/feedback?status=new')}
+                        />
+                        <StatCard
+                            label="שגיאות מערכת"
+                            value={stats.saas?.system_errors_unresolved || 0}
+                            subtext={(stats.saas?.system_errors_unresolved || 0) > 0 ? 'שגיאות פתוחות — לחץ לצפייה' : 'הכל תקין (24 שעות)'}
+                            icon={<FaExclamationTriangle size={18} />}
+                            color="red"
+                            alert={(stats.saas?.system_errors_unresolved || 0) > 0}
+                            onClick={() => navigate('/super-admin/order-debug')}
+                        />
+                        <StatCard
+                            label="אנליטיקה — היום"
+                            value={(stats.analytics_today?.total_visits || 0).toLocaleString()}
+                            subtext={`${(stats.analytics_today?.unique_visitors || 0).toLocaleString()} מבקרים ייחודיים`}
+                            icon={<FaChartLine size={18} />}
+                            color="blue"
+                            onClick={() => navigate('/super-admin/analytics')}
+                        />
+                        <StatCard
+                            label="משפך — החודש"
+                            value={`${stats.funnel_month?.conversion_rate ?? 0}%`}
+                            subtext={`${stats.funnel_month?.orders ?? 0} הזמנות · ${stats.funnel_month?.sessions ?? 0} סשנים`}
+                            icon={<FaFunnelDollar size={18} />}
+                            color="orange"
+                            onClick={() => navigate('/super-admin/funnel')}
                         />
                     </div>
                 )}
 
-                {/* SaaS KPIs */}
-                {stats?.saas && (
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
-                        <StatCard
-                            label="MRR"
-                            value={`₪${Number(stats.saas.mrr || 0).toLocaleString()}`}
-                            subtext="הכנסה חודשית חוזרת"
-                            icon={<FaCreditCard size={18} />}
-                            color="green"
-                        />
-                        <StatCard
-                            label="תקופת ניסיון"
-                            value={stats.saas.trial_restaurants || 0}
-                            subtext="מסעדות בניסיון"
-                            icon={<FaMask size={18} />}
-                            color="orange"
-                        />
-                        <StatCard
-                            label="מושעים"
-                            value={stats.saas.suspended_restaurants || 0}
-                            subtext="מסעדות מושעות"
-                            icon={<FaBan size={18} />}
-                            color="purple"
-                        />
-                        <StatCard
-                            label="שגיאות מערכת"
-                            value={stats.saas.system_errors_unresolved || 0}
-                            subtext="שגיאות פתוחות (24 שעות)"
-                            icon={<FaExclamationTriangle size={18} />}
-                            color="blue"
-                        />
-                    </div>
-                )}
+                {/* הזמנות פתוחות — מתקפל, מתחת לקוביות */}
+                <div className="mb-6">
+                    <button
+                        type="button"
+                        onClick={() => setShowOpenOrdersPanel((v) => !v)}
+                        className={`w-full text-right rounded-2xl border transition-all overflow-hidden ${
+                            showOpenOrdersPanel
+                                ? 'border-brand-primary/30 bg-white shadow-sm'
+                                : unhandledOpenCount > 0
+                                    ? 'border-red-200 bg-gradient-to-l from-red-50/80 to-orange-50/50 hover:border-red-300'
+                                    : 'border-gray-200 bg-white hover:border-gray-300'
+                        }`}
+                    >
+                        <div className="flex items-center justify-between gap-3 px-4 sm:px-5 py-3.5">
+                            <div className="flex items-center gap-3 min-w-0">
+                                <div className="relative shrink-0">
+                                    <div className={`p-2.5 rounded-xl ${unhandledOpenCount > 0 ? 'bg-red-500 text-white' : 'bg-brand-primary/10 text-brand-primary'}`}>
+                                        {loadingOpenOrders ? (
+                                            <FaSpinner className="animate-spin" size={16} />
+                                        ) : (
+                                            <FaCalendarDay size={16} />
+                                        )}
+                                    </div>
+                                    {!loadingOpenOrders && (openOrdersMeta?.total ?? 0) > 0 && (
+                                        <span className={`absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full text-white text-[10px] font-black flex items-center justify-center ring-2 ring-white ${unhandledOpenCount > 0 ? 'bg-red-600' : 'bg-brand-primary'}`}>
+                                            {openOrdersMeta.total}
+                                        </span>
+                                    )}
+                                </div>
+                                <div className="min-w-0">
+                                    <p className="font-black text-gray-900 text-sm sm:text-base">
+                                        {loadingOpenOrders
+                                            ? 'טוען הזמנות פתוחות...'
+                                            : (openOrdersMeta?.total ?? 0) === 0
+                                                ? 'אין הזמנות פתוחות — שבוע אחרון'
+                                                : `${openOrdersMeta.total} הזמנות פתוחות פעילות`}
+                                    </p>
+                                    <p className="text-xs text-gray-500 font-bold mt-0.5">
+                                        {showOpenOrdersPanel
+                                            ? 'לחץ לסגירה'
+                                            : unhandledOpenCount > 0
+                                                ? `${unhandledOpenCount} ממתינות לטיפול — לחץ לפתיחה`
+                                                : 'לחץ לצפייה, שליחת פush ו-Timeline'}
+                                    </p>
+                                </div>
+                            </div>
+                            <FaChevronDown
+                                className={`text-gray-400 shrink-0 transition-transform ${showOpenOrdersPanel ? 'rotate-180' : ''}`}
+                            />
+                        </div>
+                    </button>
+
+                    {showOpenOrdersPanel && (
+                        <div className="mt-3 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                            <div className="flex items-center justify-end gap-2 px-4 py-3 border-b border-gray-50 bg-gray-50/50">
+                                <button
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); loadOpenOrders(); }}
+                                    disabled={loadingOpenOrders}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-gray-100 text-xs font-black text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                                >
+                                    <FaSync className={loadingOpenOrders ? 'animate-spin' : ''} size={11} />
+                                    רענון
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => navigate('/super-admin/order-debug')}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-brand-primary/10 text-brand-primary text-xs font-black hover:bg-brand-primary/15"
+                                >
+                                    <FaClipboardList size={11} />
+                                    לוגים
+                                </button>
+                            </div>
+
+                            {loadingOpenOrders ? (
+                                <div className="py-10 text-center">
+                                    <FaSpinner className="animate-spin mx-auto mb-2 text-brand-primary" size={22} />
+                                    <p className="text-xs font-bold text-gray-400">טוען הזמנות פתוחות...</p>
+                                </div>
+                            ) : openOrders.length === 0 ? (
+                                <div className="py-10 text-center">
+                                    <FaCheckCircle className="mx-auto mb-2 text-green-300" size={28} />
+                                    <p className="text-xs font-bold text-gray-500">אין הזמנות פתוחות בשבוע האחרון</p>
+                                </div>
+                            ) : (
+                                <div className="max-h-[480px] overflow-y-auto custom-scrollbar p-4 sm:p-5 space-y-5">
+                                    {openOrdersByDate.map(([dateKey, dayOrders]) => (
+                                        <div key={dateKey}>
+                                            <div className="flex items-center gap-2 mb-2 sticky top-0 bg-white/95 backdrop-blur-sm py-1 z-10">
+                                                <h3 className="text-sm font-black text-gray-800">{getOpenOrderDateLabel(dateKey)}</h3>
+                                                <span className="text-[10px] font-bold text-gray-400 bg-gray-50 px-2 py-0.5 rounded-md border border-gray-100">
+                                                    {dayOrders.length}
+                                                </span>
+                                                <div className="flex-1 h-px bg-gray-100" />
+                                                <span className="text-[10px] font-mono text-gray-400" dir="ltr">{dateKey}</span>
+                                            </div>
+                                            <div className="space-y-2">
+                                                {dayOrders.map((order) => (
+                                                    <div
+                                                        key={order.id}
+                                                        className="flex flex-col lg:flex-row lg:items-center gap-3 p-3 rounded-2xl border border-gray-100 hover:bg-gray-50/80 transition-all"
+                                                    >
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex flex-wrap items-center gap-2 mb-1">
+                                                                <span className="text-sm font-black text-gray-900">#{order.id}</span>
+                                                                <span className={`text-[10px] font-black px-2 py-0.5 rounded-md border ${OPEN_ORDER_STATUS_STYLES[order.status] || 'bg-gray-50 text-gray-600 border-gray-200'}`}>
+                                                                    {OPEN_ORDER_STATUS_LABELS[order.status] || order.status}
+                                                                </span>
+                                                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${
+                                                                    order.restaurant_handled
+                                                                        ? 'bg-blue-50 text-blue-700 border-blue-100'
+                                                                        : 'bg-red-50 text-red-700 border-red-100'
+                                                                }`}>
+                                                                    {order.restaurant_handled ? 'בטיפול' : 'לא טופל'}
+                                                                </span>
+                                                                {order.payment_status === 'pending' && (
+                                                                    <span className="text-[10px] font-bold text-orange-600">תשלום ממתין</span>
+                                                                )}
+                                                                {order.payment_status === 'failed' && (
+                                                                    <span className="text-[10px] font-bold text-red-600">תשלום נכשל</span>
+                                                                )}
+                                                            </div>
+                                                            <p className="text-xs text-gray-700 font-bold truncate">
+                                                                {order.restaurant_name || order.tenant_id} • {order.customer_name || '—'} • {order.customer_phone || '—'}
+                                                            </p>
+                                                            <p className="text-[10px] text-gray-400 mt-0.5">
+                                                                {formatOpenOrderTime(order.created_at)} • פתוח {order.minutes_open} ד&apos;
+                                                                {order.restaurant_handled ? ` • בסטטוס ${order.minutes_in_status} ד'` : ''}
+                                                                {order.last_nudge_at && (
+                                                                    <span> • נשלחה התראה {formatOpenOrderDateTime(order.last_nudge_at)}</span>
+                                                                )}
+                                                            </p>
+                                                        </div>
+                                                        <div className="flex flex-wrap items-center gap-2 shrink-0">
+                                                            <span className="text-sm font-black text-gray-900 px-2">
+                                                                ₪{Number(order.total_amount || 0).toLocaleString()}
+                                                            </span>
+                                                            <button
+                                                                type="button"
+                                                                disabled={nudgingOrderId === order.id}
+                                                                onClick={() => handleNudgeOwner(order)}
+                                                                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black transition-all disabled:opacity-50 ${
+                                                                    order.restaurant_handled
+                                                                        ? 'bg-amber-500 text-white hover:bg-amber-600'
+                                                                        : 'bg-brand-primary text-white hover:bg-brand-primary/90'
+                                                                }`}
+                                                            >
+                                                                {nudgingOrderId === order.id ? (
+                                                                    <FaSpinner className="animate-spin" size={11} />
+                                                                ) : (
+                                                                    <FaPaperPlane size={11} />
+                                                                )}
+                                                                {order.restaurant_handled ? 'תזכורת לסיים' : 'שלח פוש למסעדן'}
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => openOrderTimeline(order.id)}
+                                                                className="px-3 py-2 rounded-xl bg-gray-100 text-gray-600 text-[11px] font-black hover:bg-gray-200"
+                                                            >
+                                                                Timeline
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
 
                 {/* חיפוש ופילטרים */}
                 <div className="mb-6 space-y-4">
@@ -737,6 +1025,16 @@ export default function SuperAdminDashboard() {
                                                     {Number(restaurant.pending_wolt_import_requests_count || 0) > 0 && (
                                                         <span className="px-2 py-0.5 rounded-md text-[10px] font-black bg-cyan-100 text-cyan-700 border border-cyan-200 flex items-center gap-1">
                                                             <FaCloudDownloadAlt size={10} /> בקשת ייבוא וולט
+                                                        </span>
+                                                    )}
+                                                    {restaurant.deletion_requested_at && (
+                                                        <span className="px-2 py-0.5 rounded-md text-[10px] font-black bg-amber-100 text-amber-800 border border-amber-300 flex items-center gap-1 animate-pulse">
+                                                            <FaSignOutAlt size={10} /> בקשת סיום
+                                                        </span>
+                                                    )}
+                                                    {restaurant.subscription_status === 'cancelled' && (
+                                                        <span className="px-2 py-0.5 rounded-md text-[10px] font-black bg-gray-200 text-gray-700 border border-gray-300">
+                                                            מנוי מבוטל
                                                         </span>
                                                     )}
                                                 </div>
