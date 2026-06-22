@@ -25,6 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'tenant' => \App\Http\Middleware\EnsureTenantId::class,
+            'resolve_tenant_host' => \App\Http\Middleware\ResolveTenantFromHost::class,
             'super_admin' => \App\Http\Middleware\EnsureSuperAdmin::class,
             'pos_session' => \App\Http\Middleware\VerifyPosSession::class,
             'device_token' => \App\Http\Middleware\VerifyDeviceToken::class,

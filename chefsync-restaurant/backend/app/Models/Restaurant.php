@@ -29,6 +29,9 @@ class Restaurant extends Model
         'tenant_id',
         'name',
         'slug',
+        'custom_domain',
+        'custom_domain_connected_at',
+        'custom_domain_ssl_status',
         'restaurant_type',
         'cuisine_type',
         'kosher_type',         // סוג כשרות
@@ -150,6 +153,7 @@ class Restaurant extends Model
         'operating_hours' => 'array',
         'trial_ends_at' => 'datetime',
         'trial_started_at' => 'datetime',
+        'custom_domain_connected_at' => 'datetime',
         'subscription_ends_at' => 'datetime',
         'last_payment_at' => 'datetime',
         'next_payment_at' => 'datetime',
@@ -201,6 +205,16 @@ class Restaurant extends Model
     public function woltImportRequests(): HasMany
     {
         return $this->hasMany(WoltImportRequest::class, 'restaurant_id');
+    }
+
+    public function domainRequests(): HasMany
+    {
+        return $this->hasMany(DomainRequest::class, 'restaurant_id');
+    }
+
+    public function restaurantDomains(): HasMany
+    {
+        return $this->hasMany(RestaurantDomain::class, 'restaurant_id');
     }
 
     public function variants(): HasMany

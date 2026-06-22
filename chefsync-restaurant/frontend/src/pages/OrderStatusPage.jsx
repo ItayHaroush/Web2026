@@ -1041,6 +1041,11 @@ export default function OrderStatusPage({ isPreviewMode = false }) {
                                             )}
                                         </>
                                     )}
+                                    {item.notes && (
+                                        <div className="text-sm text-amber-700 dark:text-amber-400 font-medium">
+                                            הערה: {item.notes}
+                                        </div>
+                                    )}
                                 </div>
                                 {hasCustomizations && (
                                     <div className="text-sm text-gray-700 dark:text-gray-300">

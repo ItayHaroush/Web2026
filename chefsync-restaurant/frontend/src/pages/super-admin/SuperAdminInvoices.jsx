@@ -46,6 +46,7 @@ export default function SuperAdminInvoices() {
         commission_percent: '',
         abandoned_cart_fee: '',
         setup_fee: '',
+        domain_fee: '',
         original_base_fee: '',
         total_due_override: '',
         notes: '',
@@ -182,6 +183,7 @@ export default function SuperAdminInvoices() {
             commission_percent: inv.commission_percent != null && Number(inv.commission_percent) > 0 ? String(inv.commission_percent) : '',
             abandoned_cart_fee: String(inv.abandoned_cart_fee ?? ''),
             setup_fee: String(inv.setup_fee ?? ''),
+            domain_fee: String(inv.domain_fee ?? ''),
             original_base_fee: inv.original_base_fee != null ? String(inv.original_base_fee) : '',
             total_due_override: '',
             notes: inv.notes ?? '',
@@ -202,6 +204,7 @@ export default function SuperAdminInvoices() {
                 commission_fee: parseFloat(editForm.commission_fee) || 0,
                 abandoned_cart_fee: parseFloat(editForm.abandoned_cart_fee) || 0,
                 setup_fee: parseFloat(editForm.setup_fee) || 0,
+                domain_fee: parseFloat(editForm.domain_fee) || 0,
             };
             if (editForm.commission_percent.trim() !== '') {
                 body.commission_percent = parseFloat(editForm.commission_percent);
@@ -385,7 +388,8 @@ export default function SuperAdminInvoices() {
             ((parseFloat(editForm.base_fee) || 0) +
                 (parseFloat(editForm.commission_fee) || 0) +
                 (parseFloat(editForm.abandoned_cart_fee) || 0) +
-                (parseFloat(editForm.setup_fee) || 0)) *
+                (parseFloat(editForm.setup_fee) || 0) +
+                (parseFloat(editForm.domain_fee) || 0)) *
             100
         ) / 100;
 
@@ -601,6 +605,7 @@ export default function SuperAdminInvoices() {
                                         <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-left">עמלה</th>
                                         <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-left hidden xl:table-cell">תזכורות</th>
                                         <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-left">דמי הקמה</th>
+                                        <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-left hidden xl:table-cell">דומיין</th>
                                         <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-left">סה״כ</th>
                                         <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-center hidden lg:table-cell">הזמנות</th>
                                         <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-center hidden lg:table-cell">מחזור</th>
@@ -652,6 +657,13 @@ export default function SuperAdminInvoices() {
                                             <td className="px-6 py-4 text-left">
                                                 {Number(inv.setup_fee || 0) > 0 ? (
                                                     <span className="text-sm font-black text-gray-900" title="דמי הקמת חיבור מסוף">₪{Number(inv.setup_fee).toLocaleString()}</span>
+                                                ) : (
+                                                    <span className="text-sm text-gray-400">—</span>
+                                                )}
+                                            </td>
+                                            <td className="px-6 py-4 text-left hidden xl:table-cell">
+                                                {Number(inv.domain_fee || 0) > 0 ? (
+                                                    <span className="text-sm font-black text-teal-700" title="דומיין מותאם">₪{Number(inv.domain_fee).toLocaleString()}</span>
                                                 ) : (
                                                     <span className="text-sm text-gray-400">—</span>
                                                 )}
@@ -926,6 +938,17 @@ export default function SuperAdminInvoices() {
                                         className="mt-1 w-full border border-gray-200 rounded-xl px-3 py-2 font-bold text-gray-900"
                                         value={editForm.setup_fee}
                                         onChange={(e) => setEditForm((f) => ({ ...f, setup_fee: e.target.value }))}
+                                    />
+                                </label>
+                                <label className="block text-xs font-bold text-gray-500">
+                                    דומיין מותאם
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        className="mt-1 w-full border border-gray-200 rounded-xl px-3 py-2 font-bold text-gray-900"
+                                        value={editForm.domain_fee}
+                                        onChange={(e) => setEditForm((f) => ({ ...f, domain_fee: e.target.value }))}
                                     />
                                 </label>
                                 <label className="block text-xs font-bold text-gray-500 sm:col-span-2">

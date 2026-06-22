@@ -205,6 +205,7 @@ class MenuController extends Controller
                                 'variants' => $variants,
                                 'addon_groups' => $addonGroups,
                                 'dine_in_adjustment' => (float) $item->getEffectiveDineInAdjustment(),
+                                'allow_item_note' => (bool) ($item->allow_item_note ?? false),
                                 'availability_start_time' => $item->availability_start_time
                                     ? substr((string) $item->availability_start_time, 0, 5) : null,
                                 'availability_end_time' => $item->availability_end_time

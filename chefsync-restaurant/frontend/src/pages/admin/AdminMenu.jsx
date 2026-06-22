@@ -33,6 +33,7 @@ import {
     FaSave,
     FaArchive,
     FaUndo,
+    FaComment,
 } from 'react-icons/fa';
 
 export default function AdminMenu({ embedded = false }) {
@@ -68,6 +69,7 @@ export default function AdminMenu({ embedded = false }) {
         image: null,
         use_variants: false,
         use_addons: false,
+        allow_item_note: false,
         addons_group_scope: [],
         dine_in_adjustment: '',
         addon_selection_weight: '',  // ריק=ברירת מחדל קבוצה. 2=פריט אחד נספר כשתי בחירות (כשמוצג כתוספת מקושרת לקטגוריה)
@@ -220,6 +222,7 @@ export default function AdminMenu({ embedded = false }) {
         if (form.image) formData.append('image', form.image);
         formData.append('use_variants', form.use_variants ? '1' : '0');
         formData.append('use_addons', form.use_addons ? '1' : '0');
+        formData.append('allow_item_note', form.allow_item_note ? '1' : '0');
 
         // שליחת array של group IDs כ-JSON string
         const scopeValue = form.use_addons && form.addons_group_scope?.length
@@ -373,6 +376,7 @@ export default function AdminMenu({ embedded = false }) {
             image: null,
             use_variants: Boolean(item.use_variants),
             use_addons: Boolean(item.use_addons),
+            allow_item_note: Boolean(item.allow_item_note),
             addons_group_scope: groupScope,
             dine_in_adjustment: item.dine_in_adjustment ?? '',
             addon_selection_weight: item.addon_selection_weight != null ? String(item.addon_selection_weight) : '',
@@ -409,6 +413,7 @@ export default function AdminMenu({ embedded = false }) {
             image: null,
             use_variants: false,
             use_addons: false,
+            allow_item_note: false,
             addons_group_scope: [],
             dine_in_adjustment: '',
             addon_selection_weight: '',
@@ -443,6 +448,7 @@ export default function AdminMenu({ embedded = false }) {
             image: null,
             use_variants: false,
             use_addons: false,
+            allow_item_note: false,
             addons_group_scope: [],
             dine_in_adjustment: '',
             addon_selection_weight: '',
@@ -1144,6 +1150,26 @@ export default function AdminMenu({ embedded = false }) {
                                             </div>
                                         </label>
                                     </div>
+
+                                    <label className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl cursor-pointer hover:bg-slate-100 transition-all group">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-amber-500 shadow-sm border border-amber-100">
+                                                <FaComment size={16} />
+                                            </div>
+                                            <div>
+                                                <p className="text-xs font-black text-gray-900 leading-none">הערה למנה</p>
+                                                <p className="text-[9px] font-bold text-gray-400 mt-1 uppercase tracking-tighter">הלקוח יוכל להוסיף הערה קצרה (עד 20 תווים)</p>
+                                            </div>
+                                        </div>
+                                        <div className="relative flex items-center">
+                                            <input
+                                                type="checkbox"
+                                                checked={form.allow_item_note}
+                                                onChange={(e) => setForm({ ...form, allow_item_note: e.target.checked })}
+                                                className="w-5 h-5 rounded-lg border-2 border-gray-300 checked:bg-brand-primary text-brand-primary focus:ring-offset-0 focus:ring-0 transition-all"
+                                            />
+                                        </div>
+                                    </label>
 
                                     {/* Item-level base pricing - visible when use_variants is on and editing an existing item */}
                                     {form.use_variants && editItem && (

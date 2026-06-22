@@ -120,6 +120,11 @@ export default function OrderConfirmationSheet({
                                                     <span>{addonsOnSide.join(' \u00b7 ')}</span>
                                                 </p>
                                             )}
+                                            {item.notes && (
+                                                <p className="text-xs text-amber-700 dark:text-amber-400 font-medium mt-0.5">
+                                                    הערה: {item.notes}
+                                                </p>
+                                            )}
                                         </div>
                                         <div className="flex items-start gap-2 shrink-0">
                                             <div className="text-left">

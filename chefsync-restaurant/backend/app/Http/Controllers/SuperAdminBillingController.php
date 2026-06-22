@@ -1101,12 +1101,13 @@ class SuperAdminBillingController extends Controller
             'commission_percent' => 'nullable|numeric|min:0|max:100',
             'abandoned_cart_fee' => 'nullable|numeric|min:0',
             'setup_fee' => 'nullable|numeric|min:0',
+            'domain_fee' => 'nullable|numeric|min:0',
             'total_due' => 'nullable|numeric|min:0',
         ]);
 
         $invoice = MonthlyInvoice::findOrFail($id);
 
-        $amountFieldKeys = ['base_fee', 'original_base_fee', 'commission_fee', 'commission_percent', 'abandoned_cart_fee', 'setup_fee', 'total_due'];
+        $amountFieldKeys = ['base_fee', 'original_base_fee', 'commission_fee', 'commission_percent', 'abandoned_cart_fee', 'setup_fee', 'domain_fee', 'total_due'];
         $hasAmountPatch = $request->hasAny($amountFieldKeys);
 
         $hasStatus = $request->filled('status');
@@ -1129,7 +1130,7 @@ class SuperAdminBillingController extends Controller
         if ($hasAmountPatch) {
             $updates = [];
 
-            foreach (['base_fee', 'commission_fee', 'abandoned_cart_fee', 'setup_fee'] as $key) {
+            foreach (['base_fee', 'commission_fee', 'abandoned_cart_fee', 'setup_fee', 'domain_fee'] as $key) {
                 if ($request->has($key)) {
                     $updates[$key] = round((float) $validated[$key], 2);
                 }
@@ -1149,11 +1150,12 @@ class SuperAdminBillingController extends Controller
             $commission = array_key_exists('commission_fee', $updates) ? $updates['commission_fee'] : (float) $invoice->commission_fee;
             $abandoned = array_key_exists('abandoned_cart_fee', $updates) ? $updates['abandoned_cart_fee'] : (float) $invoice->abandoned_cart_fee;
             $setup = array_key_exists('setup_fee', $updates) ? $updates['setup_fee'] : (float) $invoice->setup_fee;
+            $domain = array_key_exists('domain_fee', $updates) ? $updates['domain_fee'] : (float) ($invoice->domain_fee ?? 0);
 
             if ($request->has('total_due')) {
                 $updates['total_due'] = round((float) $validated['total_due'], 2);
             } else {
-                $updates['total_due'] = round($base + $commission + $abandoned + $setup, 2);
+                $updates['total_due'] = round($base + $commission + $abandoned + $setup + $domain, 2);
             }
 
             $invoice->update($updates);

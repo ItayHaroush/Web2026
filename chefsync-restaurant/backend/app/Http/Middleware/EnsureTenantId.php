@@ -14,6 +14,13 @@ class EnsureTenantId
 {
     public function handle(Request $request, Closure $next)
     {
+        // Already resolved from custom domain Host header
+        if (app()->has('tenant_id')) {
+            $request->merge(['tenant_id' => app('tenant_id')]);
+
+            return $next($request);
+        }
+
         // קבל Tenant ID מ-Header או Parameter
         $tenantId = $request->header('X-Tenant-ID') ??
             $request->query('tenant_id') ??

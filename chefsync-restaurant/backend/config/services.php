@@ -29,4 +29,10 @@ return [
         'test_mode_enabled' => env('ZCREDIT_TEST_MODE', false),
         'allow_test_pinpad_route' => filter_var(env('ZCREDIT_ALLOW_TEST_ROUTE', false), FILTER_VALIDATE_BOOLEAN),
     ],
+
+    'vercel' => [
+        'token' => env('VERCEL_TOKEN'),
+        'project_id' => env('VERCEL_PROJECT_ID'),
+        'team_id' => env('VERCEL_TEAM_ID'),
+    ],
 ];

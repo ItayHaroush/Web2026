@@ -56,6 +56,8 @@ import {
     FaCalendarDay,
     FaSync,
     FaPaperPlane,
+    FaGlobe,
+    FaInbox,
 } from 'react-icons/fa';
 import { TIER_LABELS } from '../../utils/tierUtils';
 
@@ -77,6 +79,30 @@ const OPEN_ORDER_STATUS_STYLES = {
     delivering: 'bg-purple-50 text-purple-700 border-purple-200',
 };
 
+const FEEDBACK_CATEGORY_LABELS = {
+    general: 'כללי',
+    idea: 'רעיון',
+    bug: 'תקלה',
+    complaint: 'תלונה',
+    praise: 'מחמאה',
+};
+
+const DOMAIN_TYPE_LABELS = {
+    existing_domain: 'חיבור דומיין',
+    full_service: 'שירות מלא',
+    change_domain: 'שינוי דומיין',
+    disconnect_domain: 'ניתוק דומיין',
+};
+
+const DOMAIN_STATUS_LABELS = {
+    awaiting_payment: 'ממתין לתשלום',
+    pending: 'ממתין לטיפול',
+    in_progress: 'בטיפול',
+    awaiting_customer_info: 'ממתין למידע',
+    awaiting_dns: 'ממתין ל-DNS',
+    ssl_setup: 'בהגדרת SSL',
+};
+
 export default function SuperAdminDashboard() {
     const { getAuthHeaders, startImpersonation } = useAdminAuth();
     const navigate = useNavigate();
@@ -93,8 +119,13 @@ export default function SuperAdminDashboard() {
     const [pendingCitiesLoading, setPendingCitiesLoading] = useState(false);
     const [approvedCities, setApprovedCities] = useState([]);
     const [churnRequests, setChurnRequests] = useState([]);
-    const [showChurnPanel, setShowChurnPanel] = useState(false);
+    const [pendingFeedback, setPendingFeedback] = useState([]);
+    const [pendingFeedbackCount, setPendingFeedbackCount] = useState(0);
+    const [pendingDomainRequests, setPendingDomainRequests] = useState([]);
+    const [pendingDomainCount, setPendingDomainCount] = useState(0);
+    const [showPendingRequestsPanel, setShowPendingRequestsPanel] = useState(false);
     const [churnActionId, setChurnActionId] = useState(null);
+    const [feedbackActionId, setFeedbackActionId] = useState(null);
 
     // Open orders (incomplete, last 7 days)
     const [openOrders, setOpenOrders] = useState([]);
@@ -106,9 +137,28 @@ export default function SuperAdminDashboard() {
     useEffect(() => {
         fetchDashboard();
         fetchRestaurants();
-        fetchChurnRequests();
+        fetchPendingRequests();
         loadOpenOrders();
     }, [filterStatus, searchTerm]);
+
+    const pendingRequestsTotal = useMemo(
+        () => churnRequests.length + pendingFeedbackCount + pendingDomainCount,
+        [churnRequests.length, pendingFeedbackCount, pendingDomainCount],
+    );
+
+    const pendingRequestsSummary = useMemo(() => {
+        const parts = [];
+        if (churnRequests.length > 0) {
+            parts.push(`${churnRequests.length} סיום התקשרות`);
+        }
+        if (pendingFeedbackCount > 0) {
+            parts.push(`${pendingFeedbackCount} משוב`);
+        }
+        if (pendingDomainCount > 0) {
+            parts.push(`${pendingDomainCount} דומיין`);
+        }
+        return parts.join(' · ');
+    }, [churnRequests.length, pendingFeedbackCount, pendingDomainCount]);
 
     const loadOpenOrders = async () => {
         setLoadingOpenOrders(true);
@@ -202,16 +252,48 @@ export default function SuperAdminDashboard() {
         minute: '2-digit',
     });
 
-    const fetchChurnRequests = async () => {
+    const fetchPendingRequests = async () => {
         try {
-            const response = await api.get('/super-admin/billing/cancellation-requests', {
-                headers: getAuthHeaders(),
-            });
-            if (response.data?.success) {
-                setChurnRequests(response.data.data || []);
+            const headers = getAuthHeaders();
+            const [churnRes, feedbackRes, domainRes] = await Promise.all([
+                api.get('/super-admin/billing/cancellation-requests', { headers }),
+                api.get('/super-admin/feedback', { headers, params: { status: 'new' } }),
+                api.get('/super-admin/domain-requests', { headers, params: { pending: 1, per_page: 20 } }),
+            ]);
+
+            if (churnRes.data?.success) {
+                setChurnRequests(churnRes.data.data || []);
+            }
+            if (feedbackRes.data?.success) {
+                setPendingFeedback(feedbackRes.data.data?.data || []);
+                setPendingFeedbackCount(feedbackRes.data.stats?.new ?? 0);
+            }
+            if (domainRes.data?.success) {
+                setPendingDomainRequests(domainRes.data.data?.data || []);
+                setPendingDomainCount(domainRes.data.stats?.open_requests ?? domainRes.data.data?.total ?? 0);
             }
         } catch (error) {
-            console.error('Failed to fetch churn requests:', error);
+            console.error('Failed to fetch pending requests:', error);
+        }
+    };
+
+    const handleMarkFeedbackReview = async (item, e) => {
+        e?.stopPropagation?.();
+        setFeedbackActionId(item.id);
+        try {
+            const res = await api.patch(
+                `/super-admin/feedback/${item.id}`,
+                { status: 'in_review' },
+                { headers: getAuthHeaders() },
+            );
+            if (res.data?.success) {
+                toast.success('המשוב סומן בטיפול');
+                await Promise.all([fetchPendingRequests(), fetchDashboard()]);
+            }
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'שגיאה בעדכון משוב');
+        } finally {
+            setFeedbackActionId(null);
         }
     };
 
@@ -229,7 +311,7 @@ export default function SuperAdminDashboard() {
             );
             if (res.data?.success) {
                 toast.success(res.data.message || 'המנוי בוטל');
-                await Promise.all([fetchChurnRequests(), fetchRestaurants(), fetchDashboard()]);
+                await Promise.all([fetchPendingRequests(), fetchRestaurants(), fetchDashboard()]);
             }
         } catch (err) {
             toast.error(err.response?.data?.message || 'שגיאה באישור');
@@ -252,7 +334,7 @@ export default function SuperAdminDashboard() {
             );
             if (res.data?.success) {
                 toast.success(res.data.message || 'הבקשה נסגרה');
-                await Promise.all([fetchChurnRequests(), fetchDashboard()]);
+                await Promise.all([fetchPendingRequests(), fetchDashboard()]);
             }
         } catch (err) {
             toast.error(err.response?.data?.message || 'שגיאה בסגירה');
@@ -529,14 +611,14 @@ export default function SuperAdminDashboard() {
                     </button>
                 </div>
 
-                {/* בקשות סיום התקשרות — באנר מהבהב + פאנל מתרחב */}
-                {churnRequests.length > 0 && (
+                {/* בקשות ממתינות — סיום התקשרות, משוב, דומיין */}
+                {pendingRequestsTotal > 0 && (
                     <div className="mb-6">
                         <button
                             type="button"
-                            onClick={() => setShowChurnPanel((v) => !v)}
+                            onClick={() => setShowPendingRequestsPanel((v) => !v)}
                             className={`w-full text-right rounded-2xl border-2 transition-all overflow-hidden ${
-                                showChurnPanel
+                                showPendingRequestsPanel
                                     ? 'border-amber-400 bg-amber-50 shadow-lg shadow-amber-100'
                                     : 'border-amber-300 bg-gradient-to-l from-amber-50 to-orange-50 hover:border-amber-400 animate-pulse'
                             }`}
@@ -545,112 +627,253 @@ export default function SuperAdminDashboard() {
                                 <div className="flex items-center gap-3 min-w-0">
                                     <div className="relative shrink-0">
                                         <div className="p-2.5 rounded-xl bg-amber-500 text-white">
-                                            <FaUserTimes size={18} />
+                                            <FaInbox size={18} />
                                         </div>
                                         <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[10px] font-black flex items-center justify-center ring-2 ring-white">
-                                            {churnRequests.length}
+                                            {pendingRequestsTotal}
                                         </span>
                                     </div>
                                     <div className="min-w-0">
                                         <p className="font-black text-amber-900 text-sm sm:text-base">
-                                            {churnRequests.length === 1
-                                                ? 'בקשת סיום התקשרות ממתינה'
-                                                : `${churnRequests.length} בקשות סיום התקשרות ממתינות`}
+                                            {pendingRequestsTotal === 1
+                                                ? 'בקשה אחת ממתינה לטיפול'
+                                                : `${pendingRequestsTotal} בקשות ממתינות לטיפול`}
                                         </p>
-                                        <p className="text-xs text-amber-700/80 font-bold mt-0.5">
-                                            {showChurnPanel ? 'לחץ לסגירה' : 'לחץ לצפייה וטיפול'}
+                                        <p className="text-xs text-amber-700/80 font-bold mt-0.5 truncate">
+                                            {pendingRequestsSummary}
+                                            {' · '}
+                                            {showPendingRequestsPanel ? 'לחץ לסגירה' : 'לחץ לצפייה וטיפול'}
                                         </p>
                                     </div>
                                 </div>
                                 <FaChevronDown
-                                    className={`text-amber-600 shrink-0 transition-transform ${showChurnPanel ? 'rotate-180' : ''}`}
+                                    className={`text-amber-600 shrink-0 transition-transform ${showPendingRequestsPanel ? 'rotate-180' : ''}`}
                                 />
                             </div>
                         </button>
 
-                        {showChurnPanel && (
-                            <div className="mt-3 space-y-3">
-                                {churnRequests.map((item) => (
-                                    <div
-                                        key={item.id}
-                                        className="bg-white rounded-2xl border border-amber-200 shadow-sm p-4 sm:p-5 space-y-3"
-                                    >
-                                        <div className="flex flex-wrap items-start justify-between gap-2">
-                                            <div>
-                                                <h3 className="font-black text-gray-900">{item.name}</h3>
-                                                <p className="text-xs text-gray-400 font-bold">
-                                                    @{item.tenant_id} · {TIER_LABELS[item.tier] || item.tier}
-                                                </p>
-                                            </div>
-                                            <span className="text-[10px] font-black bg-amber-100 text-amber-800 px-2 py-1 rounded-lg">
-                                                {item.requested_at
-                                                    ? new Date(item.requested_at).toLocaleString('he-IL')
-                                                    : '—'}
-                                            </span>
+                        {showPendingRequestsPanel && (
+                            <div className="mt-3 space-y-4">
+                                {churnRequests.length > 0 && (
+                                    <div className="space-y-3">
+                                        <div className="flex items-center justify-between gap-2 px-1">
+                                            <h3 className="text-xs font-black text-amber-900 uppercase tracking-wide flex items-center gap-2">
+                                                <FaUserTimes size={12} />
+                                                סיום התקשרות ({churnRequests.length})
+                                            </h3>
                                         </div>
-                                        <div className="grid sm:grid-cols-2 gap-2 text-sm">
-                                            <div className="bg-gray-50 rounded-xl px-3 py-2">
-                                                <span className="text-gray-400 text-[10px] font-bold block">סיבה</span>
-                                                <span className="font-bold text-gray-800">{item.reason_label || '—'}</span>
-                                            </div>
-                                            <div className="bg-gray-50 rounded-xl px-3 py-2">
-                                                <span className="text-gray-400 text-[10px] font-bold block">תאריך מבוקש</span>
-                                                <span className="font-bold text-gray-800">
-                                                    {item.effective_date
-                                                        ? new Date(item.effective_date).toLocaleDateString('he-IL')
-                                                        : 'לא צוין'}
-                                                </span>
-                                            </div>
-                                        </div>
-                                        {item.note && (
-                                            <p className="text-sm text-amber-900 bg-amber-50 rounded-xl px-3 py-2 border border-amber-100">
-                                                {item.note}
-                                            </p>
-                                        )}
-                                        <div className="flex flex-wrap gap-3 text-xs font-bold text-gray-600">
-                                            {item.owner_name && <span>{item.owner_name}</span>}
-                                            {item.owner_email && (
-                                                <a href={`mailto:${item.owner_email}`} className="text-brand-primary hover:underline flex items-center gap-1">
-                                                    <FaEnvelope size={10} /> {item.owner_email}
-                                                </a>
-                                            )}
-                                            {item.owner_phone && (
-                                                <a href={`tel:${item.owner_phone}`} className="text-brand-primary hover:underline flex items-center gap-1">
-                                                    <FaPhone size={10} /> {item.owner_phone}
-                                                </a>
-                                            )}
-                                        </div>
-                                        <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-100">
-                                            <button
-                                                type="button"
-                                                disabled={churnActionId === item.id}
-                                                onClick={(e) => handleApproveChurn(item, e)}
-                                                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-red-600 text-white text-xs font-black hover:bg-red-700 disabled:opacity-50"
+                                        {churnRequests.map((item) => (
+                                            <div
+                                                key={`churn-${item.id}`}
+                                                className="bg-white rounded-2xl border border-amber-200 shadow-sm p-4 sm:p-5 space-y-3"
                                             >
-                                                {churnActionId === item.id ? <FaSpinner className="animate-spin" /> : <FaCheck />}
-                                                אשר ביטול מנוי
-                                            </button>
-                                            <button
-                                                type="button"
-                                                disabled={churnActionId === item.id}
-                                                onClick={(e) => handleDismissChurn(item, e)}
-                                                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gray-100 text-gray-700 text-xs font-black hover:bg-gray-200 disabled:opacity-50"
-                                            >
-                                                <FaTimes /> סגור ללא ביטול
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    const r = restaurants.find((x) => x.id === item.id);
-                                                    if (r) setSelectedRestaurant(r);
-                                                }}
-                                                className="px-3 py-2 text-xs font-bold text-gray-500 hover:text-gray-900"
-                                            >
-                                                פרטי מסעדה
-                                            </button>
-                                        </div>
+                                                <div className="flex flex-wrap items-start justify-between gap-2">
+                                                    <div>
+                                                        <h3 className="font-black text-gray-900">{item.name}</h3>
+                                                        <p className="text-xs text-gray-400 font-bold">
+                                                            @{item.tenant_id} · {TIER_LABELS[item.tier] || item.tier}
+                                                        </p>
+                                                    </div>
+                                                    <span className="text-[10px] font-black bg-amber-100 text-amber-800 px-2 py-1 rounded-lg">
+                                                        {item.requested_at
+                                                            ? new Date(item.requested_at).toLocaleString('he-IL')
+                                                            : '—'}
+                                                    </span>
+                                                </div>
+                                                <div className="grid sm:grid-cols-2 gap-2 text-sm">
+                                                    <div className="bg-gray-50 rounded-xl px-3 py-2">
+                                                        <span className="text-gray-400 text-[10px] font-bold block">סיבה</span>
+                                                        <span className="font-bold text-gray-800">{item.reason_label || '—'}</span>
+                                                    </div>
+                                                    <div className="bg-gray-50 rounded-xl px-3 py-2">
+                                                        <span className="text-gray-400 text-[10px] font-bold block">תאריך מבוקש</span>
+                                                        <span className="font-bold text-gray-800">
+                                                            {item.effective_date
+                                                                ? new Date(item.effective_date).toLocaleDateString('he-IL')
+                                                                : 'לא צוין'}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                {item.note && (
+                                                    <p className="text-sm text-amber-900 bg-amber-50 rounded-xl px-3 py-2 border border-amber-100">
+                                                        {item.note}
+                                                    </p>
+                                                )}
+                                                <div className="flex flex-wrap gap-3 text-xs font-bold text-gray-600">
+                                                    {item.owner_name && <span>{item.owner_name}</span>}
+                                                    {item.owner_email && (
+                                                        <a href={`mailto:${item.owner_email}`} className="text-brand-primary hover:underline flex items-center gap-1">
+                                                            <FaEnvelope size={10} /> {item.owner_email}
+                                                        </a>
+                                                    )}
+                                                    {item.owner_phone && (
+                                                        <a href={`tel:${item.owner_phone}`} className="text-brand-primary hover:underline flex items-center gap-1">
+                                                            <FaPhone size={10} /> {item.owner_phone}
+                                                        </a>
+                                                    )}
+                                                </div>
+                                                <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-100">
+                                                    <button
+                                                        type="button"
+                                                        disabled={churnActionId === item.id}
+                                                        onClick={(e) => handleApproveChurn(item, e)}
+                                                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-red-600 text-white text-xs font-black hover:bg-red-700 disabled:opacity-50"
+                                                    >
+                                                        {churnActionId === item.id ? <FaSpinner className="animate-spin" /> : <FaCheck />}
+                                                        אשר ביטול מנוי
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        disabled={churnActionId === item.id}
+                                                        onClick={(e) => handleDismissChurn(item, e)}
+                                                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gray-100 text-gray-700 text-xs font-black hover:bg-gray-200 disabled:opacity-50"
+                                                    >
+                                                        <FaTimes /> סגור ללא ביטול
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const r = restaurants.find((x) => x.id === item.id);
+                                                            if (r) setSelectedRestaurant(r);
+                                                        }}
+                                                        className="px-3 py-2 text-xs font-bold text-gray-500 hover:text-gray-900"
+                                                    >
+                                                        פרטי מסעדה
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
-                                ))}
+                                )}
+
+                                {pendingFeedbackCount > 0 && (
+                                    <div className="space-y-3">
+                                        <div className="flex items-center justify-between gap-2 px-1">
+                                            <h3 className="text-xs font-black text-amber-900 uppercase tracking-wide flex items-center gap-2">
+                                                <FaCommentDots size={12} />
+                                                משובים חדשים ({pendingFeedbackCount})
+                                            </h3>
+                                            <button
+                                                type="button"
+                                                onClick={() => navigate('/super-admin/feedback?status=new')}
+                                                className="text-[10px] font-black text-brand-primary hover:underline"
+                                            >
+                                                לכל המשובים
+                                            </button>
+                                        </div>
+                                        {pendingFeedback.map((item) => (
+                                            <div
+                                                key={`feedback-${item.id}`}
+                                                className="bg-white rounded-2xl border border-amber-200 shadow-sm p-4 sm:p-5 space-y-3"
+                                            >
+                                                <div className="flex flex-wrap items-start justify-between gap-2">
+                                                    <div className="min-w-0">
+                                                        <p className="font-black text-gray-900">
+                                                            {item.customer?.name || 'לקוח'}
+                                                        </p>
+                                                        <p className="text-xs text-gray-400 font-bold">
+                                                            {FEEDBACK_CATEGORY_LABELS[item.category] || item.category}
+                                                            {item.rating ? ` · ${item.rating}/5` : ''}
+                                                        </p>
+                                                    </div>
+                                                    <span className="text-[10px] font-black bg-amber-100 text-amber-800 px-2 py-1 rounded-lg shrink-0">
+                                                        {item.created_at
+                                                            ? new Date(item.created_at).toLocaleString('he-IL')
+                                                            : '—'}
+                                                    </span>
+                                                </div>
+                                                <p className="text-sm text-gray-800 bg-gray-50 rounded-xl px-3 py-2 border border-gray-100 line-clamp-3">
+                                                    {item.message}
+                                                </p>
+                                                <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-100">
+                                                    <button
+                                                        type="button"
+                                                        disabled={feedbackActionId === item.id}
+                                                        onClick={(e) => handleMarkFeedbackReview(item, e)}
+                                                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-brand-primary text-white text-xs font-black hover:bg-brand-primary/90 disabled:opacity-50"
+                                                    >
+                                                        {feedbackActionId === item.id ? <FaSpinner className="animate-spin" /> : <FaCheck />}
+                                                        סמן בטיפול
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => navigate('/super-admin/feedback?status=new')}
+                                                        className="px-3 py-2 text-xs font-bold text-gray-500 hover:text-gray-900"
+                                                    >
+                                                        פרטים מלאים
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                        {pendingFeedbackCount > pendingFeedback.length && (
+                                            <button
+                                                type="button"
+                                                onClick={() => navigate('/super-admin/feedback?status=new')}
+                                                className="w-full py-2 text-xs font-black text-brand-primary hover:underline"
+                                            >
+                                                ועוד {pendingFeedbackCount - pendingFeedback.length} משובים…
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
+
+                                {pendingDomainCount > 0 && (
+                                    <div className="space-y-3">
+                                        <div className="flex items-center justify-between gap-2 px-1">
+                                            <h3 className="text-xs font-black text-amber-900 uppercase tracking-wide flex items-center gap-2">
+                                                <FaGlobe size={12} />
+                                                בקשות דומיין ({pendingDomainCount})
+                                            </h3>
+                                            <button
+                                                type="button"
+                                                onClick={() => navigate('/super-admin/domain-requests')}
+                                                className="text-[10px] font-black text-brand-primary hover:underline"
+                                            >
+                                                לכל הבקשות
+                                            </button>
+                                        </div>
+                                        {pendingDomainRequests.map((item) => (
+                                            <div
+                                                key={`domain-${item.id}`}
+                                                className="bg-white rounded-2xl border border-amber-200 shadow-sm p-4 sm:p-5 space-y-3"
+                                            >
+                                                <div className="flex flex-wrap items-start justify-between gap-2">
+                                                    <div className="min-w-0">
+                                                        <h3 className="font-black text-gray-900">{item.restaurant?.name || 'מסעדה'}</h3>
+                                                        <p className="text-xs text-gray-400 font-bold">
+                                                            {item.request_number} · {DOMAIN_TYPE_LABELS[item.type] || item.type}
+                                                        </p>
+                                                        {item.domain_name && (
+                                                            <p className="text-xs font-mono text-gray-600 mt-1" dir="ltr">{item.domain_name}</p>
+                                                        )}
+                                                    </div>
+                                                    <span className="text-[10px] font-black bg-gray-100 text-gray-800 px-2 py-1 rounded-lg shrink-0">
+                                                        {DOMAIN_STATUS_LABELS[item.status] || item.status}
+                                                    </span>
+                                                </div>
+                                                <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-100">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => navigate('/super-admin/domain-requests')}
+                                                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-brand-primary text-white text-xs font-black hover:bg-brand-primary/90"
+                                                    >
+                                                        <FaGlobe size={10} />
+                                                        טיפול בבקשה
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                        {pendingDomainCount > pendingDomainRequests.length && (
+                                            <button
+                                                type="button"
+                                                onClick={() => navigate('/super-admin/domain-requests')}
+                                                className="w-full py-2 text-xs font-black text-brand-primary hover:underline"
+                                            >
+                                                ועוד {pendingDomainCount - pendingDomainRequests.length} בקשות דומיין…
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>
@@ -685,15 +908,6 @@ export default function SuperAdminDashboard() {
                             subtext="הכנסה חודשית חוזרת"
                             icon={<FaCreditCard size={18} />}
                             color="blue"
-                        />
-                        <StatCard
-                            label="משוב משתמשים"
-                            value={stats.saas?.feedback_new || 0}
-                            subtext={(stats.saas?.feedback_new || 0) > 0 ? 'משובים חדשים — לחץ לטיפול' : 'אין משובים חדשים'}
-                            icon={<FaCommentDots size={18} />}
-                            color="amber"
-                            alert={(stats.saas?.feedback_new || 0) > 0}
-                            onClick={() => navigate('/super-admin/feedback?status=new')}
                         />
                         <StatCard
                             label="שגיאות מערכת"

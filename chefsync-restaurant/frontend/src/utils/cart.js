@@ -77,7 +77,7 @@ export const normalizeAddon = (addon) => {
     return base;
 };
 
-export const buildCartKey = (menuItemId, variant, addons = []) => {
+export const buildCartKey = (menuItemId, variant, addons = [], notes = '') => {
     const variantKey = variant?.id ?? 'base';
     const addonsKey = addons.length
         ? addons
@@ -86,8 +86,9 @@ export const buildCartKey = (menuItemId, variant, addons = []) => {
             .sort()
             .join('|')
         : 'none';
+    const notesKey = notes && String(notes).trim() ? String(notes).trim() : 'none';
 
-    return `${menuItemId}::${variantKey}::${addonsKey}`;
+    return `${menuItemId}::${variantKey}::${addonsKey}::${notesKey}`;
 };
 
 /** סיכום תוספות ללא פטור — לקבוצה או לכל הסל כשאין מטא־קבוצה */
@@ -211,10 +212,11 @@ export const normalizeCartItem = (rawItem) => {
         ? rawItem.addons.map(normalizeAddon).filter(Boolean)
         : [];
     const qty = Math.max(1, Math.round(sanitizeNumber(rawItem.qty ?? rawItem.quantity ?? 1, 1)));
+    const notes = typeof rawItem.notes === 'string' ? rawItem.notes.trim().slice(0, 20) : '';
     const unitPrice = rawItem.unitPrice
         ? sanitizeNumber(rawItem.unitPrice)
         : calculateUnitPrice(basePrice, variant, addons);
-    const cartKey = rawItem.cartKey ?? buildCartKey(menuItemId, variant, addons);
+    const cartKey = rawItem.cartKey ?? buildCartKey(menuItemId, variant, addons, notes);
 
     return {
         cartKey,
@@ -223,6 +225,7 @@ export const normalizeCartItem = (rawItem) => {
         basePrice,
         variant,
         addons,
+        notes: notes || undefined,
         qty,
         unitPrice,
         totalPrice: Number((unitPrice * qty).toFixed(2)),

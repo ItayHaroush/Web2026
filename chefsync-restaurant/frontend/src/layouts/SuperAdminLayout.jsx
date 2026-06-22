@@ -25,6 +25,7 @@ import {
     FaCommentDots,
     FaFunnelDollar,
     FaLifeRing,
+    FaGlobe,
 } from 'react-icons/fa';
 import { resolveSuperAdminPageKey } from '../utils/pageViewMap';
 import { sendSuperAdminPageView } from '../services/analyticsBeacon';
@@ -80,6 +81,7 @@ export default function SuperAdminLayout({ children }) {
         { type: 'header', label: 'ניטור ותמיכה', icon: <FaLifeRing /> },
         { label: 'מרכז התראות', path: '/super-admin/notification-center', icon: <FaBell /> },
         { label: 'משוב משתמשים', path: '/super-admin/feedback', icon: <FaCommentDots /> },
+        { label: 'בקשות דומיין', path: '/super-admin/domain-requests', icon: <FaGlobe /> },
         { label: 'לוגים והזמנות', path: '/super-admin/order-debug', icon: <FaClipboardList /> },
 
         { type: 'header', label: 'מערכת', icon: <FaCogs /> },

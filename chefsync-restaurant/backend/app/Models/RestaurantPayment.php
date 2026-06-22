@@ -32,20 +32,36 @@ class RestaurantPayment extends Model
         'paid_at' => 'datetime',
     ];
 
+    /** סוגי תשלום דומיין מותאם */
+    public const DOMAIN_TYPES = ['domain_connect', 'domain_full_service'];
+
     /** סוגי תשלום שמתאימים לחשבונית חודשית */
-    public const INVOICE_TYPES = ['subscription', 'abandoned_cart_package'];
+    public const INVOICE_TYPES = ['subscription', 'abandoned_cart_package', 'domain_connect', 'domain_full_service'];
 
     protected static function booted(): void
     {
         static::created(function (self $payment) {
-            if ($payment->status === 'paid' && in_array($payment->type ?? 'subscription', self::INVOICE_TYPES, true)) {
+            if ($payment->status !== 'paid') {
+                return;
+            }
+
+            $type = $payment->type ?? 'subscription';
+
+            if (in_array($type, self::DOMAIN_TYPES, true)) {
+                app(PlatformCommissionService::class)->syncInvoiceDomainFee(
+                    (int) $payment->restaurant_id,
+                    $payment->paid_at ?? $payment->created_at ?? now()
+                );
+            }
+
+            if (in_array($type, self::INVOICE_TYPES, true)) {
                 $payment->tryMarkMatchingInvoicePaid();
             }
         });
     }
 
     /**
-     * כשתשלום נרשם — בודק אם סך התשלומים (מנוי + חבילות תזכורות) מכסה את החשבונית ומסמן כשולמה
+     * כשתשלום נרשם — בודק אם סך התשלומים (מנוי + חבילות + דומיין) מכסה את החשבונית ומסמן כשולמה
      */
     private function tryMarkMatchingInvoicePaid(): void
     {
@@ -68,7 +84,7 @@ class RestaurantPayment extends Model
             return;
         }
 
-        // סך תשלומים לחודש (מנוי + חבילות תזכורות)
+        // סך תשלומים לחודש (מנוי + חבילות תזכורות + דומיין)
         $periodStart = Carbon::parse($invoice->month . '-01')->startOfMonth();
         $periodEnd = (clone $periodStart)->endOfMonth();
 

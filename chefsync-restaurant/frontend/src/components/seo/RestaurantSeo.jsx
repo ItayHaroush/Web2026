@@ -1,4 +1,5 @@
 import React from 'react';
+import { isPlatformHost } from '../../utils/platformHosts';
 
 /**
  * קומפוננטי SEO לצד-לקוח.
@@ -13,8 +14,34 @@ import React from 'react';
  *    כך שאם המשתמש משתף דף אחרי ניווט — הטאגים יהיו עדכניים.
  */
 
-const FRONTEND_URL = 'https://www.takeeat.co.il';
-const DEFAULT_LOGO = `${FRONTEND_URL}/icons/chefsync-logo-v2-512.png`;
+const PLATFORM_FRONTEND_URL = (import.meta.env.VITE_PLATFORM_URL || 'https://www.takeeat.co.il').replace(/\/$/, '');
+const DEFAULT_LOGO = `${PLATFORM_FRONTEND_URL}/icons/chefsync-logo-v2-512.png`;
+
+const getFrontendBaseUrl = () => {
+    if (typeof window !== 'undefined' && !isPlatformHost(window.location.hostname)) {
+        return window.location.origin;
+    }
+    return PLATFORM_FRONTEND_URL;
+};
+
+const isOnCustomDomainHost = () => typeof window !== 'undefined' && !isPlatformHost(window.location.hostname);
+
+const restaurantUsesCustomDomain = (restaurant) => {
+    if (isOnCustomDomainHost()) return true;
+    const domain = String(restaurant?.custom_domain || '').trim().toLowerCase();
+    if (!domain) return false;
+    return restaurant.custom_domain_ssl_status === 'active' || Boolean(restaurant.custom_domain_connected_at);
+};
+
+const getPublicSiteBase = (restaurant) => {
+    if (isOnCustomDomainHost()) {
+        return window.location.origin;
+    }
+    if (restaurant?.custom_domain && restaurantUsesCustomDomain(restaurant)) {
+        return `https://${restaurant.custom_domain.trim().toLowerCase()}`;
+    }
+    return getFrontendBaseUrl();
+};
 
 const truncate = (text, max) => {
     if (!text) return '';
@@ -23,10 +50,10 @@ const truncate = (text, max) => {
     return cleaned.slice(0, max - 1).trimEnd() + '…';
 };
 
-const resolveLogo = (logoUrl) => {
+const resolveLogo = (logoUrl, assetBase = PLATFORM_FRONTEND_URL) => {
     if (!logoUrl) return DEFAULT_LOGO;
     if (typeof logoUrl === 'string' && /^https?:\/\//i.test(logoUrl)) return logoUrl;
-    return `${FRONTEND_URL}/${String(logoUrl).replace(/^\//, '')}`;
+    return `${assetBase}/${String(logoUrl).replace(/^\//, '')}`;
 };
 
 const buildDescription = (restaurant, context) => {
@@ -57,7 +84,9 @@ const buildKeywords = (restaurant) => {
     return Array.from(new Set(kw)).join(', ');
 };
 
-function MetaTags({ title, description, keywords, robots, canonicalUrl, ogType, image }) {
+function MetaTags({ title, description, keywords, robots, canonicalUrl, ogType, image, siteName = 'TakeEat', favicon }) {
+    const faviconUrl = favicon || image;
+
     return (
         <>
             <title>{title}</title>
@@ -65,8 +94,14 @@ function MetaTags({ title, description, keywords, robots, canonicalUrl, ogType, 
             <meta name="keywords" content={keywords} />
             <meta name="robots" content={robots} />
             <link rel="canonical" href={canonicalUrl} />
+            {faviconUrl ? (
+                <>
+                    <link rel="icon" href={faviconUrl} />
+                    <link rel="apple-touch-icon" href={faviconUrl} />
+                </>
+            ) : null}
             <meta property="og:type" content={ogType} />
-            <meta property="og:site_name" content="TakeEat" />
+            <meta property="og:site_name" content={siteName} />
             <meta property="og:title" content={title} />
             <meta property="og:description" content={description} />
             <meta property="og:url" content={canonicalUrl} />
@@ -93,12 +128,19 @@ export function ShareSeo({ restaurant }) {
     const slug = restaurant.slug || restaurant.tenant_id;
     if (!slug) return null;
 
-    const canonicalUrl = `${FRONTEND_URL}/r/${encodeURIComponent(slug)}`;
-    const title = truncate(`${restaurant.name || ''} — הזמינו אונליין | TakeEat`, 65);
+    const onCustomDomain = restaurantUsesCustomDomain(restaurant);
+    const siteBase = getPublicSiteBase(restaurant);
+    const canonicalUrl = onCustomDomain
+        ? `${siteBase}/`
+        : `${siteBase}/r/${encodeURIComponent(slug)}`;
+    const title = onCustomDomain
+        ? truncate(`${restaurant.name || ''} — הזמינו אונליין`, 65)
+        : truncate(`${restaurant.name || ''} — הזמינו אונליין | TakeEat`, 65);
     const description = buildDescription(restaurant, 'share');
-    const image = resolveLogo(restaurant.logo_url);
+    const image = resolveLogo(restaurant.logo_url, siteBase);
     const keywords = buildKeywords(restaurant);
     const robots = restaurant.is_approved ? 'index, follow' : 'noindex, nofollow';
+    const siteName = onCustomDomain ? (restaurant.name || 'TakeEat') : 'TakeEat';
 
     return (
         <MetaTags
@@ -109,6 +151,8 @@ export function ShareSeo({ restaurant }) {
             canonicalUrl={canonicalUrl}
             ogType="restaurant.restaurant"
             image={image}
+            siteName={siteName}
+            favicon={image}
         />
     );
 }
@@ -126,12 +170,19 @@ export function MenuSeo({ restaurant, menuSections = null }) { // eslint-disable
     const tenantId = restaurant.tenant_id;
     if (!tenantId) return null;
 
-    const canonicalUrl = `${FRONTEND_URL}/${encodeURIComponent(tenantId)}/menu`;
-    const title = truncate(`תפריט ${restaurant.name || ''} | TakeEat`, 65);
+    const onCustomDomain = restaurantUsesCustomDomain(restaurant);
+    const siteBase = getPublicSiteBase(restaurant);
+    const canonicalUrl = onCustomDomain
+        ? `${siteBase}/`
+        : `${siteBase}/${encodeURIComponent(tenantId)}/menu`;
+    const title = onCustomDomain
+        ? truncate(`תפריט ${restaurant.name || ''}`, 65)
+        : truncate(`תפריט ${restaurant.name || ''} | TakeEat`, 65);
     const description = buildDescription(restaurant, 'menu');
-    const image = resolveLogo(restaurant.logo_url);
+    const image = resolveLogo(restaurant.logo_url, siteBase);
     const keywords = buildKeywords(restaurant);
     const robots = restaurant.is_approved ? 'index, follow' : 'noindex, nofollow';
+    const siteName = onCustomDomain ? (restaurant.name || 'TakeEat') : 'TakeEat';
 
     return (
         <MetaTags
@@ -142,6 +193,8 @@ export function MenuSeo({ restaurant, menuSections = null }) { // eslint-disable
             canonicalUrl={canonicalUrl}
             ogType="restaurant.menu"
             image={image}
+            siteName={siteName}
+            favicon={image}
         />
     );
 }
@@ -152,7 +205,7 @@ export function MenuSeo({ restaurant, menuSections = null }) { // eslint-disable
  * כך שגוגל רואה אותו בעת הסריקה. כאן רק meta-tags לצורך ניווט SPA פנימי.
  */
 export function RestaurantsListSeo({ city = null }) {
-    const canonicalUrl = `${FRONTEND_URL}/restaurants${city ? `?city=${encodeURIComponent(city)}` : ''}`;
+    const canonicalUrl = `${PLATFORM_FRONTEND_URL}/restaurants${city ? `?city=${encodeURIComponent(city)}` : ''}`;
     const title = city
         ? `מסעדות ב${city} · הזמנת אוכל אונליין | TakeEat`
         : 'כל המסעדות ב-TakeEat · הזמנת אוכל אונליין בישראל | טייק איט';
@@ -177,7 +230,7 @@ export function RestaurantsListSeo({ city = null }) {
 }
 
 export function NewRestaurantsSeo() {
-    const canonicalUrl = `${FRONTEND_URL}/restaurants/new`;
+    const canonicalUrl = `${PLATFORM_FRONTEND_URL}/restaurants/new`;
     const title = 'מסעדות חדשות ב-TakeEat · הזמנת אוכל מהמסעדות החדשות בישראל';
     const description = 'מסעדות שנרשמו ל-TakeEat לאחרונה, כולל מקומות בטרם אישור סופי. גלו מקומות חדשים — הזמנה אונליין, משלוח ואיסוף עצמי כשהמסעדה פעילה.';
     const keywords = 'מסעדות חדשות, מסעדה חדשה, פתיחה, TakeEat, טייק איט, הזמנת אוכל, משלוח אוכל';
@@ -196,7 +249,7 @@ export function NewRestaurantsSeo() {
 }
 
 export function LandingSeo() {
-    const canonicalUrl = `${FRONTEND_URL}/landing`;
+    const canonicalUrl = `${PLATFORM_FRONTEND_URL}/landing`;
     const title = 'מערכת הזמנות למסעדה · ללא עמלות על הזמנה | TakeEat';
     const description = 'TakeEat — מערכת הזמנות מלאה למסעדה: תפריט דיגיטלי, ניהול הזמנות, סליקה, משלוחים ודוחות. דמי מנוי חודשיים קבועים, ללא עמלה על כל הזמנה. חלופה לאפליקציות המשלוחים לבעלי מסעדות.';
     const keywords = 'מערכת הזמנות למסעדה, מערכת ניהול מסעדה, תפריט דיגיטלי למסעדה, סליקה למסעדה, מסעדה דיגיטלית, חלופה לאפליקציות משלוחים, מסעדה ללא עמלות, TakeEat, טייק איט';
@@ -215,7 +268,7 @@ export function LandingSeo() {
 }
 
 export function AboutSeo() {
-    const canonicalUrl = `${FRONTEND_URL}/about`;
+    const canonicalUrl = `${PLATFORM_FRONTEND_URL}/about`;
     const title = 'איך זה עובד · מה זה TakeEat? | טייק איט';
     const description = 'TakeEat (טייק איט) היא פלטפורמה ישראלית להזמנת אוכל ישירות מהמסעדה — ללא עמלות מוגזמות. גלו איך זה עובד: משלוח מהיר, איסוף עצמי, תפריט דיגיטלי מלא ותשלום מאובטח.';
     const keywords = 'מה זה TakeEat, איך זה עובד, הזמנת אוכל ללא עמלות, ישירות מהמסעדה, טייק איט, ChefSync, מערכת הזמנות למסעדה';
@@ -239,7 +292,7 @@ export function AboutSeo() {
  * כשמשתמש מנווט חזרה אל / אחרי שביקר בדף מסעדה.
  */
 export function HomeSeo() {
-    const canonicalUrl = `${FRONTEND_URL}/`;
+    const canonicalUrl = `${PLATFORM_FRONTEND_URL}/`;
     const title = 'TakeEat · הזמנת אוכל אונליין מהמסעדות בישראל | טייק איט';
     const description = 'TakeEat (טייק איט) – הזמנת אוכל אונליין מהמסעדות המובילות בישראל. משלוח מהיר, איסוף עצמי, תפריט מלא, תשלום מאובטח ומעקב הזמנה בזמן אמת. הזמינו עכשיו במחיר מהמסעדה.';
     const keywords = 'הזמנת אוכל, הזמנת אוכל אונליין, משלוח אוכל, משלוחי אוכל, איסוף עצמי, מסעדות, תפריט אונליין, הזמנה ממסעדה, טייק איט, TakeEat, ChefSync, מערכת הזמנות למסעדה';

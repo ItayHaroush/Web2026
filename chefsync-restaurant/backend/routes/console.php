@@ -26,6 +26,8 @@ Schedule::command('emails:monthly-report')->monthlyOn(1, '08:00');
 Schedule::command('reports:generate-daily')->dailyAt('02:00');
 Schedule::command('reports:send-notifications')->dailyAt('02:15');
 
+Schedule::command('domains:sync-status')->everyFifteenMinutes();
+
 // SEO audit — ביקורת ביצועים שבועית על דפי המסעדות
 if (env('PAGESPEED_API_KEY')) {
     Schedule::command('seo:audit --limit=20 --strategy=mobile')

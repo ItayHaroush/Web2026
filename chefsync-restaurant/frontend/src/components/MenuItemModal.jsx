@@ -39,6 +39,7 @@ export default function MenuItemModal({
     const [addonOnSide, setAddonOnSide] = useState({}); // { addonId: true/false }
     const [addonPlacement, setAddonPlacement] = useState({}); // { addonId: 'whole'|'right'|'left' }
     const [addonQuantities, setAddonQuantities] = useState({}); // { addonId: quantity }
+    const [itemNote, setItemNote] = useState('');
     const [qty, setQty] = useState(1);
 
     useEffect(() => {
@@ -47,6 +48,7 @@ export default function MenuItemModal({
         setAddonOnSide({});
         setAddonPlacement({});
         setAddonQuantities({});
+        setItemNote('');
         setQty(1);
     }, [defaultVariantId, defaultAddonState, item?.id]);
 
@@ -275,6 +277,7 @@ export default function MenuItemModal({
             basePrice,
             variant: normalizedVariant || undefined,
             addons: normalizedAddons,
+            notes: item.allow_item_note && itemNote.trim() ? itemNote.trim() : undefined,
             qty,
             imageUrl: item.image_url,
             categoryId: item.category_id,
@@ -528,6 +531,23 @@ export default function MenuItemModal({
                                     </div>
                                 );
                             })}
+                        </div>
+                    )}
+
+                    {item.allow_item_note && (
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                                <h3 className="text-lg font-semibold text-brand-dark dark:text-brand-dark-text">הערה למנה</h3>
+                                <span className="text-xs text-gray-500">{itemNote.length}/20</span>
+                            </div>
+                            <input
+                                type="text"
+                                value={itemNote}
+                                maxLength={20}
+                                onChange={(e) => setItemNote(e.target.value)}
+                                placeholder="למשל: בלי בצל, רוטב בצד..."
+                                className="w-full rounded-xl border border-gray-200 dark:border-brand-dark-border bg-gray-50 dark:bg-brand-dark-bg px-4 py-3 text-sm text-brand-dark dark:text-brand-dark-text placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-primary/30"
+                            />
                         </div>
                     )}
 

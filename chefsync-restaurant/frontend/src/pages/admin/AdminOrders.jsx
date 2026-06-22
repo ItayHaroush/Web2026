@@ -1074,6 +1074,11 @@ export default function AdminOrders() {
                                                                                 </div>
                                                                             );
                                                                         })()}
+                                                                        {item.notes && (
+                                                                            <div className="text-[11px] font-medium text-amber-700 bg-amber-50/70 px-2 py-1 rounded-lg w-fit">
+                                                                                הערה: {item.notes}
+                                                                            </div>
+                                                                        )}
                                                                     </div>
                                                                     <div className="text-left">
                                                                         <div className="font-black text-gray-900 text-lg leading-none">₪{lineTotal}</div>

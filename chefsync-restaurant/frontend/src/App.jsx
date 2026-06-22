@@ -9,6 +9,7 @@ import { PromotionProvider } from './context/PromotionContext';
 import { ToastProvider } from './context/ToastContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { CustomerProvider } from './context/CustomerContext';
+import CustomDomainBootstrap from './components/CustomDomainBootstrap';
 import DevModeBanner from './components/DevModeBanner';
 import AnalyticsPublicTracker from './components/AnalyticsPublicTracker';
 import NativePushBridge from './components/NativePushBridge';
@@ -113,6 +114,7 @@ const AdminSettingsHub = lazyWithRetry(() => import('./pages/admin/AdminSettings
 const AdminRestaurantGuide = lazyWithRetry(() => import('./pages/admin/AdminRestaurantGuide'));
 const AdminAbandonedCartReminders = lazyWithRetry(() => import('./pages/admin/AdminAbandonedCartReminders'));
 const AdminSoundSettings = lazyWithRetry(() => import('./pages/admin/AdminSoundSettings'));
+const AdminCustomDomain = lazyWithRetry(() => import('./pages/admin/AdminCustomDomain'));
 
 // סופר-אדמין
 const SuperAdminDashboard = lazyWithRetry(() => import('./pages/super-admin/SuperAdminDashboard'));
@@ -138,6 +140,7 @@ const SuperAdminNotificationCenter = lazyWithRetry(() => import('./pages/super-a
 const SuperAdminEmailManagement = lazyWithRetry(() => import('./pages/super-admin/SuperAdminEmailManagement'));
 const SuperAdminAnnouncements = lazyWithRetry(() => import('./pages/super-admin/SuperAdminAnnouncements'));
 const SuperAdminFeedback = lazyWithRetry(() => import('./pages/super-admin/SuperAdminFeedback'));
+const SuperAdminDomainRequests = lazyWithRetry(() => import('./pages/super-admin/SuperAdminDomainRequests'));
 const SuperAdminHolidays = lazyWithRetry(() => import('./pages/super-admin/SuperAdminHolidays'));
 
 import { Toaster } from 'react-hot-toast';
@@ -484,6 +487,14 @@ function AppRoutes() {
             }
           />
           <Route
+            path="/admin/custom-domain"
+            element={
+              <AdminRoute>
+                <AdminCustomDomain />
+              </AdminRoute>
+            }
+          />
+          <Route
             path="/admin/settings"
             element={
               <AdminRoute>
@@ -672,6 +683,14 @@ function AppRoutes() {
               </SuperAdminRoute>
             }
           />
+          <Route
+            path="/super-admin/domain-requests"
+            element={
+              <SuperAdminRoute>
+                <SuperAdminDomainRequests />
+              </SuperAdminRoute>
+            }
+          />
           <Route path="/super-admin/churn-requests" element={<Navigate to="/super-admin/dashboard" replace />} />
           <Route
             path="/super-admin/holidays"
@@ -736,7 +755,9 @@ export default function App() {
                     <CartProvider>
                       <CustomerProvider>
                         <PromotionProvider>
-                          <AppRoutes />
+                          <CustomDomainBootstrap>
+                            <AppRoutes />
+                          </CustomDomainBootstrap>
                           <Toaster position="bottom-right" />
                           {!new URLSearchParams(window.location.search).has('embed') && (
                             <>

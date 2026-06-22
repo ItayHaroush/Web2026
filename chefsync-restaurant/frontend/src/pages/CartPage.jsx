@@ -25,6 +25,11 @@ import CartCheckoutWizard from '../components/CartCheckoutWizard';
 import { resolveAssetUrl } from '../utils/assets';
 import { notifyActiveOrdersStorageChanged } from '../utils/activeOrdersStorage';
 import { computeClientPromotionDiscount } from '../utils/promotionDiscountPreview';
+import {
+    buildOrderSubmitFingerprint,
+    clearOrderIdempotencyKey,
+    getOrCreateOrderIdempotencyKey,
+} from '../utils/orderIdempotency';
 
 /**
  * עמוד סל קניות
@@ -41,6 +46,7 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
     const [showDeliveryModal, setShowDeliveryModal] = useState(false);
     const [showLocationModal, setShowLocationModal] = useState(false);
     const [showConfirmation, setShowConfirmation] = useState(false);
+    const orderSubmitLockRef = useRef(false);
     const [deliveryLocation, setDeliveryLocation] = useState(null);
     const [deliveryFee, setDeliveryFee] = useState(0);
 
@@ -509,11 +515,29 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
     };
 
     const handleConfirmOrder = async () => {
+        if (orderSubmitLockRef.current || submitting) {
+            return;
+        }
+
+        orderSubmitLockRef.current = true;
+
         try {
             setSubmitting(true);
             if (!isPreviewMode) trackStage('order_submit_attempt', STAGE.ORDER_SUBMIT, { amount: getTotal() });
 
+            const appliedPromotions = getAppliedPromotions();
+            const resolvedTenantSlug = tenantId || localStorage.getItem('tenantId');
+            const submitFingerprint = buildOrderSubmitFingerprint({
+                cartItems,
+                customerInfo,
+                effectivePaymentMethod,
+                scheduledFor,
+                appliedPromotions,
+            });
+            const idempotencyKey = getOrCreateOrderIdempotencyKey(resolvedTenantSlug, submitFingerprint);
+
             const orderData = {
+                idempotency_key: idempotencyKey,
                 customer_name: customerInfo.name,
                 customer_phone: customerInfo.phone,
                 delivery_method: customerInfo.delivery_method || 'pickup',
@@ -543,19 +567,21 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                         quantity: addon.quantity || 1,
                         ...(addon.placement && addon.placement !== 'whole' ? { placement: addon.placement } : {}),
                     })),
+                    notes: item.notes || undefined,
                     qty: item.qty,
                 })),
                 // הוספת שדות test אם זה מצב preview
                 is_test: isPreviewMode || false,
                 test_note: isPreviewMode ? 'הזמנה מתצוגה מקדימה - Admin' : undefined,
                 // מבצעים שהלקוח עומד בתנאים שלהם
-                applied_promotions: getAppliedPromotions(),
+                applied_promotions: appliedPromotions,
                 // הזמנה עתידית
                 scheduled_for: scheduledFor || undefined,
             };
             console.log('📦 Sending order data:', orderData);
             console.log('📞 Customer info for SMS:', customerInfo);
             const response = await orderService.createOrder(orderData);
+            clearOrderIdempotencyKey(resolvedTenantSlug);
             if (!isPreviewMode) {
                 trackStage('order_created', STAGE.ORDER_CREATED, {
                     orderId: response?.data?.id,
@@ -567,7 +593,6 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                     },
                 });
             }
-            const resolvedTenantSlug = tenantId || localStorage.getItem('tenantId');
             if (resolvedTenantSlug) {
                 // Multi-order: שומר מערך של הזמנות פעילות
                 const key = `activeOrders_${resolvedTenantSlug}`;
@@ -630,6 +655,7 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                 setError(err.response?.data?.message || 'שגיאה בהגשת ההזמנה');
             }
         } finally {
+            orderSubmitLockRef.current = false;
             setSubmitting(false);
         }
     };
@@ -1024,6 +1050,11 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                                                         בצד: {addonsOnSide.join(' · ')}
                                                     </p>
                                                 )}
+                                                {item.notes && (
+                                                    <p className="text-amber-700 dark:text-amber-400">
+                                                        הערה: {item.notes}
+                                                    </p>
+                                                )}
                                                 <p className="text-gray-500 dark:text-gray-500">
                                                     ₪{item.unitPrice.toFixed(2)} ליחידה × {item.qty}
                                                 </p>
@@ -1045,6 +1076,11 @@ export default function CartPage({ isPreviewMode: propIsPreviewMode = false }) {
                                                         <p className="text-sm text-orange-600 font-medium flex items-center gap-1">
                                                             <FaBoxOpen />
                                                             <span>בצד: {addonsOnSide.join(' · ')}</span>
+                                                        </p>
+                                                    )}
+                                                    {item.notes && (
+                                                        <p className="text-sm text-amber-700 dark:text-amber-400 font-medium">
+                                                            הערה: {item.notes}
                                                         </p>
                                                     )}
                                                     <p className="text-xs text-gray-500">₪{item.unitPrice.toFixed(2)} ליחידה</p>

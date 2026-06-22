@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Mail\RestaurantApprovedMail;
+use App\Models\DomainRequest;
 use App\Models\City;
 use App\Models\Order;
 use App\Models\PageVisit;
@@ -132,6 +133,8 @@ class SuperAdminController extends Controller
             ->whereNotNull('deletion_requested_at')
             ->count();
 
+        $pendingDomainRequests = DomainRequest::whereIn('status', DomainRequest::BLOCKING_STATUSES)->count();
+
         // מסעדות לפי סטטוס (פעילות מאומתות = approved + trial/active)
         $restaurantsByStatus = [
             'active' => $activeVerifiedCount,
@@ -161,6 +164,7 @@ class SuperAdminController extends Controller
                     'failed_payments_recent' => $failedPaymentsRecent,
                     'system_errors_unresolved' => $recentSystemErrors,
                     'pending_cancellation_requests' => $pendingCancellationCount,
+                    'pending_domain_requests' => $pendingDomainRequests,
                     'feedback_new' => $feedbackNew,
                 ],
                 'analytics_today' => $analyticsToday,

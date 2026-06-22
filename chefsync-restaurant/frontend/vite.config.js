@@ -24,6 +24,13 @@ export default defineConfig({
   define: {
     __APP_DEPLOY_VERSION__: JSON.stringify(appDeployVersion),
   },
+  server: {
+    // Bind explicitly on loopback so pizza-abc.co.il (/etc/hosts → 127.0.0.1) reaches Vite
+    host: '127.0.0.1',
+    port: 5173,
+    // Vite 7 blocks unknown Host headers without this
+    allowedHosts: true,
+  },
   build: {
     target: 'es2020', // ⚠️ Safer target for wider compatibility (In-App Browsers)
     sourcemap: true,   // ✅ Enable source maps for debugging production errors

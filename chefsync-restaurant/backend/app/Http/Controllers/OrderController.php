@@ -28,6 +28,8 @@ use App\Services\RestaurantPaymentService;
 use App\Services\SystemErrorReporter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
+use Illuminate\Database\QueryException;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -82,6 +84,7 @@ class OrderController extends Controller
                 'items.*.addons.*.placement' => 'nullable|string|in:whole,right,left,right_half,left_half',
                 'items.*.qty' => 'nullable|integer|min:1',
                 'items.*.quantity' => 'nullable|integer|min:1',
+                'items.*.notes' => 'nullable|string|max:20',
                 'is_test' => 'nullable|boolean',        // הזמנת בדיקה (מצב preview)
                 'test_note' => 'nullable|string|max:255', // הערה להזמנת בדיקה
                 'scheduled_for' => 'nullable|date', // הזמנה עתידית — מינימום זמן נבדק מול המסעדה
@@ -89,7 +92,25 @@ class OrderController extends Controller
                 'applied_promotions.*.promotion_id' => 'required|integer',
                 'applied_promotions.*.gift_items' => 'nullable|array',
                 'applied_promotions.*.gift_items.*.menu_item_id' => 'required|integer|exists:menu_items,id',
+                'idempotency_key' => 'nullable|uuid',
             ]);
+
+            $tenantId = app('tenant_id');
+            $idempotencyKey = $validated['idempotency_key'] ?? null;
+            if (is_string($idempotencyKey) && Str::isUuid($idempotencyKey)) {
+                $existingOrder = Order::withoutGlobalScopes()
+                    ->where('tenant_id', $tenantId)
+                    ->where('idempotency_key', $idempotencyKey)
+                    ->first();
+                if ($existingOrder) {
+                    Log::info('Order idempotent replay', [
+                        'order_id' => $existingOrder->id,
+                        'idempotency_key' => $idempotencyKey,
+                    ]);
+
+                    return $this->buildStoreResponse($existingOrder, idempotent: true);
+                }
+            }
 
             Log::info('Order request received', [
                 'delivery_method' => $validated['delivery_method'],
@@ -112,7 +133,6 @@ class OrderController extends Controller
                 ], 422);
             }
 
-            $tenantId = app('tenant_id');
             $restaurant = Restaurant::with([
                 'variants' => function ($variantQuery) {
                     $variantQuery->where('is_active', true)->orderBy('sort_order');
@@ -518,6 +538,15 @@ class OrderController extends Controller
                 // so we store the name/delta but keep variant_id null to satisfy FK constraint.
                 $variantIdForDb = $variantSourceIsRestaurant ? null : ($selectedVariant?->id);
 
+                $itemNote = isset($itemData['notes']) ? trim((string) $itemData['notes']) : '';
+                if ($itemNote === '') {
+                    $itemNote = null;
+                } elseif (! ($menuItem->allow_item_note ?? false)) {
+                    throw ValidationException::withMessages([
+                        "items.$index.notes" => ['הפריט "' . $menuItem->name . '" אינו מאפשר הערה למנה'],
+                    ]);
+                }
+
                 $lineItems[] = [
                     'menu_item_id' => $menuItem->id,
                     'category_id' => $menuItem->category_id,
@@ -528,6 +557,7 @@ class OrderController extends Controller
                     'variant_price_delta' => $variantDelta,
                     'addons' => array_values($addonsDetails),
                     'addons_total' => $addonsTotal,
+                    'notes' => $itemNote,
                     'price_at_order' => $unitPrice,
                 ];
             }
@@ -585,11 +615,13 @@ class OrderController extends Controller
             $paymentMethod = $validated['payment_method'];
             $paymentStatus = Order::PAYMENT_PENDING;
 
-            $order = Order::create([
-                'tenant_id' => $tenantId,
-                'restaurant_id' => $restaurantId,
-                'correlation_id' => \Illuminate\Support\Str::uuid()->toString(),
-                'customer_name' => $validated['customer_name'],
+            try {
+                $order = Order::create([
+                    'tenant_id' => $tenantId,
+                    'restaurant_id' => $restaurantId,
+                    'correlation_id' => \Illuminate\Support\Str::uuid()->toString(),
+                    'idempotency_key' => $idempotencyKey,
+                    'customer_name' => $validated['customer_name'],
                 'customer_phone' => $normalizedCustomerPhone,
                 'delivery_method' => $validated['delivery_method'],
                 'payment_method' => $paymentMethod,
@@ -616,7 +648,25 @@ class OrderController extends Controller
                 'is_future_order' => ! empty($validated['scheduled_for']),
                 'promotion_discount' => $promotionDiscount,
                 'total_amount' => $totalAmount + $deliveryFee - $promotionDiscount,
-            ]);
+                ]);
+            } catch (QueryException $e) {
+                if ($this->isDuplicateIdempotencyKey($e) && is_string($idempotencyKey)) {
+                    $existingOrder = Order::withoutGlobalScopes()
+                        ->where('tenant_id', $tenantId)
+                        ->where('idempotency_key', $idempotencyKey)
+                        ->first();
+                    if ($existingOrder) {
+                        Log::info('Order idempotent replay after duplicate insert', [
+                            'order_id' => $existingOrder->id,
+                            'idempotency_key' => $idempotencyKey,
+                        ]);
+
+                        return $this->buildStoreResponse($existingOrder, idempotent: true);
+                    }
+                }
+
+                throw $e;
+            }
 
             foreach ($lineItems as $lineItem) {
                 OrderItem::create([
@@ -629,6 +679,7 @@ class OrderController extends Controller
                     'variant_price_delta' => $lineItem['variant_price_delta'],
                     'addons' => $lineItem['addons'],
                     'addons_total' => $lineItem['addons_total'],
+                    'notes' => $lineItem['notes'] ?? null,
                     'quantity' => $lineItem['quantity'],
                     'price_at_order' => $lineItem['price_at_order'],
                 ]);
@@ -832,13 +883,10 @@ class OrderController extends Controller
                 }
             }
 
-            return response()->json([
-                'success' => true,
-                'message' => 'הזמנה נקבלה בהצלחה',
-                'data' => $order->load(['items.menuItem', 'items.variant']),
-                'payment_url' => $paymentUrl,
-                'session_token' => $sessionToken,
-            ], 201);
+            return $this->buildStoreResponse(
+                $order->load(['items.menuItem', 'items.variant']),
+                idempotent: false
+            );
         } catch (\Illuminate\Validation\ValidationException $e) {
             Log::warning('Order validation failed', [
                 'errors' => $e->errors(),
@@ -1750,5 +1798,60 @@ class OrderController extends Controller
                 'error' => $e->getMessage(),
             ], 500);
         }
+    }
+
+    /**
+     * תגובת store — כולל payment_url קיים (גם ב-idempotent replay).
+     */
+    private function buildStoreResponse(Order $order, bool $idempotent = false): \Illuminate\Http\JsonResponse
+    {
+        $order->loadMissing(['items.menuItem', 'items.variant']);
+        $paymentMethod = $order->payment_method;
+        $paymentUrl = null;
+        $sessionToken = null;
+
+        $restaurant = Restaurant::withoutGlobalScope('tenant')->find($order->restaurant_id);
+        $restaurantPaymentService = app(RestaurantPaymentService::class);
+
+        if ($restaurant && $restaurantPaymentService->isRestaurantReady($restaurant, $paymentMethod)) {
+            $session = PaymentSession::where('order_id', $order->id)
+                ->whereIn('status', ['pending', 'partial'])
+                ->where(function ($q) {
+                    $q->whereNull('expires_at')->orWhere('expires_at', '>', now());
+                })
+                ->latest()
+                ->first();
+
+            if ($session) {
+                $paymentUrl = $session->payment_url
+                    ?: $restaurantPaymentService->generateOrderPaymentUrl($restaurant, $order, $session);
+                if (! $session->payment_url && $paymentUrl) {
+                    $session->update(['payment_url' => $paymentUrl]);
+                }
+                $sessionToken = $session->session_token;
+            }
+        }
+
+        if ($paymentMethod !== 'credit_card') {
+            $paymentUrl = null;
+            $sessionToken = null;
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => $idempotent ? 'ההזמנה כבר נוצרה' : 'הזמנה נקבלה בהצלחה',
+            'data' => $order,
+            'payment_url' => $paymentUrl,
+            'session_token' => $sessionToken,
+            'idempotent' => $idempotent,
+        ], $idempotent ? 200 : 201);
+    }
+
+    private function isDuplicateIdempotencyKey(QueryException $e): bool
+    {
+        $message = $e->getMessage();
+
+        return str_contains($message, 'orders_tenant_idempotency_unique')
+            || str_contains($message, 'Duplicate entry');
     }
 }

@@ -31,6 +31,7 @@ class MenuItem extends Model
         'addons_group_scope',
         'max_addons',
         'dine_in_adjustment',
+        'allow_item_note',
         'addon_selection_weight',  // משקל בחירה כשהפריט מוצג כתוספת מקושרת לקטגוריה (null=ברירת מחדל קבוצה)
         'availability_start_time', // שעת התחלת זמינות יומית (null = כל היום)
         'availability_end_time',   // שעת סיום זמינות יומית
@@ -46,6 +47,7 @@ class MenuItem extends Model
         'max_addons' => 'integer',
         'allergen_tags' => 'array',  // JSON array של אלרגנים
         'dine_in_adjustment' => 'decimal:2',
+        'allow_item_note' => 'boolean',
         'addon_selection_weight' => 'integer',
         'availability_days' => 'array',
         'wolt_external_id' => 'string',

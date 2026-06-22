@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Restaurant;
+use App\Services\HostTenantResolver;
 use App\Services\SeoRenderer;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -52,11 +53,18 @@ class SeoController extends Controller
     public function showMenu(Request $request, string $tenantId): Response
     {
         $tenantId = trim($tenantId);
-        $restaurant = Restaurant::withoutGlobalScopes()
-            ->where(function ($q) use ($tenantId) {
-                $q->where('tenant_id', $tenantId)->orWhere('slug', $tenantId);
-            })
-            ->first();
+        $host = app(HostTenantResolver::class)->normalizeHost($request->getHost());
+        $fromHost = app(HostTenantResolver::class)->resolveRestaurantByHost($host);
+
+        if ($fromHost) {
+            $restaurant = $fromHost;
+        } else {
+            $restaurant = Restaurant::withoutGlobalScopes()
+                ->where(function ($q) use ($tenantId) {
+                    $q->where('tenant_id', $tenantId)->orWhere('slug', $tenantId);
+                })
+                ->first();
+        }
 
         if (!$restaurant) {
             return $this->notFound();

@@ -20,10 +20,20 @@ const getTenantIdFromUrl = () => {
     }
 };
 
+const getCustomDomainTenant = () => {
+    try {
+        if (sessionStorage.getItem('customDomainHost')) {
+            return localStorage.getItem('tenantId') || '';
+        }
+    } catch {
+        return '';
+    }
+    return '';
+};
+
 // שמירת Tenant ID בשימוש המקומי
 const getTenantId = () => {
-    // URL הוא מקור אמת בכניסה ישירה; fallback ל-localStorage
-    return getTenantIdFromUrl() || localStorage.getItem('tenantId') || '';
+    return getTenantIdFromUrl() || getCustomDomainTenant() || localStorage.getItem('tenantId') || '';
 };
 
 /** לבקשות לקוח (PWA / FCM) שדורשות X-Tenant-ID — גם כשהנתיב ב-customer לא עובר interceptor */

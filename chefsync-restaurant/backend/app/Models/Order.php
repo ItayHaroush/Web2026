@@ -16,6 +16,7 @@ class Order extends Model
         'tenant_id',
         'customer_id',
         'correlation_id',
+        'idempotency_key',
         'customer_name',
         'customer_phone',
         'delivery_method',

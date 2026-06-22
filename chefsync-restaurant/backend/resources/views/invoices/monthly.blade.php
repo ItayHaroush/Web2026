@@ -500,7 +500,14 @@
                 <td class="amount-col">{{ number_format($invoice->setup_fee, 2) }} &#8362;</td>
             </tr>
             @endif
-            @if($invoice->base_fee == 0 && $invoice->commission_fee == 0 && ($invoice->abandoned_cart_fee ?? 0) == 0 && ($invoice->setup_fee ?? 0) == 0)
+            @if(($invoice->domain_fee ?? 0) > 0)
+            <tr>
+                <td>דומיין מותאם אישית</td>
+                <td>חיבור / שירות דומיין (שולם ב-HYP)</td>
+                <td class="amount-col">{{ number_format($invoice->domain_fee, 2) }} &#8362;</td>
+            </tr>
+            @endif
+            @if($invoice->base_fee == 0 && $invoice->commission_fee == 0 && ($invoice->abandoned_cart_fee ?? 0) == 0 && ($invoice->setup_fee ?? 0) == 0 && ($invoice->domain_fee ?? 0) == 0)
             <tr>
                 <td>ללא חיובים</td>
                 <td>-</td>

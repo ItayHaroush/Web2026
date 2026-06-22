@@ -175,8 +175,14 @@ class SeoRenderer
      */
     protected function buildShareMeta(Restaurant $restaurant): array
     {
-        $url = $this->frontendUrl() . '/r/' . rawurlencode($restaurant->slug ?: $restaurant->tenant_id);
-        $title = $this->truncate(($restaurant->name ?? '') . ' — הזמינו אונליין | TakeEat', 65);
+        $base = $this->publicSiteBaseForRestaurant($restaurant);
+        $onCustomDomain = $this->usesCustomDomainPublicSite($restaurant);
+        $url = $onCustomDomain
+            ? $base . '/'
+            : $base . '/r/' . rawurlencode($restaurant->slug ?: $restaurant->tenant_id);
+        $title = $onCustomDomain
+            ? $this->truncate(($restaurant->name ?? '') . ' — הזמינו אונליין', 65)
+            : $this->truncate(($restaurant->name ?? '') . ' — הזמינו אונליין | TakeEat', 65);
         $description = $this->buildDescription($restaurant, 'share');
         $image = $this->resolveLogo($restaurant);
 
@@ -188,6 +194,8 @@ class SeoRenderer
             'keywords' => $this->buildKeywords($restaurant),
             'robots' => $restaurant->is_approved ? 'index, follow' : 'noindex, nofollow',
             'jsonLd' => $this->buildRestaurantJsonLd($restaurant, $url, $image),
+            'site_name' => $onCustomDomain ? ($restaurant->name ?? 'TakeEat') : 'TakeEat',
+            'favicon' => $image,
         ];
     }
 
@@ -198,8 +206,14 @@ class SeoRenderer
      */
     protected function buildMenuMeta(Restaurant $restaurant): array
     {
-        $url = $this->frontendUrl() . '/' . rawurlencode($restaurant->tenant_id) . '/menu';
-        $title = $this->truncate('תפריט ' . ($restaurant->name ?? '') . ' | TakeEat', 65);
+        $base = $this->publicSiteBaseForRestaurant($restaurant);
+        $onCustomDomain = $this->usesCustomDomainPublicSite($restaurant);
+        $url = $onCustomDomain
+            ? $base . '/'
+            : $base . '/' . rawurlencode($restaurant->tenant_id) . '/menu';
+        $title = $onCustomDomain
+            ? $this->truncate('תפריט ' . ($restaurant->name ?? ''), 65)
+            : $this->truncate('תפריט ' . ($restaurant->name ?? '') . ' | TakeEat', 65);
         $description = $this->buildDescription($restaurant, 'menu');
         $image = $this->resolveLogo($restaurant);
 
@@ -214,6 +228,8 @@ class SeoRenderer
             'keywords' => $this->buildKeywords($restaurant),
             'robots' => $restaurant->is_approved ? 'index, follow' : 'noindex, nofollow',
             'jsonLd' => $baseJsonLd,
+            'site_name' => $onCustomDomain ? ($restaurant->name ?? 'TakeEat') : 'TakeEat',
+            'favicon' => $image,
         ];
     }
 
@@ -276,6 +292,8 @@ class SeoRenderer
         $image = $meta['image'] ? e($meta['image']) : '';
         $keywords = e($meta['keywords']);
         $robots = e($meta['robots']);
+        $siteName = e($meta['site_name'] ?? 'TakeEat');
+        $favicon = !empty($meta['favicon']) ? e($meta['favicon']) : '';
 
         $jsonLdJson = json_encode(
             $meta['jsonLd'],
@@ -294,6 +312,14 @@ class SeoRenderer
 HTML;
         }
 
+        $faviconTags = '';
+        if ($favicon) {
+            $faviconTags = <<<HTML
+    <link rel="icon" href="{$favicon}" />
+    <link rel="apple-touch-icon" href="{$favicon}" />
+HTML;
+        }
+
         return <<<HTML
     <!-- SEO: Dynamic meta injected by Laravel SeoRenderer -->
     <title>{$title}</title>
@@ -301,8 +327,9 @@ HTML;
     <meta name="keywords" content="{$keywords}" />
     <meta name="robots" content="{$robots}" />
     <link rel="canonical" href="{$url}" />
+    {$faviconTags}
     <meta property="og:type" content="restaurant.restaurant" />
-    <meta property="og:site_name" content="TakeEat" />
+    <meta property="og:site_name" content="{$siteName}" />
     <meta property="og:title" content="{$title}" />
     <meta property="og:description" content="{$description}" />
     <meta property="og:url" content="{$url}" />
@@ -540,6 +567,22 @@ HTML;
     protected function frontendUrl(): string
     {
         return rtrim(config('app.frontend_url', env('FRONTEND_URL', 'https://www.takeeat.co.il')), '/');
+    }
+
+    protected function usesCustomDomainPublicSite(Restaurant $restaurant): bool
+    {
+        $domain = strtolower(trim((string) $restaurant->custom_domain));
+
+        return $domain !== '' && ($restaurant->custom_domain_ssl_status === 'active' || $restaurant->custom_domain_connected_at);
+    }
+
+    protected function publicSiteBaseForRestaurant(Restaurant $restaurant): string
+    {
+        if ($this->usesCustomDomainPublicSite($restaurant)) {
+            return 'https://' . strtolower(trim((string) $restaurant->custom_domain));
+        }
+
+        return $this->frontendUrl();
     }
 
     // =========================================================================

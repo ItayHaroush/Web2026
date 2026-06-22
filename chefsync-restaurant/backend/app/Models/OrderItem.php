@@ -20,6 +20,7 @@ class OrderItem extends Model
         'variant_price_delta',
         'addons',
         'addons_total',
+        'notes',
         'quantity',
         'price_at_order',
         'promotion_id',

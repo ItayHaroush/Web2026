@@ -3,6 +3,7 @@
 use App\Http\Controllers\CustomInvoiceController;
 use App\Http\Controllers\EmailMarketingUnsubscribeController;
 use App\Http\Controllers\HypOrderRedirectController;
+use App\Http\Controllers\HypDomainRedirectController;
 use App\Http\Controllers\HypSubscriptionRedirectController;
 use App\Http\Controllers\SeoController;
 use Illuminate\Support\Facades\Route;
@@ -55,6 +56,9 @@ Route::get('/pay/hyp/order/{sessionToken}', [HypOrderRedirectController::class, 
 // Redirect לתשלום HYP (B2B) – קורא APISign לחתימה ומפנה לעמוד תשלום מנוי
 Route::get('/pay/hyp/subscription/{restaurantId}', [HypSubscriptionRedirectController::class, 'redirect'])
     ->name('payments.hyp.subscription.redirect');
+
+Route::get('/pay/hyp/domain/{restaurantId}', [HypDomainRedirectController::class, 'redirect'])
+    ->name('payments.hyp.domain.redirect');
 
 // ── Appointed.cloud payment proxy (same HYP masof) ──
 use App\Http\Controllers\AppointedPaymentProxyController;

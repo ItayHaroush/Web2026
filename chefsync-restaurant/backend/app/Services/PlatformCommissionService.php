@@ -152,7 +152,10 @@ class PlatformCommissionService
             }
         }
 
-        $totalDue = round($baseFee + $commissionFee + $abandonedCartFee + $setupFee, 2);
+        // תשלומי דומיין מותאם (HYP) — חד-פעמי בחודש התשלום
+        $domainFee = $this->sumDomainFeesForPeriod($restaurant->id, $periodStart, $periodEnd);
+
+        $totalDue = round($baseFee + $commissionFee + $abandonedCartFee + $setupFee + $domainFee, 2);
 
         // מחיר מקורי לתצוגה עם קו — כשהמחיר בפועל נמוך ממחיר החבילה
         $originalBaseFee = null;
@@ -177,6 +180,7 @@ class PlatformCommissionService
             'abandoned_cart_fee' => $abandonedCartFee,
             'original_abandoned_cart_fee' => null,
             'setup_fee' => $setupFee,
+            'domain_fee' => $domainFee,
             'total_due' => $totalDue,
             'order_count' => $orderCount,
             'order_revenue' => $orderRevenue,
@@ -335,5 +339,49 @@ class PlatformCommissionService
         return MonthlyInvoice::where('status', 'pending')
             ->where('month', '<', $currentMonth)
             ->update(['status' => 'overdue']);
+    }
+
+    /**
+     * סכום תשלומי דומיין מותאם ששולמו בטווח התאריכים.
+     */
+    public function sumDomainFeesForPeriod(int $restaurantId, Carbon $periodStart, Carbon $periodEnd): float
+    {
+        return (float) RestaurantPayment::where('restaurant_id', $restaurantId)
+            ->whereIn('type', RestaurantPayment::DOMAIN_TYPES)
+            ->where('status', 'paid')
+            ->whereBetween('paid_at', [$periodStart, $periodEnd])
+            ->sum('amount');
+    }
+
+    /**
+     * מעדכן שורת domain_fee בחשבונית החודשית כשתשלום HYP לדומיין נרשם (גם אם החשבונית כבר קיימת).
+     */
+    public function syncInvoiceDomainFee(int $restaurantId, Carbon $paidAt): void
+    {
+        $month = $paidAt->format('Y-m');
+        $invoice = MonthlyInvoice::where('restaurant_id', $restaurantId)
+            ->where('month', $month)
+            ->whereIn('status', ['draft', 'pending', 'overdue'])
+            ->first();
+
+        if (! $invoice) {
+            return;
+        }
+
+        $periodStart = Carbon::parse($month . '-01')->startOfMonth();
+        $periodEnd = (clone $periodStart)->endOfMonth();
+        $domainFee = $this->sumDomainFeesForPeriod($restaurantId, $periodStart, $periodEnd);
+
+        $invoice->update([
+            'domain_fee' => $domainFee,
+            'total_due' => round(
+                (float) $invoice->base_fee
+                + (float) $invoice->commission_fee
+                + (float) $invoice->abandoned_cart_fee
+                + (float) $invoice->setup_fee
+                + $domainFee,
+                2
+            ),
+        ]);
     }
 }

@@ -452,6 +452,7 @@ class AdminController extends Controller
                 'addons_group_scope' => $originalItem->addons_group_scope,
                 'max_addons' => $originalItem->max_addons,
                 'dine_in_adjustment' => $originalItem->dine_in_adjustment,
+                'allow_item_note' => $originalItem->allow_item_note,
             ]);
 
             // העתקת וריאנטים ברמת פריט
@@ -565,6 +566,7 @@ class AdminController extends Controller
             'addons_group_scope' => 'nullable|string',  // משנה לקבל JSON string
             'max_addons' => 'nullable|integer|min:1|max:99',
             'dine_in_adjustment' => 'nullable|numeric',
+            'allow_item_note' => 'sometimes|boolean',
             'addon_selection_weight' => 'nullable|integer|min:1|max:10',  // משקל בחירה כשמוצג כתוספת מקושרת (null=ברירת מחדל קבוצה)
         ]);
 
@@ -616,6 +618,7 @@ class AdminController extends Controller
             'addons_group_scope' => $addonsGroupScope,
             'max_addons' => $maxAddons,
             'dine_in_adjustment' => $request->input('dine_in_adjustment'),
+            'allow_item_note' => $request->boolean('allow_item_note'),
             'addon_selection_weight' => $request->filled('addon_selection_weight') ? max(1, min(10, (int) $request->addon_selection_weight)) : null,
             'availability_start_time' => $request->filled('availability_start_time') ? $request->input('availability_start_time') : null,
             'availability_end_time' => $request->filled('availability_end_time') ? $request->input('availability_end_time') : null,
@@ -648,6 +651,7 @@ class AdminController extends Controller
             'addons_group_scope' => 'nullable|string',  // משנה לקבל JSON string
             'max_addons' => 'nullable|integer|min:1|max:99',
             'dine_in_adjustment' => 'nullable|numeric',
+            'allow_item_note' => 'sometimes|boolean',
             'addon_selection_weight' => 'nullable|integer|min:1|max:10',
             'availability_start_time' => 'nullable|date_format:H:i',
             'availability_end_time' => 'nullable|date_format:H:i',
@@ -697,6 +701,10 @@ class AdminController extends Controller
         if ($request->has('dine_in_adjustment')) {
             $value = $request->input('dine_in_adjustment');
             $payload['dine_in_adjustment'] = ($value === '' || $value === null) ? null : (float) $value;
+        }
+
+        if ($request->has('allow_item_note')) {
+            $payload['allow_item_note'] = $request->boolean('allow_item_note');
         }
 
         if ($request->has('addon_selection_weight')) {

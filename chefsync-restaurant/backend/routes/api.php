@@ -10,11 +10,14 @@ use App\Http\Controllers\CustomerAuthController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\CustomerNotificationPreferenceController;
 use App\Http\Controllers\CustomerPwaController;
+use App\Http\Controllers\DomainRequestController;
 use App\Http\Controllers\DisplayScreenController;
+use App\Http\Controllers\SuperAdminDomainRequestController;
 use App\Http\Controllers\FcmTokenController;
 use App\Http\Controllers\FunnelAnalyticsController;
 use App\Http\Controllers\FunnelEventController;
 use App\Http\Controllers\HypOrderCallbackController;
+use App\Http\Controllers\HypDomainCallbackController;
 use App\Http\Controllers\HypSubscriptionCallbackController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\KioskController;
@@ -28,6 +31,7 @@ use App\Http\Controllers\PaymentTerminalController;
 use App\Http\Controllers\PrintAgentController;
 use App\Http\Controllers\PrinterController;
 use App\Http\Controllers\PromotionController;
+use App\Http\Controllers\PublicHostController;
 use App\Http\Controllers\RegisterRestaurantController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RestaurantController;
@@ -288,6 +292,20 @@ Route::prefix('super-admin')->middleware(['auth:sanctum', 'super_admin'])->group
     Route::patch('/feedback/{id}', [PlatformFeedbackController::class, 'update'])->name('super-admin.feedback.update');
     Route::delete('/feedback/{id}', [PlatformFeedbackController::class, 'destroy'])->name('super-admin.feedback.destroy');
 
+    // בקשות דומיין מותאם
+    Route::get('/domain-requests/stats', [SuperAdminDomainRequestController::class, 'stats'])->name('super-admin.domain-requests.stats');
+    Route::get('/domain-requests', [SuperAdminDomainRequestController::class, 'index'])->name('super-admin.domain-requests.index');
+    Route::get('/domain-requests/{id}', [SuperAdminDomainRequestController::class, 'show'])->name('super-admin.domain-requests.show');
+    Route::patch('/domain-requests/{id}/status', [SuperAdminDomainRequestController::class, 'updateStatus'])->name('super-admin.domain-requests.status');
+    Route::post('/domain-requests/{id}/note', [SuperAdminDomainRequestController::class, 'addNote'])->name('super-admin.domain-requests.note');
+    Route::post('/domain-requests/{id}/payment-status', [SuperAdminDomainRequestController::class, 'updatePaymentStatus'])->name('super-admin.domain-requests.payment-status');
+    Route::post('/domain-requests/{id}/activate-domain', [SuperAdminDomainRequestController::class, 'activateDomain'])->name('super-admin.domain-requests.activate');
+    Route::post('/domain-requests/{id}/prepare-vercel', [SuperAdminDomainRequestController::class, 'prepareVercel'])->name('super-admin.domain-requests.prepare-vercel');
+    Route::post('/domain-requests/{id}/sync-vercel', [SuperAdminDomainRequestController::class, 'syncVercel'])->name('super-admin.domain-requests.sync-vercel');
+    Route::post('/domain-requests/{id}/execute-disconnect', [SuperAdminDomainRequestController::class, 'executeDisconnect'])->name('super-admin.domain-requests.execute-disconnect');
+    Route::post('/domain-requests/{id}/reject', [SuperAdminDomainRequestController::class, 'reject'])->name('super-admin.domain-requests.reject');
+    Route::post('/restaurants/{id}/domain-requests', [SuperAdminDomainRequestController::class, 'createForRestaurant'])->name('super-admin.restaurants.domain-requests.create');
+
     // ============================================
     // חגים ומועדים (Israeli Holidays)
     // ============================================
@@ -444,6 +462,16 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'tenant'])->group(function (
         Route::post('/payment-settings', [PaymentSettingsController::class, 'saveSettings'])->name('admin.payment-settings.save');
         Route::post('/payment-settings/verify', [PaymentSettingsController::class, 'verifyTerminal'])->name('admin.payment-settings.verify');
 
+        // דומיין מותאם אישית
+        Route::get('/domain-requests', [DomainRequestController::class, 'index'])->name('admin.domain-requests.index');
+        Route::post('/domain-requests/verify', [DomainRequestController::class, 'verifyDomain'])->name('admin.domain-requests.verify');
+        Route::post('/domain-requests/existing', [DomainRequestController::class, 'storeExisting'])->name('admin.domain-requests.existing');
+        Route::post('/domain-requests/full-service', [DomainRequestController::class, 'storeFullService'])->name('admin.domain-requests.full-service');
+        Route::post('/domain-requests/change', [DomainRequestController::class, 'storeChange'])->name('admin.domain-requests.change');
+        Route::post('/domain-requests/disconnect', [DomainRequestController::class, 'storeDisconnect'])->name('admin.domain-requests.disconnect');
+        Route::post('/domain-requests/payment-session', [DomainRequestController::class, 'createPaymentSession'])->name('admin.domain-requests.payment-session');
+        Route::get('/domain-requests/{id}/dns-instructions', [DomainRequestController::class, 'dnsInstructions'])->name('admin.domain-requests.dns');
+
         Route::get('/payment-terminals', [PaymentTerminalController::class, 'index'])->name('admin.payment-terminals.index');
         Route::post('/payment-terminals', [PaymentTerminalController::class, 'store'])->name('admin.payment-terminals.store');
         Route::put('/payment-terminals/{id}', [PaymentTerminalController::class, 'update'])->name('admin.payment-terminals.update');
@@ -588,7 +616,7 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'tenant'])->group(function (
 });
 
 // הרשם את Middleware Tenant לכל הנתיבים
-Route::middleware(['api', 'tenant'])->group(function () {
+Route::middleware(['api', 'resolve_tenant_host', 'tenant'])->group(function () {
 
     // ============================================
     // תפריט - ללקוחות
@@ -719,6 +747,11 @@ Route::get('/platform/announcements/active', [SuperAdminAnnouncementController::
 // חיפוש מנות בתפריטים - ציבורי
 Route::get('/menu-search', [RestaurantController::class, 'searchMenuItems'])->name('menu.search');
 
+// Custom domain → tenant resolution (404 if unknown host, no platform fallback)
+Route::get('/public/resolve-host', [PublicHostController::class, 'resolveHost'])
+    ->middleware('throttle:120,1')
+    ->name('public.resolve-host');
+
 // מסעדה לפי tenant/slug - ציבורי (לטעינת דף תפריט מלא גם אם המסעדה סגורה)
 Route::get('/restaurants/by-tenant/{tenantId}', [RestaurantController::class, 'publicShowByTenant'])
     ->name('restaurants.byTenant');
@@ -738,6 +771,10 @@ Route::prefix('payments/hyp')->group(function () {
     // B2B: תשלום מנוי מסעדה
     Route::get('/subscription/success', [HypSubscriptionCallbackController::class, 'handleSuccess'])->name('payments.hyp.subscription.success');
     Route::get('/subscription/error', [HypSubscriptionCallbackController::class, 'handleError'])->name('payments.hyp.subscription.error');
+
+    // B2B: תשלום שירות דומיין
+    Route::get('/domain/success', [HypDomainCallbackController::class, 'handleSuccess'])->name('payments.hyp.domain.success');
+    Route::get('/domain/error', [HypDomainCallbackController::class, 'handleError'])->name('payments.hyp.domain.error');
 
     // B2C: תשלום הזמנת לקוח — GET redirect ישיר מ-HYP
     Route::get('/order/success', [HypOrderCallbackController::class, 'handleSuccess'])->name('payments.hyp.order.success');

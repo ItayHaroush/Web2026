@@ -68,6 +68,8 @@ const ADMIN_RULES = [
     [/^\/admin\/guide\/install\/?$/, 'admin_restaurant_guide'],
     [/^\/admin\/settings\/?$/, 'admin_user_settings'],
     [/^\/admin\/abandoned-cart-reminders\/?$/, 'admin_abandoned_cart_reminders'],
+    [/^\/admin\/custom-domain\/?$/, 'admin_custom_domain'],
+    [/^\/admin\/sound-settings\/?$/, 'admin_sound_settings'],
 ];
 
 export function resolveRestaurantAdminPageKey(pathname) {
@@ -100,6 +102,7 @@ const SUPER_RULES = [
     [/^\/super-admin\/customers\/?$/, 'super_admin_customers'],
     [/^\/super-admin\/email-management\/?$/, 'super_admin_email_management'],
     [/^\/super-admin\/feedback\/?$/, 'super_admin_feedback'],
+    [/^\/super-admin\/domain-requests\/?$/, 'super_admin_domain_requests'],
     [/^\/super-admin\/analytics\/?$/, 'super_admin_analytics'],
     [/^\/super-admin\/profile\/?$/, 'super_admin_profile'],
 ];

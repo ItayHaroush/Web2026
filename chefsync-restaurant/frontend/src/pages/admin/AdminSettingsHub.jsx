@@ -21,6 +21,7 @@ import {
     FaDownload,
     FaBookOpen,
     FaBell,
+    FaGlobe,
 } from 'react-icons/fa';
 
 function SettingCard({ icon, title, description, to, badge }) {
@@ -104,6 +105,14 @@ export default function AdminSettingsHub() {
             title: 'תשלום וחשבון',
             description: 'הגדרות סליקה, מנוי ואמצעי תשלום.',
             to: '/admin/payment-settings',
+            show: isOwner(),
+            badge: 'בעלים',
+        },
+        {
+            icon: <FaGlobe size={20} />,
+            title: 'דומיין מותאם',
+            description: 'חיבור דומיין משלך — TakeEat מטפלת ב-DNS ו-SSL.',
+            to: '/admin/custom-domain',
             show: isOwner(),
             badge: 'בעלים',
         },

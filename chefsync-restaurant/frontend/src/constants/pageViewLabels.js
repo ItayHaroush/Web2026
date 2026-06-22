@@ -45,6 +45,8 @@ export const PAGE_VIEW_LABELS = {
     admin_settings_hub: 'פאנל — מרכז הגדרות',
     admin_user_settings: 'פאנל — הגדרות משתמש',
     admin_abandoned_cart_reminders: 'פאנל — תזכורות סל נטוש',
+    admin_custom_domain: 'פאנל — דומיין מותאם',
+    admin_sound_settings: 'פאנל — הגדרות צלצול',
 
     // סופר־אדמין
     super_admin_dashboard: 'סופר־אדמין — דשבורד',
@@ -65,6 +67,7 @@ export const PAGE_VIEW_LABELS = {
     super_admin_customer_detail: 'סופר־אדמין — פרטי לקוח',
     super_admin_customers: 'סופר־אדמין — לקוחות',
     super_admin_email_management: 'סופר־אדמין — ניהול מיילים',
+    super_admin_domain_requests: 'סופר־אדמין — בקשות דומיין',
     super_admin_analytics: 'סופר־אדמין — אנליטיקות כניסה',
     super_admin_profile: 'סופר־אדמין — פרופיל',
 };
