@@ -22,7 +22,9 @@ import {
     FaUser
 } from 'react-icons/fa';
 
-// מסוף סניף לעובדים/שליחים: מציג הזמנות פתוחות ומאפשר עדכון סטטוס מהיר
+// מסוף סניף: הזמנה מהכניסה (ממתין) ועד סיום התהליך (לפני נמסר)
+const TERMINAL_STATUSES = ['pending', 'received', 'preparing', 'ready', 'delivering'];
+const TERMINAL_STATUS_ORDER = Object.fromEntries(TERMINAL_STATUSES.map((s, i) => [s, i]));
 export default function AdminTerminal() {
     const { getAuthHeaders, user } = useAdminAuth();
     const [orders, setOrders] = useState([]);
@@ -102,24 +104,21 @@ export default function AdminTerminal() {
                 headers: getAuthHeaders()
             });
             if (response.data.success) {
-                // סנן רק הזמנות שלא הושלמו או בוטלו
                 const allOrders = response.data.orders.data || response.data.orders;
-                const openOrders = allOrders.filter((order) => {
-                    if (order.status === 'delivered' || order.status === 'cancelled') return false;
-                    // ממתין לאישור — לא מציגים במסוף עד שהמסעדה מאשרת
-                    if (order.status === 'pending') return false;
-                    // הזמנה עתידית — רק אם כבר במטבח (received+)
-                    // מוכן / במשלוח — מנוהל ע"י מנהל במסך הזמנות
-                    if (order.status === 'ready' || order.status === 'delivering') return false;
-                    if (order.is_future_order) {
-                        const inKitchen = ['received', 'preparing', 'ready', 'delivering'].includes(order.status);
-                        if (!inKitchen) return false;
-                    }
-                    // אשראי — רק אחרי תשלום מלא
-                    if (order.payment_method === 'credit_card' && order.payment_status !== 'paid') return false;
-                    return true;
-                });
-                setOrders(openOrders);
+                const terminalOrders = allOrders
+                    .filter((order) => {
+                        if (order.status === 'cancelled' || order.status === 'delivered') return false;
+                        if (!TERMINAL_STATUSES.includes(order.status)) return false;
+                        // אשראי — רק אחרי תשלום מלא (ממתין לתשלום לא מוצג)
+                        if (order.payment_method === 'credit_card' && order.payment_status !== 'paid') return false;
+                        return true;
+                    })
+                    .sort((a, b) => {
+                        const statusDiff = (TERMINAL_STATUS_ORDER[a.status] ?? 99) - (TERMINAL_STATUS_ORDER[b.status] ?? 99);
+                        if (statusDiff !== 0) return statusDiff;
+                        return new Date(a.created_at) - new Date(b.created_at);
+                    });
+                setOrders(terminalOrders);
             }
         } catch (error) {
             console.error('Failed to fetch orders:', error);
@@ -358,13 +357,13 @@ export default function AdminTerminal() {
                             return (
                                 <div
                                     key={order.id}
-                                    className={`group flex flex-col bg-white rounded-[3.5rem] shadow-sm border-2 transition-all duration-500 hover:shadow-2xl hover:-translate-y-2 overflow-hidden ${order.status === 'ready' ? 'border-amber-200' :
+                                    className={`group flex flex-col bg-white rounded-[3.5rem] shadow-sm border-2 transition-all duration-500 hover:shadow-2xl hover:-translate-y-2 overflow-hidden ${order.status === 'ready' || order.status === 'pending' ? 'border-amber-200' :
                                         order.status === 'preparing' ? 'border-brand-primary/20' :
                                             'border-gray-50'
                                         }`}
                                 >
                                     {/* Order Header Card */}
-                                    <div className={`p-8 pb-6 border-b border-gray-50 transition-colors ${order.status === 'ready' ? 'bg-amber-50/50' :
+                                    <div className={`p-8 pb-6 border-b border-gray-50 transition-colors ${order.status === 'ready' || order.status === 'pending' ? 'bg-amber-50/50' :
                                         order.status === 'preparing' ? 'bg-brand-primary/[0.03]' :
                                             'bg-gray-50/30'
                                         }`}>
@@ -421,6 +420,7 @@ export default function AdminTerminal() {
                                                 </p>
                                             </div>
                                             <div className={`px-5 py-2 rounded-2xl text-xs font-black uppercase tracking-widest shadow-sm ${order.status === 'ready' ? 'bg-amber-500 text-white animate-bounce' :
+                                                order.status === 'pending' ? 'bg-amber-500 text-white' :
                                                 order.status === 'preparing' ? 'bg-brand-primary text-white' :
                                                     'bg-indigo-500 text-white'
                                                 }`}>
@@ -525,11 +525,13 @@ export default function AdminTerminal() {
                                                     <button
                                                         onClick={() => updateStatus(order.id, next)}
                                                         className={`w-full py-5 rounded-[2rem] font-black text-lg transition-all active:scale-95 shadow-xl flex items-center justify-center gap-4 hover:-translate-y-1 ${order.status === 'ready' ? 'bg-emerald-500 text-white shadow-emerald-500/20 hover:bg-emerald-600' :
-                                                            order.status === 'preparing' ? 'bg-amber-500 text-white shadow-amber-500/20 hover:bg-amber-600' :
+                                                            order.status === 'preparing' || order.status === 'pending' ? 'bg-amber-500 text-white shadow-amber-500/20 hover:bg-amber-600' :
                                                                 'bg-brand-primary text-white shadow-brand-primary/20 hover:bg-brand-dark'
                                                             }`}
                                                     >
-                                                        {order.status === 'ready' && order.delivery_method !== 'delivery' ? (
+                                                        {order.status === 'pending' ? (
+                                                            <><FaCheckCircle /> אשר — התקבלה</>
+                                                        ) : order.status === 'ready' && order.delivery_method !== 'delivery' ? (
                                                             <><FaCheckCircle /> הכר כנמסר</>
                                                         ) : order.status === 'ready' && order.delivery_method === 'delivery' ? (
                                                             <><FaRoute /> שלח למשלוח</>
@@ -548,16 +550,14 @@ export default function AdminTerminal() {
                                             );
                                         })()}
 
-                                        <div className={`grid gap-3 mt-4 grid-cols-2`}>
-                                            {['received', 'preparing', 'ready', 'delivering'].includes(order.status) && (
-                                                <button
-                                                    onClick={() => handleReprint(order.id)}
-                                                    disabled={reprintingId === order.id}
-                                                    className="py-3 bg-white text-blue-600 rounded-2xl text-xs font-black shadow-sm border border-gray-100 hover:bg-blue-50 transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50"
-                                                >
-                                                    <FaRedoAlt size={12} /> {reprintingId === order.id ? 'שולח...' : 'הדפס למטבח'}
-                                                </button>
-                                            )}
+                                        <div className="grid gap-3 mt-4 grid-cols-2">
+                                            <button
+                                                onClick={() => handleReprint(order.id)}
+                                                disabled={reprintingId === order.id}
+                                                className="py-3 bg-white text-blue-600 rounded-2xl text-xs font-black shadow-sm border border-gray-100 hover:bg-blue-50 transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50"
+                                            >
+                                                <FaRedoAlt size={12} /> {reprintingId === order.id ? 'שולח...' : 'הדפס למטבח'}
+                                            </button>
                                             <button
                                                 onClick={() => setCancelModal({ isOpen: true, orderId: order.id })}
                                                 className="py-3 bg-white text-rose-500 rounded-2xl text-xs font-black shadow-sm border border-gray-100 hover:bg-rose-50 transition-all active:scale-95 flex items-center justify-center gap-2"
