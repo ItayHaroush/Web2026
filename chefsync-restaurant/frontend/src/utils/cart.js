@@ -20,9 +20,9 @@ export const normalizeVariant = (variant) => {
         price_delta: sanitizeNumber(variant.price_delta ?? variant.priceDelta ?? 0),
     };
 };
-/** כותרת בחירת בסיס (וריאנטים) לפי סוג הגשה של הקטגוריה */
+/** כותרת בחירת בסיס: כריך = צורת הגשה (פיתה/באגט); צלחת/סלט = תוספת לחם */
 export const getVariantSectionTitle = (dishType) => (
-    dishType === 'sandwich' ? 'בחרו תוספת לחם' : 'בחרו צורת הגשה'
+    dishType === 'sandwich' ? 'בחרו צורת הגשה' : 'בחרו תוספת לחם'
 );
 
 export const placementLabels = {

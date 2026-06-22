@@ -408,9 +408,9 @@ export default function AdminCategories({ embedded = false }) {
                                         </label>
                                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-5">
                                             {[
-                                                { id: 'both', label: 'גם וגם', icon: '🥗🌯', desc: 'כל סוגי המנות' },
-                                                { id: 'plate', label: 'צלחת', icon: '🥗', desc: 'סלטים ומנות חמות' },
-                                                { id: 'sandwich', label: 'כריך', icon: '🌯', desc: 'בתוך לחם' }
+                                                { id: 'both', label: 'גם וגם', icon: '🥗🌯', desc: 'ברירת מחדל: תוספת לחם' },
+                                                { id: 'plate', label: 'צלחת / סלט', icon: '🥗', desc: 'ללקוח: בחרו תוספת לחם' },
+                                                { id: 'sandwich', label: 'כריך', icon: '🌯', desc: 'ללקוח: בחרו צורת הגשה' }
                                             ].map((type) => (
                                                 <button
                                                     key={type.id}
