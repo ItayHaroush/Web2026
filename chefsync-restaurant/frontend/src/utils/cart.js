@@ -20,6 +20,11 @@ export const normalizeVariant = (variant) => {
         price_delta: sanitizeNumber(variant.price_delta ?? variant.priceDelta ?? 0),
     };
 };
+/** כותרת בחירת בסיס (וריאנטים) לפי סוג הגשה של הקטגוריה */
+export const getVariantSectionTitle = (dishType) => (
+    dishType === 'sandwich' ? 'בחרו תוספת לחם' : 'בחרו צורת הגשה'
+);
+
 export const placementLabels = {
     right: 'חצי ימין',
     right_half: 'חצי ימין',

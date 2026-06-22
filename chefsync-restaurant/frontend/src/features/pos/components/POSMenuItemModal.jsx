@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { FaTimes, FaMinus, FaPlus, FaShoppingCart } from 'react-icons/fa';
-import { calculateUnitPrice, buildCartKey, formatAddonLabel } from '../../../utils/cart';
+import { calculateUnitPrice, buildCartKey, formatAddonLabel, getVariantSectionTitle } from '../../../utils/cart';
 
 /**
  * בחירת וריאציה ותוספות לפריט POS — התאמה לזרימת קיוסק/אתר.
@@ -107,7 +107,7 @@ export default function POSMenuItemModal({ item, onAdd, onClose, orderType = 'ta
 
                     {item.variants && item.variants.length > 0 && (
                         <div>
-                            <h3 className="text-slate-500 text-xs font-black uppercase tracking-widest mb-2">בחירת וריאציה</h3>
+                            <h3 className="text-slate-500 text-xs font-black uppercase tracking-widest mb-2">{getVariantSectionTitle(item.dish_type)}</h3>
                             <div className="grid grid-cols-2 gap-2">
                                 {item.variants.map(v => (
                                     <button

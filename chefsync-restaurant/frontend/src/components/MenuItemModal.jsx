@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { FaBoxOpen, FaCheck } from 'react-icons/fa';
-import { calculateUnitPrice, normalizeVariant, normalizeAddon } from '../utils/cart';
+import { calculateUnitPrice, normalizeVariant, normalizeAddon, getVariantSectionTitle } from '../utils/cart';
 import { resolveAssetUrl } from '../utils/assets';
 
 const clampQty = (value) => Math.max(1, Math.round(Number(value) || 1));
@@ -353,7 +353,7 @@ export default function MenuItemModal({
                     {variants.length > 0 && (
                         <div className="space-y-2">
                             <div className="flex items-center justify-between">
-                                <h3 className="text-lg font-semibold text-brand-dark dark:text-brand-dark-text">בחרו צורת הגשה</h3>
+                                <h3 className="text-lg font-semibold text-brand-dark dark:text-brand-dark-text">{getVariantSectionTitle(item.dish_type)}</h3>
                                 <span className="text-sm text-gray-500">חובה לבחור אפשרות אחת</span>
                             </div>
                             <div className="space-y-0.5">

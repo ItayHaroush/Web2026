@@ -266,7 +266,7 @@ class KioskController extends Controller
                 $q->where('is_active', true);
             })
             ->with([
-                'category:id,name,sort_order,dine_in_adjustment',
+                'category:id,name,sort_order,dine_in_adjustment,dish_type',
                 'variants' => function ($q) {
                     $q->where('is_active', true)->orderBy('sort_order');
                 },
@@ -365,6 +365,7 @@ class KioskController extends Controller
                     'price' => (float) $item->price,
                     'image_url' => $item->image_url,
                     'category_id' => $item->category_id,
+                    'dish_type' => $item->category?->dish_type ?? 'both',
                     'category_name' => $item->category?->name,
                     'category_sort_order' => $item->category?->sort_order ?? 0,
                     'use_variants' => (bool) $item->use_variants,

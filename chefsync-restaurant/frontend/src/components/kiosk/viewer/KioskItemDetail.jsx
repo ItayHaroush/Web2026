@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { FaTimes, FaMinus, FaPlus, FaShoppingCart } from 'react-icons/fa';
-import { calculateUnitPrice } from '../../../utils/cart';
+import { calculateUnitPrice, getVariantSectionTitle } from '../../../utils/cart';
 
 export default function KioskItemDetail({ item, onAddToCart, onClose, orderType, enableDineInPricing }) {
     const [selectedVariant, setSelectedVariant] = useState(null);
@@ -76,7 +76,7 @@ export default function KioskItemDetail({ item, onAddToCart, onClose, orderType,
                     {/* Variants */}
                     {item.variants && item.variants.length > 0 && (
                         <div>
-                            <h3 className="font-black text-gray-700 text-sm uppercase tracking-widest mb-3">בחרו גודל</h3>
+                            <h3 className="font-black text-gray-700 text-sm uppercase tracking-widest mb-3">{getVariantSectionTitle(item.dish_type)}</h3>
                             <div className="grid grid-cols-2 gap-2">
                                 {item.variants.map(v => (
                                     <button
